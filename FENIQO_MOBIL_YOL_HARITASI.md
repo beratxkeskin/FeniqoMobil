@@ -1,6 +1,6 @@
 # FeniqoMobil — Uçtan Uca Geliştirme Yol Haritası
 
-> **Durum:** Devam ediyor — son tamamlanan adım: 1.2; mevcut adım: 1.3
+> **Durum:** Devam ediyor — son tamamlanan adım: 1.3; mevcut adım: 2.2
 > **Ana hedef:** Feniqo web uygulamasını referans alarak, Android'de native çalışan; offline-first; Supabase ile güvenli biçimde senkronize olan ve gelecekte iOS'a Kotlin Multiplatform (KMP) ile taşınabilen profesyonel bir mobil uygulama geliştirmek.
 
 Bu dosya projenin çalışma sözleşmesidir. Bir adım tamamlandığında ilgili kutu işaretlenir ve kısa bir not eklenir. Sohbette yalnızca örneğin **"2.3'te kalmıştık"** demen, aynı noktadan devam etmemiz için yeterlidir.
@@ -78,9 +78,9 @@ com.feniqo.mobile/
 
 ### 1.3 Supabase ve güvenlik denetimi
 
-- [ ] SQL şemasını ilk kurulum ve sürümlü migration dosyalarına ayırma planını oluştur.
+- [x] SQL şemasını ilk kurulum ve sürümlü migration dosyalarına ayırma planını oluştur.
 - [x] `workspace_members` rol sözlüğünü tekleştir: `OWNER`, `EDITOR`, `VIEWER`.
-- [ ] Ortak alan kayıtlarında görüntüleme, ekleme, düzenleme ve silme yetkilerini bir matris olarak tanımla.
+- [x] Ortak alan kayıtlarında görüntüleme, ekleme, düzenleme ve silme yetkilerini bir matris olarak tanımla.
 - [x] Makbuz deposunu public yerine sahiplik denetimli private bucket olarak planla.
 - [x] Piyasa fiyatı gibi ortak veriler için doğrudan istemci yazımı yerine Edge Function/sunucu görevi yaklaşımını seç.
 - [x] Her senkronize tablo için `updated_at`, `deleted_at` ve sürümleme gereksinimini kesinleştir.
@@ -392,7 +392,7 @@ com.feniqo.mobile/
 
 ## Başlangıç sırası
 
-Şu an başlanacak adım: **1.1 — Web referansını envantere dönüştürme**.
+Şu an başlanacak adım: **2.2 — Temel Android bağımlılıkları**.
 
 Bu adımın tamamlanmasından sonra önerilen ilk kod adımı: **3.1 — Ortak temel tipler**. Önce modelleri anlamlandıracak, sonra repository arayüzlerine, Room'a, Supabase'e ve UI'a geçeceğiz. Böylece her katmanın neden var olduğunu uygulayarak öğrenmiş olacaksın.
 
@@ -404,3 +404,4 @@ Bu adımın tamamlanmasından sonra önerilen ilk kod adımı: **3.1 — Ortak t
 | 2026-08-03 | 2.1 | KMP proje omurgası oluşturuldu. Android/iOS kimliği `com.feniqo.mobile`; API 26; Android debug derlemesi ve ortak modül host testleri başarılı; Git deposu başlatıldı. |
 | 2026-08-03 | 1.1 | Web ekranları, kullanıcı akışları, özellikler, V1 veri sözlüğü ve TypeScript/SQL riskleri `docs/WEB_REFERANS_ENVANTERI.md` içinde tamamlandı. |
 | 2026-08-03 | 1.2 | V1 kapsamı, V2/V3 ayrımı ve yedi temel ürün/mimari kararı proje sahibi tarafından onaylandı. |
+| 2026-08-03 | 1.3 | V1 RLS ve ilerideki workspace rol matrisleri, güvenli migration sırası, para dönüşümü, soft-delete/version sync ve test/onay kapısı `docs/SUPABASE_V1_GUVENLIK_VE_MIGRATION_PLANI.md` içinde tamamlandı; canlı veritabanına henüz SQL uygulanmadı. |
