@@ -1,6 +1,6 @@
 # FeniqoMobil — Uçtan Uca Geliştirme Yol Haritası
 
-> **Durum:** Devam ediyor — son tamamlanan adım: 2.1  
+> **Durum:** Devam ediyor — son tamamlanan adım: 1.2; mevcut adım: 1.3
 > **Ana hedef:** Feniqo web uygulamasını referans alarak, Android'de native çalışan; offline-first; Supabase ile güvenli biçimde senkronize olan ve gelecekte iOS'a Kotlin Multiplatform (KMP) ile taşınabilen profesyonel bir mobil uygulama geliştirmek.
 
 Bu dosya projenin çalışma sözleşmesidir. Bir adım tamamlandığında ilgili kutu işaretlenir ve kısa bir not eklenir. Sohbette yalnızca örneğin **"2.3'te kalmıştık"** demen, aynı noktadan devam etmemiz için yeterlidir.
@@ -60,30 +60,30 @@ com.feniqo.mobile/
 
 ### 1.1 Web referansını envantere dönüştürme
 
-- [ ] Web uygulamasındaki ekranları ve kullanıcı akışlarını listele.
-- [ ] Supabase tablolarını, ilişkilerini ve RLS politikalarını ayrı bir veri sözlüğünde belgele.
-- [ ] TypeScript modelleri ile SQL şeması arasındaki uyumsuzlukları kaydet.
-- [ ] Mevcut demo verilerini yalnızca geliştirme/test amacıyla ayır.
+- [x] Web uygulamasındaki ekranları ve kullanıcı akışlarını listele.
+- [x] Supabase tablolarını, ilişkilerini ve RLS politikalarını ayrı bir veri sözlüğünde belgele.
+- [x] TypeScript modelleri ile SQL şeması arasındaki uyumsuzlukları kaydet.
+- [x] Mevcut demo verilerini yalnızca geliştirme/test amacıyla ayır.
 
 **Beklenen çıktı:** Mobilde geliştirilecek modüllerin kesin listesi ve bir veri sözlüğü.
 
 ### 1.2 V1 kapsamını belirleme
 
-- [ ] V1'e dahil modülleri onayla: kimlik doğrulama, kişisel çalışma alanı, kategori, işlem, dashboard ve offline sync.
-- [ ] V1 sonrası modülleri sırala: bütçe, hedef, tekrarlayan işlem, abonelik, borç, ortak alan, rapor, varlık, OCR.
-- [ ] Demo modu için ürün kararı ver: yalnızca geliştirici örnek verisi mi, kullanıcıya açık mod mu?
-- [ ] Türkçe ilk dil olacak şekilde i18n stratejisini belirle.
+- [x] V1'e dahil modülleri onayla: kimlik doğrulama, kişisel çalışma alanı, kategori, işlem, dashboard ve offline sync.
+- [x] V1 sonrası modülleri sırala: bütçe, hedef, tekrarlayan işlem, abonelik, borç, ortak alan, rapor, varlık, OCR.
+- [x] Demo modu için ürün kararı ver: yalnızca test fixture/fake repository; kullanıcıya açık demo V1 dışında.
+- [x] Türkçe ilk dil ve İngilizce desteğe hazır i18n stratejisini belirle.
 
 **Tamamlanma ölçütü:** V1 dışındaki bir özellik, çekirdek akışı geciktirmez.
 
 ### 1.3 Supabase ve güvenlik denetimi
 
 - [ ] SQL şemasını ilk kurulum ve sürümlü migration dosyalarına ayırma planını oluştur.
-- [ ] `workspace_members` rol sözlüğünü tekleştir (`owner/member` ile `admin/contributor/viewer` çelişkisini çöz).
+- [x] `workspace_members` rol sözlüğünü tekleştir: `OWNER`, `EDITOR`, `VIEWER`.
 - [ ] Ortak alan kayıtlarında görüntüleme, ekleme, düzenleme ve silme yetkilerini bir matris olarak tanımla.
-- [ ] Makbuz deposunu public yerine sahiplik denetimli private bucket olarak planla.
-- [ ] Piyasa fiyatı gibi ortak veriler için doğrudan istemci yazımı yerine Edge Function/sunucu görevi yaklaşımını değerlendir.
-- [ ] Her senkronize tablo için `updated_at`, `deleted_at` ve sürümleme gereksinimini kesinleştir.
+- [x] Makbuz deposunu public yerine sahiplik denetimli private bucket olarak planla.
+- [x] Piyasa fiyatı gibi ortak veriler için doğrudan istemci yazımı yerine Edge Function/sunucu görevi yaklaşımını seç.
+- [x] Her senkronize tablo için `updated_at`, `deleted_at` ve sürümleme gereksinimini kesinleştir.
 
 **Tamamlanma ölçütü:** Mobil istemci için güvenli API ve veri sözleşmesi açıkça tanımlıdır.
 
@@ -402,3 +402,5 @@ Bu adımın tamamlanmasından sonra önerilen ilk kod adımı: **3.1 — Ortak t
 |---|---|---|
 | 2026-08-03 | 0 / analiz | Web projesi incelendi; mobil mimari ve risk analizi hazırlandı. |
 | 2026-08-03 | 2.1 | KMP proje omurgası oluşturuldu. Android/iOS kimliği `com.feniqo.mobile`; API 26; Android debug derlemesi ve ortak modül host testleri başarılı; Git deposu başlatıldı. |
+| 2026-08-03 | 1.1 | Web ekranları, kullanıcı akışları, özellikler, V1 veri sözlüğü ve TypeScript/SQL riskleri `docs/WEB_REFERANS_ENVANTERI.md` içinde tamamlandı. |
+| 2026-08-03 | 1.2 | V1 kapsamı, V2/V3 ayrımı ve yedi temel ürün/mimari kararı proje sahibi tarafından onaylandı. |
