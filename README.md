@@ -1,4 +1,8 @@
-This is a Kotlin Multiplatform project targeting Android, iOS.
+# FeniqoMobil
+
+> 🚧 **Geliştirme aşamasında:** FeniqoMobil aktif olarak geliştirilmektedir. Henüz son kullanıcılar için hazır veya tam işlevsel bir uygulama değildir.
+
+FeniqoMobil, Android ve iOS'u hedefleyen bir Kotlin Multiplatform projesidir.
 
 * [/iosApp](./iosApp/iosApp) contains an iOS application. Even if you’re sharing your UI with Compose Multiplatform,
   you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
