@@ -1,0 +1,1415 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 2,
+    "identityHash": "23d2e1dc959c1e5121d02a8b531fb2b9",
+    "entities": [
+      {
+        "tableName": "profiles",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `email` TEXT NOT NULL, `full_name` TEXT, `currency_code` TEXT NOT NULL, `theme_code` TEXT NOT NULL, `language_code` TEXT NOT NULL, `active_workspace_id` TEXT, `created_at_epoch_ms` INTEGER NOT NULL, `sync_status` TEXT NOT NULL, `updated_at_epoch_ms` INTEGER NOT NULL, `local_updated_at_epoch_ms` INTEGER NOT NULL, `deleted_at_epoch_ms` INTEGER, `version` INTEGER NOT NULL, `base_version` INTEGER, `last_sync_error` TEXT, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "email",
+            "columnName": "email",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fullName",
+            "columnName": "full_name",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "currencyCode",
+            "columnName": "currency_code",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "themeCode",
+            "columnName": "theme_code",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "languageCode",
+            "columnName": "language_code",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "activeWorkspaceId",
+            "columnName": "active_workspace_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAtEpochMillis",
+            "columnName": "created_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.syncStatus",
+            "columnName": "sync_status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.updatedAtEpochMillis",
+            "columnName": "updated_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.localUpdatedAtEpochMillis",
+            "columnName": "local_updated_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.deletedAtEpochMillis",
+            "columnName": "deleted_at_epoch_ms",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sync.version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.baseVersion",
+            "columnName": "base_version",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sync.lastSyncError",
+            "columnName": "last_sync_error",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_profiles_email",
+            "unique": true,
+            "columnNames": [
+              "email"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_profiles_email` ON `${TABLE_NAME}` (`email`)"
+          },
+          {
+            "name": "index_profiles_active_workspace_id",
+            "unique": false,
+            "columnNames": [
+              "active_workspace_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_profiles_active_workspace_id` ON `${TABLE_NAME}` (`active_workspace_id`)"
+          },
+          {
+            "name": "index_profiles_deleted_at_epoch_ms",
+            "unique": false,
+            "columnNames": [
+              "deleted_at_epoch_ms"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_profiles_deleted_at_epoch_ms` ON `${TABLE_NAME}` (`deleted_at_epoch_ms`)"
+          }
+        ]
+      },
+      {
+        "tableName": "workspaces",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `normalized_name` TEXT NOT NULL, `owner_id` TEXT NOT NULL, `created_at_epoch_ms` INTEGER NOT NULL, `sync_status` TEXT NOT NULL, `updated_at_epoch_ms` INTEGER NOT NULL, `local_updated_at_epoch_ms` INTEGER NOT NULL, `deleted_at_epoch_ms` INTEGER, `version` INTEGER NOT NULL, `base_version` INTEGER, `last_sync_error` TEXT, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "normalizedName",
+            "columnName": "normalized_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ownerId",
+            "columnName": "owner_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAtEpochMillis",
+            "columnName": "created_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.syncStatus",
+            "columnName": "sync_status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.updatedAtEpochMillis",
+            "columnName": "updated_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.localUpdatedAtEpochMillis",
+            "columnName": "local_updated_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.deletedAtEpochMillis",
+            "columnName": "deleted_at_epoch_ms",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sync.version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.baseVersion",
+            "columnName": "base_version",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sync.lastSyncError",
+            "columnName": "last_sync_error",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_workspaces_owner_id",
+            "unique": false,
+            "columnNames": [
+              "owner_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_workspaces_owner_id` ON `${TABLE_NAME}` (`owner_id`)"
+          },
+          {
+            "name": "index_workspaces_normalized_name",
+            "unique": false,
+            "columnNames": [
+              "normalized_name"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_workspaces_normalized_name` ON `${TABLE_NAME}` (`normalized_name`)"
+          },
+          {
+            "name": "index_workspaces_deleted_at_epoch_ms",
+            "unique": false,
+            "columnNames": [
+              "deleted_at_epoch_ms"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_workspaces_deleted_at_epoch_ms` ON `${TABLE_NAME}` (`deleted_at_epoch_ms`)"
+          }
+        ]
+      },
+      {
+        "tableName": "workspace_members",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`workspace_id` TEXT NOT NULL, `user_id` TEXT NOT NULL, `role_code` TEXT NOT NULL, `joined_at_epoch_ms` INTEGER NOT NULL, `sync_status` TEXT NOT NULL, `updated_at_epoch_ms` INTEGER NOT NULL, `local_updated_at_epoch_ms` INTEGER NOT NULL, `deleted_at_epoch_ms` INTEGER, `version` INTEGER NOT NULL, `base_version` INTEGER, `last_sync_error` TEXT, PRIMARY KEY(`workspace_id`, `user_id`), FOREIGN KEY(`workspace_id`) REFERENCES `workspaces`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "workspaceId",
+            "columnName": "workspace_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "user_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "roleCode",
+            "columnName": "role_code",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "joinedAtEpochMillis",
+            "columnName": "joined_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.syncStatus",
+            "columnName": "sync_status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.updatedAtEpochMillis",
+            "columnName": "updated_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.localUpdatedAtEpochMillis",
+            "columnName": "local_updated_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.deletedAtEpochMillis",
+            "columnName": "deleted_at_epoch_ms",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sync.version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.baseVersion",
+            "columnName": "base_version",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sync.lastSyncError",
+            "columnName": "last_sync_error",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "workspace_id",
+            "user_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_workspace_members_workspace_id",
+            "unique": false,
+            "columnNames": [
+              "workspace_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_workspace_members_workspace_id` ON `${TABLE_NAME}` (`workspace_id`)"
+          },
+          {
+            "name": "index_workspace_members_user_id",
+            "unique": false,
+            "columnNames": [
+              "user_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_workspace_members_user_id` ON `${TABLE_NAME}` (`user_id`)"
+          },
+          {
+            "name": "index_workspace_members_workspace_id_role_code",
+            "unique": false,
+            "columnNames": [
+              "workspace_id",
+              "role_code"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_workspace_members_workspace_id_role_code` ON `${TABLE_NAME}` (`workspace_id`, `role_code`)"
+          },
+          {
+            "name": "index_workspace_members_deleted_at_epoch_ms",
+            "unique": false,
+            "columnNames": [
+              "deleted_at_epoch_ms"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_workspace_members_deleted_at_epoch_ms` ON `${TABLE_NAME}` (`deleted_at_epoch_ms`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "workspaces",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "workspace_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "categories",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `owner_id` TEXT, `workspace_id` TEXT, `scope_key` TEXT NOT NULL, `name` TEXT NOT NULL, `normalized_name` TEXT NOT NULL, `slug` TEXT, `type_code` TEXT NOT NULL, `color_hex` TEXT NOT NULL, `icon_key` TEXT, `is_default` INTEGER NOT NULL, `created_at_epoch_ms` INTEGER NOT NULL, `sync_status` TEXT NOT NULL, `updated_at_epoch_ms` INTEGER NOT NULL, `local_updated_at_epoch_ms` INTEGER NOT NULL, `deleted_at_epoch_ms` INTEGER, `version` INTEGER NOT NULL, `base_version` INTEGER, `last_sync_error` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`workspace_id`) REFERENCES `workspaces`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ownerId",
+            "columnName": "owner_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "workspaceId",
+            "columnName": "workspace_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "scopeKey",
+            "columnName": "scope_key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "normalizedName",
+            "columnName": "normalized_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "slug",
+            "columnName": "slug",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "typeCode",
+            "columnName": "type_code",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "colorHex",
+            "columnName": "color_hex",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "iconKey",
+            "columnName": "icon_key",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isDefault",
+            "columnName": "is_default",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAtEpochMillis",
+            "columnName": "created_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.syncStatus",
+            "columnName": "sync_status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.updatedAtEpochMillis",
+            "columnName": "updated_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.localUpdatedAtEpochMillis",
+            "columnName": "local_updated_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.deletedAtEpochMillis",
+            "columnName": "deleted_at_epoch_ms",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sync.version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.baseVersion",
+            "columnName": "base_version",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sync.lastSyncError",
+            "columnName": "last_sync_error",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_categories_owner_id",
+            "unique": false,
+            "columnNames": [
+              "owner_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_categories_owner_id` ON `${TABLE_NAME}` (`owner_id`)"
+          },
+          {
+            "name": "index_categories_workspace_id",
+            "unique": false,
+            "columnNames": [
+              "workspace_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_categories_workspace_id` ON `${TABLE_NAME}` (`workspace_id`)"
+          },
+          {
+            "name": "index_categories_type_code",
+            "unique": false,
+            "columnNames": [
+              "type_code"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_categories_type_code` ON `${TABLE_NAME}` (`type_code`)"
+          },
+          {
+            "name": "index_categories_normalized_name",
+            "unique": false,
+            "columnNames": [
+              "normalized_name"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_categories_normalized_name` ON `${TABLE_NAME}` (`normalized_name`)"
+          },
+          {
+            "name": "index_categories_slug",
+            "unique": true,
+            "columnNames": [
+              "slug"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_categories_slug` ON `${TABLE_NAME}` (`slug`)"
+          },
+          {
+            "name": "index_categories_scope_key_type_code_normalized_name",
+            "unique": true,
+            "columnNames": [
+              "scope_key",
+              "type_code",
+              "normalized_name"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_categories_scope_key_type_code_normalized_name` ON `${TABLE_NAME}` (`scope_key`, `type_code`, `normalized_name`)"
+          },
+          {
+            "name": "index_categories_deleted_at_epoch_ms",
+            "unique": false,
+            "columnNames": [
+              "deleted_at_epoch_ms"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_categories_deleted_at_epoch_ms` ON `${TABLE_NAME}` (`deleted_at_epoch_ms`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "workspaces",
+            "onDelete": "SET NULL",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "workspace_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "transactions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `owner_id` TEXT NOT NULL, `workspace_id` TEXT, `amount_minor` INTEGER NOT NULL, `currency_code` TEXT NOT NULL, `type_code` TEXT NOT NULL, `category_id` TEXT NOT NULL, `description` TEXT, `search_text` TEXT NOT NULL, `payment_method_code` TEXT NOT NULL, `transaction_date` TEXT NOT NULL, `receipt_path` TEXT, `installment_number` INTEGER, `total_installments` INTEGER, `installment_group_id` TEXT, `created_at_epoch_ms` INTEGER NOT NULL, `sync_status` TEXT NOT NULL, `updated_at_epoch_ms` INTEGER NOT NULL, `local_updated_at_epoch_ms` INTEGER NOT NULL, `deleted_at_epoch_ms` INTEGER, `version` INTEGER NOT NULL, `base_version` INTEGER, `last_sync_error` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`category_id`) REFERENCES `categories`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT , FOREIGN KEY(`workspace_id`) REFERENCES `workspaces`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ownerId",
+            "columnName": "owner_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workspaceId",
+            "columnName": "workspace_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "amountMinor",
+            "columnName": "amount_minor",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "currencyCode",
+            "columnName": "currency_code",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "typeCode",
+            "columnName": "type_code",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoryId",
+            "columnName": "category_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "searchText",
+            "columnName": "search_text",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "paymentMethodCode",
+            "columnName": "payment_method_code",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "transactionDate",
+            "columnName": "transaction_date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "receiptPath",
+            "columnName": "receipt_path",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "installmentNumber",
+            "columnName": "installment_number",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "totalInstallments",
+            "columnName": "total_installments",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "installmentGroupId",
+            "columnName": "installment_group_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAtEpochMillis",
+            "columnName": "created_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.syncStatus",
+            "columnName": "sync_status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.updatedAtEpochMillis",
+            "columnName": "updated_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.localUpdatedAtEpochMillis",
+            "columnName": "local_updated_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.deletedAtEpochMillis",
+            "columnName": "deleted_at_epoch_ms",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sync.version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.baseVersion",
+            "columnName": "base_version",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sync.lastSyncError",
+            "columnName": "last_sync_error",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_transactions_owner_id",
+            "unique": false,
+            "columnNames": [
+              "owner_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_owner_id` ON `${TABLE_NAME}` (`owner_id`)"
+          },
+          {
+            "name": "index_transactions_workspace_id",
+            "unique": false,
+            "columnNames": [
+              "workspace_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_workspace_id` ON `${TABLE_NAME}` (`workspace_id`)"
+          },
+          {
+            "name": "index_transactions_category_id",
+            "unique": false,
+            "columnNames": [
+              "category_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_category_id` ON `${TABLE_NAME}` (`category_id`)"
+          },
+          {
+            "name": "index_transactions_transaction_date",
+            "unique": false,
+            "columnNames": [
+              "transaction_date"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_transaction_date` ON `${TABLE_NAME}` (`transaction_date`)"
+          },
+          {
+            "name": "index_transactions_type_code",
+            "unique": false,
+            "columnNames": [
+              "type_code"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_type_code` ON `${TABLE_NAME}` (`type_code`)"
+          },
+          {
+            "name": "index_transactions_payment_method_code",
+            "unique": false,
+            "columnNames": [
+              "payment_method_code"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_payment_method_code` ON `${TABLE_NAME}` (`payment_method_code`)"
+          },
+          {
+            "name": "index_transactions_search_text",
+            "unique": false,
+            "columnNames": [
+              "search_text"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_search_text` ON `${TABLE_NAME}` (`search_text`)"
+          },
+          {
+            "name": "index_transactions_owner_id_transaction_date",
+            "unique": false,
+            "columnNames": [
+              "owner_id",
+              "transaction_date"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_owner_id_transaction_date` ON `${TABLE_NAME}` (`owner_id`, `transaction_date`)"
+          },
+          {
+            "name": "index_transactions_workspace_id_transaction_date",
+            "unique": false,
+            "columnNames": [
+              "workspace_id",
+              "transaction_date"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_workspace_id_transaction_date` ON `${TABLE_NAME}` (`workspace_id`, `transaction_date`)"
+          },
+          {
+            "name": "index_transactions_deleted_at_epoch_ms",
+            "unique": false,
+            "columnNames": [
+              "deleted_at_epoch_ms"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_deleted_at_epoch_ms` ON `${TABLE_NAME}` (`deleted_at_epoch_ms`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "categories",
+            "onDelete": "RESTRICT",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "category_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "workspaces",
+            "onDelete": "SET NULL",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "workspace_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "budgets",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `owner_id` TEXT NOT NULL, `workspace_id` TEXT, `scope_key` TEXT NOT NULL, `category_id` TEXT NOT NULL, `month` TEXT NOT NULL, `limit_minor` INTEGER NOT NULL, `currency_code` TEXT NOT NULL, `created_at_epoch_ms` INTEGER NOT NULL, `sync_status` TEXT NOT NULL, `updated_at_epoch_ms` INTEGER NOT NULL, `local_updated_at_epoch_ms` INTEGER NOT NULL, `deleted_at_epoch_ms` INTEGER, `version` INTEGER NOT NULL, `base_version` INTEGER, `last_sync_error` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`category_id`) REFERENCES `categories`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT , FOREIGN KEY(`workspace_id`) REFERENCES `workspaces`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ownerId",
+            "columnName": "owner_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workspaceId",
+            "columnName": "workspace_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "scopeKey",
+            "columnName": "scope_key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoryId",
+            "columnName": "category_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "month",
+            "columnName": "month",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "limitMinor",
+            "columnName": "limit_minor",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "currencyCode",
+            "columnName": "currency_code",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAtEpochMillis",
+            "columnName": "created_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.syncStatus",
+            "columnName": "sync_status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.updatedAtEpochMillis",
+            "columnName": "updated_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.localUpdatedAtEpochMillis",
+            "columnName": "local_updated_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.deletedAtEpochMillis",
+            "columnName": "deleted_at_epoch_ms",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sync.version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.baseVersion",
+            "columnName": "base_version",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sync.lastSyncError",
+            "columnName": "last_sync_error",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_budgets_owner_id",
+            "unique": false,
+            "columnNames": [
+              "owner_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_budgets_owner_id` ON `${TABLE_NAME}` (`owner_id`)"
+          },
+          {
+            "name": "index_budgets_workspace_id",
+            "unique": false,
+            "columnNames": [
+              "workspace_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_budgets_workspace_id` ON `${TABLE_NAME}` (`workspace_id`)"
+          },
+          {
+            "name": "index_budgets_category_id",
+            "unique": false,
+            "columnNames": [
+              "category_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_budgets_category_id` ON `${TABLE_NAME}` (`category_id`)"
+          },
+          {
+            "name": "index_budgets_month",
+            "unique": false,
+            "columnNames": [
+              "month"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_budgets_month` ON `${TABLE_NAME}` (`month`)"
+          },
+          {
+            "name": "index_budgets_scope_key_category_id_month",
+            "unique": true,
+            "columnNames": [
+              "scope_key",
+              "category_id",
+              "month"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_budgets_scope_key_category_id_month` ON `${TABLE_NAME}` (`scope_key`, `category_id`, `month`)"
+          },
+          {
+            "name": "index_budgets_workspace_id_month",
+            "unique": false,
+            "columnNames": [
+              "workspace_id",
+              "month"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_budgets_workspace_id_month` ON `${TABLE_NAME}` (`workspace_id`, `month`)"
+          },
+          {
+            "name": "index_budgets_deleted_at_epoch_ms",
+            "unique": false,
+            "columnNames": [
+              "deleted_at_epoch_ms"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_budgets_deleted_at_epoch_ms` ON `${TABLE_NAME}` (`deleted_at_epoch_ms`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "categories",
+            "onDelete": "RESTRICT",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "category_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "workspaces",
+            "onDelete": "SET NULL",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "workspace_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "tags",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `owner_id` TEXT NOT NULL, `workspace_id` TEXT, `scope_key` TEXT NOT NULL, `name` TEXT NOT NULL, `normalized_name` TEXT NOT NULL, `created_at_epoch_ms` INTEGER NOT NULL, `sync_status` TEXT NOT NULL, `updated_at_epoch_ms` INTEGER NOT NULL, `local_updated_at_epoch_ms` INTEGER NOT NULL, `deleted_at_epoch_ms` INTEGER, `version` INTEGER NOT NULL, `base_version` INTEGER, `last_sync_error` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`workspace_id`) REFERENCES `workspaces`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ownerId",
+            "columnName": "owner_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workspaceId",
+            "columnName": "workspace_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "scopeKey",
+            "columnName": "scope_key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "normalizedName",
+            "columnName": "normalized_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAtEpochMillis",
+            "columnName": "created_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.syncStatus",
+            "columnName": "sync_status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.updatedAtEpochMillis",
+            "columnName": "updated_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.localUpdatedAtEpochMillis",
+            "columnName": "local_updated_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.deletedAtEpochMillis",
+            "columnName": "deleted_at_epoch_ms",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sync.version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.baseVersion",
+            "columnName": "base_version",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sync.lastSyncError",
+            "columnName": "last_sync_error",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_tags_owner_id",
+            "unique": false,
+            "columnNames": [
+              "owner_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_tags_owner_id` ON `${TABLE_NAME}` (`owner_id`)"
+          },
+          {
+            "name": "index_tags_workspace_id",
+            "unique": false,
+            "columnNames": [
+              "workspace_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_tags_workspace_id` ON `${TABLE_NAME}` (`workspace_id`)"
+          },
+          {
+            "name": "index_tags_normalized_name",
+            "unique": false,
+            "columnNames": [
+              "normalized_name"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_tags_normalized_name` ON `${TABLE_NAME}` (`normalized_name`)"
+          },
+          {
+            "name": "index_tags_scope_key_normalized_name",
+            "unique": true,
+            "columnNames": [
+              "scope_key",
+              "normalized_name"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_tags_scope_key_normalized_name` ON `${TABLE_NAME}` (`scope_key`, `normalized_name`)"
+          },
+          {
+            "name": "index_tags_deleted_at_epoch_ms",
+            "unique": false,
+            "columnNames": [
+              "deleted_at_epoch_ms"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_tags_deleted_at_epoch_ms` ON `${TABLE_NAME}` (`deleted_at_epoch_ms`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "workspaces",
+            "onDelete": "SET NULL",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "workspace_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "transaction_tags",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`transaction_id` TEXT NOT NULL, `tag_id` TEXT NOT NULL, `created_at_epoch_ms` INTEGER NOT NULL, `sync_status` TEXT NOT NULL, `updated_at_epoch_ms` INTEGER NOT NULL, `local_updated_at_epoch_ms` INTEGER NOT NULL, `deleted_at_epoch_ms` INTEGER, `version` INTEGER NOT NULL, `base_version` INTEGER, `last_sync_error` TEXT, PRIMARY KEY(`transaction_id`, `tag_id`), FOREIGN KEY(`transaction_id`) REFERENCES `transactions`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`tag_id`) REFERENCES `tags`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "transactionId",
+            "columnName": "transaction_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tagId",
+            "columnName": "tag_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAtEpochMillis",
+            "columnName": "created_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.syncStatus",
+            "columnName": "sync_status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.updatedAtEpochMillis",
+            "columnName": "updated_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.localUpdatedAtEpochMillis",
+            "columnName": "local_updated_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.deletedAtEpochMillis",
+            "columnName": "deleted_at_epoch_ms",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sync.version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sync.baseVersion",
+            "columnName": "base_version",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sync.lastSyncError",
+            "columnName": "last_sync_error",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "transaction_id",
+            "tag_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_transaction_tags_transaction_id",
+            "unique": false,
+            "columnNames": [
+              "transaction_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transaction_tags_transaction_id` ON `${TABLE_NAME}` (`transaction_id`)"
+          },
+          {
+            "name": "index_transaction_tags_tag_id",
+            "unique": false,
+            "columnNames": [
+              "tag_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transaction_tags_tag_id` ON `${TABLE_NAME}` (`tag_id`)"
+          },
+          {
+            "name": "index_transaction_tags_deleted_at_epoch_ms",
+            "unique": false,
+            "columnNames": [
+              "deleted_at_epoch_ms"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transaction_tags_deleted_at_epoch_ms` ON `${TABLE_NAME}` (`deleted_at_epoch_ms`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "transactions",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "transaction_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "tags",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "tag_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "sync_operations",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`operation_id` TEXT NOT NULL, `entity_type_code` TEXT NOT NULL, `entity_id` TEXT NOT NULL, `operation_type_code` TEXT NOT NULL, `base_version` INTEGER, `status_code` TEXT NOT NULL, `attempt_count` INTEGER NOT NULL, `last_error` TEXT, `next_attempt_at_epoch_ms` INTEGER NOT NULL, `created_at_epoch_ms` INTEGER NOT NULL, `updated_at_epoch_ms` INTEGER NOT NULL, PRIMARY KEY(`operation_id`))",
+        "fields": [
+          {
+            "fieldPath": "operationId",
+            "columnName": "operation_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "entityTypeCode",
+            "columnName": "entity_type_code",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "entityId",
+            "columnName": "entity_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "operationTypeCode",
+            "columnName": "operation_type_code",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "baseVersion",
+            "columnName": "base_version",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "statusCode",
+            "columnName": "status_code",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "attemptCount",
+            "columnName": "attempt_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastError",
+            "columnName": "last_error",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "nextAttemptAtEpochMillis",
+            "columnName": "next_attempt_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAtEpochMillis",
+            "columnName": "created_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAtEpochMillis",
+            "columnName": "updated_at_epoch_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "operation_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_sync_operations_status_code_next_attempt_at_epoch_ms_created_at_epoch_ms",
+            "unique": false,
+            "columnNames": [
+              "status_code",
+              "next_attempt_at_epoch_ms",
+              "created_at_epoch_ms"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_sync_operations_status_code_next_attempt_at_epoch_ms_created_at_epoch_ms` ON `${TABLE_NAME}` (`status_code`, `next_attempt_at_epoch_ms`, `created_at_epoch_ms`)"
+          },
+          {
+            "name": "index_sync_operations_entity_type_code_entity_id",
+            "unique": false,
+            "columnNames": [
+              "entity_type_code",
+              "entity_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_sync_operations_entity_type_code_entity_id` ON `${TABLE_NAME}` (`entity_type_code`, `entity_id`)"
+          },
+          {
+            "name": "index_sync_operations_created_at_epoch_ms",
+            "unique": false,
+            "columnNames": [
+              "created_at_epoch_ms"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_sync_operations_created_at_epoch_ms` ON `${TABLE_NAME}` (`created_at_epoch_ms`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '23d2e1dc959c1e5121d02a8b531fb2b9')"
+    ]
+  }
+}

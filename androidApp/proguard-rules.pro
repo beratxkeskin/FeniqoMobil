@@ -19,3 +19,10 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Room üretimi veritabanı uygulaması release minification sırasında bulunabilmelidir.
+-keep class * extends androidx.room.RoomDatabase { <init>(); }
+
+# SQLCipher native JNI katmanı bu sınıflara paket/sınıf adıyla erişir.
+-keep,includedescriptorclasses class net.zetetic.database.sqlcipher.** { *; }
+-keep,includedescriptorclasses interface net.zetetic.database.sqlcipher.** { *; }

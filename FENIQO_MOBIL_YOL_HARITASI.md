@@ -1,6 +1,6 @@
 # FeniqoMobil — Uçtan Uca Geliştirme Yol Haritası
 
-> **Durum:** Devam ediyor — son tamamlanan adım: 1.3; mevcut adım: 2.2
+> **Durum:** Devam ediyor — son tamamlanan adım: 4.4; sonraki adım: 5.1
 > **Ana hedef:** Feniqo web uygulamasını referans alarak, Android'de native çalışan; offline-first; Supabase ile güvenli biçimde senkronize olan ve gelecekte iOS'a Kotlin Multiplatform (KMP) ile taşınabilen profesyonel bir mobil uygulama geliştirmek.
 
 Bu dosya projenin çalışma sözleşmesidir. Bir adım tamamlandığında ilgili kutu işaretlenir ve kısa bir not eklenir. Sohbette yalnızca örneğin **"2.3'te kalmıştık"** demen, aynı noktadan devam etmemiz için yeterlidir.
@@ -103,21 +103,21 @@ com.feniqo.mobile/
 
 ### 2.2 Temel Android bağımlılıkları
 
-- [ ] Compose + Material 3 bağımlılıklarını ekle.
-- [ ] Hilt ve KSP kurulumunu yap.
-- [ ] Navigation Compose, Lifecycle ve ViewModel bağımlılıklarını ekle.
-- [ ] Coroutines, Serialization ve Ktor bağımlılıklarını ekle.
-- [ ] Test bağımlılıklarını ekle: JUnit, coroutine test, Turbine, MockK/Fake yaklaşımı.
+- [x] Compose + Material 3 bağımlılıklarını ekle.
+- [x] Hilt ve KSP kurulumunu yap.
+- [x] Navigation Compose, Lifecycle ve ViewModel bağımlılıklarını ekle.
+- [x] Coroutines, Serialization ve Ktor bağımlılıklarını ekle.
+- [x] Test bağımlılıklarını ekle: JUnit, coroutine test, Turbine, MockK/Fake yaklaşımı.
 
 **Doğrulama:** Boş uygulama derlenir ve emülatörde açılır.
 
 ### 2.3 Tema, tasarım sistemi ve temel UI kabuğu
 
-- [ ] Emerald Phoenix marka renklerini Material 3 color scheme'e dönüştür.
-- [ ] Açık, koyu ve sistem teması desteğini kur.
-- [ ] Tipografi, boşluk, köşe yarıçapı ve durum renklerini token olarak tanımla.
-- [ ] Tekrar kullanılabilir bileşenleri oluştur: yükleniyor, boş durum, hata, onay diyaloğu, snackbar.
-- [ ] Bottom navigation ve uygulama iskeletini tasarla.
+- [x] Emerald Phoenix marka renklerini Material 3 color scheme'e dönüştür.
+- [x] Açık, koyu ve sistem teması desteğini kur.
+- [x] Tipografi, boşluk, köşe yarıçapı ve durum renklerini token olarak tanımla.
+- [x] Tekrar kullanılabilir bileşenleri oluştur: yükleniyor, boş durum, hata, onay diyaloğu, snackbar.
+- [x] Bottom navigation ve uygulama iskeletini tasarla.
 
 **Doğrulama:** Tema değişimi uygulama yeniden açıldığında korunur; erişilebilir kontrast kontrol edilir.
 
@@ -127,42 +127,42 @@ com.feniqo.mobile/
 
 ### 3.1 Ortak temel tipler
 
-- [ ] `Money`, `Currency`, `EntityId`, `LocalDate`, `SyncStatus` ve ortak hata modellerini tasarla.
-- [ ] Para formatlama ile para hesaplamasını ayır.
-- [ ] Zaman dilimi kurallarını belirle: işlem tarihi yerel tarih, sunucu zamanları UTC.
+- [x] `Money`, `Currency`, `EntityId`, `LocalDate`, `SyncStatus` ve ortak hata modellerini tasarla.
+- [x] Para formatlama ile para hesaplamasını ayır.
+- [x] Zaman dilimi kurallarını belirle: işlem tarihi yerel tarih, sunucu zamanları UTC.
 
 ### 3.2 Çekirdek domain modelleri
 
-- [ ] `UserProfile` modelini oluştur.
-- [ ] `Workspace` ve `WorkspaceMember` modellerini oluştur.
-- [ ] `Category` modelini oluştur.
-- [ ] `Transaction` modelini oluştur; taksit, ödeme yöntemi ve makbuz alanlarını dahil et.
-- [ ] `Tag` ve işlem-etiket ilişkisini modelle.
-- [ ] `Budget` modelini oluştur.
+- [x] `UserProfile` modelini oluştur.
+- [x] `Workspace` ve `WorkspaceMember` modellerini oluştur.
+- [x] `Category` modelini oluştur.
+- [x] `Transaction` modelini oluştur; taksit, ödeme yöntemi ve makbuz alanlarını dahil et.
+- [x] `Tag` ve işlem-etiket ilişkisini modelle.
+- [x] `Budget` modelini oluştur.
 
 ### 3.3 İkinci dalga domain modelleri
 
-- [ ] `RecurringTransaction` ve tekrar kuralını oluştur.
-- [ ] `Goal`, `Debt`, `Subscription` modellerini oluştur.
-- [ ] `Asset` ve piyasa fiyatı modellerini oluştur.
-- [ ] Dashboard özetleri, MoneyScore ve rapor modellerini oluştur.
+- [x] `RecurringTransaction` ve tekrar kuralını oluştur.
+- [x] `Goal`, `Debt`, `Subscription` modellerini oluştur.
+- [x] `Asset` ve piyasa fiyatı modellerini oluştur.
+- [x] Dashboard özetleri, MoneyScore ve rapor modellerini oluştur.
 
 **Tamamlanma ölçütü:** Bu sınıflar Android, Room, Supabase veya Compose import etmez.
 
 ### 3.4 Repository sözleşmeleri
 
-- [ ] `AuthRepository` arayüzünü tanımla.
-- [ ] `TransactionRepository`, `CategoryRepository`, `BudgetRepository` arayüzlerini tanımla.
-- [ ] `WorkspaceRepository`, `SyncRepository` ve tercih/güvenlik arayüzlerini tanımla.
-- [ ] Her okuma metodunu uygun `Flow` türüyle tasarla.
-- [ ] Her yazma metodunun başarılı/başarısız sonucunu tanımlı bir sonuç tipiyle döndürmesini sağla.
+- [x] `AuthRepository` arayüzünü tanımla.
+- [x] `TransactionRepository`, `CategoryRepository`, `BudgetRepository` arayüzlerini tanımla.
+- [x] `WorkspaceRepository`, `SyncRepository` ve tercih/güvenlik arayüzlerini tanımla.
+- [x] Her okuma metodunu uygun `Flow` türüyle tasarla.
+- [x] Her yazma metodunun başarılı/başarısız sonucunu tanımlı bir sonuç tipiyle döndürmesini sağla.
 
 ### 3.5 Use case'ler
 
-- [ ] İlk use case'ler: işlem ekle, düzenle, sil, filtrele, kategori ekle ve dashboard özetini getir.
-- [ ] İşlem doğrulamalarını use case katmanında uygula.
-- [ ] MoneyScore ve bütçe hesaplamalarını saf fonksiyon/use case olarak uygula.
-- [ ] Her use case için birim testi yaz.
+- [x] İlk use case'ler: işlem ekle, düzenle, sil, filtrele, kategori ekle ve dashboard özetini getir.
+- [x] İşlem doğrulamalarını use case katmanında uygula.
+- [x] MoneyScore ve bütçe hesaplamalarını saf fonksiyon/use case olarak uygula.
+- [x] Her use case için birim testi yaz.
 
 ---
 
@@ -170,33 +170,33 @@ com.feniqo.mobile/
 
 ### 4.1 Room şeması
 
-- [ ] Domain modellerinden ayrı Room entity sınıflarını oluştur.
-- [ ] Her entity'ye yerel senkronizasyon alanlarını ekle: `syncStatus`, `updatedAt`, `deletedAt`, `version`.
-- [ ] Primary key, foreign key, indeks ve unique kısıtlarını tasarla.
-- [ ] `TransactionTagCrossRef` gibi ilişki tablolarını oluştur.
-- [ ] Arama, tarih ve çalışma alanı filtreleri için indeksleri tanımla.
+- [x] Domain modellerinden ayrı Room entity sınıflarını oluştur.
+- [x] Her entity'ye yerel senkronizasyon alanlarını ekle: `syncStatus`, `updatedAt`, `deletedAt`, `version`.
+- [x] Primary key, foreign key, indeks ve unique kısıtlarını tasarla.
+- [x] `TransactionTagCrossRef` gibi ilişki tablolarını oluştur.
+- [x] Arama, tarih ve çalışma alanı filtreleri için indeksleri tanımla.
 
 ### 4.2 DAO'lar ve mapper'lar
 
-- [ ] Her çekirdek model için DAO oluştur.
-- [ ] DAO okumalarını `Flow` ile sun.
-- [ ] Çok tablolulu yazma işlemlerini Room transaction içinde tut.
-- [ ] Entity ↔ domain dönüşümlerini `data.mapper` altında yaz.
-- [ ] DAO testlerini in-memory test veritabanında çalıştır.
+- [x] Her çekirdek model için DAO oluştur.
+- [x] DAO okumalarını `Flow` ile sun.
+- [x] Çok tablolulu yazma işlemlerini Room transaction içinde tut.
+- [x] Entity ↔ domain dönüşümlerini `data.mapper` altında yaz.
+- [x] DAO testlerini in-memory test veritabanında çalıştır.
 
 ### 4.3 Şifreli yerel veritabanı
 
-- [ ] Android SQLCipher entegrasyonunu yap.
-- [ ] Veritabanı parolasını Android Keystore koruması altında oluştur/sakla.
-- [ ] Anahtar kaybı, uygulama kaldırma ve cihaz değişimi senaryolarını belgele.
-- [ ] Şifrelenmiş DB'nin gerçekten açıldığını entegrasyon testiyle doğrula.
+- [x] Android SQLCipher entegrasyonunu yap.
+- [x] Veritabanı parolasını Android Keystore koruması altında oluştur/sakla.
+- [x] Anahtar kaybı, uygulama kaldırma ve cihaz değişimi senaryolarını belgele.
+- [x] Şifrelenmiş DB'nin gerçekten açıldığını entegrasyon testiyle doğrula.
 
 ### 4.4 Offline yazma kuyruğu
 
-- [ ] `sync_operations`/outbox tablosunu tasarla.
-- [ ] Ekleme, güncelleme ve silme olaylarını sırayla kuyruğa ekle.
-- [ ] İşlemi yerel DB + outbox'a atomik olarak kaydet.
-- [ ] Başarısız senkronizasyonda deneme sayısı, son hata ve geri çekilme bilgisini kaydet.
+- [x] `sync_operations`/outbox tablosunu tasarla.
+- [x] Ekleme, güncelleme ve silme olaylarını sırayla kuyruğa ekle.
+- [x] İşlemi yerel DB + outbox'a atomik olarak kaydet.
+- [x] Başarısız senkronizasyonda deneme sayısı, son hata ve geri çekilme bilgisini kaydet.
 
 **Tamamlanma ölçütü:** İnternet kapalıyken eklenen bir işlem kapanıp açıldıktan sonra da görünür.
 
@@ -392,9 +392,9 @@ com.feniqo.mobile/
 
 ## Başlangıç sırası
 
-Şu an başlanacak adım: **2.2 — Temel Android bağımlılıkları**.
+Sonraki teknik adım: **5.1 — Supabase istemcisi ve oturum**.
 
-Bu adımın tamamlanmasından sonra önerilen ilk kod adımı: **3.1 — Ortak temel tipler**. Önce modelleri anlamlandıracak, sonra repository arayüzlerine, Room'a, Supabase'e ve UI'a geçeceğiz. Böylece her katmanın neden var olduğunu uygulayarak öğrenmiş olacaksın.
+Bu adımın tamamlanmasından sonra önerilen ilk kod adımı: **5.1 — Supabase istemcisi ve oturum**. Publishable key kullanan KMP istemci yapılandırmasını kurup güvenli oturum yaşam döngüsünü repository sınırının arkasına alacağız.
 
 ## İlerleme notları
 
@@ -405,3 +405,14 @@ Bu adımın tamamlanmasından sonra önerilen ilk kod adımı: **3.1 — Ortak t
 | 2026-08-03 | 1.1 | Web ekranları, kullanıcı akışları, özellikler, V1 veri sözlüğü ve TypeScript/SQL riskleri `docs/WEB_REFERANS_ENVANTERI.md` içinde tamamlandı. |
 | 2026-08-03 | 1.2 | V1 kapsamı, V2/V3 ayrımı ve yedi temel ürün/mimari kararı proje sahibi tarafından onaylandı. |
 | 2026-08-03 | 1.3 | V1 RLS ve ilerideki workspace rol matrisleri, güvenli migration sırası, para dönüşümü, soft-delete/version sync ve test/onay kapısı `docs/SUPABASE_V1_GUVENLIK_VE_MIGRATION_PLANI.md` içinde tamamlandı; canlı veritabanına henüz SQL uygulanmadı. |
+| 2026-08-03 | 2.2 | Compose/Material 3, Hilt/KSP, Navigation Compose, Lifecycle/ViewModel, Coroutines, Serialization, Ktor ve test bağımlılıkları Version Catalog ile kuruldu. Android debug derlemesi doğrulandı; ortak testler için KMP source set yerleşimi hazırlandı. |
+| 2026-08-05 | 2.3 | Emerald Phoenix Material 3 teması, açık/koyu/sistem modu, Android DataStore ile kalıcı tema seçimi, ortak tasarım token'ları ve geri bildirim bileşenleri, bottom navigation kabuğu tamamlandı. Debug APK emülatörde doğrulandı; koyu tema uygulama yeniden açıldıktan sonra korundu. Temel kontrast oranları 6,45:1 ve üzeri ölçüldü. |
+| 2026-08-05 | 3.1 | `sharedLogic/commonMain` içinde `Money` (Long küçük birim), `Currency`, `EntityId`, KMP uyumlu `LocalDate`, `SyncStatus`, `AppError` ve işlem tarihi politikası oluşturuldu. Para hesaplaması gösterimden ayrıldı; işlem tarihi yerel tarih ve sunucu zamanları UTC sözleşmesi belgelendi. Ortak modül testleri ve Android debug APK derlemesi doğrulandı. |
+| 2026-08-05 | 3.2 | `UserProfile`, çalışma alanı/üyelik/rol, kategori, işlem, taksit, ödeme yöntemi, private makbuz yolu, etiket ilişkisi ve aylık bütçe modelleri `sharedLogic/commonMain` içinde oluşturuldu. Webdeki serbest metin ve `number` riskleri kararlı enum, normalize ilişki ve `Money` ile giderildi; ortak testler başarıyla geçti. |
+| 2026-08-05 | 3.3 | Tekrarlayan işlem ve tekrar kuralı; hedef, borç/ödeme geçmişi, abonelik; ölçekli varlık miktarı, piyasa fiyatı; dashboard, MoneyScore ve dönem raporu modelleri ortak domain katmanında oluşturuldu. Negatif net sonuçlar `MoneyDelta`, oranlar baz puan ile modellendi. Android host ortak testleri temiz derlemeyle başarıyla geçti; platform importu bulunmadı. |
+| 2026-08-05 | 3.4 | Auth, işlem, kategori, bütçe, çalışma alanı, senkronizasyon, tercih ve güvenlik repository sözleşmeleri ortak domain katmanında tanımlandı. Tüm okumalar `Flow`, tüm mutasyonlar `RepositoryResult` ve `AppError` kullanır. Coroutines public sözleşmede kullanıldığı için `api` olarak açıldı; fake repository sözleşme testleri ve ortak Android host testleri başarıyla geçti. |
+| 2026-08-05 | 3.5 | İşlem ekleme, güncelleme, soft-delete, filtreleme, kategori ekleme ve dashboard gözlem use case'leri oluşturuldu. Sahiplik aktif oturumdan atanır; tutar, gelecek tarih, açıklama ve kategori türü doğrulamaları use case katmanındadır. Bütçe ilerlemesi ve 30/30/20/20 ağırlıklı MoneyScore saf KMP hesaplarıyla, para ve oranlarda `Double` kullanmadan geliştirildi. Dokuz yeni use case testi dâhil tüm ortak Android host testleri geçti. |
+| 2026-08-05 | 4.1 | Room KMP 2.8.4 ve bundled SQLite 2.6.2 kuruldu. Profil, workspace/üyelik, kategori, işlem, bütçe, etiket ve transaction-tag için domain'den ayrı 8 entity; ortak sync metadata, primary/foreign key, unique ve filtre indeksleri tanımlandı. Room v1 JSON şeması üretildi; Android host testleri 26/26 ve iOS Simulator ARM64 derlemesi başarılı oldu. iOS kontrolünde bulunan JVM'e özel value class işaretleri KMP uyumlu data class sözleşmelerine çevrildi. |
+| 2026-08-05 | 4.2 | Profil, workspace/üyelik, kategori, işlem, bütçe ve etiket DAO'ları oluşturuldu; normal okumalar soft-delete kayıtlarını dışlayan `Flow` sorguları olarak sunuldu. İşlem, etiket ve ilişki kayıtları tek Room transaction içinde yazıldı. Entity-domain mapper'ları ve round-trip testleri eklendi. Robolectric üzerindeki in-memory Room testleri dâhil Android host testleri 30/30, iOS Simulator ARM64 derlemesi başarılı oldu. |
+| 2026-08-09 | 4.3 | SQLCipher for Android 4.17.0, Room SupportSQLite uyumluluk modu ve Hilt singleton DB grafiği kuruldu. Rastgele 32 bayt DB parolası Android Keystore AES-256-GCM anahtarıyla korunup `noBackupFilesDir` altında atomik zarf olarak saklandı; Android backup kapatıldı ve anahtar yaşam döngüsü belgelendi. Gerçek emülatörde şifreli dosya başlığı, doğru anahtarla yeniden açma ve yanlış anahtarı reddetme testi 1/1 geçti. |
+| 2026-08-09 | 4.4 | Room şeması v2'ye yükseltilerek `sync_operations` outbox tablosu, indeksleri, DAO ve v1→v2 migration eklendi. Profil, workspace, kategori, bütçe ve işlem mutasyonları entity + outbox olarak tek Room transaction içinde yazılıyor. Create/update/delete sırası, benzersiz işlem kimliği, deneme sayısı, hata ve 15 saniye–6 saat üssel geri çekilme kalıcı tutuluyor. Kapanıp açılma kalıcılığı ve rollback testleri dâhil Android host testleri 33/33, iOS Simulator ARM64 derlemesi başarılı oldu. |
