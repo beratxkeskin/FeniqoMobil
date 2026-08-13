@@ -1,6 +1,6 @@
 # FeniqoMobil — Uçtan Uca Geliştirme Yol Haritası
 
-> **Durum:** Devam ediyor — son tamamlanan adım: 4.4; sonraki adım: 5.1
+> **Durum:** Devam ediyor — son tamamlanan Android-first ana adım: 5.2; sonraki adım: 5.3
 > **Ana hedef:** Feniqo web uygulamasını referans alarak, Android'de native çalışan; offline-first; Supabase ile güvenli biçimde senkronize olan ve gelecekte iOS'a Kotlin Multiplatform (KMP) ile taşınabilen profesyonel bir mobil uygulama geliştirmek.
 
 Bu dosya projenin çalışma sözleşmesidir. Bir adım tamamlandığında ilgili kutu işaretlenir ve kısa bir not eklenir. Sohbette yalnızca örneğin **"2.3'te kalmıştık"** demen, aynı noktadan devam etmemiz için yeterlidir.
@@ -206,18 +206,18 @@ com.feniqo.mobile/
 
 ### 5.1 Supabase istemcisi ve oturum
 
-- [ ] Supabase Kotlin SDK ve hedefe uygun Ktor istemcisini ekle.
+- [x] Supabase Kotlin SDK ve hedefe uygun Ktor istemcisini ekle.
 - [ ] URL ve publishable key'i güvenli build configuration üzerinden sağla; gizli service-role anahtarını uygulamaya koyma.
-- [ ] E-posta/şifre ile kayıt, giriş, oturum yenileme ve çıkış akışlarını oluştur.
+- [x] E-posta/şifre ile kayıt, giriş, oturum yenileme ve çıkış akışlarını oluştur.
 - [ ] Oturum bilgisini platforma özel güvenli depoda tut.
-- [ ] Hata kodlarını kullanıcı dostu domain hatalarına dönüştür.
+- [x] Hata kodlarını kullanıcı dostu domain hatalarına dönüştür.
 
 ### 5.2 DTO ve remote data source
 
-- [ ] Her çekirdek tablo için `@Serializable` DTO oluştur.
-- [ ] DTO ↔ domain dönüşümlerini yaz.
-- [ ] Sayfalama, tarih aralığı ve çalışma alanı filtrelerini destekle.
-- [ ] Supabase Storage'a private makbuz yükleme/indirme sözleşmesini oluştur.
+- [x] Her çekirdek tablo için `@Serializable` DTO oluştur.
+- [x] DTO ↔ domain dönüşümlerini yaz.
+- [x] Sayfalama, tarih aralığı ve çalışma alanı filtrelerini destekle.
+- [x] Supabase Storage'a private makbuz yükleme/indirme sözleşmesini oluştur.
 
 ### 5.3 Senkronizasyon motoru
 
@@ -392,9 +392,9 @@ com.feniqo.mobile/
 
 ## Başlangıç sırası
 
-Sonraki teknik adım: **5.1 — Supabase istemcisi ve oturum**.
+Sonraki teknik adım: **5.3 — Senkronizasyon motoru**.
 
-Bu adımın tamamlanmasından sonra önerilen ilk kod adımı: **5.1 — Supabase istemcisi ve oturum**. Publishable key kullanan KMP istemci yapılandırmasını kurup güvenli oturum yaşam döngüsünü repository sınırının arkasına alacağız.
+İlk kod dilimi: Başlangıç indirmesi için Supabase DTO'larını Room entity'lerine güvenli ve atomik biçimde upsert eden senkronizasyon sınırını kuracağız. 5.1'de açık kalan iOS `.xcconfig` ve Keychain alt maddeleri, Android-first kararına uygun olarak 10.4 kapsamında tamamlanacaktır.
 
 ## İlerleme notları
 
@@ -416,3 +416,5 @@ Bu adımın tamamlanmasından sonra önerilen ilk kod adımı: **5.1 — Supabas
 | 2026-08-05 | 4.2 | Profil, workspace/üyelik, kategori, işlem, bütçe ve etiket DAO'ları oluşturuldu; normal okumalar soft-delete kayıtlarını dışlayan `Flow` sorguları olarak sunuldu. İşlem, etiket ve ilişki kayıtları tek Room transaction içinde yazıldı. Entity-domain mapper'ları ve round-trip testleri eklendi. Robolectric üzerindeki in-memory Room testleri dâhil Android host testleri 30/30, iOS Simulator ARM64 derlemesi başarılı oldu. |
 | 2026-08-09 | 4.3 | SQLCipher for Android 4.17.0, Room SupportSQLite uyumluluk modu ve Hilt singleton DB grafiği kuruldu. Rastgele 32 bayt DB parolası Android Keystore AES-256-GCM anahtarıyla korunup `noBackupFilesDir` altında atomik zarf olarak saklandı; Android backup kapatıldı ve anahtar yaşam döngüsü belgelendi. Gerçek emülatörde şifreli dosya başlığı, doğru anahtarla yeniden açma ve yanlış anahtarı reddetme testi 1/1 geçti. |
 | 2026-08-09 | 4.4 | Room şeması v2'ye yükseltilerek `sync_operations` outbox tablosu, indeksleri, DAO ve v1→v2 migration eklendi. Profil, workspace, kategori, bütçe ve işlem mutasyonları entity + outbox olarak tek Room transaction içinde yazılıyor. Create/update/delete sırası, benzersiz işlem kimliği, deneme sayısı, hata ve 15 saniye–6 saat üssel geri çekilme kalıcı tutuluyor. Kapanıp açılma kalıcılığı ve rollback testleri dâhil Android host testleri 33/33, iOS Simulator ARM64 derlemesi başarılı oldu. |
+| 2026-08-11 | 5.1 (devam ediyor) | Supabase Auth e-posta/şifre kayıt, giriş, güvenli otomatik oturum yenileme ve çıkış akışları `AuthRemoteDataSource` arkasında kuruldu. Offline-first `AuthRepository`, oturumu Supabase'ten ve profili Room SSOT'tan sunuyor; SDK hata kodları UI metninden bağımsız domain hatalarına çevriliyor. Android Hilt grafiği, debug APK ve iOS Simulator ARM64 ortak kod derlemesi doğrulandı. iOS build configuration ve Keychain oturum adaptörü 10.4 kapsamında bekliyor. |
+| 2026-08-13 | 5.2 | Profiles, workspace/üyelik, kategori, işlem, bütçe, etiket ve işlem-etiket için KMP `@Serializable` DTO'lar ve çift yönlü domain mapper'ları tamamlandı. PostgREST remote data source; en fazla 100 kayıtlık sayfalama, tarih aralığı ve kişisel/workspace filtreleri ile güvenli upsert sözleşmelerini sunuyor. Para alanları yalnız `Long` küçük birim kabul ediyor; legacy `NUMERIC` reddediliyor. Private `receipts` bucket yükleme/kimlik doğrulamalı indirme/silme sözleşmesi, 6 MB sınırı ve güvenli nesne yolu doğrulamasıyla kuruldu. 61/61 Android host testi, Android debug APK ve iOS Simulator ARM64 derlemesi başarılı oldu; canlı Supabase'e istek gönderilmedi. |

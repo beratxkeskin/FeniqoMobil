@@ -1,4 +1,50 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
+
+val localProperties = Properties().apply {
+    rootProject.file("local.properties").takeIf(File::exists)?.inputStream()?.use(::load)
+}
+
+val referenceWebEnvironment: Map<String, String> = rootProject.file("../Feniqo/.env")
+    .takeIf(File::exists)
+    ?.readLines()
+    ?.mapNotNull { line ->
+        val trimmed = line.trim()
+        if (trimmed.isEmpty() || trimmed.startsWith('#') || '=' !in trimmed) return@mapNotNull null
+        val (name, value) = trimmed.split('=', limit = 2)
+        name.trim() to value.trim().removeSurrounding("\"").removeSurrounding("'")
+    }
+    ?.toMap()
+    .orEmpty()
+
+fun requiredSupabaseValue(
+    environmentName: String,
+    localPropertyName: String,
+    webEnvironmentNames: List<String>,
+): String = System.getenv(environmentName)?.trim()?.takeIf(String::isNotEmpty)
+    ?: localProperties.getProperty(localPropertyName)?.trim()?.takeIf(String::isNotEmpty)
+    ?: webEnvironmentNames.firstNotNullOfOrNull { referenceWebEnvironment[it]?.takeIf(String::isNotEmpty) }
+    ?: error(
+        "$localPropertyName eksik. local.properties veya $environmentName ortam değişkeni ile tanımlayın.",
+    )
+
+fun String.asBuildConfigString(): String =
+    "\"${replace("\\", "\\\\").replace("\"", "\\\"")}\""
+
+val supabaseUrl = requiredSupabaseValue(
+    environmentName = "FENIQO_SUPABASE_URL",
+    localPropertyName = "feniqo.supabase.url",
+    webEnvironmentNames = listOf("VITE_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL"),
+)
+val supabasePublishableKey = requiredSupabaseValue(
+    environmentName = "FENIQO_SUPABASE_PUBLISHABLE_KEY",
+    localPropertyName = "feniqo.supabase.publishableKey",
+    webEnvironmentNames = listOf("VITE_SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+)
+
+require(!supabasePublishableKey.startsWith("sb_secret_")) {
+    "Supabase secret/service-role anahtarı Android uygulamasına eklenemez."
+}
 
 plugins {
     alias(libs.plugins.androidApplication)
@@ -43,6 +89,8 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "SUPABASE_URL", supabaseUrl.asBuildConfigString())
+        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", supabasePublishableKey.asBuildConfigString())
     }
     packaging {
         resources {
@@ -64,5 +112,6 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
