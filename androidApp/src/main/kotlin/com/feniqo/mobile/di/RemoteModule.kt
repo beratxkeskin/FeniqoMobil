@@ -5,7 +5,10 @@ import com.feniqo.mobile.BuildConfig
 import com.feniqo.mobile.data.remote.auth.AuthRemoteDataSource
 import com.feniqo.mobile.data.remote.auth.SupabaseAuthRemoteDataSource
 import com.feniqo.mobile.data.remote.core.CoreRemoteDataSource
+import com.feniqo.mobile.data.remote.core.ConditionalRemoteWriter
 import com.feniqo.mobile.data.remote.core.SupabaseCoreRemoteDataSource
+import com.feniqo.mobile.data.remote.realtime.RealtimeInvalidationSource
+import com.feniqo.mobile.data.remote.realtime.SupabaseRealtimeInvalidationSource
 import com.feniqo.mobile.data.remote.storage.ReceiptStorageDataSource
 import com.feniqo.mobile.data.remote.storage.SupabaseReceiptStorageDataSource
 import com.feniqo.mobile.data.remote.supabase.AndroidSupabaseSessionManager
@@ -53,13 +56,31 @@ object RemoteModule {
 
     @Provides
     @Singleton
-    fun provideCoreRemoteDataSource(
+    fun provideSupabaseCoreRemoteDataSource(
         client: SupabaseClient,
-    ): CoreRemoteDataSource = SupabaseCoreRemoteDataSource(client)
+    ): SupabaseCoreRemoteDataSource = SupabaseCoreRemoteDataSource(client)
+
+    @Provides
+    @Singleton
+    fun provideCoreRemoteDataSource(
+        dataSource: SupabaseCoreRemoteDataSource,
+    ): CoreRemoteDataSource = dataSource
+
+    @Provides
+    @Singleton
+    fun provideConditionalRemoteWriter(
+        dataSource: SupabaseCoreRemoteDataSource,
+    ): ConditionalRemoteWriter = dataSource
 
     @Provides
     @Singleton
     fun provideReceiptStorageDataSource(
         client: SupabaseClient,
     ): ReceiptStorageDataSource = SupabaseReceiptStorageDataSource(client)
+
+    @Provides
+    @Singleton
+    fun provideRealtimeInvalidationSource(
+        client: SupabaseClient,
+    ): RealtimeInvalidationSource = SupabaseRealtimeInvalidationSource(client)
 }

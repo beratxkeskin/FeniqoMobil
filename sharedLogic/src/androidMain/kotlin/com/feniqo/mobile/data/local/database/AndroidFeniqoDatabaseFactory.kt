@@ -45,7 +45,7 @@ class AndroidFeniqoDatabaseFactory(
         )
             // setDriver kullanılmaz: SQLCipher, Android SupportSQLite uyumluluk katmanıdır.
             .openHelperFactory(openHelperFactory)
-            .addMigrations(ANDROID_MIGRATION_1_2)
+            .addMigrations(ANDROID_MIGRATION_1_2, ANDROID_MIGRATION_2_3)
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()
     }

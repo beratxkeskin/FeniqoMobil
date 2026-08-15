@@ -272,10 +272,10 @@ Dashboard SQL Editor üzerinden yapılan manuel değişiklik, daha sonra migrati
 ### 12.1 RLS Negatif Testleri
 
 - [ ] Kullanıcı A, kullanıcı B profilini okuyamaz/güncelleyemez.
-- [ ] Kullanıcı A, kullanıcı B özel kategorisini okuyamaz/değiştiremez.
+- [x] Kullanıcı A, kullanıcı B özel kategorisini okuyamaz/değiştiremez.
 - [ ] Kullanıcı A, kullanıcı B işlemini okuyamaz/değiştiremez.
 - [ ] Kullanıcı sistem kategorisi ekleyemez/değiştiremez.
-- [ ] Kullanıcı hard-delete yapamaz.
+- [x] Kullanıcı hard-delete yapamaz.
 - [ ] Mobil/anon istemci service-role işlemi yapamaz.
 - [ ] Davet olmadan workspace üyeliği oluşturulamaz.
 - [ ] VIEWER finansal mutation yapamaz.
@@ -284,18 +284,18 @@ Dashboard SQL Editor üzerinden yapılan manuel değişiklik, daha sonra migrati
 
 ### 12.2 Sync Testleri
 
-- [ ] Aynı UUID ile iki insert denemesi tek satır üretir.
-- [ ] Doğru `base_version` güncellemeyi ve version artışını sağlar.
-- [ ] Eski `base_version` güncellemeyi reddeder ve conflict üretir.
+- [x] Aynı UUID ile iki insert denemesi tek satır üretir.
+- [x] Doğru `base_version` güncellemeyi ve version artışını sağlar.
+- [x] Eski `base_version` güncellemeyi reddeder ve conflict üretir.
 - [ ] Soft-delete başka cihazda tombstone olarak çekilir.
 - [ ] Worker tekrarında aynı outbox operasyonu yinelenmez.
 - [ ] Cursor aynı timestamp’teki farklı UUID kayıtlarını kaçırmaz.
 
 ### 12.3 Para Migration Testleri
 
-- [ ] `125.50` değeri `12550` olur.
+- [x] `125.50` değeri `12550` olur.
 - [ ] `0` ve negatif tutarlar yeni constraint tarafından reddedilir.
-- [ ] Migration öncesi/sonrası gelir ve gider toplamları eşleşir.
+- [x] Migration öncesi/sonrası gelir ve gider toplamları eşleşir.
 - [ ] TRY, USD ve EUR currency kodları doğru taşınır.
 - [ ] Null veya desteklenmeyen currency kayıtları raporlanır.
 
@@ -324,4 +324,3 @@ Bu kapı tamamlanmadan canlı Supabase projesinde şema veya RLS değişikliği 
 2. Bu plandaki dosya sırasına göre yalnız yerel/staging migration taslaklarını oluştur.
 3. RLS testlerini SQL test senaryoları olarak yaz.
 4. Canlı uygulama yapılmadan önce web uyumluluk planını onayla.
-

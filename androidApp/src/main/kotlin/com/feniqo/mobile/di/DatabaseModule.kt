@@ -4,8 +4,10 @@ import android.content.Context
 import com.feniqo.mobile.data.local.dao.BudgetDao
 import com.feniqo.mobile.data.local.dao.CategoryDao
 import com.feniqo.mobile.data.local.dao.ProfileDao
+import com.feniqo.mobile.data.local.dao.RemoteSyncDao
 import com.feniqo.mobile.data.local.dao.LocalMutationDao
 import com.feniqo.mobile.data.local.dao.SyncOperationDao
+import com.feniqo.mobile.data.local.dao.SyncStateDao
 import com.feniqo.mobile.data.local.dao.TagDao
 import com.feniqo.mobile.data.local.dao.TransactionDao
 import com.feniqo.mobile.data.local.dao.WorkspaceDao
@@ -45,6 +47,8 @@ object DatabaseModule {
     @Provides fun provideBudgetDao(database: FeniqoDatabase): BudgetDao = database.budgetDao()
     @Provides fun provideTagDao(database: FeniqoDatabase): TagDao = database.tagDao()
     @Provides fun provideSyncOperationDao(database: FeniqoDatabase): SyncOperationDao = database.syncOperationDao()
+    @Provides fun provideSyncStateDao(database: FeniqoDatabase): SyncStateDao = database.syncStateDao()
+    @Provides fun provideRemoteSyncDao(database: FeniqoDatabase): RemoteSyncDao = database.remoteSyncDao()
     @Provides fun provideLocalMutationDao(database: FeniqoDatabase): LocalMutationDao = database.localMutationDao()
 
     @Provides

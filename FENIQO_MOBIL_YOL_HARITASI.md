@@ -1,6 +1,6 @@
 # FeniqoMobil — Uçtan Uca Geliştirme Yol Haritası
 
-> **Durum:** Devam ediyor — son tamamlanan Android-first ana adım: 5.2; sonraki adım: 5.3
+> **Durum:** Devam ediyor — son tamamlanan Android-first ana adım: 5.4; sonraki adım: 6.1.
 > **Ana hedef:** Feniqo web uygulamasını referans alarak, Android'de native çalışan; offline-first; Supabase ile güvenli biçimde senkronize olan ve gelecekte iOS'a Kotlin Multiplatform (KMP) ile taşınabilen profesyonel bir mobil uygulama geliştirmek.
 
 Bu dosya projenin çalışma sözleşmesidir. Bir adım tamamlandığında ilgili kutu işaretlenir ve kısa bir not eklenir. Sohbette yalnızca örneğin **"2.3'te kalmıştık"** demen, aynı noktadan devam etmemiz için yeterlidir.
@@ -11,24 +11,24 @@ Bu dosya projenin çalışma sözleşmesidir. Bir adım tamamlandığında ilgil
 
 ### 0.1 Değişmez teknik ilkeler
 
-- [ ] Uygulama dili tamamen Kotlin olacak.
-- [ ] Minimum Android sürümü API 26 (Android 8.0) olacak.
-- [ ] UI Jetpack Compose ve Material 3 ile geliştirilecek.
-- [ ] Clean Architecture + MVVM uygulanacak.
-- [ ] UI, yalnızca ViewModel'den gelen `StateFlow`/`SharedFlow` verisini tüketecek.
-- [ ] Room, uygulamanın **tek okuma kaynağı** (Single Source of Truth) olacak.
-- [ ] Repository, yerel veritabanı ve Supabase arasındaki senkronizasyonun tek sorumlusu olacak.
-- [ ] Her yazma işlemi önce yerel veritabanına güvenli olarak kaydedilecek; ağ yoksa senkronizasyon kuyruğuna alınacak.
-- [ ] Tüm bağımlılıklar constructor injection ile Hilt üzerinden sağlanacak.
-- [ ] Para tutarları `Double` ile değil, en küçük para birimi cinsinden `Long` ile tutulacak. Örnek: `125,50 TRY` → `12550` kuruş.
+- [x] Uygulama dili tamamen Kotlin olacak.
+- [x] Minimum Android sürümü API 26 (Android 8.0) olacak.
+- [x] UI Jetpack Compose ve Material 3 ile geliştirilecek.
+- [x] Clean Architecture + MVVM uygulanacak.
+- [x] UI, yalnızca ViewModel'den gelen `StateFlow`/`SharedFlow` verisini tüketecek.
+- [x] Room, uygulamanın **tek okuma kaynağı** (Single Source of Truth) olacak.
+- [x] Repository, yerel veritabanı ve Supabase arasındaki senkronizasyonun tek sorumlusu olacak.
+- [x] Her yazma işlemi önce yerel veritabanına güvenli olarak kaydedilecek; ağ yoksa senkronizasyon kuyruğuna alınacak.
+- [x] Tüm bağımlılıklar constructor injection ile Hilt üzerinden sağlanacak.
+- [x] Para tutarları `Double` ile değil, en küçük para birimi cinsinden `Long` ile tutulacak. Örnek: `125,50 TRY` → `12550` kuruş.
 
 ### 0.2 KMP stratejisi
 
-- [ ] Proje Android-first başlayacak fakat Gradle yapısı KMP uyumlu tutulacak.
-- [ ] Platformdan bağımsız modeller, iş kuralları, use case'ler, DTO'lar ve senkronizasyon sözleşmesi `commonMain` için tasarlanacak.
-- [ ] Android'e bağımlı parçalar (`Hilt`, `WorkManager`, `BiometricPrompt`, `ML Kit`, Android Keystore) `androidMain`/`androidApp` içinde kalacak.
-- [ ] iOS için ileride `iosApp` eklenebilecek; güvenlik, veritabanı açma ve cihaz servisleri platform adaptörleri ile soyutlanacak.
-- [ ] iOS UI stratejisi, Android V1 tamamlandıktan sonra seçilecek: Compose Multiplatform veya SwiftUI + ortak iş mantığı.
+- [x] Proje Android-first başlayacak fakat Gradle yapısı KMP uyumlu tutulacak.
+- [x] Platformdan bağımsız modeller, iş kuralları, use case'ler, DTO'lar ve senkronizasyon sözleşmesi `commonMain` için tasarlanacak.
+- [x] Android'e bağımlı parçalar (`Hilt`, `WorkManager`, `BiometricPrompt`, `ML Kit`, Android Keystore) `androidMain`/`androidApp` içinde kalacak.
+- [x] iOS için ileride `iosApp` eklenebilecek; güvenlik, veritabanı açma ve cihaz servisleri platform adaptörleri ile soyutlanacak.
+- [x] iOS UI stratejisi, Android V1 tamamlandıktan sonra seçilecek: Compose Multiplatform veya SwiftUI + ortak iş mantığı.
 
 ### 0.3 Paket düzeni
 
@@ -221,18 +221,19 @@ com.feniqo.mobile/
 
 ### 5.3 Senkronizasyon motoru
 
-- [ ] İlk girişte buluttan yerel DB'ye başlangıç indirmesini uygula.
-- [ ] Outbox'taki işlemleri sırayla Supabase'e gönder.
-- [ ] Başarılı gönderimleri kuyruktan sil veya tamamlandı olarak işaretle.
-- [ ] Sunucudan değişen kayıtları Room'a upsert et.
-- [ ] Çakışma politikası uygula: V1 için sürüm/zaman damgalı son yazan kazanır.
-- [ ] Hata durumunda güvenli tekrar deneme ve kullanıcıya görünür sync durumu oluştur.
+- [x] İlk girişte buluttan yerel DB'ye başlangıç indirmesini uygula.
+- [x] Outbox'taki işlemleri sırayla Supabase'e gönder.
+- [x] Başarılı gönderimleri kuyruktan sil veya tamamlandı olarak işaretle.
+- [x] Sunucudan değişen kayıtları Room'a upsert et.
+- [x] `baseVersion` çakışmalarında iki kopyayı koru; V1 için kullanıcıya yerel veya uzak sürümü seçtir.
+- [x] Hata durumunda güvenli tekrar deneme ve kullanıcıya görünür sync durumu oluştur.
+- [x] Migration, RLS ve gerçek PostgREST/RPC akışını ayrı staging Supabase projesinde kabul testinden geçir.
 
 ### 5.4 Realtime
 
-- [ ] Ortak alan tabloları için gerekli Realtime yayınlarını belirle.
-- [ ] Realtime olayı geldiğinde UI'ı değil, Room verisini güncelle.
-- [ ] Bağlantı kaybı ve yeniden bağlanma davranışını test et.
+- [x] V1 cihazlar arası Realtime yayınını `profiles`, `categories` ve `transactions` ile sınırla.
+- [x] Realtime olayı geldiğinde UI'ı değil, Room verisini güncelle.
+- [x] Bağlantı kaybı ve yeniden bağlanma davranışını test et.
 
 ---
 
@@ -392,9 +393,9 @@ com.feniqo.mobile/
 
 ## Başlangıç sırası
 
-Sonraki teknik adım: **5.3 — Senkronizasyon motoru**.
+Sonraki teknik adım: **6.1 — WorkManager**.
 
-İlk kod dilimi: Başlangıç indirmesi için Supabase DTO'larını Room entity'lerine güvenli ve atomik biçimde upsert eden senkronizasyon sınırını kuracağız. 5.1'de açık kalan iOS `.xcconfig` ve Keychain alt maddeleri, Android-first kararına uygun olarak 10.4 kapsamında tamamlanacaktır.
+İlk dilim: Hilt destekli bir `CoroutineWorker` kurup benzersiz ilk senkronizasyon işini ağ bağlantısı koşuluyla planlayacağız. 5.1'de açık kalan iOS `.xcconfig` ve Keychain alt maddeleri, Android-first kararına uygun olarak 10.4 kapsamında tamamlanacaktır.
 
 ## İlerleme notları
 
@@ -418,3 +419,9 @@ Sonraki teknik adım: **5.3 — Senkronizasyon motoru**.
 | 2026-08-09 | 4.4 | Room şeması v2'ye yükseltilerek `sync_operations` outbox tablosu, indeksleri, DAO ve v1→v2 migration eklendi. Profil, workspace, kategori, bütçe ve işlem mutasyonları entity + outbox olarak tek Room transaction içinde yazılıyor. Create/update/delete sırası, benzersiz işlem kimliği, deneme sayısı, hata ve 15 saniye–6 saat üssel geri çekilme kalıcı tutuluyor. Kapanıp açılma kalıcılığı ve rollback testleri dâhil Android host testleri 33/33, iOS Simulator ARM64 derlemesi başarılı oldu. |
 | 2026-08-11 | 5.1 (devam ediyor) | Supabase Auth e-posta/şifre kayıt, giriş, güvenli otomatik oturum yenileme ve çıkış akışları `AuthRemoteDataSource` arkasında kuruldu. Offline-first `AuthRepository`, oturumu Supabase'ten ve profili Room SSOT'tan sunuyor; SDK hata kodları UI metninden bağımsız domain hatalarına çevriliyor. Android Hilt grafiği, debug APK ve iOS Simulator ARM64 ortak kod derlemesi doğrulandı. iOS build configuration ve Keychain oturum adaptörü 10.4 kapsamında bekliyor. |
 | 2026-08-13 | 5.2 | Profiles, workspace/üyelik, kategori, işlem, bütçe, etiket ve işlem-etiket için KMP `@Serializable` DTO'lar ve çift yönlü domain mapper'ları tamamlandı. PostgREST remote data source; en fazla 100 kayıtlık sayfalama, tarih aralığı ve kişisel/workspace filtreleri ile güvenli upsert sözleşmelerini sunuyor. Para alanları yalnız `Long` küçük birim kabul ediyor; legacy `NUMERIC` reddediliyor. Private `receipts` bucket yükleme/kimlik doğrulamalı indirme/silme sözleşmesi, 6 MB sınırı ve güvenli nesne yolu doğrulamasıyla kuruldu. 61/61 Android host testi, Android debug APK ve iOS Simulator ARM64 derlemesi başarılı oldu; canlı Supabase'e istek gönderilmedi. |
+| 2026-08-14 | 5.3 (ilk dilim) | V1 kişisel profil, kategori ve işlem başlangıç indirmesi `InitialRemoteSync` sınırında kuruldu. Kayıtlar en fazla 50'lik sayfalarla alınır; DTO doğrulaması sonrası kategori foreign key'lerini koruyacak sırayla tek Room transaction'ında upsert edilir. Uzak `updated_at`, `deleted_at` tombstone ve `version` metadata'sı `SYNCED` durumuyla yerelde korunur; Hilt grafiğine bağlandı ancak Worker henüz çağırmaz. Fake remote testi eklendi; 62/62 Android host testi, Android debug APK ve iOS Simulator ARM64 ortak kod derlemesi başarılı oldu; canlı Supabase'e istek gönderilmedi. |
+| 2026-08-14 | 5.3 (yerel motor) | Sıralı outbox push, başarılı işlem temizliği, üssel retry ve kesilen `IN_FLIGHT` işlemleri kurtarma; `(updated_at, id)` cursor ile artımlı pull; Room v3 cursor/conflict tabloları; `baseVersion` kontrollü RPC ve kullanıcı çözümlemeli iki kopyalı conflict akışı tamamlandı. Dört migration geçici yerel PostgreSQL-WASM ortamında; backfill, CREATE/UPDATE, eski sürüm conflict, aynı UUID, soft-delete, NOT_FOUND, sahiplik reddi ve güvensiz para verisini durdurma senaryolarıyla geçti. 69/69 Android host testi, debug APK ve iOS Simulator ARM64 derlemesi başarılıdır. Canlı Supabase'e bağlanılmadı; staging/RLS kabul testi açıktır. |
+| 2026-08-14 | 5.3 (tamamlandı) | Yeni `FeniqoMobil-Staging` projesi doğrulandı ve yalnız bu projeye altı sıralı migration uygulandı. Gerçek Supabase Auth JWT'leriyle profil trigger/RLS; profil, kategori ve işlem için koşullu RPC; doğru/eski `baseVersion`; aynı UUID; kullanıcılar arası izolasyon; hard-delete reddi; `(updated_at, id)` sorgusu; `amount_minor` uyumluluğu ve soft-delete tombstone kabul testleri geçti. Geçici kullanıcılar temizlendi, staging migration geçmişi günceldir. Production projesine dokunulmadı. |
+| 2026-08-15 | 5.4 (ilk dilim) | KMP `realtime-kt` modülü ortak Supabase client'a eklendi; Android ve iOS Simulator derlemeleri geçti. Realtime kapsamı `profiles`, `categories`, `transactions` tablolarıyla sınırlandı ve yalnız `FeniqoMobil-Staging` üzerindeki `supabase_realtime` publication'a sıralı migration ile eklendi. Olaylar veri payload'ı olarak değil, Room incremental pull tetikleyicisi olarak kullanılacaktır. |
+| 2026-08-15 | 5.4 (Room bağlantısı) | Realtime olaylarını yalnız senkronizasyon sinyali olarak yayımlayan ortak `RealtimeInvalidationSource` ve bu sinyalleri mevcut `SyncRepository` üzerinden artımlı pull'a yönlendiren `RealtimeSyncCoordinator` eklendi. Android'de Hilt ve Activity yaşam döngüsüne bağlandı; yalnız uygulama ön plandayken çalışır ve UI doğrudan uzak payload tüketmez. Hedefli ortak test, Android debug APK ve iOS Simulator ARM64 derlemesi başarılı oldu. |
+| 2026-08-15 | 5.4 (tamamlandı) | Supabase kanalının `SUBSCRIBED` durumu ilk bağlantı ve yeniden bağlantı telafi sinyaline dönüştürüldü; böylece çevrimdışıyken kaçırılmış olabilecek kayıtlar repository üzerinden yeniden Room'a çekilir. WebSocket yeniden bağlantısı foreground süresince 5 saniyelik aralıkla, kanal yeniden katılımı 2 saniyelik aralıkla sürer; beklenmeyen kaynak hatasında koordinatör akışı kontrollü olarak yeniden başlatır. Kopma, yeniden katılma ve kaynak hatası senaryoları test edildi; 73/73 ortak test, Android debug APK ve iOS Simulator ARM64 derlemesi başarılı oldu. Production ve staging veritabanlarına yeni işlem uygulanmadı. |

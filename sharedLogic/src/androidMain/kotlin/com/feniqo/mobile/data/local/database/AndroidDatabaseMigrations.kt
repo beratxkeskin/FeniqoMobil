@@ -35,3 +35,36 @@ val ANDROID_MIGRATION_1_2 = Migration(1, 2) { database ->
             "ON sync_operations(created_at_epoch_ms)",
     )
 }
+
+/** v3, artımlı pull cursor'larını ve kullanıcı kontrollü çakışma snapshot'larını kalıcılaştırır. */
+val ANDROID_MIGRATION_2_3 = Migration(2, 3) { database ->
+    database.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS sync_cursors (
+            entity_type_code TEXT NOT NULL,
+            updated_at_epoch_ms INTEGER NOT NULL,
+            entity_id TEXT NOT NULL,
+            PRIMARY KEY(entity_type_code)
+        )
+        """.trimIndent(),
+    )
+    database.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS sync_conflicts (
+            entity_type_code TEXT NOT NULL,
+            entity_id TEXT NOT NULL,
+            operation_id TEXT NOT NULL,
+            local_version INTEGER NOT NULL,
+            remote_version INTEGER NOT NULL,
+            local_payload_json TEXT NOT NULL,
+            remote_payload_json TEXT NOT NULL,
+            detected_at_epoch_ms INTEGER NOT NULL,
+            PRIMARY KEY(entity_type_code, entity_id)
+        )
+        """.trimIndent(),
+    )
+    database.execSQL(
+        "CREATE INDEX IF NOT EXISTS index_sync_conflicts_detected_at_epoch_ms " +
+            "ON sync_conflicts(detected_at_epoch_ms)",
+    )
+}

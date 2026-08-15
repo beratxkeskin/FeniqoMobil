@@ -7,8 +7,10 @@ import androidx.room.RoomDatabaseConstructor
 import com.feniqo.mobile.data.local.dao.BudgetDao
 import com.feniqo.mobile.data.local.dao.CategoryDao
 import com.feniqo.mobile.data.local.dao.ProfileDao
+import com.feniqo.mobile.data.local.dao.RemoteSyncDao
 import com.feniqo.mobile.data.local.dao.LocalMutationDao
 import com.feniqo.mobile.data.local.dao.SyncOperationDao
+import com.feniqo.mobile.data.local.dao.SyncStateDao
 import com.feniqo.mobile.data.local.dao.TagDao
 import com.feniqo.mobile.data.local.dao.TransactionDao
 import com.feniqo.mobile.data.local.dao.WorkspaceDao
@@ -16,6 +18,8 @@ import com.feniqo.mobile.data.local.entity.BudgetEntity
 import com.feniqo.mobile.data.local.entity.CategoryEntity
 import com.feniqo.mobile.data.local.entity.TagEntity
 import com.feniqo.mobile.data.local.entity.SyncOperationEntity
+import com.feniqo.mobile.data.local.entity.SyncConflictEntity
+import com.feniqo.mobile.data.local.entity.SyncCursorEntity
 import com.feniqo.mobile.data.local.entity.TransactionEntity
 import com.feniqo.mobile.data.local.entity.TransactionTagCrossRef
 import com.feniqo.mobile.data.local.entity.UserProfileEntity
@@ -33,8 +37,10 @@ import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
         TagEntity::class,
         TransactionTagCrossRef::class,
         SyncOperationEntity::class,
+        SyncCursorEntity::class,
+        SyncConflictEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @ConstructedBy(FeniqoDatabaseConstructor::class)
@@ -46,6 +52,8 @@ abstract class FeniqoDatabase : RoomDatabase() {
     abstract fun budgetDao(): BudgetDao
     abstract fun tagDao(): TagDao
     abstract fun syncOperationDao(): SyncOperationDao
+    abstract fun syncStateDao(): SyncStateDao
+    abstract fun remoteSyncDao(): RemoteSyncDao
     abstract fun localMutationDao(): LocalMutationDao
 }
 

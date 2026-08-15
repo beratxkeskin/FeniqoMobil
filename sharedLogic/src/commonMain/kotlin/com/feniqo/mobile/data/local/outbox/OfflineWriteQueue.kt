@@ -29,6 +29,7 @@ enum class OutboxStatus {
     PENDING,
     IN_FLIGHT,
     FAILED,
+    CONFLICT,
 }
 
 /**
@@ -77,7 +78,13 @@ class OfflineWriteQueue(
 
     suspend fun getReadyOperations(limit: Int = DEFAULT_BATCH_SIZE): List<SyncOperationEntity> {
         require(limit in 1..MAXIMUM_BATCH_SIZE) { "Outbox batch boyutu 1-$MAXIMUM_BATCH_SIZE aralığında olmalıdır." }
-        return operationDao.getReadyOperations(nowEpochMillisProvider(), limit)
+        val now = nowEpochMillisProvider()
+        operationDao.recoverStaleInFlight(
+            staleBeforeEpochMillis = now - IN_FLIGHT_LEASE_MILLIS,
+            nowEpochMillis = now,
+            lastError = INTERRUPTED_ERROR,
+        )
+        return operationDao.getReadyOperations(now, limit)
     }
 
     suspend fun markInFlight(operationId: String): Boolean =
@@ -100,6 +107,11 @@ class OfflineWriteQueue(
             nextAttemptAtEpochMillis = nextAttemptAt,
             nowEpochMillis = now,
         ) == 1
+    }
+
+    suspend fun markConflict(operationId: String, errorMessage: String): Boolean {
+        val safeError = errorMessage.trim().ifEmpty { CONFLICT_ERROR }.take(MAXIMUM_ERROR_LENGTH)
+        return operationDao.markConflict(operationId, safeError, nowEpochMillisProvider()) == 1
     }
 
     suspend fun retryAllFailed(): Int = operationDao.retryAllFailed(nowEpochMillisProvider())
@@ -150,6 +162,9 @@ class OfflineWriteQueue(
         const val MAXIMUM_BATCH_SIZE = 100
         const val MAXIMUM_ERROR_LENGTH = 1_000
         const val UNKNOWN_ERROR = "Bilinmeyen senkronizasyon hatası"
+        const val CONFLICT_ERROR = "Senkronizasyon çakışması kullanıcı kararı bekliyor"
+        const val INTERRUPTED_ERROR = "Önceki senkronizasyon tamamlanmadan kesildi"
+        const val IN_FLIGHT_LEASE_MILLIS = 10 * 60 * 1_000L
     }
 }
 

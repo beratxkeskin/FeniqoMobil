@@ -5,6 +5,7 @@ import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.PaymentMethod
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.YearMonth
+import kotlin.time.Instant
 
 data class RemotePageRequest(
     val pageIndex: Int = 0,
@@ -37,6 +38,19 @@ data class RemotePage<T>(
         ?: (items.size == request.pageSize)
 }
 
+/** Aynı updated_at değerindeki kayıtları kaçırmamak için id ile birlikte taşınan pull cursor'u. */
+data class RemoteSyncCursor(
+    val updatedAt: String,
+    val entityId: String,
+) {
+    init {
+        require(updatedAt.isNotBlank()) { "Sync cursor updatedAt alanı boş olamaz." }
+        require(entityId.isNotBlank()) { "Sync cursor entityId alanı boş olamaz." }
+        runCatching { Instant.parse(updatedAt) }
+            .getOrElse { throw IllegalArgumentException("Sync cursor updatedAt geçerli bir UTC zaman damgası olmalıdır.", it) }
+    }
+}
+
 sealed interface RemoteWorkspaceScope {
     data object All : RemoteWorkspaceScope
     data object Personal : RemoteWorkspaceScope
@@ -47,6 +61,7 @@ data class CategoryRemoteQuery(
     val page: RemotePageRequest = RemotePageRequest(),
     val type: TransactionType? = null,
     val workspaceScope: RemoteWorkspaceScope = RemoteWorkspaceScope.All,
+    val updatedAfter: RemoteSyncCursor? = null,
 )
 
 data class TransactionRemoteQuery(
@@ -57,6 +72,7 @@ data class TransactionRemoteQuery(
     val categoryId: EntityId? = null,
     val paymentMethod: PaymentMethod? = null,
     val workspaceScope: RemoteWorkspaceScope = RemoteWorkspaceScope.All,
+    val updatedAfter: RemoteSyncCursor? = null,
 ) {
     init {
         require(fromDate == null || toDate == null || fromDate <= toDate) {

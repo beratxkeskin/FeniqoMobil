@@ -6,11 +6,13 @@ import io.github.jan.supabase.auth.SessionManager
 import io.github.jan.supabase.auth.minimalConfig
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.storage.Storage
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlin.time.Duration.Companion.seconds
 
 /** Kaynak koda anahtar koymadan platform build configuration tarafından sağlanır. */
 data class SupabaseConnectionConfig(
@@ -46,6 +48,12 @@ object FeniqoSupabaseClientFactory {
         }
         install(Postgrest)
         install(Storage)
+        install(Realtime) {
+            // Activity STARTED durumundayken bağlantıyı ve kanal üyeliğini kendiliğinden toparlar.
+            reconnectDelay = 5.seconds
+            rejoinDelay = 2.seconds
+            maxAttempts = Int.MAX_VALUE
+        }
     }
 }
 
