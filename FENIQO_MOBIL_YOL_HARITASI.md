@@ -27,8 +27,8 @@ Bu dosya projenin çalışma sözleşmesidir. Bir adım tamamlandığında ilgil
 - [x] Proje Android-first başlayacak fakat Gradle yapısı KMP uyumlu tutulacak.
 - [x] Platformdan bağımsız modeller, iş kuralları, use case'ler, DTO'lar ve senkronizasyon sözleşmesi `commonMain` için tasarlanacak.
 - [x] Android'e bağımlı parçalar (`Hilt`, `WorkManager`, `BiometricPrompt`, `ML Kit`, Android Keystore) `androidMain`/`androidApp` içinde kalacak.
-- [x] iOS için ileride `iosApp` eklenebilecek; güvenlik, veritabanı açma ve cihaz servisleri platform adaptörleri ile soyutlanacak.
-- [x] iOS UI stratejisi, Android V1 tamamlandıktan sonra seçilecek: Compose Multiplatform veya SwiftUI + ortak iş mantığı.
+- [x] `iosApp` SwiftUI kabuğu eklendi; güvenlik, veritabanı açma ve cihaz servisleri platform adaptörleri ile soyutlanacak.
+- [x] İlk iOS UI stratejisi SwiftUI + `sharedLogic` ortak iş mantığı olarak belirlendi.
 
 ### 0.3 Paket düzeni
 
@@ -387,7 +387,7 @@ com.feniqo.mobile/
 - [ ] iOS güvenli depolama ve biyometri adaptörlerini uygula.
 - [ ] iOS veritabanı/şifreleme stratejisini üretim öncesi doğrula.
 - [ ] Xcode uygulama kabuğunu ekle.
-- [ ] Seçilen UI stratejisine göre Compose Multiplatform veya SwiftUI ekranlarını uygula.
+- [ ] SwiftUI ekranlarını `sharedLogic` ortak iş mantığına bağla.
 
 ---
 
