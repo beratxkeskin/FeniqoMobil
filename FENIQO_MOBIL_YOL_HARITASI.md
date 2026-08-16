@@ -1,6 +1,6 @@
 # FeniqoMobil — Uçtan Uca Geliştirme Yol Haritası
 
-> **Durum:** Devam ediyor — son tamamlanan Android-first ana adım: 5.4; sonraki adım: 6.1.
+> **Durum:** Devam ediyor — son tamamlanan Android-first ana adım: 6.1; sonraki adım: 6.2.
 > **Ana hedef:** Feniqo web uygulamasını referans alarak, Android'de native çalışan; offline-first; Supabase ile güvenli biçimde senkronize olan ve gelecekte iOS'a Kotlin Multiplatform (KMP) ile taşınabilen profesyonel bir mobil uygulama geliştirmek.
 
 Bu dosya projenin çalışma sözleşmesidir. Bir adım tamamlandığında ilgili kutu işaretlenir ve kısa bir not eklenir. Sohbette yalnızca örneğin **"2.3'te kalmıştık"** demen, aynı noktadan devam etmemiz için yeterlidir.
@@ -241,11 +241,11 @@ com.feniqo.mobile/
 
 ### 6.1 WorkManager
 
-- [ ] Hilt destekli `CoroutineWorker` kur.
-- [ ] Uygulama başlangıcında benzersiz ilk senkronizasyon işi planla.
-- [ ] Ağ bağlantısı koşulu ile outbox senkronizasyonu çalıştır.
-- [ ] Hata durumunda `Result.retry()` ve exponential backoff uygula.
-- [ ] Periyodik abonelik/bütçe kontrolünü planla.
+- [x] Hilt destekli `CoroutineWorker` kur.
+- [x] Uygulama başlangıcında benzersiz ilk senkronizasyon işi planla.
+- [x] Ağ bağlantısı koşulu ile outbox senkronizasyonu çalıştır.
+- [x] Hata durumunda `Result.retry()` ve exponential backoff uygula.
+- [ ] Periyodik abonelik/bütçe kontrolünü planla. (Bütçe/abonelik modülüne ertelendi)
 
 ### 6.2 Senkronizasyon gözlemi
 
@@ -393,9 +393,9 @@ com.feniqo.mobile/
 
 ## Başlangıç sırası
 
-Sonraki teknik adım: **6.1 — WorkManager**.
+Sonraki teknik adım: **6.2 — Senkronizasyon gözlemi**.
 
-İlk dilim: Hilt destekli bir `CoroutineWorker` kurup benzersiz ilk senkronizasyon işini ağ bağlantısı koşuluyla planlayacağız. 5.1'de açık kalan iOS `.xcconfig` ve Keychain alt maddeleri, Android-first kararına uygun olarak 10.4 kapsamında tamamlanacaktır.
+İlk dilim: Kullanıcıya son senkronizasyon zamanı, bekleyen outbox işlem sayısı, offline göstergesi ve manuel senkronizasyon tetikleyicisini sunacağız.
 
 ## İlerleme notları
 
@@ -425,3 +425,4 @@ Sonraki teknik adım: **6.1 — WorkManager**.
 | 2026-08-15 | 5.4 (ilk dilim) | KMP `realtime-kt` modülü ortak Supabase client'a eklendi; Android ve iOS Simulator derlemeleri geçti. Realtime kapsamı `profiles`, `categories`, `transactions` tablolarıyla sınırlandı ve yalnız `FeniqoMobil-Staging` üzerindeki `supabase_realtime` publication'a sıralı migration ile eklendi. Olaylar veri payload'ı olarak değil, Room incremental pull tetikleyicisi olarak kullanılacaktır. |
 | 2026-08-15 | 5.4 (Room bağlantısı) | Realtime olaylarını yalnız senkronizasyon sinyali olarak yayımlayan ortak `RealtimeInvalidationSource` ve bu sinyalleri mevcut `SyncRepository` üzerinden artımlı pull'a yönlendiren `RealtimeSyncCoordinator` eklendi. Android'de Hilt ve Activity yaşam döngüsüne bağlandı; yalnız uygulama ön plandayken çalışır ve UI doğrudan uzak payload tüketmez. Hedefli ortak test, Android debug APK ve iOS Simulator ARM64 derlemesi başarılı oldu. |
 | 2026-08-15 | 5.4 (tamamlandı) | Supabase kanalının `SUBSCRIBED` durumu ilk bağlantı ve yeniden bağlantı telafi sinyaline dönüştürüldü; böylece çevrimdışıyken kaçırılmış olabilecek kayıtlar repository üzerinden yeniden Room'a çekilir. WebSocket yeniden bağlantısı foreground süresince 5 saniyelik aralıkla, kanal yeniden katılımı 2 saniyelik aralıkla sürer; beklenmeyen kaynak hatasında koordinatör akışı kontrollü olarak yeniden başlatır. Kopma, yeniden katılma ve kaynak hatası senaryoları test edildi; 73/73 ortak test, Android debug APK ve iOS Simulator ARM64 derlemesi başarılı oldu. Production ve staging veritabanlarına yeni işlem uygulanmadı. |
+| 2026-08-16 | 6.1 | WorkManager 2.11.2 ve Hilt Work 1.3.0 entegrasyonu tamamlandı. `BackgroundSyncScheduler` KMP ortak sözleşmesi ve Android `WorkManagerSyncScheduler` oluşturuldu. `SyncWorker` yalnızca `SyncRepository` tüketir; ağ hatalarında `Result.retry()`, oturumsuzluk ve conflict durumlarında `Result.success()`, kalıcı hatalarda `Result.failure()` döner. Tekil `"feniqo_one_time_sync"` iş adı altında açılışta `KEEP`, outbox mutasyonlarında `APPEND_OR_REPLACE` politikası bağlandı. Default WorkManager initializer kaldırılıp Hilt `Configuration.Provider` devreye alındı. `OfflineFirstSyncRepository` hata ayrıştırması geliştirildi; 84/84 ortak test, 12/12 androidApp testleri, Android debug APK ve iOS Simulator ARM64 derlemesi başarılı oldu. |

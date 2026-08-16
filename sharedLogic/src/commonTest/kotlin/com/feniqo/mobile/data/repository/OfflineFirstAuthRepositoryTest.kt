@@ -59,6 +59,47 @@ class OfflineFirstAuthRepositoryTest {
         val failure = assertIs<RepositoryResult.Failure>(result)
         assertEquals(AppError.Unknown("auth_unknown"), failure.error)
     }
+
+    @Test
+    fun triggers_schedule_initial_sync_on_successful_sign_in_and_sign_up() = runTest {
+        val remote = FakeAuthRemoteDataSource()
+        val scheduler = FakeBackgroundSyncScheduler()
+        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao(), scheduler)
+
+        repository.signIn("user@example.com", "password")
+        assertEquals(1, scheduler.initialSyncCalls)
+
+        repository.signUp("user2@example.com", "password", "User Two")
+        assertEquals(2, scheduler.initialSyncCalls)
+    }
+
+    @Test
+    fun triggers_cancel_sync_work_on_successful_sign_out() = runTest {
+        val remote = FakeAuthRemoteDataSource()
+        val scheduler = FakeBackgroundSyncScheduler()
+        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao(), scheduler)
+
+        repository.signOut()
+        assertEquals(1, scheduler.cancelSyncCalls)
+    }
+}
+
+private class FakeBackgroundSyncScheduler : com.feniqo.mobile.domain.sync.BackgroundSyncScheduler {
+    var initialSyncCalls = 0
+    var outboxSyncCalls = 0
+    var cancelSyncCalls = 0
+
+    override fun scheduleInitialSync() {
+        initialSyncCalls++
+    }
+
+    override fun scheduleOutboxSync() {
+        outboxSyncCalls++
+    }
+
+    override fun cancelSyncWork() {
+        cancelSyncCalls++
+    }
 }
 
 private class FakeAuthRemoteDataSource : AuthRemoteDataSource {

@@ -32,7 +32,7 @@ anlamına gelmez. Özellik ancak ekran, iş akışı, hata durumları ve kabul t
 | Realtime | Tamamlandı | Sınırlı publication, invalidation, reconnect ve Room telafi sync'i | Kullanıcıya sync durumunun sunulması |
 | Makbuz depolama altyapısı | Altyapı hazır | Private storage sözleşmesi, güvenli yol ve 6 MB sınırı | UI, görsel seçme/kamera ve staging bucket politikası |
 | Senkronizasyon gözlemi | Planlandı | Repository overview sözleşmesi mevcut | Son sync, bekleyen işlem, offline göstergesi ve manuel sync |
-| Arka plan senkronizasyonu | Planlandı | SyncRepository hazır | 6.1 Hilt CoroutineWorker, constraints ve backoff |
+| Arka plan senkronizasyonu | Tamamlandı | Hilt CoroutineWorker, BackgroundSyncScheduler, exponential backoff ve unique work | UI üzerinden uçtan uca kabul |
 
 ## Teknik temel
 

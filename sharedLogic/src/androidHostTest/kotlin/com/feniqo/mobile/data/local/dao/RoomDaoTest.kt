@@ -218,6 +218,32 @@ class RoomDaoTest {
         }
     }
 
+    @Test
+    fun offline_write_queue_triggers_background_sync_scheduler_after_successful_mutation() = runTest {
+        val database = inMemoryDatabase()
+        try {
+            var outboxSyncCalled = 0
+            val scheduler = object : com.feniqo.mobile.domain.sync.BackgroundSyncScheduler {
+                override fun scheduleInitialSync() {}
+                override fun scheduleOutboxSync() { outboxSyncCalled++ }
+                override fun cancelSyncWork() {}
+            }
+            val queue = OfflineWriteQueue(
+                mutationDao = database.localMutationDao(),
+                operationDao = database.syncOperationDao(),
+                syncScheduler = scheduler,
+                nowEpochMillisProvider = { 1_000L },
+                operationIdFactory = { "op-1" },
+            )
+            val category = category().toEntity(newSyncMetadata(1_000L).copy(syncStatus = SyncStatus.PENDING_CREATE.name))
+            queue.enqueueCategory(category, OutboxOperationType.CREATE)
+
+            assertEquals(1, outboxSyncCalled)
+        } finally {
+            database.close()
+        }
+    }
+
     private fun inMemoryDatabase(): FeniqoDatabase {
         val context = ApplicationProvider.getApplicationContext<Context>()
         return Room.inMemoryDatabaseBuilder<FeniqoDatabase>(

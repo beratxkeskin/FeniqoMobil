@@ -13,6 +13,7 @@ class OutboxProcessor(
         var succeeded = 0
         var failedOperationId: String? = null
         var conflictOperationId: String? = null
+        var lastError: Throwable? = null
 
         for (operation in queue.readyOperations(limit)) {
             if (!queue.markInFlight(operation.operationId)) continue
@@ -28,10 +29,11 @@ class OutboxProcessor(
             } catch (error: Throwable) {
                 queue.recordFailure(operation.operationId, error.message.orEmpty())
                 failedOperationId = operation.operationId
+                lastError = error
                 break
             }
         }
-        return OutboxProcessResult(succeeded, failedOperationId, conflictOperationId)
+        return OutboxProcessResult(succeeded, failedOperationId, conflictOperationId, lastError)
     }
 
     companion object {
@@ -43,6 +45,7 @@ data class OutboxProcessResult(
     val succeededCount: Int,
     val failedOperationId: String?,
     val conflictOperationId: String? = null,
+    val lastError: Throwable? = null,
 )
 
 class OutboxConflictException(message: String) : IllegalStateException(message)

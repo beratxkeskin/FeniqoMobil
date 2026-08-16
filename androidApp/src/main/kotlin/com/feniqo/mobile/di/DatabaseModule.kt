@@ -56,5 +56,10 @@ object DatabaseModule {
     fun provideOfflineWriteQueue(
         mutationDao: LocalMutationDao,
         operationDao: SyncOperationDao,
-    ): OfflineWriteQueue = OfflineWriteQueue(mutationDao, operationDao)
+        syncScheduler: com.feniqo.mobile.domain.sync.BackgroundSyncScheduler,
+    ): OfflineWriteQueue = OfflineWriteQueue(
+        mutationDao = mutationDao,
+        operationDao = operationDao,
+        syncScheduler = syncScheduler,
+    )
 }

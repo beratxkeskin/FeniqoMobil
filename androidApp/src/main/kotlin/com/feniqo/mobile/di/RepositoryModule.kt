@@ -34,7 +34,12 @@ object RepositoryModule {
     fun provideAuthRepository(
         remoteDataSource: AuthRemoteDataSource,
         profileDao: ProfileDao,
-    ): AuthRepository = OfflineFirstAuthRepository(remoteDataSource, profileDao)
+        syncScheduler: com.feniqo.mobile.domain.sync.BackgroundSyncScheduler,
+    ): AuthRepository = OfflineFirstAuthRepository(
+        remoteDataSource = remoteDataSource,
+        profileDao = profileDao,
+        syncScheduler = syncScheduler,
+    )
 
     @Provides
     @Singleton

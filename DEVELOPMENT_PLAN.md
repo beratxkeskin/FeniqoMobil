@@ -6,9 +6,9 @@
 
 ## Güncel durum
 
-- Son tamamlanan ana adım: **5.4 — Realtime**
-- Sıradaki ana adım: **6.1 — WorkManager**
-- Güncel doğrulama: **73/73 ortak Android host testi**, Android debug APK ve iOS Simulator
+- Son tamamlanan ana adım: **6.1 — WorkManager**
+- Sıradaki ana adım: **6.2 — Senkronizasyon gözlemi**
+- Güncel doğrulama: **84/84 ortak Android host testi, 12/12 androidApp birim testi**, Android debug APK ve iOS Simulator
   ARM64 ortak kod derlemesi başarılı.
 - Production Supabase durumu: migration uygulanmadı.
 - Staging: `FeniqoMobil-Staging`; V1 migration, RLS, RPC ve Realtime publication doğrulandı.
@@ -22,39 +22,24 @@
 | 3. Domain | Tamamlandı | Temel/ikinci dalga modeller, repository sözleşmeleri ve use case'ler |
 | 4. Yerel veri | Tamamlandı | Room v3, DAO/mapper, SQLCipher/Keystore ve outbox |
 | 5. Uzak veri | Tamamlandı | Auth, DTO/remote, sync motoru, staging kabulü ve Realtime |
+| 6.1 Arka plan sync | Tamamlandı | Hilt CoroutineWorker, BackgroundSyncScheduler, exponential backoff, KEEP / APPEND_OR_REPLACE |
 
 5.1'de Android için build configuration ve güvenli oturum saklama uygulanmıştır. iOS `.xcconfig`,
 Keychain ve üretim güvenlik adaptörlerinin kalan kısmı Android-first kararı gereği 10.4'te tamamlanır.
 
-## Aktif faz: 6.1 WorkManager
+## Aktif faz: 6.2 Senkronizasyon gözlemi
 
-Amaç: uygulama kapalıyken veya arka plandayken bekleyen outbox kayıtlarının güvenli biçimde
-senkronize edilmesini sağlamak.
+Amaç: Senkronizasyon durumunu (son başarılı sync zamanı, bekleyen işlem ve conflict sayısı), offline göstergesini ve manuel senkronizasyon tetikleyicisini sunmak.
 
 Sıralı alt adımlar:
 
-1. Hilt destekli bir `CoroutineWorker` oluştur.
-2. Worker'ın yalnız `SyncRepository` kullanmasını sağla; DAO veya Supabase client enjekte etme.
-3. Ağ bağlantısı constraint'i tanımla.
-4. Uygulama başlangıcında benzersiz one-time ilk sync işi planla.
-5. Outbox için benzersiz arka plan sync isteği oluştur; duplicate worker zincirini engelle.
-6. Geçici ağ hatasında `Result.retry()` ve WorkManager exponential backoff kullan.
-7. Auth yokluğu, kullanıcı conflict'i ve kalıcı veri hatasını retry fırtınasına dönüştürme.
-8. Worker planlama ve sonuç eşleme testlerini ekle.
-9. Android debug APK ve ortak testleri doğrula.
-10. Ana adım tamamlanınca ayrıntılı yol haritasını ve bu dosyayı güncelle.
-
-6.1 tamamlanma ölçütü: ağ kapalıyken oluşturulan kayıt uygulama kapalı olsa bile ağ geri
-geldiğinde tekil bir worker zinciriyle gönderilir; aynı outbox operasyonu yinelenmez.
+1. `SyncOverview` verisini Room SSOT ve outbox üzerinden gözlemleyen UI state modelini netleştir.
+2. Ağ bağlantısı durumunu izleyen StateFlow adaptörünü bağla.
+3. Müdahaleci olmayan offline durum göstergesi bileşeni hazırla.
+4. Manuel senkronizasyon ve tekrar deneme tetikleyicilerini use case/UI seviyesine bağla.
+5. Ortak ve platform testlerini doğrula.
 
 ## Sonraki fazlar
-
-### 6.2 Senkronizasyon gözlemi
-
-- son başarılı senkronizasyon zamanı;
-- bekleyen operasyon ve conflict sayısı;
-- müdahaleci olmayan offline göstergesi;
-- manuel senkronizasyon.
 
 ### 7. Presentation — V1 kullanıcı akışı
 

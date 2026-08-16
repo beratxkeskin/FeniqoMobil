@@ -25,6 +25,7 @@ import kotlinx.datetime.Instant
 class OfflineFirstAuthRepository(
     private val remoteDataSource: AuthRemoteDataSource,
     private val profileDao: ProfileDao,
+    private val syncScheduler: com.feniqo.mobile.domain.sync.BackgroundSyncScheduler? = null,
 ) : AuthRepository {
 
     override fun observeSession(): Flow<AuthSession?> = remoteDataSource
@@ -52,22 +53,38 @@ class OfflineFirstAuthRepository(
         }
         .distinctUntilChanged()
 
-    override suspend fun signIn(email: String, password: String): RepositoryResult<Unit> =
-        authResult { remoteDataSource.signIn(email.trim(), password) }
+    override suspend fun signIn(email: String, password: String): RepositoryResult<Unit> {
+        val result = authResult { remoteDataSource.signIn(email.trim(), password) }
+        if (result is RepositoryResult.Success) {
+            syncScheduler?.scheduleInitialSync()
+        }
+        return result
+    }
 
     override suspend fun signUp(
         email: String,
         password: String,
         fullName: String?,
-    ): RepositoryResult<EntityId> = authResult {
-        EntityId(remoteDataSource.signUp(email.trim(), password, fullName))
+    ): RepositoryResult<EntityId> {
+        val result = authResult {
+            EntityId(remoteDataSource.signUp(email.trim(), password, fullName))
+        }
+        if (result is RepositoryResult.Success) {
+            syncScheduler?.scheduleInitialSync()
+        }
+        return result
     }
 
     override suspend fun refreshSession(): RepositoryResult<Unit> =
         authResult { remoteDataSource.refreshSession() }
 
-    override suspend fun signOut(): RepositoryResult<Unit> =
-        authResult { remoteDataSource.signOut() }
+    override suspend fun signOut(): RepositoryResult<Unit> {
+        val result = authResult { remoteDataSource.signOut() }
+        if (result is RepositoryResult.Success) {
+            syncScheduler?.cancelSyncWork()
+        }
+        return result
+    }
 }
 
 private suspend inline fun <T> authResult(block: () -> T): RepositoryResult<T> = try {

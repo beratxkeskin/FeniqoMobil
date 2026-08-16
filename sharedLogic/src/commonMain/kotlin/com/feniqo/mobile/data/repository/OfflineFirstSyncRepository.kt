@@ -90,7 +90,8 @@ class OfflineFirstSyncRepository(
 
             val outboxResult = outboxProcessor.processReadyOperations()
             if (outboxResult.failedOperationId != null) {
-                return@withLock fail(AppError.Network("sync.push_failed"))
+                val mappedError = outboxResult.lastError?.toSyncAppError() ?: AppError.Network("sync.push_failed")
+                return@withLock fail(mappedError)
             }
 
             val pullResult = incrementalRemoteSync.pullFor(session.userId)
@@ -108,8 +109,8 @@ class OfflineFirstSyncRepository(
         } catch (cancelled: CancellationException) {
             phase.value = SyncPhase.IDLE
             throw cancelled
-        } catch (_: Throwable) {
-            fail(AppError.Network("sync.failed"))
+        } catch (error: Throwable) {
+            fail(error.toSyncAppError())
         }
     }
 
@@ -182,4 +183,41 @@ class OfflineFirstSyncRepository(
         lastError.value = error
         return RepositoryResult.Failure(error)
     }
+}
+
+internal fun Throwable.toSyncAppError(): AppError = when (this) {
+    is io.github.jan.supabase.auth.exception.AuthRestException -> when (errorCode) {
+        io.github.jan.supabase.auth.exception.AuthErrorCode.WeakPassword,
+        io.github.jan.supabase.auth.exception.AuthErrorCode.EmailAddressInvalid,
+        io.github.jan.supabase.auth.exception.AuthErrorCode.ValidationFailed -> AppError.Validation("sync.invalid_request")
+        io.github.jan.supabase.auth.exception.AuthErrorCode.Conflict,
+        io.github.jan.supabase.auth.exception.AuthErrorCode.EmailExists,
+        io.github.jan.supabase.auth.exception.AuthErrorCode.UserAlreadyExists -> AppError.Conflict("sync.remote_conflict")
+        io.github.jan.supabase.auth.exception.AuthErrorCode.OverRequestRateLimit,
+        io.github.jan.supabase.auth.exception.AuthErrorCode.OverEmailSendRateLimit,
+        io.github.jan.supabase.auth.exception.AuthErrorCode.RequestTimeout -> AppError.Network("sync.rate_limited")
+        else -> AppError.Authentication("sync.auth_failed")
+    }
+    is io.github.jan.supabase.exceptions.HttpRequestException -> AppError.Network("sync.network_unavailable")
+    is io.github.jan.supabase.exceptions.RestException -> {
+        val statusCode = try { response.status.value } catch (_: Throwable) { 0 }
+        when (statusCode) {
+            401, 403 -> AppError.Authentication("sync.unauthorized")
+            400, 404, 422 -> AppError.Validation("sync.invalid_request")
+            409 -> AppError.Conflict("sync.remote_conflict")
+            408, 429, in 500..599 -> AppError.Network("sync.http_error_$statusCode")
+            else -> AppError.Unknown("sync.http_error_$statusCode")
+        }
+    }
+    is io.ktor.client.plugins.HttpRequestTimeoutException,
+    is io.ktor.client.network.sockets.SocketTimeoutException,
+    is io.ktor.client.network.sockets.ConnectTimeoutException,
+    is io.ktor.util.network.UnresolvedAddressException,
+    is io.ktor.utils.io.errors.IOException,
+    is kotlinx.io.IOException -> AppError.Network("sync.network_failed")
+    is androidx.sqlite.SQLiteException -> AppError.Storage("sync.storage_failed")
+    is kotlinx.serialization.SerializationException -> AppError.Validation("sync.serialization_failed")
+    is IllegalArgumentException -> AppError.Validation("sync.invalid_argument")
+    is IllegalStateException -> AppError.Validation("sync.invalid_state")
+    else -> AppError.Unknown("sync.unknown_error")
 }

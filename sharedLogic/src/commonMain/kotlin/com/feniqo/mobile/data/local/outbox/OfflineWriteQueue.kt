@@ -14,6 +14,7 @@ import com.feniqo.mobile.data.local.entity.WorkspaceEntity
 import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
 import com.feniqo.mobile.domain.model.SyncStatus
 import com.feniqo.mobile.domain.repository.SyncEntityType
+import com.feniqo.mobile.domain.sync.BackgroundSyncScheduler
 import kotlinx.coroutines.flow.Flow
 import kotlin.math.min
 import kotlin.random.Random
@@ -34,11 +35,12 @@ enum class OutboxStatus {
 
 /**
  * Offline mutasyonları önce Room'a yazar ve aynı transaction içinde kalıcı outbox'a ekler.
- * Uzak veri kaynağı bu kuyruğu 5.x adımında tüketecektir.
+ * Başarılı yazma sonrasında BackgroundSyncScheduler üzerinden arka plan senkronizasyonunu tetikler.
  */
 class OfflineWriteQueue(
     private val mutationDao: LocalMutationDao,
     private val operationDao: SyncOperationDao,
+    private val syncScheduler: BackgroundSyncScheduler? = null,
     private val nowEpochMillisProvider: () -> Long = { Clock.System.now().toEpochMilliseconds() },
     private val operationIdFactory: () -> String = ::newOperationId,
 ) {
@@ -143,6 +145,7 @@ class OfflineWriteQueue(
                 updatedAtEpochMillis = now,
             ),
         )
+        syncScheduler?.scheduleOutboxSync()
         return operationId
     }
 
