@@ -132,7 +132,7 @@ class RealtimeSyncCoordinatorTest {
         var requestCount = 0
 
         override fun observeOverview(): Flow<SyncOverview> = flowOf(
-            SyncOverview(SyncPhase.IDLE, 0, 0, null, null),
+            SyncOverview(SyncPhase.IDLE, 0, 0, 0, null, null),
         )
         override fun observeConflicts(): Flow<List<SyncConflict>> = flowOf(emptyList())
         override suspend fun requestSync(): RepositoryResult<Unit> {

@@ -5,6 +5,7 @@ import androidx.room.Query
 import androidx.room.Upsert
 import com.feniqo.mobile.data.local.entity.SyncConflictEntity
 import com.feniqo.mobile.data.local.entity.SyncCursorEntity
+import com.feniqo.mobile.data.local.entity.SyncUserStateEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -31,4 +32,13 @@ interface SyncStateDao {
         "DELETE FROM sync_conflicts WHERE entity_type_code = :entityTypeCode AND entity_id = :entityId",
     )
     suspend fun deleteConflict(entityTypeCode: String, entityId: String): Int
+
+    @Query("SELECT last_successful_sync_at_epoch_ms FROM sync_user_states WHERE user_id = :userId LIMIT 1")
+    fun observeLastSuccessfulSyncAt(userId: String): Flow<Long?>
+
+    @Query("SELECT * FROM sync_user_states WHERE user_id = :userId LIMIT 1")
+    suspend fun getUserState(userId: String): SyncUserStateEntity?
+
+    @Upsert
+    suspend fun upsertUserState(state: SyncUserStateEntity)
 }

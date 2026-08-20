@@ -48,12 +48,14 @@ enum class SyncPhase {
 data class SyncOverview(
     val phase: SyncPhase,
     val pendingOperationCount: Int,
+    val failedOperationCount: Int,
     val conflictCount: Int,
     val lastSuccessfulSyncAt: Instant?,
     val lastError: AppError?,
 ) {
     init {
         require(pendingOperationCount >= 0) { "Bekleyen senkronizasyon sayısı negatif olamaz." }
+        require(failedOperationCount >= 0) { "Başarısız senkronizasyon sayısı negatif olamaz." }
         require(conflictCount >= 0) { "Çakışma sayısı negatif olamaz." }
     }
 }

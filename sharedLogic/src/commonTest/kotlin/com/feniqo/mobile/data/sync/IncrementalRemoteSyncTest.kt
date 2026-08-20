@@ -116,6 +116,9 @@ class IncrementalRemoteSyncTest {
         override fun observeConflictCount(): Flow<Int> = flowOf(0)
         override suspend fun upsertConflict(conflict: SyncConflictEntity) = Unit
         override suspend fun deleteConflict(entityTypeCode: String, entityId: String): Int = 0
+        override fun observeLastSuccessfulSyncAt(userId: String): Flow<Long?> = flowOf(null)
+        override suspend fun getUserState(userId: String): com.feniqo.mobile.data.local.entity.SyncUserStateEntity? = null
+        override suspend fun upsertUserState(state: com.feniqo.mobile.data.local.entity.SyncUserStateEntity) = Unit
     }
 
     private class RecordingRemoteSyncDao(

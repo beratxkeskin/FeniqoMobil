@@ -12,6 +12,9 @@ interface SyncOperationDao {
     @Query("SELECT COUNT(*) FROM sync_operations WHERE status_code IN ('PENDING', 'IN_FLIGHT', 'FAILED')")
     fun observePendingCount(): Flow<Int>
 
+    @Query("SELECT COUNT(*) FROM sync_operations WHERE status_code = 'FAILED'")
+    fun observeFailedCount(): Flow<Int>
+
     @Query(
         """
         SELECT * FROM sync_operations

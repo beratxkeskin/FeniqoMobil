@@ -75,6 +75,7 @@ kotlin {
             // Room DAO testleri cihaz gerektirmeden Android uygulama bağlamıyla çalıştırılır.
             implementation(libs.androidx.test.core)
             implementation(libs.robolectric)
+            implementation(libs.androidx.room.testing)
         }
     }
 }
@@ -93,4 +94,17 @@ tasks.withType<Test>().configureEach {
     // Robolectric/Conscrypt, Türkçe Windows yerel ayarında native kütüphane adını hatalı küçültüyor.
     systemProperty("user.language", "en")
     systemProperty("user.country", "US")
+}
+
+val copySchemasForTest = tasks.register<Copy>("copySchemasForTest") {
+    from(layout.projectDirectory.dir("schemas"))
+    into(layout.buildDirectory.dir("intermediates/assets/androidHostTest/mergeAndroidHostTestAssets"))
+}
+
+tasks.matching { it.name == "packageAndroidHostTestForUnitTest" }.configureEach {
+    dependsOn(copySchemasForTest)
+}
+
+copySchemasForTest.configure {
+    dependsOn(tasks.matching { it.name == "mergeAndroidHostTestAssets" })
 }

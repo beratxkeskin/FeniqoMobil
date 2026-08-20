@@ -143,6 +143,7 @@ private class FakeSyncRepository(
         SyncOverview(
             phase = SyncPhase.IDLE,
             pendingOperationCount = 0,
+            failedOperationCount = 0,
             conflictCount = 0,
             lastSuccessfulSyncAt = null,
             lastError = null,

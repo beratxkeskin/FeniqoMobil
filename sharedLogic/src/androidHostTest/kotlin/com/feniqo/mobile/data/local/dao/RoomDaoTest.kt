@@ -21,10 +21,14 @@ import com.feniqo.mobile.domain.model.Tag
 import com.feniqo.mobile.domain.model.Transaction
 import com.feniqo.mobile.domain.model.TransactionTag
 import com.feniqo.mobile.domain.model.TransactionType
+import androidx.room.testing.MigrationTestHelper
+import androidx.test.platform.app.InstrumentationRegistry
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Instant
+import org.junit.Rule
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import kotlin.test.Test
@@ -35,6 +39,12 @@ import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 class RoomDaoTest {
+
+    @get:Rule
+    val migrationHelper: MigrationTestHelper = MigrationTestHelper(
+        InstrumentationRegistry.getInstrumentation(),
+        FeniqoDatabase::class.java,
+    )
 
     @Test
     fun transaction_with_tags_is_written_atomically_and_observed_from_room() = runTest {
@@ -241,6 +251,186 @@ class RoomDaoTest {
             assertEquals(1, outboxSyncCalled)
         } finally {
             database.close()
+        }
+    }
+
+    @Test
+    fun sync_user_states_stores_and_observes_last_successful_sync_at_per_user_isolated() = runTest {
+        val database = inMemoryDatabase()
+        try {
+            val dao = database.syncStateDao()
+
+            assertNull(dao.getUserState("user-1"))
+            assertNull(dao.observeLastSuccessfulSyncAt("user-1").first())
+
+            dao.upsertUserState(
+                com.feniqo.mobile.data.local.entity.SyncUserStateEntity(
+                    userId = "user-1",
+                    lastSuccessfulSyncAtEpochMillis = 1_000L,
+                    updatedAtEpochMillis = 1_000L,
+                ),
+            )
+
+            dao.upsertUserState(
+                com.feniqo.mobile.data.local.entity.SyncUserStateEntity(
+                    userId = "user-2",
+                    lastSuccessfulSyncAtEpochMillis = 2_000L,
+                    updatedAtEpochMillis = 2_000L,
+                ),
+            )
+
+            assertEquals(1_000L, dao.observeLastSuccessfulSyncAt("user-1").first())
+            assertEquals(2_000L, dao.observeLastSuccessfulSyncAt("user-2").first())
+            assertNull(dao.observeLastSuccessfulSyncAt("user-3").first())
+
+            dao.upsertUserState(
+                com.feniqo.mobile.data.local.entity.SyncUserStateEntity(
+                    userId = "user-1",
+                    lastSuccessfulSyncAtEpochMillis = 3_000L,
+                    updatedAtEpochMillis = 3_000L,
+                ),
+            )
+            assertEquals(3_000L, dao.observeLastSuccessfulSyncAt("user-1").first())
+            assertEquals(2_000L, dao.observeLastSuccessfulSyncAt("user-2").first())
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun observe_failed_count_tracks_pending_in_flight_failed_and_retried_operations() = runTest {
+        val database = inMemoryDatabase()
+        try {
+            val dao = database.syncOperationDao()
+
+            assertEquals(0, dao.observePendingCount().first())
+            assertEquals(0, dao.observeFailedCount().first())
+
+            dao.insert(
+                com.feniqo.mobile.data.local.entity.SyncOperationEntity(
+                    operationId = "op-1",
+                    entityTypeCode = "CATEGORY",
+                    entityId = "cat-1",
+                    operationTypeCode = "CREATE",
+                    baseVersion = null,
+                    statusCode = "PENDING",
+                    attemptCount = 0,
+                    lastError = null,
+                    nextAttemptAtEpochMillis = 1_000L,
+                    createdAtEpochMillis = 1_000L,
+                    updatedAtEpochMillis = 1_000L,
+                ),
+            )
+            assertEquals(1, dao.observePendingCount().first())
+            assertEquals(0, dao.observeFailedCount().first())
+
+            dao.markInFlight("op-1", 1_000L)
+            assertEquals(1, dao.observePendingCount().first())
+            assertEquals(0, dao.observeFailedCount().first())
+
+            dao.markFailed("op-1", 1, "network_error", 2_000L, 1_500L)
+            assertEquals(1, dao.observePendingCount().first())
+            assertEquals(1, dao.observeFailedCount().first())
+
+            dao.insert(
+                com.feniqo.mobile.data.local.entity.SyncOperationEntity(
+                    operationId = "op-2",
+                    entityTypeCode = "TRANSACTION",
+                    entityId = "tx-1",
+                    operationTypeCode = "CREATE",
+                    baseVersion = null,
+                    statusCode = "PENDING",
+                    attemptCount = 0,
+                    lastError = null,
+                    nextAttemptAtEpochMillis = 1_000L,
+                    createdAtEpochMillis = 1_000L,
+                    updatedAtEpochMillis = 1_000L,
+                ),
+            )
+            dao.markFailed("op-2", 1, "timeout", 2_000L, 1_500L)
+            assertEquals(2, dao.observePendingCount().first())
+            assertEquals(2, dao.observeFailedCount().first())
+
+            dao.retryAllFailed(2_000L)
+            assertEquals(2, dao.observePendingCount().first())
+            assertEquals(0, dao.observeFailedCount().first())
+
+            dao.deleteCompleted("op-1")
+            assertEquals(1, dao.observePendingCount().first())
+            assertEquals(0, dao.observeFailedCount().first())
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun offline_write_queue_observe_failed_count_delegates_to_dao() = runTest {
+        val database = inMemoryDatabase()
+        try {
+            val queue = OfflineWriteQueue(
+                mutationDao = database.localMutationDao(),
+                operationDao = database.syncOperationDao(),
+            )
+            assertEquals(0, queue.observeFailedCount().first())
+
+            database.syncOperationDao().insert(
+                com.feniqo.mobile.data.local.entity.SyncOperationEntity(
+                    operationId = "op-f",
+                    entityTypeCode = "CATEGORY",
+                    entityId = "cat-f",
+                    operationTypeCode = "CREATE",
+                    baseVersion = null,
+                    statusCode = "FAILED",
+                    attemptCount = 1,
+                    lastError = "error",
+                    nextAttemptAtEpochMillis = 1_000L,
+                    createdAtEpochMillis = 1_000L,
+                    updatedAtEpochMillis = 1_000L,
+                ),
+            )
+            assertEquals(1, queue.observeFailedCount().first())
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun migration_3_to_4_creates_sync_user_states_and_preserves_existing_data() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val testDbName = "migration_test_v3_to_v4.db"
+        val testDbPath = context.getDatabasePath(testDbName).absolutePath
+        context.deleteDatabase(testDbName)
+
+        val v3Db = migrationHelper.createDatabase(testDbPath, 3)
+        try {
+            v3Db.execSQL("INSERT INTO sync_cursors (entity_type_code, updated_at_epoch_ms, entity_id) VALUES ('PROFILE', 1000, 'user-1')")
+        } finally {
+            v3Db.close()
+        }
+
+        val v4Db = migrationHelper.runMigrationsAndValidate(
+            testDbPath,
+            4,
+            true,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_3_4,
+        )
+        try {
+            val cursor = v4Db.query("SELECT entity_type_code, updated_at_epoch_ms FROM sync_cursors WHERE entity_type_code = 'PROFILE'")
+            assertTrue(cursor.moveToFirst())
+            assertEquals("PROFILE", cursor.getString(0))
+            assertEquals(1000L, cursor.getLong(1))
+            cursor.close()
+
+            v4Db.execSQL("INSERT INTO sync_user_states (user_id, last_successful_sync_at_epoch_ms, updated_at_epoch_ms) VALUES ('user-1', 5000, 5000)")
+            val userStateCursor = v4Db.query("SELECT user_id, last_successful_sync_at_epoch_ms, updated_at_epoch_ms FROM sync_user_states WHERE user_id = 'user-1'")
+            assertTrue(userStateCursor.moveToFirst())
+            assertEquals("user-1", userStateCursor.getString(0))
+            assertEquals(5000L, userStateCursor.getLong(1))
+            assertEquals(5000L, userStateCursor.getLong(2))
+            userStateCursor.close()
+        } finally {
+            v4Db.close()
+            context.deleteDatabase(testDbName)
         }
     }
 

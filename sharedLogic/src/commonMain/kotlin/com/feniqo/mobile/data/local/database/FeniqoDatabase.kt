@@ -20,6 +20,7 @@ import com.feniqo.mobile.data.local.entity.TagEntity
 import com.feniqo.mobile.data.local.entity.SyncOperationEntity
 import com.feniqo.mobile.data.local.entity.SyncConflictEntity
 import com.feniqo.mobile.data.local.entity.SyncCursorEntity
+import com.feniqo.mobile.data.local.entity.SyncUserStateEntity
 import com.feniqo.mobile.data.local.entity.TransactionEntity
 import com.feniqo.mobile.data.local.entity.TransactionTagCrossRef
 import com.feniqo.mobile.data.local.entity.UserProfileEntity
@@ -39,8 +40,9 @@ import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
         SyncOperationEntity::class,
         SyncCursorEntity::class,
         SyncConflictEntity::class,
+        SyncUserStateEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 @ConstructedBy(FeniqoDatabaseConstructor::class)

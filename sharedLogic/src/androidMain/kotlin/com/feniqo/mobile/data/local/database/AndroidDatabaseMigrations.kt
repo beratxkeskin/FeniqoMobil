@@ -68,3 +68,17 @@ val ANDROID_MIGRATION_2_3 = Migration(2, 3) { database ->
             "ON sync_conflicts(detected_at_epoch_ms)",
     )
 }
+
+/** v4, kullanıcı bazında son başarılı senkronizasyon zamanını kalıcılaştırır. */
+val ANDROID_MIGRATION_3_4 = Migration(3, 4) { database ->
+    database.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS sync_user_states (
+            user_id TEXT NOT NULL,
+            last_successful_sync_at_epoch_ms INTEGER,
+            updated_at_epoch_ms INTEGER NOT NULL,
+            PRIMARY KEY(user_id)
+        )
+        """.trimIndent(),
+    )
+}

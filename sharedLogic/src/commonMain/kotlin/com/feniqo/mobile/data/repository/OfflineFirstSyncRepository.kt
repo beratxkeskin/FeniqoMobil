@@ -35,6 +35,11 @@ import kotlinx.datetime.Instant
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.decodeFromString
 
+import com.feniqo.mobile.data.local.entity.SyncUserStateEntity
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+
 /** UI'a yalnız Room/outbox tabanlı gözlem sunan ortak senkronizasyon repository'si. */
 class OfflineFirstSyncRepository(
     private val authRepository: AuthRepository,
@@ -48,21 +53,38 @@ class OfflineFirstSyncRepository(
 ) : SyncRepository {
     private val mutex = Mutex()
     private val phase = MutableStateFlow(SyncPhase.IDLE)
-    private val lastSuccessfulSyncAt = MutableStateFlow<Instant?>(null)
     private val lastError = MutableStateFlow<AppError?>(null)
     private val snapshotJson = Json { ignoreUnknownKeys = true }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeOverview(): Flow<SyncOverview> {
         val counts = combine(
             phase,
             offlineWriteQueue.observePendingCount(),
+            offlineWriteQueue.observeFailedCount(),
             syncStateDao.observeConflictCount(),
-        ) { currentPhase, pendingCount, conflictCount ->
-            Triple(currentPhase, pendingCount, conflictCount)
+        ) { currentPhase, pendingCount, failedCount, conflictCount ->
+            OverviewCounts(currentPhase, pendingCount, failedCount, conflictCount)
         }
-        val outcome = combine(lastSuccessfulSyncAt, lastError) { successfulAt, error -> successfulAt to error }
-        return combine(counts, outcome) { (currentPhase, pendingCount, conflictCount), (successfulAt, error) ->
-            SyncOverview(currentPhase, pendingCount, conflictCount, successfulAt, error)
+        val userSyncTime = authRepository.observeSession().flatMapLatest { session ->
+            if (session == null) {
+                flowOf(null)
+            } else {
+                syncStateDao.observeLastSuccessfulSyncAt(session.userId.value).map { millis ->
+                    millis?.let { Instant.fromEpochMilliseconds(it) }
+                }
+            }
+        }
+        val outcome = combine(userSyncTime, lastError) { successfulAt, error -> successfulAt to error }
+        return combine(counts, outcome) { countsData, (successfulAt, error) ->
+            SyncOverview(
+                phase = countsData.phase,
+                pendingOperationCount = countsData.pendingCount,
+                failedOperationCount = countsData.failedCount,
+                conflictCount = countsData.conflictCount,
+                lastSuccessfulSyncAt = successfulAt,
+                lastError = error,
+            )
         }
     }
 
@@ -97,13 +119,20 @@ class OfflineFirstSyncRepository(
             val pullResult = incrementalRemoteSync.pullFor(session.userId)
             val conflictDetected = outboxResult.conflictOperationId != null || pullResult.conflictCount > 0
 
-            lastSuccessfulSyncAt.value = Instant.fromEpochMilliseconds(nowEpochMillisProvider())
             phase.value = SyncPhase.IDLE
             if (conflictDetected) {
                 val error = AppError.Conflict("sync.user_resolution_required")
                 lastError.value = error
                 RepositoryResult.Failure(error)
             } else {
+                val now = nowEpochMillisProvider()
+                syncStateDao.upsertUserState(
+                    SyncUserStateEntity(
+                        userId = session.userId.value,
+                        lastSuccessfulSyncAtEpochMillis = now,
+                        updatedAtEpochMillis = now,
+                    ),
+                )
                 RepositoryResult.Success(Unit)
             }
         } catch (cancelled: CancellationException) {
@@ -221,3 +250,10 @@ internal fun Throwable.toSyncAppError(): AppError = when (this) {
     is IllegalStateException -> AppError.Validation("sync.invalid_state")
     else -> AppError.Unknown("sync.unknown_error")
 }
+
+private data class OverviewCounts(
+    val phase: SyncPhase,
+    val pendingCount: Int,
+    val failedCount: Int,
+    val conflictCount: Int,
+)

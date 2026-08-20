@@ -45,6 +45,7 @@ class OfflineWriteQueue(
     private val operationIdFactory: () -> String = ::newOperationId,
 ) {
     fun observePendingCount(): Flow<Int> = operationDao.observePendingCount()
+    fun observeFailedCount(): Flow<Int> = operationDao.observeFailedCount()
 
     suspend fun enqueueProfile(entity: UserProfileEntity, type: OutboxOperationType): String =
         enqueue(entity.id, SyncEntityType.PROFILE, entity.sync, type) { operation ->
