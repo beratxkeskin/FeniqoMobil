@@ -31,7 +31,7 @@ anlamına gelmez. Özellik ancak ekran, iş akışı, hata durumları ve kabul t
 | Senkronizasyon motoru | Tamamlandı | Initial pull, sıralı push, incremental pull, retry, cursor ve conflict | WorkManager ile arka plan planlama |
 | Realtime | Tamamlandı | Sınırlı publication, invalidation, reconnect ve Room telafi sync'i | Kullanıcıya sync durumunun sunulması |
 | Makbuz depolama altyapısı | Altyapı hazır | Private storage sözleşmesi, güvenli yol ve 6 MB sınırı | UI, görsel seçme/kamera ve staging bucket politikası |
-| Senkronizasyon gözlemi | Planlandı | Repository overview sözleşmesi mevcut | Son sync, bekleyen işlem, offline göstergesi ve manuel sync |
+| Senkronizasyon gözlemi | Tamamlandı | SyncOverview Flow, ağ gözlemcisi, ViewModel, SyncStatusIndicator ve manuel sync | V1 ekranlarıyla son kabul testleri |
 | Arka plan senkronizasyonu | Tamamlandı | Hilt CoroutineWorker, BackgroundSyncScheduler, exponential backoff ve unique work | UI üzerinden uçtan uca kabul |
 
 ## Teknik temel

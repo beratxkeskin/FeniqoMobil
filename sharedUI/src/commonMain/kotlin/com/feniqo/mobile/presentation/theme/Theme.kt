@@ -22,6 +22,8 @@ private val LightColorScheme = lightColorScheme(
     onSecondaryContainer = Color(0xFF241A00),
     tertiary = PhoenixOrange,
     onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFFFDBCF),
+    onTertiaryContainer = Color(0xFF380D00),
     background = Color(0xFFF7FBF8),
     onBackground = Color(0xFF181D1A),
     surface = Color(0xFFF7FBF8),
@@ -30,6 +32,8 @@ private val LightColorScheme = lightColorScheme(
     onSurfaceVariant = Color(0xFF404943),
     error = Color(0xFFBA1A1A),
     onError = Color.White,
+    errorContainer = Color(0xFFFFDAD6),
+    onErrorContainer = Color(0xFF410002),
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -43,6 +47,8 @@ private val DarkColorScheme = darkColorScheme(
     onSecondaryContainer = Color(0xFFFFDF93),
     tertiary = Color(0xFFFFB68D),
     onTertiary = Color(0xFF512300),
+    tertiaryContainer = Color(0xFF713700),
+    onTertiaryContainer = Color(0xFFFFDBCF),
     background = Color(0xFF0B1410),
     onBackground = Color(0xFFDFE4DF),
     surface = Color(0xFF0B1410),
@@ -51,6 +57,8 @@ private val DarkColorScheme = darkColorScheme(
     onSurfaceVariant = Color(0xFFC0C9C1),
     error = Color(0xFFFFB4AB),
     onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6),
 )
 
 private val FeniqoTypography = Typography(

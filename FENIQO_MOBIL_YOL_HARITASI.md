@@ -249,9 +249,11 @@ com.feniqo.mobile/
 
 ### 6.2 Senkronizasyon gözlemi
 
-- [ ] Kullanıcıya son senkronizasyon zamanı ve bekleyen işlem sayısını göster.
-- [ ] Bağlantı durumunu izleyip müdahaleci olmayan bir offline göstergesi sun.
-- [ ] Kullanıcının manuel senkronizasyon başlatabilmesini sağla.
+- [x] Kullanıcıya son senkronizasyon zamanı ve bekleyen işlem sayısını göster.
+- [x] Bağlantı durumunu izleyip müdahaleci olmayan bir offline göstergesi sun.
+- [x] Kullanıcının manuel senkronizasyon başlatabilmesini sağla.
+
+**İlerleme notu (Faz 6.2):** Room v4 migration ile `SyncOverview` (son başarılı sync, pending, failed, conflict sayıları) Flow'u, platformlar arası `NetworkConnectivityObserver` sözleşmesi ve Android `ConnectivityManager` implementasyonu, use case'ler (`ObserveSyncOverviewUseCase`, `RequestManualSyncUseCase`, `RetryFailedSyncOperationsUseCase`), `SyncStatusViewModel`, erişilebilir ve açık/koyu temada okunabilirliği iyileştirilmiş `SyncStatusIndicator` Compose bileşeni ile `FeniqoAppShell` entegrasyonu tamamlandı. Toplam 148 test (99 sharedLogic, 12 sharedUI, 37 androidApp) ile doğrulandı.
 
 **Tamamlanma ölçütü:** Uygulama kapalıyken oluşan ağ dönüşünde bekleyen yazılar güvenle gönderilir.
 

@@ -4,6 +4,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.feniqo.mobile.presentation.shell.FeniqoAppShell
+import com.feniqo.mobile.presentation.sync.SyncStatusUiState
 import com.feniqo.mobile.presentation.theme.FeniqoTheme
 import com.feniqo.mobile.presentation.theme.ThemeMode
 
@@ -12,11 +13,17 @@ import com.feniqo.mobile.presentation.theme.ThemeMode
 fun App(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     onThemeModeChange: suspend (ThemeMode) -> Unit = {},
+    syncStatus: SyncStatusUiState = SyncStatusUiState.Initial,
+    onManualSync: () -> Unit = {},
+    onRetryFailed: () -> Unit = {},
 ) {
     FeniqoTheme(darkTheme = themeMode.resolvesToDark(isSystemInDarkTheme())) {
         FeniqoAppShell(
             themeMode = themeMode,
             onThemeModeChange = onThemeModeChange,
+            syncStatus = syncStatus,
+            onManualSync = onManualSync,
+            onRetryFailed = onRetryFailed,
         )
     }
 }

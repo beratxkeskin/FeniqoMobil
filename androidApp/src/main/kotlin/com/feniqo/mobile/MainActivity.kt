@@ -4,14 +4,17 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.feniqo.mobile.data.sync.RealtimeSyncCoordinator
+import com.feniqo.mobile.presentation.sync.SyncStatusViewModel
 import com.feniqo.mobile.presentation.theme.AndroidThemePreferences
 import com.feniqo.mobile.presentation.theme.ThemeMode
 import dagger.hilt.android.AndroidEntryPoint
@@ -23,6 +26,7 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var realtimeSyncCoordinator: RealtimeSyncCoordinator
 
+    private val syncStatusViewModel: SyncStatusViewModel by viewModels()
     private val themePreferences by lazy { AndroidThemePreferences(applicationContext) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,9 +42,14 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val themeMode by themePreferences.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
+            val syncStatus by syncStatusViewModel.uiState.collectAsStateWithLifecycle()
+
             App(
                 themeMode = themeMode,
                 onThemeModeChange = themePreferences::saveThemeMode,
+                syncStatus = syncStatus,
+                onManualSync = syncStatusViewModel::requestManualSync,
+                onRetryFailed = syncStatusViewModel::retryFailedOperations,
             )
         }
     }

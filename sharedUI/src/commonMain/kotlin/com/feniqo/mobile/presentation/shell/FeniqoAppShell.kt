@@ -21,6 +21,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.feniqo.mobile.presentation.component.EmptyState
+import com.feniqo.mobile.presentation.component.SyncStatusIndicator
+import com.feniqo.mobile.presentation.sync.SyncStatusUiState
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.ThemeMode
 import kotlinx.coroutines.launch
@@ -39,6 +41,9 @@ private enum class AppSection(val label: String, val symbol: String) {
 fun FeniqoAppShell(
     themeMode: ThemeMode,
     onThemeModeChange: suspend (ThemeMode) -> Unit,
+    syncStatus: SyncStatusUiState = SyncStatusUiState.Initial,
+    onManualSync: () -> Unit = {},
+    onRetryFailed: () -> Unit = {},
 ) {
     var selectedSection by remember { mutableStateOf(AppSection.DASHBOARD) }
 
@@ -56,14 +61,32 @@ fun FeniqoAppShell(
             }
         },
     ) { paddingValues ->
-        when (selectedSection) {
-            AppSection.DASHBOARD -> DashboardPlaceholder(paddingValues)
-            AppSection.TRANSACTIONS -> TransactionsPlaceholder(paddingValues)
-            AppSection.SETTINGS -> ThemeSettings(
-                paddingValues = paddingValues,
-                themeMode = themeMode,
-                onThemeModeChange = onThemeModeChange,
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+        ) {
+            SyncStatusIndicator(
+                uiState = syncStatus,
+                onManualSync = onManualSync,
+                onRetryFailed = onRetryFailed,
             )
+
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+            ) {
+                when (selectedSection) {
+                    AppSection.DASHBOARD -> DashboardPlaceholder(PaddingValues())
+                    AppSection.TRANSACTIONS -> TransactionsPlaceholder(PaddingValues())
+                    AppSection.SETTINGS -> ThemeSettings(
+                        paddingValues = PaddingValues(),
+                        themeMode = themeMode,
+                        onThemeModeChange = onThemeModeChange,
+                    )
+                }
+            }
         }
     }
 }
