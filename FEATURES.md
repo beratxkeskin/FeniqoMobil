@@ -21,7 +21,7 @@ anlamına gelmez. Özellik ancak ekran, iş akışı, hata durumları ve kabul t
 
 | Özellik | Durum | Tamamlanan kısım | Kalan kullanıcı işi |
 |---|---|---|---|
-| Tema ve uygulama kabuğu | Tamamlandı | Material 3, açık/koyu/sistem, token'lar, temel bileşenler, bottom navigation kabuğu | Ürün ekranlarının bağlanması |
+| Tema ve uygulama kabuğu | Tamamlandı | Material 3, açık/koyu/sistem, token'lar, type-safe Navigation Compose, bağımsız Auth/Main NavHost, stateless 4-sekme kabuk | Ürün ve form ekranlarının bağlanması |
 | Kimlik doğrulama altyapısı | Altyapı hazır | Supabase kayıt/giriş/yenileme/çıkış, domain hata eşleme, Android güvenli oturum adaptörü | Splash, giriş ve kayıt ekranları |
 | Profil | Altyapı hazır | Domain, Room, DTO, RLS, başlangıç ve artımlı sync | Profil ayarları ekranı |
 | Kategoriler | Altyapı hazır | Domain/use case, Room/DAO, offline mutation, DTO, RLS ve sync | Liste, seçim ve yönetim ekranları |

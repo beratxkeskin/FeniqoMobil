@@ -6,9 +6,9 @@
 
 ## Güncel durum
 
-- Son tamamlanan ana adım: **6.2 — Senkronizasyon gözlemi**
-- Sıradaki ana adım: **7.1 — Navigasyon ve UI durumları**
-- Güncel doğrulama: **99 sharedLogic host testi, 12 sharedUI host testi, 37 androidApp birim testi (toplam 148 test)**, Android debug APK ve iOS Simulator
+- Son tamamlanan ana adım: **7.1 — Navigasyon ve UI durumları**
+- Sıradaki ana adım: **7.2 — Giriş ve kayıt ekranları**
+- Güncel doğrulama: **100 sharedLogic host testi, 12 sharedUI host testi, 50 androidApp birim testi (toplam 162 test)**, Android debug APK ve iOS Simulator
   ARM64 ortak kod derlemesi başarılı.
 - Production Supabase durumu: migration uygulanmadı.
 - Staging: `FeniqoMobil-Staging`; V1 migration, RLS, RPC ve Realtime publication doğrulandı.
@@ -24,13 +24,14 @@
 | 5. Uzak veri | Tamamlandı | Auth, DTO/remote, sync motoru, staging kabulü ve Realtime |
 | 6.1 Arka plan sync | Tamamlandı | Hilt CoroutineWorker, BackgroundSyncScheduler, exponential backoff, KEEP / APPEND_OR_REPLACE |
 | 6.2 Senkronizasyon gözlemi | Tamamlandı | Room v4 SyncOverview Flow, NetworkConnectivityObserver, ViewModel, SyncStatusIndicator Compose bileşeni |
+| 7.1 Navigasyon ve UI durumları | Tamamlandı | Type-safe Navigation Compose rotaları, bağımsız Auth/Main NavHost, RootNavViewModel, stateless FeniqoAppShell |
 
 5.1'de Android için build configuration ve güvenli oturum saklama uygulanmıştır. iOS `.xcconfig`,
 Keychain ve üretim güvenlik adaptörlerinin kalan kısmı Android-first kararı gereği 10.4'te tamamlanır.
 
-## Aktif faz: 7.1 Navigasyon ve UI durumları
+## Aktif faz: 7.2 Giriş ve kayıt ekranları
 
-Amaç: Type-safe Compose navigation rotalarını, ekran bazlı UI state modellerini (`DashboardUiState`, `TransactionUiState`, vb.) ve Hilt ViewModel altyapısını kurmak.
+Amaç: Açılış/splash oturum kontrolü, giriş ve kayıt ekranları, form validasyonu, hata durumları ve oturum açma/kayıt olma akışını tamamlamak.
 
 ## Sonraki fazlar
 

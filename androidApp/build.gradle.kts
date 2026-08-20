@@ -49,6 +49,7 @@ require(!supabasePublishableKey.startsWith("sb_secret_")) {
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.hiltAndroid)
     alias(libs.plugins.ksp)
 }

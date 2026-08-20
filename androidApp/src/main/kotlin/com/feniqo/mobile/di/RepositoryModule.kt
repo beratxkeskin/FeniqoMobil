@@ -43,6 +43,13 @@ object RepositoryModule {
 
     @Provides
     @Singleton
+    fun provideObserveAuthSessionUseCase(
+        authRepository: AuthRepository,
+    ): com.feniqo.mobile.domain.usecase.ObserveAuthSessionUseCase =
+        com.feniqo.mobile.domain.usecase.ObserveAuthSessionUseCase(authRepository)
+
+    @Provides
+    @Singleton
     fun provideInitialRemoteSync(
         remoteDataSource: CoreRemoteDataSource,
         remoteSyncDao: RemoteSyncDao,

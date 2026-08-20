@@ -263,10 +263,12 @@ com.feniqo.mobile/
 
 ### 7.1 Navigasyon ve UI durumları
 
-- [ ] Type-safe Navigation Compose rotalarını oluştur.
-- [ ] `DashboardUiState`, `TransactionUiState` gibi sealed UI state'leri tasarla.
-- [ ] Tek seferlik olayları `SharedFlow` ile yönet: snackbar, navigasyon, izin isteği.
-- [ ] Her ViewModel'i Hilt constructor injection ile oluştur.
+- [x] Type-safe Navigation Compose rotalarını oluştur.
+- [x] `DashboardUiState`, `TransactionUiState` gibi sealed UI state'leri tasarla.
+- [x] Tek seferlik olayları `SharedFlow` ile yönet: snackbar, navigasyon, izin isteği.
+- [x] Her ViewModel'i Hilt constructor injection ile oluştur.
+
+**İlerleme notu (Faz 7.1):** Android'e özel type-safe Navigation Compose rotaları (`FeniqoRoute`), oturum durumuna göre bağımsız `AuthNavHost` ve `MainNavHost` dalları, session tabanlı `RootNavViewModel`, stateless `FeniqoAppShell`, dört ana sekme (Özet, İşlemler, Kategoriler, Ayarlar) için type-safe `hasRoute<T>()` eşlemesi ve placeholder içerikleri uygulandı. Auth ekranlarında bottom bar ve `SyncStatusIndicator` izolasyonu sağlandı. Manuel smoke testler ve toplam 162 test (100 sharedLogic, 12 sharedUI, 50 androidApp) ile doğrulandı. Placeholder ekranlar sonraki adımlarda gerçek kullanıcı ekranlarıyla değiştirilecektir.
 
 ### 7.2 Kimlik doğrulama ekranları
 

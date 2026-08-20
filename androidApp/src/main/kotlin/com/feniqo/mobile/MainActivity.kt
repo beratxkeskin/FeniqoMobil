@@ -14,6 +14,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.feniqo.mobile.data.sync.RealtimeSyncCoordinator
+import com.feniqo.mobile.navigation.FeniqoNavigation
+import com.feniqo.mobile.presentation.navigation.RootNavViewModel
 import com.feniqo.mobile.presentation.sync.SyncStatusViewModel
 import com.feniqo.mobile.presentation.theme.AndroidThemePreferences
 import com.feniqo.mobile.presentation.theme.ThemeMode
@@ -26,6 +28,7 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var realtimeSyncCoordinator: RealtimeSyncCoordinator
 
+    private val rootNavViewModel: RootNavViewModel by viewModels()
     private val syncStatusViewModel: SyncStatusViewModel by viewModels()
     private val themePreferences by lazy { AndroidThemePreferences(applicationContext) }
 
@@ -42,15 +45,19 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val themeMode by themePreferences.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
+            val authState by rootNavViewModel.authState.collectAsStateWithLifecycle()
             val syncStatus by syncStatusViewModel.uiState.collectAsStateWithLifecycle()
 
-            App(
-                themeMode = themeMode,
-                onThemeModeChange = themePreferences::saveThemeMode,
-                syncStatus = syncStatus,
-                onManualSync = syncStatusViewModel::requestManualSync,
-                onRetryFailed = syncStatusViewModel::retryFailedOperations,
-            )
+            App(themeMode = themeMode) {
+                FeniqoNavigation(
+                    authState = authState,
+                    syncStatus = syncStatus,
+                    onManualSync = syncStatusViewModel::requestManualSync,
+                    onRetryFailed = syncStatusViewModel::retryFailedOperations,
+                    themeMode = themeMode,
+                    onThemeModeChange = themePreferences::saveThemeMode,
+                )
+            }
         }
     }
 }
@@ -58,5 +65,7 @@ class MainActivity : ComponentActivity() {
 @Preview
 @Composable
 fun AppAndroidPreview() {
-    App()
+    App {
+        // Preview placeholder
+    }
 }
