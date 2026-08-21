@@ -22,7 +22,7 @@ anlamına gelmez. Özellik ancak ekran, iş akışı, hata durumları ve kabul t
 | Özellik | Durum | Tamamlanan kısım | Kalan kullanıcı işi |
 |---|---|---|---|
 | Tema ve uygulama kabuğu | Tamamlandı | Material 3, açık/koyu/sistem, token'lar, type-safe Navigation Compose, bağımsız Auth/Main NavHost, stateless 4-sekme kabuk | Ürün ve form ekranlarının bağlanması |
-| Kimlik doğrulama altyapısı | Altyapı hazır | Supabase kayıt/giriş/yenileme/çıkış, domain hata eşleme, Android güvenli oturum adaptörü | Splash, giriş ve kayıt ekranları |
+| Kimlik doğrulama | Tamamlandı | Supabase kayıt/giriş/yenileme/çıkış, domain hata eşleme, LoginScreen, RegisterScreen, alan validation, güvenli hata mesajları, e-posta doğrulama bekleme akışı, session tabanlı yönlendirme | Biyometrik giriş ve şifre sıfırlama (kapsam dışı / sonraki fazlar) |
 | Profil | Altyapı hazır | Domain, Room, DTO, RLS, başlangıç ve artımlı sync | Profil ayarları ekranı |
 | Kategoriler | Altyapı hazır | Domain/use case, Room/DAO, offline mutation, DTO, RLS ve sync | Liste, seçim ve yönetim ekranları |
 | Gelir/gider işlemleri | Altyapı hazır | Domain/use case, Room/DAO, outbox, koşullu RPC, conflict ve sync | Liste, ekleme, düzenleme, silme ve filtre UI'ı |

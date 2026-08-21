@@ -3,22 +3,20 @@
 Supabase proje URL'si ve mobil istemcide kullanılabilen publishable/legacy anon key kaynak
 koda yazılmaz. Android derlemesi değerleri aşağıdaki sırayla arar:
 
-1. CI ortam değişkenleri:
+1. CI ve yerel ortam değişkenleri:
    - `FENIQO_SUPABASE_URL`
    - `FENIQO_SUPABASE_PUBLISHABLE_KEY`
 2. Git tarafından izlenmeyen kök `local.properties`:
-   - `feniqo.supabase.url=https://...supabase.co`
-   - `feniqo.supabase.publishableKey=sb_publishable_...`
-3. Yalnızca mevcut geliştirme workspace'i için kardeş web projesindeki `.env` değerleri.
+   - `feniqo.supabase.url`
+   - `feniqo.supabase.publishableKey`
 
-Kardeş web `.env` desteği yerel geçiş kolaylığıdır. CI ve bağımsız mobil
-checkout'larda ilk iki yöntemden biri kullanılmalıdır.
+Mobil uygulama yalnız yukarıdaki iki kaynaktan beslenir; referans web `.env` fallback'i bulunmaz.
 
 ## Güvenlik sınırı
 
-- Publishable/anon key mobil uygulamada bulunabilir; yetkiyi RLS belirler.
-- `sb_secret_...` veya service-role key kesinlikle mobil yapılandırmaya konulmaz.
-- Gradle bu değerleri loglamaz.
+- Mobil istemcide yalnızca `sb_publishable_` ile başlayan publishable anahtarlar kabul edilir.
+- `sb_secret_...` veya service-role anahtarları kesinlikle mobil yapılandırmaya eklenemez.
+- Gradle derleme sürecinde bu değerleri loglamaz veya hata mesajlarında yazdırmaz.
 - UI `SupabaseClient` kullanmaz; istemci repository/data-source katmanına Hilt ile verilir.
 - iOS build configuration, iOS uygulama kabuğu aktif geliştirilmeye başlandığında
   `.xcconfig` ve `Info.plist` aktarımıyla aynı `SupabaseConnectionConfig` sözleşmesine bağlanacaktır.

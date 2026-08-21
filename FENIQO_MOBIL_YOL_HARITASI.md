@@ -272,10 +272,12 @@ com.feniqo.mobile/
 
 ### 7.2 Kimlik doğrulama ekranları
 
-- [ ] Açılış/splash ve oturum kontrolü.
-- [ ] Giriş ekranı.
-- [ ] Kayıt ekranı.
-- [ ] Şifre görünürlüğü, doğrulama, hata ve yüklenme durumları.
+- [x] Açılış/splash ve oturum kontrolü.
+- [x] Giriş ekranı.
+- [x] Kayıt ekranı.
+- [x] Şifre görünürlüğü, doğrulama, hata ve yüklenme durumları.
+
+**İlerleme notu (Faz 7.2):** Stateless Compose `LoginScreen` ve `RegisterScreen` gerçek formları uygulandı. Tipli validation (`AuthValidationRules`), `AuthUiMessage` hata ve durum eşlemesi, `LoginViewModel` ve `RegisterViewModel`, `AuthUseCaseModule` Hilt bağlantıları, parola bilgilerinin kalıcılaştırılmaması (RAM/geçici state izolasyonu), `RootNavViewModel` ile session tabanlı otomatik navigasyon ve e-posta doğrulama bekleme ekranı tamamlandı. Staging ortamında kayıt, e-posta doğrulama ve giriş smoke testleri ile 124 sharedLogic, 22 sharedUI, 66 androidApp olmak üzere toplam 212 test (0 failure, 0 error) ile başarıyla doğrulandı.
 
 ### 7.3 İşlem ve kategori akışı
 
