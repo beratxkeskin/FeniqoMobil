@@ -26,7 +26,7 @@ anlamına gelmez. Özellik ancak ekran, iş akışı, hata durumları ve kabul t
 | Profil | Altyapı hazır | Domain, Room, DTO, RLS, başlangıç ve artımlı sync | Profil ayarları ekranı |
 | Kategoriler | Altyapı hazır | Domain/use case, Room/DAO, offline mutation, DTO, RLS ve sync | Liste, seçim ve yönetim ekranları |
 | Gelir/gider işlemleri | Altyapı hazır | Domain/use case, Room/DAO, outbox, koşullu RPC, conflict ve sync | Liste, ekleme, düzenleme, silme ve filtre UI'ı |
-| Dashboard hesapları | Altyapı hazır | Özet ve MoneyScore domain/use case modelleri | Gerçek Room akışına bağlı dashboard ekranı |
+| Dashboard ve MoneyScore | Tamamlandı | Stateless DashboardScreen, DashboardViewModel, dinamik ay Room Flow SSOT, aylık gelir/gider/bakiye/tasarruf kartları, en yüksek harcama kategorisi, son işlemler, navigasyonlar, geçici MoneyScore kartı ve ön değerlendirme şeffaflığı | İleride bütçe/borç/hedef modülleri tamamlandığında tam skor bağlantısı |
 | Offline-first okuma/yazma | Tamamlandı | Room SSOT, atomik entity + outbox, kapanıp açılma kalıcılığı | UI üzerinden uçtan uca kullanıcı kabulü |
 | Senkronizasyon motoru | Tamamlandı | Initial pull, sıralı push, incremental pull, retry, cursor ve conflict | WorkManager ile arka plan planlama |
 | Realtime | Tamamlandı | Sınırlı publication, invalidation, reconnect ve Room telafi sync'i | Kullanıcıya sync durumunun sunulması |

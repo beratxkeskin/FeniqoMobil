@@ -1,6 +1,6 @@
 # FeniqoMobil — Uçtan Uca Geliştirme Yol Haritası
 
-> **Durum:** Devam ediyor — son tamamlanan Android-first ana adım: 6.1; sonraki adım: 6.2.
+> **Durum:** Devam ediyor — son tamamlanan Android-first ana adım: 7.4; sonraki adım: 7.3.
 > **Ana hedef:** Feniqo web uygulamasını referans alarak, Android'de native çalışan; offline-first; Supabase ile güvenli biçimde senkronize olan ve gelecekte iOS'a Kotlin Multiplatform (KMP) ile taşınabilen profesyonel bir mobil uygulama geliştirmek.
 
 Bu dosya projenin çalışma sözleşmesidir. Bir adım tamamlandığında ilgili kutu işaretlenir ve kısa bir not eklenir. Sohbette yalnızca örneğin **"2.3'te kalmıştık"** demen, aynı noktadan devam etmemiz için yeterlidir.
@@ -289,10 +289,12 @@ com.feniqo.mobile/
 
 ### 7.4 Dashboard
 
-- [ ] Aylık gelir, gider, net bakiye ve tasarruf oranı.
-- [ ] Son işlemler ve hızlı işlem ekleme.
-- [ ] Bütçe uyarı alanı için hazırlık.
-- [ ] MoneyScore kartı ve açıklanabilir hesaplama sonucu.
+- [x] Aylık gelir, gider, net bakiye ve tasarruf oranı.
+- [x] Son işlemler ve hızlı işlem ekleme.
+- [x] Bütçe uyarı alanı için hazırlık.
+- [x] MoneyScore kartı ve açıklanabilir hesaplama sonucu.
+
+**İlerleme notu (Faz 7.4):** Stateless Compose `DashboardScreen`, `DashboardViewModel`, Hilt modül bağlantıları (`CalculateDashboardSummaryUseCase`, `ObserveDashboardSummaryUseCase`, `CalculateMoneyScoreUseCase`), `DashboardDisplayModelBuilder` ve type-safe Android route entegrasyonu tamamlandı. Room Flow SSOT üzerinden dinamik ay seçimi (`CurrentDateProvider`), TRY formatlama, net bakiye durum renkleri, en yüksek gider kategorisi, son 5 işlem listesi, hızlı "+ İşlem Ekle" FAB'ı ve tüm işlemleri görüntüleme/düzenleme navigasyonları bağlandı. MoneyScore için V1 şeffaflığıyla "Ön değerlendirme" rozeti, 4 alt puan çubuğu ve nötr başlangıç açıklaması gösterildi. Manuel smoke test ve birim testleriyle doğrulandı. (Not: 3 çakışma banner'ı ertelenmiş bilinen V1 conflict/outbox konusu olarak korunmaktadır; Faz 7.3/B5A işlem akışı kapsamındadır).
 
 **Tamamlanma ölçütü:** Kullanıcı offline iken işlem ekleyebilir, listeleyebilir; ağ geldiğinde senkronizasyonu görebilir.
 
@@ -432,3 +434,4 @@ Sonraki teknik adım: **6.2 — Senkronizasyon gözlemi**.
 | 2026-08-15 | 5.4 (Room bağlantısı) | Realtime olaylarını yalnız senkronizasyon sinyali olarak yayımlayan ortak `RealtimeInvalidationSource` ve bu sinyalleri mevcut `SyncRepository` üzerinden artımlı pull'a yönlendiren `RealtimeSyncCoordinator` eklendi. Android'de Hilt ve Activity yaşam döngüsüne bağlandı; yalnız uygulama ön plandayken çalışır ve UI doğrudan uzak payload tüketmez. Hedefli ortak test, Android debug APK ve iOS Simulator ARM64 derlemesi başarılı oldu. |
 | 2026-08-15 | 5.4 (tamamlandı) | Supabase kanalının `SUBSCRIBED` durumu ilk bağlantı ve yeniden bağlantı telafi sinyaline dönüştürüldü; böylece çevrimdışıyken kaçırılmış olabilecek kayıtlar repository üzerinden yeniden Room'a çekilir. WebSocket yeniden bağlantısı foreground süresince 5 saniyelik aralıkla, kanal yeniden katılımı 2 saniyelik aralıkla sürer; beklenmeyen kaynak hatasında koordinatör akışı kontrollü olarak yeniden başlatır. Kopma, yeniden katılma ve kaynak hatası senaryoları test edildi; 73/73 ortak test, Android debug APK ve iOS Simulator ARM64 derlemesi başarılı oldu. Production ve staging veritabanlarına yeni işlem uygulanmadı. |
 | 2026-08-16 | 6.1 | WorkManager 2.11.2 ve Hilt Work 1.3.0 entegrasyonu tamamlandı. `BackgroundSyncScheduler` KMP ortak sözleşmesi ve Android `WorkManagerSyncScheduler` oluşturuldu. `SyncWorker` yalnızca `SyncRepository` tüketir; ağ hatalarında `Result.retry()`, oturumsuzluk ve conflict durumlarında `Result.success()`, kalıcı hatalarda `Result.failure()` döner. Tekil `"feniqo_one_time_sync"` iş adı altında açılışta `KEEP`, outbox mutasyonlarında `APPEND_OR_REPLACE` politikası bağlandı. Default WorkManager initializer kaldırılıp Hilt `Configuration.Provider` devreye alındı. `OfflineFirstSyncRepository` hata ayrıştırması geliştirildi; 84/84 ortak test, 12/12 androidApp testleri, Android debug APK ve iOS Simulator ARM64 derlemesi başarılı oldu. |
+| 2026-08-27 | 7.4 | Stateless Compose `DashboardScreen`, `DashboardViewModel`, Hilt modülleri, `DashboardDisplayModelBuilder` ve type-safe Android route entegrasyonu tamamlandı. Room Flow SSOT dinamik ay özeti, son işlemler listesi, işlem/düzenleme/ekleme navigasyonları, geçici MoneyScore kartı ve ön değerlendirme şeffaflığı manuel smoke test ve otomatik birim/host testleriyle doğrulandı. (Not: 3 çakışma banner'ı ertelenmiş bilinen V1 conflict/outbox konusu olarak korunmaktadır). |

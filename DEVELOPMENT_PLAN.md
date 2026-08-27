@@ -6,10 +6,10 @@
 
 ## Güncel durum
 
-- Son tamamlanan ana adım: **7.2 — Giriş ve kayıt ekranları**
+- Son tamamlanan ana adım: **7.4 — Dashboard ve geçici MoneyScore**
 - Sıradaki ana adım: **7.3 — İşlem ve kategori akışı**
-- Güncel doğrulama: **124 sharedLogic host testi, 22 sharedUI host testi, 66 androidApp birim testi (toplam 212 test)**, Android debug APK ve iOS Simulator
-  ARM64 ortak kod derlemesi başarılı. Staging auth smoke testi doğrulandı.
+- Güncel doğrulama: **124 sharedLogic host testi, 23 sharedUI host testi, 71 androidApp birim testi (toplam 218 test)**, Android debug APK ve iOS Simulator
+  ARM64 ortak kod derlemesi başarılı. Staging auth ve Dashboard emülatör smoke testleri doğrulandı.
 - Production Supabase durumu: migration uygulanmadı.
 - Staging: `FeniqoMobil-Staging`; V1 migration, RLS, RPC, Realtime publication ve auth akışları doğrulandı.
 
@@ -26,6 +26,7 @@
 | 6.2 Senkronizasyon gözlemi | Tamamlandı | Room v4 SyncOverview Flow, NetworkConnectivityObserver, ViewModel, SyncStatusIndicator Compose bileşeni |
 | 7.1 Navigasyon ve UI durumları | Tamamlandı | Type-safe Navigation Compose rotaları, bağımsız Auth/Main NavHost, RootNavViewModel, stateless FeniqoAppShell |
 | 7.2 Giriş ve kayıt ekranları | Tamamlandı | LoginScreen, RegisterScreen, tipli validation/hata eşleme, Login/RegisterViewModel, session tabanlı akış, staging auth |
+| 7.4 Dashboard | Tamamlandı | Stateless DashboardScreen, DashboardViewModel, Hilt modülleri, dinamik ay Room Flow SSOT, son işlemler, işlem/düzenleme navigasyonları, geçici MoneyScore kartı ve ön değerlendirme |
 
 5.1'de Android için build configuration ve güvenli oturum saklama uygulanmıştır. iOS `.xcconfig`,
 Keychain ve üretim güvenlik adaptörlerinin kalan kısmı Android-first kararı gereği 10.4'te tamamlanır.
