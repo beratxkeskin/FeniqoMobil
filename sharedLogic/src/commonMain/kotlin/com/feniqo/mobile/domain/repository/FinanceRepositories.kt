@@ -2,11 +2,15 @@ package com.feniqo.mobile.domain.repository
 
 import com.feniqo.mobile.domain.model.Budget
 import com.feniqo.mobile.domain.model.Category
+import com.feniqo.mobile.domain.model.CopyBudgetsCommand
+import com.feniqo.mobile.domain.model.CopyBudgetsResult
+import com.feniqo.mobile.domain.model.CreateBudgetCommand
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.PaymentMethod
 import com.feniqo.mobile.domain.model.ReportPeriod
 import com.feniqo.mobile.domain.model.Transaction
 import com.feniqo.mobile.domain.model.TransactionType
+import com.feniqo.mobile.domain.model.UpdateBudgetCommand
 import com.feniqo.mobile.domain.model.YearMonth
 import kotlinx.coroutines.flow.Flow
 
@@ -24,11 +28,17 @@ interface TransactionRepository {
 
     fun observeTransaction(id: EntityId): Flow<Transaction?>
 
+    fun observeInstallmentGroup(groupId: EntityId): Flow<List<Transaction>>
+
     suspend fun create(transaction: Transaction): RepositoryResult<EntityId>
+
+    suspend fun createInstallmentGroup(transactions: List<Transaction>): RepositoryResult<EntityId>
 
     suspend fun update(transaction: Transaction): RepositoryResult<Unit>
 
     suspend fun softDelete(id: EntityId): RepositoryResult<Unit>
+
+    suspend fun softDeleteInstallments(ids: Set<EntityId>): RepositoryResult<Unit>
 }
 
 interface CategoryRepository {
@@ -38,6 +48,10 @@ interface CategoryRepository {
     ): Flow<List<Category>>
 
     fun observeCategory(id: EntityId): Flow<Category?>
+
+    fun observeCategoriesForHistoryLookup(
+        workspaceId: EntityId? = null,
+    ): Flow<List<Category>>
 
     suspend fun create(category: Category): RepositoryResult<EntityId>
 
@@ -51,9 +65,11 @@ interface BudgetRepository {
 
     fun observeBudget(id: EntityId): Flow<Budget?>
 
-    suspend fun create(budget: Budget): RepositoryResult<EntityId>
+    suspend fun create(command: CreateBudgetCommand): RepositoryResult<EntityId>
 
-    suspend fun update(budget: Budget): RepositoryResult<Unit>
+    suspend fun update(command: UpdateBudgetCommand): RepositoryResult<Unit>
 
     suspend fun softDelete(id: EntityId): RepositoryResult<Unit>
+
+    suspend fun copyBudgets(command: CopyBudgetsCommand): RepositoryResult<CopyBudgetsResult>
 }

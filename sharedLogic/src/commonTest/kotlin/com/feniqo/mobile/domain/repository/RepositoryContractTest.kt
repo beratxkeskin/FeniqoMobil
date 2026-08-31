@@ -67,12 +67,20 @@ private class FakeTransactionRepository : TransactionRepository {
     override fun observeTransaction(id: EntityId): Flow<Transaction?> =
         transactions.map { items -> items.firstOrNull { it.id == id } }
 
+    override fun observeInstallmentGroup(groupId: EntityId): Flow<List<Transaction>> =
+        transactions.map { items -> items.filter { it.installment?.groupId == groupId } }
+
     override suspend fun create(transaction: Transaction): RepositoryResult<EntityId> {
         if (transactions.value.any { it.id == transaction.id }) {
             return RepositoryResult.Failure(AppError.Conflict("transaction_already_exists"))
         }
         transactions.value = transactions.value + transaction
         return RepositoryResult.Success(transaction.id)
+    }
+
+    override suspend fun createInstallmentGroup(transactions: List<Transaction>): RepositoryResult<EntityId> {
+        this.transactions.value = this.transactions.value + transactions
+        return RepositoryResult.Success(transactions.first().installment?.groupId ?: EntityId("group-1"))
     }
 
     override suspend fun update(transaction: Transaction): RepositoryResult<Unit> {
@@ -84,6 +92,11 @@ private class FakeTransactionRepository : TransactionRepository {
 
     override suspend fun softDelete(id: EntityId): RepositoryResult<Unit> {
         transactions.value = transactions.value.filterNot { it.id == id }
+        return RepositoryResult.Success(Unit)
+    }
+
+    override suspend fun softDeleteInstallments(ids: Set<EntityId>): RepositoryResult<Unit> {
+        transactions.value = transactions.value.filterNot { it.id in ids }
         return RepositoryResult.Success(Unit)
     }
 }

@@ -74,6 +74,12 @@ object RemoteModule {
 
     @Provides
     @Singleton
+    fun provideIdempotentConditionalRemoteWriter(
+        dataSource: SupabaseCoreRemoteDataSource,
+    ): com.feniqo.mobile.data.remote.core.IdempotentConditionalRemoteWriter = dataSource
+
+    @Provides
+    @Singleton
     fun provideReceiptStorageDataSource(
         client: SupabaseClient,
     ): ReceiptStorageDataSource = SupabaseReceiptStorageDataSource(client)

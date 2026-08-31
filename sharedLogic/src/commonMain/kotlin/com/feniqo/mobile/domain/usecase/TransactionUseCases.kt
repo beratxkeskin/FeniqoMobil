@@ -28,7 +28,6 @@ data class TransactionCommand(
     val paymentMethod: PaymentMethod,
     val transactionDate: LocalDate,
     val receiptPath: ReceiptPath?,
-    val installment: InstallmentInfo?,
 )
 
 class AddTransactionUseCase(
@@ -44,7 +43,7 @@ class AddTransactionUseCase(
         val session = authRepository.observeSession().first()
             ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
 
-        validateTransaction(command, today, categoryRepository)?.let { error ->
+        validateTransaction(command, today, session.userId, command.workspaceId, categoryRepository)?.let { error ->
             return RepositoryResult.Failure(error)
         }
 
@@ -60,7 +59,7 @@ class AddTransactionUseCase(
                 paymentMethod = command.paymentMethod,
                 transactionDate = command.transactionDate,
                 receiptPath = command.receiptPath,
-                installment = command.installment,
+                installment = null,
                 createdAt = createdAt,
             ),
         )
@@ -84,13 +83,16 @@ class UpdateTransactionUseCase(
             return RepositoryResult.Failure(AppError.Authentication("transaction_owner_mismatch"))
         }
 
-        validateTransaction(command, today, categoryRepository)?.let { error ->
+        if (command.workspaceId != existing.workspaceId) {
+            return RepositoryResult.Failure(AppError.Validation("transaction_workspace_immutable"))
+        }
+
+        validateTransaction(command, today, session.userId, existing.workspaceId, categoryRepository)?.let { error ->
             return RepositoryResult.Failure(error)
         }
 
         return transactionRepository.update(
             existing.copy(
-                workspaceId = command.workspaceId,
                 amount = command.amount,
                 type = command.type,
                 categoryId = command.categoryId,
@@ -98,7 +100,6 @@ class UpdateTransactionUseCase(
                 paymentMethod = command.paymentMethod,
                 transactionDate = command.transactionDate,
                 receiptPath = command.receiptPath,
-                installment = command.installment,
             ),
         )
     }
@@ -108,7 +109,10 @@ class DeleteTransactionUseCase(
     private val authRepository: AuthRepository,
     private val transactionRepository: TransactionRepository,
 ) {
-    suspend operator fun invoke(id: EntityId): RepositoryResult<Unit> {
+    suspend operator fun invoke(
+        id: EntityId,
+        installmentScope: InstallmentDeleteScope? = null,
+    ): RepositoryResult<Unit> {
         val session = authRepository.observeSession().first()
             ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
         val existing = transactionRepository.observeTransaction(id).first()
@@ -116,7 +120,50 @@ class DeleteTransactionUseCase(
         if (existing.ownerId != session.userId) {
             return RepositoryResult.Failure(AppError.Authentication("transaction_owner_mismatch"))
         }
-        return transactionRepository.softDelete(id)
+
+        val installment = existing.installment
+        if (installment == null) {
+            if (installmentScope != null) {
+                return RepositoryResult.Failure(AppError.Validation("installment_scope_not_applicable"))
+            }
+            return transactionRepository.softDelete(id)
+        }
+
+        if (installmentScope == null) {
+            return RepositoryResult.Failure(AppError.Validation("installment_delete_scope_required"))
+        }
+
+        val groupTransactions = transactionRepository.observeInstallmentGroup(installment.groupId).first()
+        if (groupTransactions.isEmpty() || groupTransactions.none { it.id == id }) {
+            return RepositoryResult.Failure(AppError.Validation("transaction_not_found"))
+        }
+
+        for (item in groupTransactions) {
+            val itemInst = item.installment
+            if (itemInst == null || itemInst.groupId != installment.groupId || itemInst.total != installment.total) {
+                return RepositoryResult.Failure(AppError.Validation("installment_group_mismatch"))
+            }
+        }
+
+        val targetNumber = installment.number
+        val targetIds: Set<EntityId> = when (installmentScope) {
+            InstallmentDeleteScope.ONLY_THIS -> setOf(id)
+            InstallmentDeleteScope.THIS_AND_FOLLOWING -> {
+                groupTransactions
+                    .filter { it.installment!!.number >= targetNumber }
+                    .map { it.id }
+                    .toSet()
+            }
+            InstallmentDeleteScope.ALL_GROUP -> {
+                groupTransactions.map { it.id }.toSet()
+            }
+        }
+
+        if (targetIds.isEmpty()) {
+            return RepositoryResult.Failure(AppError.Validation("transaction_not_found"))
+        }
+
+        return transactionRepository.softDeleteInstallments(targetIds)
     }
 }
 
@@ -127,9 +174,18 @@ class ObserveTransactionsUseCase(
         transactionRepository.observeTransactions(filter)
 }
 
+class ObserveTransactionUseCase(
+    private val transactionRepository: TransactionRepository,
+) {
+    operator fun invoke(id: EntityId): Flow<Transaction?> =
+        transactionRepository.observeTransaction(id)
+}
+
 private suspend fun validateTransaction(
     command: TransactionCommand,
     today: LocalDate,
+    userId: EntityId,
+    targetWorkspaceId: EntityId?,
     categoryRepository: CategoryRepository,
 ): AppError.Validation? {
     if (command.amount.amountMinor <= 0) return AppError.Validation("transaction_amount_must_be_positive")
@@ -141,7 +197,29 @@ private suspend fun validateTransaction(
         return AppError.Validation("transaction_description_too_long")
     }
     val category = categoryRepository.observeCategory(command.categoryId).first()
-        ?: return AppError.Validation("transaction_category_not_found")
-    if (category.type != command.type) return AppError.Validation("transaction_category_type_mismatch")
+    return validateCategoryAccess(category, command.type, targetWorkspaceId, userId)
+}
+
+internal fun validateCategoryAccess(
+    category: com.feniqo.mobile.domain.model.Category?,
+    expectedType: TransactionType,
+    targetWorkspaceId: EntityId?,
+    userId: EntityId,
+): AppError.Validation? {
+    if (category == null) return AppError.Validation("transaction_category_not_found")
+    if (category.type != expectedType) return AppError.Validation("transaction_category_type_mismatch")
+
+    if (category.isDefault && category.ownerId == null) {
+        return null
+    }
+
+    if (category.ownerId != userId) {
+        return AppError.Validation("transaction_category_not_found")
+    }
+
+    if (category.workspaceId != targetWorkspaceId) {
+        return AppError.Validation("category_workspace_mismatch")
+    }
+
     return null
 }

@@ -58,6 +58,53 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE id = :id AND deleted_at_epoch_ms IS NULL")
     fun observeById(id: String): Flow<TransactionEntity?>
 
+    @Query(
+        """
+        SELECT * FROM transactions
+        WHERE id = :id
+          AND owner_id = :ownerId
+          AND deleted_at_epoch_ms IS NULL
+        """,
+    )
+    fun observeByIdAndOwner(id: String, ownerId: String): Flow<TransactionEntity?>
+
+    @Query(
+        """
+        SELECT * FROM transactions
+        WHERE id = :id
+          AND owner_id = :ownerId
+          AND deleted_at_epoch_ms IS NULL
+        """,
+    )
+    suspend fun getByIdAndOwner(id: String, ownerId: String): TransactionEntity?
+
+    @Query(
+        """
+        SELECT * FROM transactions
+        WHERE installment_group_id = :groupId
+          AND owner_id = :ownerId
+          AND deleted_at_epoch_ms IS NULL
+        ORDER BY installment_number ASC
+        """,
+    )
+    fun observeInstallmentGroupAndOwner(
+        groupId: String,
+        ownerId: String,
+    ): Flow<List<TransactionEntity>>
+
+    @Query(
+        """
+        SELECT * FROM transactions
+        WHERE id IN (:ids)
+          AND owner_id = :ownerId
+          AND deleted_at_epoch_ms IS NULL
+        """,
+    )
+    suspend fun getByIdsAndOwner(
+        ids: List<String>,
+        ownerId: String,
+    ): List<TransactionEntity>
+
     @Transaction
     @Query("SELECT * FROM transactions WHERE id = :id AND deleted_at_epoch_ms IS NULL")
     fun observeWithTags(id: String): Flow<TransactionWithTags?>

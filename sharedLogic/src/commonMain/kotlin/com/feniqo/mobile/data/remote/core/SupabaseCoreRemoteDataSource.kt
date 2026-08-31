@@ -3,6 +3,7 @@ package com.feniqo.mobile.data.remote.core
 import com.feniqo.mobile.data.remote.dto.BudgetDto
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.ProfileDto
+import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
 import com.feniqo.mobile.data.remote.dto.TagDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.remote.dto.TransactionTagDto
@@ -18,6 +19,7 @@ import io.github.jan.supabase.postgrest.query.filter.PostgrestFilterBuilder
 import io.github.jan.supabase.postgrest.result.PostgrestResult
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -30,7 +32,7 @@ import kotlin.time.Instant
 
 class SupabaseCoreRemoteDataSource(
     private val client: SupabaseClient,
-) : CoreRemoteDataSource, ConditionalRemoteWriter {
+) : CoreRemoteDataSource, ConditionalRemoteWriter, IdempotentConditionalRemoteWriter {
 
     private val rpcJson = Json { ignoreUnknownKeys = true }
 
@@ -108,7 +110,36 @@ class SupabaseCoreRemoteDataSource(
         return result.toPage(query.page)
     }
 
+    override suspend fun fetchRecurringTransactions(query: RecurringTransactionRemoteQuery): RemotePage<RecurringTransactionDto> {
+        val result = client.from(RECURRING_TRANSACTIONS).select {
+            count(Count.EXACT)
+            range(query.page.range)
+            order("updated_at", Order.ASCENDING)
+            order("id", Order.ASCENDING)
+            filter {
+                query.updatedAfter?.let { cursor ->
+                    or {
+                        gt("updated_at", cursor.updatedAt)
+                        and {
+                            eq("updated_at", cursor.updatedAt)
+                            gt("id", cursor.entityId)
+                        }
+                    }
+                }
+                applyWorkspaceScope(query.workspaceScope)
+            }
+        }
+        return result.toCursorPage(
+            request = query.page,
+            cursor = query.updatedAfter,
+            updatedAt = { it.updatedAt ?: it.createdAt },
+            id = RecurringTransactionDto::id,
+        )
+    }
+
+
     override suspend fun fetchTags(
+
         scope: RemoteWorkspaceScope,
         page: RemotePageRequest,
     ): RemotePage<TagDto> {
@@ -180,6 +211,47 @@ class SupabaseCoreRemoteDataSource(
         dto: TransactionDto,
     ): ConditionalRemoteWriteResult<TransactionDto> = conditionalWrite(TRANSACTION, operation, baseVersion, dto)
 
+    override suspend fun writeProfile(
+        operationId: String,
+        operation: RemoteWriteOperation,
+        baseVersion: Long?,
+        dto: ProfileDto,
+    ): ConditionalRemoteWriteResult<ProfileDto> =
+        idempotentConditionalWrite(operationId, PROFILE, operation, baseVersion, dto)
+
+    override suspend fun writeCategory(
+        operationId: String,
+        operation: RemoteWriteOperation,
+        baseVersion: Long?,
+        dto: CategoryDto,
+    ): ConditionalRemoteWriteResult<CategoryDto> =
+        idempotentConditionalWrite(operationId, CATEGORY, operation, baseVersion, dto)
+
+    override suspend fun writeTransaction(
+        operationId: String,
+        operation: RemoteWriteOperation,
+        baseVersion: Long?,
+        dto: TransactionDto,
+    ): ConditionalRemoteWriteResult<TransactionDto> =
+        idempotentConditionalWrite(operationId, TRANSACTION, operation, baseVersion, dto)
+
+    override suspend fun writeBudget(
+        operationId: String,
+        operation: RemoteWriteOperation,
+        baseVersion: Long?,
+        dto: BudgetDto,
+    ): ConditionalRemoteWriteResult<BudgetDto> =
+        idempotentConditionalWrite(operationId, BUDGET, operation, baseVersion, dto)
+
+    override suspend fun writeRecurringTransaction(
+        operationId: String,
+        operation: RemoteWriteOperation,
+        baseVersion: Long?,
+        dto: RecurringTransactionDto,
+    ): ConditionalRemoteWriteResult<RecurringTransactionDto> =
+        idempotentConditionalWrite(operationId, RECURRING_TRANSACTION, operation, baseVersion, dto)
+
+
     private suspend inline fun <reified T : Any> conditionalWrite(
         entityType: String,
         operation: RemoteWriteOperation,
@@ -196,7 +268,7 @@ class SupabaseCoreRemoteDataSource(
                     payload = rpcJson.encodeToJsonElement(dto),
                 ),
             ).jsonObject,
-        ).decodeSingle<JsonObject>()
+        ).decodeAs<JsonObject>()
 
         val status = response[STATUS]?.jsonPrimitive?.content
             ?: throw IllegalStateException("Koşullu Supabase yazma sonucu status taşımıyor.")
@@ -214,6 +286,45 @@ class SupabaseCoreRemoteDataSource(
             )
             NOT_FOUND -> ConditionalRemoteWriteResult.NotFound
             else -> throw IllegalStateException("Bilinmeyen koşullu Supabase yazma sonucu: $status")
+        }
+    }
+
+    private suspend inline fun <reified T : Any> idempotentConditionalWrite(
+        operationId: String,
+        entityType: String,
+        operation: RemoteWriteOperation,
+        baseVersion: Long?,
+        dto: T,
+    ): ConditionalRemoteWriteResult<T> {
+        val response = client.postgrest.rpc(
+            function = SYNC_WRITE_V2_RPC,
+            parameters = rpcJson.encodeToJsonElement(
+                SyncWriteV2RpcParameters(
+                    operationId = operationId,
+                    entityType = entityType,
+                    operation = operation.name,
+                    baseVersion = baseVersion,
+                    payload = rpcJson.encodeToJsonElement(dto),
+                ),
+            ).jsonObject,
+        ).decodeAs<JsonObject>()
+
+        val status = response[STATUS]?.jsonPrimitive?.content
+            ?: throw IllegalStateException("Koşullu Supabase V2 yazma sonucu status taşımıyor.")
+        val recordElement = response[RECORD]
+        val record = recordElement
+            ?.takeUnless { it is JsonNull }
+            ?.let { rpcJson.decodeFromJsonElement<T>(it) }
+
+        return when (status) {
+            APPLIED -> ConditionalRemoteWriteResult.Applied(
+                requireNotNull(record) { "APPLIED sonucu uzak kayıt taşımıyor." },
+            )
+            CONFLICT -> ConditionalRemoteWriteResult.Conflict(
+                requireNotNull(record) { "CONFLICT sonucu uzak kayıt taşımıyor." },
+            )
+            NOT_FOUND -> ConditionalRemoteWriteResult.NotFound
+            else -> throw IllegalStateException("Bilinmeyen koşullu Supabase V2 yazma sonucu: $status")
         }
     }
 
@@ -270,9 +381,13 @@ class SupabaseCoreRemoteDataSource(
 
     private companion object {
         const val CONDITIONAL_WRITE_RPC = "sync_write_v1"
+        const val SYNC_WRITE_V2_RPC = "sync_write_v2"
         const val PROFILE = "PROFILE"
         const val CATEGORY = "CATEGORY"
         const val TRANSACTION = "TRANSACTION"
+        const val BUDGET = "BUDGET"
+        const val RECURRING_TRANSACTION = "RECURRING_TRANSACTION"
+
         const val STATUS = "status"
         const val RECORD = "record"
         const val APPLIED = "APPLIED"
@@ -282,7 +397,9 @@ class SupabaseCoreRemoteDataSource(
         const val CATEGORIES = "categories"
         const val TRANSACTIONS = "transactions"
         const val BUDGETS = "budgets"
+        const val RECURRING_TRANSACTIONS = "recurring_transactions"
         const val TAGS = "tags"
+
         const val TRANSACTION_TAGS = "transaction_tags"
         const val WORKSPACES = "workspaces"
         const val WORKSPACE_MEMBERS = "workspace_members"
@@ -291,6 +408,20 @@ class SupabaseCoreRemoteDataSource(
 
 @Serializable
 private data class ConditionalWriteRpcParameters(
+    @SerialName("p_entity_type")
+    val entityType: String,
+    @SerialName("p_operation")
+    val operation: String,
+    @SerialName("p_base_version")
+    val baseVersion: Long?,
+    @SerialName("p_payload")
+    val payload: JsonElement,
+)
+
+@Serializable
+private data class SyncWriteV2RpcParameters(
+    @SerialName("p_operation_id")
+    val operationId: String,
     @SerialName("p_entity_type")
     val entityType: String,
     @SerialName("p_operation")

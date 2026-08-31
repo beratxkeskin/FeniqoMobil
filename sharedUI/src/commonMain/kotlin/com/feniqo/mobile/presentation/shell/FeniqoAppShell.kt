@@ -17,6 +17,7 @@ import com.feniqo.mobile.presentation.sync.SyncStatusUiState
 enum class AppSection(val label: String, val symbol: String) {
     DASHBOARD("Özet", "⌂"),
     TRANSACTIONS("İşlemler", "↕"),
+    BUDGETS("Bütçeler", "📊"),
     CATEGORIES("Kategoriler", "⊞"),
     SETTINGS("Ayarlar", "⚙"),
 }
@@ -33,20 +34,23 @@ fun FeniqoAppShell(
     syncStatus: SyncStatusUiState = SyncStatusUiState.Initial,
     onManualSync: () -> Unit = {},
     onRetryFailed: () -> Unit = {},
+    showNavigationChrome: Boolean = true,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
     Scaffold(
         modifier = modifier,
         bottomBar = {
-            NavigationBar {
-                AppSection.entries.forEach { section ->
-                    NavigationBarItem(
-                        selected = section == selectedSection,
-                        onClick = { onSectionSelect(section) },
-                        icon = { Text(section.symbol) },
-                        label = { Text(section.label) },
-                    )
+            if (showNavigationChrome) {
+                NavigationBar {
+                    AppSection.entries.forEach { section ->
+                        NavigationBarItem(
+                            selected = section == selectedSection,
+                            onClick = { onSectionSelect(section) },
+                            icon = { Text(section.symbol) },
+                            label = { Text(section.label) },
+                        )
+                    }
                 }
             }
         },
@@ -56,11 +60,13 @@ fun FeniqoAppShell(
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
-            SyncStatusIndicator(
-                uiState = syncStatus,
-                onManualSync = onManualSync,
-                onRetryFailed = onRetryFailed,
-            )
+            if (showNavigationChrome) {
+                SyncStatusIndicator(
+                    uiState = syncStatus,
+                    onManualSync = onManualSync,
+                    onRetryFailed = onRetryFailed,
+                )
+            }
 
             Box(
                 modifier = Modifier

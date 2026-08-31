@@ -3,13 +3,13 @@ package com.feniqo.mobile
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
-import com.feniqo.mobile.domain.sync.BackgroundSyncScheduler
+import com.feniqo.mobile.sync.RecurringTransactionStartupInitializer
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
 /**
  * Hilt'in uygulama seviyesindeki bağımlılık grafiğini başlatır.
- * WorkManager özel factory'si ile başlatılır ve açılış senkronizasyonu planlanır.
+ * WorkManager özel factory'si ile başlatılır.
  */
 @HiltAndroidApp
 class FeniqoApplication : Application(), Configuration.Provider {
@@ -18,7 +18,7 @@ class FeniqoApplication : Application(), Configuration.Provider {
     lateinit var workerFactory: HiltWorkerFactory
 
     @Inject
-    lateinit var backgroundSyncScheduler: BackgroundSyncScheduler
+    lateinit var recurringStartupInitializer: RecurringTransactionStartupInitializer
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -27,6 +27,6 @@ class FeniqoApplication : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
-        backgroundSyncScheduler.scheduleInitialSync()
+        recurringStartupInitializer.onAppCreate()
     }
 }

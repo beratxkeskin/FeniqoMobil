@@ -2,6 +2,7 @@ package com.feniqo.mobile.data.sync
 
 import com.feniqo.mobile.data.local.dao.RemoteSyncDao
 import com.feniqo.mobile.data.local.entity.CategoryEntity
+import com.feniqo.mobile.data.local.entity.RecurringTransactionEntity
 import com.feniqo.mobile.data.local.entity.TransactionEntity
 import com.feniqo.mobile.data.local.entity.UserProfileEntity
 import com.feniqo.mobile.data.local.entity.SyncConflictEntity
@@ -9,6 +10,7 @@ import com.feniqo.mobile.data.local.entity.SyncCursorEntity
 import com.feniqo.mobile.data.remote.core.BudgetRemoteQuery
 import com.feniqo.mobile.data.remote.core.CategoryRemoteQuery
 import com.feniqo.mobile.data.remote.core.CoreRemoteDataSource
+import com.feniqo.mobile.data.remote.core.RecurringTransactionRemoteQuery
 import com.feniqo.mobile.data.remote.core.RemotePage
 import com.feniqo.mobile.data.remote.core.RemotePageRequest
 import com.feniqo.mobile.data.remote.core.RemoteWorkspaceScope
@@ -16,6 +18,7 @@ import com.feniqo.mobile.data.remote.core.TransactionRemoteQuery
 import com.feniqo.mobile.data.remote.dto.BudgetDto
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.ProfileDto
+import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
 import com.feniqo.mobile.data.remote.dto.TagDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.remote.dto.TransactionTagDto
@@ -27,6 +30,7 @@ import kotlin.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class InitialRemoteSyncTest {
     @Test
@@ -38,42 +42,61 @@ class InitialRemoteSyncTest {
 
         assertEquals(2, result.categoryCount)
         assertEquals(2, result.transactionCount)
+        assertEquals(2, result.recurringTransactionCount)
         assertEquals(listOf(0), FakeCoreRemote.categoryPages)
+        assertEquals(listOf(0), FakeCoreRemote.recurringPages)
         assertEquals(listOf(0), FakeCoreRemote.transactionPages)
         assertEquals("SYNCED", dao.profile?.sync?.syncStatus)
         assertEquals(RECEIVED_AT, dao.profile?.sync?.localUpdatedAtEpochMillis)
         assertEquals(7L, dao.categories.single { it.id == CATEGORY_2 }.sync.version)
         assertEquals(Instant.parse(REMOTE_UPDATED_AT).toEpochMilliseconds(), dao.categories.single { it.id == CATEGORY_2 }.sync.updatedAtEpochMillis)
         assertEquals(Instant.parse(REMOTE_DELETED_AT).toEpochMilliseconds(), dao.categories.single { it.id == CATEGORY_2 }.sync.deletedAtEpochMillis)
+        assertEquals(5L, dao.recurringTransactions.single { it.id == RECURRING_2 }.sync.version)
+        assertEquals(Instant.parse(REMOTE_DELETED_AT).toEpochMilliseconds(), dao.recurringTransactions.single { it.id == RECURRING_2 }.sync.deletedAtEpochMillis)
         assertNull(dao.transactions.first().sync.deletedAtEpochMillis)
-        assertEquals(setOf("PROFILE", "CATEGORY", "TRANSACTION"), dao.cursors.map { it.entityTypeCode }.toSet())
+        assertEquals(setOf("PROFILE", "CATEGORY", "RECURRING_TRANSACTION", "TRANSACTION"), dao.cursors.map { it.entityTypeCode }.toSet())
+        assertTrue(dao.categoryInsertedBeforeRecurring)
+        assertTrue(dao.recurringInsertedBeforeTransactions)
     }
 
     private class RecordingRemoteSyncDao : RemoteSyncDao {
         var profile: UserProfileEntity? = null
         var categories: List<CategoryEntity> = emptyList()
+        var recurringTransactions: List<RecurringTransactionEntity> = emptyList()
         var transactions: List<TransactionEntity> = emptyList()
         var cursors: List<SyncCursorEntity> = emptyList()
+        var categoryInsertedBeforeRecurring = false
+        var recurringInsertedBeforeTransactions = false
 
         override suspend fun getProfileRow(id: String): UserProfileEntity? = profile
         override suspend fun getCategoryRow(id: String): CategoryEntity? = categories.firstOrNull { it.id == id }
         override suspend fun getTransactionRow(id: String): TransactionEntity? = transactions.firstOrNull { it.id == id }
+        override suspend fun getRecurringTransactionRow(id: String): RecurringTransactionEntity? = recurringTransactions.firstOrNull { it.id == id }
         override suspend fun getFirstOutboxOperationId(entityTypeCode: String, entityId: String): String? = null
         override suspend fun upsertProfileRow(entity: UserProfileEntity) { profile = entity }
         override suspend fun upsertCategoryRows(entities: List<CategoryEntity>) { categories = entities }
-        override suspend fun upsertTransactionRows(entities: List<TransactionEntity>) { transactions = entities }
+        override suspend fun upsertTransactionRows(entities: List<TransactionEntity>) {
+            recurringInsertedBeforeTransactions = recurringTransactions.isNotEmpty()
+            transactions = entities
+        }
+        override suspend fun upsertRecurringTransactionRows(entities: List<RecurringTransactionEntity>) {
+            categoryInsertedBeforeRecurring = categories.isNotEmpty()
+            recurringTransactions = entities
+        }
         override suspend fun upsertConflictRow(conflict: SyncConflictEntity) = error("Test kapsamı dışı")
         override suspend fun upsertCursorRows(cursors: List<SyncCursorEntity>) { this.cursors = cursors }
         override suspend fun deleteConflictRow(entityTypeCode: String, entityId: String): Int = 0
         override suspend fun markProfileConflict(entityId: String, error: String): Int = 0
         override suspend fun markCategoryConflict(entityId: String, error: String): Int = 0
         override suspend fun markTransactionConflict(entityId: String, error: String): Int = 0
+        override suspend fun markRecurringTransactionConflict(entityId: String, error: String): Int = 0
         override suspend fun deleteOutboxRows(entityTypeCode: String, entityId: String): Int = 0
         override suspend fun deleteOtherOutboxRows(entityTypeCode: String, entityId: String, keptOperationId: String): Int = 0
         override suspend fun resetConflictOperation(operationId: String, operationTypeCode: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseProfileForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseCategoryForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun rebaseRecurringTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
     }
 
     private class FakeCoreRemote : CoreRemoteDataSource {
@@ -91,6 +114,15 @@ class InitialRemoteSyncTest {
             return RemotePage(items, query.page, totalCount = 2)
         }
 
+        override suspend fun fetchRecurringTransactions(query: RecurringTransactionRemoteQuery): RemotePage<RecurringTransactionDto> {
+            assertEquals(RemoteWorkspaceScope.Personal, query.workspaceScope)
+            recurringPages += query.page.pageIndex
+            val items = if (query.page.pageIndex == 0) {
+                listOf(recurring(RECURRING_1), recurring(RECURRING_2, REMOTE_DELETED_AT, 5))
+            } else emptyList()
+            return RemotePage(items, query.page, totalCount = 2)
+        }
+
         override suspend fun fetchTransactions(query: TransactionRemoteQuery): RemotePage<TransactionDto> {
             assertEquals(RemoteWorkspaceScope.Personal, query.workspaceScope)
             transactionPages += query.page.pageIndex
@@ -102,6 +134,7 @@ class InitialRemoteSyncTest {
 
         override suspend fun fetchBudgets(query: BudgetRemoteQuery): RemotePage<BudgetDto> = error("Kapsam dışı")
         override suspend fun fetchTags(scope: RemoteWorkspaceScope, page: RemotePageRequest): RemotePage<TagDto> = error("Kapsam dışı")
+
         override suspend fun fetchWorkspaces(page: RemotePageRequest): RemotePage<WorkspaceDto> = error("Kapsam dışı")
         override suspend fun fetchWorkspaceMembers(workspaceId: String, page: RemotePageRequest): RemotePage<WorkspaceMemberDto> = error("Kapsam dışı")
         override suspend fun fetchTransactionTags(transactionId: String): List<TransactionTagDto> = error("Kapsam dışı")
@@ -114,6 +147,7 @@ class InitialRemoteSyncTest {
 
         companion object {
             val categoryPages = mutableListOf<Int>()
+            val recurringPages = mutableListOf<Int>()
             val transactionPages = mutableListOf<Int>()
         }
     }
@@ -122,14 +156,35 @@ class InitialRemoteSyncTest {
         const val USER_ID = "user-1"
         const val CATEGORY_1 = "category-1"
         const val CATEGORY_2 = "category-2"
+        const val RECURRING_1 = "recurring-1"
+        const val RECURRING_2 = "recurring-2"
         const val REMOTE_CREATED_AT = "2026-08-14T08:00:00Z"
         const val REMOTE_UPDATED_AT = "2026-08-14T09:00:00Z"
         const val REMOTE_DELETED_AT = "2026-08-14T10:00:00Z"
         const val RECEIVED_AT = 1_785_767_400_000L
+
         fun category(id: String, deletedAt: String? = null, version: Long = 4) = CategoryDto(
             id = id, userId = USER_ID, name = "Market $id", type = "expense", color = "#0A7A55",
             createdAt = REMOTE_CREATED_AT, updatedAt = REMOTE_UPDATED_AT,
             deletedAt = deletedAt, version = version,
+        )
+
+        fun recurring(id: String, deletedAt: String? = null, version: Long = 1) = RecurringTransactionDto(
+            id = id,
+            userId = USER_ID,
+            amountMinor = 50_000,
+            currency = "TRY",
+            type = "expense",
+            categoryId = CATEGORY_1,
+            description = "Abonelik $id",
+            paymentMethod = "CREDIT_CARD",
+            frequency = "MONTHLY",
+            interval = 1,
+            startDate = "2026-08-01",
+            createdAt = REMOTE_CREATED_AT,
+            updatedAt = REMOTE_UPDATED_AT,
+            deletedAt = deletedAt,
+            version = version,
         )
 
         fun transaction(id: String) = TransactionDto(

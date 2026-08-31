@@ -94,12 +94,14 @@ class V1OutboxOperationExecutorTest {
         override suspend fun getProfileRow(id: String): UserProfileEntity? = null
         override suspend fun getCategoryRow(id: String): CategoryEntity? = category?.takeIf { it.id == id }
         override suspend fun getTransactionRow(id: String): TransactionEntity? = null
+        override suspend fun getRecurringTransactionRow(id: String): com.feniqo.mobile.data.local.entity.RecurringTransactionEntity? = null
         override suspend fun getFirstOutboxOperationId(entityTypeCode: String, entityId: String): String? = "operation-1"
         override suspend fun upsertProfileRow(entity: UserProfileEntity) = Unit
         override suspend fun upsertCategoryRows(entities: List<CategoryEntity>) {
             category = entities.single()
         }
         override suspend fun upsertTransactionRows(entities: List<TransactionEntity>) = Unit
+        override suspend fun upsertRecurringTransactionRows(entities: List<com.feniqo.mobile.data.local.entity.RecurringTransactionEntity>) = Unit
         override suspend fun upsertConflictRow(conflict: SyncConflictEntity) {
             this.conflict = conflict
         }
@@ -114,13 +116,16 @@ class V1OutboxOperationExecutorTest {
             return 1
         }
         override suspend fun markTransactionConflict(entityId: String, error: String): Int = 0
+        override suspend fun markRecurringTransactionConflict(entityId: String, error: String): Int = 0
         override suspend fun deleteOutboxRows(entityTypeCode: String, entityId: String): Int = 0
         override suspend fun deleteOtherOutboxRows(entityTypeCode: String, entityId: String, keptOperationId: String): Int = 0
         override suspend fun resetConflictOperation(operationId: String, operationTypeCode: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseProfileForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseCategoryForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun rebaseRecurringTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
     }
+
 
     private companion object {
         const val ENTITY_ID = "10000000-0000-0000-0000-000000000001"

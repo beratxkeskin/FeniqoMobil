@@ -15,6 +15,7 @@ import com.feniqo.mobile.domain.repository.SyncEntityType
 import com.feniqo.mobile.domain.repository.SyncOverview
 import com.feniqo.mobile.domain.repository.SyncPhase
 import com.feniqo.mobile.domain.repository.SyncRepository
+import com.feniqo.mobile.domain.sync.BackgroundSyncScheduler
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -34,16 +35,126 @@ import kotlin.test.assertEquals
 class RealtimeSyncCoordinatorTest {
 
     @Test
-    fun authenticated_realtime_signal_requests_room_sync() = runTest {
+    fun initial_null_session_does_not_schedule_initial_sync() = runTest {
         val auth = FakeAuthRepository()
         val source = FakeInvalidationSource()
         val sync = RecordingSyncRepository()
-        val coordinator = RealtimeSyncCoordinator(auth, source, sync)
+        val scheduler = FakeBackgroundSyncScheduler()
+        val coordinator = RealtimeSyncCoordinator(
+            authRepository = auth,
+            invalidationSource = source,
+            syncRepository = sync,
+            syncScheduler = scheduler,
+        )
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             coordinator.run()
         }
-        auth.session.value = testSession()
+        advanceUntilIdle()
+
+        assertEquals(0, scheduler.scheduleInitialSyncCallCount)
+    }
+
+    @Test
+    fun null_to_authenticated_session_schedules_initial_sync_once() = runTest {
+        val auth = FakeAuthRepository()
+        val source = FakeInvalidationSource()
+        val sync = RecordingSyncRepository()
+        val scheduler = FakeBackgroundSyncScheduler()
+        val coordinator = RealtimeSyncCoordinator(
+            authRepository = auth,
+            invalidationSource = source,
+            syncRepository = sync,
+            syncScheduler = scheduler,
+        )
+
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            coordinator.run()
+        }
+        advanceUntilIdle()
+        assertEquals(0, scheduler.scheduleInitialSyncCallCount)
+
+        auth.session.value = testSession(USER_ID)
+        advanceUntilIdle()
+
+        assertEquals(1, scheduler.scheduleInitialSyncCallCount)
+    }
+
+    @Test
+    fun duplicate_authenticated_session_emission_does_not_reschedule() = runTest {
+        val auth = FakeAuthRepository()
+        val source = FakeInvalidationSource()
+        val sync = RecordingSyncRepository()
+        val scheduler = FakeBackgroundSyncScheduler()
+        val coordinator = RealtimeSyncCoordinator(
+            authRepository = auth,
+            invalidationSource = source,
+            syncRepository = sync,
+            syncScheduler = scheduler,
+        )
+
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            coordinator.run()
+        }
+        auth.session.value = testSession(USER_ID)
+        advanceUntilIdle()
+        assertEquals(1, scheduler.scheduleInitialSyncCallCount)
+
+        // Same user emitted again without null intervening
+        auth.session.value = testSession(USER_ID)
+        advanceUntilIdle()
+
+        assertEquals(1, scheduler.scheduleInitialSyncCallCount)
+    }
+
+    @Test
+    fun authenticated_to_null_to_same_user_schedules_initial_sync_again() = runTest {
+        val auth = FakeAuthRepository()
+        val source = FakeInvalidationSource()
+        val sync = RecordingSyncRepository()
+        val scheduler = FakeBackgroundSyncScheduler()
+        val coordinator = RealtimeSyncCoordinator(
+            authRepository = auth,
+            invalidationSource = source,
+            syncRepository = sync,
+            syncScheduler = scheduler,
+        )
+
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            coordinator.run()
+        }
+        auth.session.value = testSession(USER_ID)
+        advanceUntilIdle()
+        assertEquals(1, scheduler.scheduleInitialSyncCallCount)
+
+        // Logout
+        auth.session.value = null
+        advanceUntilIdle()
+        assertEquals(1, scheduler.scheduleInitialSyncCallCount)
+
+        // Re-login with same user
+        auth.session.value = testSession(USER_ID)
+        advanceUntilIdle()
+        assertEquals(2, scheduler.scheduleInitialSyncCallCount)
+    }
+
+    @Test
+    fun authenticated_realtime_signal_requests_room_sync() = runTest {
+        val auth = FakeAuthRepository()
+        val source = FakeInvalidationSource()
+        val sync = RecordingSyncRepository()
+        val scheduler = FakeBackgroundSyncScheduler()
+        val coordinator = RealtimeSyncCoordinator(
+            authRepository = auth,
+            invalidationSource = source,
+            syncRepository = sync,
+            syncScheduler = scheduler,
+        )
+
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            coordinator.run()
+        }
+        auth.session.value = testSession(USER_ID)
         advanceUntilIdle()
 
         source.events.emit(RealtimeInvalidation(SyncEntityType.CATEGORY))
@@ -58,12 +169,18 @@ class RealtimeSyncCoordinatorTest {
         val auth = FakeAuthRepository()
         val source = FakeInvalidationSource()
         val sync = RecordingSyncRepository()
-        val coordinator = RealtimeSyncCoordinator(auth, source, sync)
+        val scheduler = FakeBackgroundSyncScheduler()
+        val coordinator = RealtimeSyncCoordinator(
+            authRepository = auth,
+            invalidationSource = source,
+            syncRepository = sync,
+            syncScheduler = scheduler,
+        )
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             coordinator.run()
         }
-        auth.session.value = testSession()
+        auth.session.value = testSession(USER_ID)
         advanceUntilIdle()
 
         source.events.emit(RealtimeConnectionReady)
@@ -79,22 +196,42 @@ class RealtimeSyncCoordinatorTest {
         val auth = FakeAuthRepository()
         val source = FailsOnceInvalidationSource()
         val sync = RecordingSyncRepository()
+        val scheduler = FakeBackgroundSyncScheduler()
         val coordinator = RealtimeSyncCoordinator(
             authRepository = auth,
             invalidationSource = source,
             syncRepository = sync,
+            syncScheduler = scheduler,
             sourceRestartDelayMillis = 1_000L,
         )
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             coordinator.run()
         }
-        auth.session.value = testSession()
+        auth.session.value = testSession(USER_ID)
         advanceTimeBy(1_001L)
         advanceUntilIdle()
 
         assertEquals(2, source.collectionCount)
         assertEquals(1, sync.requestCount)
+    }
+
+    private class FakeBackgroundSyncScheduler : BackgroundSyncScheduler {
+        var scheduleInitialSyncCallCount = 0
+        var scheduleOutboxSyncCallCount = 0
+        var cancelSyncWorkCallCount = 0
+
+        override fun scheduleInitialSync() {
+            scheduleInitialSyncCallCount++
+        }
+
+        override fun scheduleOutboxSync() {
+            scheduleOutboxSyncCallCount++
+        }
+
+        override fun cancelSyncWork() {
+            cancelSyncWorkCallCount++
+        }
     }
 
     private class FakeInvalidationSource : RealtimeInvalidationSource {
@@ -149,8 +286,8 @@ class RealtimeSyncCoordinatorTest {
     private companion object {
         const val USER_ID = "20000000-0000-0000-0000-000000000001"
 
-        fun testSession() = AuthSession(
-            userId = EntityId(USER_ID),
+        fun testSession(userId: String = USER_ID) = AuthSession(
+            userId = EntityId(userId),
             email = "realtime@feniqo.test",
             expiresAt = Instant.parse("2026-08-15T12:00:00Z"),
         )

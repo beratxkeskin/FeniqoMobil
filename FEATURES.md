@@ -33,6 +33,8 @@ anlamına gelmez. Özellik ancak ekran, iş akışı, hata durumları ve kabul t
 | Makbuz depolama altyapısı | Altyapı hazır | Private storage sözleşmesi, güvenli yol ve 6 MB sınırı | UI, görsel seçme/kamera ve staging bucket politikası |
 | Senkronizasyon gözlemi | Tamamlandı | SyncOverview Flow, ağ gözlemcisi, ViewModel, SyncStatusIndicator ve manuel sync | V1 ekranlarıyla son kabul testleri |
 | Arka plan senkronizasyonu | Tamamlandı | Hilt CoroutineWorker, BackgroundSyncScheduler, exponential backoff ve unique work | UI üzerinden uçtan uca kabul |
+| Bütçeler | Tamamlandı | Ay bazlı bütçe listesi, dinamik ay gezinimi, reaktif harcama/ilerleme takibi, %80 uyarı ve %100 aşım gösterimi, harcama kategorisiyle bütçe ekleme, ID tabanlı Room SSOT form düzenlemesi, onaylı silme ve dinamik ay seçimli önceki aydan kopyalama akışları (Android emülatör manuel smoke kabulü yapıldı) | Workspace bütçeleri (Faz 8.4) |
+| Tekrarlayan işlemler | Devam ediyor | Vade takvim hesaplayıcı, deterministik aday planlayıcı, Room atomik occurrence ve V2 outbox üretimi, WorkManager arka plan işi, saf kural komutları ve doğrulama sözleşmesi, Staging V2 SQL migration ve 28 senaryolu sözleşme kabulü | V2 istemci entegrasyonu (DTO/mapper/outbox/CRUD), kural listesi, ekleme/düzenleme/duraklatma/silme ekranları |
 
 ## Teknik temel
 

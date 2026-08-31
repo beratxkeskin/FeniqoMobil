@@ -17,3 +17,26 @@ fun newSyncMetadata(
     baseVersion = null,
     lastSyncError = null,
 )
+
+fun SyncMetadata.toPendingUpdate(nowEpochMillis: Long): SyncMetadata {
+    val targetStatus = if (syncStatus == SyncStatus.PENDING_CREATE.name) {
+        SyncStatus.PENDING_CREATE.name
+    } else {
+        SyncStatus.PENDING_UPDATE.name
+    }
+    return copy(
+        syncStatus = targetStatus,
+        localUpdatedAtEpochMillis = nowEpochMillis,
+        deletedAtEpochMillis = null,
+        lastSyncError = null,
+    )
+}
+
+fun SyncMetadata.toPendingDelete(nowEpochMillis: Long): SyncMetadata {
+    return copy(
+        syncStatus = SyncStatus.PENDING_DELETE.name,
+        localUpdatedAtEpochMillis = nowEpochMillis,
+        deletedAtEpochMillis = nowEpochMillis,
+        lastSyncError = null,
+    )
+}

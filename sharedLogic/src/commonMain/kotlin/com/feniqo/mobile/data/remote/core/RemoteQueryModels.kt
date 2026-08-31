@@ -86,3 +86,9 @@ data class BudgetRemoteQuery(
     val month: YearMonth? = null,
     val workspaceScope: RemoteWorkspaceScope = RemoteWorkspaceScope.All,
 )
+
+data class RecurringTransactionRemoteQuery(
+    val page: RemotePageRequest = RemotePageRequest(),
+    val workspaceScope: RemoteWorkspaceScope = RemoteWorkspaceScope.All,
+    val updatedAfter: RemoteSyncCursor? = null,
+)

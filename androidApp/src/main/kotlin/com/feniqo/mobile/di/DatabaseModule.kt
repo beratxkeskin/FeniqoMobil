@@ -50,6 +50,7 @@ object DatabaseModule {
     @Provides fun provideSyncStateDao(database: FeniqoDatabase): SyncStateDao = database.syncStateDao()
     @Provides fun provideRemoteSyncDao(database: FeniqoDatabase): RemoteSyncDao = database.remoteSyncDao()
     @Provides fun provideLocalMutationDao(database: FeniqoDatabase): LocalMutationDao = database.localMutationDao()
+    @Provides fun provideRecurringTransactionDao(database: FeniqoDatabase): com.feniqo.mobile.data.local.dao.RecurringTransactionDao = database.recurringTransactionDao()
 
     @Provides
     @Singleton

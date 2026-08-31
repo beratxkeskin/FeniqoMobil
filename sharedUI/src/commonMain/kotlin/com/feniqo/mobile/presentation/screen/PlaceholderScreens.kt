@@ -2,19 +2,15 @@ package com.feniqo.mobile.presentation.screen
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.feniqo.mobile.presentation.component.EmptyState
 import com.feniqo.mobile.presentation.component.LoadingContent
@@ -35,35 +31,6 @@ fun SplashLoadingScreen(
 }
 
 @Composable
-fun DashboardPlaceholderScreen(
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(FeniqoSpacing.Screen),
-        verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
-    ) {
-        Text("Feniqo", style = MaterialTheme.typography.headlineMedium)
-        Text(
-            "Finansal özetin burada yer alacak.",
-            style = MaterialTheme.typography.bodyLarge,
-        )
-    }
-}
-
-@Composable
-fun TransactionsPlaceholderScreen(
-    modifier: Modifier = Modifier,
-) {
-    EmptyState(
-        modifier = modifier.fillMaxSize(),
-        title = "Henüz işlem yok",
-        description = "İşlem listesi ve ekleme akışı sonraki ürün adımlarında eklenecek.",
-    )
-}
-
-@Composable
 fun CategoriesPlaceholderScreen(
     modifier: Modifier = Modifier,
 ) {
@@ -78,6 +45,7 @@ fun CategoriesPlaceholderScreen(
 fun ThemeSettingsPlaceholderScreen(
     themeMode: ThemeMode,
     onThemeModeChange: suspend (ThemeMode) -> Unit,
+    onNavigateToRecurringTransactions: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -108,6 +76,14 @@ fun ThemeSettingsPlaceholderScreen(
                     },
                 )
             }
+        }
+
+        Text("Finansal Araçlar", style = MaterialTheme.typography.headlineMedium)
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onNavigateToRecurringTransactions,
+        ) {
+            Text("Tekrarlayan İşlemler (Abonelikler)")
         }
     }
 }

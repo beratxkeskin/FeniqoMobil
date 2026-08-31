@@ -64,3 +64,38 @@ data class TransactionDto(
     val deletedAt: String? = null,
     val version: Long? = null,
 )
+
+@Serializable
+data class RecurringTransactionDto(
+    val id: String,
+    @SerialName("user_id")
+    val userId: String,
+    @SerialName("workspace_id")
+    val workspaceId: String? = null,
+    @SerialName("amount_minor")
+    val amountMinor: Long,
+    val currency: String = "TRY",
+    val type: String,
+    @SerialName("category_id")
+    val categoryId: String,
+    val description: String? = null,
+    @SerialName("payment_method")
+    val paymentMethod: String,
+    val frequency: String,
+    val interval: Int = 1,
+    @SerialName("start_date")
+    val startDate: String,
+    @SerialName("end_date")
+    val endDate: String? = null,
+    @SerialName("last_generated_date")
+    val lastGeneratedDate: String? = null,
+    @SerialName("is_active")
+    val isActive: Boolean = true,
+    @SerialName("created_at")
+    val createdAt: String,
+    @SerialName("updated_at")
+    val updatedAt: String? = null,
+    @SerialName("deleted_at")
+    val deletedAt: String? = null,
+    val version: Long? = null,
+)

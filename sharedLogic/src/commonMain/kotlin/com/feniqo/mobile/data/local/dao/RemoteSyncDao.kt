@@ -5,6 +5,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Upsert
 import com.feniqo.mobile.data.local.entity.CategoryEntity
+import com.feniqo.mobile.data.local.entity.RecurringTransactionEntity
 import com.feniqo.mobile.data.local.entity.TransactionEntity
 import com.feniqo.mobile.data.local.entity.UserProfileEntity
 import com.feniqo.mobile.data.local.entity.SyncConflictEntity
@@ -21,6 +22,9 @@ interface RemoteSyncDao {
 
     @Query("SELECT * FROM transactions WHERE id = :id LIMIT 1")
     suspend fun getTransactionRow(id: String): TransactionEntity?
+
+    @Query("SELECT * FROM recurring_transactions WHERE id = :id LIMIT 1")
+    suspend fun getRecurringTransactionRow(id: String): RecurringTransactionEntity?
 
     @Query(
         """
@@ -42,6 +46,9 @@ interface RemoteSyncDao {
     suspend fun upsertTransactionRows(entities: List<TransactionEntity>)
 
     @Upsert
+    suspend fun upsertRecurringTransactionRows(entities: List<RecurringTransactionEntity>)
+
+    @Upsert
     suspend fun upsertConflictRow(conflict: SyncConflictEntity)
 
     @Upsert
@@ -58,6 +65,10 @@ interface RemoteSyncDao {
 
     @Query("UPDATE transactions SET sync_status = 'CONFLICT', last_sync_error = :error WHERE id = :entityId")
     suspend fun markTransactionConflict(entityId: String, error: String): Int
+
+    @Query("UPDATE recurring_transactions SET sync_status = 'CONFLICT', last_sync_error = :error WHERE id = :entityId")
+    suspend fun markRecurringTransactionConflict(entityId: String, error: String): Int
+
 
     @Query("DELETE FROM sync_operations WHERE entity_type_code = :entityTypeCode AND entity_id = :entityId")
     suspend fun deleteOutboxRows(entityTypeCode: String, entityId: String): Int
@@ -124,6 +135,17 @@ interface RemoteSyncDao {
     )
     suspend fun rebaseTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int
 
+    @Query(
+        """
+        UPDATE recurring_transactions
+        SET sync_status = CASE WHEN deleted_at_epoch_ms IS NULL THEN 'PENDING_UPDATE' ELSE 'PENDING_DELETE' END,
+            version = :remoteVersion, base_version = :remoteVersion,
+            last_sync_error = NULL, local_updated_at_epoch_ms = :nowEpochMillis
+        WHERE id = :entityId
+        """,
+    )
+    suspend fun rebaseRecurringTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int
+
     @Transaction
     suspend fun applyProfileWrite(entity: UserProfileEntity) {
         upsertProfileRow(entity)
@@ -152,6 +174,13 @@ interface RemoteSyncDao {
     }
 
     @Transaction
+    suspend fun resolveRecurringTransactionKeepRemote(entity: RecurringTransactionEntity) {
+        upsertRecurringTransactionRows(listOf(entity))
+        deleteOutboxRows("RECURRING_TRANSACTION", entity.id)
+        deleteConflictRow("RECURRING_TRANSACTION", entity.id)
+    }
+
+    @Transaction
     suspend fun resolveKeepLocal(
         conflict: SyncConflictEntity,
         operationTypeCode: String,
@@ -171,6 +200,7 @@ interface RemoteSyncDao {
             "PROFILE" -> rebaseProfileForRetry(conflict.entityId, conflict.remoteVersion, nowEpochMillis)
             "CATEGORY" -> rebaseCategoryForRetry(conflict.entityId, conflict.remoteVersion, nowEpochMillis)
             "TRANSACTION" -> rebaseTransactionForRetry(conflict.entityId, conflict.remoteVersion, nowEpochMillis)
+            "RECURRING_TRANSACTION" -> rebaseRecurringTransactionForRetry(conflict.entityId, conflict.remoteVersion, nowEpochMillis)
             else -> error("Desteklenmeyen conflict entity türü: ${conflict.entityTypeCode}")
         }
         check(updated == 1) { "Çakışmanın yerel kaydı bulunamadı." }
@@ -199,6 +229,13 @@ interface RemoteSyncDao {
     }
 
     @Transaction
+    suspend fun applyRecurringTransactionPull(entity: RecurringTransactionEntity, cursor: SyncCursorEntity) {
+        upsertRecurringTransactionRows(listOf(entity))
+        deleteConflictRow("RECURRING_TRANSACTION", entity.id)
+        upsertCursorRows(listOf(cursor))
+    }
+
+    @Transaction
     suspend fun advancePullCursor(cursor: SyncCursorEntity) {
         upsertCursorRows(listOf(cursor))
     }
@@ -213,6 +250,12 @@ interface RemoteSyncDao {
     suspend fun applyTransactionWrite(entity: TransactionEntity) {
         upsertTransactionRows(listOf(entity))
         deleteConflictRow("TRANSACTION", entity.id)
+    }
+
+    @Transaction
+    suspend fun applyRecurringTransactionWrite(entity: RecurringTransactionEntity) {
+        upsertRecurringTransactionRows(listOf(entity))
+        deleteConflictRow("RECURRING_TRANSACTION", entity.id)
     }
 
     @Transaction
@@ -251,9 +294,21 @@ interface RemoteSyncDao {
         upsertCursorRows(listOf(cursor))
     }
 
+    @Transaction
+    suspend fun recordRecurringTransactionConflict(conflict: SyncConflictEntity) {
+        upsertConflictRow(conflict)
+        check(markRecurringTransactionConflict(conflict.entityId, CONFLICT_ERROR) == 1)
+    }
+
+    @Transaction
+    suspend fun recordRecurringTransactionPullConflict(conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
+        recordRecurringTransactionConflict(conflict)
+        upsertCursorRows(listOf(cursor))
+    }
+
     /**
-     * Kategoriler işlemlerden önce yazılır; böylece transaction.category_id foreign key'i
-     * aynı senkronizasyon sınırı içinde her zaman geçerli kalır.
+     * Kategoriler işlemlerden ve recurring kurallarından önce yazılır; böylece
+     * category_id foreign key'i her zaman geçerli kalır.
      */
     @Transaction
     suspend fun applyInitialSnapshot(
@@ -261,12 +316,15 @@ interface RemoteSyncDao {
         categories: List<CategoryEntity>,
         transactions: List<TransactionEntity>,
         cursors: List<SyncCursorEntity> = emptyList(),
+        recurringTransactions: List<RecurringTransactionEntity> = emptyList(),
     ) {
         upsertProfileRow(profile)
         if (categories.isNotEmpty()) upsertCategoryRows(categories)
+        if (recurringTransactions.isNotEmpty()) upsertRecurringTransactionRows(recurringTransactions)
         if (transactions.isNotEmpty()) upsertTransactionRows(transactions)
         if (cursors.isNotEmpty()) upsertCursorRows(cursors)
     }
+
 
     companion object {
         const val CONFLICT_ERROR = "Sunucudaki kayıt yerel baseVersion ile uyuşmuyor"

@@ -6,6 +6,7 @@ import com.feniqo.mobile.domain.model.CategoryColor
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.DashboardSummary
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.domain.model.InstallmentInfo
 import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.MoneyScoreLevel
@@ -99,6 +100,148 @@ class CoreUseCasesTest {
     }
 
     @Test
+    fun add_transaction_with_custom_category_in_same_workspace_succeeds() = runTest {
+        val wsId = EntityId("ws-1")
+        val cat = expenseCategory().copy(workspaceId = wsId)
+        val catRepo = FakeCategoryRepository(listOf(cat))
+        val trxRepo = FakeTransactionRepository()
+        val useCase = AddTransactionUseCase(authRepository(), catRepo, trxRepo)
+
+        val result = useCase(transactionCommand().copy(workspaceId = wsId), TODAY, NOW)
+        assertIs<RepositoryResult.Success<EntityId>>(result)
+    }
+
+    @Test
+    fun add_transaction_with_custom_category_in_different_workspace_fails_with_category_workspace_mismatch() = runTest {
+        val cat = expenseCategory().copy(workspaceId = EntityId("ws-other"))
+        val catRepo = FakeCategoryRepository(listOf(cat))
+        val trxRepo = FakeTransactionRepository()
+        val useCase = AddTransactionUseCase(authRepository(), catRepo, trxRepo)
+
+        val result = useCase(transactionCommand().copy(workspaceId = EntityId("ws-1")), TODAY, NOW)
+        val failure = assertIs<RepositoryResult.Failure>(result)
+        assertEquals("category_workspace_mismatch", failure.error.code)
+    }
+
+    @Test
+    fun add_transaction_with_default_category_succeeds_in_any_workspace() = runTest {
+        val defaultCat = expenseCategory().copy(ownerId = null, workspaceId = null, isDefault = true)
+        val catRepo = FakeCategoryRepository(listOf(defaultCat))
+        val trxRepo = FakeTransactionRepository()
+        val useCase = AddTransactionUseCase(authRepository(), catRepo, trxRepo)
+
+        val result = useCase(transactionCommand().copy(workspaceId = EntityId("ws-any")), TODAY, NOW)
+        assertIs<RepositoryResult.Success<EntityId>>(result)
+    }
+
+    @Test
+    fun update_transaction_with_custom_category_in_same_workspace_succeeds() = runTest {
+        val wsId = EntityId("ws-1")
+        val cat = expenseCategory().copy(workspaceId = wsId)
+        val existing = transaction().copy(workspaceId = wsId)
+        val catRepo = FakeCategoryRepository(listOf(cat))
+        val trxRepo = FakeTransactionRepository(listOf(existing))
+        val useCase = UpdateTransactionUseCase(authRepository(), catRepo, trxRepo)
+
+        val result = useCase(transactionCommand().copy(workspaceId = wsId), TODAY)
+        assertIs<RepositoryResult.Success<Unit>>(result)
+    }
+
+    @Test
+    fun update_transaction_with_custom_category_in_different_workspace_fails_with_category_workspace_mismatch() = runTest {
+        val cat = expenseCategory().copy(workspaceId = EntityId("ws-other"))
+        val existing = transaction().copy(workspaceId = EntityId("ws-1"))
+        val catRepo = FakeCategoryRepository(listOf(cat))
+        val trxRepo = FakeTransactionRepository(listOf(existing))
+        val useCase = UpdateTransactionUseCase(authRepository(), catRepo, trxRepo)
+
+        val result = useCase(transactionCommand().copy(workspaceId = EntityId("ws-1")), TODAY)
+        val failure = assertIs<RepositoryResult.Failure>(result)
+        assertEquals("category_workspace_mismatch", failure.error.code)
+    }
+
+    @Test
+    fun update_transaction_with_default_category_succeeds_in_any_workspace() = runTest {
+        val defaultCat = expenseCategory().copy(ownerId = null, workspaceId = null, isDefault = true)
+        val existing = transaction().copy(workspaceId = EntityId("ws-any"))
+        val catRepo = FakeCategoryRepository(listOf(defaultCat))
+        val trxRepo = FakeTransactionRepository(listOf(existing))
+        val useCase = UpdateTransactionUseCase(authRepository(), catRepo, trxRepo)
+
+        val result = useCase(transactionCommand().copy(workspaceId = EntityId("ws-any")), TODAY)
+        assertIs<RepositoryResult.Success<Unit>>(result)
+    }
+
+    @Test
+    fun add_transaction_creates_with_null_installment() = runTest {
+        val catRepo = FakeCategoryRepository(listOf(expenseCategory()))
+        val trxRepo = FakeTransactionRepository()
+        val useCase = AddTransactionUseCase(authRepository(), catRepo, trxRepo)
+
+        val result = useCase(transactionCommand(), TODAY, NOW)
+        assertIs<RepositoryResult.Success<EntityId>>(result)
+
+        val created = trxRepo.observeTransaction(TRANSACTION_ID).first()
+        assertNull(created?.installment)
+    }
+
+    @Test
+    fun update_transaction_when_workspace_different_fails_with_transaction_workspace_immutable_and_does_not_call_repo() = runTest {
+        val existing = transaction().copy(workspaceId = EntityId("ws-initial"))
+        val catRepo = FakeCategoryRepository(listOf(expenseCategory().copy(workspaceId = EntityId("ws-initial"))))
+        val trxRepo = FakeTransactionRepository(listOf(existing))
+        val useCase = UpdateTransactionUseCase(authRepository(), catRepo, trxRepo)
+
+        val result = useCase(transactionCommand().copy(workspaceId = EntityId("ws-different")), TODAY)
+        val failure = assertIs<RepositoryResult.Failure>(result)
+        assertEquals("transaction_workspace_immutable", failure.error.code)
+
+        // Verify repository update was not called
+        val current = trxRepo.observeTransaction(TRANSACTION_ID).first()
+        assertEquals(EntityId("ws-initial"), current?.workspaceId)
+    }
+
+    @Test
+    fun update_transaction_preserves_installment_metadata_and_immutable_fields() = runTest {
+        val instInfo = InstallmentInfo(1, 3, EntityId("grp-1"))
+        val existing = transaction(description = "Eski").copy(
+            installment = instInfo,
+            workspaceId = EntityId("ws-1"),
+        )
+        val catRepo = FakeCategoryRepository(listOf(expenseCategory().copy(workspaceId = EntityId("ws-1"))))
+        val trxRepo = FakeTransactionRepository(listOf(existing))
+        val useCase = UpdateTransactionUseCase(authRepository(), catRepo, trxRepo)
+
+        val result = useCase(transactionCommand(description = "Yeni").copy(workspaceId = EntityId("ws-1")), TODAY)
+        assertIs<RepositoryResult.Success<Unit>>(result)
+
+        val updated = trxRepo.observeTransaction(TRANSACTION_ID).first()
+        // Immutable fields preserved
+        assertEquals(TRANSACTION_ID, updated?.id)
+        assertEquals(USER_ID, updated?.ownerId)
+        assertEquals(EntityId("ws-1"), updated?.workspaceId)
+        assertEquals(NOW, updated?.createdAt)
+        assertEquals(instInfo, updated?.installment)
+        // Mutable fields updated
+        assertEquals("Yeni", updated?.description)
+    }
+
+    @Test
+    fun update_transaction_preserves_null_installment_for_regular_transaction() = runTest {
+        val existing = transaction().copy(installment = null)
+        val catRepo = FakeCategoryRepository(listOf(expenseCategory()))
+        val trxRepo = FakeTransactionRepository(listOf(existing))
+        val useCase = UpdateTransactionUseCase(authRepository(), catRepo, trxRepo)
+
+        val result = useCase(transactionCommand(description = "Güncel"), TODAY)
+        assertIs<RepositoryResult.Success<Unit>>(result)
+
+        val updated = trxRepo.observeTransaction(TRANSACTION_ID).first()
+        assertNull(updated?.installment)
+        assertEquals("Güncel", updated?.description)
+    }
+
+    @Test
     fun observe_transactions_forwards_the_filter_to_repository() = runTest {
         val transactionRepository = FakeTransactionRepository(listOf(transaction()))
         val useCase = ObserveTransactionsUseCase(transactionRepository)
@@ -121,7 +264,7 @@ class CoreUseCasesTest {
                 workspaceId = null,
                 name = "  Market  ",
                 type = TransactionType.EXPENSE,
-                color = CategoryColor("#0A7A55"),
+                colorHex = "#0A7A55",
                 icon = null,
             ),
             NOW,
@@ -207,7 +350,6 @@ class CoreUseCasesTest {
         paymentMethod = PaymentMethod.CASH,
         transactionDate = transactionDate,
         receiptPath = null,
-        installment = null,
     )
 
     private fun transaction(
@@ -273,6 +415,7 @@ private class FakeCategoryRepository(initial: List<Category> = emptyList()) : Ca
 
     override fun observeCategories(type: TransactionType?, workspaceId: EntityId?): Flow<List<Category>> = categories
     override fun observeCategory(id: EntityId): Flow<Category?> = categories.map { list -> list.firstOrNull { it.id == id } }
+    override fun observeCategoriesForHistoryLookup(workspaceId: EntityId?): Flow<List<Category>> = categories
     override suspend fun create(category: Category): RepositoryResult<EntityId> {
         categories.value = categories.value + category
         return RepositoryResult.Success(category.id)
@@ -296,9 +439,17 @@ private class FakeTransactionRepository(initial: List<Transaction> = emptyList()
     override fun observeTransaction(id: EntityId): Flow<Transaction?> =
         transactions.map { list -> list.firstOrNull { it.id == id } }
 
+    override fun observeInstallmentGroup(groupId: EntityId): Flow<List<Transaction>> =
+        transactions.map { list -> list.filter { it.installment?.groupId == groupId } }
+
     override suspend fun create(transaction: Transaction): RepositoryResult<EntityId> {
         transactions.value = transactions.value + transaction
         return RepositoryResult.Success(transaction.id)
+    }
+
+    override suspend fun createInstallmentGroup(transactions: List<Transaction>): RepositoryResult<EntityId> {
+        this.transactions.value = this.transactions.value + transactions
+        return RepositoryResult.Success(transactions.first().installment?.groupId ?: EntityId("group-1"))
     }
 
     override suspend fun update(transaction: Transaction): RepositoryResult<Unit> {
@@ -309,6 +460,11 @@ private class FakeTransactionRepository(initial: List<Transaction> = emptyList()
     override suspend fun softDelete(id: EntityId): RepositoryResult<Unit> {
         lastSoftDeletedId = id
         transactions.value = transactions.value.filterNot { it.id == id }
+        return RepositoryResult.Success(Unit)
+    }
+
+    override suspend fun softDeleteInstallments(ids: Set<EntityId>): RepositoryResult<Unit> {
+        transactions.value = transactions.value.filterNot { it.id in ids }
         return RepositoryResult.Success(Unit)
     }
 }

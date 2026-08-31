@@ -82,3 +82,73 @@ val ANDROID_MIGRATION_3_4 = Migration(3, 4) { database ->
         """.trimIndent(),
     )
 }
+
+/** v5, operation-level idempotency için değişmez snapshot, predecessor zinciri ve protocol_version ekler. */
+val ANDROID_MIGRATION_4_5 = Migration(4, 5) { database ->
+    database.execSQL("ALTER TABLE sync_operations ADD COLUMN payload_json TEXT")
+    database.execSQL("ALTER TABLE sync_operations ADD COLUMN predecessor_operation_id TEXT")
+    database.execSQL("ALTER TABLE sync_operations ADD COLUMN is_blocked INTEGER NOT NULL DEFAULT 0")
+    database.execSQL("ALTER TABLE sync_operations ADD COLUMN protocol_version INTEGER NOT NULL DEFAULT 1")
+    database.execSQL(
+        "CREATE INDEX IF NOT EXISTS index_sync_operations_predecessor_operation_id " +
+            "ON sync_operations(predecessor_operation_id)",
+    )
+}
+
+/** v6, tekrarlayan işlem kurallarını ve atomik tekrar vadeleri için idempotency tablosunu ekler. */
+val ANDROID_MIGRATION_5_6 = Migration(5, 6) { database ->
+    database.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS recurring_transactions (
+            id TEXT NOT NULL,
+            owner_id TEXT NOT NULL,
+            workspace_id TEXT,
+            amount_minor INTEGER NOT NULL,
+            currency_code TEXT NOT NULL,
+            type_code TEXT NOT NULL,
+            category_id TEXT NOT NULL,
+            description TEXT,
+            payment_method_code TEXT NOT NULL,
+            frequency_code TEXT NOT NULL,
+            `interval` INTEGER NOT NULL,
+            start_date TEXT NOT NULL,
+            end_date TEXT,
+            last_generated_date TEXT,
+            is_active INTEGER NOT NULL,
+            created_at_epoch_ms INTEGER NOT NULL,
+            sync_status TEXT NOT NULL,
+            updated_at_epoch_ms INTEGER NOT NULL,
+            local_updated_at_epoch_ms INTEGER NOT NULL,
+            deleted_at_epoch_ms INTEGER,
+            version INTEGER NOT NULL,
+            base_version INTEGER,
+            last_sync_error TEXT,
+            PRIMARY KEY(id),
+            FOREIGN KEY(category_id) REFERENCES categories(id) ON UPDATE NO ACTION ON DELETE RESTRICT,
+            FOREIGN KEY(workspace_id) REFERENCES workspaces(id) ON UPDATE NO ACTION ON DELETE SET NULL
+        )
+        """.trimIndent(),
+    )
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_recurring_transactions_owner_id ON recurring_transactions(owner_id)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_recurring_transactions_workspace_id ON recurring_transactions(workspace_id)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_recurring_transactions_category_id ON recurring_transactions(category_id)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_recurring_transactions_is_active ON recurring_transactions(is_active)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_recurring_transactions_start_date ON recurring_transactions(start_date)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_recurring_transactions_deleted_at_epoch_ms ON recurring_transactions(deleted_at_epoch_ms)")
+
+    database.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS recurring_transaction_occurrences (
+            recurring_transaction_id TEXT NOT NULL,
+            due_date TEXT NOT NULL,
+            transaction_id TEXT NOT NULL,
+            created_at_epoch_ms INTEGER NOT NULL,
+            PRIMARY KEY(recurring_transaction_id, due_date),
+            FOREIGN KEY(recurring_transaction_id) REFERENCES recurring_transactions(id) ON UPDATE NO ACTION ON DELETE CASCADE,
+            FOREIGN KEY(transaction_id) REFERENCES transactions(id) ON UPDATE NO ACTION ON DELETE RESTRICT
+        )
+        """.trimIndent(),
+    )
+    database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_recurring_transaction_occurrences_transaction_id ON recurring_transaction_occurrences(transaction_id)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_recurring_transaction_occurrences_recurring_transaction_id ON recurring_transaction_occurrences(recurring_transaction_id)")
+}

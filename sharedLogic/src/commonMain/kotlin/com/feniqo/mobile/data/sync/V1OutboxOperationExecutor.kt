@@ -28,13 +28,17 @@ class V1OutboxOperationExecutor(
 
     private val snapshotJson = Json { encodeDefaults = true; explicitNulls = true }
 
-    override suspend fun execute(operation: SyncOperationEntity) {
+    override suspend fun execute(operation: SyncOperationEntity): OutboxExecutionResult {
+        require(operation.protocolVersion == 1) {
+            "V1 executor yalnızca protocolVersion=1 kabul eder. Alınan: ${operation.protocolVersion}"
+        }
         when (SyncEntityType.valueOf(operation.entityTypeCode)) {
             SyncEntityType.PROFILE -> executeProfile(operation)
             SyncEntityType.CATEGORY -> executeCategory(operation)
             SyncEntityType.TRANSACTION -> executeTransaction(operation)
             else -> error("V1 outbox henüz ${operation.entityTypeCode} türünü desteklemiyor.")
         }
+        return OutboxExecutionResult.V1Completed
     }
 
     private suspend fun executeProfile(operation: SyncOperationEntity) {

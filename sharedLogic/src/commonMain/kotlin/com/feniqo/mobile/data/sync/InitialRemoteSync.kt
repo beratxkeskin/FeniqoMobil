@@ -5,11 +5,13 @@ import com.feniqo.mobile.data.local.entity.SyncCursorEntity
 import com.feniqo.mobile.data.mapper.toEntity
 import com.feniqo.mobile.data.remote.core.CategoryRemoteQuery
 import com.feniqo.mobile.data.remote.core.CoreRemoteDataSource
+import com.feniqo.mobile.data.remote.core.RecurringTransactionRemoteQuery
 import com.feniqo.mobile.data.remote.core.RemotePage
 import com.feniqo.mobile.data.remote.core.RemotePageRequest
 import com.feniqo.mobile.data.remote.core.RemoteWorkspaceScope
 import com.feniqo.mobile.data.remote.core.TransactionRemoteQuery
 import com.feniqo.mobile.data.remote.dto.CategoryDto
+import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.remote.mapper.toDomain
 import com.feniqo.mobile.domain.model.EntityId
@@ -28,6 +30,9 @@ class InitialRemoteSync(
         val categories = fetchAll { page ->
             remote.fetchCategories(CategoryRemoteQuery(page, workspaceScope = RemoteWorkspaceScope.Personal))
         }
+        val recurringTransactions = fetchAll { page ->
+            remote.fetchRecurringTransactions(RecurringTransactionRemoteQuery(page, workspaceScope = RemoteWorkspaceScope.Personal))
+        }
         val transactions = fetchAll { page ->
             remote.fetchTransactions(TransactionRemoteQuery(page, workspaceScope = RemoteWorkspaceScope.Personal))
         }
@@ -38,16 +43,24 @@ class InitialRemoteSync(
             categories = categories.map { dto ->
                 dto.toDomain().toEntity(dto.toRemoteSyncMetadata(receivedAt), slug = dto.slug)
             },
+            recurringTransactions = recurringTransactions.map { dto ->
+                dto.toDomain().toEntity(dto.toRemoteSyncMetadata(receivedAt))
+            },
             transactions = transactions.map { dto ->
                 dto.toDomain().toEntity(dto.toRemoteSyncMetadata(receivedAt))
             },
             cursors = listOfNotNull(
                 cursorFor(PROFILE, listOf(profile.id to (profile.updatedAt ?: profile.createdAt))),
                 cursorFor(CATEGORY, categories.map { it.id to (it.updatedAt ?: it.createdAt) }),
+                cursorFor(RECURRING_TRANSACTION, recurringTransactions.map { it.id to (it.updatedAt ?: it.createdAt) }),
                 cursorFor(TRANSACTION, transactions.map { it.id to (it.updatedAt ?: it.createdAt) }),
             ),
         )
-        return InitialSyncResult(categories.size, transactions.size)
+        return InitialSyncResult(
+            categoryCount = categories.size,
+            transactionCount = transactions.size,
+            recurringTransactionCount = recurringTransactions.size,
+        )
     }
 
     private suspend fun <T> fetchAll(fetch: suspend (RemotePageRequest) -> RemotePage<T>): List<T> {
@@ -75,6 +88,7 @@ class InitialRemoteSync(
     private companion object {
         const val PROFILE = "PROFILE"
         const val CATEGORY = "CATEGORY"
+        const val RECURRING_TRANSACTION = "RECURRING_TRANSACTION"
         const val TRANSACTION = "TRANSACTION"
     }
 }
@@ -82,4 +96,5 @@ class InitialRemoteSync(
 data class InitialSyncResult(
     val categoryCount: Int,
     val transactionCount: Int,
+    val recurringTransactionCount: Int = 0,
 )

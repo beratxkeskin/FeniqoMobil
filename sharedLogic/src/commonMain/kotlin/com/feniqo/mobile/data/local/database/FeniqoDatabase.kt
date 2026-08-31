@@ -14,13 +14,16 @@ import com.feniqo.mobile.data.local.dao.SyncStateDao
 import com.feniqo.mobile.data.local.dao.TagDao
 import com.feniqo.mobile.data.local.dao.TransactionDao
 import com.feniqo.mobile.data.local.dao.WorkspaceDao
+import com.feniqo.mobile.data.local.dao.RecurringTransactionDao
 import com.feniqo.mobile.data.local.entity.BudgetEntity
 import com.feniqo.mobile.data.local.entity.CategoryEntity
-import com.feniqo.mobile.data.local.entity.TagEntity
-import com.feniqo.mobile.data.local.entity.SyncOperationEntity
+import com.feniqo.mobile.data.local.entity.RecurringTransactionEntity
+import com.feniqo.mobile.data.local.entity.RecurringTransactionOccurrenceEntity
 import com.feniqo.mobile.data.local.entity.SyncConflictEntity
 import com.feniqo.mobile.data.local.entity.SyncCursorEntity
+import com.feniqo.mobile.data.local.entity.SyncOperationEntity
 import com.feniqo.mobile.data.local.entity.SyncUserStateEntity
+import com.feniqo.mobile.data.local.entity.TagEntity
 import com.feniqo.mobile.data.local.entity.TransactionEntity
 import com.feniqo.mobile.data.local.entity.TransactionTagCrossRef
 import com.feniqo.mobile.data.local.entity.UserProfileEntity
@@ -41,8 +44,10 @@ import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
         SyncCursorEntity::class,
         SyncConflictEntity::class,
         SyncUserStateEntity::class,
+        RecurringTransactionEntity::class,
+        RecurringTransactionOccurrenceEntity::class,
     ],
-    version = 4,
+    version = 6,
     exportSchema = true,
 )
 @ConstructedBy(FeniqoDatabaseConstructor::class)
@@ -53,6 +58,7 @@ abstract class FeniqoDatabase : RoomDatabase() {
     abstract fun transactionDao(): TransactionDao
     abstract fun budgetDao(): BudgetDao
     abstract fun tagDao(): TagDao
+    abstract fun recurringTransactionDao(): RecurringTransactionDao
     abstract fun syncOperationDao(): SyncOperationDao
     abstract fun syncStateDao(): SyncStateDao
     abstract fun remoteSyncDao(): RemoteSyncDao

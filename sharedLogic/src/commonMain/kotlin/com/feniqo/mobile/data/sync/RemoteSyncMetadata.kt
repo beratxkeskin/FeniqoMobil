@@ -1,8 +1,10 @@
 package com.feniqo.mobile.data.sync
 
 import com.feniqo.mobile.data.local.entity.SyncMetadata
+import com.feniqo.mobile.data.remote.dto.BudgetDto
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.ProfileDto
+import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.domain.model.SyncStatus
 import kotlin.time.Instant
@@ -22,6 +24,20 @@ internal fun CategoryDto.toRemoteSyncMetadata(receivedAtEpochMillis: Long): Sync
 )
 
 internal fun TransactionDto.toRemoteSyncMetadata(receivedAtEpochMillis: Long): SyncMetadata = remoteSyncMetadata(
+    updatedAt = updatedAt ?: createdAt,
+    deletedAt = deletedAt,
+    version = version,
+    receivedAtEpochMillis = receivedAtEpochMillis,
+)
+
+internal fun BudgetDto.toRemoteSyncMetadata(receivedAtEpochMillis: Long): SyncMetadata = remoteSyncMetadata(
+    updatedAt = updatedAt ?: createdAt,
+    deletedAt = deletedAt,
+    version = version,
+    receivedAtEpochMillis = receivedAtEpochMillis,
+)
+
+internal fun RecurringTransactionDto.toRemoteSyncMetadata(receivedAtEpochMillis: Long): SyncMetadata = remoteSyncMetadata(
     updatedAt = updatedAt ?: createdAt,
     deletedAt = deletedAt,
     version = version,

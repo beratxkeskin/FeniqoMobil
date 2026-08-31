@@ -30,7 +30,7 @@ fun Category.toEntity(sync: SyncMetadata, slug: String? = null): CategoryEntity 
     workspaceId = workspaceId?.value,
     scopeKey = scopeKey(ownerId, workspaceId),
     name = name.trim(),
-    normalizedName = name.normalizeForStorage(),
+    normalizedName = com.feniqo.mobile.domain.validation.CategoryValidationRules.normalizeName(name),
     slug = slug,
     typeCode = type.name,
     colorHex = color.hex,
@@ -154,3 +154,45 @@ fun TransactionTagCrossRef.toDomain(): TransactionTag = TransactionTag(
     transactionId = EntityId(transactionId),
     tagId = EntityId(tagId),
 )
+
+fun com.feniqo.mobile.domain.model.RecurringTransaction.toEntity(sync: SyncMetadata): com.feniqo.mobile.data.local.entity.RecurringTransactionEntity =
+    com.feniqo.mobile.data.local.entity.RecurringTransactionEntity(
+        id = id.value,
+        ownerId = ownerId.value,
+        workspaceId = workspaceId?.value,
+        amountMinor = amount.amountMinor,
+        currencyCode = amount.currency.code,
+        typeCode = type.name,
+        categoryId = categoryId.value,
+        description = description,
+        paymentMethodCode = paymentMethod.name,
+        frequencyCode = rule.frequency.name,
+        interval = rule.interval,
+        startDate = rule.startDate.toString(),
+        endDate = rule.endDate?.toString(),
+        lastGeneratedDate = lastGeneratedDate?.toString(),
+        isActive = isActive,
+        createdAtEpochMillis = createdAt.toEpochMilliseconds(),
+        sync = sync,
+    )
+
+fun com.feniqo.mobile.data.local.entity.RecurringTransactionEntity.toDomain(): com.feniqo.mobile.domain.model.RecurringTransaction =
+    com.feniqo.mobile.domain.model.RecurringTransaction(
+        id = EntityId(id),
+        ownerId = EntityId(ownerId),
+        workspaceId = workspaceId?.let(::EntityId),
+        amount = Money(amountMinor, Currency.valueOf(currencyCode)),
+        type = TransactionType.valueOf(typeCode),
+        categoryId = EntityId(categoryId),
+        description = description,
+        paymentMethod = PaymentMethod.valueOf(paymentMethodCode),
+        rule = com.feniqo.mobile.domain.model.RecurrenceRule(
+            frequency = com.feniqo.mobile.domain.model.RecurrenceFrequency.valueOf(frequencyCode),
+            interval = interval,
+            startDate = LocalDate.parse(startDate),
+            endDate = endDate?.let(LocalDate::parse),
+        ),
+        lastGeneratedDate = lastGeneratedDate?.let(LocalDate::parse),
+        isActive = isActive,
+        createdAt = Instant.fromEpochMilliseconds(createdAtEpochMillis),
+    )

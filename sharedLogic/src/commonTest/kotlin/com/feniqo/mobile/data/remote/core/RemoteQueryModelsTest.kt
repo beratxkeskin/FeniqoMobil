@@ -40,4 +40,13 @@ class RemoteQueryModelsTest {
         assertTrue(first.hasNextPage)
         assertFalse(last.hasNextPage)
     }
+
+    @Test
+    fun default_recurring_transaction_query_has_correct_defaults() {
+        val query = RecurringTransactionRemoteQuery()
+        assertEquals(0, query.page.pageIndex)
+        assertEquals(RemotePageRequest.DEFAULT_PAGE_SIZE, query.page.pageSize)
+        assertEquals(RemoteWorkspaceScope.All, query.workspaceScope)
+        assertEquals(null, query.updatedAfter)
+    }
 }

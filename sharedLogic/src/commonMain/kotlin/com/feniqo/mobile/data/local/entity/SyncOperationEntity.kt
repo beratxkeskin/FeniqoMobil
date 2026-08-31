@@ -12,6 +12,7 @@ import androidx.room.PrimaryKey
         Index(value = ["status_code", "next_attempt_at_epoch_ms", "created_at_epoch_ms"]),
         Index(value = ["entity_type_code", "entity_id"]),
         Index(value = ["created_at_epoch_ms"]),
+        Index(value = ["predecessor_operation_id"]),
     ],
 )
 data class SyncOperationEntity(
@@ -26,6 +27,14 @@ data class SyncOperationEntity(
     val operationTypeCode: String,
     @ColumnInfo(name = "base_version")
     val baseVersion: Long?,
+    @ColumnInfo(name = "payload_json")
+    val payloadJson: String? = null,
+    @ColumnInfo(name = "predecessor_operation_id")
+    val predecessorOperationId: String? = null,
+    @ColumnInfo(name = "is_blocked", defaultValue = "0")
+    val isBlocked: Boolean = false,
+    @ColumnInfo(name = "protocol_version", defaultValue = "1")
+    val protocolVersion: Int = 1,
     @ColumnInfo(name = "status_code")
     val statusCode: String,
     @ColumnInfo(name = "attempt_count")

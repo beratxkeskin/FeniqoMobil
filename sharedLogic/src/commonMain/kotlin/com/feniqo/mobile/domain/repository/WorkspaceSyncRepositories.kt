@@ -66,7 +66,9 @@ enum class SyncEntityType {
     TRANSACTION,
     BUDGET,
     WORKSPACE,
+    RECURRING_TRANSACTION,
 }
+
 
 data class SyncConflict(
     val entityId: EntityId,

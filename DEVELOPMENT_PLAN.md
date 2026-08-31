@@ -6,12 +6,11 @@
 
 ## Güncel durum
 
-- Son tamamlanan ana adım: **7.4 — Dashboard ve geçici MoneyScore**
-- Sıradaki ana adım: **7.3 — İşlem ve kategori akışı**
-- Güncel doğrulama: **124 sharedLogic host testi, 23 sharedUI host testi, 71 androidApp birim testi (toplam 218 test)**, Android debug APK ve iOS Simulator
-  ARM64 ortak kod derlemesi başarılı. Staging auth ve Dashboard emülatör smoke testleri doğrulandı.
+- Aktif çalışma: **8.2 — Tekrarlayan İşlemler ve Abonelikler (Recurring Transactions)** (Devam ediyor).
+- Tamamlanan dilimler: Dilim 1A–1E (vade hesaplama, aday planlama, Room atomik occurrence üretimi, repository/use-case, Android WorkManager), Dilim 2A (saf command/validation kuralları) ve Dilim 2B (Supabase V2 migration ve 28 senaryolu SQL sözleşme testi).
+- Sıradaki teknik adım: Recurring rule için Android/KMP V2 istemci entegrasyonu (DTO/mapper, `SyncEntityType.RECURRING_TRANSACTION`, outbox ACK/pull ve CRUD akışı). UI ve abonelikler daha sonra.
 - Production Supabase durumu: migration uygulanmadı.
-- Staging: `FeniqoMobil-Staging`; V1 migration, RLS, RPC, Realtime publication ve auth akışları doğrulandı.
+- Staging: `FeniqoMobil-Staging` (ref: `rxfaiynkhaxrksosxvxp`); 12/12 migration (`20260830000100_sync_write_v2_recurring_transactions.sql` dâhil), RLS, `sync_write_v2` RPC ve 28 senaryolu SQL sözleşme testi doğrulandı; koşulsuz ROLLBACK ile test verisi bırakılmadı.
 
 ## Tamamlanan fazlar
 
@@ -27,13 +26,14 @@
 | 7.1 Navigasyon ve UI durumları | Tamamlandı | Type-safe Navigation Compose rotaları, bağımsız Auth/Main NavHost, RootNavViewModel, stateless FeniqoAppShell |
 | 7.2 Giriş ve kayıt ekranları | Tamamlandı | LoginScreen, RegisterScreen, tipli validation/hata eşleme, Login/RegisterViewModel, session tabanlı akış, staging auth |
 | 7.4 Dashboard | Tamamlandı | Stateless DashboardScreen, DashboardViewModel, Hilt modülleri, dinamik ay Room Flow SSOT, son işlemler, işlem/düzenleme navigasyonları, geçici MoneyScore kartı ve ön değerlendirme |
+| 8.1 Bütçeler | Tamamlandı | Bütçe listesi, dinamik ay gezinimi, %80 uyarı ve %100 aşım, harcama kategorisiyle bütçe ekleme, ID tabanlı Room SSOT form düzenlemesi, onaylı silme ve kopyalama akışları, Room V2 outbox/ACK, Staging V2 SQL migration, sözleşme testi ve Android emülatör manuel smoke kabulü |
 
 5.1'de Android için build configuration ve güvenli oturum saklama uygulanmıştır. iOS `.xcconfig`,
 Keychain ve üretim güvenlik adaptörlerinin kalan kısmı Android-first kararı gereği 10.4'te tamamlanır.
 
-## Aktif faz: 7.3 İşlem ve kategori akışı
+## Aktif faz: 8.2 Tekrarlayan İşlemler ve Abonelikler (Devam Ediyor)
 
-Amaç: İşlem listesi (tarih gruplama, arama, filtreleme, boş durum), işlem ekleme/düzenleme/silme ekranları, kategori seçimi ve yönetimi akışlarını tamamlamak.
+Amaç: Tekrarlayan işlem ve abonelik domain modelleri, Room V2 outbox desteği, Supabase V2 migration ve kullanıcı arayüzü akışlarını tamamlamak. Dilim 1A–2B tamamlandı; V2 istemci entegrasyonu (DTO/mapper/outbox/CRUD) ile devam ediliyor.
 
 ## Sonraki fazlar
 

@@ -16,6 +16,15 @@ interface SyncStateDao {
     @Query("SELECT * FROM sync_conflicts WHERE entity_id = :entityId LIMIT 1")
     suspend fun getConflict(entityId: String): SyncConflictEntity?
 
+    @Query("SELECT * FROM sync_conflicts WHERE entity_type_code = :entityTypeCode AND entity_id = :entityId LIMIT 1")
+    suspend fun getConflict(entityTypeCode: String, entityId: String): SyncConflictEntity?
+
+    @Query("SELECT * FROM sync_conflicts WHERE entity_type_code = :entityTypeCode")
+    suspend fun getConflictsByEntityType(entityTypeCode: String): List<SyncConflictEntity>
+
+    @Query("SELECT * FROM sync_conflicts")
+    suspend fun getAllConflicts(): List<SyncConflictEntity>
+
     @Upsert
     suspend fun upsertCursor(cursor: SyncCursorEntity)
 
@@ -24,6 +33,9 @@ interface SyncStateDao {
 
     @Query("SELECT COUNT(*) FROM sync_conflicts")
     fun observeConflictCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM sync_conflicts")
+    suspend fun getConflictCount(): Int
 
     @Upsert
     suspend fun upsertConflict(conflict: SyncConflictEntity)

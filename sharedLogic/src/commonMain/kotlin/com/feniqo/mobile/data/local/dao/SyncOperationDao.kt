@@ -19,6 +19,7 @@ interface SyncOperationDao {
         """
         SELECT * FROM sync_operations
         WHERE status_code IN ('PENDING', 'FAILED')
+          AND is_blocked = 0
           AND next_attempt_at_epoch_ms <= :nowEpochMillis
         ORDER BY created_at_epoch_ms, operation_id
         LIMIT :limit
@@ -35,19 +36,21 @@ interface SyncOperationDao {
     @Query(
         """
         UPDATE sync_operations
-        SET status_code = 'IN_FLIGHT', updated_at_epoch_ms = :nowEpochMillis
+        SET status_code = 'IN_FLIGHT',
+            attempt_count = attempt_count + 1,
+            updated_at_epoch_ms = :nowEpochMillis
         WHERE operation_id = :operationId
           AND status_code IN ('PENDING', 'FAILED')
+          AND is_blocked = 0
           AND next_attempt_at_epoch_ms <= :nowEpochMillis
         """,
     )
-    suspend fun markInFlight(operationId: String, nowEpochMillis: Long): Int
+    suspend fun claimOperation(operationId: String, nowEpochMillis: Long): Int
 
     @Query(
         """
         UPDATE sync_operations
         SET status_code = 'FAILED',
-            attempt_count = :attemptCount,
             last_error = :lastError,
             next_attempt_at_epoch_ms = :nextAttemptAtEpochMillis,
             updated_at_epoch_ms = :nowEpochMillis
@@ -56,7 +59,6 @@ interface SyncOperationDao {
     )
     suspend fun markFailed(
         operationId: String,
-        attemptCount: Int,
         lastError: String,
         nextAttemptAtEpochMillis: Long,
         nowEpochMillis: Long,
@@ -77,7 +79,6 @@ interface SyncOperationDao {
         """
         UPDATE sync_operations
         SET status_code = 'FAILED',
-            attempt_count = attempt_count + 1,
             last_error = :lastError,
             next_attempt_at_epoch_ms = :nowEpochMillis,
             updated_at_epoch_ms = :nowEpochMillis
@@ -110,4 +111,76 @@ interface SyncOperationDao {
         "DELETE FROM sync_operations WHERE entity_type_code = :entityTypeCode AND entity_id = :entityId",
     )
     suspend fun deleteForEntity(entityTypeCode: String, entityId: String): Int
+
+    @Query(
+        """
+        SELECT * FROM sync_operations
+        WHERE predecessor_operation_id = :predecessorOperationId
+        LIMIT 2
+        """,
+    )
+    suspend fun getSuccessors(predecessorOperationId: String): List<SyncOperationEntity>
+
+    @Query(
+        """
+        UPDATE sync_operations
+        SET base_version = :appliedVersion,
+            is_blocked = 0,
+            updated_at_epoch_ms = :nowEpochMillis
+        WHERE operation_id = :operationId
+          AND predecessor_operation_id = :predecessorOperationId
+          AND is_blocked = 1
+          AND attempt_count = 0
+          AND status_code = 'PENDING'
+          AND protocol_version = 2
+        """,
+    )
+    suspend fun unblockSuccessor(
+        operationId: String,
+        predecessorOperationId: String,
+        appliedVersion: Long,
+        nowEpochMillis: Long,
+    ): Int
+
+    @Query(
+        """
+        SELECT * FROM sync_operations
+        WHERE entity_type_code = :entityTypeCode
+          AND entity_id = :entityId
+          AND operation_id NOT IN (
+              SELECT predecessor_operation_id
+              FROM sync_operations
+              WHERE predecessor_operation_id IS NOT NULL
+          )
+        LIMIT 2
+        """,
+    )
+    suspend fun getActiveTailCandidates(entityTypeCode: String, entityId: String): List<SyncOperationEntity>
+
+    @Query(
+        """
+        UPDATE sync_operations
+        SET payload_json = :payloadJson,
+            updated_at_epoch_ms = :nowEpochMillis
+        WHERE operation_id = :operationId
+          AND protocol_version = 2
+          AND attempt_count = 0
+          AND status_code = 'PENDING'
+        """,
+    )
+    suspend fun coalescePendingPayload(operationId: String, payloadJson: String, nowEpochMillis: Long): Int
+
+    @Query(
+        """
+        UPDATE sync_operations
+        SET operation_type_code = 'DELETE',
+            payload_json = :payloadJson,
+            updated_at_epoch_ms = :nowEpochMillis
+        WHERE operation_id = :operationId
+          AND protocol_version = 2
+          AND attempt_count = 0
+          AND status_code = 'PENDING'
+        """,
+    )
+    suspend fun convertToPendingDelete(operationId: String, payloadJson: String?, nowEpochMillis: Long): Int
 }

@@ -3,6 +3,7 @@ package com.feniqo.mobile.data.remote.core
 import com.feniqo.mobile.data.remote.dto.BudgetDto
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.ProfileDto
+import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
 import com.feniqo.mobile.data.remote.dto.TagDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.remote.dto.TransactionTagDto
@@ -14,7 +15,9 @@ interface CoreRemoteDataSource {
     suspend fun fetchCategories(query: CategoryRemoteQuery): RemotePage<CategoryDto>
     suspend fun fetchTransactions(query: TransactionRemoteQuery): RemotePage<TransactionDto>
     suspend fun fetchBudgets(query: BudgetRemoteQuery): RemotePage<BudgetDto>
+    suspend fun fetchRecurringTransactions(query: RecurringTransactionRemoteQuery): RemotePage<RecurringTransactionDto>
     suspend fun fetchTags(scope: RemoteWorkspaceScope, page: RemotePageRequest): RemotePage<TagDto>
+
     suspend fun fetchWorkspaces(page: RemotePageRequest): RemotePage<WorkspaceDto>
     suspend fun fetchWorkspaceMembers(workspaceId: String, page: RemotePageRequest): RemotePage<WorkspaceMemberDto>
     suspend fun fetchTransactionTags(transactionId: String): List<TransactionTagDto>

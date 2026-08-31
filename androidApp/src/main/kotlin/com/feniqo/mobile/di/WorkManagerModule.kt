@@ -25,11 +25,28 @@ abstract class WorkManagerModule {
         scheduler: WorkManagerSyncScheduler,
     ): BackgroundSyncScheduler
 
+    @Binds
+    @Singleton
+    abstract fun bindRecurringTransactionWorkScheduler(
+        scheduler: com.feniqo.mobile.sync.WorkManagerRecurringTransactionScheduler,
+    ): com.feniqo.mobile.sync.RecurringTransactionWorkScheduler
+
+    @Binds
+    @Singleton
+    abstract fun bindRecurringTransactionTimeProvider(
+        provider: com.feniqo.mobile.sync.SystemRecurringTransactionTimeProvider,
+    ): com.feniqo.mobile.sync.RecurringTransactionTimeProvider
+
     companion object {
         @Provides
         @Singleton
         fun provideWorkManager(
             @ApplicationContext context: Context,
         ): WorkManager = WorkManager.getInstance(context)
+
+        @Provides
+        @Singleton
+        fun provideSystemRecurringTransactionTimeProvider(): com.feniqo.mobile.sync.SystemRecurringTransactionTimeProvider =
+            com.feniqo.mobile.sync.SystemRecurringTransactionTimeProvider()
     }
 }

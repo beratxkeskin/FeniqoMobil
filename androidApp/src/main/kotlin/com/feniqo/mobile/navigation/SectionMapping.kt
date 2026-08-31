@@ -8,6 +8,7 @@ import com.feniqo.mobile.presentation.shell.AppSection
 fun AppSection.toTopLevelDestination(): TopLevelDestination = when (this) {
     AppSection.DASHBOARD -> TopLevelDestination.DASHBOARD
     AppSection.TRANSACTIONS -> TopLevelDestination.TRANSACTIONS
+    AppSection.BUDGETS -> TopLevelDestination.BUDGETS
     AppSection.CATEGORIES -> TopLevelDestination.CATEGORIES
     AppSection.SETTINGS -> TopLevelDestination.SETTINGS
 }
@@ -15,6 +16,7 @@ fun AppSection.toTopLevelDestination(): TopLevelDestination = when (this) {
 fun TopLevelDestination.toAppSection(): AppSection = when (this) {
     TopLevelDestination.DASHBOARD -> AppSection.DASHBOARD
     TopLevelDestination.TRANSACTIONS -> AppSection.TRANSACTIONS
+    TopLevelDestination.BUDGETS -> AppSection.BUDGETS
     TopLevelDestination.CATEGORIES -> AppSection.CATEGORIES
     TopLevelDestination.SETTINGS -> AppSection.SETTINGS
 }

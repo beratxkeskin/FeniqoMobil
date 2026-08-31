@@ -15,7 +15,7 @@ interface CategoryDao {
         WHERE deleted_at_epoch_ms IS NULL
           AND (:typeCode IS NULL OR type_code = :typeCode)
           AND (
-            is_default = 1 OR
+            (is_default = 1 AND owner_id IS NULL) OR
             (owner_id = :ownerId AND (
               (:workspaceId IS NULL AND workspace_id IS NULL) OR workspace_id = :workspaceId
             ))
@@ -31,6 +31,43 @@ interface CategoryDao {
 
     @Query("SELECT * FROM categories WHERE id = :id AND deleted_at_epoch_ms IS NULL")
     fun observeById(id: String): Flow<CategoryEntity?>
+
+    @Query(
+        """
+        SELECT * FROM categories
+        WHERE id = :id
+          AND deleted_at_epoch_ms IS NULL
+          AND ((is_default = 1 AND owner_id IS NULL) OR owner_id = :ownerId)
+        """,
+    )
+    fun observeByIdAndOwner(id: String, ownerId: String): Flow<CategoryEntity?>
+
+    @Query(
+        """
+        SELECT * FROM categories
+        WHERE id = :id
+          AND deleted_at_epoch_ms IS NULL
+          AND ((is_default = 1 AND owner_id IS NULL) OR owner_id = :ownerId)
+        """,
+    )
+    suspend fun getByIdAndOwner(id: String, ownerId: String): CategoryEntity?
+
+    @Query(
+        """
+        SELECT * FROM categories
+        WHERE (
+            (is_default = 1 AND owner_id IS NULL) OR
+            (owner_id = :ownerId AND (
+              (:workspaceId IS NULL AND workspace_id IS NULL) OR workspace_id = :workspaceId
+            ))
+        )
+        ORDER BY is_default DESC, normalized_name
+        """,
+    )
+    fun observeAllForHistoryLookup(
+        ownerId: String,
+        workspaceId: String?,
+    ): Flow<List<CategoryEntity>>
 
     @Upsert
     suspend fun upsert(entity: CategoryEntity)
@@ -54,8 +91,48 @@ interface BudgetDao {
         month: String,
     ): Flow<List<BudgetEntity>>
 
+    @Query(
+        """
+        SELECT * FROM budgets
+        WHERE owner_id = :ownerId
+          AND month = :month
+          AND deleted_at_epoch_ms IS NULL
+          AND ((:workspaceId IS NULL AND workspace_id IS NULL) OR workspace_id = :workspaceId)
+        ORDER BY category_id
+        """,
+    )
+    suspend fun getForMonth(
+        ownerId: String,
+        workspaceId: String?,
+        month: String,
+    ): List<BudgetEntity>
+
     @Query("SELECT * FROM budgets WHERE id = :id AND deleted_at_epoch_ms IS NULL")
     fun observeById(id: String): Flow<BudgetEntity?>
+
+    @Query(
+        """
+        SELECT * FROM budgets
+        WHERE id = :id
+          AND owner_id = :ownerId
+          AND deleted_at_epoch_ms IS NULL
+        """,
+    )
+    suspend fun getByIdAndOwner(id: String, ownerId: String): BudgetEntity?
+
+    @Query(
+        """
+        SELECT * FROM budgets
+        WHERE scope_key = :scopeKey
+          AND category_id = :categoryId
+          AND month = :month
+        """,
+    )
+    suspend fun getAnyByScopeCategoryAndMonth(
+        scopeKey: String,
+        categoryId: String,
+        month: String,
+    ): BudgetEntity?
 
     @Upsert
     suspend fun upsert(entity: BudgetEntity)

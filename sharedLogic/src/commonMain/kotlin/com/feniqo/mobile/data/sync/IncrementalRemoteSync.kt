@@ -3,6 +3,7 @@ package com.feniqo.mobile.data.sync
 import com.feniqo.mobile.data.local.dao.RemoteSyncDao
 import com.feniqo.mobile.data.local.dao.SyncStateDao
 import com.feniqo.mobile.data.local.entity.CategoryEntity
+import com.feniqo.mobile.data.local.entity.RecurringTransactionEntity
 import com.feniqo.mobile.data.local.entity.SyncConflictEntity
 import com.feniqo.mobile.data.local.entity.SyncCursorEntity
 import com.feniqo.mobile.data.local.entity.TransactionEntity
@@ -11,6 +12,7 @@ import com.feniqo.mobile.data.mapper.toDomain
 import com.feniqo.mobile.data.mapper.toEntity
 import com.feniqo.mobile.data.remote.core.CategoryRemoteQuery
 import com.feniqo.mobile.data.remote.core.CoreRemoteDataSource
+import com.feniqo.mobile.data.remote.core.RecurringTransactionRemoteQuery
 import com.feniqo.mobile.data.remote.core.RemotePage
 import com.feniqo.mobile.data.remote.core.RemotePageRequest
 import com.feniqo.mobile.data.remote.core.RemoteSyncCursor
@@ -18,6 +20,7 @@ import com.feniqo.mobile.data.remote.core.RemoteWorkspaceScope
 import com.feniqo.mobile.data.remote.core.TransactionRemoteQuery
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.ProfileDto
+import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.remote.mapper.toDomain
 import com.feniqo.mobile.data.remote.mapper.toDto
@@ -65,6 +68,22 @@ class IncrementalRemoteSync(
             conflicts += result.conflicts
         }
 
+        val recurringCursor = syncStateDao.getCursor(RECURRING_TRANSACTION)
+        val recurringTransactions = fetchAll { page ->
+            remote.fetchRecurringTransactions(
+                RecurringTransactionRemoteQuery(
+                    page = page,
+                    workspaceScope = RemoteWorkspaceScope.Personal,
+                    updatedAfter = recurringCursor?.toRemoteCursor(),
+                ),
+            )
+        }
+        recurringTransactions.forEach { dto ->
+            val result = applyRecurringTransaction(dto)
+            applied += result.applied
+            conflicts += result.conflicts
+        }
+
         val transactionCursor = syncStateDao.getCursor(TRANSACTION)
         val transactions = fetchAll { page ->
             remote.fetchTransactions(
@@ -86,6 +105,7 @@ class IncrementalRemoteSync(
             conflictCount = conflicts,
             receivedCategoryCount = categories.size,
             receivedTransactionCount = transactions.size,
+            receivedRecurringTransactionCount = recurringTransactions.size,
         )
     }
 
@@ -142,6 +162,32 @@ class IncrementalRemoteSync(
         )
     }
 
+    private suspend fun applyRecurringTransaction(dto: RecurringTransactionDto): ApplyResult {
+        val cursor = dto.cursor(RECURRING_TRANSACTION)
+        val local = remoteSyncDao.getRecurringTransactionRow(dto.id)
+        val remoteEntity = dto.toDomain().toEntity(dto.toRemoteSyncMetadata(nowEpochMillisProvider()))
+        return applyOrConflict(
+            local = local,
+            remoteVersion = dto.requiredVersion(RECURRING_TRANSACTION),
+            apply = { remoteSyncDao.applyRecurringTransactionPull(remoteEntity, cursor) },
+            conflict = {
+                remoteSyncDao.recordRecurringTransactionPullConflict(
+                    conflict = pullConflict(
+                        entityType = RECURRING_TRANSACTION,
+                        entityId = dto.id,
+                        operationId = requiredOutboxOperationId(RECURRING_TRANSACTION, dto.id),
+                        localVersion = local!!.sync.version,
+                        remoteVersion = dto.requiredVersion(RECURRING_TRANSACTION),
+                        local = local.toDomain().toDto(),
+                        remote = dto,
+                    ),
+                    cursor = cursor,
+                )
+            },
+            advance = { remoteSyncDao.advancePullCursor(cursor) },
+        )
+    }
+
     private suspend fun applyTransaction(dto: TransactionDto): ApplyResult {
         val cursor = dto.cursor(TRANSACTION)
         val local = remoteSyncDao.getTransactionRow(dto.id)
@@ -179,6 +225,7 @@ class IncrementalRemoteSync(
             is UserProfileEntity -> local.sync
             is CategoryEntity -> local.sync
             is TransactionEntity -> local.sync
+            is RecurringTransactionEntity -> local.sync
             null -> null
             else -> error("Desteklenmeyen yerel sync entity türü.")
         }
@@ -249,6 +296,7 @@ class IncrementalRemoteSync(
     private fun ProfileDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
     private fun CategoryDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
     private fun TransactionDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
+    private fun RecurringTransactionDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
 
     private fun cursor(entityType: String, entityId: String, updatedAt: String) = SyncCursorEntity(
         entityTypeCode = entityType,
@@ -259,6 +307,7 @@ class IncrementalRemoteSync(
     private fun ProfileDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
     private fun CategoryDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
     private fun TransactionDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
+    private fun RecurringTransactionDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
 
     private fun requiredVersion(entityType: String, version: Long?): Long = requireNotNull(version) {
         "$entityType uzak kaydı version taşımıyor; sync migration uygulanmadan pull yapılamaz."
@@ -269,6 +318,7 @@ class IncrementalRemoteSync(
     private companion object {
         const val PROFILE = "PROFILE"
         const val CATEGORY = "CATEGORY"
+        const val RECURRING_TRANSACTION = "RECURRING_TRANSACTION"
         const val TRANSACTION = "TRANSACTION"
     }
 }
@@ -278,4 +328,5 @@ data class IncrementalSyncResult(
     val conflictCount: Int,
     val receivedCategoryCount: Int,
     val receivedTransactionCount: Int,
+    val receivedRecurringTransactionCount: Int = 0,
 )

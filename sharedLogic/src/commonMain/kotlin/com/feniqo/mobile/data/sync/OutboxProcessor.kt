@@ -2,7 +2,25 @@ package com.feniqo.mobile.data.sync
 
 import com.feniqo.mobile.data.local.entity.SyncOperationEntity
 import com.feniqo.mobile.data.local.outbox.OfflineWriteQueue
+import com.feniqo.mobile.data.remote.dto.BudgetDto
+import com.feniqo.mobile.data.remote.dto.CategoryDto
+import com.feniqo.mobile.data.remote.dto.ProfileDto
+import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
+import com.feniqo.mobile.data.remote.dto.TransactionDto
 import kotlinx.coroutines.CancellationException
+
+/** Outbox işleminin sunucuda yürütülmesi sonrası dönen tip güvenli sonuç. */
+sealed interface OutboxExecutionResult {
+    data object V1Completed : OutboxExecutionResult
+    data class ProfileApplied(val record: ProfileDto) : OutboxExecutionResult
+    data class CategoryApplied(val record: CategoryDto) : OutboxExecutionResult
+    data class TransactionApplied(val record: TransactionDto) : OutboxExecutionResult
+    data class BudgetApplied(val record: BudgetDto) : OutboxExecutionResult
+    data class RecurringTransactionApplied(val record: RecurringTransactionDto) : OutboxExecutionResult
+    data object MissingDeleteAcknowledged : OutboxExecutionResult
+    data class ConflictDetected(val conflict: com.feniqo.mobile.data.local.entity.SyncConflictEntity) : OutboxExecutionResult
+}
+
 
 /** Outbox'ın kalıcı sırasını koruyarak tek tek gönderilmesini sağlayan ortak senkronizasyon çekirdeği. */
 class OutboxProcessor(
@@ -15,20 +33,32 @@ class OutboxProcessor(
         var conflictOperationId: String? = null
         var lastError: Throwable? = null
 
-        for (operation in queue.readyOperations(limit)) {
-            if (!queue.markInFlight(operation.operationId)) continue
+        for (candidate in queue.readyOperations(limit)) {
+            val claimed = queue.claimOperation(candidate.operationId) ?: continue
             try {
-                executor.execute(operation)
-                if (queue.markSucceeded(operation.operationId)) succeeded++
+                val result = executor.execute(claimed)
+                when (result) {
+                    is OutboxExecutionResult.V1Completed -> {
+                        if (queue.markSucceeded(claimed.operationId)) succeeded++
+                    }
+                    is OutboxExecutionResult.ConflictDetected -> {
+                        queue.recordV2Conflict(result.conflict)
+                        conflictOperationId = claimed.operationId
+                        break
+                    }
+                    else -> {
+                        if (queue.ackV2Execution(claimed.operationId, result)) succeeded++
+                    }
+                }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (conflict: OutboxConflictException) {
-                queue.markConflict(operation.operationId, conflict.message.orEmpty())
-                conflictOperationId = operation.operationId
+                queue.markConflict(claimed.operationId, conflict.message.orEmpty())
+                conflictOperationId = claimed.operationId
                 break
             } catch (error: Throwable) {
-                queue.recordFailure(operation.operationId, error.message.orEmpty())
-                failedOperationId = operation.operationId
+                queue.recordFailure(claimed.operationId, error.message.orEmpty())
+                failedOperationId = claimed.operationId
                 lastError = error
                 break
             }
@@ -51,15 +81,17 @@ data class OutboxProcessResult(
 class OutboxConflictException(message: String) : IllegalStateException(message)
 
 fun interface OutboxOperationExecutor {
-    /** İşlem başarılı sayılmadan önce uzak kaynağın isteği kabul ettiğini doğrular. */
-    suspend fun execute(operation: SyncOperationEntity)
+    /** İşlem başarılı sayılmadan önce uzak kaynağın isteği kabul ettiğini doğrular ve yürütme sonucunu döner. */
+    suspend fun execute(operation: SyncOperationEntity): OutboxExecutionResult
 }
 
 /** İşleyiciyi Room uygulamasından ayırır; testte yan etkisiz sahte kuyruk kullanılabilir. */
 interface OutboxQueue {
     suspend fun readyOperations(limit: Int): List<SyncOperationEntity>
-    suspend fun markInFlight(operationId: String): Boolean
+    suspend fun claimOperation(operationId: String): SyncOperationEntity?
     suspend fun markSucceeded(operationId: String): Boolean
+    suspend fun ackV2Execution(operationId: String, result: OutboxExecutionResult): Boolean
+    suspend fun recordV2Conflict(conflict: com.feniqo.mobile.data.local.entity.SyncConflictEntity): Boolean
     suspend fun recordFailure(operationId: String, errorMessage: String): Boolean
     suspend fun markConflict(operationId: String, errorMessage: String): Boolean
 }
@@ -68,8 +100,12 @@ class RoomOutboxQueue(
     private val delegate: OfflineWriteQueue,
 ) : OutboxQueue {
     override suspend fun readyOperations(limit: Int): List<SyncOperationEntity> = delegate.getReadyOperations(limit)
-    override suspend fun markInFlight(operationId: String): Boolean = delegate.markInFlight(operationId)
+    override suspend fun claimOperation(operationId: String): SyncOperationEntity? = delegate.claimOperation(operationId)
     override suspend fun markSucceeded(operationId: String): Boolean = delegate.markSucceeded(operationId)
+    override suspend fun ackV2Execution(operationId: String, result: OutboxExecutionResult): Boolean =
+        delegate.ackV2Execution(operationId, result)
+    override suspend fun recordV2Conflict(conflict: com.feniqo.mobile.data.local.entity.SyncConflictEntity): Boolean =
+        delegate.recordV2Conflict(conflict)
     override suspend fun recordFailure(operationId: String, errorMessage: String): Boolean =
         delegate.recordFailure(operationId, errorMessage)
     override suspend fun markConflict(operationId: String, errorMessage: String): Boolean =

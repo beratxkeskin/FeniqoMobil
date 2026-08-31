@@ -7,8 +7,10 @@ import com.feniqo.mobile.data.local.outbox.OfflineWriteQueue
 import com.feniqo.mobile.data.mapper.toEntity
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.ProfileDto
+import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.remote.mapper.toDomain
+import com.feniqo.mobile.data.sync.ConflictRecoveryService
 import com.feniqo.mobile.data.sync.IncrementalRemoteSync
 import com.feniqo.mobile.data.sync.InitialRemoteSync
 import com.feniqo.mobile.data.sync.OutboxProcessor
@@ -49,6 +51,7 @@ class OfflineFirstSyncRepository(
     private val offlineWriteQueue: OfflineWriteQueue,
     private val syncStateDao: SyncStateDao,
     private val remoteSyncDao: RemoteSyncDao,
+    private val conflictRecoveryService: ConflictRecoveryService,
     private val nowEpochMillisProvider: () -> Long,
 ) : SyncRepository {
     private val mutex = Mutex()
@@ -110,14 +113,18 @@ class OfflineFirstSyncRepository(
                 initialRemoteSync.pullFor(session.userId)
             }
 
+            // Outbox işleminden önce mevcut eşdeğer çakışmaları otomatik kurtar
+            conflictRecoveryService.recoverAllPendingConflicts()
+
             val outboxResult = outboxProcessor.processReadyOperations()
             if (outboxResult.failedOperationId != null) {
                 val mappedError = outboxResult.lastError?.toSyncAppError() ?: AppError.Network("sync.push_failed")
                 return@withLock fail(mappedError)
             }
 
-            val pullResult = incrementalRemoteSync.pullFor(session.userId)
-            val conflictDetected = outboxResult.conflictOperationId != null || pullResult.conflictCount > 0
+            incrementalRemoteSync.pullFor(session.userId)
+            val remainingConflicts = syncStateDao.getConflictCount()
+            val conflictDetected = outboxResult.conflictOperationId != null || remainingConflicts > 0
 
             phase.value = SyncPhase.IDLE
             if (conflictDetected) {
@@ -190,6 +197,13 @@ class OfflineFirstSyncRepository(
                 val dto = snapshotJson.decodeFromString<TransactionDto>(conflict.remotePayloadJson)
                 remoteSyncDao.resolveTransactionKeepRemote(dto.toDomain().toEntity(dto.toRemoteSyncMetadata(receivedAt)))
             }
+            SyncEntityType.RECURRING_TRANSACTION -> {
+                val dto = snapshotJson.decodeFromString<RecurringTransactionDto>(conflict.remotePayloadJson)
+                require(dto.id == conflict.entityId) {
+                    "Uzak snapshot kimliği (${dto.id}) çakışan varlık kimliği (${conflict.entityId}) ile uyuşmuyor."
+                }
+                remoteSyncDao.resolveRecurringTransactionKeepRemote(dto.toDomain().toEntity(dto.toRemoteSyncMetadata(receivedAt)))
+            }
             else -> error("V1 conflict çözümü ${conflict.entityTypeCode} türünü desteklemiyor.")
         }
     }
@@ -203,6 +217,9 @@ class OfflineFirstSyncRepository(
         ) "DELETE" else "UPDATE"
         SyncEntityType.TRANSACTION -> if (
             remoteSyncDao.getTransactionRow(conflict.entityId)?.sync?.deletedAtEpochMillis != null
+        ) "DELETE" else "UPDATE"
+        SyncEntityType.RECURRING_TRANSACTION -> if (
+            remoteSyncDao.getRecurringTransactionRow(conflict.entityId)?.sync?.deletedAtEpochMillis != null
         ) "DELETE" else "UPDATE"
         else -> error("V1 conflict çözümü ${conflict.entityTypeCode} türünü desteklemiyor.")
     }
