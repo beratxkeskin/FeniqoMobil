@@ -152,3 +152,216 @@ val ANDROID_MIGRATION_5_6 = Migration(5, 6) { database ->
     database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_recurring_transaction_occurrences_transaction_id ON recurring_transaction_occurrences(transaction_id)")
     database.execSQL("CREATE INDEX IF NOT EXISTS index_recurring_transaction_occurrences_recurring_transaction_id ON recurring_transaction_occurrences(recurring_transaction_id)")
 }
+
+/** v7, abonelikleri (subscriptions) ekler. */
+val ANDROID_MIGRATION_6_7 = Migration(6, 7) { database ->
+    database.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS subscriptions (
+            id TEXT NOT NULL,
+            owner_id TEXT NOT NULL,
+            workspace_id TEXT,
+            name TEXT NOT NULL,
+            amount_minor INTEGER NOT NULL,
+            currency_code TEXT NOT NULL,
+            category_id TEXT,
+            frequency_code TEXT NOT NULL,
+            `interval` INTEGER NOT NULL,
+            start_date TEXT NOT NULL,
+            end_date TEXT,
+            next_renewal_date TEXT NOT NULL,
+            is_active INTEGER NOT NULL,
+            created_at_epoch_ms INTEGER NOT NULL,
+            sync_status TEXT NOT NULL,
+            updated_at_epoch_ms INTEGER NOT NULL,
+            local_updated_at_epoch_ms INTEGER NOT NULL,
+            deleted_at_epoch_ms INTEGER,
+            version INTEGER NOT NULL,
+            base_version INTEGER,
+            last_sync_error TEXT,
+            PRIMARY KEY(id),
+            FOREIGN KEY(category_id) REFERENCES categories(id) ON UPDATE NO ACTION ON DELETE SET NULL,
+            FOREIGN KEY(workspace_id) REFERENCES workspaces(id) ON UPDATE NO ACTION ON DELETE SET NULL
+        )
+        """.trimIndent(),
+    )
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_subscriptions_owner_id ON subscriptions(owner_id)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_subscriptions_workspace_id ON subscriptions(workspace_id)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_subscriptions_category_id ON subscriptions(category_id)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_subscriptions_is_active ON subscriptions(is_active)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_subscriptions_next_renewal_date ON subscriptions(next_renewal_date)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_subscriptions_deleted_at_epoch_ms ON subscriptions(deleted_at_epoch_ms)")
+}
+
+/** v8, abonelik ödeme hatırlatıcıları için yerel idempotency kayıtlarını (receipts) ekler. */
+val ANDROID_MIGRATION_7_8 = Migration(7, 8) { database ->
+    database.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS subscription_payment_reminder_receipts (
+            stable_key TEXT NOT NULL,
+            subscription_id TEXT NOT NULL,
+            next_renewal_date TEXT NOT NULL,
+            reminder_kind TEXT NOT NULL,
+            claimed_at_epoch_millis INTEGER NOT NULL,
+            PRIMARY KEY(stable_key)
+        )
+        """.trimIndent(),
+    )
+    database.execSQL(
+        "CREATE INDEX IF NOT EXISTS index_subscription_payment_reminder_receipts_subscription_id " +
+            "ON subscription_payment_reminder_receipts(subscription_id)",
+    )
+}
+
+/** v9, birikim hedefleri (goals, goal_contributions) ve borç/alacakları (debts, debt_payments) ekler. */
+val ANDROID_MIGRATION_8_9 = Migration(8, 9) { database ->
+    database.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS goals (
+            id TEXT NOT NULL,
+            owner_id TEXT NOT NULL,
+            workspace_id TEXT,
+            name TEXT NOT NULL,
+            target_amount_minor INTEGER NOT NULL,
+            current_amount_minor INTEGER NOT NULL,
+            currency_code TEXT NOT NULL,
+            target_date TEXT NOT NULL,
+            color_hex TEXT NOT NULL,
+            icon_key TEXT,
+            created_at_epoch_ms INTEGER NOT NULL,
+            sync_status TEXT NOT NULL,
+            updated_at_epoch_ms INTEGER NOT NULL,
+            local_updated_at_epoch_ms INTEGER NOT NULL,
+            deleted_at_epoch_ms INTEGER,
+            version INTEGER NOT NULL,
+            base_version INTEGER,
+            last_sync_error TEXT,
+            PRIMARY KEY(id),
+            FOREIGN KEY(workspace_id) REFERENCES workspaces(id) ON UPDATE NO ACTION ON DELETE SET NULL
+        )
+        """.trimIndent(),
+    )
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_goals_owner_id ON goals(owner_id)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_goals_workspace_id ON goals(workspace_id)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_goals_target_date ON goals(target_date)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_goals_deleted_at_epoch_ms ON goals(deleted_at_epoch_ms)")
+
+    database.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS goal_contributions (
+            id TEXT NOT NULL,
+            goal_id TEXT NOT NULL,
+            amount_minor INTEGER NOT NULL,
+            currency_code TEXT NOT NULL,
+            direction_code TEXT NOT NULL,
+            occurred_on TEXT NOT NULL,
+            note TEXT,
+            created_at_epoch_ms INTEGER NOT NULL,
+            sync_status TEXT NOT NULL,
+            updated_at_epoch_ms INTEGER NOT NULL,
+            local_updated_at_epoch_ms INTEGER NOT NULL,
+            deleted_at_epoch_ms INTEGER,
+            version INTEGER NOT NULL,
+            base_version INTEGER,
+            last_sync_error TEXT,
+            PRIMARY KEY(id),
+            FOREIGN KEY(goal_id) REFERENCES goals(id) ON UPDATE NO ACTION ON DELETE CASCADE
+        )
+        """.trimIndent(),
+    )
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_goal_contributions_goal_id ON goal_contributions(goal_id)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_goal_contributions_occurred_on ON goal_contributions(occurred_on)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_goal_contributions_deleted_at_epoch_ms ON goal_contributions(deleted_at_epoch_ms)")
+
+    database.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS debts (
+            id TEXT NOT NULL,
+            owner_id TEXT NOT NULL,
+            workspace_id TEXT,
+            title TEXT NOT NULL,
+            amount_minor INTEGER NOT NULL,
+            currency_code TEXT NOT NULL,
+            type_code TEXT NOT NULL,
+            due_date TEXT NOT NULL,
+            status_code TEXT NOT NULL,
+            description TEXT,
+            created_at_epoch_ms INTEGER NOT NULL,
+            sync_status TEXT NOT NULL,
+            updated_at_epoch_ms INTEGER NOT NULL,
+            local_updated_at_epoch_ms INTEGER NOT NULL,
+            deleted_at_epoch_ms INTEGER,
+            version INTEGER NOT NULL,
+            base_version INTEGER,
+            last_sync_error TEXT,
+            PRIMARY KEY(id),
+            FOREIGN KEY(workspace_id) REFERENCES workspaces(id) ON UPDATE NO ACTION ON DELETE SET NULL
+        )
+        """.trimIndent(),
+    )
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_debts_owner_id ON debts(owner_id)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_debts_workspace_id ON debts(workspace_id)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_debts_type_code ON debts(type_code)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_debts_status_code ON debts(status_code)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_debts_due_date ON debts(due_date)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_debts_deleted_at_epoch_ms ON debts(deleted_at_epoch_ms)")
+
+    database.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS debt_payments (
+            id TEXT NOT NULL,
+            debt_id TEXT NOT NULL,
+            amount_minor INTEGER NOT NULL,
+            currency_code TEXT NOT NULL,
+            paid_on TEXT NOT NULL,
+            created_at_epoch_ms INTEGER NOT NULL,
+            sync_status TEXT NOT NULL,
+            updated_at_epoch_ms INTEGER NOT NULL,
+            local_updated_at_epoch_ms INTEGER NOT NULL,
+            deleted_at_epoch_ms INTEGER,
+            version INTEGER NOT NULL,
+            base_version INTEGER,
+            last_sync_error TEXT,
+            PRIMARY KEY(id),
+            FOREIGN KEY(debt_id) REFERENCES debts(id) ON UPDATE NO ACTION ON DELETE CASCADE
+        )
+        """.trimIndent(),
+    )
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_debt_payments_debt_id ON debt_payments(debt_id)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_debt_payments_paid_on ON debt_payments(paid_on)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_debt_payments_deleted_at_epoch_ms ON debt_payments(deleted_at_epoch_ms)")
+}
+
+/** v10, workspaces tablosunu type/currency/description alanlarıyla genişletir ve workspace_invitations tablosunu ekler. */
+val ANDROID_MIGRATION_9_10 = Migration(9, 10) { database ->
+    database.execSQL("ALTER TABLE workspaces ADD COLUMN type_code TEXT NOT NULL DEFAULT 'personal'")
+    database.execSQL("ALTER TABLE workspaces ADD COLUMN currency_code TEXT NOT NULL DEFAULT 'TRY'")
+    database.execSQL("ALTER TABLE workspaces ADD COLUMN description TEXT")
+
+    database.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS workspace_invitations (
+            id TEXT NOT NULL,
+            workspace_id TEXT NOT NULL,
+            inviter_id TEXT NOT NULL,
+            role_code TEXT NOT NULL,
+            created_at_epoch_ms INTEGER NOT NULL,
+            expires_at_epoch_ms INTEGER NOT NULL,
+            max_uses INTEGER NOT NULL,
+            uses_count INTEGER NOT NULL,
+            sync_status TEXT NOT NULL,
+            updated_at_epoch_ms INTEGER NOT NULL,
+            local_updated_at_epoch_ms INTEGER NOT NULL,
+            deleted_at_epoch_ms INTEGER,
+            version INTEGER NOT NULL,
+            base_version INTEGER,
+            last_sync_error TEXT,
+            PRIMARY KEY(id),
+            FOREIGN KEY(workspace_id) REFERENCES workspaces(id) ON UPDATE NO ACTION ON DELETE CASCADE
+        )
+        """.trimIndent(),
+    )
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_workspace_invitations_workspace_id ON workspace_invitations(workspace_id)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_workspace_invitations_expires_at_epoch_ms ON workspace_invitations(expires_at_epoch_ms)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_workspace_invitations_deleted_at_epoch_ms ON workspace_invitations(deleted_at_epoch_ms)")
+}

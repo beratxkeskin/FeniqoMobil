@@ -6,6 +6,10 @@ import com.feniqo.mobile.data.local.dao.LocalMutationDao
 import com.feniqo.mobile.data.local.dao.SyncOperationDao
 import com.feniqo.mobile.data.local.entity.BudgetEntity
 import com.feniqo.mobile.data.local.entity.CategoryEntity
+import com.feniqo.mobile.data.local.entity.DebtEntity
+import com.feniqo.mobile.data.local.entity.DebtPaymentEntity
+import com.feniqo.mobile.data.local.entity.GoalContributionEntity
+import com.feniqo.mobile.data.local.entity.GoalEntity
 import com.feniqo.mobile.data.local.entity.SyncConflictEntity
 import com.feniqo.mobile.data.local.entity.SyncMetadata
 import com.feniqo.mobile.data.local.entity.SyncOperationEntity
@@ -648,6 +652,7 @@ private class FakeBudgetOfflineWriteQueueHolder(
         override suspend fun upsertTagRows(entities: List<TagEntity>) {}
         override suspend fun upsertTransactionTagRows(entities: List<TransactionTagCrossRef>) {}
         override suspend fun upsertRecurringTransactionRow(entity: com.feniqo.mobile.data.local.entity.RecurringTransactionEntity) {}
+        override suspend fun upsertSubscriptionRow(entity: com.feniqo.mobile.data.local.entity.SubscriptionEntity) {}
         override suspend fun upsertRecurringOccurrenceRow(entity: com.feniqo.mobile.data.local.entity.RecurringTransactionOccurrenceEntity) {}
         override suspend fun getOccurrence(recurringTransactionId: String, dueDate: String): com.feniqo.mobile.data.local.entity.RecurringTransactionOccurrenceEntity? = null
         override suspend fun getRecurringTransactionById(id: String): com.feniqo.mobile.data.local.entity.RecurringTransactionEntity? = null
@@ -672,18 +677,55 @@ private class FakeBudgetOfflineWriteQueueHolder(
         override suspend fun rebaseTransactionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseBudgetVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseRecurringTransactionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun rebaseSubscriptionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun deleteRecurringTransactionRow(id: String): Int = 0
+        override suspend fun deleteSubscriptionRow(id: String): Int = 0
         override suspend fun markCategorySyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
         override suspend fun markTransactionSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
         override suspend fun markBudgetSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
         override suspend fun markRecurringTransactionSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
-
+        override suspend fun markSubscriptionSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
+        override suspend fun deleteWorkspaceRow(id: String): Int = 0
+        override suspend fun deleteWorkspaceMemberRows(workspaceId: String): Int = 0
+        override suspend fun rebaseWorkspaceVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun markWorkspaceSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
+        override suspend fun upsertGoalRow(entity: GoalEntity) = Unit
+        override suspend fun upsertGoalContributionRow(entity: GoalContributionEntity) = Unit
+        override suspend fun upsertDebtRow(entity: DebtEntity) = Unit
+        override suspend fun upsertDebtPaymentRow(entity: DebtPaymentEntity) = Unit
+        override suspend fun deleteGoalRow(id: String): Int = 0
+        override suspend fun deleteGoalContributionRow(id: String): Int = 0
+        override suspend fun deleteDebtRow(id: String): Int = 0
+        override suspend fun deleteDebtPaymentRow(id: String): Int = 0
+        override suspend fun getGoalById(id: String): GoalEntity? = null
+        override suspend fun getDebtById(id: String): DebtEntity? = null
+        override suspend fun getGoalContributionById(id: String): GoalContributionEntity? = null
+        override suspend fun getDebtPaymentById(id: String): DebtPaymentEntity? = null
+        override suspend fun getActiveGoalContributions(goalId: String): List<GoalContributionEntity> = emptyList()
+        override suspend fun getActiveDebtPayments(debtId: String): List<DebtPaymentEntity> = emptyList()
+        override suspend fun rebaseGoalVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun rebaseGoalContributionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun rebaseDebtVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun rebaseDebtPaymentVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun markGoalSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
+        override suspend fun markDebtSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
+        override suspend fun tombstoneGoalContributionsForDeletedGoal(goalId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun tombstoneDebtPaymentsForDeletedDebt(debtId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun getActiveGoalAggregateTailCandidates(goalId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun getActiveDebtAggregateTailCandidates(debtId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun countPendingGoalAggregateOperations(goalId: String, operationId: String): Int = 0
+        override suspend fun countPendingDebtAggregateOperations(debtId: String, operationId: String): Int = 0
+        override suspend fun setGoalSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
+        override suspend fun setGoalContributionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
+        override suspend fun setDebtSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
+        override suspend fun setDebtPaymentSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun upsertConflictRow(entity: SyncConflictEntity) {}
         override suspend fun setOutboxStatusConflict(operationId: String, nowEpochMillis: Long): Int = 1
         override suspend fun setProfileSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setCategorySyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setTransactionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setBudgetSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
+
         override suspend fun upsertTransactionKeepingTagsAndEnqueue(entity: TransactionEntity, operation: SyncOperationEntity) {}
         override suspend fun mutateBudgetV2(
             entity: BudgetEntity,

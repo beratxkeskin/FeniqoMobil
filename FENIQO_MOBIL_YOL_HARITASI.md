@@ -1,6 +1,6 @@
 # FeniqoMobil — Uçtan Uca Geliştirme Yol Haritası
 
-> **Durum:** Devam ediyor — son tamamlanan Android-first ana adım: 7.4; sonraki adım: 7.3.
+> **Durum:** Devam ediyor — son tamamlanan Android-first ana adım: Faz 8.3 (Hedefler ve Borçlar); sonraki adım: Faz 8.4 (Ortak Çalışma Alanları / Workspaces).
 > **Ana hedef:** Feniqo web uygulamasını referans alarak, Android'de native çalışan; offline-first; Supabase ile güvenli biçimde senkronize olan ve gelecekte iOS'a Kotlin Multiplatform (KMP) ile taşınabilen profesyonel bir mobil uygulama geliştirmek.
 
 Bu dosya projenin çalışma sözleşmesidir. Bir adım tamamlandığında ilgili kutu işaretlenir ve kısa bir not eklenir. Sohbette yalnızca örneğin **"2.3'te kalmıştık"** demen, aynı noktadan devam etmemiz için yeterlidir.
@@ -120,6 +120,10 @@ com.feniqo.mobile/
 - [x] Bottom navigation ve uygulama iskeletini tasarla.
 
 **Doğrulama:** Tema değişimi uygulama yeniden açıldığında korunur; erişilebilir kontrast kontrol edilir.
+
+**İlerleme notu (2026-09-05 görsel yenileme):** Production UI tasarımının ilk dilimi mevcut Compose mimarisi korunarak uygulandı. Açık tema `#F4FAF7`/`#FBFDFC`, koyu tema `#0B1410`/`#16281E`, resmi emerald ve durum renkleriyle genişletildi; 20 dp boşluk, 48/56 dp dokunma hedefleri ve tabular sayı stili eklendi. Alt navigasyondaki metin/emoji sembolleri ortak Canvas çizgi ikonlarına çevrildi, merkez `Ekle` eylemi 56 dp yapıldı ve son hedef Profil olarak sunuldu. `sharedUI` testleri ve Android debug APK derlemesi başarılıdır.
+
+**İlerleme notu (2026-09-05 görsel yenileme, dilim 2):** Mevcut Room SSOT, ViewModel ve navigasyon sözleşmeleri değiştirilmeden Dashboard finans özeti net bakiye odaklı hero düzene taşındı; gelir/gider/tasarruf ikincil metrikleri sadeleştirildi, işlem gider tutarları renk yanında eksi işaretiyle de ayrıştırıldı ve Plan/Profil modül menülerindeki emoji dili nötr çizgisel semboller ile düz yüzeylere dönüştürüldü. Android ortak UI derlemesi başarılıdır.
 
 ---
 
@@ -313,15 +317,19 @@ com.feniqo.mobile/
 
 ### 8.2 Tekrarlayan işlemler ve abonelikler
 
-- [ ] Tekrar kurallarını modelle ve doğrula.
-- [ ] WorkManager ile vadesi gelen işlemleri idempotent üret.
-- [ ] Abonelik yenileme, duraklatma ve yaklaşan ödeme bildirimi.
+- [x] Tekrar kurallarını modelle ve doğrula.
+- [x] WorkManager ile vadesi gelen işlemleri idempotent üret.
+- [x] Abonelik yenileme, duraklatma ve yaklaşan ödeme bildirimi.
+
+**İlerleme notu (Faz 8.2):** Tekrarlayan işlemler (domain/validation, Room occurrence idempotency, V2 outbox/ACK/pull/conflict, Supabase migration/RLS/RPC, liste-form UI, düzenleme/duraklatma/silme, Worker ve scheduler) ve abonelikler (CRUD, yenileme/duraklatma, V2 sync, liste-form UI, ödeme hatırlatıcı planlayıcı, Room receipt claim, Android notification Worker, scheduler ve Android 13+ izin CTA'sı) kod, hedefli birim/host testleri, platform derlemeleri ve Staging SQL kabulüyle tamamlandı. Android emülatör manuel smoke kabulü kullanıcı tarafından başarıyla gerçekleştirildi.
 
 ### 8.3 Hedefler ve borçlar
 
-- [ ] Birikim hedefleri ve hedefe para ekleme.
-- [ ] Borç/alacak ekleme, vade ve ödendi işareti.
-- [ ] Borç ödeme planı / snowball raporu.
+- [x] Birikim hedefleri ve hedefe para ekleme.
+- [x] Borç/alacak ekleme, vade ve ödendi işareti.
+- [x] Borç ödeme planı / snowball raporu.
+
+**İlerleme notu (Faz 8.3):** Dilim 1A–2H tamamlandı. Goals (birikim/hedef CRUD, hedefe katkı ekleme/çıkarma, ilerleme/tahmini süre hesabı), Debts & Receivables (borç/alacak CRUD, ödeme/tahsilat geçmişi, reaktif kalan bakiye gösterimi, fail-closed `DebtBalanceCalculator`), borç snowball planlayıcısı (`DebtSnowballPlanner`, deterministik simülasyon, bütçe tahsisi ve kapanış sırası) ve MVI Compose ekranları (`GoalsScreen`, `GoalFormScreen`, `GoalContributionFormDialog`, `DebtsScreen`, `DebtFormScreen`, `DebtPaymentFormDialog`, `DebtSnowballPlanScreen`) tamamlandı. Room v9/v10/v11 tabloları (`goals`, `goal_contributions`, `debts`, `debt_payments`), V2 outbox/ACK/pull/conflict senkronizasyonu, Staging 15/15 migration (`20260901000100_sync_write_v2_goals_and_debts.sql`, `20260901000200_reconcile_goals_debts_sync_contract.sql`), SQL sözleşme testi (koşulsuz ROLLBACK ile 0 kalıntı: goals, contributions, debts, payments, sync receipts = 0) ve Android emülatör manuel smoke kabulü kullanıcı tarafından başarıyla gerçekleştirildi. Production'a dokunulmadı.
 
 ### 8.4 Ortak çalışma alanları
 
@@ -441,3 +449,7 @@ Sonraki teknik adım: **6.2 — Senkronizasyon gözlemi**.
 | 2026-08-29 | 8.1 (tamamlandı) | Bütçeler kullanıcı arayüzü ve kabulü (Dilim 1A–4J) tamamlandı: `BudgetsScreen`, `BudgetProgressCard` (%80 uyarı/%100 aşım), `BudgetHeader` ay gezinimi, `BudgetFormScreen` güvenli seed ve ID-based SSOT edit yüklemesi, `BudgetDeleteDialog` onaylı silme, `BudgetCopyDialog` dinamik ay seçimli önceki aydan bütçe kopyalama ve tek seferlik sonuç mesajları; `BudgetViewModel` MVI state akışı ve type-safe Navigation Compose bağlantıları doğrulandı (27/27 sharedUI, 71/71 androidApp testleri başarılı). Android emülatör manuel smoke kabulü kullanıcı tarafından doğrulandı. |
 | 2026-08-30 | 8.2 (Dilim 1A–1E) | Tekrarlayan işlem takvim periyot hesaplaması (`RecurrenceScheduleCalculator`), deterministik aday planlayıcı (`PlanDueRecurringOccurrencesUseCase`), `RecurringOccurrenceKey` idempotency anahtarı, Room atomik occurrence ve `LocalMutationDao.generateRecurringOccurrence` CAS & V2 outbox üretimi, `OfflineFirstRecurringTransactionRepository`, `GenerateDueRecurringTransactionsUseCase`, Android `RecurringTransactionWorker`, 24 saatlik `RecurringTransactionWorkScheduler` ve açılış entegrasyonu tamamlandı. Hedefli birim ve host testleri başarıyla geçti. |
 | 2026-08-30 | 8.2 (Dilim 2A–2B) | Tekrar kuralı saf domain komutları (`CreateRecurringTransactionCommand`, `UpdateRecurringTransactionCommand`, `SetRecurringTransactionActiveCommand`), `RecurringTransactionValidationRules` ve `applyRecurringRuleUpdate` sözleşmesi tamamlandı. Supabase `RECURRING_TRANSACTION` V2 SQL migration'ı (`20260830000100_sync_write_v2_recurring_transactions.sql`), `public.recurring_transactions` fail-closed tablosu, RLS politikası, `sync_operations_receipts` constraint'i ve 28 senaryolu SQL sözleşme testi (`sync_write_v2_contract.sql`) `FeniqoMobil-Staging` (ref: `rxfaiynkhaxrksosxvxp`) üzerinde uygulandı ve doğrulandı (12/12 migration güncel). Koşulsuz ROLLBACK ile test verisi bırakılmadı; Production'a dokunulmadı. |
+| 2026-09-01 | 8.2 (tamamlandı) | Tekrarlayan işlemler ve abonelikler modülü (domain/validation, Room v6/v7/v8, V2 outbox/ACK/pull, Supabase 13/13 migration, `sync_write_v2` RPC, MVI Compose UI, hatırlatıcı planlayıcı, Room receipt claim, Android 13+ izin CTA'sı ve WorkManager teslimatı) tamamlandı. Staging 38 senaryolu SQL sözleşme testi ve Android emülatör manuel smoke kabulü başarıyla geçti. |
+| 2026-09-01 | Mobil Navigasyon Bilgi Mimarisi (tamamlandı) | 5’li kalıcı alt bar (Ana Sayfa, İşlemler, + hızlı işlem eylemi, Plan hub, Daha Fazla hub) ve type-safe route mimarisi tamamlandı. Plan altında Bütçeler, Tekrarlayanlar, Abonelikler (aktif) / Hedefler, Borç/Alacak (Yakında); Daha Fazla altında Kategoriler, Ayarlar (aktif) / Varlıklar, Raporlar, Ortak Alanlar, Bankalar, Bildirimler (Yakında) yapılandırıldı. Hub geçişleri, geri dönüşler ve + eylemi Android emülatör manuel smoke kabulüyle kullanıcı tarafından doğrulandı. |
+| 2026-09-04 | 8.4-A (ilk dilim) | Workspace saf domain command (`CreateWorkspaceCommand`, `UpdateWorkspaceCommand`), `WorkspaceInvitation` güvenli metadata sözleşmesi, `WorkspacePermissionPolicy` rol matrisi (`OWNER`, `EDITOR`, `VIEWER`), üyelikten türetilen fail-closed ön kontrol kuralları (`WorkspaceValidationRules`: ad trim/blank, açıklama normalizasyonu, davet parametreleri, üye rol değişimi/OWNER transfer zorunluluğu, üye çıkarma, alandan ayrılma, sahiplik devri) ve hedefli KMP host birim testleri başarıyla tamamlandı. Room/DAO, outbox, remote sync, SQL/RLS ve UI kapsamı henüz uygulanmadı. |
+| 2026-09-05 | 8.4-B (Room şema & DAO) | Room şeması v9→v10 yükseltildi; `workspaces` tablosu `type_code` (default 'personal'), `currency_code` (default 'TRY') ve `description` alanlarıyla genişletildi; `workspace_invitations` güvenli metadata cache tablosu, indeksleri ve `WorkspaceEntity` CASCADE FK ilişkisi oluşturuldu (`ANDROID_MIGRATION_9_10`, `10.json`). `WorkspaceDao`ya salt-okunur `observeInvitations` ve remote pull hazırlığı `upsertInvitation` eklendi; Robolectric migration/backfill ve DAO testleri (`WorkspaceDaoTest`) başarıyla doğrulandı. V2 outbox, remote sync, SQL/RLS ve UI kapsamı henüz uygulanmadı. |

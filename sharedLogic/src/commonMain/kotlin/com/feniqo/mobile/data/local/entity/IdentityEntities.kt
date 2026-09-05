@@ -55,8 +55,52 @@ data class WorkspaceEntity(
     val normalizedName: String,
     @ColumnInfo(name = "owner_id")
     val ownerId: String,
+    @ColumnInfo(name = "type_code", defaultValue = "'personal'")
+    val typeCode: String = "personal",
+    @ColumnInfo(name = "currency_code", defaultValue = "'TRY'")
+    val currencyCode: String = "TRY",
+    @ColumnInfo(name = "description")
+    val description: String? = null,
     @ColumnInfo(name = "created_at_epoch_ms")
     val createdAtEpochMillis: Long,
+    @Embedded
+    val sync: SyncMetadata,
+)
+
+@Entity(
+    tableName = "workspace_invitations",
+    foreignKeys = [
+        ForeignKey(
+            entity = WorkspaceEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["workspace_id"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [
+        Index(value = ["workspace_id"]),
+        Index(value = ["expires_at_epoch_ms"]),
+        Index(value = ["deleted_at_epoch_ms"]),
+    ],
+)
+data class WorkspaceInvitationEntity(
+    @PrimaryKey
+    @ColumnInfo(name = "id")
+    val id: String,
+    @ColumnInfo(name = "workspace_id")
+    val workspaceId: String,
+    @ColumnInfo(name = "inviter_id")
+    val inviterId: String,
+    @ColumnInfo(name = "role_code")
+    val roleCode: String,
+    @ColumnInfo(name = "created_at_epoch_ms")
+    val createdAtEpochMillis: Long,
+    @ColumnInfo(name = "expires_at_epoch_ms")
+    val expiresAtEpochMillis: Long,
+    @ColumnInfo(name = "max_uses")
+    val maxUses: Int,
+    @ColumnInfo(name = "uses_count")
+    val usesCount: Int,
     @Embedded
     val sync: SyncMetadata,
 )

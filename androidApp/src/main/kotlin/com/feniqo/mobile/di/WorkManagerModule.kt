@@ -37,6 +37,18 @@ abstract class WorkManagerModule {
         provider: com.feniqo.mobile.sync.SystemRecurringTransactionTimeProvider,
     ): com.feniqo.mobile.sync.RecurringTransactionTimeProvider
 
+    @Binds
+    @Singleton
+    abstract fun bindSubscriptionPaymentReminderNotifier(
+        notifier: com.feniqo.mobile.sync.AndroidSubscriptionPaymentReminderNotifier,
+    ): com.feniqo.mobile.sync.SubscriptionPaymentReminderNotifier
+
+    @Binds
+    @Singleton
+    abstract fun bindSubscriptionPaymentReminderWorkScheduler(
+        scheduler: com.feniqo.mobile.sync.WorkManagerSubscriptionPaymentReminderScheduler,
+    ): com.feniqo.mobile.sync.SubscriptionPaymentReminderWorkScheduler
+
     companion object {
         @Provides
         @Singleton

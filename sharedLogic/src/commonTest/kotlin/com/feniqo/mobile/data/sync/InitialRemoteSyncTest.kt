@@ -3,6 +3,7 @@ package com.feniqo.mobile.data.sync
 import com.feniqo.mobile.data.local.dao.RemoteSyncDao
 import com.feniqo.mobile.data.local.entity.CategoryEntity
 import com.feniqo.mobile.data.local.entity.RecurringTransactionEntity
+import com.feniqo.mobile.data.local.entity.SubscriptionEntity
 import com.feniqo.mobile.data.local.entity.TransactionEntity
 import com.feniqo.mobile.data.local.entity.UserProfileEntity
 import com.feniqo.mobile.data.local.entity.SyncConflictEntity
@@ -14,11 +15,13 @@ import com.feniqo.mobile.data.remote.core.RecurringTransactionRemoteQuery
 import com.feniqo.mobile.data.remote.core.RemotePage
 import com.feniqo.mobile.data.remote.core.RemotePageRequest
 import com.feniqo.mobile.data.remote.core.RemoteWorkspaceScope
+import com.feniqo.mobile.data.remote.core.SubscriptionRemoteQuery
 import com.feniqo.mobile.data.remote.core.TransactionRemoteQuery
 import com.feniqo.mobile.data.remote.dto.BudgetDto
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.ProfileDto
 import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
+import com.feniqo.mobile.data.remote.dto.SubscriptionDto
 import com.feniqo.mobile.data.remote.dto.TagDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.remote.dto.TransactionTagDto
@@ -35,6 +38,11 @@ import kotlin.test.assertTrue
 class InitialRemoteSyncTest {
     @Test
     fun personal_pages_are_mapped_and_applied_as_a_synced_snapshot() = runTest {
+        FakeCoreRemote.categoryPages.clear()
+        FakeCoreRemote.recurringPages.clear()
+        FakeCoreRemote.subscriptionPages.clear()
+        FakeCoreRemote.transactionPages.clear()
+
         val dao = RecordingRemoteSyncDao()
         val sync = InitialRemoteSync(FakeCoreRemote(), dao) { RECEIVED_AT }
 
@@ -43,8 +51,10 @@ class InitialRemoteSyncTest {
         assertEquals(2, result.categoryCount)
         assertEquals(2, result.transactionCount)
         assertEquals(2, result.recurringTransactionCount)
+        assertEquals(2, result.subscriptionCount)
         assertEquals(listOf(0), FakeCoreRemote.categoryPages)
         assertEquals(listOf(0), FakeCoreRemote.recurringPages)
+        assertEquals(listOf(0), FakeCoreRemote.subscriptionPages)
         assertEquals(listOf(0), FakeCoreRemote.transactionPages)
         assertEquals("SYNCED", dao.profile?.sync?.syncStatus)
         assertEquals(RECEIVED_AT, dao.profile?.sync?.localUpdatedAtEpochMillis)
@@ -53,36 +63,62 @@ class InitialRemoteSyncTest {
         assertEquals(Instant.parse(REMOTE_DELETED_AT).toEpochMilliseconds(), dao.categories.single { it.id == CATEGORY_2 }.sync.deletedAtEpochMillis)
         assertEquals(5L, dao.recurringTransactions.single { it.id == RECURRING_2 }.sync.version)
         assertEquals(Instant.parse(REMOTE_DELETED_AT).toEpochMilliseconds(), dao.recurringTransactions.single { it.id == RECURRING_2 }.sync.deletedAtEpochMillis)
+        assertEquals(6L, dao.subscriptions.single { it.id == SUBSCRIPTION_2 }.sync.version)
+        assertNull(dao.subscriptions.single { it.id == SUBSCRIPTION_2 }.categoryId)
+        assertEquals(Instant.parse(REMOTE_DELETED_AT).toEpochMilliseconds(), dao.subscriptions.single { it.id == SUBSCRIPTION_2 }.sync.deletedAtEpochMillis)
         assertNull(dao.transactions.first().sync.deletedAtEpochMillis)
-        assertEquals(setOf("PROFILE", "CATEGORY", "RECURRING_TRANSACTION", "TRANSACTION"), dao.cursors.map { it.entityTypeCode }.toSet())
+        assertEquals(setOf("PROFILE", "CATEGORY", "RECURRING_TRANSACTION", "SUBSCRIPTION", "TRANSACTION"), dao.cursors.map { it.entityTypeCode }.toSet())
         assertTrue(dao.categoryInsertedBeforeRecurring)
-        assertTrue(dao.recurringInsertedBeforeTransactions)
+        assertTrue(dao.recurringInsertedBeforeSubscriptions)
+        assertTrue(dao.subscriptionsInsertedBeforeTransactions)
     }
 
     private class RecordingRemoteSyncDao : RemoteSyncDao {
         var profile: UserProfileEntity? = null
         var categories: List<CategoryEntity> = emptyList()
         var recurringTransactions: List<RecurringTransactionEntity> = emptyList()
+        var subscriptions: List<SubscriptionEntity> = emptyList()
         var transactions: List<TransactionEntity> = emptyList()
         var cursors: List<SyncCursorEntity> = emptyList()
         var categoryInsertedBeforeRecurring = false
-        var recurringInsertedBeforeTransactions = false
+        var recurringInsertedBeforeSubscriptions = false
+        var subscriptionsInsertedBeforeTransactions = false
 
         override suspend fun getProfileRow(id: String): UserProfileEntity? = profile
         override suspend fun getCategoryRow(id: String): CategoryEntity? = categories.firstOrNull { it.id == id }
         override suspend fun getTransactionRow(id: String): TransactionEntity? = transactions.firstOrNull { it.id == id }
         override suspend fun getRecurringTransactionRow(id: String): RecurringTransactionEntity? = recurringTransactions.firstOrNull { it.id == id }
+        override suspend fun getSubscriptionRow(id: String): SubscriptionEntity? = subscriptions.firstOrNull { it.id == id }
+        override suspend fun getGoalRow(id: String): com.feniqo.mobile.data.local.entity.GoalEntity? = null
+        override suspend fun getGoalContributionRow(id: String): com.feniqo.mobile.data.local.entity.GoalContributionEntity? = null
+        override suspend fun getDebtRow(id: String): com.feniqo.mobile.data.local.entity.DebtEntity? = null
+        override suspend fun getDebtPaymentRow(id: String): com.feniqo.mobile.data.local.entity.DebtPaymentEntity? = null
+        override suspend fun getWorkspaceRow(id: String): com.feniqo.mobile.data.local.entity.WorkspaceEntity? = null
+        override suspend fun getWorkspaceMemberRow(workspaceId: String, userId: String): com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity? = null
+        override suspend fun getWorkspaceMemberRows(workspaceId: String): List<com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity> = emptyList()
+        override suspend fun getAllKnownLiveWorkspaceIds(): List<String> = emptyList()
         override suspend fun getFirstOutboxOperationId(entityTypeCode: String, entityId: String): String? = null
+        override suspend fun countOutboxRows(entityTypeCode: String, entityId: String): Int = 0
         override suspend fun upsertProfileRow(entity: UserProfileEntity) { profile = entity }
+        override suspend fun upsertWorkspaceRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceEntity>) = Unit
+        override suspend fun upsertWorkspaceMemberRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity>) = Unit
         override suspend fun upsertCategoryRows(entities: List<CategoryEntity>) { categories = entities }
         override suspend fun upsertTransactionRows(entities: List<TransactionEntity>) {
-            recurringInsertedBeforeTransactions = recurringTransactions.isNotEmpty()
+            subscriptionsInsertedBeforeTransactions = subscriptions.isNotEmpty()
             transactions = entities
         }
         override suspend fun upsertRecurringTransactionRows(entities: List<RecurringTransactionEntity>) {
             categoryInsertedBeforeRecurring = categories.isNotEmpty()
             recurringTransactions = entities
         }
+        override suspend fun upsertSubscriptionRows(entities: List<SubscriptionEntity>) {
+            recurringInsertedBeforeSubscriptions = recurringTransactions.isNotEmpty()
+            subscriptions = entities
+        }
+        override suspend fun upsertGoalRows(entities: List<com.feniqo.mobile.data.local.entity.GoalEntity>) = Unit
+        override suspend fun upsertGoalContributionRows(entities: List<com.feniqo.mobile.data.local.entity.GoalContributionEntity>) = Unit
+        override suspend fun upsertDebtRows(entities: List<com.feniqo.mobile.data.local.entity.DebtEntity>) = Unit
+        override suspend fun upsertDebtPaymentRows(entities: List<com.feniqo.mobile.data.local.entity.DebtPaymentEntity>) = Unit
         override suspend fun upsertConflictRow(conflict: SyncConflictEntity) = error("Test kapsamı dışı")
         override suspend fun upsertCursorRows(cursors: List<SyncCursorEntity>) { this.cursors = cursors }
         override suspend fun deleteConflictRow(entityTypeCode: String, entityId: String): Int = 0
@@ -90,6 +126,11 @@ class InitialRemoteSyncTest {
         override suspend fun markCategoryConflict(entityId: String, error: String): Int = 0
         override suspend fun markTransactionConflict(entityId: String, error: String): Int = 0
         override suspend fun markRecurringTransactionConflict(entityId: String, error: String): Int = 0
+        override suspend fun markSubscriptionConflict(entityId: String, error: String): Int = 0
+        override suspend fun markGoalConflict(entityId: String, error: String): Int = 0
+        override suspend fun markGoalContributionConflict(entityId: String, error: String): Int = 0
+        override suspend fun markDebtConflict(entityId: String, error: String): Int = 0
+        override suspend fun markDebtPaymentConflict(entityId: String, error: String): Int = 0
         override suspend fun deleteOutboxRows(entityTypeCode: String, entityId: String): Int = 0
         override suspend fun deleteOtherOutboxRows(entityTypeCode: String, entityId: String, keptOperationId: String): Int = 0
         override suspend fun resetConflictOperation(operationId: String, operationTypeCode: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
@@ -97,7 +138,9 @@ class InitialRemoteSyncTest {
         override suspend fun rebaseCategoryForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseRecurringTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun rebaseSubscriptionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
     }
+
 
     private class FakeCoreRemote : CoreRemoteDataSource {
         override suspend fun fetchProfile(userId: String) = ProfileDto(
@@ -123,6 +166,15 @@ class InitialRemoteSyncTest {
             return RemotePage(items, query.page, totalCount = 2)
         }
 
+        override suspend fun fetchSubscriptions(query: SubscriptionRemoteQuery): RemotePage<SubscriptionDto> {
+            assertEquals(RemoteWorkspaceScope.Personal, query.workspaceScope)
+            subscriptionPages += query.page.pageIndex
+            val items = if (query.page.pageIndex == 0) {
+                listOf(subscription(SUBSCRIPTION_1), subscription(SUBSCRIPTION_2, deletedAt = REMOTE_DELETED_AT, version = 6, categoryId = null))
+            } else emptyList()
+            return RemotePage(items, query.page, totalCount = 2)
+        }
+
         override suspend fun fetchTransactions(query: TransactionRemoteQuery): RemotePage<TransactionDto> {
             assertEquals(RemoteWorkspaceScope.Personal, query.workspaceScope)
             transactionPages += query.page.pageIndex
@@ -133,7 +185,12 @@ class InitialRemoteSyncTest {
         }
 
         override suspend fun fetchBudgets(query: BudgetRemoteQuery): RemotePage<BudgetDto> = error("Kapsam dışı")
+        override suspend fun fetchGoals(query: com.feniqo.mobile.data.remote.core.GoalRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.GoalDto> = error("Kapsam dışı")
+        override suspend fun fetchGoalContributions(query: com.feniqo.mobile.data.remote.core.GoalContributionRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.GoalContributionDto> = error("Kapsam dışı")
+        override suspend fun fetchDebts(query: com.feniqo.mobile.data.remote.core.DebtRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.DebtDto> = error("Kapsam dışı")
+        override suspend fun fetchDebtPayments(query: com.feniqo.mobile.data.remote.core.DebtPaymentRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.DebtPaymentDto> = error("Kapsam dışı")
         override suspend fun fetchTags(scope: RemoteWorkspaceScope, page: RemotePageRequest): RemotePage<TagDto> = error("Kapsam dışı")
+
 
         override suspend fun fetchWorkspaces(page: RemotePageRequest): RemotePage<WorkspaceDto> = error("Kapsam dışı")
         override suspend fun fetchWorkspaceMembers(workspaceId: String, page: RemotePageRequest): RemotePage<WorkspaceMemberDto> = error("Kapsam dışı")
@@ -148,6 +205,7 @@ class InitialRemoteSyncTest {
         companion object {
             val categoryPages = mutableListOf<Int>()
             val recurringPages = mutableListOf<Int>()
+            val subscriptionPages = mutableListOf<Int>()
             val transactionPages = mutableListOf<Int>()
         }
     }
@@ -158,6 +216,8 @@ class InitialRemoteSyncTest {
         const val CATEGORY_2 = "category-2"
         const val RECURRING_1 = "recurring-1"
         const val RECURRING_2 = "recurring-2"
+        const val SUBSCRIPTION_1 = "subscription-1"
+        const val SUBSCRIPTION_2 = "subscription-2"
         const val REMOTE_CREATED_AT = "2026-08-14T08:00:00Z"
         const val REMOTE_UPDATED_AT = "2026-08-14T09:00:00Z"
         const val REMOTE_DELETED_AT = "2026-08-14T10:00:00Z"
@@ -181,6 +241,24 @@ class InitialRemoteSyncTest {
             frequency = "MONTHLY",
             interval = 1,
             startDate = "2026-08-01",
+            createdAt = REMOTE_CREATED_AT,
+            updatedAt = REMOTE_UPDATED_AT,
+            deletedAt = deletedAt,
+            version = version,
+        )
+
+        fun subscription(id: String, deletedAt: String? = null, version: Long = 1, categoryId: String? = CATEGORY_1) = SubscriptionDto(
+            id = id,
+            userId = USER_ID,
+            name = "Spotify $id",
+            amountMinor = 5999,
+            currency = "TRY",
+            categoryId = categoryId,
+            frequency = "MONTHLY",
+            interval = 1,
+            startDate = "2026-08-01",
+            nextRenewalDate = "2026-09-01",
+            isActive = true,
             createdAt = REMOTE_CREATED_AT,
             updatedAt = REMOTE_UPDATED_AT,
             deletedAt = deletedAt,

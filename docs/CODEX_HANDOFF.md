@@ -48,89 +48,86 @@ Bu belge, FeniqoMobil projesinin yeni Codex oturumuna eksiksiz ve pürüzsüz bi
 
 - **Faz 8.1 — Bütçeler (Budgets) [TAMAMLANDI]**:
   - Kişisel bütçe CRUD, ay bazlı bütçe limitleri, önceki aydan kopyalama, V2 outbox/sync mutasyonları, reaktif harcama/ilerleme takibi, %80 uyarı ve %100 aşım gösterimleri, ID tabanlı Room SSOT form düzenlemesi, onaylı silme ve kopyalama kullanıcı akışlarının kod, hedefli birim/host testleri ve Android emülatör manuel smoke kabulü tamamlandı.
-- **Faz 8.2 — Tekrarlayan İşlemler ve Abonelikler (Recurring Transactions) [DEVAM EDİYOR]**:
-  - Dilim 1A: `RecurrenceScheduleCalculator` saf takvim/periyot hesaplaması.
-  - Dilim 1B: `PlanDueRecurringOccurrencesUseCase` ve `RecurringOccurrenceKey` deterministik aday planlayıcı.
-  - Dilim 1C: Room atomik tekrar vadesi yazma (`RecurringTransactionEntity`, `RecurringTransactionOccurrenceEntity`, `LocalMutationDao.generateRecurringOccurrence` CAS & V2 outbox).
-  - Dilim 1D: `OfflineFirstRecurringTransactionRepository.generateDueTransactions`, `GenerateDueRecurringTransactionsUseCase` ve V2 snapshot Json serileştirme hizalaması.
-  - Dilim 1E: Android `RecurringTransactionWorker`, `RecurringTransactionWorkScheduler` (24h KEEP, NOT_REQUIRED, 15s backoff), `RecurringTransactionStartupInitializer` ve uygulama açılış entegrasyonu.
-  - Dilim 2A: Tekrar kuralı saf domain komutları (`CreateRecurringTransactionCommand`, `UpdateRecurringTransactionCommand`, `SetRecurringTransactionActiveCommand`) ve `RecurringTransactionValidationRules` (tip güvenli `applyRecurringRuleUpdate` ve fail-closed regresyon korumaları).
-  - Dilim 2B: Supabase `RECURRING_TRANSACTION` V2 SQL migration'ı (`20260830000100_sync_write_v2_recurring_transactions.sql`), `public.recurring_transactions` fail-closed şeması, RLS politikası, `sync_operations_receipts` constraint'i ve 28 senaryolu SQL sözleşme testi (`sync_write_v2_contract.sql`).
+- **Faz 8.2 — Tekrarlayan İşlemler ve Abonelikler [TAMAMLANDI]**:
+  - **Tekrarlayan İşlemler**: Vade takvim hesaplayıcı (`RecurrenceScheduleCalculator`), deterministik aday planlayıcı (`PlanDueRecurringOccurrencesUseCase`), Room atomik occurrence ve `LocalMutationDao.generateRecurringOccurrence` CAS & V2 outbox üretimi, WorkManager 24h periyodik işi (`RecurringTransactionWorker`, `RecurringTransactionWorkScheduler`), saf kural CRUD komutları ve tip güvenli `RecurringTransactionValidationRules`, Supabase V2 SQL migration (`20260830000100_sync_write_v2_recurring_transactions.sql`), V2 outbox ACK/pull/conflict senkronizasyonu ve MVI Compose liste/form kullanıcı akışları (`RecurringTransactionsScreen`, `RecurringTransactionFormScreen`, `RecurringTransactionDeleteDialog`) tamamlandı.
+  - **Abonelikler**: Abonelik saf domain komutları (`CreateSubscriptionCommand`, `UpdateSubscriptionCommand`, `SetSubscriptionActiveCommand`), `SubscriptionValidationRules`, `SubscriptionRenewalStatusCalculator`, `SubscriptionRenewalProgressionCalculator`, Room v7/v8 tabloları (`subscriptions`, `subscription_payment_reminder_receipts`), Supabase V2 SQL migration (`20260831000100_sync_write_v2_subscriptions.sql`), V2 outbox ACK/pull/conflict senkronizasyonu, MVI Compose liste ve form ekranları (`SubscriptionsScreen`, `SubscriptionFormScreen`, `SubscriptionDeleteDialog`), ödeme hatırlatıcı saf planlayıcı (`PlanSubscriptionPaymentRemindersUseCase`), Room atomik receipt claim (`SubscriptionPaymentReminderReceiptDao.claim`), Android bildirim Worker'ı (`SubscriptionPaymentReminderWorker`), 24h scheduler (`WorkManagerSubscriptionPaymentReminderScheduler`), Android 13+ bildirim izni CTA banner'ı (`SubscriptionsScreenRoute`) ve açılış başlatıcısı tamamlandı.
+  - **Kabul**: Android emülatör manuel smoke kabulü kullanıcı tarafından gerçekleştirildi ve başarıyla geçti.
+- **Mobil Navigasyon Bilgi Mimarisi [TAMAMLANDI]**:
+  - Alt bar `Ana Sayfa` / `İşlemler` / `+` / `Plan` / `Daha Fazla` 5'li kalıcı yapısına dönüştürüldü.
+  - `+` (Orta Hızlı Buton): Doğrudan `TransactionFormRoute(null)` açar; bir route veya `TopLevelDestination` değildir; `popUpTo` kullanılmadığı için form sonrası kullanıcı geldiği kaynak ekrana döner.
+  - `Plan` Hub (`PlanHubScreen`): Bütçeler, Tekrarlayan İşlemler, Abonelikler, Hedefler ve Borç/Alacak aktif modüllerdir.
+  - `Daha Fazla` Hub (`MoreHubScreen`): Kategoriler ve Ayarlar aktif modüllerdir; Varlıklar, Raporlar, Ortak Alanlar, Bankalar ve Bildirimler pasif "Yakında" bilgi kartıdır.
+  - `ThemeSettingsPlaceholderScreen`: Eski finansal araçlar ve no-op parametreler temizlenerek yalnız görünüm/ayarlar işlevine odaklandı.
+  - Hub'lardan alt modüllere geçiş, geri dönüşler ve `+` eylemi Android emülatör manuel smoke kabulüyle kullanıcı tarafından doğrulandı.
+- **Faz 8.3 — Hedefler ve Borçlar (Goals & Debts) [TAMAMLANDI]**:
+  - **Hedefler (Goals)**: Birikim/tasarruf hedefi CRUD, hedefe para ekleme/çıkarma hareketleri (`GoalContribution`), ilerleme yüzdesi ve tahmini tamamlanma süresi hesabı, liste ve form MVI Compose akışları (`GoalsScreen`, `GoalFormScreen`, `GoalContributionFormDialog`).
+  - **Borç ve Alacak (Debts & Receivables)**: Kişi/kurum bazlı borç ve alacak CRUD, kısmi/tam ödeme ve tahsilat hareketleri (`DebtPayment`), fail-closed reaktif bakiye ve durum hesaplayıcısı (`DebtBalanceCalculator`), liste ve form MVI Compose akışları (`DebtsScreen`, `DebtFormScreen`, `DebtPaymentFormDialog`).
+  - **Faizsiz Borç Snowball Planlayıcısı**: Deterministik simülasyon motoru (`DebtSnowballPlanner`), seçili para birimi ve aylık bütçe ile borç kapanış sırası ve aylık tahsis planlama ekranı (`DebtSnowballPlanScreen`).
+  - **Veri ve Senkronizasyon**: Room v9/v10/v11 şemaları (`goals`, `goal_contributions`, `debts`, `debt_payments`), V2 outbox/ACK/pull/conflict senkronizasyonu, Staging 15/15 migration (`20260901000100_sync_write_v2_goals_and_debts.sql`, `20260901000200_reconcile_goals_debts_sync_contract.sql`), SQL sözleşme testi (koşulsuz ROLLBACK ile 0 kalıntı).
+  - **Kabul**: Android emülatör manuel smoke kabulü kullanıcı tarafından gerçekleştirildi ve başarıyla geçti. Production Supabase'e dokunulmadı.
+- **Aktif Aşama — Faz 8.4: Ortak Çalışma Alanları (Workspaces) [BAŞLANACAK]**:
+  - Çalışma alanı oluşturma, katılma, ayrılma, aktif alan seçimi, üye listesi, rol tabanlı yetki matrisi (`OWNER`, `EDITOR`, `VIEWER`), ortak işlem ve bütçe görünürlüğü, kimin ne kadar ödediği ve borç dağılımı (split) hesaplama motorunun saf domain modelleri, validation invariant'ları, Room DAO/V2 outbox ve sync altyapısı planlanacaktır.
 
 ---
 
-## 5. Tamamlanan Dilimler (Faz 8.1 ve Faz 8.2)
+## 5. Tamamlanan Fazlar ve Modüller
 
-- **Faz 8.1 Dilim 1A–4J**: Bütçeler modülünün tüm domain, Room, outbox, remote, UI ve emülatör kabul adımları.
-- **Faz 8.2 Dilim 1A–1E**: Tekrar vade hesaplama, deterministik aday planlama, Room atomik occurrence yazma, repository/use-case ve Android WorkManager üretim altyapısı.
-- **Faz 8.2 Dilim 2A**: Tekrarlayan işlem kuralı saf domain komutları, tip güvenli doğrulama kuralları ve `applyRecurringRuleUpdate` sözleşmesi.
-- **Faz 8.2 Dilim 2B**: Supabase V2 `RECURRING_TRANSACTION` şeması, RLS, `sync_write_v2` RPC genişletmesi, 28 senaryolu SQL sözleşme kabulü ve Staging veritabanı uygulaması.
+- **Faz 8.1**: Bütçeler modülünün tüm domain, Room, outbox, remote, UI ve emülatör kabul adımları.
+- **Faz 8.2**: Tekrarlayan işlemler ve abonelikler modüllerinin tüm domain, validation, Room (v6, v7, v8), Supabase V2 migration'ları (12 ve 13), `sync_write_v2` 38 senaryolu sözleşme testi, MVI Compose ekranları, hatırlatıcı altyapısı ve emülatör kabul adımları.
+- **Mobil Navigasyon Bilgi Mimarisi**: 5'li kalıcı alt bar, type-safe route'lar, Plan ve Daha Fazla hub ekranları, pasif Yakında modülleri ve Android emülatör kabulü.
+- **Faz 8.3**: Hedefler ve borçlar modüllerinin tüm domain/validation modelleri, Room (v9, v10, v11), Supabase V2 migration'ları (14 ve 15), sözleşme testi, MVI Compose liste/form/snowball ekranları ve Android emülatör kabul adımları.
 
 ---
 
 ## 6. Doğrulama ve Staging Durumu
 
 - **Hedefli Birim/Host Testleri**:
-  - `RecurrenceScheduleCalculatorTest`, `PlanDueRecurringOccurrencesUseCaseTest`, `RecurringOccurrenceDaoTest`, `OfflineFirstRecurringTransactionRepositoryTest`, `GenerateDueRecurringTransactionsUseCaseTest`, `RecurringTransactionWorkerTest`, `RecurringTransactionWorkSchedulerTest`, `RecurringTransactionStartupTest`, `RecurringTransactionValidationRulesTest`: **Tümü başarılı (`BUILD SUCCESSFUL`)**.
+  - Tüm use-case, validation, Room DAO, outbox executor, Worker, WorkScheduler, Initializer, ViewModel, HubRegistry, FeniqoRoutes ve Snowball planner/model testleri: **Tümü başarılı (`BUILD SUCCESSFUL`)**.
 - **KMP Platform Derlemesi**:
-  - `sharedLogic:testAndroidHostTest`, `sharedLogic:compileKotlinIosSimulatorArm64`, `androidApp:assembleDebug`: **`BUILD SUCCESSFUL`**.
+  - `sharedLogic:testAndroidHostTest`, `sharedLogic:compileKotlinIosSimulatorArm64`, `androidApp:compileDebugKotlin`, `androidApp:assembleDebug`: **`BUILD SUCCESSFUL`**.
 - **Staging SQL Sözleşme Doğrulaması**:
-  - `FeniqoMobil-Staging` (ref: `rxfaiynkhaxrksosxvxp`) üzerinde `20260830000100_sync_write_v2_recurring_transactions.sql` başarıyla uygulandı (`12/12` migration senkronize).
-  - `supabase/tests/sync_write_v2_contract.sql` (28 sözleşme senaryosu) çalıştırıldı: **Başarılı (`Exit code 0`)**.
-  - Koşulsuz `ROLLBACK` disiplini sayesinde veritabanında test kalıntısı bırakılmadı (`0` satır).
+  - `FeniqoMobil-Staging` (ref: `rxfaiynkhaxrksosxvxp`) üzerinde 15/15 migration günceldir (`20260901000100_sync_write_v2_goals_and_debts.sql` ve `20260901000200_reconcile_goals_debts_sync_contract.sql` dâhil).
+  - `supabase/tests/sync_write_v2_contract.sql` çalıştırıldı: **Başarılı (`Exit code 0`)**.
+  - Koşulsuz `ROLLBACK` disiplini sayesinde veritabanında test kalıntısı bırakılmadı (`public.goals`, `public.goal_contributions`, `public.debts`, `public.debt_payments`, `public.sync_operations_receipts` = `0` satır kalıntı).
   - **Production Supabase'e kesinlikle dokunulmadı.**
 
 ---
 
-## 7. Açık Bağımlılık Durumu
+## 7. Sıradaki İş: Faz 8.4 — Ortak Çalışma Alanları (Workspaces)
 
-- Faz 8.2 aktif ve devam ediyor.
-- Kullanıcı arayüzü ve abonelik akışları henüz başlatılmadı.
-
----
-
-## 8. Kesin Sıradaki Adım
-
-1. **Faz 8.2 — Tekrarlayan İşlemler V2 İstemci Entegrasyonu**:
-   - Recurring rule için Android/KMP V2 istemci entegrasyonu:
-     - `RecurringTransactionDto` ve domain mapper'ları,
-     - `SyncEntityType.RECURRING_TRANSACTION` desteği,
-     - `V2OutboxOperationExecutor` remote write & Room ACK akışı,
-     - Recurring transaction kural CRUD repository ve use-case akışları.
-   - UI (ekranlar/formlar) ve abonelikler bu teknik temelden sonra ele alınacaktır.
+Sıradaki geliştirme diliminde Faz 8.4 için şu adımlar planlanacaktır:
+1. **Domain & Validation**:
+   - `Workspace` (isim, tip, para birimi, açıklama), `WorkspaceMember` (kullanıcı, rol: `OWNER`, `EDITOR`, `VIEWER`), `WorkspaceInvitation` ve validasyon kuralları.
+   - Ortak harcamalar için "kim ödedi", "kimler arasında bölüşülecek" (split) modelleri ve borç mahsuplaşma motoru.
+2. **Room Veri Katmanı**:
+   - `workspaces`, `workspace_members`, `workspace_invitations` entity'leri, DAO'lar, şema ve migration hazırlığı.
+3. **V2 Outbox & Supabase Sync**:
+   - `WORKSPACE`, `WORKSPACE_MEMBER` mutation executor'ları, Staging SQL migration'ı ve sözleşme testi.
 
 ---
 
-## 9. Ertelenen Bilinen Problem
+## 8. Test Politikası
 
-- **"3 çakışma mevcut" Banner'ı**:
-  - Eski V1 outbox / conflict tablolarındaki artık verilerden kaynaklanmaktadır.
-  - Faz 7.3 / B5A (Conflict Recovery / Migration cleanup) henüz tam olarak tamamlandı sayılmamalıdır; V2 geçişleri ve temizlik mantığı oturduğunda ele alınacaktır.
-
----
-
-## 10. Test Politikası
-
-- Her küçük dilimde **yalnızca o dilimi ilgilendiren hedefli testler** çalıştırılmalıdır (Örn: `--tests "*Recurring*"`).
-- `--rerun-tasks` veya tüm test paketini baştan koşan ağır komutlar faz sonuna kadar çalıştırılmamalıdır.
+- Her küçük dilimde **yalnızca o dilimi ilgilendiren hedefli testler** çalıştırılmalıdır.
+- `--rerun-tasks` veya tüm test paketini baştan koşan ağır komutlar çalıştırılmamalıdır.
 
 ---
 
-## 11. Güvenlik Kuralları
+## 9. Güvenlik Kuralları
 
 - `local.properties`, `.env`, API anahtarları, Service Role Key, kullanıcı tokenları ve finansal gerçek veriler hiçbir dokümana veya commit'e yazılmaz.
 - Mobil istemci yalnızca publishable/anon key kullanır.
 
 ---
 
-## 12. Güncel Git Durumu
+## 10. Güncel Git Durumu
 
-- Çalışma ağacında Faz 8.2 Dilim 2B tamamlanmış olup `git diff --check` temizdir.
+- Çalışma ağacında Faz 8.3 tamamlanmış olup `git diff --check` temizdir.
 - Proje sahibinin açık onayı olmadan commit veya push yapılmaz.
 
 ---
 
-## 13. Yeni Codex Sohbetine Başlangıç Promptu
+## 11. Yeni Codex Sohbetine Başlangıç Promptu
 
 Aşağıdaki metni yeni Codex sohbetinin ilk mesajı olarak yapıştırabilirsiniz:
 
@@ -138,10 +135,17 @@ Aşağıdaki metni yeni Codex sohbetinin ilk mesajı olarak yapıştırabilirsin
 FeniqoMobil projesinde çalışıyoruz. Lütfen öncelikle kök dizindeki AGENTS.md, PRODUCT.md, ARCHITECTURE.md, DATABASE.md, FEATURES.md, DEVELOPMENT_PLAN.md, FENIQO_MOBIL_YOL_HARITASI.md ve docs/CODEX_HANDOFF.md belgelerini oku.
 
 Mevcut Durum:
-- Faz 8.2 (Tekrarlayan İşlemler) Dilim 1A–1E (vade hesaplama, aday planlama, Room atomik occurrence, repository/use-case, Android WorkManager), Dilim 2A (saf command/validation sözleşmesi) ve Dilim 2B (Supabase V2 migration & 28 senaryolu Staging SQL sözleşme testi) başarıyla tamamlandı.
-- FeniqoMobil-Staging (ref: rxfaiynkhaxrksosxvxp) üzerinde 12/12 migration günceldir; Production Supabase'e dokunulmadı.
-- Tüm hedefli birim/host testleri ve derleme kontrolleri başarılıdır.
+- Mobil Navigasyon Bilgi Mimarisi (5'li kalıcı alt bar: Ana Sayfa / İşlemler / + / Plan / Daha Fazla, Plan hub, Daha Fazla hub ve pasif Yakında modülleri) tamamlandı.
+- Faz 8.1 (Bütçeler), Faz 8.2 (Tekrarlayan İşlemler ve Abonelikler) ve Faz 8.3 (Hedefler ve Borçlar: Goals, Goal Contributions, Debts, Debt Payments, Debt Snowball Planner) tüm katmanlarıyla tamamlandı ve Android emülatör manuel smoke kabulü başarıyla geçti.
+- FeniqoMobil-Staging (ref: rxfaiynkhaxrksosxvxp) üzerinde 15/15 migration günceldir; SQL sözleşme testi başarılıdır (0 kalıntı); Production Supabase'e dokunulmadı.
+- Tüm hedefli birim/host testleri ve platform derleme kontrolleri başarılıdır.
 
-Lütfen sıradaki teknik adım olan "Recurring rule için Android/KMP V2 istemci entegrasyonu (DTO/mapper, SyncEntityType, outbox ACK/pull ve CRUD akışı)" için planlama ve dilim adımlarını hazırla.
+Sıradaki Planlanan İş:
+- "Faz 8.4 — Ortak Çalışma Alanları (Workspaces)":
+  - Çalışma alanı oluşturma, katılma, ayrılma, aktif alan seçimi, üye listesi ve rol tabanlı (`OWNER`, `EDITOR`, `VIEWER`) kurallar.
+  - Ortak harcama/işlem ve bütçe görünürlüğü, kimin ne kadar ödediği ve borç dağılımı (split) hesaplama motoru.
+  - Domain modelleri, validation invariant'ları, use case'ler ve Room planlaması.
+
+Lütfen Faz 8.4 (Ortak Çalışma Alanları) için ilk küçük, güvenli ve test edilebilir uygulama dilimini (Domain modelleri ve validation kuralları) hazırla.
 ```
 

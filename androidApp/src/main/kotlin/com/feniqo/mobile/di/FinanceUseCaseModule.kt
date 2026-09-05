@@ -309,5 +309,171 @@ object FinanceUseCaseModule {
         com.feniqo.mobile.domain.usecase.DeleteRecurringTransactionUseCase(
             repository = recurringTransactionRepository,
         )
+
+    @Provides
+    @Singleton
+    fun provideObserveSubscriptionsUseCase(
+        subscriptionRepository: com.feniqo.mobile.domain.repository.SubscriptionRepository,
+    ): com.feniqo.mobile.domain.usecase.ObserveSubscriptionsUseCase =
+        com.feniqo.mobile.domain.usecase.ObserveSubscriptionsUseCase(
+            repository = subscriptionRepository,
+        )
+
+    @Provides
+    @Singleton
+    fun provideObserveSubscriptionUseCase(
+        subscriptionRepository: com.feniqo.mobile.domain.repository.SubscriptionRepository,
+    ): com.feniqo.mobile.domain.usecase.ObserveSubscriptionUseCase =
+        com.feniqo.mobile.domain.usecase.ObserveSubscriptionUseCase(
+            repository = subscriptionRepository,
+        )
+
+    @Provides
+    @Singleton
+    fun provideCreateSubscriptionUseCase(
+        subscriptionRepository: com.feniqo.mobile.domain.repository.SubscriptionRepository,
+    ): com.feniqo.mobile.domain.usecase.CreateSubscriptionUseCase =
+        com.feniqo.mobile.domain.usecase.CreateSubscriptionUseCase(
+            repository = subscriptionRepository,
+        )
+
+    @Provides
+    @Singleton
+    fun provideUpdateSubscriptionUseCase(
+        subscriptionRepository: com.feniqo.mobile.domain.repository.SubscriptionRepository,
+    ): com.feniqo.mobile.domain.usecase.UpdateSubscriptionUseCase =
+        com.feniqo.mobile.domain.usecase.UpdateSubscriptionUseCase(
+            repository = subscriptionRepository,
+        )
+
+    @Provides
+    @Singleton
+    fun provideSetSubscriptionActiveUseCase(
+        subscriptionRepository: com.feniqo.mobile.domain.repository.SubscriptionRepository,
+    ): com.feniqo.mobile.domain.usecase.SetSubscriptionActiveUseCase =
+        com.feniqo.mobile.domain.usecase.SetSubscriptionActiveUseCase(
+            repository = subscriptionRepository,
+        )
+
+    @Provides
+    @Singleton
+    fun provideAdvanceSubscriptionRenewalUseCase(
+        subscriptionRepository: com.feniqo.mobile.domain.repository.SubscriptionRepository,
+    ): com.feniqo.mobile.domain.usecase.AdvanceSubscriptionRenewalUseCase =
+        com.feniqo.mobile.domain.usecase.AdvanceSubscriptionRenewalUseCase(
+            repository = subscriptionRepository,
+        )
+
+    @Provides
+    @Singleton
+    fun provideDeleteSubscriptionUseCase(
+        subscriptionRepository: com.feniqo.mobile.domain.repository.SubscriptionRepository,
+    ): com.feniqo.mobile.domain.usecase.DeleteSubscriptionUseCase =
+        com.feniqo.mobile.domain.usecase.DeleteSubscriptionUseCase(
+            repository = subscriptionRepository,
+        )
+
+    @Provides
+    @Singleton
+    fun providePlanSubscriptionPaymentRemindersUseCase(): com.feniqo.mobile.domain.usecase.PlanSubscriptionPaymentRemindersUseCase =
+        com.feniqo.mobile.domain.usecase.PlanSubscriptionPaymentRemindersUseCase()
+
+    @Provides
+    @Singleton
+    fun provideObserveGoalsUseCase(
+        goalRepository: com.feniqo.mobile.domain.repository.GoalRepository,
+    ): com.feniqo.mobile.domain.usecase.ObserveGoalsUseCase =
+        com.feniqo.mobile.domain.usecase.ObserveGoalsUseCase(repository = goalRepository)
+
+    @Provides
+    @Singleton
+    fun provideObserveGoalUseCase(
+        goalRepository: com.feniqo.mobile.domain.repository.GoalRepository,
+    ): com.feniqo.mobile.domain.usecase.ObserveGoalUseCase =
+        com.feniqo.mobile.domain.usecase.ObserveGoalUseCase(repository = goalRepository)
+
+    @Provides
+    @Singleton
+    fun provideObserveGoalContributionsUseCase(
+        goalRepository: com.feniqo.mobile.domain.repository.GoalRepository,
+    ): com.feniqo.mobile.domain.usecase.ObserveGoalContributionsUseCase =
+        com.feniqo.mobile.domain.usecase.ObserveGoalContributionsUseCase(repository = goalRepository)
+
+    @Provides
+    @Singleton
+    fun provideObserveDebtsUseCase(
+        debtRepository: com.feniqo.mobile.domain.repository.DebtRepository,
+    ): com.feniqo.mobile.domain.usecase.ObserveDebtsUseCase =
+        com.feniqo.mobile.domain.usecase.ObserveDebtsUseCase(repository = debtRepository)
+
+    @Provides
+    @Singleton
+    fun provideObserveDebtUseCase(
+        debtRepository: com.feniqo.mobile.domain.repository.DebtRepository,
+    ): com.feniqo.mobile.domain.usecase.ObserveDebtUseCase =
+        com.feniqo.mobile.domain.usecase.ObserveDebtUseCase(repository = debtRepository)
+
+    @Provides
+    @Singleton
+    fun provideObserveDebtPaymentsUseCase(
+        debtRepository: com.feniqo.mobile.domain.repository.DebtRepository,
+    ): com.feniqo.mobile.domain.usecase.ObserveDebtPaymentsUseCase =
+        com.feniqo.mobile.domain.usecase.ObserveDebtPaymentsUseCase(repository = debtRepository)
+
+    @Provides
+    @Singleton
+    fun provideCreateGoalUseCase(
+        goalRepository: com.feniqo.mobile.domain.repository.GoalRepository,
+    ): com.feniqo.mobile.domain.usecase.CreateGoalUseCase =
+        com.feniqo.mobile.domain.usecase.CreateGoalUseCase(repository = goalRepository)
+
+    @Provides
+    @Singleton
+    fun provideUpdateGoalUseCase(
+        goalRepository: com.feniqo.mobile.domain.repository.GoalRepository,
+    ): com.feniqo.mobile.domain.usecase.UpdateGoalUseCase =
+        com.feniqo.mobile.domain.usecase.UpdateGoalUseCase(repository = goalRepository)
+
+    @Provides
+    @Singleton
+    fun provideAddGoalContributionUseCase(
+        goalRepository: com.feniqo.mobile.domain.repository.GoalRepository,
+    ): com.feniqo.mobile.domain.usecase.AddGoalContributionUseCase =
+        com.feniqo.mobile.domain.usecase.AddGoalContributionUseCase(repository = goalRepository)
+
+    @Provides
+    @Singleton
+    fun provideDeleteGoalUseCase(
+        goalRepository: com.feniqo.mobile.domain.repository.GoalRepository,
+    ): com.feniqo.mobile.domain.usecase.DeleteGoalUseCase =
+        com.feniqo.mobile.domain.usecase.DeleteGoalUseCase(repository = goalRepository)
+
+    @Provides
+    @Singleton
+    fun provideCreateDebtUseCase(
+        debtRepository: com.feniqo.mobile.domain.repository.DebtRepository,
+    ): com.feniqo.mobile.domain.usecase.CreateDebtUseCase =
+        com.feniqo.mobile.domain.usecase.CreateDebtUseCase(repository = debtRepository)
+
+    @Provides
+    @Singleton
+    fun provideUpdateDebtUseCase(
+        debtRepository: com.feniqo.mobile.domain.repository.DebtRepository,
+    ): com.feniqo.mobile.domain.usecase.UpdateDebtUseCase =
+        com.feniqo.mobile.domain.usecase.UpdateDebtUseCase(repository = debtRepository)
+
+    @Provides
+    @Singleton
+    fun provideAddDebtPaymentUseCase(
+        debtRepository: com.feniqo.mobile.domain.repository.DebtRepository,
+    ): com.feniqo.mobile.domain.usecase.AddDebtPaymentUseCase =
+        com.feniqo.mobile.domain.usecase.AddDebtPaymentUseCase(repository = debtRepository)
+
+    @Provides
+    @Singleton
+    fun provideDeleteDebtUseCase(
+        debtRepository: com.feniqo.mobile.domain.repository.DebtRepository,
+    ): com.feniqo.mobile.domain.usecase.DeleteDebtUseCase =
+        com.feniqo.mobile.domain.usecase.DeleteDebtUseCase(repository = debtRepository)
 }
 

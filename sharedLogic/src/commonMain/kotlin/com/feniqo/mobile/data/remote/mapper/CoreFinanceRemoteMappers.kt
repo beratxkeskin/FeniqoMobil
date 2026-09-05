@@ -1,13 +1,25 @@
 package com.feniqo.mobile.data.remote.mapper
 
 import com.feniqo.mobile.data.remote.dto.CategoryDto
+import com.feniqo.mobile.data.remote.dto.DebtDto
+import com.feniqo.mobile.data.remote.dto.DebtPaymentDto
+import com.feniqo.mobile.data.remote.dto.GoalContributionDto
+import com.feniqo.mobile.data.remote.dto.GoalDto
 import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
+import com.feniqo.mobile.data.remote.dto.SubscriptionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.domain.model.Category
 import com.feniqo.mobile.domain.model.CategoryColor
 import com.feniqo.mobile.domain.model.CategoryIcon
 import com.feniqo.mobile.domain.model.Currency
+import com.feniqo.mobile.domain.model.Debt
+import com.feniqo.mobile.domain.model.DebtPayment
+import com.feniqo.mobile.domain.model.DebtStatus
+import com.feniqo.mobile.domain.model.DebtType
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.domain.model.Goal
+import com.feniqo.mobile.domain.model.GoalContribution
+import com.feniqo.mobile.domain.model.GoalContributionDirection
 import com.feniqo.mobile.domain.model.InstallmentInfo
 import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.Money
@@ -16,9 +28,12 @@ import com.feniqo.mobile.domain.model.ReceiptPath
 import com.feniqo.mobile.domain.model.RecurrenceFrequency
 import com.feniqo.mobile.domain.model.RecurrenceRule
 import com.feniqo.mobile.domain.model.RecurringTransaction
+import com.feniqo.mobile.domain.model.Subscription
 import com.feniqo.mobile.domain.model.Transaction
 import com.feniqo.mobile.domain.model.TransactionType
 import kotlin.time.Instant
+
+
 
 fun CategoryDto.toDomain(): Category {
     if (isDefault && userId != null) {
@@ -164,6 +179,276 @@ fun RecurringTransaction.toDto(): RecurringTransactionDto = RecurringTransaction
     createdAt = createdAt.toString(),
 )
 
+fun SubscriptionDto.toDomain(): Subscription {
+    if (workspaceId != null) {
+        throw RemoteMappingException("subscriptions.workspace_id V2 kişisel kapsamda null olmalıdır.")
+    }
+    if (amountMinor <= 0L) {
+        throw RemoteMappingException("subscriptions.amount_minor sıfırdan büyük olmalıdır: $amountMinor")
+    }
+    if (interval <= 0) {
+        throw RemoteMappingException("subscriptions.interval pozitif olmalıdır: $interval")
+    }
+
+    val trimmedName = name.trim()
+    if (trimmedName.isEmpty()) {
+        throw RemoteMappingException("subscriptions.name boş olamaz.")
+    }
+    if (trimmedName.length > Subscription.MAX_NAME_LENGTH) {
+        throw RemoteMappingException("subscriptions.name ${Subscription.MAX_NAME_LENGTH} karakterden uzun olamaz: ${trimmedName.length}")
+    }
+
+    val parsedStartDate = startDate.toLocalDate("subscriptions.start_date")
+    val parsedEndDate = endDate?.toLocalDate("subscriptions.end_date")
+    val parsedNextRenewalDate = nextRenewalDate.toLocalDate("subscriptions.next_renewal_date")
+
+    if (parsedEndDate != null && parsedEndDate < parsedStartDate) {
+        throw RemoteMappingException("subscriptions.end_date ($parsedEndDate) start_date ($parsedStartDate) öncesinde olamaz.")
+    }
+    if (parsedNextRenewalDate < parsedStartDate) {
+        throw RemoteMappingException("subscriptions.next_renewal_date ($parsedNextRenewalDate) start_date ($parsedStartDate) öncesinde olamaz.")
+    }
+    if (parsedEndDate != null && parsedNextRenewalDate > parsedEndDate) {
+        throw RemoteMappingException("subscriptions.next_renewal_date ($parsedNextRenewalDate) end_date ($parsedEndDate) sonrasında olamaz.")
+    }
+
+    val parsedRule = RecurrenceRule(
+        frequency = frequency.toRecurrenceFrequency("subscriptions.frequency"),
+        interval = interval,
+        startDate = parsedStartDate,
+        endDate = parsedEndDate,
+    )
+
+    return Subscription(
+        id = EntityId(id.required("subscriptions.id")),
+        ownerId = EntityId(userId.required("subscriptions.user_id")),
+        workspaceId = null,
+        name = trimmedName,
+        amount = Money(amountMinor, currency.toCurrency("subscriptions.currency")),
+        categoryId = categoryId?.let { EntityId(it.required("subscriptions.category_id")) },
+        renewalRule = parsedRule,
+        nextRenewalDate = parsedNextRenewalDate,
+        isActive = isActive,
+        createdAt = createdAt.toInstant("subscriptions.created_at"),
+    )
+}
+
+
+fun Subscription.toDto(): SubscriptionDto = SubscriptionDto(
+    id = id.value,
+    userId = ownerId.value,
+    workspaceId = workspaceId?.value,
+    name = name.trim(),
+    amountMinor = amount.amountMinor,
+    currency = amount.currency.code,
+    categoryId = categoryId?.value,
+    frequency = renewalRule.frequency.name,
+    interval = renewalRule.interval,
+    startDate = renewalRule.startDate.toString(),
+    endDate = renewalRule.endDate?.toString(),
+    nextRenewalDate = nextRenewalDate.toString(),
+    isActive = isActive,
+    createdAt = createdAt.toString(),
+)
+
+fun GoalDto.toDomain(): Goal {
+    if (workspaceId != null) {
+        throw RemoteMappingException("goals.workspace_id V2 kişisel kapsamda null olmalıdır.")
+    }
+    if (targetAmountMinor <= 0L) {
+        throw RemoteMappingException("goals.target_amount_minor sıfırdan büyük olmalıdır: $targetAmountMinor")
+    }
+    if (currentAmountMinor < 0L) {
+        throw RemoteMappingException("goals.current_amount_minor negatif olamaz: $currentAmountMinor")
+    }
+
+    val trimmedName = name.trim()
+    if (trimmedName.isEmpty()) {
+        throw RemoteMappingException("goals.name boş olamaz.")
+    }
+    if (trimmedName.length > Goal.MAX_NAME_LENGTH) {
+        throw RemoteMappingException("goals.name ${Goal.MAX_NAME_LENGTH} karakterden uzun olamaz: ${trimmedName.length}")
+    }
+
+    val parsedTargetDate = targetDate.toLocalDate("goals.target_date")
+    val parsedCurrency = currency.toCurrency("goals.currency")
+
+    val parsedColor = try {
+        CategoryColor(colorHex.trim())
+    } catch (error: IllegalArgumentException) {
+        throw RemoteMappingException("goals.color_hex geçersiz formatta: $colorHex", error)
+    }
+
+    val parsedIcon = iconKey?.let { rawKey ->
+        val trimmedKey = rawKey.trim()
+        if (trimmedKey.isEmpty()) {
+            throw RemoteMappingException("goals.icon_key boş olamaz.")
+        }
+        try {
+            CategoryIcon(trimmedKey)
+        } catch (error: IllegalArgumentException) {
+            throw RemoteMappingException("goals.icon_key geçersiz: $rawKey", error)
+        }
+    }
+
+    return Goal(
+        id = EntityId(id.required("goals.id")),
+        ownerId = EntityId(userId.required("goals.user_id")),
+        workspaceId = null,
+        name = trimmedName,
+        targetAmount = Money(targetAmountMinor, parsedCurrency),
+        currentAmount = Money(currentAmountMinor, parsedCurrency),
+        targetDate = parsedTargetDate,
+        color = parsedColor,
+        icon = parsedIcon,
+        createdAt = createdAt.toInstant("goals.created_at"),
+    )
+}
+
+fun Goal.toDto(): GoalDto = GoalDto(
+    id = id.value,
+    userId = ownerId.value,
+    workspaceId = workspaceId?.value,
+    name = name.trim(),
+    targetAmountMinor = targetAmount.amountMinor,
+    currentAmountMinor = currentAmount.amountMinor,
+    currency = targetAmount.currency.code,
+    targetDate = targetDate.toString(),
+    colorHex = color.hex,
+    iconKey = icon?.key,
+    createdAt = createdAt.toString(),
+)
+
+fun GoalContributionDto.toDomain(): GoalContribution {
+    if (amountMinor <= 0L) {
+        throw RemoteMappingException("goal_contributions.amount_minor sıfırdan büyük olmalıdır: $amountMinor")
+    }
+
+    val parsedDirection = direction.toGoalContributionDirection("goal_contributions.direction")
+    val parsedOccurredOn = occurredOn.toLocalDate("goal_contributions.occurred_on")
+    val parsedCurrency = currency.toCurrency("goal_contributions.currency")
+
+    val normalizedNote = note?.let { rawNote ->
+        val trimmed = rawNote.trim()
+        if (trimmed.isEmpty()) {
+            throw RemoteMappingException("goal_contributions.note boş olamaz.")
+        }
+        if (trimmed.length > GoalContribution.MAX_NOTE_LENGTH) {
+            throw RemoteMappingException("goal_contributions.note ${GoalContribution.MAX_NOTE_LENGTH} karakterden uzun olamaz: ${trimmed.length}")
+        }
+        trimmed
+    }
+
+    return GoalContribution(
+        id = EntityId(id.required("goal_contributions.id")),
+        goalId = EntityId(goalId.required("goal_contributions.goal_id")),
+        amount = Money(amountMinor, parsedCurrency),
+        direction = parsedDirection,
+        occurredOn = parsedOccurredOn,
+        note = normalizedNote,
+        createdAt = createdAt.toInstant("goal_contributions.created_at"),
+    )
+}
+
+fun GoalContribution.toDto(): GoalContributionDto = GoalContributionDto(
+    id = id.value,
+    goalId = goalId.value,
+    amountMinor = amount.amountMinor,
+    currency = amount.currency.code,
+    direction = direction.name,
+    occurredOn = occurredOn.toString(),
+    note = note?.trim(),
+    createdAt = createdAt.toString(),
+)
+
+fun DebtDto.toDomain(): Debt {
+    if (workspaceId != null) {
+        throw RemoteMappingException("debts.workspace_id V2 kişisel kapsamda null olmalıdır.")
+    }
+    if (amountMinor <= 0L) {
+        throw RemoteMappingException("debts.amount_minor sıfırdan büyük olmalıdır: $amountMinor")
+    }
+
+    val trimmedTitle = title.trim()
+    if (trimmedTitle.isEmpty()) {
+        throw RemoteMappingException("debts.title boş olamaz.")
+    }
+    if (trimmedTitle.length > Debt.MAX_TITLE_LENGTH) {
+        throw RemoteMappingException("debts.title ${Debt.MAX_TITLE_LENGTH} karakterden uzun olamaz: ${trimmedTitle.length}")
+    }
+
+    val parsedType = type.toDebtType("debts.type")
+    val parsedStatus = status.toDebtStatus("debts.status")
+    val parsedDueDate = dueDate.toLocalDate("debts.due_date")
+    val parsedCurrency = currency.toCurrency("debts.currency")
+
+    val normalizedDescription = description?.let { rawDesc ->
+        val trimmed = rawDesc.trim()
+        if (trimmed.isEmpty()) {
+            throw RemoteMappingException("debts.description boş olamaz.")
+        }
+        if (trimmed.length > Debt.MAX_DESCRIPTION_LENGTH) {
+            throw RemoteMappingException("debts.description ${Debt.MAX_DESCRIPTION_LENGTH} karakterden uzun olamaz: ${trimmed.length}")
+        }
+        trimmed
+    }
+
+    return Debt(
+        id = EntityId(id.required("debts.id")),
+        ownerId = EntityId(userId.required("debts.user_id")),
+        workspaceId = null,
+        title = trimmedTitle,
+        amount = Money(amountMinor, parsedCurrency),
+        type = parsedType,
+        dueDate = parsedDueDate,
+        status = parsedStatus,
+        description = normalizedDescription,
+        createdAt = createdAt.toInstant("debts.created_at"),
+    )
+}
+
+fun Debt.toDto(): DebtDto = DebtDto(
+    id = id.value,
+    userId = ownerId.value,
+    workspaceId = workspaceId?.value,
+    title = title.trim(),
+    amountMinor = amount.amountMinor,
+    currency = amount.currency.code,
+    type = type.name,
+    dueDate = dueDate.toString(),
+    status = status.name,
+    description = description?.trim(),
+    createdAt = createdAt.toString(),
+)
+
+fun DebtPaymentDto.toDomain(): DebtPayment {
+    if (amountMinor <= 0L) {
+        throw RemoteMappingException("debt_payments.amount_minor sıfırdan büyük olmalıdır: $amountMinor")
+    }
+
+    val parsedPaidOn = paidOn.toLocalDate("debt_payments.paid_on")
+    val parsedCurrency = currency.toCurrency("debt_payments.currency")
+
+    return DebtPayment(
+        id = EntityId(id.required("debt_payments.id")),
+        debtId = EntityId(debtId.required("debt_payments.debt_id")),
+        amount = Money(amountMinor, parsedCurrency),
+        paidOn = parsedPaidOn,
+        createdAt = createdAt.toInstant("debt_payments.created_at"),
+    )
+}
+
+fun DebtPayment.toDto(): DebtPaymentDto = DebtPaymentDto(
+    id = id.value,
+    debtId = debtId.value,
+    amountMinor = amount.amountMinor,
+    currency = amount.currency.code,
+    paidOn = paidOn.toString(),
+    createdAt = createdAt.toString(),
+)
+
+
+
 private fun TransactionDto.toInstallmentInfo(): InstallmentInfo? {
     val values = listOf(installmentNumber, totalInstallments, installmentGroupId)
     if (values.all { it == null }) return null
@@ -216,7 +501,26 @@ private fun String.toRecurrenceFrequency(field: String): RecurrenceFrequency = R
     it.name.equals(trim(), ignoreCase = true)
 } ?: throw RemoteMappingException("Desteklenmeyen $field değeri: $this")
 
+private fun String.toGoalContributionDirection(field: String): GoalContributionDirection = when (trim().uppercase()) {
+    "ADD" -> GoalContributionDirection.ADD
+    "REMOVE" -> GoalContributionDirection.REMOVE
+    else -> throw RemoteMappingException("Desteklenmeyen $field değeri: $this")
+}
+
+private fun String.toDebtType(field: String): DebtType = when (trim().uppercase()) {
+    "DEBT" -> DebtType.DEBT
+    "RECEIVABLE" -> DebtType.RECEIVABLE
+    else -> throw RemoteMappingException("Desteklenmeyen $field değeri: $this")
+}
+
+private fun String.toDebtStatus(field: String): DebtStatus = when (trim().uppercase()) {
+    "OPEN" -> DebtStatus.OPEN
+    "SETTLED" -> DebtStatus.SETTLED
+    else -> throw RemoteMappingException("Desteklenmeyen $field değeri: $this")
+}
+
 private fun String.toLocalDate(field: String = "transactions.transaction_date"): LocalDate = try {
+
     LocalDate.parse(this)
 } catch (error: IllegalArgumentException) {
     throw RemoteMappingException("$field geçerli bir ISO tarih değil.", error)

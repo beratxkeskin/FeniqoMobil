@@ -23,6 +23,11 @@ object DateFormatter {
         return "${date.day} $monthName ${date.year}"
     }
 
+    fun formatReadableDate(date: LocalDate): String {
+        val monthName = getTurkishMonthName(date.month)
+        return "${date.day} $monthName ${date.year}"
+    }
+
     fun formatYearMonth(yearMonth: YearMonth): String {
         val parts = yearMonth.value.split("-")
         val year = parts.getOrNull(0) ?: return yearMonth.value

@@ -23,6 +23,12 @@ interface WorkspaceRepository {
 
     suspend fun create(name: String): RepositoryResult<EntityId>
 
+    suspend fun createWorkspace(command: com.feniqo.mobile.domain.model.CreateWorkspaceCommand): RepositoryResult<EntityId>
+
+    suspend fun updateWorkspace(command: com.feniqo.mobile.domain.model.UpdateWorkspaceCommand): RepositoryResult<Unit>
+
+    suspend fun deleteWorkspace(id: EntityId): RepositoryResult<Unit>
+
     suspend fun setActive(workspaceId: EntityId?): RepositoryResult<Unit>
 
     suspend fun createInvite(workspaceId: EntityId): RepositoryResult<WorkspaceInviteCode>
@@ -67,7 +73,14 @@ enum class SyncEntityType {
     BUDGET,
     WORKSPACE,
     RECURRING_TRANSACTION,
+    SUBSCRIPTION,
+    GOAL,
+    GOAL_CONTRIBUTION,
+    DEBT,
+    DEBT_PAYMENT,
 }
+
+
 
 
 data class SyncConflict(

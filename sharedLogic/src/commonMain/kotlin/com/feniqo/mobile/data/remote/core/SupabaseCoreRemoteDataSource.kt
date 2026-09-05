@@ -2,13 +2,22 @@ package com.feniqo.mobile.data.remote.core
 
 import com.feniqo.mobile.data.remote.dto.BudgetDto
 import com.feniqo.mobile.data.remote.dto.CategoryDto
+import com.feniqo.mobile.data.remote.dto.DebtDto
+import com.feniqo.mobile.data.remote.dto.DebtPaymentDto
+import com.feniqo.mobile.data.remote.dto.DebtPaymentSyncRecordDto
+import com.feniqo.mobile.data.remote.dto.GoalContributionDto
+import com.feniqo.mobile.data.remote.dto.GoalContributionSyncRecordDto
+import com.feniqo.mobile.data.remote.dto.GoalDto
+
 import com.feniqo.mobile.data.remote.dto.ProfileDto
 import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
+import com.feniqo.mobile.data.remote.dto.SubscriptionDto
 import com.feniqo.mobile.data.remote.dto.TagDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.remote.dto.TransactionTagDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceMemberDto
+
 import com.feniqo.mobile.domain.model.PaymentMethod
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
@@ -34,7 +43,11 @@ class SupabaseCoreRemoteDataSource(
     private val client: SupabaseClient,
 ) : CoreRemoteDataSource, ConditionalRemoteWriter, IdempotentConditionalRemoteWriter {
 
-    private val rpcJson = Json { ignoreUnknownKeys = true }
+    private val rpcJson = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+        explicitNulls = true
+    }
 
     override suspend fun fetchProfile(userId: String): ProfileDto? = client
         .from(PROFILES)
@@ -137,8 +150,144 @@ class SupabaseCoreRemoteDataSource(
         )
     }
 
+    override suspend fun fetchSubscriptions(query: SubscriptionRemoteQuery): RemotePage<SubscriptionDto> {
+        val result = client.from(SUBSCRIPTIONS).select {
+            count(Count.EXACT)
+            range(query.page.range)
+            order("updated_at", Order.ASCENDING)
+            order("id", Order.ASCENDING)
+            filter {
+                query.updatedAfter?.let { cursor ->
+                    or {
+                        gt("updated_at", cursor.updatedAt)
+                        and {
+                            eq("updated_at", cursor.updatedAt)
+                            gt("id", cursor.entityId)
+                        }
+                    }
+                }
+                applyWorkspaceScope(query.workspaceScope)
+            }
+        }
+        return result.toCursorPage(
+            request = query.page,
+            cursor = query.updatedAfter,
+            updatedAt = { it.updatedAt ?: it.createdAt },
+            id = SubscriptionDto::id,
+        )
+    }
+
+    override suspend fun fetchGoals(query: GoalRemoteQuery): RemotePage<GoalDto> {
+        val result = client.from(GOALS).select {
+            count(Count.EXACT)
+            range(query.page.range)
+            order("updated_at", Order.ASCENDING)
+            order("id", Order.ASCENDING)
+            filter {
+                query.updatedAfter?.let { cursor ->
+                    or {
+                        gt("updated_at", cursor.updatedAt)
+                        and {
+                            eq("updated_at", cursor.updatedAt)
+                            gt("id", cursor.entityId)
+                        }
+                    }
+                }
+                applyWorkspaceScope(query.workspaceScope)
+            }
+        }
+        return result.toCursorPage(
+            request = query.page,
+            cursor = query.updatedAfter,
+            updatedAt = { it.updatedAt ?: it.createdAt },
+            id = GoalDto::id,
+        )
+    }
+
+    override suspend fun fetchGoalContributions(query: GoalContributionRemoteQuery): RemotePage<GoalContributionDto> {
+        val result = client.from(GOAL_CONTRIBUTIONS).select {
+            count(Count.EXACT)
+            range(query.page.range)
+            order("updated_at", Order.ASCENDING)
+            order("id", Order.ASCENDING)
+            filter {
+                query.goalId?.let { eq("goal_id", it.value) }
+                query.updatedAfter?.let { cursor ->
+                    or {
+                        gt("updated_at", cursor.updatedAt)
+                        and {
+                            eq("updated_at", cursor.updatedAt)
+                            gt("id", cursor.entityId)
+                        }
+                    }
+                }
+            }
+        }
+        return result.toCursorPage(
+            request = query.page,
+            cursor = query.updatedAfter,
+            updatedAt = { it.updatedAt ?: it.createdAt },
+            id = GoalContributionDto::id,
+        )
+    }
+
+    override suspend fun fetchDebts(query: DebtRemoteQuery): RemotePage<DebtDto> {
+        val result = client.from(DEBTS).select {
+            count(Count.EXACT)
+            range(query.page.range)
+            order("updated_at", Order.ASCENDING)
+            order("id", Order.ASCENDING)
+            filter {
+                query.updatedAfter?.let { cursor ->
+                    or {
+                        gt("updated_at", cursor.updatedAt)
+                        and {
+                            eq("updated_at", cursor.updatedAt)
+                            gt("id", cursor.entityId)
+                        }
+                    }
+                }
+                applyWorkspaceScope(query.workspaceScope)
+            }
+        }
+        return result.toCursorPage(
+            request = query.page,
+            cursor = query.updatedAfter,
+            updatedAt = { it.updatedAt ?: it.createdAt },
+            id = DebtDto::id,
+        )
+    }
+
+    override suspend fun fetchDebtPayments(query: DebtPaymentRemoteQuery): RemotePage<DebtPaymentDto> {
+        val result = client.from(DEBT_PAYMENTS).select {
+            count(Count.EXACT)
+            range(query.page.range)
+            order("updated_at", Order.ASCENDING)
+            order("id", Order.ASCENDING)
+            filter {
+                query.debtId?.let { eq("debt_id", it.value) }
+                query.updatedAfter?.let { cursor ->
+                    or {
+                        gt("updated_at", cursor.updatedAt)
+                        and {
+                            eq("updated_at", cursor.updatedAt)
+                            gt("id", cursor.entityId)
+                        }
+                    }
+                }
+            }
+        }
+        return result.toCursorPage(
+            request = query.page,
+            cursor = query.updatedAfter,
+            updatedAt = { it.updatedAt ?: it.createdAt },
+            id = DebtPaymentDto::id,
+        )
+    }
 
     override suspend fun fetchTags(
+
+
 
         scope: RemoteWorkspaceScope,
         page: RemotePageRequest,
@@ -152,27 +301,63 @@ class SupabaseCoreRemoteDataSource(
         return result.toPage(page)
     }
 
-    override suspend fun fetchWorkspaces(page: RemotePageRequest): RemotePage<WorkspaceDto> {
+    override suspend fun fetchWorkspaces(query: WorkspaceRemoteQuery): RemotePage<WorkspaceDto> {
         val result = client.from(WORKSPACES).select {
             count(Count.EXACT)
-            range(page.range)
-            order("name", Order.ASCENDING)
+            range(query.page.range)
+            order("updated_at", Order.ASCENDING)
+            order("id", Order.ASCENDING)
+            filter {
+                query.updatedAfter?.let { cursor ->
+                    or {
+                        gt("updated_at", cursor.updatedAt)
+                        and {
+                            eq("updated_at", cursor.updatedAt)
+                            gt("id", cursor.entityId)
+                        }
+                    }
+                }
+            }
         }
-        return result.toPage(page)
+        return result.toCursorPage(
+            request = query.page,
+            cursor = query.updatedAfter,
+            updatedAt = WorkspaceDto::updatedAt,
+            id = WorkspaceDto::id,
+        )
     }
 
-    override suspend fun fetchWorkspaceMembers(
-        workspaceId: String,
-        page: RemotePageRequest,
-    ): RemotePage<WorkspaceMemberDto> {
+    override suspend fun fetchWorkspaceMembers(query: WorkspaceMemberRemoteQuery): RemotePage<WorkspaceMemberDto> {
         val result = client.from(WORKSPACE_MEMBERS).select {
             count(Count.EXACT)
-            range(page.range)
-            order("created_at", Order.ASCENDING)
-            filter { eq("workspace_id", workspaceId) }
+            range(query.page.range)
+            order("updated_at", Order.ASCENDING)
+            order("workspace_id", Order.ASCENDING)
+            order("user_id", Order.ASCENDING)
+            filter {
+                query.workspaceId?.let { eq("workspace_id", it.value) }
+                query.updatedAfter?.let { cursor ->
+                    or {
+                        gt("updated_at", cursor.updatedAt)
+                        and {
+                            eq("updated_at", cursor.updatedAt)
+                            gt("workspace_id", cursor.workspaceId)
+                        }
+                        and {
+                            eq("updated_at", cursor.updatedAt)
+                            eq("workspace_id", cursor.workspaceId)
+                            gt("user_id", cursor.userId)
+                        }
+                    }
+                }
+            }
         }
-        return result.toPage(page)
+        return result.toWorkspaceMemberCursorPage(
+            request = query.page,
+            cursor = query.updatedAfter,
+        )
     }
+
 
     override suspend fun fetchTransactionTags(transactionId: String): List<TransactionTagDto> = client
         .from(TRANSACTION_TAGS)
@@ -251,6 +436,56 @@ class SupabaseCoreRemoteDataSource(
     ): ConditionalRemoteWriteResult<RecurringTransactionDto> =
         idempotentConditionalWrite(operationId, RECURRING_TRANSACTION, operation, baseVersion, dto)
 
+    override suspend fun writeSubscription(
+        operationId: String,
+        operation: RemoteWriteOperation,
+        baseVersion: Long?,
+        dto: SubscriptionDto,
+    ): ConditionalRemoteWriteResult<SubscriptionDto> =
+        idempotentConditionalWrite(operationId, SUBSCRIPTION, operation, baseVersion, dto)
+
+    override suspend fun writeGoal(
+        operationId: String,
+        operation: RemoteWriteOperation,
+        baseVersion: Long?,
+        dto: GoalDto,
+    ): ConditionalRemoteWriteResult<GoalDto> =
+        idempotentConditionalWrite(operationId, GOAL, operation, baseVersion, dto)
+
+    override suspend fun writeGoalContribution(
+        operationId: String,
+        operation: RemoteWriteOperation,
+        baseVersion: Long?,
+        dto: GoalContributionDto,
+    ): ConditionalRemoteWriteResult<GoalContributionSyncRecordDto> =
+        idempotentConditionalWrite<GoalContributionDto, GoalContributionSyncRecordDto>(operationId, GOAL_CONTRIBUTION, operation, baseVersion, dto)
+
+    override suspend fun writeDebt(
+        operationId: String,
+        operation: RemoteWriteOperation,
+        baseVersion: Long?,
+        dto: DebtDto,
+    ): ConditionalRemoteWriteResult<DebtDto> =
+        idempotentConditionalWrite(operationId, DEBT, operation, baseVersion, dto)
+
+    override suspend fun writeDebtPayment(
+        operationId: String,
+        operation: RemoteWriteOperation,
+        baseVersion: Long?,
+        dto: DebtPaymentDto,
+    ): ConditionalRemoteWriteResult<DebtPaymentSyncRecordDto> =
+        idempotentConditionalWrite<DebtPaymentDto, DebtPaymentSyncRecordDto>(operationId, DEBT_PAYMENT, operation, baseVersion, dto)
+
+    override suspend fun writeWorkspace(
+        operationId: String,
+        operation: RemoteWriteOperation,
+        baseVersion: Long?,
+        payload: JsonObject,
+    ): ConditionalRemoteWriteResult<WorkspaceDto> =
+        idempotentConditionalWrite(operationId, WORKSPACE, operation, baseVersion, payload)
+
+
+
 
     private suspend inline fun <reified T : Any> conditionalWrite(
         entityType: String,
@@ -289,13 +524,13 @@ class SupabaseCoreRemoteDataSource(
         }
     }
 
-    private suspend inline fun <reified T : Any> idempotentConditionalWrite(
+    private suspend inline fun <reified P : Any, reified R : Any> idempotentConditionalWrite(
         operationId: String,
         entityType: String,
         operation: RemoteWriteOperation,
         baseVersion: Long?,
-        dto: T,
-    ): ConditionalRemoteWriteResult<T> {
+        dto: P,
+    ): ConditionalRemoteWriteResult<R> {
         val response = client.postgrest.rpc(
             function = SYNC_WRITE_V2_RPC,
             parameters = rpcJson.encodeToJsonElement(
@@ -314,7 +549,7 @@ class SupabaseCoreRemoteDataSource(
         val recordElement = response[RECORD]
         val record = recordElement
             ?.takeUnless { it is JsonNull }
-            ?.let { rpcJson.decodeFromJsonElement<T>(it) }
+            ?.let { rpcJson.decodeFromJsonElement<R>(it) }
 
         return when (status) {
             APPLIED -> ConditionalRemoteWriteResult.Applied(
@@ -327,6 +562,7 @@ class SupabaseCoreRemoteDataSource(
             else -> throw IllegalStateException("Bilinmeyen koşullu Supabase V2 yazma sonucu: $status")
         }
     }
+
 
     private suspend inline fun <reified T : Any> upsert(table: String, dto: T) {
         client.from(table).upsert(dto) {
@@ -363,6 +599,26 @@ class SupabaseCoreRemoteDataSource(
         return RemotePage(filtered, request, countOrNull())
     }
 
+    private fun PostgrestResult.toWorkspaceMemberCursorPage(
+        request: RemotePageRequest,
+        cursor: WorkspaceMemberSyncCursor?,
+    ): RemotePage<WorkspaceMemberDto> {
+        val decoded = decodeList<WorkspaceMemberDto>()
+        val filtered = if (cursor == null) {
+            decoded
+        } else {
+            val cursorInstant = Instant.parse(cursor.updatedAt)
+            decoded.filter { item ->
+                val itemInstant = Instant.parse(item.updatedAt)
+                itemInstant > cursorInstant ||
+                    (itemInstant == cursorInstant && item.workspaceId > cursor.workspaceId) ||
+                    (itemInstant == cursorInstant && item.workspaceId == cursor.workspaceId && item.userId > cursor.userId)
+            }
+        }
+        return RemotePage(filtered, request, countOrNull())
+    }
+
+
     private fun PostgrestFilterBuilder.applyWorkspaceScope(scope: RemoteWorkspaceScope) {
         when (scope) {
             RemoteWorkspaceScope.All -> Unit
@@ -387,8 +643,15 @@ class SupabaseCoreRemoteDataSource(
         const val TRANSACTION = "TRANSACTION"
         const val BUDGET = "BUDGET"
         const val RECURRING_TRANSACTION = "RECURRING_TRANSACTION"
+        const val SUBSCRIPTION = "SUBSCRIPTION"
+        const val GOAL = "GOAL"
+        const val GOAL_CONTRIBUTION = "GOAL_CONTRIBUTION"
+        const val DEBT = "DEBT"
+        const val DEBT_PAYMENT = "DEBT_PAYMENT"
+        const val WORKSPACE = "WORKSPACE"
 
         const val STATUS = "status"
+
         const val RECORD = "record"
         const val APPLIED = "APPLIED"
         const val CONFLICT = "CONFLICT"
@@ -398,7 +661,14 @@ class SupabaseCoreRemoteDataSource(
         const val TRANSACTIONS = "transactions"
         const val BUDGETS = "budgets"
         const val RECURRING_TRANSACTIONS = "recurring_transactions"
+        const val SUBSCRIPTIONS = "subscriptions"
+        const val GOALS = "goals"
+        const val GOAL_CONTRIBUTIONS = "goal_contributions"
+        const val DEBTS = "debts"
+        const val DEBT_PAYMENTS = "debt_payments"
         const val TAGS = "tags"
+
+
 
         const val TRANSACTION_TAGS = "transaction_tags"
         const val WORKSPACES = "workspaces"

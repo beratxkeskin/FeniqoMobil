@@ -1,5 +1,8 @@
 package com.feniqo.mobile.data.remote.mapper
 
+import com.feniqo.mobile.data.local.entity.SyncMetadata
+import com.feniqo.mobile.data.local.entity.WorkspaceEntity
+import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
 import com.feniqo.mobile.data.remote.dto.ProfileDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceMemberDto
@@ -38,30 +41,84 @@ fun UserProfile.toDto(): ProfileDto = ProfileDto(
 fun WorkspaceDto.toDomain(): Workspace = Workspace(
     id = EntityId(id.requireRemoteValue("workspaces.id")),
     name = name.trim().requireRemoteValue("workspaces.name"),
-    ownerId = EntityId(createdBy.requireRemoteValue("workspaces.created_by")),
+    ownerId = EntityId(ownerId.requireRemoteValue("workspaces.owner_id")),
     createdAt = createdAt.toRemoteInstant("workspaces.created_at"),
 )
 
-fun Workspace.toDto(): WorkspaceDto = WorkspaceDto(
-    id = id.value,
-    name = name.trim(),
-    createdBy = ownerId.value,
-    createdAt = createdAt.toString(),
-)
+fun WorkspaceDto.toEntity(receivedAtEpochMillis: Long): WorkspaceEntity {
+    val cleanName = name.trim().requireRemoteValue("workspaces.name")
+    val cleanNormalizedName = normalizedName.trim().requireRemoteValue("workspaces.normalized_name")
+    val cleanTypeCode = typeCode.trim().requireRemoteValue("workspaces.type_code")
+    if (cleanTypeCode !in setOf("personal", "shared")) {
+        throw RemoteMappingException("Desteklenmeyen workspaces.type_code değeri: $typeCode")
+    }
+    val cleanCurrencyCode = currencyCode.trim().requireRemoteValue("workspaces.currency_code")
+    if (cleanCurrencyCode !in setOf("TRY", "USD", "EUR")) {
+        throw RemoteMappingException("Desteklenmeyen workspaces.currency_code değeri: $currencyCode")
+    }
+
+    if (version <= 0L) {
+        throw RemoteMappingException("workspaces.version pozitif bir tamsayı olmalıdır: $version")
+    }
+
+    val createdAtInstant = createdAt.toRemoteInstant("workspaces.created_at")
+    val updatedAtInstant = updatedAt.toRemoteInstant("workspaces.updated_at")
+    val deletedAtInstant = deletedAt?.toRemoteInstant("workspaces.deleted_at")
+
+    return WorkspaceEntity(
+        id = id.requireRemoteValue("workspaces.id"),
+        name = cleanName,
+        normalizedName = cleanNormalizedName,
+        ownerId = ownerId.requireRemoteValue("workspaces.owner_id"),
+        typeCode = cleanTypeCode,
+        currencyCode = cleanCurrencyCode,
+        description = description?.trim()?.takeIf(String::isNotEmpty),
+        createdAtEpochMillis = createdAtInstant.toEpochMilliseconds(),
+        sync = SyncMetadata(
+            syncStatus = "SYNCED",
+            updatedAtEpochMillis = updatedAtInstant.toEpochMilliseconds(),
+            localUpdatedAtEpochMillis = receivedAtEpochMillis,
+            deletedAtEpochMillis = deletedAtInstant?.toEpochMilliseconds(),
+            version = version,
+            baseVersion = null,
+            lastSyncError = null,
+        ),
+    )
+}
 
 fun WorkspaceMemberDto.toDomain(): WorkspaceMember = WorkspaceMember(
     workspaceId = EntityId(workspaceId.requireRemoteValue("workspace_members.workspace_id")),
     userId = EntityId(userId.requireRemoteValue("workspace_members.user_id")),
-    role = role.toWorkspaceRole(),
-    joinedAt = createdAt.toRemoteInstant("workspace_members.created_at"),
+    role = roleCode.toWorkspaceRole(),
+    joinedAt = joinedAt.toRemoteInstant("workspace_members.joined_at"),
 )
 
-fun WorkspaceMember.toDto(): WorkspaceMemberDto = WorkspaceMemberDto(
-    workspaceId = workspaceId.value,
-    userId = userId.value,
-    role = role.name.lowercase(),
-    createdAt = joinedAt.toString(),
-)
+fun WorkspaceMemberDto.toEntity(receivedAtEpochMillis: Long): WorkspaceMemberEntity {
+    val cleanRoleCode = roleCode.toWorkspaceRole().name
+    val joinedAtInstant = joinedAt.toRemoteInstant("workspace_members.joined_at")
+    val updatedAtInstant = updatedAt.toRemoteInstant("workspace_members.updated_at")
+    val deletedAtInstant = deletedAt?.toRemoteInstant("workspace_members.deleted_at")
+
+    if (version <= 0L) {
+        throw RemoteMappingException("workspace_members.version pozitif bir tamsayı olmalıdır: $version")
+    }
+
+    return WorkspaceMemberEntity(
+        workspaceId = workspaceId.requireRemoteValue("workspace_members.workspace_id"),
+        userId = userId.requireRemoteValue("workspace_members.user_id"),
+        roleCode = cleanRoleCode,
+        joinedAtEpochMillis = joinedAtInstant.toEpochMilliseconds(),
+        sync = SyncMetadata(
+            syncStatus = "SYNCED",
+            updatedAtEpochMillis = updatedAtInstant.toEpochMilliseconds(),
+            localUpdatedAtEpochMillis = receivedAtEpochMillis,
+            deletedAtEpochMillis = deletedAtInstant?.toEpochMilliseconds(),
+            version = version,
+            baseVersion = null,
+            lastSyncError = null,
+        ),
+    )
+}
 
 private fun String.toCurrency(): Currency = Currency.entries.firstOrNull {
     it.code.equals(trim(), ignoreCase = true)
@@ -80,11 +137,11 @@ private fun String.toAppLanguage(): AppLanguage = when (trim().lowercase()) {
     else -> throw RemoteMappingException("Desteklenmeyen profiles.lang değeri: $this")
 }
 
-private fun String.toWorkspaceRole(): WorkspaceRole = when (trim().lowercase()) {
-    "owner" -> WorkspaceRole.OWNER
-    "editor", "member" -> WorkspaceRole.EDITOR
-    "viewer" -> WorkspaceRole.VIEWER
-    else -> throw RemoteMappingException("Desteklenmeyen workspace_members.role değeri: $this")
+private fun String.toWorkspaceRole(): WorkspaceRole = when (trim().uppercase()) {
+    "OWNER" -> WorkspaceRole.OWNER
+    "EDITOR" -> WorkspaceRole.EDITOR
+    "VIEWER" -> WorkspaceRole.VIEWER
+    else -> throw RemoteMappingException("Desteklenmeyen workspace_members.role_code değeri: $this")
 }
 
 private fun String.toRemoteInstant(field: String): Instant = try {
@@ -102,3 +159,4 @@ class RemoteMappingException(
     message: String,
     cause: Throwable? = null,
 ) : IllegalArgumentException(message, cause)
+

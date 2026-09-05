@@ -146,7 +146,7 @@ fun TransactionListItem(
     val amountColor = if (item.type == TransactionType.INCOME) {
         FeniqoStatusColor.Success
     } else {
-        MaterialTheme.colorScheme.onSurface
+        MaterialTheme.colorScheme.error
     }
 
     Card(
@@ -155,7 +155,7 @@ fun TransactionListItem(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
             modifier = Modifier

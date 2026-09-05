@@ -14,8 +14,8 @@ import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.UpdateRecurringTransactionCommand
 import com.feniqo.mobile.domain.validation.RecurrenceScheduleCalculator
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.util.DateFormatter
 import com.feniqo.mobile.presentation.util.MoneyFormatter
-import kotlinx.datetime.Month
 
 /**
  * Tekrarlayan işlem mutasyon durum modelidir.
@@ -152,14 +152,14 @@ object RecurringTransactionDisplayModelMapper {
             interval = item.rule.interval,
             formattedFrequency = formattedFrequency,
             startDate = item.rule.startDate,
-            formattedStartDate = formatReadableDate(item.rule.startDate),
+            formattedStartDate = DateFormatter.formatReadableDate(item.rule.startDate),
             endDate = item.rule.endDate,
-            formattedEndDate = item.rule.endDate?.let { formatReadableDate(it) },
+            formattedEndDate = item.rule.endDate?.let { DateFormatter.formatReadableDate(it) },
             lastGeneratedDate = item.lastGeneratedDate,
-            formattedLastGeneratedDate = item.lastGeneratedDate?.let { formatReadableDate(it) },
+            formattedLastGeneratedDate = item.lastGeneratedDate?.let { DateFormatter.formatReadableDate(it) },
             isNeverGenerated = item.lastGeneratedDate == null,
             nextOccurrenceDate = nextOccurrenceDate,
-            formattedNextOccurrenceDate = nextOccurrenceDate?.let { formatReadableDate(it) },
+            formattedNextOccurrenceDate = nextOccurrenceDate?.let { DateFormatter.formatReadableDate(it) },
             isActive = item.isActive,
             isPaused = !item.isActive,
             description = item.description,
@@ -172,23 +172,5 @@ object RecurringTransactionDisplayModelMapper {
         RecurrenceFrequency.WEEKLY -> if (interval == 1) "Her hafta" else "Her $interval haftada bir"
         RecurrenceFrequency.MONTHLY -> if (interval == 1) "Her ay" else "Her $interval ayda bir"
         RecurrenceFrequency.YEARLY -> if (interval == 1) "Her yıl" else "Her $interval yılda bir"
-    }
-
-    fun formatReadableDate(date: LocalDate): String {
-        val monthName = when (date.month) {
-            Month.JANUARY -> "Ocak"
-            Month.FEBRUARY -> "Şubat"
-            Month.MARCH -> "Mart"
-            Month.APRIL -> "Nisan"
-            Month.MAY -> "Mayıs"
-            Month.JUNE -> "Haziran"
-            Month.JULY -> "Temmuz"
-            Month.AUGUST -> "Ağustos"
-            Month.SEPTEMBER -> "Eylül"
-            Month.OCTOBER -> "Ekim"
-            Month.NOVEMBER -> "Kasım"
-            Month.DECEMBER -> "Aralık"
-        }
-        return "${date.day} $monthName ${date.year}"
     }
 }

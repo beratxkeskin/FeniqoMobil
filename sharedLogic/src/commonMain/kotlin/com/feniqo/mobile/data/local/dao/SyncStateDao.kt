@@ -13,6 +13,9 @@ interface SyncStateDao {
     @Query("SELECT * FROM sync_cursors WHERE entity_type_code = :entityTypeCode LIMIT 1")
     suspend fun getCursor(entityTypeCode: String): SyncCursorEntity?
 
+    @Query("SELECT * FROM sync_cursors WHERE entity_type_code LIKE 'WORKSPACE_MEMBER:%'")
+    suspend fun getWorkspaceMemberCursors(): List<SyncCursorEntity>
+
     @Query("SELECT * FROM sync_conflicts WHERE entity_id = :entityId LIMIT 1")
     suspend fun getConflict(entityId: String): SyncConflictEntity?
 

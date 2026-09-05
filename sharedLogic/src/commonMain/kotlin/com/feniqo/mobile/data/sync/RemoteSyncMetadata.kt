@@ -3,8 +3,13 @@ package com.feniqo.mobile.data.sync
 import com.feniqo.mobile.data.local.entity.SyncMetadata
 import com.feniqo.mobile.data.remote.dto.BudgetDto
 import com.feniqo.mobile.data.remote.dto.CategoryDto
+import com.feniqo.mobile.data.remote.dto.DebtDto
+import com.feniqo.mobile.data.remote.dto.DebtPaymentDto
+import com.feniqo.mobile.data.remote.dto.GoalContributionDto
+import com.feniqo.mobile.data.remote.dto.GoalDto
 import com.feniqo.mobile.data.remote.dto.ProfileDto
 import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
+import com.feniqo.mobile.data.remote.dto.SubscriptionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.domain.model.SyncStatus
 import kotlin.time.Instant
@@ -43,6 +48,43 @@ internal fun RecurringTransactionDto.toRemoteSyncMetadata(receivedAtEpochMillis:
     version = version,
     receivedAtEpochMillis = receivedAtEpochMillis,
 )
+
+internal fun SubscriptionDto.toRemoteSyncMetadata(receivedAtEpochMillis: Long): SyncMetadata = remoteSyncMetadata(
+    updatedAt = updatedAt ?: createdAt,
+    deletedAt = deletedAt,
+    version = version,
+    receivedAtEpochMillis = receivedAtEpochMillis,
+)
+
+internal fun GoalDto.toRemoteSyncMetadata(receivedAtEpochMillis: Long): SyncMetadata = remoteSyncMetadata(
+    updatedAt = updatedAt ?: createdAt,
+    deletedAt = deletedAt,
+    version = version,
+    receivedAtEpochMillis = receivedAtEpochMillis,
+)
+
+internal fun GoalContributionDto.toRemoteSyncMetadata(receivedAtEpochMillis: Long): SyncMetadata = remoteSyncMetadata(
+    updatedAt = createdAt,
+    deletedAt = deletedAt,
+    version = version,
+    receivedAtEpochMillis = receivedAtEpochMillis,
+)
+
+internal fun DebtDto.toRemoteSyncMetadata(receivedAtEpochMillis: Long): SyncMetadata = remoteSyncMetadata(
+    updatedAt = updatedAt ?: createdAt,
+    deletedAt = deletedAt,
+    version = version,
+    receivedAtEpochMillis = receivedAtEpochMillis,
+)
+
+internal fun DebtPaymentDto.toRemoteSyncMetadata(receivedAtEpochMillis: Long): SyncMetadata = remoteSyncMetadata(
+    updatedAt = createdAt,
+    deletedAt = deletedAt,
+    version = version,
+    receivedAtEpochMillis = receivedAtEpochMillis,
+)
+
+
 
 private fun remoteSyncMetadata(
     updatedAt: String,

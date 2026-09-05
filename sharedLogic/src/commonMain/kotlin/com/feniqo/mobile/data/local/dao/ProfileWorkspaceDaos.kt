@@ -5,6 +5,7 @@ import androidx.room.Query
 import androidx.room.Upsert
 import com.feniqo.mobile.data.local.entity.UserProfileEntity
 import com.feniqo.mobile.data.local.entity.WorkspaceEntity
+import com.feniqo.mobile.data.local.entity.WorkspaceInvitationEntity
 import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -53,9 +54,25 @@ interface WorkspaceDao {
     )
     fun observeMembers(workspaceId: String): Flow<List<WorkspaceMemberEntity>>
 
+    @Query(
+        """
+        SELECT * FROM workspace_invitations
+        WHERE workspace_id = :workspaceId
+          AND deleted_at_epoch_ms IS NULL
+        ORDER BY expires_at_epoch_ms ASC, id ASC
+        """,
+    )
+    fun observeInvitations(workspaceId: String): Flow<List<WorkspaceInvitationEntity>>
+
+    @Query("SELECT * FROM workspaces WHERE id = :id LIMIT 1")
+    suspend fun getWorkspaceById(id: String): WorkspaceEntity?
+
     @Upsert
     suspend fun upsertWorkspace(entity: WorkspaceEntity)
 
     @Upsert
     suspend fun upsertMember(entity: WorkspaceMemberEntity)
+
+    @Upsert
+    suspend fun upsertInvitation(entity: WorkspaceInvitationEntity)
 }

@@ -4,9 +4,17 @@ import com.feniqo.mobile.data.local.entity.SyncOperationEntity
 import com.feniqo.mobile.data.local.outbox.OfflineWriteQueue
 import com.feniqo.mobile.data.remote.dto.BudgetDto
 import com.feniqo.mobile.data.remote.dto.CategoryDto
+import com.feniqo.mobile.data.remote.dto.DebtDto
+import com.feniqo.mobile.data.remote.dto.DebtPaymentDto
+import com.feniqo.mobile.data.remote.dto.DebtPaymentSyncRecordDto
+import com.feniqo.mobile.data.remote.dto.GoalContributionDto
+import com.feniqo.mobile.data.remote.dto.GoalContributionSyncRecordDto
+import com.feniqo.mobile.data.remote.dto.GoalDto
 import com.feniqo.mobile.data.remote.dto.ProfileDto
 import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
+import com.feniqo.mobile.data.remote.dto.SubscriptionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
+import com.feniqo.mobile.data.remote.dto.WorkspaceDto
 import kotlinx.coroutines.CancellationException
 
 /** Outbox işleminin sunucuda yürütülmesi sonrası dönen tip güvenli sonuç. */
@@ -17,9 +25,17 @@ sealed interface OutboxExecutionResult {
     data class TransactionApplied(val record: TransactionDto) : OutboxExecutionResult
     data class BudgetApplied(val record: BudgetDto) : OutboxExecutionResult
     data class RecurringTransactionApplied(val record: RecurringTransactionDto) : OutboxExecutionResult
+    data class SubscriptionApplied(val record: SubscriptionDto) : OutboxExecutionResult
+    data class GoalApplied(val record: GoalDto) : OutboxExecutionResult
+    data class GoalContributionApplied(val record: GoalContributionSyncRecordDto) : OutboxExecutionResult
+    data class DebtApplied(val record: DebtDto) : OutboxExecutionResult
+    data class DebtPaymentApplied(val record: DebtPaymentSyncRecordDto) : OutboxExecutionResult
+    data class WorkspaceApplied(val record: WorkspaceDto) : OutboxExecutionResult
     data object MissingDeleteAcknowledged : OutboxExecutionResult
     data class ConflictDetected(val conflict: com.feniqo.mobile.data.local.entity.SyncConflictEntity) : OutboxExecutionResult
 }
+
+
 
 
 /** Outbox'ın kalıcı sırasını koruyarak tek tek gönderilmesini sağlayan ortak senkronizasyon çekirdeği. */

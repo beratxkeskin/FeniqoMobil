@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.feniqo.mobile.sync.RecurringTransactionStartupInitializer
+import com.feniqo.mobile.sync.SubscriptionPaymentReminderStartupInitializer
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -20,6 +21,9 @@ class FeniqoApplication : Application(), Configuration.Provider {
     @Inject
     lateinit var recurringStartupInitializer: RecurringTransactionStartupInitializer
 
+    @Inject
+    lateinit var subscriptionReminderStartupInitializer: SubscriptionPaymentReminderStartupInitializer
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
@@ -28,5 +32,6 @@ class FeniqoApplication : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         recurringStartupInitializer.onAppCreate()
+        subscriptionReminderStartupInitializer.onAppCreate()
     }
 }

@@ -74,11 +74,16 @@ class OfflineFirstSyncRepositoryTest {
         val incrementalRemoteSync = IncrementalRemoteSync(remote, remoteSyncDao, syncStateDao) { 1_000L }
         val offlineWriteQueue = OfflineWriteQueue(FakeLocalMutationDao(), FakeSyncOperationDao())
 
+        val workspaceInitialRemoteSync = com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L }
+        val workspaceIncrementalRemoteSync = com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L }
+
         val repository = OfflineFirstSyncRepository(
             authRepository = auth,
             initialRemoteSync = initialRemoteSync,
+            workspaceInitialRemoteSync = workspaceInitialRemoteSync,
             outboxProcessor = outboxProcessor,
             incrementalRemoteSync = incrementalRemoteSync,
+            workspaceIncrementalRemoteSync = workspaceIncrementalRemoteSync,
             offlineWriteQueue = offlineWriteQueue,
             syncStateDao = syncStateDao,
             remoteSyncDao = remoteSyncDao,
@@ -109,15 +114,18 @@ class OfflineFirstSyncRepositoryTest {
                 updatedAtEpochMillis = 8_000L,
             ),
         )
+        val remoteSyncDao = FakeRemoteSyncDao()
 
         val repository = OfflineFirstSyncRepository(
             authRepository = auth,
-            initialRemoteSync = InitialRemoteSync(FakeCoreRemoteDataSource(), FakeRemoteSyncDao()) { 1_000L },
+            initialRemoteSync = InitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
+            workspaceInitialRemoteSync = com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
             outboxProcessor = OutboxProcessor(FakeOutboxQueue(), FakeOutboxExecutor()),
-            incrementalRemoteSync = IncrementalRemoteSync(FakeCoreRemoteDataSource(), FakeRemoteSyncDao(), syncStateDao) { 1_000L },
+            incrementalRemoteSync = IncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
+            workspaceIncrementalRemoteSync = com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
             offlineWriteQueue = OfflineWriteQueue(FakeLocalMutationDao(), FakeSyncOperationDao()),
             syncStateDao = syncStateDao,
-            remoteSyncDao = FakeRemoteSyncDao(),
+            remoteSyncDao = remoteSyncDao,
             conflictRecoveryService = com.feniqo.mobile.data.sync.ConflictRecoveryService(syncStateDao, FakeSyncOperationDao(), FakeLocalMutationDao()) { 1_000L },
             nowEpochMillisProvider = { 10_000L },
         )
@@ -136,15 +144,18 @@ class OfflineFirstSyncRepositoryTest {
         syncStateDao.upsertUserState(
             SyncUserStateEntity(userId = "user-2", lastSuccessfulSyncAtEpochMillis = 7_000L, updatedAtEpochMillis = 7_000L),
         )
+        val remoteSyncDao = FakeRemoteSyncDao()
 
         val repository = OfflineFirstSyncRepository(
             authRepository = auth,
-            initialRemoteSync = InitialRemoteSync(FakeCoreRemoteDataSource(), FakeRemoteSyncDao()) { 1_000L },
+            initialRemoteSync = InitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
+            workspaceInitialRemoteSync = com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
             outboxProcessor = OutboxProcessor(FakeOutboxQueue(), FakeOutboxExecutor()),
-            incrementalRemoteSync = IncrementalRemoteSync(FakeCoreRemoteDataSource(), FakeRemoteSyncDao(), syncStateDao) { 1_000L },
+            incrementalRemoteSync = IncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
+            workspaceIncrementalRemoteSync = com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
             offlineWriteQueue = OfflineWriteQueue(FakeLocalMutationDao(), FakeSyncOperationDao()),
             syncStateDao = syncStateDao,
-            remoteSyncDao = FakeRemoteSyncDao(),
+            remoteSyncDao = remoteSyncDao,
             conflictRecoveryService = com.feniqo.mobile.data.sync.ConflictRecoveryService(syncStateDao, FakeSyncOperationDao(), FakeLocalMutationDao()) { 1_000L },
             nowEpochMillisProvider = { 10_000L },
         )
@@ -165,15 +176,18 @@ class OfflineFirstSyncRepositoryTest {
         syncStateDao.upsertUserState(
             SyncUserStateEntity(userId = "user-1", lastSuccessfulSyncAtEpochMillis = 3_000L, updatedAtEpochMillis = 3_000L),
         )
+        val remoteSyncDao = FakeRemoteSyncDao()
 
         val repository = OfflineFirstSyncRepository(
             authRepository = auth,
-            initialRemoteSync = InitialRemoteSync(FakeCoreRemoteDataSource(), FakeRemoteSyncDao()) { 1_000L },
+            initialRemoteSync = InitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
+            workspaceInitialRemoteSync = com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
             outboxProcessor = OutboxProcessor(FakeOutboxQueue(), FakeOutboxExecutor()),
-            incrementalRemoteSync = IncrementalRemoteSync(FakeCoreRemoteDataSource(), FakeRemoteSyncDao(), syncStateDao) { 1_000L },
+            incrementalRemoteSync = IncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
+            workspaceIncrementalRemoteSync = com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
             offlineWriteQueue = OfflineWriteQueue(FakeLocalMutationDao(), FakeSyncOperationDao()),
             syncStateDao = syncStateDao,
-            remoteSyncDao = FakeRemoteSyncDao(),
+            remoteSyncDao = remoteSyncDao,
             conflictRecoveryService = com.feniqo.mobile.data.sync.ConflictRecoveryService(syncStateDao, FakeSyncOperationDao(), FakeLocalMutationDao()) { 1_000L },
             nowEpochMillisProvider = { 10_000L },
         )
@@ -197,15 +211,18 @@ class OfflineFirstSyncRepositoryTest {
             }
         }
         val outboxProcessor = OutboxProcessor(outboxQueue, failingExecutor)
+        val remoteSyncDao = FakeRemoteSyncDao()
 
         val repository = OfflineFirstSyncRepository(
             authRepository = auth,
-            initialRemoteSync = InitialRemoteSync(FakeCoreRemoteDataSource(sampleProfileDto("user-1")), FakeRemoteSyncDao()) { 1_000L },
+            initialRemoteSync = InitialRemoteSync(FakeCoreRemoteDataSource(sampleProfileDto("user-1")), remoteSyncDao) { 1_000L },
+            workspaceInitialRemoteSync = com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
             outboxProcessor = outboxProcessor,
-            incrementalRemoteSync = IncrementalRemoteSync(FakeCoreRemoteDataSource(), FakeRemoteSyncDao(), syncStateDao) { 1_000L },
+            incrementalRemoteSync = IncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
+            workspaceIncrementalRemoteSync = com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
             offlineWriteQueue = OfflineWriteQueue(FakeLocalMutationDao(), FakeSyncOperationDao()),
             syncStateDao = syncStateDao,
-            remoteSyncDao = FakeRemoteSyncDao(),
+            remoteSyncDao = remoteSyncDao,
             conflictRecoveryService = com.feniqo.mobile.data.sync.ConflictRecoveryService(syncStateDao, FakeSyncOperationDao(), FakeLocalMutationDao()) { 1_000L },
             nowEpochMillisProvider = { 9_000L },
         )
@@ -233,15 +250,18 @@ class OfflineFirstSyncRepositoryTest {
             }
         }
         val outboxProcessor = OutboxProcessor(outboxQueue, conflictExecutor)
+        val remoteSyncDao = FakeRemoteSyncDao()
 
         val repository = OfflineFirstSyncRepository(
             authRepository = auth,
-            initialRemoteSync = InitialRemoteSync(FakeCoreRemoteDataSource(sampleProfileDto("user-1")), FakeRemoteSyncDao()) { 1_000L },
+            initialRemoteSync = InitialRemoteSync(FakeCoreRemoteDataSource(sampleProfileDto("user-1")), remoteSyncDao) { 1_000L },
+            workspaceInitialRemoteSync = com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
             outboxProcessor = outboxProcessor,
-            incrementalRemoteSync = IncrementalRemoteSync(FakeCoreRemoteDataSource(), FakeRemoteSyncDao(), syncStateDao) { 1_000L },
+            incrementalRemoteSync = IncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
+            workspaceIncrementalRemoteSync = com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
             offlineWriteQueue = OfflineWriteQueue(FakeLocalMutationDao(), FakeSyncOperationDao()),
             syncStateDao = syncStateDao,
-            remoteSyncDao = FakeRemoteSyncDao(),
+            remoteSyncDao = remoteSyncDao,
             conflictRecoveryService = com.feniqo.mobile.data.sync.ConflictRecoveryService(syncStateDao, FakeSyncOperationDao(), FakeLocalMutationDao()) { 1_000L },
             nowEpochMillisProvider = { 9_000L },
         )
@@ -262,14 +282,17 @@ class OfflineFirstSyncRepositoryTest {
         val syncStateDao = FakeSyncStateDao().apply {
             upsertUserStateError = androidx.sqlite.SQLiteException("disk I/O error")
         }
+        val remoteSyncDao = FakeRemoteSyncDao()
         val repository = OfflineFirstSyncRepository(
             authRepository = auth,
-            initialRemoteSync = InitialRemoteSync(FakeCoreRemoteDataSource(sampleProfileDto("user-1")), FakeRemoteSyncDao()) { 1_000L },
+            initialRemoteSync = InitialRemoteSync(FakeCoreRemoteDataSource(sampleProfileDto("user-1")), remoteSyncDao) { 1_000L },
+            workspaceInitialRemoteSync = com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
             outboxProcessor = OutboxProcessor(FakeOutboxQueue(), FakeOutboxExecutor()),
-            incrementalRemoteSync = IncrementalRemoteSync(FakeCoreRemoteDataSource(), FakeRemoteSyncDao(), syncStateDao) { 1_000L },
+            incrementalRemoteSync = IncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
+            workspaceIncrementalRemoteSync = com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
             offlineWriteQueue = OfflineWriteQueue(FakeLocalMutationDao(), FakeSyncOperationDao()),
             syncStateDao = syncStateDao,
-            remoteSyncDao = FakeRemoteSyncDao(),
+            remoteSyncDao = remoteSyncDao,
             conflictRecoveryService = com.feniqo.mobile.data.sync.ConflictRecoveryService(syncStateDao, FakeSyncOperationDao(), FakeLocalMutationDao()) { 1_000L },
             nowEpochMillisProvider = { 9_000L },
         )
@@ -290,15 +313,18 @@ class OfflineFirstSyncRepositoryTest {
         val syncStateDao = FakeSyncStateDao()
         val syncOpDao = FakeSyncOperationDao(initialPending = 4, initialFailed = 2)
         val offlineWriteQueue = OfflineWriteQueue(FakeLocalMutationDao(), syncOpDao)
+        val remoteSyncDao = FakeRemoteSyncDao()
 
         val repository = OfflineFirstSyncRepository(
             authRepository = auth,
-            initialRemoteSync = InitialRemoteSync(FakeCoreRemoteDataSource(), FakeRemoteSyncDao()) { 1_000L },
+            initialRemoteSync = InitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
+            workspaceInitialRemoteSync = com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
             outboxProcessor = OutboxProcessor(FakeOutboxQueue(), FakeOutboxExecutor()),
-            incrementalRemoteSync = IncrementalRemoteSync(FakeCoreRemoteDataSource(), FakeRemoteSyncDao(), syncStateDao) { 1_000L },
+            incrementalRemoteSync = IncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
+            workspaceIncrementalRemoteSync = com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
             offlineWriteQueue = offlineWriteQueue,
             syncStateDao = syncStateDao,
-            remoteSyncDao = FakeRemoteSyncDao(),
+            remoteSyncDao = remoteSyncDao,
             conflictRecoveryService = com.feniqo.mobile.data.sync.ConflictRecoveryService(syncStateDao, FakeSyncOperationDao(), FakeLocalMutationDao()) { 1_000L },
             nowEpochMillisProvider = { 1_000L },
         )
@@ -319,8 +345,10 @@ class OfflineFirstSyncRepositoryTest {
         val repository = OfflineFirstSyncRepository(
             authRepository = auth,
             initialRemoteSync = InitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
+            workspaceInitialRemoteSync = com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
             outboxProcessor = OutboxProcessor(FakeOutboxQueue(), FakeOutboxExecutor()),
             incrementalRemoteSync = IncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
+            workspaceIncrementalRemoteSync = com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
             offlineWriteQueue = OfflineWriteQueue(FakeLocalMutationDao(), FakeSyncOperationDao()),
             syncStateDao = syncStateDao,
             remoteSyncDao = remoteSyncDao,
@@ -351,8 +379,10 @@ class OfflineFirstSyncRepositoryTest {
         val repository = OfflineFirstSyncRepository(
             authRepository = auth,
             initialRemoteSync = InitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
+            workspaceInitialRemoteSync = com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
             outboxProcessor = OutboxProcessor(FakeOutboxQueue(), FakeOutboxExecutor()),
             incrementalRemoteSync = IncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
+            workspaceIncrementalRemoteSync = com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
             offlineWriteQueue = OfflineWriteQueue(FakeLocalMutationDao(), FakeSyncOperationDao()),
             syncStateDao = syncStateDao,
             remoteSyncDao = remoteSyncDao,
@@ -381,8 +411,10 @@ class OfflineFirstSyncRepositoryTest {
         val repository = OfflineFirstSyncRepository(
             authRepository = auth,
             initialRemoteSync = InitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
+            workspaceInitialRemoteSync = com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
             outboxProcessor = OutboxProcessor(FakeOutboxQueue(), FakeOutboxExecutor()),
             incrementalRemoteSync = IncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
+            workspaceIncrementalRemoteSync = com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
             offlineWriteQueue = OfflineWriteQueue(FakeLocalMutationDao(), FakeSyncOperationDao()),
             syncStateDao = syncStateDao,
             remoteSyncDao = remoteSyncDao,
@@ -414,8 +446,10 @@ class OfflineFirstSyncRepositoryTest {
         val repository = OfflineFirstSyncRepository(
             authRepository = auth,
             initialRemoteSync = InitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
+            workspaceInitialRemoteSync = com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
             outboxProcessor = OutboxProcessor(FakeOutboxQueue(), FakeOutboxExecutor()),
             incrementalRemoteSync = IncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
+            workspaceIncrementalRemoteSync = com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
             offlineWriteQueue = OfflineWriteQueue(FakeLocalMutationDao(), FakeSyncOperationDao()),
             syncStateDao = syncStateDao,
             remoteSyncDao = remoteSyncDao,
@@ -444,8 +478,10 @@ class OfflineFirstSyncRepositoryTest {
         val repository = OfflineFirstSyncRepository(
             authRepository = auth,
             initialRemoteSync = InitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
+            workspaceInitialRemoteSync = com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
             outboxProcessor = OutboxProcessor(FakeOutboxQueue(), FakeOutboxExecutor()),
             incrementalRemoteSync = IncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
+            workspaceIncrementalRemoteSync = com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
             offlineWriteQueue = OfflineWriteQueue(FakeLocalMutationDao(), FakeSyncOperationDao()),
             syncStateDao = syncStateDao,
             remoteSyncDao = remoteSyncDao,
@@ -456,6 +492,318 @@ class OfflineFirstSyncRepositoryTest {
         assertFailsWith<CancellationException> {
             repository.resolveConflict(EntityId("rec-4"), ConflictResolution.KEEP_REMOTE)
         }
+    }
+
+    @Test
+    fun workspace_initial_sync_is_triggered_when_marker_is_missing_even_if_profile_cursor_exists() = runTest {
+        val auth = FakeAuthRepository(USER_1_SESSION)
+        val syncStateDao = FakeSyncStateDao()
+        // PROFILE cursor var
+        syncStateDao.upsertCursor(
+            SyncCursorEntity(
+                entityTypeCode = "PROFILE",
+                updatedAtEpochMillis = 1000L,
+                entityId = "user-1",
+            ),
+        )
+        // WORKSPACE_BOOTSTRAP_COMPLETE marker YOK!
+
+        var profileInitialCalled = false
+        var workspaceInitialCalled = false
+
+        val remoteSyncDao = object : RemoteSyncDao by FakeRemoteSyncDao() {
+            override suspend fun upsertProfileRow(entity: UserProfileEntity) {
+                profileInitialCalled = true
+            }
+
+            override suspend fun applyWorkspaceSnapshot(
+                workspaces: List<WorkspaceEntity>,
+                members: List<WorkspaceMemberEntity>,
+                cursors: List<SyncCursorEntity>,
+            ) {
+                if (cursors.any { it.entityTypeCode == com.feniqo.mobile.data.sync.WorkspaceSyncCursorKeys.WORKSPACE_BOOTSTRAP_COMPLETE }) {
+                    workspaceInitialCalled = true
+                }
+                cursors.forEach { syncStateDao.upsertCursor(it) }
+            }
+        }
+
+        val remote = FakeCoreRemoteDataSource(profile = sampleProfileDto("user-1"))
+
+        val initialRemoteSync = InitialRemoteSync(remote, remoteSyncDao) { 1_000L }
+        val workspaceInitialRemoteSync = com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync(remote, remoteSyncDao) { 1_000L }
+        val incrementalRemoteSync = IncrementalRemoteSync(remote, remoteSyncDao, syncStateDao) { 1_000L }
+        val workspaceIncrementalRemoteSync = com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync(remote, remoteSyncDao, syncStateDao) { 1_000L }
+
+        val repository = OfflineFirstSyncRepository(
+            authRepository = auth,
+            initialRemoteSync = initialRemoteSync,
+            workspaceInitialRemoteSync = workspaceInitialRemoteSync,
+            outboxProcessor = OutboxProcessor(FakeOutboxQueue(), FakeOutboxExecutor()),
+            incrementalRemoteSync = incrementalRemoteSync,
+            workspaceIncrementalRemoteSync = workspaceIncrementalRemoteSync,
+            offlineWriteQueue = OfflineWriteQueue(FakeLocalMutationDao(), FakeSyncOperationDao()),
+            syncStateDao = syncStateDao,
+            remoteSyncDao = remoteSyncDao,
+            conflictRecoveryService = com.feniqo.mobile.data.sync.ConflictRecoveryService(syncStateDao, FakeSyncOperationDao(), FakeLocalMutationDao()) { 1_000L },
+            nowEpochMillisProvider = { 5_000L },
+        )
+
+        val result = repository.requestSync()
+        assertTrue(result is RepositoryResult.Success)
+        // Profile initial should NOT be called because PROFILE cursor exists
+        assertEquals(false, profileInitialCalled)
+        // Workspace initial MUST be called because WORKSPACE_BOOTSTRAP_COMPLETE is missing
+        assertEquals(true, workspaceInitialCalled)
+    }
+
+    @Test
+    fun workspace_initial_sync_is_skipped_when_marker_is_present() = runTest {
+        val auth = FakeAuthRepository(USER_1_SESSION)
+        val syncStateDao = FakeSyncStateDao()
+        syncStateDao.upsertCursor(
+            SyncCursorEntity(
+                entityTypeCode = "PROFILE",
+                updatedAtEpochMillis = 1000L,
+                entityId = "user-1",
+            ),
+        )
+        syncStateDao.upsertCursor(
+            com.feniqo.mobile.data.sync.WorkspaceSyncCursorKeys.bootstrapCompleteEntity(1000L),
+        )
+
+        var workspaceInitialCalled = false
+        var workspaceIncrementalCalled = false
+
+        val remoteSyncDao = object : RemoteSyncDao by FakeRemoteSyncDao() {
+            override suspend fun applyWorkspaceSnapshot(
+                workspaces: List<WorkspaceEntity>,
+                members: List<WorkspaceMemberEntity>,
+                cursors: List<SyncCursorEntity>,
+            ) {
+                // Initial writes WORKSPACE_BOOTSTRAP_COMPLETE cursor, incremental does not
+                if (cursors.any { it.entityTypeCode == com.feniqo.mobile.data.sync.WorkspaceSyncCursorKeys.WORKSPACE_BOOTSTRAP_COMPLETE }) {
+                    workspaceInitialCalled = true
+                } else {
+                    workspaceIncrementalCalled = true
+                }
+            }
+        }
+        val remote = object : CoreRemoteDataSource by FakeCoreRemoteDataSource(profile = sampleProfileDto("user-1")) {
+            override suspend fun fetchWorkspaces(query: com.feniqo.mobile.data.remote.core.WorkspaceRemoteQuery): RemotePage<WorkspaceDto> {
+                workspaceIncrementalCalled = true
+                return RemotePage(emptyList(), query.page, 0)
+            }
+        }
+
+        val repository = OfflineFirstSyncRepository(
+            authRepository = auth,
+            initialRemoteSync = InitialRemoteSync(remote, remoteSyncDao) { 1_000L },
+            workspaceInitialRemoteSync = com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync(remote, remoteSyncDao) { 1_000L },
+            outboxProcessor = OutboxProcessor(FakeOutboxQueue(), FakeOutboxExecutor()),
+            incrementalRemoteSync = IncrementalRemoteSync(remote, remoteSyncDao, syncStateDao) { 1_000L },
+            workspaceIncrementalRemoteSync = com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync(remote, remoteSyncDao, syncStateDao) { 1_000L },
+            offlineWriteQueue = OfflineWriteQueue(FakeLocalMutationDao(), FakeSyncOperationDao()),
+            syncStateDao = syncStateDao,
+            remoteSyncDao = remoteSyncDao,
+            conflictRecoveryService = com.feniqo.mobile.data.sync.ConflictRecoveryService(syncStateDao, FakeSyncOperationDao(), FakeLocalMutationDao()) { 1_000L },
+            nowEpochMillisProvider = { 5_000L },
+        )
+
+        val result = repository.requestSync()
+        assertTrue(result is RepositoryResult.Success)
+        assertEquals(false, workspaceInitialCalled)
+        assertEquals(true, workspaceIncrementalCalled)
+    }
+
+    @Test
+    fun workspace_initial_failure_returns_repository_failure() = runTest {
+        val auth = FakeAuthRepository(USER_1_SESSION)
+        val syncStateDao = FakeSyncStateDao()
+        val remoteSyncDao = FakeRemoteSyncDao()
+
+        val remote = object : CoreRemoteDataSource by FakeCoreRemoteDataSource() {
+            override suspend fun fetchWorkspaces(query: com.feniqo.mobile.data.remote.core.WorkspaceRemoteQuery): RemotePage<WorkspaceDto> {
+                throw io.ktor.utils.io.errors.IOException("Network error during workspace initial")
+            }
+        }
+
+        val repository = OfflineFirstSyncRepository(
+            authRepository = auth,
+            initialRemoteSync = InitialRemoteSync(FakeCoreRemoteDataSource(sampleProfileDto("user-1")), remoteSyncDao) { 1_000L },
+            workspaceInitialRemoteSync = com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync(remote, remoteSyncDao) { 1_000L },
+            outboxProcessor = OutboxProcessor(FakeOutboxQueue(), FakeOutboxExecutor()),
+            incrementalRemoteSync = IncrementalRemoteSync(remote, remoteSyncDao, syncStateDao) { 1_000L },
+            workspaceIncrementalRemoteSync = com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync(remote, remoteSyncDao, syncStateDao) { 1_000L },
+            offlineWriteQueue = OfflineWriteQueue(FakeLocalMutationDao(), FakeSyncOperationDao()),
+            syncStateDao = syncStateDao,
+            remoteSyncDao = remoteSyncDao,
+            conflictRecoveryService = com.feniqo.mobile.data.sync.ConflictRecoveryService(syncStateDao, FakeSyncOperationDao(), FakeLocalMutationDao()) { 1_000L },
+            nowEpochMillisProvider = { 5_000L },
+        )
+
+        val result = repository.requestSync()
+        assertTrue(result is RepositoryResult.Failure)
+        assertTrue(result.error is AppError.Network)
+    }
+
+    @Test
+    fun workspace_incremental_failure_returns_repository_failure() = runTest {
+        val auth = FakeAuthRepository(USER_1_SESSION)
+        val syncStateDao = FakeSyncStateDao()
+        syncStateDao.upsertCursor(
+            SyncCursorEntity("PROFILE", 1000L, "user-1"),
+        )
+        syncStateDao.upsertCursor(
+            com.feniqo.mobile.data.sync.WorkspaceSyncCursorKeys.bootstrapCompleteEntity(1000L),
+        )
+        val remoteSyncDao = FakeRemoteSyncDao()
+
+        val remote = object : CoreRemoteDataSource by FakeCoreRemoteDataSource() {
+            override suspend fun fetchWorkspaces(query: com.feniqo.mobile.data.remote.core.WorkspaceRemoteQuery): RemotePage<WorkspaceDto> {
+                throw io.ktor.utils.io.errors.IOException("Network error during workspace incremental")
+            }
+        }
+
+        val repository = OfflineFirstSyncRepository(
+            authRepository = auth,
+            initialRemoteSync = InitialRemoteSync(remote, remoteSyncDao) { 1_000L },
+            workspaceInitialRemoteSync = com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync(remote, remoteSyncDao) { 1_000L },
+            outboxProcessor = OutboxProcessor(FakeOutboxQueue(), FakeOutboxExecutor()),
+            incrementalRemoteSync = IncrementalRemoteSync(remote, remoteSyncDao, syncStateDao) { 1_000L },
+            workspaceIncrementalRemoteSync = com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync(remote, remoteSyncDao, syncStateDao) { 1_000L },
+            offlineWriteQueue = OfflineWriteQueue(FakeLocalMutationDao(), FakeSyncOperationDao()),
+            syncStateDao = syncStateDao,
+            remoteSyncDao = remoteSyncDao,
+            conflictRecoveryService = com.feniqo.mobile.data.sync.ConflictRecoveryService(syncStateDao, FakeSyncOperationDao(), FakeLocalMutationDao()) { 1_000L },
+            nowEpochMillisProvider = { 5_000L },
+        )
+
+        val result = repository.requestSync()
+        assertTrue(result is RepositoryResult.Failure)
+        assertTrue(result.error is AppError.Network)
+    }
+
+    @Test
+    fun workspace_initial_sync_fails_closed_when_marker_is_invalid() = runTest {
+        val auth = FakeAuthRepository(USER_1_SESSION)
+        val syncStateDao = FakeSyncStateDao()
+        syncStateDao.upsertCursor(
+            SyncCursorEntity(
+                entityTypeCode = "PROFILE",
+                updatedAtEpochMillis = 1000L,
+                entityId = "user-1",
+            ),
+        )
+        // Geçersiz marker: entityId "COMPLETED" değil ("INVALID_ID")
+        syncStateDao.upsertCursor(
+            SyncCursorEntity(
+                entityTypeCode = com.feniqo.mobile.data.sync.WorkspaceSyncCursorKeys.WORKSPACE_BOOTSTRAP_COMPLETE,
+                updatedAtEpochMillis = 1000L,
+                entityId = "INVALID_ID",
+            ),
+        )
+
+        var workspaceInitialCalled = false
+        var outboxCalled = false
+        var incrementalCalled = false
+
+        val remoteSyncDao = object : RemoteSyncDao by FakeRemoteSyncDao() {
+            override suspend fun applyWorkspaceSnapshot(
+                workspaces: List<WorkspaceEntity>,
+                members: List<WorkspaceMemberEntity>,
+                cursors: List<SyncCursorEntity>,
+            ) {
+                workspaceInitialCalled = true
+            }
+        }
+
+        val outboxQueue = object : OutboxQueue by FakeOutboxQueue() {
+            override suspend fun readyOperations(limit: Int): List<SyncOperationEntity> {
+                outboxCalled = true
+                return emptyList()
+            }
+        }
+
+        val remote = object : CoreRemoteDataSource by FakeCoreRemoteDataSource(profile = sampleProfileDto("user-1")) {
+            override suspend fun fetchCategories(query: CategoryRemoteQuery): RemotePage<CategoryDto> {
+                incrementalCalled = true
+                return RemotePage(emptyList(), query.page, 0)
+            }
+        }
+
+        val repository = OfflineFirstSyncRepository(
+            authRepository = auth,
+            initialRemoteSync = InitialRemoteSync(remote, remoteSyncDao) { 1_000L },
+            workspaceInitialRemoteSync = com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync(remote, remoteSyncDao) { 1_000L },
+            outboxProcessor = OutboxProcessor(outboxQueue, FakeOutboxExecutor()),
+            incrementalRemoteSync = IncrementalRemoteSync(remote, remoteSyncDao, syncStateDao) { 1_000L },
+            workspaceIncrementalRemoteSync = com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync(remote, remoteSyncDao, syncStateDao) { 1_000L },
+            offlineWriteQueue = OfflineWriteQueue(FakeLocalMutationDao(), FakeSyncOperationDao()),
+            syncStateDao = syncStateDao,
+            remoteSyncDao = remoteSyncDao,
+            conflictRecoveryService = com.feniqo.mobile.data.sync.ConflictRecoveryService(syncStateDao, FakeSyncOperationDao(), FakeLocalMutationDao()) { 1_000L },
+            nowEpochMillisProvider = { 5_000L },
+        )
+
+        val result = repository.requestSync()
+        assertTrue(result is RepositoryResult.Failure)
+        assertTrue(result.error is AppError.Validation)
+        assertEquals(false, workspaceInitialCalled)
+        assertEquals(false, outboxCalled)
+        assertEquals(false, incrementalCalled)
+    }
+
+    @Test
+    fun workspace_initial_sync_fails_closed_when_marker_timestamp_is_non_positive() = runTest {
+        val auth = FakeAuthRepository(USER_1_SESSION)
+        val syncStateDao = FakeSyncStateDao()
+        syncStateDao.upsertCursor(
+            SyncCursorEntity(
+                entityTypeCode = "PROFILE",
+                updatedAtEpochMillis = 1000L,
+                entityId = "user-1",
+            ),
+        )
+        // Geçersiz marker: updatedAtEpochMillis = 0L
+        syncStateDao.upsertCursor(
+            SyncCursorEntity(
+                entityTypeCode = com.feniqo.mobile.data.sync.WorkspaceSyncCursorKeys.WORKSPACE_BOOTSTRAP_COMPLETE,
+                updatedAtEpochMillis = 0L,
+                entityId = com.feniqo.mobile.data.sync.WorkspaceSyncCursorKeys.WORKSPACE_BOOTSTRAP_COMPLETED_ENTITY_ID,
+            ),
+        )
+
+        var workspaceInitialCalled = false
+        val remoteSyncDao = object : RemoteSyncDao by FakeRemoteSyncDao() {
+            override suspend fun applyWorkspaceSnapshot(
+                workspaces: List<WorkspaceEntity>,
+                members: List<WorkspaceMemberEntity>,
+                cursors: List<SyncCursorEntity>,
+            ) {
+                workspaceInitialCalled = true
+            }
+        }
+        val remote = FakeCoreRemoteDataSource(profile = sampleProfileDto("user-1"))
+
+        val repository = OfflineFirstSyncRepository(
+            authRepository = auth,
+            initialRemoteSync = InitialRemoteSync(remote, remoteSyncDao) { 1_000L },
+            workspaceInitialRemoteSync = com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync(remote, remoteSyncDao) { 1_000L },
+            outboxProcessor = OutboxProcessor(FakeOutboxQueue(), FakeOutboxExecutor()),
+            incrementalRemoteSync = IncrementalRemoteSync(remote, remoteSyncDao, syncStateDao) { 1_000L },
+            workspaceIncrementalRemoteSync = com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync(remote, remoteSyncDao, syncStateDao) { 1_000L },
+            offlineWriteQueue = OfflineWriteQueue(FakeLocalMutationDao(), FakeSyncOperationDao()),
+            syncStateDao = syncStateDao,
+            remoteSyncDao = remoteSyncDao,
+            conflictRecoveryService = com.feniqo.mobile.data.sync.ConflictRecoveryService(syncStateDao, FakeSyncOperationDao(), FakeLocalMutationDao()) { 1_000L },
+            nowEpochMillisProvider = { 5_000L },
+        )
+
+        val result = repository.requestSync()
+        assertTrue(result is RepositoryResult.Failure)
+        assertTrue(result.error is AppError.Validation)
+        assertEquals(false, workspaceInitialCalled)
     }
 
     private companion object {
@@ -546,6 +894,8 @@ class OfflineFirstSyncRepositoryTest {
         var conflictCount: Int = 0
 
         override suspend fun getCursor(entityTypeCode: String): SyncCursorEntity? = cursors[entityTypeCode]
+        override suspend fun getWorkspaceMemberCursors(): List<SyncCursorEntity> =
+            cursors.filterKeys { it.startsWith("WORKSPACE_MEMBER:") }.values.toList()
         override suspend fun getConflict(entityId: String): SyncConflictEntity? {
             getConflictError?.let { throw it }
             return conflicts[entityId]
@@ -584,18 +934,43 @@ class OfflineFirstSyncRepositoryTest {
         override suspend fun getCategoryRow(id: String): CategoryEntity? = null
         override suspend fun getTransactionRow(id: String): TransactionEntity? = null
         override suspend fun getRecurringTransactionRow(id: String): RecurringTransactionEntity? = localRecurringRow
+        override suspend fun getSubscriptionRow(id: String): com.feniqo.mobile.data.local.entity.SubscriptionEntity? = null
         override suspend fun getFirstOutboxOperationId(entityTypeCode: String, entityId: String): String? = null
+        override suspend fun countOutboxRows(entityTypeCode: String, entityId: String): Int = 0
         override suspend fun upsertProfileRow(entity: UserProfileEntity) = Unit
         override suspend fun upsertCategoryRows(entities: List<CategoryEntity>) = Unit
         override suspend fun upsertTransactionRows(entities: List<TransactionEntity>) = Unit
         override suspend fun upsertRecurringTransactionRows(entities: List<RecurringTransactionEntity>) = Unit
+        override suspend fun upsertSubscriptionRows(entities: List<com.feniqo.mobile.data.local.entity.SubscriptionEntity>) = Unit
         override suspend fun upsertConflictRow(conflict: SyncConflictEntity) = Unit
-        override suspend fun upsertCursorRows(cursors: List<SyncCursorEntity>) = Unit
+        var syncStateDao: SyncStateDao? = null
+
+        override suspend fun upsertCursorRows(cursors: List<SyncCursorEntity>) {
+            cursors.forEach { syncStateDao?.upsertCursor(it) }
+        }
         override suspend fun deleteConflictRow(entityTypeCode: String, entityId: String): Int = 0
         override suspend fun markProfileConflict(entityId: String, error: String): Int = 0
         override suspend fun markCategoryConflict(entityId: String, error: String): Int = 0
         override suspend fun markTransactionConflict(entityId: String, error: String): Int = 0
         override suspend fun markRecurringTransactionConflict(entityId: String, error: String): Int = 0
+        override suspend fun markSubscriptionConflict(entityId: String, error: String): Int = 0
+        override suspend fun markGoalConflict(entityId: String, error: String): Int = 0
+        override suspend fun markGoalContributionConflict(entityId: String, error: String): Int = 0
+        override suspend fun markDebtConflict(entityId: String, error: String): Int = 0
+        override suspend fun markDebtPaymentConflict(entityId: String, error: String): Int = 0
+        override suspend fun getGoalRow(id: String): com.feniqo.mobile.data.local.entity.GoalEntity? = null
+        override suspend fun getGoalContributionRow(id: String): com.feniqo.mobile.data.local.entity.GoalContributionEntity? = null
+        override suspend fun getDebtRow(id: String): com.feniqo.mobile.data.local.entity.DebtEntity? = null
+        override suspend fun getDebtPaymentRow(id: String): com.feniqo.mobile.data.local.entity.DebtPaymentEntity? = null
+        override suspend fun getWorkspaceRow(id: String): com.feniqo.mobile.data.local.entity.WorkspaceEntity? = null
+        override suspend fun getWorkspaceMemberRow(workspaceId: String, userId: String): com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity? = null
+        override suspend fun getWorkspaceMemberRows(workspaceId: String): List<com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity> = emptyList()
+        override suspend fun upsertWorkspaceRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceEntity>) = Unit
+        override suspend fun upsertWorkspaceMemberRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity>) = Unit
+        override suspend fun upsertGoalRows(entities: List<com.feniqo.mobile.data.local.entity.GoalEntity>) = Unit
+        override suspend fun upsertGoalContributionRows(entities: List<com.feniqo.mobile.data.local.entity.GoalContributionEntity>) = Unit
+        override suspend fun upsertDebtRows(entities: List<com.feniqo.mobile.data.local.entity.DebtEntity>) = Unit
+        override suspend fun upsertDebtPaymentRows(entities: List<com.feniqo.mobile.data.local.entity.DebtPaymentEntity>) = Unit
         override suspend fun deleteOutboxRows(entityTypeCode: String, entityId: String): Int = 0
         override suspend fun deleteOtherOutboxRows(entityTypeCode: String, entityId: String, keptOperationId: String): Int = 0
         override suspend fun resetConflictOperation(operationId: String, operationTypeCode: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
@@ -603,6 +978,7 @@ class OfflineFirstSyncRepositoryTest {
         override suspend fun rebaseCategoryForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseRecurringTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun rebaseSubscriptionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun resolveRecurringTransactionKeepRemote(entity: RecurringTransactionEntity) {
             resolvedRecurringRemote = entity
         }
@@ -612,6 +988,15 @@ class OfflineFirstSyncRepositoryTest {
             nowEpochMillis: Long,
         ) {
             resolveKeepLocalCalledWith = Triple(conflict, operationTypeCode, nowEpochMillis)
+        }
+
+        override suspend fun getAllKnownLiveWorkspaceIds(): List<String> = emptyList()
+        override suspend fun applyWorkspaceSnapshot(
+            workspaces: List<WorkspaceEntity>,
+            members: List<WorkspaceMemberEntity>,
+            cursors: List<SyncCursorEntity>,
+        ) {
+            cursors.forEach { syncStateDao?.upsertCursor(it) }
         }
     }
 
@@ -623,8 +1008,14 @@ class OfflineFirstSyncRepositoryTest {
         override suspend fun fetchTransactions(query: TransactionRemoteQuery): RemotePage<TransactionDto> = RemotePage(emptyList(), query.page, 0)
         override suspend fun fetchBudgets(query: BudgetRemoteQuery): RemotePage<BudgetDto> = RemotePage(emptyList(), query.page, 0)
         override suspend fun fetchRecurringTransactions(query: com.feniqo.mobile.data.remote.core.RecurringTransactionRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.RecurringTransactionDto> = RemotePage(emptyList(), query.page, 0)
+        override suspend fun fetchSubscriptions(query: com.feniqo.mobile.data.remote.core.SubscriptionRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.SubscriptionDto> = RemotePage(emptyList(), query.page, 0)
+        override suspend fun fetchGoals(query: com.feniqo.mobile.data.remote.core.GoalRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.GoalDto> = RemotePage(emptyList(), query.page, 0)
+        override suspend fun fetchGoalContributions(query: com.feniqo.mobile.data.remote.core.GoalContributionRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.GoalContributionDto> = RemotePage(emptyList(), query.page, 0)
+        override suspend fun fetchDebts(query: com.feniqo.mobile.data.remote.core.DebtRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.DebtDto> = RemotePage(emptyList(), query.page, 0)
+        override suspend fun fetchDebtPayments(query: com.feniqo.mobile.data.remote.core.DebtPaymentRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.DebtPaymentDto> = RemotePage(emptyList(), query.page, 0)
+        override suspend fun fetchWorkspaces(query: com.feniqo.mobile.data.remote.core.WorkspaceRemoteQuery): RemotePage<WorkspaceDto> = RemotePage(emptyList(), query.page, 0)
         override suspend fun fetchWorkspaces(request: RemotePageRequest): RemotePage<WorkspaceDto> = RemotePage(emptyList(), request, 0)
-
+        override suspend fun fetchWorkspaceMembers(query: com.feniqo.mobile.data.remote.core.WorkspaceMemberRemoteQuery): RemotePage<WorkspaceMemberDto> = RemotePage(emptyList(), query.page, 0)
         override suspend fun fetchWorkspaceMembers(workspaceId: String, page: RemotePageRequest): RemotePage<WorkspaceMemberDto> = RemotePage(emptyList(), page, 0)
         override suspend fun fetchTags(scope: RemoteWorkspaceScope, page: RemotePageRequest): RemotePage<TagDto> = RemotePage(emptyList(), page, 0)
         override suspend fun fetchTransactionTags(transactionId: String): List<TransactionTagDto> = emptyList()
@@ -663,6 +1054,7 @@ class OfflineFirstSyncRepositoryTest {
         override suspend fun upsertTagRows(entities: List<TagEntity>) = Unit
         override suspend fun upsertTransactionTagRows(entities: List<TransactionTagCrossRef>) = Unit
         override suspend fun upsertRecurringTransactionRow(entity: com.feniqo.mobile.data.local.entity.RecurringTransactionEntity) = Unit
+        override suspend fun upsertSubscriptionRow(entity: com.feniqo.mobile.data.local.entity.SubscriptionEntity) = Unit
         override suspend fun upsertRecurringOccurrenceRow(entity: com.feniqo.mobile.data.local.entity.RecurringTransactionOccurrenceEntity) = Unit
         override suspend fun getOccurrence(recurringTransactionId: String, dueDate: String): com.feniqo.mobile.data.local.entity.RecurringTransactionOccurrenceEntity? = null
         override suspend fun getRecurringTransactionById(id: String): com.feniqo.mobile.data.local.entity.RecurringTransactionEntity? = null
@@ -687,12 +1079,48 @@ class OfflineFirstSyncRepositoryTest {
         override suspend fun rebaseTransactionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseBudgetVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseRecurringTransactionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun rebaseSubscriptionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun deleteRecurringTransactionRow(id: String): Int = 0
+        override suspend fun deleteSubscriptionRow(id: String): Int = 0
         override suspend fun markCategorySyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
         override suspend fun markTransactionSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
         override suspend fun markBudgetSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
         override suspend fun markRecurringTransactionSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
-
+        override suspend fun markSubscriptionSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
+        override suspend fun deleteWorkspaceRow(id: String): Int = 0
+        override suspend fun deleteWorkspaceMemberRows(workspaceId: String): Int = 0
+        override suspend fun rebaseWorkspaceVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun markWorkspaceSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
+        override suspend fun upsertGoalRow(entity: com.feniqo.mobile.data.local.entity.GoalEntity) = Unit
+        override suspend fun upsertGoalContributionRow(entity: com.feniqo.mobile.data.local.entity.GoalContributionEntity) = Unit
+        override suspend fun upsertDebtRow(entity: com.feniqo.mobile.data.local.entity.DebtEntity) = Unit
+        override suspend fun upsertDebtPaymentRow(entity: com.feniqo.mobile.data.local.entity.DebtPaymentEntity) = Unit
+        override suspend fun deleteGoalRow(id: String): Int = 0
+        override suspend fun deleteGoalContributionRow(id: String): Int = 0
+        override suspend fun deleteDebtRow(id: String): Int = 0
+        override suspend fun deleteDebtPaymentRow(id: String): Int = 0
+        override suspend fun getGoalById(id: String): com.feniqo.mobile.data.local.entity.GoalEntity? = null
+        override suspend fun getDebtById(id: String): com.feniqo.mobile.data.local.entity.DebtEntity? = null
+        override suspend fun getGoalContributionById(id: String): com.feniqo.mobile.data.local.entity.GoalContributionEntity? = null
+        override suspend fun getDebtPaymentById(id: String): com.feniqo.mobile.data.local.entity.DebtPaymentEntity? = null
+        override suspend fun getActiveGoalContributions(goalId: String): List<com.feniqo.mobile.data.local.entity.GoalContributionEntity> = emptyList()
+        override suspend fun getActiveDebtPayments(debtId: String): List<com.feniqo.mobile.data.local.entity.DebtPaymentEntity> = emptyList()
+        override suspend fun rebaseGoalVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun rebaseGoalContributionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun rebaseDebtVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun rebaseDebtPaymentVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun markGoalSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
+        override suspend fun markDebtSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
+        override suspend fun tombstoneGoalContributionsForDeletedGoal(goalId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun tombstoneDebtPaymentsForDeletedDebt(debtId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun getActiveGoalAggregateTailCandidates(goalId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun getActiveDebtAggregateTailCandidates(debtId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun countPendingGoalAggregateOperations(goalId: String, operationId: String): Int = 0
+        override suspend fun countPendingDebtAggregateOperations(debtId: String, operationId: String): Int = 0
+        override suspend fun setGoalSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
+        override suspend fun setGoalContributionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
+        override suspend fun setDebtSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
+        override suspend fun setDebtPaymentSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun upsertConflictRow(entity: com.feniqo.mobile.data.local.entity.SyncConflictEntity) = Unit
         override suspend fun setOutboxStatusConflict(operationId: String, nowEpochMillis: Long): Int = 1
         override suspend fun setProfileSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
@@ -700,6 +1128,7 @@ class OfflineFirstSyncRepositoryTest {
         override suspend fun setTransactionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setBudgetSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
     }
+
 
     private class FakeSyncOperationDao(
         initialPending: Int = 0,

@@ -14,6 +14,9 @@ import com.feniqo.mobile.data.sync.ConflictRecoveryService
 import com.feniqo.mobile.data.sync.IncrementalRemoteSync
 import com.feniqo.mobile.data.sync.InitialRemoteSync
 import com.feniqo.mobile.data.sync.OutboxProcessor
+import com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync
+import com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync
+import com.feniqo.mobile.data.sync.WorkspaceSyncCursorKeys
 import com.feniqo.mobile.data.sync.toRemoteSyncMetadata
 import com.feniqo.mobile.domain.model.AppError
 import com.feniqo.mobile.domain.model.EntityId
@@ -46,8 +49,10 @@ import kotlinx.coroutines.flow.flowOf
 class OfflineFirstSyncRepository(
     private val authRepository: AuthRepository,
     private val initialRemoteSync: InitialRemoteSync,
+    private val workspaceInitialRemoteSync: WorkspaceInitialRemoteSync,
     private val outboxProcessor: OutboxProcessor,
     private val incrementalRemoteSync: IncrementalRemoteSync,
+    private val workspaceIncrementalRemoteSync: WorkspaceIncrementalRemoteSync,
     private val offlineWriteQueue: OfflineWriteQueue,
     private val syncStateDao: SyncStateDao,
     private val remoteSyncDao: RemoteSyncDao,
@@ -113,6 +118,15 @@ class OfflineFirstSyncRepository(
                 initialRemoteSync.pullFor(session.userId)
             }
 
+            val bootstrapMarker = syncStateDao.getCursor(WorkspaceSyncCursorKeys.WORKSPACE_BOOTSTRAP_COMPLETE)
+            if (bootstrapMarker == null) {
+                workspaceInitialRemoteSync.pull()
+            } else {
+                check(WorkspaceSyncCursorKeys.isBootstrapCompleteMarker(bootstrapMarker)) {
+                    "Geçersiz WORKSPACE_BOOTSTRAP_COMPLETE cursor marker formatı: $bootstrapMarker"
+                }
+            }
+
             // Outbox işleminden önce mevcut eşdeğer çakışmaları otomatik kurtar
             conflictRecoveryService.recoverAllPendingConflicts()
 
@@ -123,6 +137,7 @@ class OfflineFirstSyncRepository(
             }
 
             incrementalRemoteSync.pullFor(session.userId)
+            workspaceIncrementalRemoteSync.pull()
             val remainingConflicts = syncStateDao.getConflictCount()
             val conflictDetected = outboxResult.conflictOperationId != null || remainingConflicts > 0
 

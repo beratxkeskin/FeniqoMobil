@@ -8,8 +8,13 @@ import androidx.room.Transaction
 import androidx.room.Upsert
 import com.feniqo.mobile.data.local.entity.BudgetEntity
 import com.feniqo.mobile.data.local.entity.CategoryEntity
+import com.feniqo.mobile.data.local.entity.DebtEntity
+import com.feniqo.mobile.data.local.entity.DebtPaymentEntity
+import com.feniqo.mobile.data.local.entity.GoalContributionEntity
+import com.feniqo.mobile.data.local.entity.GoalEntity
 import com.feniqo.mobile.data.local.entity.RecurringTransactionEntity
 import com.feniqo.mobile.data.local.entity.RecurringTransactionOccurrenceEntity
+import com.feniqo.mobile.data.local.entity.SubscriptionEntity
 import com.feniqo.mobile.data.local.entity.SyncConflictEntity
 import com.feniqo.mobile.data.local.entity.SyncOperationEntity
 import com.feniqo.mobile.data.local.entity.TagEntity
@@ -22,10 +27,22 @@ import com.feniqo.mobile.data.local.outbox.OutboxOperationType
 import com.feniqo.mobile.data.mapper.toEntity
 import com.feniqo.mobile.data.remote.dto.BudgetDto
 import com.feniqo.mobile.data.remote.dto.CategoryDto
+import com.feniqo.mobile.data.remote.dto.DebtDto
+import com.feniqo.mobile.data.remote.dto.DebtPaymentDto
+import com.feniqo.mobile.data.remote.dto.DebtPaymentSyncRecordDto
+import com.feniqo.mobile.data.remote.dto.GoalContributionDto
+import com.feniqo.mobile.data.remote.dto.GoalContributionSyncRecordDto
+import com.feniqo.mobile.data.remote.dto.GoalDto
 import com.feniqo.mobile.data.remote.dto.ProfileDto
 import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
+import com.feniqo.mobile.data.remote.dto.SubscriptionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
+import com.feniqo.mobile.data.remote.dto.WorkspaceDto
 import com.feniqo.mobile.data.remote.mapper.toDomain
+import com.feniqo.mobile.data.remote.mapper.toEntity
+import com.feniqo.mobile.domain.model.SyncStatus
+
+
 import com.feniqo.mobile.data.sync.OutboxExecutionResult
 import com.feniqo.mobile.data.sync.toRemoteSyncMetadata
 
@@ -56,6 +73,13 @@ interface LocalMutationDao {
     @Upsert suspend fun upsertTransactionTagRows(entities: List<TransactionTagCrossRef>)
     @Upsert suspend fun upsertRecurringTransactionRow(entity: RecurringTransactionEntity)
     @Upsert suspend fun upsertRecurringOccurrenceRow(entity: RecurringTransactionOccurrenceEntity)
+    @Upsert suspend fun upsertSubscriptionRow(entity: SubscriptionEntity)
+    @Upsert suspend fun upsertGoalRow(entity: GoalEntity)
+    @Upsert suspend fun upsertGoalContributionRow(entity: GoalContributionEntity)
+    @Upsert suspend fun upsertDebtRow(entity: DebtEntity)
+    @Upsert suspend fun upsertDebtPaymentRow(entity: DebtPaymentEntity)
+
+
 
     @Query(
         """
@@ -229,12 +253,251 @@ interface LocalMutationDao {
     )
     suspend fun markRecurringTransactionSyncedIfDeleted(id: String, nowEpochMillis: Long): Int
 
+    @Query("DELETE FROM subscriptions WHERE id = :id")
+    suspend fun deleteSubscriptionRow(id: String): Int
+
+    @Query(
+        """
+        UPDATE subscriptions
+        SET version = :appliedVersion,
+            base_version = :appliedVersion,
+            local_updated_at_epoch_ms = :nowEpochMillis,
+            last_sync_error = NULL
+        WHERE id = :id
+        """,
+    )
+    suspend fun rebaseSubscriptionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int
+
+    @Query(
+        """
+        UPDATE subscriptions
+        SET sync_status = 'SYNCED',
+            local_updated_at_epoch_ms = :nowEpochMillis,
+            last_sync_error = NULL
+        WHERE id = :id AND deleted_at_epoch_ms IS NOT NULL
+        """,
+    )
+    suspend fun markSubscriptionSyncedIfDeleted(id: String, nowEpochMillis: Long): Int
+
+
+    @Query("DELETE FROM workspaces WHERE id = :id")
+    suspend fun deleteWorkspaceRow(id: String): Int
+
+    @Query("DELETE FROM workspace_members WHERE workspace_id = :workspaceId")
+    suspend fun deleteWorkspaceMemberRows(workspaceId: String): Int
+
+    @Query("DELETE FROM goals WHERE id = :id")
+    suspend fun deleteGoalRow(id: String): Int
+
+    @Query("DELETE FROM goal_contributions WHERE id = :id")
+    suspend fun deleteGoalContributionRow(id: String): Int
+
+    @Query("DELETE FROM debts WHERE id = :id")
+    suspend fun deleteDebtRow(id: String): Int
+
+    @Query("DELETE FROM debt_payments WHERE id = :id")
+    suspend fun deleteDebtPaymentRow(id: String): Int
+
+    @Query("SELECT * FROM goals WHERE id = :id LIMIT 1")
+    suspend fun getGoalById(id: String): GoalEntity?
+
+    @Query("SELECT * FROM debts WHERE id = :id LIMIT 1")
+    suspend fun getDebtById(id: String): DebtEntity?
+
+    @Query("SELECT * FROM goal_contributions WHERE id = :id LIMIT 1")
+    suspend fun getGoalContributionById(id: String): GoalContributionEntity?
+
+    @Query("SELECT * FROM debt_payments WHERE id = :id LIMIT 1")
+    suspend fun getDebtPaymentById(id: String): DebtPaymentEntity?
+
+    @Query("SELECT * FROM goal_contributions WHERE goal_id = :goalId AND deleted_at_epoch_ms IS NULL")
+    suspend fun getActiveGoalContributions(goalId: String): List<GoalContributionEntity>
+
+    @Query("SELECT * FROM debt_payments WHERE debt_id = :debtId AND deleted_at_epoch_ms IS NULL")
+    suspend fun getActiveDebtPayments(debtId: String): List<DebtPaymentEntity>
+
+    @Query(
+        """
+        UPDATE goals
+        SET version = :appliedVersion,
+            base_version = :appliedVersion,
+            local_updated_at_epoch_ms = :nowEpochMillis,
+            last_sync_error = NULL
+        WHERE id = :id
+        """,
+    )
+    suspend fun rebaseGoalVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int
+
+    @Query(
+        """
+        UPDATE goal_contributions
+        SET version = :appliedVersion,
+            base_version = :appliedVersion,
+            local_updated_at_epoch_ms = :nowEpochMillis,
+            last_sync_error = NULL
+        WHERE id = :id
+        """,
+    )
+    suspend fun rebaseGoalContributionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int
+
+    @Query(
+        """
+        UPDATE debts
+        SET version = :appliedVersion,
+            base_version = :appliedVersion,
+            local_updated_at_epoch_ms = :nowEpochMillis,
+            last_sync_error = NULL
+        WHERE id = :id
+        """,
+    )
+    suspend fun rebaseDebtVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int
+
+    @Query(
+        """
+        UPDATE debt_payments
+        SET version = :appliedVersion,
+            base_version = :appliedVersion,
+            local_updated_at_epoch_ms = :nowEpochMillis,
+            last_sync_error = NULL
+        WHERE id = :id
+        """,
+    )
+    suspend fun rebaseDebtPaymentVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int
+
+    @Query(
+        """
+        UPDATE workspaces
+        SET version = :appliedVersion,
+            base_version = :appliedVersion,
+            local_updated_at_epoch_ms = :nowEpochMillis,
+            last_sync_error = NULL
+        WHERE id = :id
+        """,
+    )
+    suspend fun rebaseWorkspaceVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int
+
+    @Query(
+        """
+        UPDATE workspaces
+        SET sync_status = 'SYNCED',
+            local_updated_at_epoch_ms = :nowEpochMillis,
+            last_sync_error = NULL
+        WHERE id = :id AND deleted_at_epoch_ms IS NOT NULL
+        """,
+    )
+    suspend fun markWorkspaceSyncedIfDeleted(id: String, nowEpochMillis: Long): Int
+
+    @Query(
+        """
+        UPDATE goals
+        SET sync_status = 'SYNCED',
+            local_updated_at_epoch_ms = :nowEpochMillis,
+            last_sync_error = NULL
+        WHERE id = :id AND deleted_at_epoch_ms IS NOT NULL
+        """,
+    )
+    suspend fun markGoalSyncedIfDeleted(id: String, nowEpochMillis: Long): Int
+
+    @Query(
+        """
+        UPDATE debts
+        SET sync_status = 'SYNCED',
+            local_updated_at_epoch_ms = :nowEpochMillis,
+            last_sync_error = NULL
+        WHERE id = :id AND deleted_at_epoch_ms IS NOT NULL
+        """,
+    )
+    suspend fun markDebtSyncedIfDeleted(id: String, nowEpochMillis: Long): Int
+
+    @Query(
+        """
+        UPDATE goal_contributions
+        SET deleted_at_epoch_ms = :deletedAtEpochMillis,
+            local_updated_at_epoch_ms = :nowEpochMillis,
+            sync_status = 'SYNCED'
+        WHERE goal_id = :goalId AND deleted_at_epoch_ms IS NULL
+        """,
+    )
+    suspend fun tombstoneGoalContributionsForDeletedGoal(goalId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int
+
+    @Query(
+        """
+        UPDATE debt_payments
+        SET deleted_at_epoch_ms = :deletedAtEpochMillis,
+            local_updated_at_epoch_ms = :nowEpochMillis,
+            sync_status = 'SYNCED'
+        WHERE debt_id = :debtId AND deleted_at_epoch_ms IS NULL
+        """,
+    )
+    suspend fun tombstoneDebtPaymentsForDeletedDebt(debtId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int
+
+    @Query(
+        """
+        SELECT * FROM sync_operations
+        WHERE (
+            (entity_type_code = 'GOAL' AND entity_id = :goalId)
+            OR
+            (entity_type_code = 'GOAL_CONTRIBUTION' AND entity_id IN (SELECT id FROM goal_contributions WHERE goal_id = :goalId))
+        )
+          AND operation_id NOT IN (
+              SELECT predecessor_operation_id
+              FROM sync_operations
+              WHERE predecessor_operation_id IS NOT NULL
+          )
+        LIMIT 2
+        """,
+    )
+    suspend fun getActiveGoalAggregateTailCandidates(goalId: String): List<SyncOperationEntity>
+
+    @Query(
+        """
+        SELECT * FROM sync_operations
+        WHERE (
+            (entity_type_code = 'DEBT' AND entity_id = :debtId)
+            OR
+            (entity_type_code = 'DEBT_PAYMENT' AND entity_id IN (SELECT id FROM debt_payments WHERE debt_id = :debtId))
+        )
+          AND operation_id NOT IN (
+              SELECT predecessor_operation_id
+              FROM sync_operations
+              WHERE predecessor_operation_id IS NOT NULL
+          )
+        LIMIT 2
+        """,
+    )
+    suspend fun getActiveDebtAggregateTailCandidates(debtId: String): List<SyncOperationEntity>
+
+    @Query(
+        """
+        SELECT COUNT(*) FROM sync_operations
+        WHERE (
+            (entity_type_code = 'GOAL' AND entity_id = :goalId AND operation_id <> :operationId)
+            OR
+            (entity_type_code = 'GOAL_CONTRIBUTION' AND entity_id IN (SELECT id FROM goal_contributions WHERE goal_id = :goalId) AND operation_id <> :operationId)
+        )
+        """,
+    )
+    suspend fun countPendingGoalAggregateOperations(goalId: String, operationId: String): Int
+
+    @Query(
+        """
+        SELECT COUNT(*) FROM sync_operations
+        WHERE (
+            (entity_type_code = 'DEBT' AND entity_id = :debtId AND operation_id <> :operationId)
+            OR
+            (entity_type_code = 'DEBT_PAYMENT' AND entity_id IN (SELECT id FROM debt_payments WHERE debt_id = :debtId) AND operation_id <> :operationId)
+        )
+        """,
+    )
+    suspend fun countPendingDebtAggregateOperations(debtId: String, operationId: String): Int
+
     @Query(
         """
         SELECT * FROM sync_operations
         WHERE entity_type_code = :entityTypeCode
-          AND entity_id = :entityId
-          AND operation_id NOT IN (
+        AND entity_id = :entityId
+        AND operation_id NOT IN (
+
               SELECT predecessor_operation_id
               FROM sync_operations
               WHERE predecessor_operation_id IS NOT NULL
@@ -370,6 +633,18 @@ interface LocalMutationDao {
     @Query("UPDATE budgets SET sync_status = :status, local_updated_at_epoch_ms = :nowEpochMillis WHERE id = :id")
     suspend fun setBudgetSyncStatus(id: String, status: String, nowEpochMillis: Long): Int
 
+    @Query("UPDATE goals SET sync_status = :status, local_updated_at_epoch_ms = :nowEpochMillis WHERE id = :id")
+    suspend fun setGoalSyncStatus(id: String, status: String, nowEpochMillis: Long): Int
+
+    @Query("UPDATE goal_contributions SET sync_status = :status, local_updated_at_epoch_ms = :nowEpochMillis WHERE id = :id")
+    suspend fun setGoalContributionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int
+
+    @Query("UPDATE debts SET sync_status = :status, local_updated_at_epoch_ms = :nowEpochMillis WHERE id = :id")
+    suspend fun setDebtSyncStatus(id: String, status: String, nowEpochMillis: Long): Int
+
+    @Query("UPDATE debt_payments SET sync_status = :status, local_updated_at_epoch_ms = :nowEpochMillis WHERE id = :id")
+    suspend fun setDebtPaymentSyncStatus(id: String, status: String, nowEpochMillis: Long): Int
+
     @Transaction
     suspend fun recordV2Conflict(conflict: SyncConflictEntity, nowEpochMillis: Long): Boolean {
         val predecessor = getOutboxById(conflict.operationId)
@@ -404,6 +679,10 @@ interface LocalMutationDao {
                 "CATEGORY" -> setCategorySyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
                 "TRANSACTION" -> setTransactionSyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
                 "BUDGET" -> setBudgetSyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
+                "GOAL" -> setGoalSyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
+                "GOAL_CONTRIBUTION" -> setGoalContributionSyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
+                "DEBT" -> setDebtSyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
+                "DEBT_PAYMENT" -> setDebtPaymentSyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
                 else -> error("Bilinmeyen entityTypeCode: ${conflict.entityTypeCode}")
             }
             check(updatedCount == 1) {
@@ -412,6 +691,7 @@ interface LocalMutationDao {
         }
         return true
     }
+
 
     @Transaction
     suspend fun ackProfileWriteV2(operationId: String, record: ProfileDto, nowEpochMillis: Long): Boolean {
@@ -713,6 +993,410 @@ interface LocalMutationDao {
     }
 
     @Transaction
+    suspend fun ackSubscriptionWriteV2(
+        operationId: String,
+        record: SubscriptionDto,
+        nowEpochMillis: Long,
+    ): Boolean {
+        val appliedVersion = record.version
+        requireNotNull(appliedVersion) { "Uzak abonelik kaydı version taşımıyor: $operationId" }
+        require(appliedVersion >= 1) { "appliedVersion en az 1 olmalıdır: $appliedVersion" }
+
+        val predecessor = getOutboxById(operationId)
+        requireNotNull(predecessor) { "Outbox operasyonu bulunamadı: $operationId" }
+        check(predecessor.protocolVersion == 2) {
+            "V2 ACK yalnız protocolVersion=2 için geçerlidir: ${predecessor.protocolVersion}"
+        }
+        check(predecessor.statusCode == "IN_FLIGHT") {
+            "Outbox operasyonu IN_FLIGHT durumunda olmalıdır: ${predecessor.statusCode}"
+        }
+        check(predecessor.attemptCount > 0) {
+            "Outbox operasyonu attempt_count > 0 olmalıdır: ${predecessor.attemptCount}"
+        }
+        check(predecessor.entityTypeCode == "SUBSCRIPTION") {
+            "Outbox operasyonu entityTypeCode SUBSCRIPTION olmalıdır: ${predecessor.entityTypeCode}"
+        }
+        check(predecessor.entityId == record.id) {
+            "Outbox operasyonu entityId (${predecessor.entityId}) ile uzak kayıt id (${record.id}) eşleşmelidir."
+        }
+
+        val successors = getSuccessors(operationId)
+        check(successors.size <= 1) { "Birden fazla successor bulundu: $operationId" }
+        val successor = successors.firstOrNull()
+
+        if (successor == null) {
+            upsertSubscriptionRow(record.toDomain().toEntity(record.toRemoteSyncMetadata(nowEpochMillis)))
+            deleteConflictRow("SUBSCRIPTION", record.id)
+            val deleted = deleteOutboxRow(operationId)
+            check(deleted == 1) { "Outbox kaydı silinemedi: $operationId" }
+        } else {
+            check(successor.protocolVersion == 2) { "Successor protocolVersion == 2 olmalıdır: ${successor.protocolVersion}" }
+            check(successor.predecessorOperationId == predecessor.operationId) { "Successor predecessor_operation_id eşleşmelidir" }
+            check(successor.entityTypeCode == "SUBSCRIPTION") { "Successor entityTypeCode eşleşmelidir" }
+            check(successor.entityId == record.id) { "Successor entityId eşleşmelidir" }
+            check(successor.statusCode == "PENDING") { "Successor statusCode == PENDING olmalıdır: ${successor.statusCode}" }
+            check(successor.attemptCount == 0) { "Successor attemptCount == 0 olmalıdır: ${successor.attemptCount}" }
+            check(successor.isBlocked) { "Successor isBlocked == true olmalıdır" }
+
+            val rebased = rebaseSubscriptionVersion(record.id, appliedVersion, nowEpochMillis)
+            check(rebased == 1) { "Abonelik sürümü rebase edilemedi: ${record.id}" }
+
+            val deleted = deleteOutboxRow(operationId)
+            check(deleted == 1) { "Predecessor outbox silinemedi: $operationId" }
+
+            val unblocked = unblockSuccessor(
+                operationId = successor.operationId,
+                predecessorOperationId = operationId,
+                appliedVersion = appliedVersion,
+                nowEpochMillis = nowEpochMillis,
+            )
+            check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
+        }
+        return true
+    }
+
+    @Transaction
+    suspend fun ackGoalWriteV2(operationId: String, record: GoalDto, nowEpochMillis: Long): Boolean {
+        val appliedVersion = record.version
+        requireNotNull(appliedVersion) { "Uzak hedef kaydı version taşımıyor: $operationId" }
+        require(appliedVersion >= 1) { "appliedVersion en az 1 olmalıdır: $appliedVersion" }
+
+        val predecessor = getOutboxById(operationId)
+        requireNotNull(predecessor) { "Outbox operasyonu bulunamadı: $operationId" }
+        check(predecessor.protocolVersion == 2) {
+            "V2 ACK yalnız protocolVersion=2 için geçerlidir: ${predecessor.protocolVersion}"
+        }
+        check(predecessor.statusCode == "IN_FLIGHT") {
+            "Outbox operasyonu IN_FLIGHT durumunda olmalıdır: ${predecessor.statusCode}"
+        }
+        check(predecessor.attemptCount > 0) {
+            "Outbox operasyonu attempt_count > 0 olmalıdır: ${predecessor.attemptCount}"
+        }
+        check(predecessor.entityTypeCode == "GOAL") {
+            "Outbox operasyonu entityTypeCode GOAL olmalıdır: ${predecessor.entityTypeCode}"
+        }
+        check(predecessor.entityId == record.id) {
+            "Outbox operasyonu entityId (${predecessor.entityId}) ile uzak kayıt id (${record.id}) eşleşmelidir."
+        }
+
+        val successors = getSuccessors(operationId)
+        check(successors.size <= 1) { "Birden fazla successor bulundu: $operationId" }
+        val successor = successors.firstOrNull()
+        val pendingAggregateCount = countPendingGoalAggregateOperations(record.id, operationId)
+
+        if (successor == null && pendingAggregateCount == 0) {
+            upsertGoalRow(record.toDomain().toEntity(record.toRemoteSyncMetadata(nowEpochMillis)))
+            deleteConflictRow("GOAL", record.id)
+            val deleted = deleteOutboxRow(operationId)
+            check(deleted == 1) { "Outbox kaydı silinemedi: $operationId" }
+        } else {
+            val rebased = rebaseGoalVersion(record.id, appliedVersion, nowEpochMillis)
+            check(rebased == 1) { "Hedef sürümü rebase edilemedi: ${record.id}" }
+
+            deleteConflictRow("GOAL", record.id)
+            val deleted = deleteOutboxRow(operationId)
+            check(deleted == 1) { "Predecessor outbox silinemedi: $operationId" }
+
+            if (successor != null) {
+                check(successor.protocolVersion == 2) { "Successor protocolVersion == 2 olmalıdır: ${successor.protocolVersion}" }
+                check(successor.predecessorOperationId == predecessor.operationId) { "Successor predecessor_operation_id eşleşmelidir" }
+                check(successor.statusCode == "PENDING") { "Successor statusCode == PENDING olmalıdır: ${successor.statusCode}" }
+                check(successor.attemptCount == 0) { "Successor attemptCount == 0 olmalıdır: ${successor.attemptCount}" }
+                check(successor.isBlocked) { "Successor isBlocked == true olmalıdır" }
+
+                val unblocked = unblockSuccessor(
+                    operationId = successor.operationId,
+                    predecessorOperationId = operationId,
+                    appliedVersion = appliedVersion,
+                    nowEpochMillis = nowEpochMillis,
+                )
+                check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
+            }
+        }
+        return true
+    }
+
+    @Transaction
+    suspend fun ackGoalContributionWriteV2(
+        operationId: String,
+        record: GoalContributionSyncRecordDto,
+        nowEpochMillis: Long,
+    ): Boolean {
+        val contribDto = record.contribution
+        val goalDto = record.goal
+        val appliedContribVersion = contribDto.version
+        val appliedGoalVersion = goalDto.version
+        requireNotNull(appliedContribVersion) { "Uzak katkı kaydı version taşımıyor: $operationId" }
+        requireNotNull(appliedGoalVersion) { "Uzak hedef kaydı version taşımıyor: $operationId" }
+
+        val predecessor = getOutboxById(operationId)
+        requireNotNull(predecessor) { "Outbox operasyonu bulunamadı: $operationId" }
+        check(predecessor.protocolVersion == 2) {
+            "V2 ACK yalnız protocolVersion=2 için geçerlidir: ${predecessor.protocolVersion}"
+        }
+        check(predecessor.statusCode == "IN_FLIGHT") {
+            "Outbox operasyonu IN_FLIGHT durumunda olmalıdır: ${predecessor.statusCode}"
+        }
+        check(predecessor.attemptCount > 0) {
+            "Outbox operasyonu attempt_count > 0 olmalıdır: ${predecessor.attemptCount}"
+        }
+        check(predecessor.entityTypeCode == "GOAL_CONTRIBUTION") {
+            "Outbox operasyonu entityTypeCode GOAL_CONTRIBUTION olmalıdır: ${predecessor.entityTypeCode}"
+        }
+        check(predecessor.entityId == contribDto.id) {
+            "Outbox operasyonu entityId (${predecessor.entityId}) ile uzak kayıt id (${contribDto.id}) eşleşmelidir."
+        }
+
+        val successors = getSuccessors(operationId)
+        check(successors.size <= 1) { "Birden fazla successor bulundu: $operationId" }
+        val successor = successors.firstOrNull()
+        val pendingAggregateCount = countPendingGoalAggregateOperations(goalDto.id, operationId)
+
+        upsertGoalContributionRow(contribDto.toDomain().toEntity(contribDto.toRemoteSyncMetadata(nowEpochMillis)))
+        deleteConflictRow("GOAL_CONTRIBUTION", contribDto.id)
+
+        if (successors.isEmpty() && pendingAggregateCount == 0) {
+            upsertGoalRow(goalDto.toDomain().toEntity(goalDto.toRemoteSyncMetadata(nowEpochMillis)))
+            deleteConflictRow("GOAL", goalDto.id)
+            val deleted = deleteOutboxRow(operationId)
+            check(deleted == 1) { "Outbox kaydı silinemedi: $operationId" }
+        } else {
+            val rebased = rebaseGoalVersion(goalDto.id, appliedGoalVersion, nowEpochMillis)
+            check(rebased == 1) { "Hedef sürümü rebase edilemedi: ${goalDto.id}" }
+
+            deleteConflictRow("GOAL", goalDto.id)
+            val deleted = deleteOutboxRow(operationId)
+            check(deleted == 1) { "Predecessor outbox silinemedi: $operationId" }
+
+            if (successor != null) {
+                check(successor.protocolVersion == 2) { "Successor protocolVersion == 2 olmalıdır: ${successor.protocolVersion}" }
+                check(successor.predecessorOperationId == predecessor.operationId) { "Successor predecessor_operation_id eşleşmelidir" }
+                check(successor.statusCode == "PENDING") { "Successor statusCode == PENDING olmalıdır: ${successor.statusCode}" }
+                check(successor.attemptCount == 0) { "Successor attemptCount == 0 olmalıdır: ${successor.attemptCount}" }
+                check(successor.isBlocked) { "Successor isBlocked == true olmalıdır" }
+
+                val unblocked = unblockSuccessor(
+                    operationId = successor.operationId,
+                    predecessorOperationId = operationId,
+                    appliedVersion = appliedGoalVersion,
+                    nowEpochMillis = nowEpochMillis,
+                )
+                check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
+            }
+        }
+        return true
+    }
+
+    @Transaction
+    suspend fun ackDebtWriteV2(operationId: String, record: DebtDto, nowEpochMillis: Long): Boolean {
+        val appliedVersion = record.version
+        requireNotNull(appliedVersion) { "Uzak borç kaydı version taşımıyor: $operationId" }
+        require(appliedVersion >= 1) { "appliedVersion en az 1 olmalıdır: $appliedVersion" }
+
+        val predecessor = getOutboxById(operationId)
+        requireNotNull(predecessor) { "Outbox operasyonu bulunamadı: $operationId" }
+        check(predecessor.protocolVersion == 2) {
+            "V2 ACK yalnız protocolVersion=2 için geçerlidir: ${predecessor.protocolVersion}"
+        }
+        check(predecessor.statusCode == "IN_FLIGHT") {
+            "Outbox operasyonu IN_FLIGHT durumunda olmalıdır: ${predecessor.statusCode}"
+        }
+        check(predecessor.attemptCount > 0) {
+            "Outbox operasyonu attempt_count > 0 olmalıdır: ${predecessor.attemptCount}"
+        }
+        check(predecessor.entityTypeCode == "DEBT") {
+            "Outbox operasyonu entityTypeCode DEBT olmalıdır: ${predecessor.entityTypeCode}"
+        }
+        check(predecessor.entityId == record.id) {
+            "Outbox operasyonu entityId (${predecessor.entityId}) ile uzak kayıt id (${record.id}) eşleşmelidir."
+        }
+
+        val successors = getSuccessors(operationId)
+        check(successors.size <= 1) { "Birden fazla successor bulundu: $operationId" }
+        val successor = successors.firstOrNull()
+        val pendingAggregateCount = countPendingDebtAggregateOperations(record.id, operationId)
+
+        if (successor == null && pendingAggregateCount == 0) {
+            upsertDebtRow(record.toDomain().toEntity(record.toRemoteSyncMetadata(nowEpochMillis)))
+            deleteConflictRow("DEBT", record.id)
+            val deleted = deleteOutboxRow(operationId)
+            check(deleted == 1) { "Outbox kaydı silinemedi: $operationId" }
+        } else {
+            val rebased = rebaseDebtVersion(record.id, appliedVersion, nowEpochMillis)
+            check(rebased == 1) { "Borç sürümü rebase edilemedi: ${record.id}" }
+
+            deleteConflictRow("DEBT", record.id)
+            val deleted = deleteOutboxRow(operationId)
+            check(deleted == 1) { "Predecessor outbox silinemedi: $operationId" }
+
+            if (successor != null) {
+                check(successor.protocolVersion == 2) { "Successor protocolVersion == 2 olmalıdır: ${successor.protocolVersion}" }
+                check(successor.predecessorOperationId == predecessor.operationId) { "Successor predecessor_operation_id eşleşmelidir" }
+                check(successor.statusCode == "PENDING") { "Successor statusCode == PENDING olmalıdır: ${successor.statusCode}" }
+                check(successor.attemptCount == 0) { "Successor attemptCount == 0 olmalıdır: ${successor.attemptCount}" }
+                check(successor.isBlocked) { "Successor isBlocked == true olmalıdır" }
+
+                val unblocked = unblockSuccessor(
+                    operationId = successor.operationId,
+                    predecessorOperationId = operationId,
+                    appliedVersion = appliedVersion,
+                    nowEpochMillis = nowEpochMillis,
+                )
+                check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
+            }
+        }
+        return true
+    }
+
+    @Transaction
+    suspend fun ackDebtPaymentWriteV2(
+        operationId: String,
+        record: DebtPaymentSyncRecordDto,
+        nowEpochMillis: Long,
+    ): Boolean {
+        val paymentDto = record.payment
+        val debtDto = record.debt
+        val appliedPaymentVersion = paymentDto.version
+        val appliedDebtVersion = debtDto.version
+        requireNotNull(appliedPaymentVersion) { "Uzak ödeme kaydı version taşımıyor: $operationId" }
+        requireNotNull(appliedDebtVersion) { "Uzak borç kaydı version taşımıyor: $operationId" }
+
+        val predecessor = getOutboxById(operationId)
+        requireNotNull(predecessor) { "Outbox operasyonu bulunamadı: $operationId" }
+        check(predecessor.protocolVersion == 2) {
+            "V2 ACK yalnız protocolVersion=2 için geçerlidir: ${predecessor.protocolVersion}"
+        }
+        check(predecessor.statusCode == "IN_FLIGHT") {
+            "Outbox operasyonu IN_FLIGHT durumunda olmalıdır: ${predecessor.statusCode}"
+        }
+        check(predecessor.attemptCount > 0) {
+            "Outbox operasyonu attempt_count > 0 olmalıdır: ${predecessor.attemptCount}"
+        }
+        check(predecessor.entityTypeCode == "DEBT_PAYMENT") {
+            "Outbox operasyonu entityTypeCode DEBT_PAYMENT olmalıdır: ${predecessor.entityTypeCode}"
+        }
+        check(predecessor.entityId == paymentDto.id) {
+            "Outbox operasyonu entityId (${predecessor.entityId}) ile uzak kayıt id (${paymentDto.id}) eşleşmelidir."
+        }
+
+        val successors = getSuccessors(operationId)
+        check(successors.size <= 1) { "Birden fazla successor bulundu: $operationId" }
+        val successor = successors.firstOrNull()
+        val pendingAggregateCount = countPendingDebtAggregateOperations(debtDto.id, operationId)
+
+        upsertDebtPaymentRow(paymentDto.toDomain().toEntity(paymentDto.toRemoteSyncMetadata(nowEpochMillis)))
+        deleteConflictRow("DEBT_PAYMENT", paymentDto.id)
+
+        if (successors.isEmpty() && pendingAggregateCount == 0) {
+            upsertDebtRow(debtDto.toDomain().toEntity(debtDto.toRemoteSyncMetadata(nowEpochMillis)))
+            deleteConflictRow("DEBT", debtDto.id)
+            val deleted = deleteOutboxRow(operationId)
+            check(deleted == 1) { "Outbox kaydı silinemedi: $operationId" }
+        } else {
+            val rebased = rebaseDebtVersion(debtDto.id, appliedDebtVersion, nowEpochMillis)
+            check(rebased == 1) { "Borç sürümü rebase edilemedi: ${debtDto.id}" }
+
+            deleteConflictRow("DEBT", debtDto.id)
+            val deleted = deleteOutboxRow(operationId)
+            check(deleted == 1) { "Predecessor outbox silinemedi: $operationId" }
+
+            if (successor != null) {
+                check(successor.protocolVersion == 2) { "Successor protocolVersion == 2 olmalıdır: ${successor.protocolVersion}" }
+                check(successor.predecessorOperationId == predecessor.operationId) { "Successor predecessor_operation_id eşleşmelidir" }
+                check(successor.statusCode == "PENDING") { "Successor statusCode == PENDING olmalıdır: ${successor.statusCode}" }
+                check(successor.attemptCount == 0) { "Successor attemptCount == 0 olmalıdır: ${successor.attemptCount}" }
+                check(successor.isBlocked) { "Successor isBlocked == true olmalıdır" }
+
+                val unblocked = unblockSuccessor(
+                    operationId = successor.operationId,
+                    predecessorOperationId = operationId,
+                    appliedVersion = appliedDebtVersion,
+                    nowEpochMillis = nowEpochMillis,
+                )
+                check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
+            }
+        }
+        return true
+    }
+
+    @Transaction
+    suspend fun ackWorkspaceWriteV2(
+        operationId: String,
+        record: WorkspaceDto,
+        nowEpochMillis: Long,
+    ): Boolean {
+        val appliedVersion = record.version
+        require(appliedVersion >= 1) { "appliedVersion en az 1 olmalıdır: $appliedVersion" }
+
+        val predecessor = getOutboxById(operationId)
+        requireNotNull(predecessor) { "Outbox operasyonu bulunamadı: $operationId" }
+        check(predecessor.protocolVersion == 2) {
+            "V2 ACK yalnız protocolVersion=2 için geçerlidir: ${predecessor.protocolVersion}"
+        }
+        check(predecessor.statusCode == "IN_FLIGHT") {
+            "Outbox operasyonu IN_FLIGHT durumunda olmalıdır: ${predecessor.statusCode}"
+        }
+        check(predecessor.attemptCount > 0) {
+            "Outbox operasyonu attempt_count > 0 olmalıdır: ${predecessor.attemptCount}"
+        }
+        check(predecessor.entityTypeCode == "WORKSPACE") {
+            "Outbox operasyonu entityTypeCode WORKSPACE olmalıdır: ${predecessor.entityTypeCode}"
+        }
+        check(predecessor.entityId == record.id) {
+            "Outbox operasyonu entityId (${predecessor.entityId}) ile uzak kayıt id (${record.id}) eşleşmelidir."
+        }
+
+        when (predecessor.operationTypeCode) {
+            "CREATE", "UPDATE" -> {
+                check(record.deletedAt == null) {
+                    "${predecessor.operationTypeCode} ACK için record.deletedAt null olmalıdır: ${record.deletedAt}"
+                }
+            }
+            "DELETE" -> {
+                check(record.deletedAt != null) {
+                    "DELETE ACK için record.deletedAt zorunludur: id=${record.id}"
+                }
+            }
+            else -> error("Bilinmeyen veya desteklenmeyen outbox operasyon türü: ${predecessor.operationTypeCode}")
+        }
+
+        val successors = getSuccessors(operationId)
+        check(successors.size <= 1) { "Birden fazla successor bulundu: $operationId" }
+        val successor = successors.firstOrNull()
+
+        if (successor == null) {
+            upsertWorkspaceRow(record.toEntity(nowEpochMillis))
+            deleteConflictRow("WORKSPACE", record.id)
+            val deleted = deleteOutboxRow(operationId)
+            check(deleted == 1) { "Outbox kaydı silinemedi: $operationId" }
+        } else {
+            check(successor.protocolVersion == 2) { "Successor protocolVersion == 2 olmalıdır: ${successor.protocolVersion}" }
+            check(successor.predecessorOperationId == predecessor.operationId) { "Successor predecessor_operation_id eşleşmelidir" }
+            check(successor.entityTypeCode == "WORKSPACE") { "Successor entityTypeCode eşleşmelidir" }
+            check(successor.entityId == record.id) { "Successor entityId eşleşmelidir" }
+            check(successor.statusCode == "PENDING") { "Successor statusCode == PENDING olmalıdır: ${successor.statusCode}" }
+            check(successor.attemptCount == 0) { "Successor attemptCount == 0 olmalıdır: ${successor.attemptCount}" }
+            check(successor.isBlocked) { "Successor isBlocked == true olmalıdır" }
+
+            val rebased = rebaseWorkspaceVersion(record.id, appliedVersion, nowEpochMillis)
+            check(rebased == 1) { "Workspace sürümü rebase edilemedi: ${record.id}" }
+
+            deleteConflictRow("WORKSPACE", record.id)
+            val deleted = deleteOutboxRow(operationId)
+            check(deleted == 1) { "Predecessor outbox silinemedi: $operationId" }
+
+            val unblocked = unblockSuccessor(
+                operationId = successor.operationId,
+                predecessorOperationId = operationId,
+                appliedVersion = appliedVersion,
+                nowEpochMillis = nowEpochMillis,
+            )
+            check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
+        }
+        return true
+    }
+
+    @Transaction
     suspend fun ackMissingDeleteV2(
         operationId: String,
         entityTypeCode: String,
@@ -753,12 +1437,21 @@ interface LocalMutationDao {
             "TRANSACTION" -> markTransactionSyncedIfDeleted(entityId, nowEpochMillis)
             "BUDGET" -> markBudgetSyncedIfDeleted(entityId, nowEpochMillis)
             "RECURRING_TRANSACTION" -> markRecurringTransactionSyncedIfDeleted(entityId, nowEpochMillis)
+            "SUBSCRIPTION" -> markSubscriptionSyncedIfDeleted(entityId, nowEpochMillis)
+            "GOAL" -> markGoalSyncedIfDeleted(entityId, nowEpochMillis)
+            "DEBT" -> markDebtSyncedIfDeleted(entityId, nowEpochMillis)
+            "WORKSPACE" -> {
+                val marked = markWorkspaceSyncedIfDeleted(entityId, nowEpochMillis)
+                check(marked == 1) { "Silinmiş yerel Workspace kaydı bulunamadı veya güncellenemedi: $entityId" }
+            }
         }
         deleteConflictRow(entityTypeCode, entityId)
         val deleted = deleteOutboxRow(operationId)
         check(deleted == 1) { "Outbox kaydı silinemedi: $operationId" }
         return true
     }
+
+
 
     @Transaction
     suspend fun ackTransactionGroupV2(
@@ -929,7 +1622,14 @@ interface LocalMutationDao {
             is OutboxExecutionResult.TransactionApplied -> ackTransactionWriteV2(operationId, result.record, nowEpochMillis)
             is OutboxExecutionResult.BudgetApplied -> ackBudgetWriteV2(operationId, result.record, nowEpochMillis)
             is OutboxExecutionResult.RecurringTransactionApplied -> ackRecurringTransactionWriteV2(operationId, result.record, nowEpochMillis)
+            is OutboxExecutionResult.SubscriptionApplied -> ackSubscriptionWriteV2(operationId, result.record, nowEpochMillis)
+            is OutboxExecutionResult.GoalApplied -> ackGoalWriteV2(operationId, result.record, nowEpochMillis)
+            is OutboxExecutionResult.GoalContributionApplied -> ackGoalContributionWriteV2(operationId, result.record, nowEpochMillis)
+            is OutboxExecutionResult.DebtApplied -> ackDebtWriteV2(operationId, result.record, nowEpochMillis)
+            is OutboxExecutionResult.DebtPaymentApplied -> ackDebtPaymentWriteV2(operationId, result.record, nowEpochMillis)
+            is OutboxExecutionResult.WorkspaceApplied -> ackWorkspaceWriteV2(operationId, result.record, nowEpochMillis)
             is OutboxExecutionResult.MissingDeleteAcknowledged -> {
+
                 val op = checkNotNull(getOutboxById(operationId)) { "Outbox işlemi bulunamadı: $operationId" }
                 ackMissingDeleteV2(operationId, op.entityTypeCode, op.entityId, nowEpochMillis)
             }
@@ -937,6 +1637,7 @@ interface LocalMutationDao {
         }
         return true
     }
+
 
     @Transaction
     suspend fun mutateProfileV2(
@@ -1448,7 +2149,508 @@ interface LocalMutationDao {
     }
 
     @Transaction
+    suspend fun mutateSubscriptionV2(
+        entity: SubscriptionEntity,
+        type: OutboxOperationType,
+        payloadJson: String,
+        operationIdFactory: () -> String,
+        nowEpochMillis: Long,
+    ): V2EnqueueResult {
+        val tailCandidates = getActiveTailCandidates("SUBSCRIPTION", entity.id)
+        check(tailCandidates.size <= 1) { "Birden fazla aktif kuyruk sonu (tail) tespit edildi: ${entity.id}" }
+        val tail = tailCandidates.firstOrNull()
+
+        if (tail != null && tail.protocolVersion == 2) {
+            if (tail.attemptCount == 0 && tail.statusCode == "PENDING") {
+                if (type == OutboxOperationType.UPDATE) {
+                    if (tail.operationTypeCode == OutboxOperationType.DELETE.name) {
+                        upsertSubscriptionRow(entity)
+                        val updated = convertPendingDeleteToUpdate(tail.operationId, payloadJson, nowEpochMillis)
+                        check(updated == 1) { "Outbox kaydı UPDATE'e dönüştürülemedi: ${tail.operationId}" }
+                        return V2EnqueueResult(tail.operationId, V2EnqueueDecision.CONVERTED_TO_UPDATE)
+                    } else {
+                        upsertSubscriptionRow(entity)
+                        val updated = coalescePendingPayload(tail.operationId, payloadJson, nowEpochMillis)
+                        check(updated == 1) { "Outbox payload coalesce edilemedi: ${tail.operationId}" }
+                        return V2EnqueueResult(tail.operationId, V2EnqueueDecision.COALESCED)
+                    }
+                } else if (type == OutboxOperationType.DELETE) {
+                    if (tail.operationTypeCode == OutboxOperationType.CREATE.name && tail.predecessorOperationId == null) {
+                        deleteSubscriptionRow(entity.id)
+                        val deleted = deleteOutboxRow(tail.operationId)
+                        check(deleted == 1) { "Outbox kaydı silinemedi: ${tail.operationId}" }
+                        return V2EnqueueResult(tail.operationId, V2EnqueueDecision.HARD_DELETED)
+                    } else {
+                        upsertSubscriptionRow(entity)
+                        val updated = convertToPendingDelete(tail.operationId, payloadJson, nowEpochMillis)
+                        check(updated == 1) { "Outbox kaydı DELETE'e dönüştürülemedi: ${tail.operationId}" }
+                        return V2EnqueueResult(tail.operationId, V2EnqueueDecision.CONVERTED_TO_DELETE)
+                    }
+                }
+            }
+
+            upsertSubscriptionRow(entity)
+            val newOpId = operationIdFactory()
+            validateOperationId(newOpId)
+            val successor = SyncOperationEntity(
+                operationId = newOpId,
+                entityTypeCode = "SUBSCRIPTION",
+                entityId = entity.id,
+                operationTypeCode = type.name,
+                baseVersion = null,
+                payloadJson = payloadJson,
+                predecessorOperationId = tail.operationId,
+                isBlocked = true,
+                protocolVersion = 2,
+                statusCode = "PENDING",
+                attemptCount = 0,
+                lastError = null,
+                nextAttemptAtEpochMillis = nowEpochMillis,
+                createdAtEpochMillis = nowEpochMillis,
+                updatedAtEpochMillis = nowEpochMillis,
+            )
+            insertOutboxRow(successor)
+            return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+        }
+
+        upsertSubscriptionRow(entity)
+        val newOpId = operationIdFactory()
+        validateOperationId(newOpId)
+        val op = SyncOperationEntity(
+            operationId = newOpId,
+            entityTypeCode = "SUBSCRIPTION",
+            entityId = entity.id,
+            operationTypeCode = type.name,
+            baseVersion = if (tail != null) null else entity.sync.baseVersion,
+            payloadJson = payloadJson,
+            predecessorOperationId = tail?.operationId,
+            isBlocked = tail != null,
+            protocolVersion = 2,
+            statusCode = "PENDING",
+            attemptCount = 0,
+            lastError = null,
+            nextAttemptAtEpochMillis = nowEpochMillis,
+            createdAtEpochMillis = nowEpochMillis,
+            updatedAtEpochMillis = nowEpochMillis,
+        )
+        insertOutboxRow(op)
+        return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+    }
+
+    @Transaction
+    suspend fun mutateGoalV2(
+        entity: GoalEntity,
+        type: OutboxOperationType,
+        payloadJson: String,
+        operationIdFactory: () -> String,
+        nowEpochMillis: Long,
+    ): V2EnqueueResult {
+        val tailCandidates = getActiveGoalAggregateTailCandidates(entity.id)
+        check(tailCandidates.size <= 1) { "Birden fazla aktif kuyruk sonu (tail) tespit edildi: ${entity.id}" }
+        val tail = tailCandidates.firstOrNull()
+
+        if (tail != null && tail.protocolVersion == 2) {
+            if (tail.attemptCount == 0 && tail.statusCode == "PENDING" && tail.entityTypeCode == "GOAL") {
+                if (type == OutboxOperationType.UPDATE) {
+                    if (tail.operationTypeCode == OutboxOperationType.DELETE.name) {
+                        upsertGoalRow(entity)
+                        val updated = convertPendingDeleteToUpdate(tail.operationId, payloadJson, nowEpochMillis)
+                        check(updated == 1) { "Outbox kaydı UPDATE'e dönüştürülemedi: ${tail.operationId}" }
+                        return V2EnqueueResult(tail.operationId, V2EnqueueDecision.CONVERTED_TO_UPDATE)
+                    } else {
+                        upsertGoalRow(entity)
+                        val updated = coalescePendingPayload(tail.operationId, payloadJson, nowEpochMillis)
+                        check(updated == 1) { "Outbox payload coalesce edilemedi: ${tail.operationId}" }
+                        return V2EnqueueResult(tail.operationId, V2EnqueueDecision.COALESCED)
+                    }
+                } else if (type == OutboxOperationType.DELETE) {
+                    if (tail.operationTypeCode == OutboxOperationType.CREATE.name && tail.predecessorOperationId == null) {
+                        tombstoneGoalContributionsForDeletedGoal(entity.id, entity.sync.deletedAtEpochMillis ?: nowEpochMillis, nowEpochMillis)
+                        deleteGoalRow(entity.id)
+                        val deleted = deleteOutboxRow(tail.operationId)
+                        check(deleted == 1) { "Outbox kaydı silinemedi: ${tail.operationId}" }
+                        return V2EnqueueResult(tail.operationId, V2EnqueueDecision.HARD_DELETED)
+                    } else {
+                        upsertGoalRow(entity)
+                        tombstoneGoalContributionsForDeletedGoal(entity.id, entity.sync.deletedAtEpochMillis ?: nowEpochMillis, nowEpochMillis)
+                        val updated = convertToPendingDelete(tail.operationId, payloadJson, nowEpochMillis)
+                        check(updated == 1) { "Outbox kaydı DELETE'e dönüştürülemedi: ${tail.operationId}" }
+                        return V2EnqueueResult(tail.operationId, V2EnqueueDecision.CONVERTED_TO_DELETE)
+                    }
+                }
+            }
+
+            upsertGoalRow(entity)
+            if (type == OutboxOperationType.DELETE) {
+                tombstoneGoalContributionsForDeletedGoal(entity.id, entity.sync.deletedAtEpochMillis ?: nowEpochMillis, nowEpochMillis)
+            }
+            val newOpId = operationIdFactory()
+            validateOperationId(newOpId)
+            val successor = SyncOperationEntity(
+                operationId = newOpId,
+                entityTypeCode = "GOAL",
+                entityId = entity.id,
+                operationTypeCode = type.name,
+                baseVersion = null,
+                payloadJson = payloadJson,
+                predecessorOperationId = tail.operationId,
+                isBlocked = true,
+                protocolVersion = 2,
+                statusCode = "PENDING",
+                attemptCount = 0,
+                lastError = null,
+                nextAttemptAtEpochMillis = nowEpochMillis,
+                createdAtEpochMillis = nowEpochMillis,
+                updatedAtEpochMillis = nowEpochMillis,
+            )
+            insertOutboxRow(successor)
+            return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+        }
+
+        upsertGoalRow(entity)
+        if (type == OutboxOperationType.DELETE) {
+            tombstoneGoalContributionsForDeletedGoal(entity.id, entity.sync.deletedAtEpochMillis ?: nowEpochMillis, nowEpochMillis)
+        }
+        val newOpId = operationIdFactory()
+        validateOperationId(newOpId)
+        val op = SyncOperationEntity(
+            operationId = newOpId,
+            entityTypeCode = "GOAL",
+            entityId = entity.id,
+            operationTypeCode = type.name,
+            baseVersion = if (tail != null) null else entity.sync.baseVersion,
+            payloadJson = payloadJson,
+            predecessorOperationId = tail?.operationId,
+            isBlocked = tail != null,
+            protocolVersion = 2,
+            statusCode = "PENDING",
+            attemptCount = 0,
+            lastError = null,
+            nextAttemptAtEpochMillis = nowEpochMillis,
+            createdAtEpochMillis = nowEpochMillis,
+            updatedAtEpochMillis = nowEpochMillis,
+        )
+        insertOutboxRow(op)
+        return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+    }
+
+    @Transaction
+    suspend fun mutateGoalContributionV2(
+        entity: GoalContributionEntity,
+        updatedGoal: GoalEntity,
+        payloadJson: String,
+        operationIdFactory: () -> String,
+        nowEpochMillis: Long,
+    ): V2EnqueueResult {
+        require(updatedGoal.currentAmountMinor >= 0) { "Hedef tutarı negatif olamaz." }
+
+        val tailCandidates = getActiveGoalAggregateTailCandidates(entity.goalId)
+        check(tailCandidates.size <= 1) { "Birden fazla aktif hedef kuyruk sonu tespit edildi: ${entity.goalId}" }
+        val tail = tailCandidates.firstOrNull()
+
+        upsertGoalContributionRow(entity)
+        upsertGoalRow(updatedGoal)
+
+        val newOpId = operationIdFactory()
+        validateOperationId(newOpId)
+
+        val op = SyncOperationEntity(
+            operationId = newOpId,
+            entityTypeCode = "GOAL_CONTRIBUTION",
+            entityId = entity.id,
+            operationTypeCode = OutboxOperationType.CREATE.name,
+            baseVersion = if (tail != null) null else updatedGoal.sync.baseVersion,
+            payloadJson = payloadJson,
+            predecessorOperationId = tail?.operationId,
+            isBlocked = tail != null,
+            protocolVersion = 2,
+            statusCode = "PENDING",
+            attemptCount = 0,
+            lastError = null,
+            nextAttemptAtEpochMillis = nowEpochMillis,
+            createdAtEpochMillis = nowEpochMillis,
+            updatedAtEpochMillis = nowEpochMillis,
+        )
+        insertOutboxRow(op)
+        return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+    }
+
+    @Transaction
+    suspend fun mutateDebtV2(
+        entity: DebtEntity,
+        type: OutboxOperationType,
+        payloadJson: String,
+        operationIdFactory: () -> String,
+        nowEpochMillis: Long,
+    ): V2EnqueueResult {
+        val tailCandidates = getActiveDebtAggregateTailCandidates(entity.id)
+        check(tailCandidates.size <= 1) { "Birden fazla aktif borç kuyruk sonu tespit edildi: ${entity.id}" }
+        val tail = tailCandidates.firstOrNull()
+
+        if (tail != null && tail.protocolVersion == 2) {
+            if (tail.attemptCount == 0 && tail.statusCode == "PENDING" && tail.entityTypeCode == "DEBT") {
+                if (type == OutboxOperationType.UPDATE) {
+                    if (tail.operationTypeCode == OutboxOperationType.DELETE.name) {
+                        upsertDebtRow(entity)
+                        val updated = convertPendingDeleteToUpdate(tail.operationId, payloadJson, nowEpochMillis)
+                        check(updated == 1) { "Outbox kaydı UPDATE'e dönüştürülemedi: ${tail.operationId}" }
+                        return V2EnqueueResult(tail.operationId, V2EnqueueDecision.CONVERTED_TO_UPDATE)
+                    } else {
+                        upsertDebtRow(entity)
+                        val updated = coalescePendingPayload(tail.operationId, payloadJson, nowEpochMillis)
+                        check(updated == 1) { "Outbox payload coalesce edilemedi: ${tail.operationId}" }
+                        return V2EnqueueResult(tail.operationId, V2EnqueueDecision.COALESCED)
+                    }
+                } else if (type == OutboxOperationType.DELETE) {
+                    if (tail.operationTypeCode == OutboxOperationType.CREATE.name && tail.predecessorOperationId == null) {
+                        tombstoneDebtPaymentsForDeletedDebt(entity.id, entity.sync.deletedAtEpochMillis ?: nowEpochMillis, nowEpochMillis)
+                        deleteDebtRow(entity.id)
+                        val deleted = deleteOutboxRow(tail.operationId)
+                        check(deleted == 1) { "Outbox kaydı silinemedi: ${tail.operationId}" }
+                        return V2EnqueueResult(tail.operationId, V2EnqueueDecision.HARD_DELETED)
+                    } else {
+                        upsertDebtRow(entity)
+                        tombstoneDebtPaymentsForDeletedDebt(entity.id, entity.sync.deletedAtEpochMillis ?: nowEpochMillis, nowEpochMillis)
+                        val updated = convertToPendingDelete(tail.operationId, payloadJson, nowEpochMillis)
+                        check(updated == 1) { "Outbox kaydı DELETE'e dönüştürülemedi: ${tail.operationId}" }
+                        return V2EnqueueResult(tail.operationId, V2EnqueueDecision.CONVERTED_TO_DELETE)
+                    }
+                }
+            }
+
+            upsertDebtRow(entity)
+            if (type == OutboxOperationType.DELETE) {
+                tombstoneDebtPaymentsForDeletedDebt(entity.id, entity.sync.deletedAtEpochMillis ?: nowEpochMillis, nowEpochMillis)
+            }
+            val newOpId = operationIdFactory()
+            validateOperationId(newOpId)
+            val successor = SyncOperationEntity(
+                operationId = newOpId,
+                entityTypeCode = "DEBT",
+                entityId = entity.id,
+                operationTypeCode = type.name,
+                baseVersion = null,
+                payloadJson = payloadJson,
+                predecessorOperationId = tail.operationId,
+                isBlocked = true,
+                protocolVersion = 2,
+                statusCode = "PENDING",
+                attemptCount = 0,
+                lastError = null,
+                nextAttemptAtEpochMillis = nowEpochMillis,
+                createdAtEpochMillis = nowEpochMillis,
+                updatedAtEpochMillis = nowEpochMillis,
+            )
+            insertOutboxRow(successor)
+            return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+        }
+
+        upsertDebtRow(entity)
+        if (type == OutboxOperationType.DELETE) {
+            tombstoneDebtPaymentsForDeletedDebt(entity.id, entity.sync.deletedAtEpochMillis ?: nowEpochMillis, nowEpochMillis)
+        }
+        val newOpId = operationIdFactory()
+        validateOperationId(newOpId)
+        val op = SyncOperationEntity(
+            operationId = newOpId,
+            entityTypeCode = "DEBT",
+            entityId = entity.id,
+            operationTypeCode = type.name,
+            baseVersion = if (tail != null) null else entity.sync.baseVersion,
+            payloadJson = payloadJson,
+            predecessorOperationId = tail?.operationId,
+            isBlocked = tail != null,
+            protocolVersion = 2,
+            statusCode = "PENDING",
+            attemptCount = 0,
+            lastError = null,
+            nextAttemptAtEpochMillis = nowEpochMillis,
+            createdAtEpochMillis = nowEpochMillis,
+            updatedAtEpochMillis = nowEpochMillis,
+        )
+        insertOutboxRow(op)
+        return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+    }
+
+    @Transaction
+    suspend fun mutateDebtPaymentV2(
+        entity: DebtPaymentEntity,
+        updatedDebt: DebtEntity,
+        payloadJson: String,
+        operationIdFactory: () -> String,
+        nowEpochMillis: Long,
+    ): V2EnqueueResult {
+        val tailCandidates = getActiveDebtAggregateTailCandidates(entity.debtId)
+        check(tailCandidates.size <= 1) { "Birden fazla aktif borç kuyruk sonu tespit edildi: ${entity.debtId}" }
+        val tail = tailCandidates.firstOrNull()
+
+        upsertDebtPaymentRow(entity)
+        upsertDebtRow(updatedDebt)
+
+        val newOpId = operationIdFactory()
+        validateOperationId(newOpId)
+
+        val op = SyncOperationEntity(
+            operationId = newOpId,
+            entityTypeCode = "DEBT_PAYMENT",
+            entityId = entity.id,
+            operationTypeCode = OutboxOperationType.CREATE.name,
+            baseVersion = if (tail != null) null else updatedDebt.sync.baseVersion,
+            payloadJson = payloadJson,
+            predecessorOperationId = tail?.operationId,
+            isBlocked = tail != null,
+            protocolVersion = 2,
+            statusCode = "PENDING",
+            attemptCount = 0,
+            lastError = null,
+            nextAttemptAtEpochMillis = nowEpochMillis,
+            createdAtEpochMillis = nowEpochMillis,
+            updatedAtEpochMillis = nowEpochMillis,
+        )
+        insertOutboxRow(op)
+        return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+    }
+
+
+    @Transaction
+    suspend fun mutateWorkspaceV2(
+        entity: WorkspaceEntity,
+        members: List<WorkspaceMemberEntity>,
+        type: OutboxOperationType,
+        payloadJson: String,
+        operationIdFactory: () -> String,
+        nowEpochMillis: Long,
+    ): V2EnqueueResult {
+        require(payloadJson.isNotBlank()) { "Workspace payload JSON boş olamaz." }
+
+        val sync = entity.sync
+        val status = SyncStatus.valueOf(sync.syncStatus)
+        require(status != SyncStatus.SYNCED) { "Yerel mutasyon outbox'a eklenmeden önce pending olmalıdır: ${entity.id}" }
+
+        if (type == OutboxOperationType.CREATE) {
+            require(sync.baseVersion == null) { "CREATE işleminde baseVersion null olmalıdır: ${entity.id}" }
+            require(sync.deletedAtEpochMillis == null) { "CREATE işleminde deletedAtEpochMillis null olmalıdır: ${entity.id}" }
+            require(sync.syncStatus == SyncStatus.PENDING_CREATE.name) {
+                "CREATE işleminde syncStatus PENDING_CREATE olmalıdır: ${entity.id}"
+            }
+            require(members.isNotEmpty()) { "CREATE işleminde üye listesi boş olamaz: ${entity.id}" }
+            require(members.all { it.workspaceId == entity.id }) {
+                "Tüm üyelerin workspaceId değeri '${entity.id}' ile eşleşmelidir."
+            }
+            val memberKeys = members.map { it.workspaceId to it.userId }
+            require(memberKeys.distinct().size == members.size) {
+                "CREATE işleminde yinelenen üye bulundu: ${entity.id}"
+            }
+            val ownerMembers = members.filter { it.userId == entity.ownerId }
+            require(ownerMembers.size == 1) {
+                "CREATE işleminde sahip için tam olarak bir üyelik kaydı bulunmalıdır: ownerId=${entity.ownerId}"
+            }
+            val ownerMember = ownerMembers.first()
+            require(ownerMember.roleCode.equals("OWNER", ignoreCase = true)) {
+                "Çalışma alanı sahibinin üyelik rolü OWNER olmalıdır: ${ownerMember.roleCode}"
+            }
+        } else if (type == OutboxOperationType.DELETE) {
+            require(sync.deletedAtEpochMillis != null) { "DELETE işleminde deletedAtEpochMillis zorunludur: ${entity.id}" }
+            require(sync.syncStatus == SyncStatus.PENDING_DELETE.name) {
+                "DELETE işleminde syncStatus PENDING_DELETE olmalıdır: ${entity.id}"
+            }
+        } else {
+            require(sync.deletedAtEpochMillis == null) { "UPDATE işleminde deletedAtEpochMillis null olmalıdır: ${entity.id}" }
+            require(sync.syncStatus == SyncStatus.PENDING_UPDATE.name || sync.syncStatus == SyncStatus.PENDING_CREATE.name) {
+                "UPDATE işleminde syncStatus PENDING_UPDATE veya PENDING_CREATE olmalıdır: ${entity.id}"
+            }
+        }
+
+        val tailCandidates = getActiveTailCandidates("WORKSPACE", entity.id)
+        check(tailCandidates.size <= 1) { "Birden fazla aktif workspace kuyruk sonu tespit edildi: ${entity.id}" }
+        val tail = tailCandidates.firstOrNull()
+
+        if (tail != null && tail.protocolVersion == 2) {
+            if (tail.attemptCount == 0 && tail.statusCode == "PENDING") {
+                if (type == OutboxOperationType.UPDATE) {
+                    if (tail.operationTypeCode == OutboxOperationType.DELETE.name) {
+                        upsertWorkspaceRow(entity)
+                        if (members.isNotEmpty()) upsertWorkspaceMemberRows(members)
+                        val updated = convertPendingDeleteToUpdate(tail.operationId, payloadJson, nowEpochMillis)
+                        check(updated == 1) { "Outbox kaydı UPDATE'e dönüştürülemedi: ${tail.operationId}" }
+                        return V2EnqueueResult(tail.operationId, V2EnqueueDecision.CONVERTED_TO_UPDATE)
+                    } else {
+                        upsertWorkspaceRow(entity)
+                        if (members.isNotEmpty()) upsertWorkspaceMemberRows(members)
+                        val updated = coalescePendingPayload(tail.operationId, payloadJson, nowEpochMillis)
+                        check(updated == 1) { "Outbox payload coalesce edilemedi: ${tail.operationId}" }
+                        return V2EnqueueResult(tail.operationId, V2EnqueueDecision.COALESCED)
+                    }
+                } else if (type == OutboxOperationType.DELETE) {
+                    if (tail.operationTypeCode == OutboxOperationType.CREATE.name && tail.predecessorOperationId == null) {
+                        deleteWorkspaceMemberRows(entity.id)
+                        deleteWorkspaceRow(entity.id)
+                        val deleted = deleteOutboxRow(tail.operationId)
+                        check(deleted == 1) { "Outbox kaydı silinemedi: ${tail.operationId}" }
+                        return V2EnqueueResult(tail.operationId, V2EnqueueDecision.HARD_DELETED)
+                    } else {
+                        upsertWorkspaceRow(entity)
+                        if (members.isNotEmpty()) upsertWorkspaceMemberRows(members)
+                        val updated = convertToPendingDelete(tail.operationId, payloadJson, nowEpochMillis)
+                        check(updated == 1) { "Outbox kaydı DELETE'e dönüştürülemedi: ${tail.operationId}" }
+                        return V2EnqueueResult(tail.operationId, V2EnqueueDecision.CONVERTED_TO_DELETE)
+                    }
+                }
+            }
+
+            upsertWorkspaceRow(entity)
+            if (members.isNotEmpty()) upsertWorkspaceMemberRows(members)
+            val newOpId = operationIdFactory()
+            validateOperationId(newOpId)
+            val successor = SyncOperationEntity(
+                operationId = newOpId,
+                entityTypeCode = "WORKSPACE",
+                entityId = entity.id,
+                operationTypeCode = type.name,
+                baseVersion = null,
+                payloadJson = payloadJson,
+                predecessorOperationId = tail.operationId,
+                isBlocked = true,
+                protocolVersion = 2,
+                statusCode = "PENDING",
+                attemptCount = 0,
+                lastError = null,
+                nextAttemptAtEpochMillis = nowEpochMillis,
+                createdAtEpochMillis = nowEpochMillis,
+                updatedAtEpochMillis = nowEpochMillis,
+            )
+            insertOutboxRow(successor)
+            return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+        }
+
+        upsertWorkspaceRow(entity)
+        if (members.isNotEmpty()) upsertWorkspaceMemberRows(members)
+        val newOpId = operationIdFactory()
+        validateOperationId(newOpId)
+        val op = SyncOperationEntity(
+            operationId = newOpId,
+            entityTypeCode = "WORKSPACE",
+            entityId = entity.id,
+            operationTypeCode = type.name,
+            baseVersion = if (tail != null) null else entity.sync.baseVersion,
+            payloadJson = payloadJson,
+            predecessorOperationId = tail?.operationId,
+            isBlocked = tail != null,
+            protocolVersion = 2,
+            statusCode = "PENDING",
+            attemptCount = 0,
+            lastError = null,
+            nextAttemptAtEpochMillis = nowEpochMillis,
+            createdAtEpochMillis = nowEpochMillis,
+            updatedAtEpochMillis = nowEpochMillis,
+        )
+        insertOutboxRow(op)
+        return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+    }
+
+    @Transaction
     suspend fun upsertProfileAndEnqueue(entity: UserProfileEntity, operation: SyncOperationEntity) {
+
         upsertProfileRow(entity)
         insertOutboxRow(operation)
     }
@@ -1678,6 +2880,13 @@ internal fun validateOperationId(operationId: String) {
         "Geçersiz outbox işlem kimliği: $operationId. 32 karakter küçük harfli onaltılık (hex) dize bekleniyor."
     }
 }
+
+data class WorkspaceMutationInputV2(
+    val entity: WorkspaceEntity,
+    val members: List<WorkspaceMemberEntity> = emptyList(),
+    val type: OutboxOperationType,
+    val payloadJson: String,
+)
 
 data class BudgetMutationInputV2(
     val entity: BudgetEntity,

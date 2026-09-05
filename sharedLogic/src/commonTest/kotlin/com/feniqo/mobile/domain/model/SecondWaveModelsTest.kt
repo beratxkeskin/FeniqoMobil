@@ -126,6 +126,130 @@ class SecondWaveModelsTest {
         assertEquals(null, subscription.categoryId)
     }
 
+    @Test
+    fun subscription_rejects_name_longer_than_max_length() {
+        val longName = "s".repeat(Subscription.MAX_NAME_LENGTH + 1)
+        assertFailsWith<IllegalArgumentException> {
+            Subscription(
+                id = EntityId("subscription-1"),
+                ownerId = EntityId("user-1"),
+                workspaceId = null,
+                name = longName,
+                amount = Money(5999, Currency.TRY),
+                categoryId = null,
+                renewalRule = RecurrenceRule(
+                    frequency = RecurrenceFrequency.MONTHLY,
+                    startDate = LocalDate(2026, 8, 5),
+                    endDate = null,
+                ),
+                nextRenewalDate = LocalDate(2026, 9, 5),
+                isActive = true,
+                createdAt = NOW,
+            )
+        }
+    }
+
+    @Test
+    fun subscription_accepts_name_with_exact_max_length() {
+        val exactName = "s".repeat(Subscription.MAX_NAME_LENGTH)
+        val subscription = Subscription(
+            id = EntityId("subscription-1"),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            name = exactName,
+            amount = Money(5999, Currency.TRY),
+            categoryId = null,
+            renewalRule = RecurrenceRule(
+                frequency = RecurrenceFrequency.MONTHLY,
+                startDate = LocalDate(2026, 8, 5),
+                endDate = null,
+            ),
+            nextRenewalDate = LocalDate(2026, 9, 5),
+            isActive = true,
+            createdAt = NOW,
+        )
+        assertEquals(Subscription.MAX_NAME_LENGTH, subscription.name.length)
+    }
+
+    @Test
+    fun goal_rejects_negative_current_amount() {
+        assertFailsWith<IllegalArgumentException> {
+            Goal(
+                id = EntityId("goal-1"),
+                ownerId = EntityId("user-1"),
+                workspaceId = null,
+                name = "Acil durum fonu",
+                targetAmount = Money(100_000, Currency.TRY),
+                currentAmount = Money(-1, Currency.TRY),
+                targetDate = LocalDate(2027, 1, 1),
+                color = CategoryColor("#0A7A55"),
+                icon = CategoryIcon("shield"),
+                createdAt = NOW,
+            )
+        }
+    }
+
+    @Test
+    fun goal_contribution_rejects_non_positive_amount() {
+        assertFailsWith<IllegalArgumentException> {
+            GoalContribution(
+                id = EntityId("contrib-1"),
+                goalId = EntityId("goal-1"),
+                amount = Money(0, Currency.TRY),
+                direction = GoalContributionDirection.ADD,
+                occurredOn = LocalDate(2026, 9, 1),
+                note = null,
+                createdAt = NOW,
+            )
+        }
+    }
+
+    @Test
+    fun goal_contribution_rejects_blank_note() {
+        assertFailsWith<IllegalArgumentException> {
+            GoalContribution(
+                id = EntityId("contrib-1"),
+                goalId = EntityId("goal-1"),
+                amount = Money(10_000, Currency.TRY),
+                direction = GoalContributionDirection.ADD,
+                occurredOn = LocalDate(2026, 9, 1),
+                note = "   ",
+                createdAt = NOW,
+            )
+        }
+    }
+
+    @Test
+    fun debt_rejects_blank_title() {
+        assertFailsWith<IllegalArgumentException> {
+            Debt(
+                id = EntityId("debt-1"),
+                ownerId = EntityId("user-1"),
+                workspaceId = null,
+                title = "   ",
+                amount = Money(50_000, Currency.TRY),
+                type = DebtType.DEBT,
+                dueDate = LocalDate(2026, 12, 1),
+                status = DebtStatus.OPEN,
+                description = null,
+                createdAt = NOW,
+            )
+        }
+    }
+
+    @Test
+    fun debt_payment_rejects_non_positive_amount() {
+        assertFailsWith<IllegalArgumentException> {
+            DebtPayment(
+                id = EntityId("pay-1"),
+                debtId = EntityId("debt-1"),
+                amount = Money(0, Currency.TRY),
+                paidOn = LocalDate(2026, 9, 1),
+                createdAt = NOW,
+            )
+        }
+    }
+
     private companion object {
         val NOW: Instant = Instant.parse("2026-08-05T00:00:00Z")
     }

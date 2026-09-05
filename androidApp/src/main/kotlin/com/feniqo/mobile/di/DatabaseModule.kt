@@ -5,6 +5,7 @@ import com.feniqo.mobile.data.local.dao.BudgetDao
 import com.feniqo.mobile.data.local.dao.CategoryDao
 import com.feniqo.mobile.data.local.dao.ProfileDao
 import com.feniqo.mobile.data.local.dao.RemoteSyncDao
+import com.feniqo.mobile.data.local.dao.SubscriptionDao
 import com.feniqo.mobile.data.local.dao.LocalMutationDao
 import com.feniqo.mobile.data.local.dao.SyncOperationDao
 import com.feniqo.mobile.data.local.dao.SyncStateDao
@@ -51,6 +52,10 @@ object DatabaseModule {
     @Provides fun provideRemoteSyncDao(database: FeniqoDatabase): RemoteSyncDao = database.remoteSyncDao()
     @Provides fun provideLocalMutationDao(database: FeniqoDatabase): LocalMutationDao = database.localMutationDao()
     @Provides fun provideRecurringTransactionDao(database: FeniqoDatabase): com.feniqo.mobile.data.local.dao.RecurringTransactionDao = database.recurringTransactionDao()
+    @Provides fun provideSubscriptionDao(database: FeniqoDatabase): SubscriptionDao = database.subscriptionDao()
+    @Provides fun provideSubscriptionPaymentReminderReceiptDao(database: FeniqoDatabase): com.feniqo.mobile.data.local.dao.SubscriptionPaymentReminderReceiptDao = database.subscriptionPaymentReminderReceiptDao()
+    @Provides fun provideGoalDao(database: FeniqoDatabase): com.feniqo.mobile.data.local.dao.GoalDao = database.goalDao()
+    @Provides fun provideDebtDao(database: FeniqoDatabase): com.feniqo.mobile.data.local.dao.DebtDao = database.debtDao()
 
     @Provides
     @Singleton

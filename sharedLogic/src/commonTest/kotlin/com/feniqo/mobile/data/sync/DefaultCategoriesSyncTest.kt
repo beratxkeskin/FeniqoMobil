@@ -111,6 +111,8 @@ class DefaultCategoriesSyncTest {
         val dao = RecordingRemoteSyncDao(cursorMap = cursors)
         val syncStateDao = object : com.feniqo.mobile.data.local.dao.SyncStateDao {
             override suspend fun getCursor(entityTypeCode: String): SyncCursorEntity? = cursors[entityTypeCode]
+            override suspend fun getWorkspaceMemberCursors(): List<SyncCursorEntity> =
+                cursors.filterKeys { it.startsWith("WORKSPACE_MEMBER:") }.values.toList()
             override suspend fun getConflict(entityId: String): SyncConflictEntity? = null
             override suspend fun getConflict(entityTypeCode: String, entityId: String): SyncConflictEntity? = null
             override suspend fun getConflictsByEntityType(entityTypeCode: String): List<SyncConflictEntity> = emptyList()
@@ -168,11 +170,28 @@ class DefaultCategoriesSyncTest {
         override suspend fun getCategoryRow(id: String): CategoryEntity? = categories.firstOrNull { it.id == id }
         override suspend fun getTransactionRow(id: String): TransactionEntity? = transactions.firstOrNull { it.id == id }
         override suspend fun getRecurringTransactionRow(id: String): com.feniqo.mobile.data.local.entity.RecurringTransactionEntity? = null
+        override suspend fun getSubscriptionRow(id: String): com.feniqo.mobile.data.local.entity.SubscriptionEntity? = null
+        override suspend fun getGoalRow(id: String): com.feniqo.mobile.data.local.entity.GoalEntity? = null
+        override suspend fun getGoalContributionRow(id: String): com.feniqo.mobile.data.local.entity.GoalContributionEntity? = null
+        override suspend fun getDebtRow(id: String): com.feniqo.mobile.data.local.entity.DebtEntity? = null
+        override suspend fun getDebtPaymentRow(id: String): com.feniqo.mobile.data.local.entity.DebtPaymentEntity? = null
+        override suspend fun getWorkspaceRow(id: String): com.feniqo.mobile.data.local.entity.WorkspaceEntity? = null
+        override suspend fun getWorkspaceMemberRow(workspaceId: String, userId: String): com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity? = null
+        override suspend fun getWorkspaceMemberRows(workspaceId: String): List<com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity> = emptyList()
+        override suspend fun getAllKnownLiveWorkspaceIds(): List<String> = emptyList()
         override suspend fun getFirstOutboxOperationId(entityTypeCode: String, entityId: String): String? = null
+        override suspend fun countOutboxRows(entityTypeCode: String, entityId: String): Int = 0
         override suspend fun upsertProfileRow(entity: UserProfileEntity) { profile = entity }
+        override suspend fun upsertWorkspaceRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceEntity>) = Unit
+        override suspend fun upsertWorkspaceMemberRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity>) = Unit
         override suspend fun upsertCategoryRows(entities: List<CategoryEntity>) { categories = entities }
         override suspend fun upsertTransactionRows(entities: List<TransactionEntity>) { transactions = entities }
         override suspend fun upsertRecurringTransactionRows(entities: List<com.feniqo.mobile.data.local.entity.RecurringTransactionEntity>) = Unit
+        override suspend fun upsertSubscriptionRows(entities: List<com.feniqo.mobile.data.local.entity.SubscriptionEntity>) = Unit
+        override suspend fun upsertGoalRows(entities: List<com.feniqo.mobile.data.local.entity.GoalEntity>) = Unit
+        override suspend fun upsertGoalContributionRows(entities: List<com.feniqo.mobile.data.local.entity.GoalContributionEntity>) = Unit
+        override suspend fun upsertDebtRows(entities: List<com.feniqo.mobile.data.local.entity.DebtEntity>) = Unit
+        override suspend fun upsertDebtPaymentRows(entities: List<com.feniqo.mobile.data.local.entity.DebtPaymentEntity>) = Unit
         override suspend fun upsertConflictRow(conflict: SyncConflictEntity) = error("Test kapsamı dışı")
         override suspend fun upsertCursorRows(cursors: List<SyncCursorEntity>) {
             this.cursors = cursors
@@ -183,6 +202,11 @@ class DefaultCategoriesSyncTest {
         override suspend fun markCategoryConflict(entityId: String, error: String): Int = 0
         override suspend fun markTransactionConflict(entityId: String, error: String): Int = 0
         override suspend fun markRecurringTransactionConflict(entityId: String, error: String): Int = 0
+        override suspend fun markSubscriptionConflict(entityId: String, error: String): Int = 0
+        override suspend fun markGoalConflict(entityId: String, error: String): Int = 0
+        override suspend fun markGoalContributionConflict(entityId: String, error: String): Int = 0
+        override suspend fun markDebtConflict(entityId: String, error: String): Int = 0
+        override suspend fun markDebtPaymentConflict(entityId: String, error: String): Int = 0
         override suspend fun deleteOutboxRows(entityTypeCode: String, entityId: String): Int = 0
         override suspend fun deleteOtherOutboxRows(entityTypeCode: String, entityId: String, keptOperationId: String): Int = 0
         override suspend fun resetConflictOperation(operationId: String, operationTypeCode: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
@@ -190,7 +214,10 @@ class DefaultCategoriesSyncTest {
         override suspend fun rebaseCategoryForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseRecurringTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun rebaseSubscriptionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
     }
+
+
 
 
     private class FakeCoreRemoteWithDefaults(
@@ -257,8 +284,22 @@ class DefaultCategoriesSyncTest {
             return RemotePage(emptyList(), query.page, totalCount = 0)
         }
 
+        override suspend fun fetchSubscriptions(query: com.feniqo.mobile.data.remote.core.SubscriptionRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.SubscriptionDto> {
+            return RemotePage(emptyList(), query.page, totalCount = 0)
+        }
+
         override suspend fun fetchBudgets(query: BudgetRemoteQuery): RemotePage<BudgetDto> = error("Kapsam dışı")
+        override suspend fun fetchGoals(query: com.feniqo.mobile.data.remote.core.GoalRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.GoalDto> =
+            RemotePage(emptyList(), query.page, totalCount = 0)
+        override suspend fun fetchGoalContributions(query: com.feniqo.mobile.data.remote.core.GoalContributionRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.GoalContributionDto> =
+            RemotePage(emptyList(), query.page, totalCount = 0)
+        override suspend fun fetchDebts(query: com.feniqo.mobile.data.remote.core.DebtRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.DebtDto> =
+            RemotePage(emptyList(), query.page, totalCount = 0)
+        override suspend fun fetchDebtPayments(query: com.feniqo.mobile.data.remote.core.DebtPaymentRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.DebtPaymentDto> =
+            RemotePage(emptyList(), query.page, totalCount = 0)
+
         override suspend fun fetchTags(scope: RemoteWorkspaceScope, page: RemotePageRequest): RemotePage<TagDto> = error("Kapsam dışı")
+
 
         override suspend fun fetchWorkspaces(page: RemotePageRequest): RemotePage<WorkspaceDto> = error("Kapsam dışı")
         override suspend fun fetchWorkspaceMembers(workspaceId: String, page: RemotePageRequest): RemotePage<WorkspaceMemberDto> = error("Kapsam dışı")

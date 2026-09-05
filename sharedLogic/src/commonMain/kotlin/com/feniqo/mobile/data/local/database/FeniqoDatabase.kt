@@ -6,19 +6,29 @@ import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
 import com.feniqo.mobile.data.local.dao.BudgetDao
 import com.feniqo.mobile.data.local.dao.CategoryDao
-import com.feniqo.mobile.data.local.dao.ProfileDao
-import com.feniqo.mobile.data.local.dao.RemoteSyncDao
+import com.feniqo.mobile.data.local.dao.DebtDao
+import com.feniqo.mobile.data.local.dao.GoalDao
 import com.feniqo.mobile.data.local.dao.LocalMutationDao
+import com.feniqo.mobile.data.local.dao.ProfileDao
+import com.feniqo.mobile.data.local.dao.RecurringTransactionDao
+import com.feniqo.mobile.data.local.dao.RemoteSyncDao
+import com.feniqo.mobile.data.local.dao.SubscriptionDao
+import com.feniqo.mobile.data.local.dao.SubscriptionPaymentReminderReceiptDao
 import com.feniqo.mobile.data.local.dao.SyncOperationDao
 import com.feniqo.mobile.data.local.dao.SyncStateDao
 import com.feniqo.mobile.data.local.dao.TagDao
 import com.feniqo.mobile.data.local.dao.TransactionDao
 import com.feniqo.mobile.data.local.dao.WorkspaceDao
-import com.feniqo.mobile.data.local.dao.RecurringTransactionDao
 import com.feniqo.mobile.data.local.entity.BudgetEntity
 import com.feniqo.mobile.data.local.entity.CategoryEntity
+import com.feniqo.mobile.data.local.entity.DebtEntity
+import com.feniqo.mobile.data.local.entity.DebtPaymentEntity
+import com.feniqo.mobile.data.local.entity.GoalContributionEntity
+import com.feniqo.mobile.data.local.entity.GoalEntity
 import com.feniqo.mobile.data.local.entity.RecurringTransactionEntity
 import com.feniqo.mobile.data.local.entity.RecurringTransactionOccurrenceEntity
+import com.feniqo.mobile.data.local.entity.SubscriptionEntity
+import com.feniqo.mobile.data.local.entity.SubscriptionPaymentReminderReceiptEntity
 import com.feniqo.mobile.data.local.entity.SyncConflictEntity
 import com.feniqo.mobile.data.local.entity.SyncCursorEntity
 import com.feniqo.mobile.data.local.entity.SyncOperationEntity
@@ -28,6 +38,7 @@ import com.feniqo.mobile.data.local.entity.TransactionEntity
 import com.feniqo.mobile.data.local.entity.TransactionTagCrossRef
 import com.feniqo.mobile.data.local.entity.UserProfileEntity
 import com.feniqo.mobile.data.local.entity.WorkspaceEntity
+import com.feniqo.mobile.data.local.entity.WorkspaceInvitationEntity
 import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
 
 @Database(
@@ -35,6 +46,7 @@ import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
         UserProfileEntity::class,
         WorkspaceEntity::class,
         WorkspaceMemberEntity::class,
+        WorkspaceInvitationEntity::class,
         CategoryEntity::class,
         TransactionEntity::class,
         BudgetEntity::class,
@@ -46,8 +58,14 @@ import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
         SyncUserStateEntity::class,
         RecurringTransactionEntity::class,
         RecurringTransactionOccurrenceEntity::class,
+        SubscriptionEntity::class,
+        SubscriptionPaymentReminderReceiptEntity::class,
+        GoalEntity::class,
+        GoalContributionEntity::class,
+        DebtEntity::class,
+        DebtPaymentEntity::class,
     ],
-    version = 6,
+    version = 10,
     exportSchema = true,
 )
 @ConstructedBy(FeniqoDatabaseConstructor::class)
@@ -59,11 +77,16 @@ abstract class FeniqoDatabase : RoomDatabase() {
     abstract fun budgetDao(): BudgetDao
     abstract fun tagDao(): TagDao
     abstract fun recurringTransactionDao(): RecurringTransactionDao
+    abstract fun subscriptionDao(): SubscriptionDao
+    abstract fun subscriptionPaymentReminderReceiptDao(): SubscriptionPaymentReminderReceiptDao
+    abstract fun goalDao(): GoalDao
+    abstract fun debtDao(): DebtDao
     abstract fun syncOperationDao(): SyncOperationDao
     abstract fun syncStateDao(): SyncStateDao
     abstract fun remoteSyncDao(): RemoteSyncDao
     abstract fun localMutationDao(): LocalMutationDao
 }
+
 
 /** Room KSP her hedef için actual veritabanı kurucusunu üretir. */
 @Suppress("KotlinNoActualForExpect")

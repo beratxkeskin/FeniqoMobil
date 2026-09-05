@@ -6,8 +6,16 @@ import com.feniqo.mobile.data.local.dao.TransactionKeepingTagsMutationUnit
 import com.feniqo.mobile.data.local.dao.TransactionMutationUnit
 import com.feniqo.mobile.data.local.entity.BudgetEntity
 import com.feniqo.mobile.data.local.entity.CategoryEntity
+import com.feniqo.mobile.data.local.entity.DebtEntity
+
+import com.feniqo.mobile.data.local.entity.DebtPaymentEntity
+import com.feniqo.mobile.data.local.entity.GoalContributionEntity
+import com.feniqo.mobile.data.local.entity.GoalEntity
 import com.feniqo.mobile.data.local.entity.RecurringTransactionEntity
+import com.feniqo.mobile.data.local.entity.SubscriptionEntity
 import com.feniqo.mobile.data.local.entity.SyncMetadata
+
+
 import com.feniqo.mobile.data.local.entity.SyncOperationEntity
 import com.feniqo.mobile.data.local.entity.TagEntity
 import com.feniqo.mobile.data.local.entity.TransactionEntity
@@ -387,6 +395,103 @@ class OfflineWriteQueue(
         }
         return result.operationId
     }
+
+    suspend fun enqueueSubscriptionV2(
+        entity: SubscriptionEntity,
+        type: OutboxOperationType,
+        payloadJson: String,
+    ): String {
+        validateMutation(entity.sync, type)
+        val result = mutationDao.mutateSubscriptionV2(
+            entity = entity,
+            type = type,
+            payloadJson = payloadJson,
+            operationIdFactory = operationIdFactory,
+            nowEpochMillis = nowEpochMillisProvider(),
+        )
+        if (result.decision != com.feniqo.mobile.data.local.dao.V2EnqueueDecision.HARD_DELETED) {
+            syncScheduler?.scheduleOutboxSync()
+        }
+        return result.operationId
+    }
+
+    suspend fun enqueueGoalV2(
+        entity: GoalEntity,
+        type: OutboxOperationType,
+        payloadJson: String,
+    ): String {
+        validateMutation(entity.sync, type)
+        val result = mutationDao.mutateGoalV2(
+            entity = entity,
+            type = type,
+            payloadJson = payloadJson,
+            operationIdFactory = operationIdFactory,
+            nowEpochMillis = nowEpochMillisProvider(),
+        )
+        if (result.decision != com.feniqo.mobile.data.local.dao.V2EnqueueDecision.HARD_DELETED) {
+            syncScheduler?.scheduleOutboxSync()
+        }
+        return result.operationId
+    }
+
+    suspend fun enqueueGoalContributionV2(
+        entity: GoalContributionEntity,
+        updatedGoal: GoalEntity,
+        payloadJson: String,
+    ): String {
+        validateMutation(entity.sync, OutboxOperationType.CREATE)
+        val result = mutationDao.mutateGoalContributionV2(
+            entity = entity,
+            updatedGoal = updatedGoal,
+            payloadJson = payloadJson,
+            operationIdFactory = operationIdFactory,
+            nowEpochMillis = nowEpochMillisProvider(),
+        )
+        if (result.decision != com.feniqo.mobile.data.local.dao.V2EnqueueDecision.HARD_DELETED) {
+            syncScheduler?.scheduleOutboxSync()
+        }
+        return result.operationId
+    }
+
+    suspend fun enqueueDebtV2(
+        entity: DebtEntity,
+        type: OutboxOperationType,
+        payloadJson: String,
+    ): String {
+        validateMutation(entity.sync, type)
+        val result = mutationDao.mutateDebtV2(
+            entity = entity,
+            type = type,
+            payloadJson = payloadJson,
+            operationIdFactory = operationIdFactory,
+            nowEpochMillis = nowEpochMillisProvider(),
+        )
+        if (result.decision != com.feniqo.mobile.data.local.dao.V2EnqueueDecision.HARD_DELETED) {
+            syncScheduler?.scheduleOutboxSync()
+        }
+        return result.operationId
+    }
+
+    suspend fun enqueueDebtPaymentV2(
+        entity: DebtPaymentEntity,
+        updatedDebt: DebtEntity,
+        payloadJson: String,
+    ): String {
+        validateMutation(entity.sync, OutboxOperationType.CREATE)
+        val result = mutationDao.mutateDebtPaymentV2(
+            entity = entity,
+            updatedDebt = updatedDebt,
+            payloadJson = payloadJson,
+            operationIdFactory = operationIdFactory,
+            nowEpochMillis = nowEpochMillisProvider(),
+        )
+        if (result.decision != com.feniqo.mobile.data.local.dao.V2EnqueueDecision.HARD_DELETED) {
+            syncScheduler?.scheduleOutboxSync()
+        }
+        return result.operationId
+    }
+
+
 
     suspend fun enqueueBudgetsV2(
         inputs: List<com.feniqo.mobile.data.local.dao.BudgetMutationInputV2>,

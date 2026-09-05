@@ -22,36 +22,45 @@ data class ProfileDto(
     val version: Long? = null,
 )
 
-/** Mevcut web şemasındaki `created_by`, domain'deki owner kimliğine dönüştürülür. */
+/** Supabase `workspaces` satırının ağ temsilidir. */
 @Serializable
 data class WorkspaceDto(
     val id: String,
     val name: String,
-    @SerialName("created_by")
-    val createdBy: String?,
+    @SerialName("normalized_name")
+    val normalizedName: String,
+    @SerialName("owner_id")
+    val ownerId: String,
+    @SerialName("type_code")
+    val typeCode: String,
+    @SerialName("currency_code")
+    val currencyCode: String,
+    val description: String? = null,
     @SerialName("created_at")
     val createdAt: String,
     @SerialName("updated_at")
-    val updatedAt: String? = null,
+    val updatedAt: String,
     @SerialName("deleted_at")
     val deletedAt: String? = null,
-    val version: Long? = null,
+    val version: Long,
 )
 
-/** Üyelik satırının teknik `id` alanı domain ilişkisini etkilemez. */
+/** Supabase `workspace_members` satırının ağ temsilidir. */
 @Serializable
 data class WorkspaceMemberDto(
-    val id: String? = null,
     @SerialName("workspace_id")
     val workspaceId: String,
     @SerialName("user_id")
     val userId: String,
-    val role: String,
-    @SerialName("created_at")
-    val createdAt: String,
+    @SerialName("role_code")
+    val roleCode: String,
+    @SerialName("joined_at")
+    val joinedAt: String,
     @SerialName("updated_at")
-    val updatedAt: String? = null,
+    val updatedAt: String,
     @SerialName("deleted_at")
     val deletedAt: String? = null,
-    val version: Long? = null,
+    val version: Long,
 )
+
+

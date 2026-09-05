@@ -45,7 +45,6 @@ fun CategoriesPlaceholderScreen(
 fun ThemeSettingsPlaceholderScreen(
     themeMode: ThemeMode,
     onThemeModeChange: suspend (ThemeMode) -> Unit,
-    onNavigateToRecurringTransactions: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -76,14 +75,6 @@ fun ThemeSettingsPlaceholderScreen(
                     },
                 )
             }
-        }
-
-        Text("Finansal Araçlar", style = MaterialTheme.typography.headlineMedium)
-        Button(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = onNavigateToRecurringTransactions,
-        ) {
-            Text("Tekrarlayan İşlemler (Abonelikler)")
         }
     }
 }

@@ -26,4 +26,26 @@ class EntityIdGeneratorTest {
         assertTrue(id2.value.isNotBlank())
         assertNotEquals(id1, id2)
     }
+
+    @Test
+    fun randomUuidEntityIdGenerator_generatesValidRfc4122Uuid() {
+        val generator = RandomUuidEntityIdGenerator()
+        val id = generator.nextId().value
+
+        assertEquals(36, id.length)
+        val uuidRegex = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
+        assertTrue(uuidRegex.matches(id), "Generated UUID should match RFC-4122 v4 pattern: $id")
+    }
+
+    @Test
+    fun randomUuidEntityIdGenerator_generatesUniqueIds() {
+        val generator = RandomUuidEntityIdGenerator()
+        val id1 = generator.nextId()
+        val id2 = generator.nextId()
+
+        assertTrue(id1.value.isNotBlank())
+        assertTrue(id2.value.isNotBlank())
+        assertNotEquals(id1, id2)
+    }
 }
+

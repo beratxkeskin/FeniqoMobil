@@ -60,9 +60,15 @@ fun DashboardHeader(
         verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
     ) {
         Text(
+            text = "Finansal görünümün",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Text(
             text = "Genel Bakış",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onBackground,
         )
         Text(
@@ -85,53 +91,58 @@ fun MonthlySummaryGrid(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
     ) {
-        // Üst Satır: Gelir ve Gider
-        Row(
+        Surface(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
+            shape = RoundedCornerShape(FeniqoRadius.Large),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
         ) {
-            SummaryMetricCard(
-                title = "Aylık Gelir",
-                value = summary.formattedIncome,
-                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.weight(1f),
-            )
-            SummaryMetricCard(
-                title = "Aylık Gider",
-                value = summary.formattedExpense,
-                containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
-                contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.weight(1f),
-            )
-        }
-
-        // Alt Satır: Net Bakiye ve Tasarruf Oranı
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
-        ) {
-            val (balanceBgColor, balanceTextColor) = when (summary.balanceStatus) {
-                NetBalanceStatus.POSITIVE -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
-                NetBalanceStatus.NEGATIVE -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
-                NetBalanceStatus.NEUTRAL -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+            Column(
+                modifier = Modifier.padding(FeniqoSpacing.Large),
+                verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+            ) {
+                Text(
+                    text = "Net bakiye",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.72f),
+                )
+                Text(
+                    text = summary.formattedBalance,
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
+        }
 
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
+        ) {
             SummaryMetricCard(
-                title = "Net Bakiye",
-                value = summary.formattedBalance,
-                containerColor = balanceBgColor.copy(alpha = 0.55f),
-                contentColor = balanceTextColor,
+                title = "Gelir",
+                value = summary.formattedIncome,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f),
             )
             SummaryMetricCard(
-                title = "Tasarruf Oranı",
-                value = summary.formattedSavingsRate,
-                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                title = "Gider",
+                value = summary.formattedExpense,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.error,
                 modifier = Modifier.weight(1f),
             )
         }
+
+        SummaryMetricCard(
+            title = "Tasarruf oranı",
+            value = summary.formattedSavingsRate,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -153,6 +164,7 @@ private fun SummaryMetricCard(
             containerColor = containerColor,
             contentColor = contentColor,
         ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
             modifier = Modifier

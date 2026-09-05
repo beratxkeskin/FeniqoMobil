@@ -16,6 +16,7 @@ import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.ProfileDto
 import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
+import com.feniqo.mobile.data.remote.dto.WorkspaceDto
 
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -252,13 +253,354 @@ class V2OutboxOperationExecutorTest {
         assertEquals(3L, result.conflict.remoteVersion)
     }
 
+    @Test
+    fun workspace_v2_executor_create_dispatches_cleanly_to_writer() = runTest {
+        val testWsId = "550e8400-e29b-41d4-a716-446655440000"
+        val remoteWs = WorkspaceDto(
+            id = testWsId,
+            name = "Aile Bütçesi",
+            normalizedName = "aile bütçesi",
+            ownerId = USER_ID,
+            typeCode = "shared",
+            currencyCode = "TRY",
+            description = "Ortak",
+            createdAt = "2026-03-01T10:00:00Z",
+            updatedAt = "2026-03-01T10:00:01Z",
+            deletedAt = null,
+            version = 1L,
+        )
+        val writer = RecordingV2Writer(
+            workspaceResult = ConditionalRemoteWriteResult.Applied(remoteWs),
+        )
+        val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+        val wsPayload = """
+            {
+                "id": "$testWsId",
+                "name": "Aile Bütçesi",
+                "type_code": "shared",
+                "currency_code": "TRY",
+                "description": "Ortak",
+                "created_at": "2026-03-01T10:00:00Z"
+            }
+        """.trimIndent()
+        val wsOp = SyncOperationEntity(
+            operationId = "op-ws-1",
+            entityTypeCode = "WORKSPACE",
+            entityId = testWsId,
+            operationTypeCode = "CREATE",
+            baseVersion = null,
+            payloadJson = wsPayload,
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "IN_FLIGHT",
+            attemptCount = 1,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+
+        val result = executor.execute(wsOp)
+        assertIs<OutboxExecutionResult.WorkspaceApplied>(result)
+        assertEquals(1L, result.record.version)
+        assertEquals("op-ws-1", writer.lastOperationId)
+        assertEquals(RemoteWriteOperation.CREATE, writer.lastOperation)
+        assertEquals(null, writer.lastBaseVersion)
+        assertEquals(testWsId, writer.lastWorkspacePayload?.get("id")?.toString()?.replace("\"", ""))
+    }
+
+    @Test
+    fun workspace_v2_executor_update_and_delete_dispatch_and_conflict() = runTest {
+        val testWsId = "550e8400-e29b-41d4-a716-446655440000"
+        val remoteWs = WorkspaceDto(
+            id = testWsId,
+            name = "Aile Bütçesi Güncel",
+            normalizedName = "aile bütçesi güncel",
+            ownerId = USER_ID,
+            typeCode = "shared",
+            currencyCode = "TRY",
+            description = null,
+            createdAt = "2026-03-01T10:00:00Z",
+            updatedAt = "2026-03-01T10:00:10Z",
+            deletedAt = null,
+            version = 2L,
+        )
+        val writer = RecordingV2Writer(
+            workspaceResult = ConditionalRemoteWriteResult.Applied(remoteWs),
+        )
+        val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+        // 1. UPDATE
+        val updatePayload = """
+            {
+                "id": "$testWsId",
+                "name": "Aile Bütçesi Güncel",
+                "type_code": "shared",
+                "currency_code": "TRY",
+                "description": null
+            }
+        """.trimIndent()
+        val updateOp = SyncOperationEntity(
+            operationId = "op-ws-update",
+            entityTypeCode = "WORKSPACE",
+            entityId = testWsId,
+            operationTypeCode = "UPDATE",
+            baseVersion = 1L,
+            payloadJson = updatePayload,
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "IN_FLIGHT",
+            attemptCount = 1,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+        val updateResult = executor.execute(updateOp)
+        assertIs<OutboxExecutionResult.WorkspaceApplied>(updateResult)
+        assertEquals(2L, updateResult.record.version)
+        assertEquals(1L, writer.lastBaseVersion)
+
+        // 2. DELETE + NOT_FOUND -> MissingDeleteAcknowledged
+        writer.workspaceResult = ConditionalRemoteWriteResult.NotFound
+        val deletePayload = """{"id": "$testWsId"}"""
+        val deleteOp = SyncOperationEntity(
+            operationId = "op-ws-delete",
+            entityTypeCode = "WORKSPACE",
+            entityId = testWsId,
+            operationTypeCode = "DELETE",
+            baseVersion = 2L,
+            payloadJson = deletePayload,
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "IN_FLIGHT",
+            attemptCount = 1,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+        val deleteResult = executor.execute(deleteOp)
+        assertIs<OutboxExecutionResult.MissingDeleteAcknowledged>(deleteResult)
+
+        // 3. CONFLICT
+        writer.workspaceResult = ConditionalRemoteWriteResult.Conflict(remoteWs.copy(version = 5L))
+        val conflictResult = executor.execute(updateOp)
+        assertIs<OutboxExecutionResult.ConflictDetected>(conflictResult)
+        assertEquals(5L, conflictResult.conflict.remoteVersion)
+        assertEquals(1L, conflictResult.conflict.localVersion)
+    }
+
+    @Test
+    fun workspace_v2_executor_rejects_invalid_payload_before_calling_writer() = runTest {
+        val writer = RecordingV2Writer()
+        val executor = V2OutboxOperationExecutor(writer) { 1000L }
+        val testWsId = "550e8400-e29b-41d4-a716-446655440000"
+
+        // 1. Forbidden key in UPDATE
+        val invalidPayload = """
+            {
+                "id": "$testWsId",
+                "name": "Yeni Ad",
+                "type_code": "shared",
+                "currency_code": "TRY",
+                "forbidden_field": 123
+            }
+        """.trimIndent()
+        val opForbidden = SyncOperationEntity(
+            operationId = "op-ws-invalid-1",
+            entityTypeCode = "WORKSPACE",
+            entityId = testWsId,
+            operationTypeCode = "UPDATE",
+            baseVersion = 1L,
+            payloadJson = invalidPayload,
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "IN_FLIGHT",
+            attemptCount = 1,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            executor.execute(opForbidden)
+        }
+        assertEquals(null, writer.lastOperationId)
+
+        // 2. Non-UUID entityId / payload id
+        val nonUuidPayload = """
+            {
+                "id": "ws-not-uuid",
+                "name": "Yeni Ad",
+                "type_code": "shared",
+                "currency_code": "TRY"
+            }
+        """.trimIndent()
+        val opNonUuid = SyncOperationEntity(
+            operationId = "op-ws-invalid-2",
+            entityTypeCode = "WORKSPACE",
+            entityId = "ws-not-uuid",
+            operationTypeCode = "CREATE",
+            baseVersion = null,
+            payloadJson = nonUuidPayload,
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "IN_FLIGHT",
+            attemptCount = 1,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+        assertFailsWith<IllegalArgumentException> {
+            executor.execute(opNonUuid)
+        }
+        assertEquals(null, writer.lastOperationId)
+
+        // 3. Blank description
+        val blankDescPayload = """
+            {
+                "id": "$testWsId",
+                "name": "Yeni Ad",
+                "type_code": "shared",
+                "currency_code": "TRY",
+                "description": "   "
+            }
+        """.trimIndent()
+        val opBlankDesc = SyncOperationEntity(
+            operationId = "op-ws-invalid-3",
+            entityTypeCode = "WORKSPACE",
+            entityId = testWsId,
+            operationTypeCode = "CREATE",
+            baseVersion = null,
+            payloadJson = blankDescPayload,
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "IN_FLIGHT",
+            attemptCount = 1,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+        assertFailsWith<IllegalArgumentException> {
+            executor.execute(opBlankDesc)
+        }
+        assertEquals(null, writer.lastOperationId)
+
+        // 4. Non-Z timezone offset timestamp
+        val nonZPayload = """
+            {
+                "id": "$testWsId",
+                "name": "Yeni Ad",
+                "type_code": "shared",
+                "currency_code": "TRY",
+                "created_at": "2026-03-01T10:00:00+03:00"
+            }
+        """.trimIndent()
+        val opNonZ = SyncOperationEntity(
+            operationId = "op-ws-invalid-4",
+            entityTypeCode = "WORKSPACE",
+            entityId = testWsId,
+            operationTypeCode = "CREATE",
+            baseVersion = null,
+            payloadJson = nonZPayload,
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "IN_FLIGHT",
+            attemptCount = 1,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+        assertFailsWith<IllegalArgumentException> {
+            executor.execute(opNonZ)
+        }
+        assertEquals(null, writer.lastOperationId)
+
+        // 5. Leading/trailing whitespace in entityId
+        val validPayload = """
+            {
+                "id": "$testWsId",
+                "name": "Yeni Ad",
+                "type_code": "shared",
+                "currency_code": "TRY"
+            }
+        """.trimIndent()
+        val opWhitespaceEntityId = SyncOperationEntity(
+            operationId = "op-ws-invalid-5",
+            entityTypeCode = "WORKSPACE",
+            entityId = " $testWsId",
+            operationTypeCode = "CREATE",
+            baseVersion = null,
+            payloadJson = validPayload,
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "IN_FLIGHT",
+            attemptCount = 1,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+        assertFailsWith<IllegalArgumentException> {
+            executor.execute(opWhitespaceEntityId)
+        }
+        assertEquals(null, writer.lastOperationId)
+
+        // 6. Leading/trailing whitespace in payload id
+        val whitespacePayloadId = """
+            {
+                "id": "$testWsId ",
+                "name": "Yeni Ad",
+                "type_code": "shared",
+                "currency_code": "TRY"
+            }
+        """.trimIndent()
+        val opWhitespacePayloadId = SyncOperationEntity(
+            operationId = "op-ws-invalid-6",
+            entityTypeCode = "WORKSPACE",
+            entityId = testWsId,
+            operationTypeCode = "CREATE",
+            baseVersion = null,
+            payloadJson = whitespacePayloadId,
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "IN_FLIGHT",
+            attemptCount = 1,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+        assertFailsWith<IllegalArgumentException> {
+            executor.execute(opWhitespacePayloadId)
+        }
+        assertEquals(null, writer.lastOperationId)
+    }
+
     private class RecordingV2Writer(
         var categoryResult: ConditionalRemoteWriteResult<CategoryDto> = ConditionalRemoteWriteResult.NotFound,
+        var workspaceResult: ConditionalRemoteWriteResult<WorkspaceDto> = ConditionalRemoteWriteResult.NotFound,
     ) : IdempotentConditionalRemoteWriter {
         var lastOperationId: String? = null
         var lastOperation: RemoteWriteOperation? = null
         var lastBaseVersion: Long? = null
         var lastCategoryDto: CategoryDto? = null
+        var lastWorkspacePayload: kotlinx.serialization.json.JsonObject? = null
 
         override suspend fun writeCategory(
             operationId: String,
@@ -271,6 +613,19 @@ class V2OutboxOperationExecutorTest {
             lastBaseVersion = baseVersion
             lastCategoryDto = dto
             return categoryResult
+        }
+
+        override suspend fun writeWorkspace(
+            operationId: String,
+            operation: RemoteWriteOperation,
+            baseVersion: Long?,
+            payload: kotlinx.serialization.json.JsonObject,
+        ): ConditionalRemoteWriteResult<WorkspaceDto> {
+            lastOperationId = operationId
+            lastOperation = operation
+            lastBaseVersion = baseVersion
+            lastWorkspacePayload = payload
+            return workspaceResult
         }
 
         override suspend fun writeProfile(
@@ -300,7 +655,15 @@ class V2OutboxOperationExecutorTest {
             baseVersion: Long?,
             dto: RecurringTransactionDto,
         ): ConditionalRemoteWriteResult<RecurringTransactionDto> = error("Test kapsamı dışı")
+
+        override suspend fun writeSubscription(
+            operationId: String,
+            operation: RemoteWriteOperation,
+            baseVersion: Long?,
+            dto: com.feniqo.mobile.data.remote.dto.SubscriptionDto,
+        ): ConditionalRemoteWriteResult<com.feniqo.mobile.data.remote.dto.SubscriptionDto> = error("Test kapsamı dışı")
     }
+
 
 
     private class RecordingDao(
@@ -312,13 +675,30 @@ class V2OutboxOperationExecutorTest {
         override suspend fun getCategoryRow(id: String): CategoryEntity? = category?.takeIf { it.id == id }
         override suspend fun getTransactionRow(id: String): TransactionEntity? = null
         override suspend fun getRecurringTransactionRow(id: String): com.feniqo.mobile.data.local.entity.RecurringTransactionEntity? = null
+        override suspend fun getSubscriptionRow(id: String): com.feniqo.mobile.data.local.entity.SubscriptionEntity? = null
+        override suspend fun getGoalRow(id: String): com.feniqo.mobile.data.local.entity.GoalEntity? = null
+        override suspend fun getGoalContributionRow(id: String): com.feniqo.mobile.data.local.entity.GoalContributionEntity? = null
+        override suspend fun getDebtRow(id: String): com.feniqo.mobile.data.local.entity.DebtEntity? = null
+        override suspend fun getDebtPaymentRow(id: String): com.feniqo.mobile.data.local.entity.DebtPaymentEntity? = null
+        override suspend fun getWorkspaceRow(id: String): com.feniqo.mobile.data.local.entity.WorkspaceEntity? = null
+        override suspend fun getWorkspaceMemberRow(workspaceId: String, userId: String): com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity? = null
+        override suspend fun getWorkspaceMemberRows(workspaceId: String): List<com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity> = emptyList()
+        override suspend fun getAllKnownLiveWorkspaceIds(): List<String> = emptyList()
         override suspend fun getFirstOutboxOperationId(entityTypeCode: String, entityId: String): String? = OP_ID
+        override suspend fun countOutboxRows(entityTypeCode: String, entityId: String): Int = 1
         override suspend fun upsertProfileRow(entity: UserProfileEntity) = Unit
+        override suspend fun upsertWorkspaceRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceEntity>) = Unit
+        override suspend fun upsertWorkspaceMemberRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity>) = Unit
         override suspend fun upsertCategoryRows(entities: List<CategoryEntity>) {
             category = entities.single()
         }
         override suspend fun upsertTransactionRows(entities: List<TransactionEntity>) = Unit
         override suspend fun upsertRecurringTransactionRows(entities: List<com.feniqo.mobile.data.local.entity.RecurringTransactionEntity>) = Unit
+        override suspend fun upsertSubscriptionRows(entities: List<com.feniqo.mobile.data.local.entity.SubscriptionEntity>) = Unit
+        override suspend fun upsertGoalRows(entities: List<com.feniqo.mobile.data.local.entity.GoalEntity>) = Unit
+        override suspend fun upsertGoalContributionRows(entities: List<com.feniqo.mobile.data.local.entity.GoalContributionEntity>) = Unit
+        override suspend fun upsertDebtRows(entities: List<com.feniqo.mobile.data.local.entity.DebtEntity>) = Unit
+        override suspend fun upsertDebtPaymentRows(entities: List<com.feniqo.mobile.data.local.entity.DebtPaymentEntity>) = Unit
         override suspend fun upsertConflictRow(conflict: SyncConflictEntity) {
             this.conflict = conflict
         }
@@ -328,6 +708,11 @@ class V2OutboxOperationExecutorTest {
         override suspend fun markCategoryConflict(entityId: String, error: String): Int = 1
         override suspend fun markTransactionConflict(entityId: String, error: String): Int = 1
         override suspend fun markRecurringTransactionConflict(entityId: String, error: String): Int = 1
+        override suspend fun markSubscriptionConflict(entityId: String, error: String): Int = 1
+        override suspend fun markGoalConflict(entityId: String, error: String): Int = 1
+        override suspend fun markGoalContributionConflict(entityId: String, error: String): Int = 1
+        override suspend fun markDebtConflict(entityId: String, error: String): Int = 1
+        override suspend fun markDebtPaymentConflict(entityId: String, error: String): Int = 1
         override suspend fun deleteOutboxRows(entityTypeCode: String, entityId: String): Int = 0
         override suspend fun deleteOtherOutboxRows(entityTypeCode: String, entityId: String, keptOperationId: String): Int = 0
         override suspend fun resetConflictOperation(operationId: String, operationTypeCode: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
@@ -335,7 +720,10 @@ class V2OutboxOperationExecutorTest {
         override suspend fun rebaseCategoryForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
         override suspend fun rebaseTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
         override suspend fun rebaseRecurringTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
+        override suspend fun rebaseSubscriptionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
     }
+
+
 
 
     private companion object {

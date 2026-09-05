@@ -92,3 +92,60 @@ data class RecurringTransactionRemoteQuery(
     val workspaceScope: RemoteWorkspaceScope = RemoteWorkspaceScope.All,
     val updatedAfter: RemoteSyncCursor? = null,
 )
+
+data class SubscriptionRemoteQuery(
+    val page: RemotePageRequest = RemotePageRequest(),
+    val workspaceScope: RemoteWorkspaceScope = RemoteWorkspaceScope.All,
+    val updatedAfter: RemoteSyncCursor? = null,
+)
+
+data class GoalRemoteQuery(
+    val page: RemotePageRequest = RemotePageRequest(),
+    val workspaceScope: RemoteWorkspaceScope = RemoteWorkspaceScope.All,
+    val updatedAfter: RemoteSyncCursor? = null,
+)
+
+data class GoalContributionRemoteQuery(
+    val page: RemotePageRequest = RemotePageRequest(),
+    val goalId: EntityId? = null,
+    val updatedAfter: RemoteSyncCursor? = null,
+)
+
+data class DebtRemoteQuery(
+    val page: RemotePageRequest = RemotePageRequest(),
+    val workspaceScope: RemoteWorkspaceScope = RemoteWorkspaceScope.All,
+    val updatedAfter: RemoteSyncCursor? = null,
+)
+
+data class DebtPaymentRemoteQuery(
+    val page: RemotePageRequest = RemotePageRequest(),
+    val debtId: EntityId? = null,
+    val updatedAfter: RemoteSyncCursor? = null,
+)
+
+/** WorkspaceMember composite cursor (updated_at, workspace_id, user_id). */
+data class WorkspaceMemberSyncCursor(
+    val updatedAt: String,
+    val workspaceId: String,
+    val userId: String,
+) {
+    init {
+        require(updatedAt.isNotBlank()) { "WorkspaceMemberSyncCursor updatedAt alanı boş olamaz." }
+        require(workspaceId.isNotBlank()) { "WorkspaceMemberSyncCursor workspaceId alanı boş olamaz." }
+        require(userId.isNotBlank()) { "WorkspaceMemberSyncCursor userId alanı boş olamaz." }
+        runCatching { Instant.parse(updatedAt) }
+            .getOrElse { throw IllegalArgumentException("WorkspaceMemberSyncCursor updatedAt geçerli bir UTC zaman damgası olmalıdır.", it) }
+    }
+}
+
+data class WorkspaceRemoteQuery(
+    val page: RemotePageRequest = RemotePageRequest(),
+    val updatedAfter: RemoteSyncCursor? = null,
+)
+
+data class WorkspaceMemberRemoteQuery(
+    val page: RemotePageRequest = RemotePageRequest(),
+    val workspaceId: EntityId? = null,
+    val updatedAfter: WorkspaceMemberSyncCursor? = null,
+)
+

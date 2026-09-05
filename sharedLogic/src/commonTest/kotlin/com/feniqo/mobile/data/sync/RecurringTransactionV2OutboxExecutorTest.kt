@@ -203,7 +203,15 @@ class RecurringTransactionV2OutboxExecutorTest {
             baseVersion: Long?,
             dto: BudgetDto,
         ): ConditionalRemoteWriteResult<BudgetDto> = error("Test kapsamı dışı")
+
+        override suspend fun writeSubscription(
+            operationId: String,
+            operation: RemoteWriteOperation,
+            baseVersion: Long?,
+            dto: com.feniqo.mobile.data.remote.dto.SubscriptionDto,
+        ): ConditionalRemoteWriteResult<com.feniqo.mobile.data.remote.dto.SubscriptionDto> = error("Test kapsamı dışı")
     }
+
 
     private companion object {
         const val OP_ID = "0123456789abcdef0123456789abcdef"

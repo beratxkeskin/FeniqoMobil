@@ -37,7 +37,18 @@ enum class FinanceUiMessage {
     BUDGET_SAVED,
     BUDGET_DELETED,
     BUDGETS_COPIED,
-    BUDGET_COPY_MONTHS_SAME;
+    BUDGET_COPY_MONTHS_SAME,
+    SUBSCRIPTION_SAVED,
+    SUBSCRIPTION_DELETED,
+    SUBSCRIPTION_RENEWED,
+    SUBSCRIPTION_COMPLETED,
+    GOAL_SAVED,
+    GOAL_DELETED,
+    GOAL_CONTRIBUTION_ADDED,
+    DEBT_SAVED,
+    DEBT_DELETED,
+    DEBT_PAYMENT_ADDED;
+
 
     val isError: Boolean
         get() = when (this) {
@@ -47,11 +58,22 @@ enum class FinanceUiMessage {
             CATEGORY_DELETED,
             BUDGET_SAVED,
             BUDGET_DELETED,
-            BUDGETS_COPIED -> false
+            BUDGETS_COPIED,
+            SUBSCRIPTION_SAVED,
+            SUBSCRIPTION_DELETED,
+            SUBSCRIPTION_RENEWED,
+            SUBSCRIPTION_COMPLETED,
+            GOAL_SAVED,
+            GOAL_DELETED,
+            GOAL_CONTRIBUTION_ADDED,
+            DEBT_SAVED,
+            DEBT_DELETED,
+            DEBT_PAYMENT_ADDED -> false
             else -> true
         }
 
     fun toDisplayText(): String = when (this) {
+
         INVALID_AMOUNT -> "Geçerli bir tutar girin."
         AMOUNT_REQUIRED -> "Lütfen bir tutar girin."
         AMOUNT_TOO_SMALL -> "Tutar taksit sayısına bölünemeyecek kadar küçük."
@@ -84,8 +106,21 @@ enum class FinanceUiMessage {
         BUDGET_DELETED -> "Bütçe başarıyla silindi."
         BUDGETS_COPIED -> "Bütçeler başarıyla kopyalandı."
         BUDGET_COPY_MONTHS_SAME -> "Kaynak ve hedef ay aynı olamaz."
+        SUBSCRIPTION_SAVED -> "Abonelik başarıyla kaydedildi."
+        SUBSCRIPTION_DELETED -> "Abonelik başarıyla silindi."
+        SUBSCRIPTION_RENEWED -> "Abonelik yenilemesi kaydedildi."
+        SUBSCRIPTION_COMPLETED -> "Abonelik süresi tamamlandı ve pasife alındı."
+        GOAL_SAVED -> "Hedef başarıyla kaydedildi."
+        GOAL_DELETED -> "Hedef başarıyla silindi."
+        GOAL_CONTRIBUTION_ADDED -> "Hedef hareketi başarıyla kaydedildi."
+        DEBT_SAVED -> "Borç / alacak kaydı başarıyla kaydedildi."
+        DEBT_DELETED -> "Borç / alacak kaydı başarıyla silindi."
+        DEBT_PAYMENT_ADDED -> "Ödeme / tahsilat başarıyla kaydedildi."
     }
+
+
 }
+
 
 /**
  * Domain AppError hatalarını tipli FinanceUiMessage'a dönüştürür.

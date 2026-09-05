@@ -3,7 +3,12 @@ package com.feniqo.mobile.data.sync
 import com.feniqo.mobile.data.local.dao.RemoteSyncDao
 import com.feniqo.mobile.data.local.dao.SyncStateDao
 import com.feniqo.mobile.data.local.entity.CategoryEntity
+import com.feniqo.mobile.data.local.entity.DebtEntity
+import com.feniqo.mobile.data.local.entity.DebtPaymentEntity
+import com.feniqo.mobile.data.local.entity.GoalContributionEntity
+import com.feniqo.mobile.data.local.entity.GoalEntity
 import com.feniqo.mobile.data.local.entity.RecurringTransactionEntity
+import com.feniqo.mobile.data.local.entity.SubscriptionEntity
 import com.feniqo.mobile.data.local.entity.SyncConflictEntity
 import com.feniqo.mobile.data.local.entity.SyncCursorEntity
 import com.feniqo.mobile.data.local.entity.TransactionEntity
@@ -12,25 +17,36 @@ import com.feniqo.mobile.data.mapper.toDomain
 import com.feniqo.mobile.data.mapper.toEntity
 import com.feniqo.mobile.data.remote.core.CategoryRemoteQuery
 import com.feniqo.mobile.data.remote.core.CoreRemoteDataSource
+import com.feniqo.mobile.data.remote.core.DebtPaymentRemoteQuery
+import com.feniqo.mobile.data.remote.core.DebtRemoteQuery
+import com.feniqo.mobile.data.remote.core.GoalContributionRemoteQuery
+import com.feniqo.mobile.data.remote.core.GoalRemoteQuery
 import com.feniqo.mobile.data.remote.core.RecurringTransactionRemoteQuery
 import com.feniqo.mobile.data.remote.core.RemotePage
 import com.feniqo.mobile.data.remote.core.RemotePageRequest
 import com.feniqo.mobile.data.remote.core.RemoteSyncCursor
 import com.feniqo.mobile.data.remote.core.RemoteWorkspaceScope
+import com.feniqo.mobile.data.remote.core.SubscriptionRemoteQuery
 import com.feniqo.mobile.data.remote.core.TransactionRemoteQuery
 import com.feniqo.mobile.data.remote.dto.CategoryDto
+import com.feniqo.mobile.data.remote.dto.DebtDto
+import com.feniqo.mobile.data.remote.dto.DebtPaymentDto
+import com.feniqo.mobile.data.remote.dto.GoalContributionDto
+import com.feniqo.mobile.data.remote.dto.GoalDto
 import com.feniqo.mobile.data.remote.dto.ProfileDto
 import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
+import com.feniqo.mobile.data.remote.dto.SubscriptionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.remote.mapper.toDomain
 import com.feniqo.mobile.data.remote.mapper.toDto
+
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.SyncStatus
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.time.Instant
 
-/** Sunucuda cursor sonrasında değişen V1 kayıtlarını Room SSOT'a uygular. */
+/** Sunucuda cursor sonrasında değişen V1/V2 kayıtlarını Room SSOT'a uygular. */
 class IncrementalRemoteSync(
     private val remote: CoreRemoteDataSource,
     private val remoteSyncDao: RemoteSyncDao,
@@ -84,6 +100,102 @@ class IncrementalRemoteSync(
             conflicts += result.conflicts
         }
 
+        val subscriptionCursor = syncStateDao.getCursor(SUBSCRIPTION)
+        val subscriptions = fetchAll { page ->
+            remote.fetchSubscriptions(
+                SubscriptionRemoteQuery(
+                    page = page,
+                    workspaceScope = RemoteWorkspaceScope.Personal,
+                    updatedAfter = subscriptionCursor?.toRemoteCursor(),
+                ),
+            )
+        }
+        subscriptions.forEach { dto ->
+            val result = applySubscription(dto)
+            applied += result.applied
+            conflicts += result.conflicts
+        }
+
+        val goalCursor = syncStateDao.getCursor(GOAL)
+        val goals = fetchAll { page ->
+            remote.fetchGoals(
+                GoalRemoteQuery(
+                    page = page,
+                    workspaceScope = RemoteWorkspaceScope.Personal,
+                    updatedAfter = goalCursor?.toRemoteCursor(),
+                ),
+            )
+        }
+        goals.forEach { dto ->
+            val result = applyGoal(dto)
+            applied += result.applied
+            conflicts += result.conflicts
+        }
+
+        val goalContributionCursor = syncStateDao.getCursor(GOAL_CONTRIBUTION)
+        val goalContributions = fetchAll { page ->
+            remote.fetchGoalContributions(
+                GoalContributionRemoteQuery(
+                    page = page,
+                    updatedAfter = goalContributionCursor?.toRemoteCursor(),
+                ),
+            )
+        }
+        for (dto in goalContributions) {
+            if (dto.deletedAt == null) {
+                val parentGoal = remoteSyncDao.getGoalRow(dto.goalId)
+                checkNotNull(parentGoal) {
+                    "Uzak hedef katkısı (${dto.id}) için üst hedef (${dto.goalId}) yerel veritabanında bulunamadı."
+                }
+            }
+        }
+        goalContributions.forEach { dto ->
+            val result = applyGoalContribution(dto)
+            applied += result.applied
+            conflicts += result.conflicts
+        }
+
+        val debtCursor = syncStateDao.getCursor(DEBT)
+        val debts = fetchAll { page ->
+            remote.fetchDebts(
+                DebtRemoteQuery(
+                    page = page,
+                    workspaceScope = RemoteWorkspaceScope.Personal,
+                    updatedAfter = debtCursor?.toRemoteCursor(),
+                ),
+            )
+        }
+        debts.forEach { dto ->
+            val result = applyDebt(dto)
+            applied += result.applied
+            conflicts += result.conflicts
+        }
+
+        val debtPaymentCursor = syncStateDao.getCursor(DEBT_PAYMENT)
+        val debtPayments = fetchAll { page ->
+            remote.fetchDebtPayments(
+                DebtPaymentRemoteQuery(
+                    page = page,
+                    updatedAfter = debtPaymentCursor?.toRemoteCursor(),
+                ),
+            )
+        }
+        for (dto in debtPayments) {
+            if (dto.deletedAt == null) {
+                val parentDebt = remoteSyncDao.getDebtRow(dto.debtId)
+                checkNotNull(parentDebt) {
+                    "Uzak borç ödemesi (${dto.id}) için üst borç (${dto.debtId}) yerel veritabanında bulunamadı."
+                }
+            }
+        }
+        debtPayments.forEach { dto ->
+            val result = applyDebtPayment(dto)
+            applied += result.applied
+            conflicts += result.conflicts
+        }
+
+
+
         val transactionCursor = syncStateDao.getCursor(TRANSACTION)
         val transactions = fetchAll { page ->
             remote.fetchTransactions(
@@ -106,6 +218,11 @@ class IncrementalRemoteSync(
             receivedCategoryCount = categories.size,
             receivedTransactionCount = transactions.size,
             receivedRecurringTransactionCount = recurringTransactions.size,
+            receivedSubscriptionCount = subscriptions.size,
+            receivedGoalCount = goals.size,
+            receivedGoalContributionCount = goalContributions.size,
+            receivedDebtCount = debts.size,
+            receivedDebtPaymentCount = debtPayments.size,
         )
     }
 
@@ -188,6 +305,150 @@ class IncrementalRemoteSync(
         )
     }
 
+    private suspend fun applySubscription(dto: SubscriptionDto): ApplyResult {
+        val cursor = dto.cursor(SUBSCRIPTION)
+        val local = remoteSyncDao.getSubscriptionRow(dto.id)
+        val remoteEntity = dto.toDomain().toEntity(dto.toRemoteSyncMetadata(nowEpochMillisProvider()))
+        return applyOrConflict(
+            local = local,
+            remoteVersion = dto.requiredVersion(SUBSCRIPTION),
+            apply = { remoteSyncDao.applySubscriptionPull(remoteEntity, cursor) },
+            conflict = {
+                remoteSyncDao.recordSubscriptionPullConflict(
+                    conflict = pullConflict(
+                        entityType = SUBSCRIPTION,
+                        entityId = dto.id,
+                        operationId = requiredOutboxOperationId(SUBSCRIPTION, dto.id),
+                        localVersion = local!!.sync.version,
+                        remoteVersion = dto.requiredVersion(SUBSCRIPTION),
+                        local = local.toDomain().toDto(),
+                        remote = dto,
+                    ),
+                    cursor = cursor,
+                )
+            },
+            advance = { remoteSyncDao.advancePullCursor(cursor) },
+        )
+    }
+
+    private suspend fun applyGoal(dto: GoalDto): ApplyResult {
+        val cursor = dto.cursor(GOAL)
+        val local = remoteSyncDao.getGoalRow(dto.id)
+        val remoteEntity = dto.toDomain().toEntity(dto.toRemoteSyncMetadata(nowEpochMillisProvider()))
+        return applyOrConflict(
+            local = local,
+            remoteVersion = dto.requiredVersion(GOAL),
+            apply = { remoteSyncDao.applyGoalPull(remoteEntity, cursor) },
+            conflict = {
+                remoteSyncDao.recordGoalPullConflict(
+                    conflict = pullConflict(
+                        entityType = GOAL,
+                        entityId = dto.id,
+                        operationId = requiredOutboxOperationId(GOAL, dto.id),
+                        localVersion = local!!.sync.version,
+                        remoteVersion = dto.requiredVersion(GOAL),
+                        local = local.toDomain().toDto(),
+                        remote = dto,
+                    ),
+                    cursor = cursor,
+                )
+            },
+            advance = { remoteSyncDao.advancePullCursor(cursor) },
+        )
+    }
+
+    private suspend fun applyGoalContribution(dto: GoalContributionDto): ApplyResult {
+        val cursor = dto.cursor(GOAL_CONTRIBUTION)
+        if (dto.deletedAt == null) {
+            val parentGoal = remoteSyncDao.getGoalRow(dto.goalId)
+            checkNotNull(parentGoal) {
+                "Uzak hedef katkısı (${dto.id}) için üst hedef (${dto.goalId}) yerel veritabanında bulunamadı."
+            }
+        }
+
+        val local = remoteSyncDao.getGoalContributionRow(dto.id)
+        val remoteEntity = dto.toDomain().toEntity(dto.toRemoteSyncMetadata(nowEpochMillisProvider()))
+        return applyOrConflict(
+            local = local,
+            remoteVersion = dto.requiredVersion(GOAL_CONTRIBUTION),
+            apply = { remoteSyncDao.applyGoalContributionPull(remoteEntity, cursor) },
+            conflict = {
+                remoteSyncDao.recordGoalContributionPullConflict(
+                    conflict = pullConflict(
+                        entityType = GOAL_CONTRIBUTION,
+                        entityId = dto.id,
+                        operationId = requiredOutboxOperationId(GOAL_CONTRIBUTION, dto.id),
+                        localVersion = local!!.sync.version,
+                        remoteVersion = dto.requiredVersion(GOAL_CONTRIBUTION),
+                        local = local.toDomain().toDto(),
+                        remote = dto,
+                    ),
+                    cursor = cursor,
+                )
+            },
+            advance = { remoteSyncDao.advancePullCursor(cursor) },
+        )
+    }
+
+    private suspend fun applyDebt(dto: DebtDto): ApplyResult {
+        val cursor = dto.cursor(DEBT)
+        val local = remoteSyncDao.getDebtRow(dto.id)
+        val remoteEntity = dto.toDomain().toEntity(dto.toRemoteSyncMetadata(nowEpochMillisProvider()))
+        return applyOrConflict(
+            local = local,
+            remoteVersion = dto.requiredVersion(DEBT),
+            apply = { remoteSyncDao.applyDebtPull(remoteEntity, cursor) },
+            conflict = {
+                remoteSyncDao.recordDebtPullConflict(
+                    conflict = pullConflict(
+                        entityType = DEBT,
+                        entityId = dto.id,
+                        operationId = requiredOutboxOperationId(DEBT, dto.id),
+                        localVersion = local!!.sync.version,
+                        remoteVersion = dto.requiredVersion(DEBT),
+                        local = local.toDomain().toDto(),
+                        remote = dto,
+                    ),
+                    cursor = cursor,
+                )
+            },
+            advance = { remoteSyncDao.advancePullCursor(cursor) },
+        )
+    }
+
+    private suspend fun applyDebtPayment(dto: DebtPaymentDto): ApplyResult {
+        val cursor = dto.cursor(DEBT_PAYMENT)
+        if (dto.deletedAt == null) {
+            val parentDebt = remoteSyncDao.getDebtRow(dto.debtId)
+            checkNotNull(parentDebt) {
+                "Uzak borç ödemesi (${dto.id}) için üst borç (${dto.debtId}) yerel veritabanında bulunamadı."
+            }
+        }
+
+        val local = remoteSyncDao.getDebtPaymentRow(dto.id)
+        val remoteEntity = dto.toDomain().toEntity(dto.toRemoteSyncMetadata(nowEpochMillisProvider()))
+        return applyOrConflict(
+            local = local,
+            remoteVersion = dto.requiredVersion(DEBT_PAYMENT),
+            apply = { remoteSyncDao.applyDebtPaymentPull(remoteEntity, cursor) },
+            conflict = {
+                remoteSyncDao.recordDebtPaymentPullConflict(
+                    conflict = pullConflict(
+                        entityType = DEBT_PAYMENT,
+                        entityId = dto.id,
+                        operationId = requiredOutboxOperationId(DEBT_PAYMENT, dto.id),
+                        localVersion = local!!.sync.version,
+                        remoteVersion = dto.requiredVersion(DEBT_PAYMENT),
+                        local = local.toDomain().toDto(),
+                        remote = dto,
+                    ),
+                    cursor = cursor,
+                )
+            },
+            advance = { remoteSyncDao.advancePullCursor(cursor) },
+        )
+    }
+
     private suspend fun applyTransaction(dto: TransactionDto): ApplyResult {
         val cursor = dto.cursor(TRANSACTION)
         val local = remoteSyncDao.getTransactionRow(dto.id)
@@ -226,6 +487,11 @@ class IncrementalRemoteSync(
             is CategoryEntity -> local.sync
             is TransactionEntity -> local.sync
             is RecurringTransactionEntity -> local.sync
+            is SubscriptionEntity -> local.sync
+            is GoalEntity -> local.sync
+            is GoalContributionEntity -> local.sync
+            is DebtEntity -> local.sync
+            is DebtPaymentEntity -> local.sync
             null -> null
             else -> error("Desteklenmeyen yerel sync entity türü.")
         }
@@ -297,6 +563,11 @@ class IncrementalRemoteSync(
     private fun CategoryDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
     private fun TransactionDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
     private fun RecurringTransactionDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
+    private fun SubscriptionDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
+    private fun GoalDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
+    private fun GoalContributionDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
+    private fun DebtDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
+    private fun DebtPaymentDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
 
     private fun cursor(entityType: String, entityId: String, updatedAt: String) = SyncCursorEntity(
         entityTypeCode = entityType,
@@ -308,6 +579,11 @@ class IncrementalRemoteSync(
     private fun CategoryDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
     private fun TransactionDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
     private fun RecurringTransactionDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
+    private fun SubscriptionDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
+    private fun GoalDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
+    private fun GoalContributionDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
+    private fun DebtDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
+    private fun DebtPaymentDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
 
     private fun requiredVersion(entityType: String, version: Long?): Long = requireNotNull(version) {
         "$entityType uzak kaydı version taşımıyor; sync migration uygulanmadan pull yapılamaz."
@@ -319,6 +595,11 @@ class IncrementalRemoteSync(
         const val PROFILE = "PROFILE"
         const val CATEGORY = "CATEGORY"
         const val RECURRING_TRANSACTION = "RECURRING_TRANSACTION"
+        const val SUBSCRIPTION = "SUBSCRIPTION"
+        const val GOAL = "GOAL"
+        const val GOAL_CONTRIBUTION = "GOAL_CONTRIBUTION"
+        const val DEBT = "DEBT"
+        const val DEBT_PAYMENT = "DEBT_PAYMENT"
         const val TRANSACTION = "TRANSACTION"
     }
 }
@@ -329,4 +610,9 @@ data class IncrementalSyncResult(
     val receivedCategoryCount: Int,
     val receivedTransactionCount: Int,
     val receivedRecurringTransactionCount: Int = 0,
+    val receivedSubscriptionCount: Int = 0,
+    val receivedGoalCount: Int = 0,
+    val receivedGoalContributionCount: Int = 0,
+    val receivedDebtCount: Int = 0,
+    val receivedDebtPaymentCount: Int = 0,
 )

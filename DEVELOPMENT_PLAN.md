@@ -6,11 +6,16 @@
 
 ## Güncel durum
 
-- Aktif çalışma: **8.2 — Tekrarlayan İşlemler ve Abonelikler (Recurring Transactions)** (Devam ediyor).
-- Tamamlanan dilimler: Dilim 1A–1E (vade hesaplama, aday planlama, Room atomik occurrence üretimi, repository/use-case, Android WorkManager), Dilim 2A (saf command/validation kuralları) ve Dilim 2B (Supabase V2 migration ve 28 senaryolu SQL sözleşme testi).
-- Sıradaki teknik adım: Recurring rule için Android/KMP V2 istemci entegrasyonu (DTO/mapper, `SyncEntityType.RECURRING_TRANSACTION`, outbox ACK/pull ve CRUD akışı). UI ve abonelikler daha sonra.
+- Aktif çalışma: **Faz 8.4 — Ortak Çalışma Alanları (Workspaces)** (Domain/validation ve Room v9→v10 şema/DAO dilimleri tamamlandı; Workspace V2 outbox/sync tasarımı sıradadır).
+- Görsel yenileme: Feniqo production UI tasarımının ikinci dilimi tamamlandı; tema ve alt navigasyona ek olarak Dashboard net bakiye hero hiyerarşisi, düz finans metrikleri, gelir/gider semantiği ve Plan/Profil modül menülerinin sade yüzey dili güncellendi.
+- Tamamlanan fazlar:
+  - Faz 8.3 — Hedefler ve Borçlar (Goals & Debts) başarıyla tamamlandı.
+  - Mobil Navigasyon Bilgi Mimarisi (Ana Sayfa, İşlemler, + hızlı eylem, Plan hub [Bütçeler, Tekrarlayanlar, Abonelikler], Daha Fazla hub [Kategoriler, Ayarlar]) 5'li kalıcı alt bar, type-safe route'lar, pasif Yakında modülleri ve Android emülatör manuel smoke kabulü başarıyla tamamlandı.
+  - Faz 8.2 — Tekrarlayan İşlemler ve Abonelikler (Recurring Transactions & Subscriptions) başarıyla tamamlandı.
+  - Faz 8.1 — Bütçeler (Budgets) başarıyla tamamlandı.
+- Sıradaki teknik iş: Faz 8.4 Ortak Çalışma Alanları (Workspaces) V2 outbox mutasyonları ve Supabase senkronizasyon altyapısı tasarımı.
 - Production Supabase durumu: migration uygulanmadı.
-- Staging: `FeniqoMobil-Staging` (ref: `rxfaiynkhaxrksosxvxp`); 12/12 migration (`20260830000100_sync_write_v2_recurring_transactions.sql` dâhil), RLS, `sync_write_v2` RPC ve 28 senaryolu SQL sözleşme testi doğrulandı; koşulsuz ROLLBACK ile test verisi bırakılmadı.
+- Staging: `FeniqoMobil-Staging` (ref: `rxfaiynkhaxrksosxvxp`); 15/15 migration (`20260901000100_sync_write_v2_goals_and_debts.sql`, `20260901000200_reconcile_goals_debts_sync_contract.sql` dâhil), RLS, `sync_write_v2` RPC ve SQL sözleşme testi doğrulandı; koşulsuz ROLLBACK ile test verisi bırakılmadı (goals, contributions, debts, payments ve sync receipts = 0 kalıntı).
 
 ## Tamamlanan fazlar
 
@@ -27,13 +32,22 @@
 | 7.2 Giriş ve kayıt ekranları | Tamamlandı | LoginScreen, RegisterScreen, tipli validation/hata eşleme, Login/RegisterViewModel, session tabanlı akış, staging auth |
 | 7.4 Dashboard | Tamamlandı | Stateless DashboardScreen, DashboardViewModel, Hilt modülleri, dinamik ay Room Flow SSOT, son işlemler, işlem/düzenleme navigasyonları, geçici MoneyScore kartı ve ön değerlendirme |
 | 8.1 Bütçeler | Tamamlandı | Bütçe listesi, dinamik ay gezinimi, %80 uyarı ve %100 aşım, harcama kategorisiyle bütçe ekleme, ID tabanlı Room SSOT form düzenlemesi, onaylı silme ve kopyalama akışları, Room V2 outbox/ACK, Staging V2 SQL migration, sözleşme testi ve Android emülatör manuel smoke kabulü |
+| 8.2 Tekrarlayan işlemler ve abonelikler | Tamamlandı | Tekrar vade hesaplayıcı, occurrence idempotency, kural/abonelik CRUD komutları, Room v6/v7/v8, V2 outbox/ACK/pull/conflict, Staging 13/13 migration, 38 senaryolu SQL sözleşme testi, MVI Compose liste ve form ekranları, hatırlatıcı planlayıcı, Room receipt claim, Android bildirim Worker'ı, 24h periyodik scheduler, Android 13+ izin CTA'sı ve Android emülatör manuel smoke kabulü |
+| Mobil Navigasyon Bilgi Mimarisi | Tamamlandı | 5'li kalıcı alt navigasyon kabuğu (Ana Sayfa, İşlemler, + hızlı eylem, Plan hub [Bütçeler, Tekrarlayanlar, Abonelikler], Daha Fazla hub [Kategoriler, Ayarlar]), type-safe route'lar, pasif Yakında modülleri ve Android emülatör manuel smoke kabulü |
+| 8.3 Hedefler ve borçlar | Tamamlandı | Goals (birikim CRUD, katkı ekleme/çıkarma, ilerleme/tahmini süre), Debts & Receivables (borç/alacak CRUD, ödeme/tahsilat geçmişi, fail-closed reaktif bakiye hesabı), Borç snowball planlayıcısı ve ekranı, Room v9/v10/v11 tabloları, V2 outbox/ACK/pull/conflict sync, Staging 15/15 migration, SQL sözleşme testi (0 kalıntı) ve Android emülatör manuel smoke kabulü |
 
 5.1'de Android için build configuration ve güvenli oturum saklama uygulanmıştır. iOS `.xcconfig`,
 Keychain ve üretim güvenlik adaptörlerinin kalan kısmı Android-first kararı gereği 10.4'te tamamlanır.
 
-## Aktif faz: 8.2 Tekrarlayan İşlemler ve Abonelikler (Devam Ediyor)
+## Aktif faz: Faz 8.4 — Ortak Çalışma Alanları (Workspaces)
 
-Amaç: Tekrarlayan işlem ve abonelik domain modelleri, Room V2 outbox desteği, Supabase V2 migration ve kullanıcı arayüzü akışlarını tamamlamak. Dilim 1A–2B tamamlandı; V2 istemci entegrasyonu (DTO/mapper/outbox/CRUD) ile devam ediliyor.
+Amaç: Ortak çalışma alanları (çalışma alanı oluşturma, katılma, ayrılma, aktif alan seçimi, üye listesi, rol tabanlı yetki matrisi, ortak işlem ve bütçe görünürlüğü, kimin ne kadar ödediği ve borç dağılımı hesaplaması) modülünün saf domain modelleri, validation invariant'ları, Room DAO/V2 outbox ve sync altyapısının planlanması ve geliştirilmesi.
+
+Planlanan Kapsam:
+- Workspace CRUD, davet, üyelik ve rol tabanlı (`OWNER`, `EDITOR`, `VIEWER`) kurallar.
+- Ortak harcama/işlem ve bütçe görünürlüğü.
+- Kimin ne kadar ödediği ve borç dağılımı (split) hesaplama motoru.
+- V2 Outbox ve Supabase senkronizasyonu.
 
 ## Sonraki fazlar
 

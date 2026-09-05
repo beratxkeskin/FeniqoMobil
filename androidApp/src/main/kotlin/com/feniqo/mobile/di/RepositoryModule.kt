@@ -105,6 +105,79 @@ object RepositoryModule {
             entityIdGenerator = entityIdGenerator,
         )
 
+    @Provides
+    @Singleton
+    fun provideSubscriptionRepository(
+        authRepository: AuthRepository,
+        categoryDao: CategoryDao,
+        subscriptionDao: com.feniqo.mobile.data.local.dao.SubscriptionDao,
+        offlineWriteQueue: OfflineWriteQueue,
+        entityIdGenerator: com.feniqo.mobile.domain.model.EntityIdGenerator,
+    ): com.feniqo.mobile.domain.repository.SubscriptionRepository =
+        com.feniqo.mobile.data.repository.OfflineFirstSubscriptionRepository(
+            authRepository = authRepository,
+            categoryDao = categoryDao,
+            subscriptionDao = subscriptionDao,
+            offlineWriteQueue = offlineWriteQueue,
+            entityIdGenerator = entityIdGenerator,
+        )
+
+    @Provides
+    @Singleton
+    fun provideGoalRepository(
+        authRepository: AuthRepository,
+        goalDao: com.feniqo.mobile.data.local.dao.GoalDao,
+        offlineWriteQueue: com.feniqo.mobile.data.local.outbox.OfflineWriteQueue,
+        entityIdGenerator: com.feniqo.mobile.domain.model.EntityIdGenerator,
+    ): com.feniqo.mobile.domain.repository.GoalRepository =
+        com.feniqo.mobile.data.repository.OfflineFirstGoalRepository(
+            authRepository = authRepository,
+            goalDao = goalDao,
+            offlineWriteQueue = offlineWriteQueue,
+            entityIdGenerator = entityIdGenerator,
+        )
+
+    @Provides
+    @Singleton
+    fun provideDebtRepository(
+        authRepository: AuthRepository,
+        debtDao: com.feniqo.mobile.data.local.dao.DebtDao,
+        offlineWriteQueue: com.feniqo.mobile.data.local.outbox.OfflineWriteQueue,
+        entityIdGenerator: com.feniqo.mobile.domain.model.EntityIdGenerator,
+    ): com.feniqo.mobile.domain.repository.DebtRepository =
+        com.feniqo.mobile.data.repository.OfflineFirstDebtRepository(
+            authRepository = authRepository,
+            debtDao = debtDao,
+            offlineWriteQueue = offlineWriteQueue,
+            entityIdGenerator = entityIdGenerator,
+        )
+
+
+
+
+    @Provides
+    @Singleton
+    fun provideWorkspaceInitialRemoteSync(
+        remoteDataSource: CoreRemoteDataSource,
+        remoteSyncDao: RemoteSyncDao,
+    ): com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync = com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync(
+        remote = remoteDataSource,
+        remoteSyncDao = remoteSyncDao,
+        nowEpochMillisProvider = { System.currentTimeMillis() },
+    )
+
+    @Provides
+    @Singleton
+    fun provideWorkspaceIncrementalRemoteSync(
+        remoteDataSource: CoreRemoteDataSource,
+        remoteSyncDao: RemoteSyncDao,
+        syncStateDao: SyncStateDao,
+    ): com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync = com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync(
+        remote = remoteDataSource,
+        remoteSyncDao = remoteSyncDao,
+        syncStateDao = syncStateDao,
+        nowEpochMillisProvider = { System.currentTimeMillis() },
+    )
 
     @Provides
     @Singleton
@@ -185,8 +258,10 @@ object RepositoryModule {
     fun provideSyncRepository(
         authRepository: AuthRepository,
         initialRemoteSync: InitialRemoteSync,
+        workspaceInitialRemoteSync: com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync,
         outboxProcessor: OutboxProcessor,
         incrementalRemoteSync: IncrementalRemoteSync,
+        workspaceIncrementalRemoteSync: com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync,
         queue: OfflineWriteQueue,
         syncStateDao: SyncStateDao,
         remoteSyncDao: RemoteSyncDao,
@@ -194,8 +269,10 @@ object RepositoryModule {
     ): SyncRepository = OfflineFirstSyncRepository(
         authRepository = authRepository,
         initialRemoteSync = initialRemoteSync,
+        workspaceInitialRemoteSync = workspaceInitialRemoteSync,
         outboxProcessor = outboxProcessor,
         incrementalRemoteSync = incrementalRemoteSync,
+        workspaceIncrementalRemoteSync = workspaceIncrementalRemoteSync,
         offlineWriteQueue = queue,
         syncStateDao = syncStateDao,
         remoteSyncDao = remoteSyncDao,
