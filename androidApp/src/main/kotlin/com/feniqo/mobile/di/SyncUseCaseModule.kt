@@ -1,8 +1,10 @@
 package com.feniqo.mobile.di
 
 import com.feniqo.mobile.domain.repository.SyncRepository
+import com.feniqo.mobile.domain.usecase.ObserveSyncConflictsUseCase
 import com.feniqo.mobile.domain.usecase.ObserveSyncOverviewUseCase
 import com.feniqo.mobile.domain.usecase.RequestManualSyncUseCase
+import com.feniqo.mobile.domain.usecase.ResolveSyncConflictUseCase
 import com.feniqo.mobile.domain.usecase.RetryFailedSyncOperationsUseCase
 import dagger.Module
 import dagger.Provides
@@ -31,4 +33,16 @@ object SyncUseCaseModule {
     fun provideRetryFailedSyncOperationsUseCase(
         syncRepository: SyncRepository,
     ): RetryFailedSyncOperationsUseCase = RetryFailedSyncOperationsUseCase(syncRepository)
+
+    @Provides
+    @Singleton
+    fun provideObserveSyncConflictsUseCase(
+        syncRepository: SyncRepository,
+    ): ObserveSyncConflictsUseCase = ObserveSyncConflictsUseCase(syncRepository)
+
+    @Provides
+    @Singleton
+    fun provideResolveSyncConflictUseCase(
+        syncRepository: SyncRepository,
+    ): ResolveSyncConflictUseCase = ResolveSyncConflictUseCase(syncRepository)
 }

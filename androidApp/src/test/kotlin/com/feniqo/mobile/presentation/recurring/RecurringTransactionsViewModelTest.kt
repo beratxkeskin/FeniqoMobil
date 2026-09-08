@@ -827,15 +827,19 @@ class RecurringTransactionsViewModelTest {
     private fun createViewModel(
         recurringRepo: RecurringTransactionRepository,
         categoryRepo: CategoryRepository,
-    ): RecurringTransactionsViewModel = RecurringTransactionsViewModel(
-        observeRecurringTransactionsUseCase = ObserveRecurringTransactionsUseCase(recurringRepo),
-        observeRecurringTransactionUseCase = ObserveRecurringTransactionUseCase(recurringRepo),
-        observeCategoriesUseCase = ObserveCategoriesUseCase(categoryRepo),
-        createRecurringTransactionUseCase = CreateRecurringTransactionUseCase(recurringRepo),
-        updateRecurringTransactionUseCase = UpdateRecurringTransactionUseCase(recurringRepo),
-        setRecurringTransactionActiveUseCase = SetRecurringTransactionActiveUseCase(recurringRepo),
-        deleteRecurringTransactionUseCase = DeleteRecurringTransactionUseCase(recurringRepo),
-    )
+    ): RecurringTransactionsViewModel {
+        val fakeWorkspaceRepo = com.feniqo.mobile.presentation.common.FakeWorkspaceRepository()
+        return RecurringTransactionsViewModel(
+            observeRecurringTransactionsUseCase = ObserveRecurringTransactionsUseCase(recurringRepo),
+            observeRecurringTransactionUseCase = ObserveRecurringTransactionUseCase(recurringRepo),
+            observeCategoriesUseCase = ObserveCategoriesUseCase(categoryRepo),
+            createRecurringTransactionUseCase = CreateRecurringTransactionUseCase(recurringRepo),
+            updateRecurringTransactionUseCase = UpdateRecurringTransactionUseCase(recurringRepo),
+            setRecurringTransactionActiveUseCase = SetRecurringTransactionActiveUseCase(recurringRepo),
+            deleteRecurringTransactionUseCase = DeleteRecurringTransactionUseCase(recurringRepo),
+            observeActiveWorkspaceUseCase = com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase(fakeWorkspaceRepo),
+        )
+    }
 
     private class FakeRecurringTransactionRepository : RecurringTransactionRepository {
         val recurringFlow = MutableStateFlow<List<RecurringTransaction>>(emptyList())

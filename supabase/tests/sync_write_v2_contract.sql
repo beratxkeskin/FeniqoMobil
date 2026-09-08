@@ -132,6 +132,20 @@ declare
     v_op_update_ws text := replace(extensions.gen_random_uuid()::text, '-', '');
     v_op_delete_ws text := replace(extensions.gen_random_uuid()::text, '-', '');
 
+    -- Workspace Invitation & Member test değişkenleri
+    v_ws_inv_test_id uuid := extensions.gen_random_uuid();
+    v_op_create_ws_inv_test text := replace(extensions.gen_random_uuid()::text, '-', '');
+    v_inv_id uuid := extensions.gen_random_uuid();
+    v_raw_token text := 'abc';
+    v_inv_token_hash text := 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
+    v_op_create_inv text := replace(extensions.gen_random_uuid()::text, '-', '');
+    v_op_join_member text := replace(extensions.gen_random_uuid()::text, '-', '');
+    v_op_join_duplicate text := replace(extensions.gen_random_uuid()::text, '-', '');
+    v_op_change_role text := replace(extensions.gen_random_uuid()::text, '-', '');
+    v_op_leave_member text := replace(extensions.gen_random_uuid()::text, '-', '');
+    v_op_owner_leave text := replace(extensions.gen_random_uuid()::text, '-', '');
+    v_op_delete_inv text := replace(extensions.gen_random_uuid()::text, '-', '');
+
     v_ws_db_version bigint;
     v_ws_db_name text;
     v_ws_db_normalized text;
@@ -2613,12 +2627,868 @@ declare
 
 
     -- =========================================================================
-    -- SENARYO 58: BİLGİLENDİRME VE GÜVENLİ TEMİZLİK
+    -- SENARYO 58: WORKSPACE_INVITATION CREATE (Yalnız Aktif OWNER, Raw Token Dışlanır)
     -- =========================================================================
-    raise notice 'Tüm 57 sözleşme ve idempotency senaryosu (PROFILE, CATEGORY, TRANSACTION, BUDGET, RECURRING_TRANSACTION, SUBSCRIPTION, GOAL, GOAL_CONTRIBUTION, DEBT, DEBT_PAYMENT, WORKSPACE) başarıyla doğrulandı. İşlemler ROLLBACK ile geri alınıyor.';
+    -- Davet testleri için taze ve aktif bir paylaşımlı çalışma alanı oluştur
+    perform set_config('request.jwt.claim.sub', v_test_user_id::text, true);
+
+    v_res := public.sync_write_v2(
+        p_operation_id := v_op_create_ws_inv_test,
+        p_entity_type := 'WORKSPACE',
+        p_operation := 'CREATE',
+        p_base_version := null,
+        p_payload := jsonb_build_object(
+            'id', v_ws_inv_test_id,
+            'name', 'Davet Test Alanı',
+            'type_code', 'shared',
+            'currency_code', 'TRY'
+        )
+    );
+
+    if (v_res ->> 'status') <> 'APPLIED' then
+        raise exception 'Senaryo 58 Başarısız: Davet testi için çalışma alanı oluşturulamadı.';
+    end if;
+
+    -- Owner olarak davet oluştur (token_hash doğrulaması ve yanıttan filtrelenmesi)
+    v_res := public.sync_write_v2(
+        p_operation_id := v_op_create_inv,
+        p_entity_type := 'WORKSPACE_INVITATION',
+        p_operation := 'CREATE',
+        p_base_version := null,
+        p_payload := jsonb_build_object(
+            'id', v_inv_id,
+            'workspace_id', v_ws_inv_test_id,
+            'token_hash', v_inv_token_hash,
+            'role_code', 'EDITOR',
+            'expires_at', (timezone('utc'::text, now() + interval '7 days'))::text,
+            'max_uses', 5
+        )
+    );
+
+    if (v_res ->> 'status') <> 'APPLIED'
+       or (v_res -> 'record' ->> 'id') <> v_inv_id::text
+       or (v_res -> 'record' ->> 'token_hash') is not null then
+        raise exception 'Senaryo 58 Başarısız: WORKSPACE_INVITATION CREATE APPLIED dönmedi veya token_hash yanıttan filtrelenmedi.';
+    end if;
+
+    -- =========================================================================
+    -- SENARYO 59: WORKSPACE_MEMBER CREATE REDDİ VE REDEEM_WORKSPACE_INVITATION_V1 SÖZLEŞMESİ
+    -- =========================================================================
+    -- 59.1: Generic outbox sync_write_v2 ile WORKSPACE_MEMBER CREATE çağrısı FAIL-CLOSED reddedilmelidir
+    perform set_config('request.jwt.claim.sub', v_other_user_id::text, true);
+
+    v_error_caught := false;
+    begin
+        perform public.sync_write_v2(
+            p_operation_id := v_op_join_member,
+            p_entity_type := 'WORKSPACE_MEMBER',
+            p_operation := 'CREATE',
+            p_base_version := null,
+            p_payload := jsonb_build_object(
+                'workspace_id', v_ws_inv_test_id,
+                'user_id', v_other_user_id,
+                'role_code', 'EDITOR'
+            )
+        );
+    exception when others then
+        if sqlerrm like '%generic outbox CREATE işlemi desteklenmez%' then
+            v_error_caught := true;
+        end if;
+    end;
+
+    if not v_error_caught then
+        raise exception 'Senaryo 59.1 Başarısız: WORKSPACE_MEMBER CREATE generic sync_write_v2 çağrısı fail-closed reddedilmedi.';
+    end if;
+
+    -- 59.2: redeem_workspace_invitation_v1 ile tek-transaction güvenli katılım
+    v_res := public.redeem_workspace_invitation_v1(v_raw_token);
+
+    if (v_res -> 'workspace') is null
+       or (v_res -> 'workspace' ->> 'id') <> v_ws_inv_test_id::text
+       or (v_res -> 'member') is null
+       or (v_res -> 'member' ->> 'user_id') <> v_other_user_id::text
+       or (v_res -> 'member' ->> 'role_code') <> 'EDITOR'
+       or (v_res -> 'token') is not null
+       or (v_res -> 'token_hash') is not null
+       or (v_res -> 'workspace' -> 'token_hash') is not null
+       or (v_res -> 'member' -> 'token_hash') is not null then
+        raise exception 'Senaryo 59.2 Başarısız: redeem_workspace_invitation_v1 beklenen güvenli sonucu dönmedi veya token sızdırdı.';
+    end if;
+
+    -- uses_count kontrolü
+    if (select uses_count from public.workspace_invitations where id = v_inv_id) <> 1 then
+        raise exception 'Senaryo 59.2 Başarısız: İlk katılım sonrası uses_count 1 olmalıdır.';
+    end if;
+
+    -- 59.3: Idempotency: Aynı aktif kullanıcı tekrar çağırırsa uses_count artmamalı
+    v_res := public.redeem_workspace_invitation_v1(v_raw_token);
+
+    if (v_res -> 'workspace') is null
+       or (v_res -> 'member' ->> 'user_id') <> v_other_user_id::text then
+        raise exception 'Senaryo 59.3 Başarısız: redeem_workspace_invitation_v1 idempotent çağrısı başarısız oldu.';
+    end if;
+
+    if (select uses_count from public.workspace_invitations where id = v_inv_id) <> 1 then
+        raise exception 'Senaryo 59.3 Başarısız: İdempotent çağrıda uses_count tekrar artmamalıydı (hala 1 olmalıdır).';
+    end if;
+
+    -- 59.4: Süresi dolmuş token fail-closed reddedilmelidir
+    insert into public.workspace_invitations (
+        id, workspace_id, inviter_id, role_code, token_hash,
+        expires_at, max_uses, uses_count, version
+    ) values (
+        extensions.gen_random_uuid(), v_ws_inv_test_id, v_test_user_id, 'VIEWER',
+        pg_catalog.encode(extensions.digest('expired_token_abc'::bytea, 'sha256'), 'hex'),
+        timezone('utc'::text, now() - interval '1 day'), 5, 0, 1
+    );
+
+    v_error_caught := false;
+    begin
+        perform public.redeem_workspace_invitation_v1('expired_token_abc');
+    exception when others then
+        if sqlerrm like '%Davet süresi dolmuş%' then
+            v_error_caught := true;
+        end if;
+    end;
+
+    if not v_error_caught then
+        raise exception 'Senaryo 59.4 Başarısız: Süresi dolmuş davet kodu reddedilmedi.';
+    end if;
+
+    -- 59.5: Geçersiz token fail-closed reddedilmelidir
+    v_error_caught := false;
+    begin
+        perform public.redeem_workspace_invitation_v1('non_existent_token_xyz_123');
+    exception when others then
+        if sqlerrm like '%Geçersiz veya bulunamayan davet%' then
+            v_error_caught := true;
+        end if;
+    end;
+
+    if not v_error_caught then
+        raise exception 'Senaryo 59.5 Başarısız: Geçersiz veya bulunamayan token reddedilmedi.';
+    end if;
+
+    -- 59.6: Kullanım limiti dolmuş token fail-closed reddedilmelidir (max-use koruması)
+    insert into public.workspace_invitations (
+        id, workspace_id, inviter_id, role_code, token_hash,
+        expires_at, max_uses, uses_count, version
+    ) values (
+        extensions.gen_random_uuid(), v_ws_inv_test_id, v_test_user_id, 'VIEWER',
+        pg_catalog.encode(extensions.digest('limit_reached_token_abc'::bytea, 'sha256'), 'hex'),
+        timezone('utc'::text, now() + interval '1 day'), 1, 1, 1
+    );
+
+    v_error_caught := false;
+    begin
+        perform public.redeem_workspace_invitation_v1('limit_reached_token_abc');
+    exception when others then
+        if sqlerrm like '%Davet kullanım limitine ulaşıldı%' then
+            v_error_caught := true;
+        end if;
+    end;
+
+    if not v_error_caught then
+        raise exception 'Senaryo 59.6 Başarısız: Kullanım limiti dolmuş davet kodu reddedilmedi.';
+    end if;
+
+
+    -- =========================================================================
+    -- SENARYO 60: WORKSPACE_MEMBER UPDATE (Rol Değişikliği Yalnız OWNER)
+    -- =========================================================================
+    -- Owner kimliğine geri dön
+    perform set_config('request.jwt.claim.sub', v_test_user_id::text, true);
+
+    v_res := public.sync_write_v2(
+        p_operation_id := v_op_change_role,
+        p_entity_type := 'WORKSPACE_MEMBER',
+        p_operation := 'UPDATE',
+        p_base_version := 1,
+        p_payload := jsonb_build_object(
+            'workspace_id', v_ws_inv_test_id,
+            'user_id', v_other_user_id,
+            'role_code', 'VIEWER'
+        )
+    );
+
+    if (v_res ->> 'status') <> 'APPLIED'
+       or (v_res -> 'record' ->> 'role_code') <> 'VIEWER'
+       or (v_res -> 'record' ->> 'version')::bigint <> 2 then
+        raise exception 'Senaryo 60 Başarısız: WORKSPACE_MEMBER rol değişikliği APPLIED dönmedi.';
+    end if;
+
+    -- =========================================================================
+    -- SENARYO 61: WORKSPACE_MEMBER DELETE (Alandan Ayrılma ve OWNER Koruması)
+    -- =========================================================================
+    -- 61.1: OWNER kendisi ayrılamaz (fail-closed koruması)
+    begin
+        perform public.sync_write_v2(
+            p_operation_id := v_op_owner_leave,
+            p_entity_type := 'WORKSPACE_MEMBER',
+            p_operation := 'DELETE',
+            p_base_version := 1,
+            p_payload := jsonb_build_object(
+                'workspace_id', v_ws_inv_test_id,
+                'user_id', v_test_user_id
+            )
+        );
+        raise exception 'Senaryo 61 Başarısız: OWNER çalışma alanından ayrılamamalıydı.';
+    exception
+        when others then
+            if sqlerrm not like '%sahibi alandan ayrılamaz%' then
+                raise;
+            end if;
+    end;
+
+    -- 61.2: Normal üye (v_other_user_id) alandan ayrılabilir
+    perform set_config('request.jwt.claim.sub', v_other_user_id::text, true);
+
+    v_res := public.sync_write_v2(
+        p_operation_id := v_op_leave_member,
+        p_entity_type := 'WORKSPACE_MEMBER',
+        p_operation := 'DELETE',
+        p_base_version := 2,
+        p_payload := jsonb_build_object(
+            'workspace_id', v_ws_inv_test_id,
+            'user_id', v_other_user_id
+        )
+    );
+
+    if (v_res ->> 'status') <> 'APPLIED'
+       or (v_res -> 'record' ->> 'deleted_at') is null then
+        raise exception 'Senaryo 61 Başarısız: Üyenin alandan ayrılması (soft-delete) APPLIED dönmedi.';
+    end if;
+
+    -- =========================================================================
+    -- SENARYO 62: WORKSPACE_INVITATION DELETE (Davet İptali / Soft-Delete)
+    -- =========================================================================
+    perform set_config('request.jwt.claim.sub', v_test_user_id::text, true);
+
+    v_res := public.sync_write_v2(
+        p_operation_id := v_op_delete_inv,
+        p_entity_type := 'WORKSPACE_INVITATION',
+        p_operation := 'DELETE',
+        p_base_version := 1,
+        p_payload := jsonb_build_object(
+            'id', v_inv_id
+        )
+    );
+
+    if (v_res ->> 'status') <> 'APPLIED'
+       or (v_res -> 'record' ->> 'deleted_at') is null then
+        raise exception 'Senaryo 62 Başarısız: WORKSPACE_INVITATION DELETE soft-delete APPLIED dönmedi.';
+    end if;
+
+
+    -- =========================================================================
+    -- SENARYO 63: TRANSFER_WORKSPACE_OWNERSHIP_V1 SÖZLEŞMESİ
+    -- =========================================================================
+    -- 63.0: Test için yeni bir çalışma alanı ve üye oluştur
+    declare
+        v_ws_tr_id uuid := extensions.gen_random_uuid();
+        v_tr_member_id uuid := extensions.gen_random_uuid();
+        v_tr_res jsonb;
+    begin
+        -- v_test_user_id tarafından workspace oluşturulur (OWNER, version = 1)
+        perform set_config('request.jwt.claim.sub', v_test_user_id::text, true);
+
+        insert into public.workspaces (
+            id, owner_id, name, type_code, currency_code, created_at, updated_at, version
+        ) values (
+            v_ws_tr_id, v_test_user_id, 'Transfer Test WS', 'shared', 'TRY',
+            timezone('utc'::text, now()), timezone('utc'::text, now()), 1
+        );
+
+        insert into public.workspace_members (
+            workspace_id, user_id, role_code, joined_at, updated_at, version
+        ) values (
+            v_ws_tr_id, v_test_user_id, 'OWNER',
+            timezone('utc'::text, now()), timezone('utc'::text, now()), 1
+        );
+
+        -- v_tr_member_id (ikinci kullanıcı) EDITOR olarak eklenir (version = 1)
+        insert into public.workspace_members (
+            workspace_id, user_id, role_code, joined_at, updated_at, version
+        ) values (
+            v_ws_tr_id, v_tr_member_id, 'EDITOR',
+            timezone('utc'::text, now()), timezone('utc'::text, now()), 1
+        );
+
+        -- 63.1: Non-owner actor yetkisi: v_tr_member_id (EDITOR) transfer yapmaya kalkarsa reddedilmelidir
+        perform set_config('request.jwt.claim.sub', v_tr_member_id::text, true);
+        v_error_caught := false;
+        begin
+            perform public.transfer_workspace_ownership_v1(
+                p_workspace_id := v_ws_tr_id,
+                p_target_user_id := v_test_user_id,
+                p_expected_workspace_version := 1,
+                p_expected_current_owner_member_version := 1,
+                p_expected_target_member_version := 1
+            );
+        exception when others then
+            if sqlerrm like '%ownership_transfer_actor_not_owner%' then
+                v_error_caught := true;
+            end if;
+        end;
+
+        if not v_error_caught then
+            raise exception 'Senaryo 63.1 Başarısız: Non-owner actor transfer çağrısı fail-closed reddedilmedi.';
+        end if;
+
+        -- Actor'ü tekrar gerçek OWNER yap
+        perform set_config('request.jwt.claim.sub', v_test_user_id::text, true);
+
+        -- 63.2: Target alanda üye değilse reddedilmelidir
+        v_error_caught := false;
+        begin
+            perform public.transfer_workspace_ownership_v1(
+                p_workspace_id := v_ws_tr_id,
+                p_target_user_id := extensions.gen_random_uuid(),
+                p_expected_workspace_version := 1,
+                p_expected_current_owner_member_version := 1,
+                p_expected_target_member_version := 1
+            );
+        exception when others then
+            if sqlerrm like '%ownership_transfer_target_not_member%' then
+                v_error_caught := true;
+            end if;
+        end;
+
+        if not v_error_caught then
+            raise exception 'Senaryo 63.2 Başarısız: Üye olmayan hedefe transfer çağrısı fail-closed reddedilmedi.';
+        end if;
+
+        -- 63.3: Hedefe kendine transfer durumu reddedilmelidir
+        v_error_caught := false;
+        begin
+            perform public.transfer_workspace_ownership_v1(
+                p_workspace_id := v_ws_tr_id,
+                p_target_user_id := v_test_user_id,
+                p_expected_workspace_version := 1,
+                p_expected_current_owner_member_version := 1,
+                p_expected_target_member_version := 1
+            );
+        exception when others then
+            if sqlerrm like '%cannot_change_own_role%' or sqlerrm like '%ownership_transfer_target_already_owner%' then
+                v_error_caught := true;
+            end if;
+        end;
+
+        if not v_error_caught then
+            raise exception 'Senaryo 63.3 Başarısız: Kendine transfer çağrısı fail-closed reddedilmedi.';
+        end if;
+
+        -- 63.4: Versiyon uyuşmazlığı durumunda (expected version conflict) reddedilmelidir
+        v_error_caught := false;
+        begin
+            perform public.transfer_workspace_ownership_v1(
+                p_workspace_id := v_ws_tr_id,
+                p_target_user_id := v_tr_member_id,
+                p_expected_workspace_version := 99,
+                p_expected_current_owner_member_version := 1,
+                p_expected_target_member_version := 1
+            );
+        exception when others then
+            if sqlerrm like '%ownership_transfer_version_conflict%' then
+                v_error_caught := true;
+            end if;
+        end;
+
+        if not v_error_caught then
+            raise exception 'Senaryo 63.4 Başarısız: Versiyon uyuşmazlığında transfer çağrısı fail-closed reddedilmedi.';
+        end if;
+
+        -- 63.5: Başarılı tek-transaction atomik sahiplik devri
+        v_tr_res := public.transfer_workspace_ownership_v1(
+            p_workspace_id := v_ws_tr_id,
+            p_target_user_id := v_tr_member_id,
+            p_expected_workspace_version := 1,
+            p_expected_current_owner_member_version := 1,
+            p_expected_target_member_version := 1
+        );
+
+        if (v_tr_res -> 'workspace' ->> 'owner_id') <> v_tr_member_id::text
+           or (v_tr_res -> 'workspace' ->> 'version')::bigint <> 2
+           or (v_tr_res -> 'actor_member' ->> 'role_code') <> 'EDITOR'
+           or (v_tr_res -> 'actor_member' ->> 'version')::bigint <> 2
+           or (v_tr_res -> 'target_member' ->> 'role_code') <> 'OWNER'
+           or (v_tr_res -> 'target_member' ->> 'version')::bigint <> 2 then
+            raise exception 'Senaryo 63.5 Başarısız: transfer_workspace_ownership_v1 atomik olarak rolleri ve versiyonları güncellemedi.';
+        end if;
+    end;
+
+    -- =========================================================================
+    -- SENARYO 64: OWNER WORKSPACE ÜYE ÇIKARMA VE RLS INBOUND TOMBSTONE SÖZLEŞMESİ (E12-F / E12-F0)
+    -- =========================================================================
+    declare
+        v_ws_rem_id uuid := 'ffffffff-eeee-dddd-cccc-bbbbbbbbbb01'::uuid;
+        v_rem_owner_id uuid := 'ffffffff-eeee-dddd-cccc-bbbbbbbbbb02'::uuid;
+        v_rem_editor_id uuid := 'ffffffff-eeee-dddd-cccc-bbbbbbbbbb03'::uuid;
+        v_rem_other_id uuid := 'ffffffff-eeee-dddd-cccc-bbbbbbbbbb04'::uuid;
+        v_rem_res jsonb;
+        v_can_read_own_tombstone boolean := false;
+        v_can_read_other_member boolean := false;
+    begin
+        -- Kullanıcı ve Çalışma alanı kurulumu
+        insert into auth.users (id, email) values
+            (v_rem_owner_id, 'rem_owner@feniqo.test'),
+            (v_rem_editor_id, 'rem_editor@feniqo.test'),
+            (v_rem_other_id, 'rem_other@feniqo.test')
+        on conflict (id) do nothing;
+
+        insert into public.workspaces (id, name, owner_id, version)
+        values (v_ws_rem_id, 'Çıkarma Test Alanı', v_rem_owner_id, 1);
+
+        insert into public.workspace_members (workspace_id, user_id, role_code, version) values
+            (v_ws_rem_id, v_rem_owner_id, 'OWNER', 1),
+            (v_ws_rem_id, v_rem_editor_id, 'EDITOR', 1);
+
+        -- 64.1: EDITOR başka bir üyeyi çıkaramaz (insufficient_privilege)
+        perform set_config('request.jwt.claims', json_build_object('sub', v_rem_editor_id)::text, true);
+        v_error_caught := false;
+        begin
+            perform public.sync_write_v2(
+                p_operation_id := 'rem_op_001',
+                p_entity_type := 'WORKSPACE_MEMBER',
+                p_operation := 'DELETE',
+                p_base_version := 1,
+                p_payload := jsonb_build_object('workspace_id', v_ws_rem_id, 'user_id', v_rem_owner_id)
+            );
+        exception when insufficient_privilege then
+            v_error_caught := true;
+        end;
+
+        if not v_error_caught then
+            raise exception 'Senaryo 64.1 Başarısız: Non-owner üye çıkarma çağrısı insufficient_privilege ile reddedilmedi.';
+        end if;
+
+        -- 64.2: OWNER kendini "üye çıkar" ile çıkaramaz
+        perform set_config('request.jwt.claims', json_build_object('sub', v_rem_owner_id)::text, true);
+        v_error_caught := false;
+        begin
+            perform public.sync_write_v2(
+                p_operation_id := 'rem_op_002',
+                p_entity_type := 'WORKSPACE_MEMBER',
+                p_operation := 'DELETE',
+                p_base_version := 1,
+                p_payload := jsonb_build_object('workspace_id', v_ws_rem_id, 'user_id', v_rem_owner_id)
+            );
+        exception when others then
+            if sqlerrm like '%Çalışma alanı sahibi alandan ayrılamaz%' then
+                v_error_caught := true;
+            end if;
+        end;
+
+        if not v_error_caught then
+            raise exception 'Senaryo 64.2 Başarısız: OWNER self-delete fail-closed reddedilmedi.';
+        end if;
+
+        -- 64.3: OWNER EDITOR üyeyi başarıyla çıkarır (tombstone oluşur)
+        v_rem_res := public.sync_write_v2(
+            p_operation_id := 'rem_op_003',
+            p_entity_type := 'WORKSPACE_MEMBER',
+            p_operation := 'DELETE',
+            p_base_version := 1,
+            p_payload := jsonb_build_object('workspace_id', v_ws_rem_id, 'user_id', v_rem_editor_id)
+        );
+
+        if (v_rem_res ->> 'status') <> 'APPLIED'
+           or (v_rem_res -> 'record' ->> 'deleted_at') is null
+           or (v_rem_res -> 'record' ->> 'version')::bigint <> 2 then
+            raise exception 'Senaryo 64.3 Başarısız: Üye çıkarma işlemi tombstone ve versiyonu doğru döndürmedi.';
+        end if;
+
+        -- 64.4: RLS E12-F0 Sözleşmesi: Çıkarılan üye kendi tombstone satırını okuyabilmeli
+        perform set_config('request.jwt.claims', json_build_object('sub', v_rem_editor_id)::text, true);
+        select exists (
+            select 1 from public.workspace_members
+            where workspace_id = v_ws_rem_id
+              and user_id = v_rem_editor_id
+              and deleted_at is not null
+        ) into v_can_read_own_tombstone;
+
+        if not v_can_read_own_tombstone then
+            raise exception 'Senaryo 64.4 Başarısız: Çıkarılan kullanıcı kendi membership tombstone satırını okuyamadı.';
+        end if;
+
+        -- 64.5: RLS E12-F0 Sözleşmesi: Çıkarılan üye diğer üyeleri okuyamamalı
+        select exists (
+            select 1 from public.workspace_members
+            where workspace_id = v_ws_rem_id
+              and user_id = v_rem_owner_id
+        ) into v_can_read_other_member;
+
+        if v_can_read_other_member then
+            raise exception 'Senaryo 64.5 Başarısız: Çıkarılan kullanıcı diğer workspace üyelerini okuyabildi.';
+        end if;
+    end;
+
+    -- =========================================================================
+    -- SENARYO 65: GEÇERLİ ORTAK ALAN EXPENSE TRANSACTION SPLIT (CREATE / UPDATE / DELETE)
+    -- =========================================================================
+    declare
+        v_ws_split_id uuid := extensions.gen_random_uuid();
+        v_split_tx_id uuid := extensions.gen_random_uuid();
+        v_split_cat_id uuid := extensions.gen_random_uuid();
+        v_split_owner_id uuid := v_test_user_id;
+        v_split_member_id uuid := v_other_user_id;
+        v_split_op_create text := 'spl_op_create_001';
+        v_split_op_update text := 'spl_op_update_002';
+        v_split_op_delete text := 'spl_op_delete_003';
+        v_split_res jsonb;
+    begin
+        -- 1. Test workspace ve üye oluştur (v_split_owner_id OWNER, v_split_member_id EDITOR)
+        insert into public.workspaces (id, owner_id, name, normalized_name, type_code, currency_code, created_at)
+        values (v_ws_split_id, v_split_owner_id, 'Split Test Alanı', 'split test alani', 'FAMILY', 'TRY', timezone('utc', now()));
+
+        insert into public.workspace_members (workspace_id, user_id, role_code, joined_at)
+        values
+            (v_ws_split_id, v_split_owner_id, 'OWNER', timezone('utc', now())),
+            (v_ws_split_id, v_split_member_id, 'EDITOR', timezone('utc', now()));
+
+        -- 2. Workspace gider kategorisi oluştur
+        insert into public.categories (id, user_id, workspace_id, name, slug, type, color, icon, is_default, created_at)
+        values (v_split_cat_id, null, v_ws_split_id, 'Ortak Market', 'ortak-market', 'expense', '#10B981', 'cart', false, timezone('utc', now()));
+
+        -- 3. Actor = v_split_owner_id
+        perform set_config('request.jwt.claim.sub', v_split_owner_id::text, true);
+
+        -- 65.1: Split Transaction CREATE
+        v_split_res := public.sync_write_v2(
+            p_operation_id := v_split_op_create,
+            p_entity_type := 'TRANSACTION',
+            p_operation := 'CREATE',
+            p_base_version := null,
+            p_payload := jsonb_build_object(
+                'id', v_split_tx_id,
+                'user_id', v_split_owner_id,
+                'workspace_id', v_ws_split_id,
+                'paid_by_user_id', v_split_member_id,
+                'participant_user_ids', jsonb_build_array(v_split_owner_id::text, v_split_member_id::text),
+                'amount_minor', 20000,
+                'currency', 'TRY',
+                'type', 'expense',
+                'category_id', v_split_cat_id,
+                'payment_method', 'credit_card',
+                'transaction_date', '2026-09-08'
+            )
+        );
+
+        if (v_split_res ->> 'status') <> 'APPLIED'
+           or (v_split_res -> 'record' ->> 'paid_by_user_id') <> v_split_member_id::text
+           or jsonb_array_length(v_split_res -> 'record' -> 'participant_user_ids') <> 2 then
+            raise exception 'Senaryo 65.1 Başarısız: Split Transaction CREATE APPLIED dönmedi veya split alanları hatalı.';
+        end if;
+
+        -- 65.2: Split Transaction UPDATE (Payer ve katılımcı değişimi)
+        v_split_res := public.sync_write_v2(
+            p_operation_id := v_split_op_update,
+            p_entity_type := 'TRANSACTION',
+            p_operation := 'UPDATE',
+            p_base_version := (v_split_res -> 'record' ->> 'version')::bigint,
+            p_payload := jsonb_build_object(
+                'id', v_split_tx_id,
+                'user_id', v_split_owner_id,
+                'workspace_id', v_ws_split_id,
+                'paid_by_user_id', v_split_owner_id,
+                'participant_user_ids', jsonb_build_array(v_split_owner_id::text, v_split_member_id::text),
+                'amount_minor', 25000,
+                'currency', 'TRY',
+                'type', 'expense',
+                'category_id', v_split_cat_id,
+                'payment_method', 'credit_card',
+                'transaction_date', '2026-09-08'
+            )
+        );
+
+        if (v_split_res ->> 'status') <> 'APPLIED'
+           or (v_split_res -> 'record' ->> 'paid_by_user_id') <> v_split_owner_id::text
+           or (v_split_res -> 'record' ->> 'amount_minor')::bigint <> 25000 then
+            raise exception 'Senaryo 65.2 Başarısız: Split Transaction UPDATE APPLIED dönmedi veya split alanları güncellenmedi.';
+        end if;
+
+        -- 65.3: Split Transaction DELETE
+        v_split_res := public.sync_write_v2(
+            p_operation_id := v_split_op_delete,
+            p_entity_type := 'TRANSACTION',
+            p_operation := 'DELETE',
+            p_base_version := (v_split_res -> 'record' ->> 'version')::bigint,
+            p_payload := jsonb_build_object(
+                'id', v_split_tx_id,
+                'user_id', v_split_owner_id
+            )
+        );
+
+        if (v_split_res ->> 'status') <> 'APPLIED'
+           or (v_split_res -> 'record' ->> 'deleted_at') is null then
+            raise exception 'Senaryo 65.3 Başarısız: Split Transaction DELETE APPLIED soft-delete dönmedi.';
+        end if;
+    end;
+
+    -- =========================================================================
+    -- SENARYO 66: KİŞİSEL VE INCOME TRANSACTION SPLIT ALANLARININ NORMALİZASYONU
+    -- =========================================================================
+    declare
+        v_norm_tx1 uuid := extensions.gen_random_uuid();
+        v_norm_tx2 uuid := extensions.gen_random_uuid();
+        v_norm_ws_id uuid := extensions.gen_random_uuid();
+        v_bogus_user_id uuid := extensions.gen_random_uuid();
+        v_norm_res jsonb;
+    begin
+        -- 66.1: Kişisel gider işleminde keyfi başka kullanıcı split payload'ı verilse de actor'e normalize edilmeli
+        perform set_config('request.jwt.claim.sub', v_test_user_id::text, true);
+
+        v_norm_res := public.sync_write_v2(
+            p_operation_id := 'norm_op_001',
+            p_entity_type := 'TRANSACTION',
+            p_operation := 'CREATE',
+            p_base_version := null,
+            p_payload := jsonb_build_object(
+                'id', v_norm_tx1,
+                'user_id', v_test_user_id,
+                'paid_by_user_id', v_bogus_user_id,
+                'participant_user_ids', jsonb_build_array(v_bogus_user_id::text),
+                'amount_minor', 10000,
+                'currency', 'TRY',
+                'type', 'expense',
+                'category_id', v_default_expense_cat_id,
+                'payment_method', 'cash',
+                'transaction_date', '2026-09-08'
+            )
+        );
+
+        if (v_norm_res -> 'record' ->> 'paid_by_user_id') <> v_test_user_id::text
+           or (v_norm_res -> 'record' -> 'participant_user_ids') <> jsonb_build_array(v_test_user_id::text) then
+            raise exception 'Senaryo 66.1 Başarısız: Kişisel işlem split alanları actor_id olarak normalize edilmedi.';
+        end if;
+
+        -- 66.2: Workspace INCOME işleminde split alanları actor'e normalize edilmeli
+        insert into public.workspaces (id, owner_id, name, normalized_name, type_code, currency_code, created_at)
+        values (v_norm_ws_id, v_test_user_id, 'Norm WS', 'norm ws', 'FAMILY', 'TRY', timezone('utc', now()));
+
+        insert into public.workspace_members (workspace_id, user_id, role_code, joined_at)
+        values (v_norm_ws_id, v_test_user_id, 'OWNER', timezone('utc', now()));
+
+        v_norm_res := public.sync_write_v2(
+            p_operation_id := 'norm_op_002',
+            p_entity_type := 'TRANSACTION',
+            p_operation := 'CREATE',
+            p_base_version := null,
+            p_payload := jsonb_build_object(
+                'id', v_norm_tx2,
+                'user_id', v_test_user_id,
+                'workspace_id', v_norm_ws_id,
+                'paid_by_user_id', v_bogus_user_id,
+                'participant_user_ids', jsonb_build_array(v_bogus_user_id::text),
+                'amount_minor', 50000,
+                'currency', 'TRY',
+                'type', 'income',
+                'category_id', v_default_income_cat_id,
+                'payment_method', 'bank_transfer',
+                'transaction_date', '2026-09-08'
+            )
+        );
+
+        if (v_norm_res -> 'record' ->> 'paid_by_user_id') <> v_test_user_id::text
+           or (v_norm_res -> 'record' -> 'participant_user_ids') <> jsonb_build_array(v_test_user_id::text) then
+            raise exception 'Senaryo 66.2 Başarısız: Workspace gelir işlemi split alanları actor_id olarak normalize edilmedi.';
+        end if;
+    end;
+
+    -- =========================================================================
+    -- SENARYO 67: NON-MEMBER PAYER VEYA PARTICIPANT FAIL-CLOSED REDDİ
+    -- =========================================================================
+    declare
+        v_fail_ws_id uuid := extensions.gen_random_uuid();
+        v_fail_cat_id uuid := extensions.gen_random_uuid();
+        v_non_member_id uuid := extensions.gen_random_uuid();
+        v_error_caught boolean := false;
+    begin
+        insert into public.workspaces (id, owner_id, name, normalized_name, type_code, currency_code, created_at)
+        values (v_fail_ws_id, v_test_user_id, 'Fail WS', 'fail ws', 'PROJECT', 'TRY', timezone('utc', now()));
+
+        insert into public.workspace_members (workspace_id, user_id, role_code, joined_at)
+        values (v_fail_ws_id, v_test_user_id, 'OWNER', timezone('utc', now()));
+
+        insert into public.categories (id, user_id, workspace_id, name, slug, type, color, icon, is_default, created_at)
+        values (v_fail_cat_id, null, v_fail_ws_id, 'Proje Gideri', 'proje-gideri', 'expense', '#3B82F6', 'tag', false, timezone('utc', now()));
+
+        perform set_config('request.jwt.claim.sub', v_test_user_id::text, true);
+
+        -- Non-member participant ile çağrı
+        begin
+            perform public.sync_write_v2(
+                p_operation_id := 'fail_op_001',
+                p_entity_type := 'TRANSACTION',
+                p_operation := 'CREATE',
+                p_base_version := null,
+                p_payload := jsonb_build_object(
+                    'id', extensions.gen_random_uuid(),
+                    'user_id', v_test_user_id,
+                    'workspace_id', v_fail_ws_id,
+                    'paid_by_user_id', v_test_user_id,
+                    'participant_user_ids', jsonb_build_array(v_test_user_id::text, v_non_member_id::text),
+                    'amount_minor', 15000,
+                    'currency', 'TRY',
+                    'type', 'expense',
+                    'category_id', v_fail_cat_id,
+                    'payment_method', 'cash',
+                    'transaction_date', '2026-09-08'
+                )
+            );
+        exception when others then
+            if sqlerrm like '%aktif üyesi olmayan%' then
+                v_error_caught := true;
+            end if;
+        end;
+
+        if not v_error_caught then
+            raise exception 'Senaryo 67 Başarısız: Üye olmayan katılımcı içeren ortak gider reddedilmedi.';
+        end if;
+    end;
+
+    -- =========================================================================
+    -- SENARYO 68: TEKRARLI VEYA BOŞ KATILIMCI LİSTESİ FAIL-CLOSED REDDİ
+    -- =========================================================================
+    declare
+        v_dup_ws_id uuid := extensions.gen_random_uuid();
+        v_dup_cat_id uuid := extensions.gen_random_uuid();
+        v_error_caught boolean := false;
+    begin
+        insert into public.workspaces (id, owner_id, name, normalized_name, type_code, currency_code, created_at)
+        values (v_dup_ws_id, v_test_user_id, 'Dup WS', 'dup ws', 'BUSINESS', 'TRY', timezone('utc', now()));
+
+        insert into public.workspace_members (workspace_id, user_id, role_code, joined_at)
+        values (v_dup_ws_id, v_test_user_id, 'OWNER', timezone('utc', now()));
+
+        insert into public.categories (id, user_id, workspace_id, name, slug, type, color, icon, is_default, created_at)
+        values (v_dup_cat_id, null, v_dup_ws_id, 'Ofis', 'ofis', 'expense', '#F59E0B', 'briefcase', false, timezone('utc', now()));
+
+        perform set_config('request.jwt.claim.sub', v_test_user_id::text, true);
+
+        -- Tekrarlı katılımcı ile çağrı
+        begin
+            perform public.sync_write_v2(
+                p_operation_id := 'dup_op_001',
+                p_entity_type := 'TRANSACTION',
+                p_operation := 'CREATE',
+                p_base_version := null,
+                p_payload := jsonb_build_object(
+                    'id', extensions.gen_random_uuid(),
+                    'user_id', v_test_user_id,
+                    'workspace_id', v_dup_ws_id,
+                    'paid_by_user_id', v_test_user_id,
+                    'participant_user_ids', jsonb_build_array(v_test_user_id::text, v_test_user_id::text),
+                    'amount_minor', 30000,
+                    'currency', 'TRY',
+                    'type', 'expense',
+                    'category_id', v_dup_cat_id,
+                    'payment_method', 'credit_card',
+                    'transaction_date', '2026-09-08'
+                )
+            );
+        exception when others then
+            if sqlerrm like '%boş veya tekrarlı olamaz%' then
+                v_error_caught := true;
+            end if;
+        end;
+
+        if not v_error_caught then
+            raise exception 'Senaryo 68 Başarısız: Tekrarlı katılımcı içeren ortak gider reddedilmedi.';
+        end if;
+    end;
+
+    -- =========================================================================
+    -- SENARYO 69: PAYER'IN KATILIMCI LİSTESİNDE OLMAMASI VE NON-MEMBER YAZMA ENGELİ
+    -- =========================================================================
+    declare
+        v_payer_ws_id uuid := extensions.gen_random_uuid();
+        v_payer_cat_id uuid := extensions.gen_random_uuid();
+        v_second_user_id uuid := v_other_user_id;
+        v_error_caught boolean := false;
+    begin
+        insert into public.workspaces (id, owner_id, name, normalized_name, type_code, currency_code, created_at)
+        values (v_payer_ws_id, v_test_user_id, 'Payer WS', 'payer ws', 'FAMILY', 'TRY', timezone('utc', now()));
+
+        insert into public.workspace_members (workspace_id, user_id, role_code, joined_at)
+        values
+            (v_payer_ws_id, v_test_user_id, 'OWNER', timezone('utc', now())),
+            (v_payer_ws_id, v_second_user_id, 'EDITOR', timezone('utc', now()));
+
+        insert into public.categories (id, user_id, workspace_id, name, slug, type, color, icon, is_default, created_at)
+        values (v_payer_cat_id, null, v_payer_ws_id, 'Kira', 'kira', 'expense', '#EC4899', 'home', false, timezone('utc', now()));
+
+        perform set_config('request.jwt.claim.sub', v_test_user_id::text, true);
+
+        -- 69.1: Payer (v_test_user_id), katılımcı listesinde (yalnız v_second_user_id) bulunmuyor
+        begin
+            perform public.sync_write_v2(
+                p_operation_id := 'payer_op_001',
+                p_entity_type := 'TRANSACTION',
+                p_operation := 'CREATE',
+                p_base_version := null,
+                p_payload := jsonb_build_object(
+                    'id', extensions.gen_random_uuid(),
+                    'user_id', v_test_user_id,
+                    'workspace_id', v_payer_ws_id,
+                    'paid_by_user_id', v_test_user_id,
+                    'participant_user_ids', jsonb_build_array(v_second_user_id::text),
+                    'amount_minor', 40000,
+                    'currency', 'TRY',
+                    'type', 'expense',
+                    'category_id', v_payer_cat_id,
+                    'payment_method', 'bank_transfer',
+                    'transaction_date', '2026-09-08'
+                )
+            );
+        exception when others then
+            if sqlerrm like '%katılımcı olmalıdır%' then
+                v_error_caught := true;
+            end if;
+        end;
+
+        if not v_error_caught then
+            raise exception 'Senaryo 69.1 Başarısız: Payer katılımcı listesinde olmadığı halde işlem reddedilmedi.';
+        end if;
+
+        -- 69.2: Çalışma alanı üyesi olmayan bir kullanıcının alana işlem yazma girişimi insufficient_privilege almalı
+        perform set_config('request.jwt.claim.sub', extensions.gen_random_uuid()::text, true);
+        v_error_caught := false;
+        begin
+            perform public.sync_write_v2(
+                p_operation_id := 'payer_op_002',
+                p_entity_type := 'TRANSACTION',
+                p_operation := 'CREATE',
+                p_base_version := null,
+                p_payload := jsonb_build_object(
+                    'id', extensions.gen_random_uuid(),
+                    'user_id', v_test_user_id,
+                    'workspace_id', v_payer_ws_id,
+                    'paid_by_user_id', v_test_user_id,
+                    'participant_user_ids', jsonb_build_array(v_test_user_id::text),
+                    'amount_minor', 10000,
+                    'currency', 'TRY',
+                    'type', 'expense',
+                    'category_id', v_payer_cat_id,
+                    'payment_method', 'cash',
+                    'transaction_date', '2026-09-08'
+                )
+            );
+        exception when insufficient_privilege then
+            v_error_caught := true;
+        end;
+
+        if not v_error_caught then
+            raise exception 'Senaryo 69.2 Başarısız: Non-member workspace transaction yazma girişimi insufficient_privilege ile engellenmedi.';
+        end if;
+    end;
+
+    -- =========================================================================
+    -- SENARYO 70: BİLGİLENDİRME VE GÜVENLİ TEMİZLİK
+    -- =========================================================================
+    raise notice 'Tüm 69 sözleşme ve idempotency senaryosu (PROFILE, CATEGORY, TRANSACTION SPLIT, BUDGET, RECURRING_TRANSACTION, SUBSCRIPTION, GOAL, GOAL_CONTRIBUTION, DEBT, DEBT_PAYMENT, WORKSPACE, WORKSPACE_MEMBER, WORKSPACE_INVITATION, TRANSFER_OWNERSHIP, MEMBER_REMOVAL_RLS) başarıyla doğrulandı. İşlemler ROLLBACK ile geri alınıyor.';
 end
 $$;
 
--- 58. Koşulsuz ROLLBACK: Veritabanında hiçbir geçici kayıt veya yan etki bırakılmaz
+-- Koşulsuz ROLLBACK: Veritabanında hiçbir geçici kayıt veya yan etki bırakılmaz
 rollback;
-

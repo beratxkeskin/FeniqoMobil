@@ -66,7 +66,6 @@ class AddCategoryUseCase(
 
         val isDuplicate = historyCategories.any { existing ->
             existing.ownerId == session.userId &&
-                existing.workspaceId == command.workspaceId &&
                 existing.type == command.type &&
                 CategoryValidationRules.normalizeName(existing.name) == CategoryValidationRules.normalizeName(validName)
         }

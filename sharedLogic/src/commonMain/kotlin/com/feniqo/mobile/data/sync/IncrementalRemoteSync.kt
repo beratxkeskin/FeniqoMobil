@@ -226,6 +226,60 @@ class IncrementalRemoteSync(
         )
     }
 
+    /**
+     * Pulls the finance records that belong to one shared workspace.
+     *
+     * Shared records deliberately use workspace-specific cursor keys.  The legacy personal
+     * category/transaction cursors must remain personal-only: reusing them here could skip
+     * records created before a user joined a workspace.
+     */
+    suspend fun pullWorkspaceFinance(workspaceId: EntityId): WorkspaceFinanceSyncResult {
+        val categoryCursorKey = workspaceCursorKey(CATEGORY, workspaceId)
+        val transactionCursorKey = workspaceCursorKey(TRANSACTION, workspaceId)
+        val categoryCursor = syncStateDao.getCursor(categoryCursorKey)
+        val transactionCursor = syncStateDao.getCursor(transactionCursorKey)
+
+        var applied = 0
+        var conflicts = 0
+        val categories = fetchAll { page ->
+            remote.fetchCategories(
+                CategoryRemoteQuery(
+                    page = page,
+                    workspaceScope = RemoteWorkspaceScope.Workspace(workspaceId),
+                    updatedAfter = categoryCursor?.toRemoteCursor(),
+                ),
+            )
+        }
+        categories.forEach { dto ->
+            val result = applyCategory(dto, cursorEntityType = categoryCursorKey)
+            applied += result.applied
+            conflicts += result.conflicts
+        }
+
+        val transactions = fetchAll { page ->
+            remote.fetchTransactions(
+                TransactionRemoteQuery(
+                    page = page,
+                    workspaceScope = RemoteWorkspaceScope.Workspace(workspaceId),
+                    updatedAfter = transactionCursor?.toRemoteCursor(),
+                ),
+            )
+        }
+        transactions.forEach { dto ->
+            val result = applyTransaction(dto, cursorEntityType = transactionCursorKey)
+            applied += result.applied
+            conflicts += result.conflicts
+        }
+
+        return WorkspaceFinanceSyncResult(
+            workspaceId = workspaceId,
+            appliedCount = applied,
+            conflictCount = conflicts,
+            receivedCategoryCount = categories.size,
+            receivedTransactionCount = transactions.size,
+        )
+    }
+
     private suspend fun applyProfile(dto: ProfileDto): ApplyResult {
         val cursor = dto.cursor(PROFILE)
         val local = remoteSyncDao.getProfileRow(dto.id)
@@ -252,8 +306,11 @@ class IncrementalRemoteSync(
         )
     }
 
-    private suspend fun applyCategory(dto: CategoryDto): ApplyResult {
-        val cursor = dto.cursor(CATEGORY)
+    private suspend fun applyCategory(
+        dto: CategoryDto,
+        cursorEntityType: String = CATEGORY,
+    ): ApplyResult {
+        val cursor = dto.cursor(cursorEntityType)
         val local = remoteSyncDao.getCategoryRow(dto.id)
         val remoteEntity = dto.toDomain().toEntity(dto.toRemoteSyncMetadata(nowEpochMillisProvider()), slug = dto.slug)
         return applyOrConflict(
@@ -449,8 +506,11 @@ class IncrementalRemoteSync(
         )
     }
 
-    private suspend fun applyTransaction(dto: TransactionDto): ApplyResult {
-        val cursor = dto.cursor(TRANSACTION)
+    private suspend fun applyTransaction(
+        dto: TransactionDto,
+        cursorEntityType: String = TRANSACTION,
+    ): ApplyResult {
+        val cursor = dto.cursor(cursorEntityType)
         val local = remoteSyncDao.getTransactionRow(dto.id)
         val remoteEntity = dto.toDomain().toEntity(dto.toRemoteSyncMetadata(nowEpochMillisProvider()))
         return applyOrConflict(
@@ -591,6 +651,9 @@ class IncrementalRemoteSync(
 
     private data class ApplyResult(val applied: Int, val conflicts: Int)
 
+    private fun workspaceCursorKey(entityType: String, workspaceId: EntityId): String =
+        "$entityType:WORKSPACE:${workspaceId.value}"
+
     private companion object {
         const val PROFILE = "PROFILE"
         const val CATEGORY = "CATEGORY"
@@ -615,4 +678,12 @@ data class IncrementalSyncResult(
     val receivedGoalContributionCount: Int = 0,
     val receivedDebtCount: Int = 0,
     val receivedDebtPaymentCount: Int = 0,
+)
+
+data class WorkspaceFinanceSyncResult(
+    val workspaceId: EntityId,
+    val appliedCount: Int,
+    val conflictCount: Int,
+    val receivedCategoryCount: Int,
+    val receivedTransactionCount: Int,
 )

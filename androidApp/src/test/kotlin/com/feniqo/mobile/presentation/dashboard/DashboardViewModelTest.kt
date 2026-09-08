@@ -137,12 +137,16 @@ class DashboardViewModelTest {
         )
         val observeCategoriesHistory = ObserveCategoriesForHistoryLookupUseCase(categoryRepo)
 
+        val fakeWorkspaceRepo = com.feniqo.mobile.presentation.common.FakeWorkspaceRepository()
+        val observeActiveWorkspaceUseCase = com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase(fakeWorkspaceRepo)
+
         return DashboardViewModel(
             observeDashboardSummaryUseCase = observeSummary,
             observeTransactionsUseCase = observeTransactions,
             observeCategoriesForHistoryLookupUseCase = observeCategoriesHistory,
             calculateMoneyScoreUseCase = moneyScoreCalculator,
             currentDateProvider = dateProvider,
+            observeActiveWorkspaceUseCase = observeActiveWorkspaceUseCase,
         )
     }
 

@@ -127,6 +127,7 @@ data class SubscriptionFormUiState(
     val draft: SubscriptionFormDraft,
     val availableCategories: List<Category> = emptyList(),
     val mutationState: SubscriptionMutationState = SubscriptionMutationState(),
+    val activeWorkspaceName: String? = null,
 ) {
     val isEditMode: Boolean get() = draft.isEditMode
     val isCreateMode: Boolean get() = draft.isCreateMode

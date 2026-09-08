@@ -95,6 +95,11 @@ data class TransactionEntity(
     val ownerId: String,
     @ColumnInfo(name = "workspace_id")
     val workspaceId: String?,
+    @ColumnInfo(name = "paid_by_user_id")
+    val paidByUserId: String? = null,
+    /** JSON array; split changes are versioned with the parent transaction outbox operation. */
+    @ColumnInfo(name = "participant_user_ids_json")
+    val participantUserIdsJson: String? = null,
     @ColumnInfo(name = "amount_minor")
     val amountMinor: Long,
     @ColumnInfo(name = "currency_code")

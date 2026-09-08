@@ -54,6 +54,45 @@ class SyncUseCasesTest {
         assertEquals(1, repository.retryFailedCallCount)
     }
 
+    @Test
+    fun observe_sync_conflicts_use_case_delegates_to_repository() = runTest {
+        val expectedConflicts = listOf(
+            SyncConflict(
+                entityId = EntityId("ws-1"),
+                entityType = com.feniqo.mobile.domain.repository.SyncEntityType.WORKSPACE,
+                localVersion = 1L,
+                remoteVersion = 2L,
+            ),
+        )
+        val repository = RecordingSyncRepository(conflicts = expectedConflicts)
+        val useCase = ObserveSyncConflictsUseCase(repository)
+
+        val actual = useCase().first()
+        assertEquals(expectedConflicts, actual)
+    }
+
+    @Test
+    fun resolve_sync_conflict_use_case_delegates_parameters_and_forwards_success() = runTest {
+        val repository = RecordingSyncRepository()
+        val useCase = ResolveSyncConflictUseCase(repository)
+
+        val result = useCase(EntityId("ws-1"), ConflictResolution.KEEP_REMOTE)
+        assertTrue(result is RepositoryResult.Success)
+        assertEquals(EntityId("ws-1"), repository.lastResolvedEntityId)
+        assertEquals(ConflictResolution.KEEP_REMOTE, repository.lastResolution)
+    }
+
+    @Test
+    fun resolve_sync_conflict_use_case_forwards_error_from_repository() = runTest {
+        val expectedError = com.feniqo.mobile.domain.model.AppError.Conflict("sync.conflict_resolution_stale")
+        val repository = RecordingSyncRepository(resolveResult = RepositoryResult.Failure(expectedError))
+        val useCase = ResolveSyncConflictUseCase(repository)
+
+        val result = useCase(EntityId("ws-1"), ConflictResolution.KEEP_LOCAL)
+        assertTrue(result is RepositoryResult.Failure)
+        assertEquals(expectedError, result.error)
+    }
+
     private class RecordingSyncRepository(
         private val overview: SyncOverview = SyncOverview(
             phase = SyncPhase.IDLE,
@@ -63,12 +102,16 @@ class SyncUseCasesTest {
             lastSuccessfulSyncAt = null,
             lastError = null,
         ),
+        private val conflicts: List<SyncConflict> = emptyList(),
+        private val resolveResult: RepositoryResult<Unit> = RepositoryResult.Success(Unit),
     ) : SyncRepository {
         var requestSyncCallCount = 0
         var retryFailedCallCount = 0
+        var lastResolvedEntityId: EntityId? = null
+        var lastResolution: ConflictResolution? = null
 
         override fun observeOverview(): Flow<SyncOverview> = flowOf(overview)
-        override fun observeConflicts(): Flow<List<SyncConflict>> = flowOf(emptyList())
+        override fun observeConflicts(): Flow<List<SyncConflict>> = flowOf(conflicts)
 
         override suspend fun requestSync(): RepositoryResult<Unit> {
             requestSyncCallCount++
@@ -83,6 +126,10 @@ class SyncUseCasesTest {
         override suspend fun resolveConflict(
             entityId: EntityId,
             resolution: ConflictResolution,
-        ): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        ): RepositoryResult<Unit> {
+            lastResolvedEntityId = entityId
+            lastResolution = resolution
+            return resolveResult
+        }
     }
 }

@@ -109,9 +109,11 @@ class CategoriesViewModelTest {
     private val categoryRepository = FakeCategoryRepository()
     private val observeCategoriesUseCase = ObserveCategoriesUseCase(categoryRepository)
     private val deleteCategoryUseCase = DeleteCategoryUseCase(authRepository, categoryRepository)
+    private val fakeWorkspaceRepo = com.feniqo.mobile.presentation.common.FakeWorkspaceRepository()
+    private val observeActiveWorkspaceUseCase = com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase(fakeWorkspaceRepo)
 
     private fun createViewModel(): CategoriesViewModel =
-        CategoriesViewModel(observeCategoriesUseCase, deleteCategoryUseCase)
+        CategoriesViewModel(observeCategoriesUseCase, deleteCategoryUseCase, observeActiveWorkspaceUseCase)
 
     @Test
     fun initialState_observesExpenseType_andSeparatesSystemAndCustomCategories() = runTest {

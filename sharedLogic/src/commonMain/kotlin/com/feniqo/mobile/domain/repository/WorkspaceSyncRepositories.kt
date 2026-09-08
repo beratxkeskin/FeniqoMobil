@@ -8,11 +8,7 @@ import com.feniqo.mobile.domain.model.WorkspaceRole
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.Instant
 
-data class WorkspaceInviteCode(val value: String) {
-    init {
-        require(value.isNotBlank()) { "Çalışma alanı davet kodu boş olamaz." }
-    }
-}
+data class WorkspaceInviteCode(val value: String)
 
 interface WorkspaceRepository {
     fun observeWorkspaces(): Flow<List<Workspace>>
@@ -42,6 +38,16 @@ interface WorkspaceRepository {
     ): RepositoryResult<Unit>
 
     suspend fun leave(workspaceId: EntityId): RepositoryResult<Unit>
+
+    suspend fun transferOwnership(
+        workspaceId: EntityId,
+        targetUserId: EntityId,
+    ): RepositoryResult<Unit>
+
+    suspend fun removeMember(
+        workspaceId: EntityId,
+        userId: EntityId,
+    ): RepositoryResult<Unit>
 }
 
 enum class SyncPhase {
@@ -78,6 +84,8 @@ enum class SyncEntityType {
     GOAL_CONTRIBUTION,
     DEBT,
     DEBT_PAYMENT,
+    WORKSPACE_MEMBER,
+    WORKSPACE_INVITATION,
 }
 
 

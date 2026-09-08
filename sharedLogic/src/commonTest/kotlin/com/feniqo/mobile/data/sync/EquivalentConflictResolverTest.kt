@@ -85,6 +85,51 @@ class EquivalentConflictResolverTest {
     }
 
     @Test
+    fun transaction_equivalent_when_split_fields_match_or_default_to_user_id() {
+        val localDto = sampleTx().copy(
+            paidByUserId = "usr-1",
+            participantUserIds = listOf("usr-1", "usr-2"),
+        )
+        val remoteDto = sampleTx(version = 1L).copy(
+            paidByUserId = "usr-1",
+            participantUserIds = listOf("usr-1", "usr-2"),
+        )
+
+        val conflict = conflictEntity("TRANSACTION", "tx-1", "op-1", localDto, remoteDto)
+        val op = operationEntity("TRANSACTION", "tx-1", "op-1", "CREATE")
+
+        assertTrue(EquivalentConflictResolver.isEquivalent(conflict, op))
+
+        // When empty, defaults to userId/listOf(userId)
+        val localDefault = sampleTx().copy(paidByUserId = null, participantUserIds = emptyList())
+        val remoteExplicit = sampleTx(version = 1L).copy(paidByUserId = "usr-1", participantUserIds = listOf("usr-1"))
+        val defaultConflict = conflictEntity("TRANSACTION", "tx-1", "op-1", localDefault, remoteExplicit)
+        assertTrue(EquivalentConflictResolver.isEquivalent(defaultConflict, op))
+    }
+
+    @Test
+    fun transaction_not_equivalent_when_paid_by_user_id_differs() {
+        val localDto = sampleTx().copy(paidByUserId = "usr-1", participantUserIds = listOf("usr-1", "usr-2"))
+        val remoteDto = sampleTx().copy(paidByUserId = "usr-2", participantUserIds = listOf("usr-1", "usr-2"))
+
+        val conflict = conflictEntity("TRANSACTION", "tx-1", "op-1", localDto, remoteDto)
+        val op = operationEntity("TRANSACTION", "tx-1", "op-1", "CREATE")
+
+        assertFalse(EquivalentConflictResolver.isEquivalent(conflict, op))
+    }
+
+    @Test
+    fun transaction_not_equivalent_when_participant_user_ids_differ() {
+        val localDto = sampleTx().copy(paidByUserId = "usr-1", participantUserIds = listOf("usr-1", "usr-2"))
+        val remoteDto = sampleTx().copy(paidByUserId = "usr-1", participantUserIds = listOf("usr-1", "usr-3"))
+
+        val conflict = conflictEntity("TRANSACTION", "tx-1", "op-1", localDto, remoteDto)
+        val op = operationEntity("TRANSACTION", "tx-1", "op-1", "CREATE")
+
+        assertFalse(EquivalentConflictResolver.isEquivalent(conflict, op))
+    }
+
+    @Test
     fun category_equivalent_positive_and_negative() {
         val localDto = CategoryDto(
             id = "cat-1",

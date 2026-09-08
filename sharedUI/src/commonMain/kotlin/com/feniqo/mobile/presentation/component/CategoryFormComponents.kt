@@ -110,6 +110,7 @@ fun CategoryFormHeader(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     isBackEnabled: Boolean = true,
+    activeWorkspaceName: String? = null,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -117,6 +118,7 @@ fun CategoryFormHeader(
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             TextButton(
                 onClick = onBack,
@@ -133,6 +135,11 @@ fun CategoryFormHeader(
                     fontWeight = FontWeight.SemiBold,
                 )
             }
+
+            ActiveWorkspaceIndicator(
+                workspaceName = activeWorkspaceName,
+                isCompact = true,
+            )
         }
 
         Spacer(modifier = Modifier.height(FeniqoSpacing.Small))

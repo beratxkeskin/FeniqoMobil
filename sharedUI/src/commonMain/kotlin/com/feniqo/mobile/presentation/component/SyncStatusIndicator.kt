@@ -59,6 +59,7 @@ fun SyncStatusIndicator(
     uiState: SyncStatusUiState,
     onManualSync: () -> Unit,
     onRetryFailed: () -> Unit,
+    onResolveConflict: () -> Unit = {},
     modifier: Modifier = Modifier,
     nowEpochMillis: Long = Clock.System.now().toEpochMilliseconds(),
 ) {
@@ -174,6 +175,7 @@ fun SyncStatusIndicator(
                             when (displayModel.actionType) {
                                 SyncDisplayActionType.RETRY_FAILED -> onRetryFailed()
                                 SyncDisplayActionType.MANUAL_SYNC -> onManualSync()
+                                SyncDisplayActionType.RESOLVE_CONFLICT -> onResolveConflict()
                             }
                         },
                         enabled = displayModel.isActionEnabled,

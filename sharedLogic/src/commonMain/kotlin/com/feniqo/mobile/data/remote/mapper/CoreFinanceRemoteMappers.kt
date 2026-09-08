@@ -74,6 +74,10 @@ fun TransactionDto.toDomain(): Transaction {
         id = EntityId(id.required("transactions.id")),
         ownerId = EntityId(userId.required("transactions.user_id")),
         workspaceId = workspaceId?.required("transactions.workspace_id")?.let(::EntityId),
+        paidByUserId = paidByUserId?.required("transactions.paid_by_user_id")?.let(::EntityId) ?: EntityId(userId.required("transactions.user_id")),
+        participantUserIds = participantUserIds.map(::EntityId).ifEmpty {
+            listOf(paidByUserId?.let(::EntityId) ?: EntityId(userId.required("transactions.user_id")))
+        },
         amount = Money(amountMinor, currency.toCurrency()),
         type = type.toTransactionType("transactions.type"),
         categoryId = EntityId(categoryId.required("transactions.category_id")),
@@ -90,6 +94,8 @@ fun Transaction.toDto(): TransactionDto = TransactionDto(
     id = id.value,
     userId = ownerId.value,
     workspaceId = workspaceId?.value,
+    paidByUserId = paidByUserId.value,
+    participantUserIds = participantUserIds.map(EntityId::value),
     amountMinor = amount.amountMinor,
     currency = amount.currency.code,
     type = type.toRemoteCode(),

@@ -9,6 +9,7 @@ import com.feniqo.mobile.domain.repository.RepositoryResult
 import com.feniqo.mobile.domain.repository.TransactionFilter
 import com.feniqo.mobile.domain.usecase.DeleteTransactionUseCase
 import com.feniqo.mobile.domain.usecase.InstallmentDeleteScope
+import com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase
 import com.feniqo.mobile.domain.usecase.ObserveCategoriesForHistoryLookupUseCase
 import com.feniqo.mobile.domain.usecase.ObserveCategoriesUseCase
 import com.feniqo.mobile.domain.usecase.ObserveTransactionsUseCase
@@ -39,6 +40,7 @@ class TransactionsViewModel @Inject constructor(
     private val observeCategoriesForHistoryLookupUseCase: ObserveCategoriesForHistoryLookupUseCase,
     private val observeCategoriesUseCase: ObserveCategoriesUseCase,
     private val deleteTransactionUseCase: DeleteTransactionUseCase,
+    private val observeActiveWorkspaceUseCase: ObserveActiveWorkspaceUseCase,
     private val currentDateProvider: CurrentDateProvider,
 ) : ViewModel() {
 
@@ -51,6 +53,24 @@ class TransactionsViewModel @Inject constructor(
     private val _isDeleteInProgress = MutableStateFlow(false)
 
     private var activeDeleteJob: Job? = null
+
+    init {
+        viewModelScope.launch {
+            var previousWorkspaceId: EntityId? = null
+            var isFirstEmission = true
+            observeActiveWorkspaceUseCase().collect { workspace ->
+                val currentWorkspaceId = workspace?.id
+                if (!isFirstEmission && currentWorkspaceId != previousWorkspaceId) {
+                    _filter.update { it.copy(categoryId = null) }
+                    activeDeleteJob?.cancel()
+                    _deleteDialog.value = null
+                    _isDeleteInProgress.value = false
+                }
+                isFirstEmission = false
+                previousWorkspaceId = currentWorkspaceId
+            }
+        }
+    }
 
     private data class FilterState(
         val query: String,
@@ -153,7 +173,9 @@ class TransactionsViewModel @Inject constructor(
         _searchQuery,
         _filter,
         dialogAndMessageFlow,
-    ) { observation, query, filter, dialogMsg ->
+        observeActiveWorkspaceUseCase(),
+    ) { observation, query, filter, dialogMsg, activeWorkspace ->
+        val workspaceName = activeWorkspace?.name
         when (observation) {
             is ObservationResult.Loading -> {
                 TransactionsUiState(
@@ -163,6 +185,7 @@ class TransactionsViewModel @Inject constructor(
                     searchQuery = query,
                     filter = filter,
                     isFilterExpanded = dialogMsg.isExpanded,
+                    activeWorkspaceName = workspaceName,
                     userMessage = dialogMsg.message,
                     deleteDialog = dialogMsg.dialog,
                     isDeleteInProgress = dialogMsg.isDeleteInProgress,
@@ -177,6 +200,7 @@ class TransactionsViewModel @Inject constructor(
                     searchQuery = query,
                     filter = filter,
                     isFilterExpanded = dialogMsg.isExpanded,
+                    activeWorkspaceName = workspaceName,
                     userMessage = dialogMsg.message,
                     deleteDialog = dialogMsg.dialog,
                     isDeleteInProgress = dialogMsg.isDeleteInProgress,
@@ -191,6 +215,7 @@ class TransactionsViewModel @Inject constructor(
                     searchQuery = query,
                     filter = filter,
                     isFilterExpanded = dialogMsg.isExpanded,
+                    activeWorkspaceName = workspaceName,
                     userMessage = dialogMsg.message,
                     deleteDialog = dialogMsg.dialog,
                     isDeleteInProgress = dialogMsg.isDeleteInProgress,

@@ -16,9 +16,10 @@ interface CategoryDao {
           AND (:typeCode IS NULL OR type_code = :typeCode)
           AND (
             (is_default = 1 AND owner_id IS NULL) OR
-            (owner_id = :ownerId AND (
-              (:workspaceId IS NULL AND workspace_id IS NULL) OR workspace_id = :workspaceId
-            ))
+            (
+              (:workspaceId IS NULL AND owner_id = :ownerId AND workspace_id IS NULL) OR
+              (:workspaceId IS NOT NULL AND workspace_id = :workspaceId)
+            )
           )
         ORDER BY is_default DESC, normalized_name
         """,
@@ -57,9 +58,10 @@ interface CategoryDao {
         SELECT * FROM categories
         WHERE (
             (is_default = 1 AND owner_id IS NULL) OR
-            (owner_id = :ownerId AND (
-              (:workspaceId IS NULL AND workspace_id IS NULL) OR workspace_id = :workspaceId
-            ))
+            (
+              (:workspaceId IS NULL AND owner_id = :ownerId AND workspace_id IS NULL) OR
+              (:workspaceId IS NOT NULL AND workspace_id = :workspaceId)
+            )
         )
         ORDER BY is_default DESC, normalized_name
         """,
@@ -78,10 +80,12 @@ interface BudgetDao {
     @Query(
         """
         SELECT * FROM budgets
-        WHERE owner_id = :ownerId
-          AND month = :month
+        WHERE month = :month
           AND deleted_at_epoch_ms IS NULL
-          AND ((:workspaceId IS NULL AND workspace_id IS NULL) OR workspace_id = :workspaceId)
+          AND (
+            (:workspaceId IS NULL AND owner_id = :ownerId AND workspace_id IS NULL) OR
+            (:workspaceId IS NOT NULL AND workspace_id = :workspaceId)
+          )
         ORDER BY category_id
         """,
     )
@@ -94,10 +98,12 @@ interface BudgetDao {
     @Query(
         """
         SELECT * FROM budgets
-        WHERE owner_id = :ownerId
-          AND month = :month
+        WHERE month = :month
           AND deleted_at_epoch_ms IS NULL
-          AND ((:workspaceId IS NULL AND workspace_id IS NULL) OR workspace_id = :workspaceId)
+          AND (
+            (:workspaceId IS NULL AND owner_id = :ownerId AND workspace_id IS NULL) OR
+            (:workspaceId IS NOT NULL AND workspace_id = :workspaceId)
+          )
         ORDER BY category_id
         """,
     )

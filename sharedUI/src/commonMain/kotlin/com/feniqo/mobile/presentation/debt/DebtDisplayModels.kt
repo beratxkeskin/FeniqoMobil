@@ -20,6 +20,7 @@ import com.feniqo.mobile.presentation.util.MoneyFormatter
 data class DebtsUiState(
     val isLoading: Boolean = true,
     val debts: List<DebtDisplayModel> = emptyList(),
+    val activeWorkspaceName: String? = null,
     val observationError: FinanceUiMessage? = null,
 ) {
     val isEmpty: Boolean get() = !isLoading && observationError == null && debts.isEmpty()

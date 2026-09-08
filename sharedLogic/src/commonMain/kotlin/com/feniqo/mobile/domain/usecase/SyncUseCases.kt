@@ -34,3 +34,25 @@ class RetryFailedSyncOperationsUseCase(
 ) {
     suspend operator fun invoke(): RepositoryResult<Unit> = syncRepository.retryFailedOperations()
 }
+
+/**
+ * Bekleyen çakışmaları (conflict) Room Single Source of Truth üzerinden gözlemler.
+ */
+class ObserveSyncConflictsUseCase(
+    private val syncRepository: SyncRepository,
+) {
+    operator fun invoke(): Flow<List<com.feniqo.mobile.domain.repository.SyncConflict>> =
+        syncRepository.observeConflicts()
+}
+
+/**
+ * Belirli bir varlık çakışmasını kullanıcı kararına (KEEP_LOCAL / KEEP_REMOTE) göre çözer.
+ */
+class ResolveSyncConflictUseCase(
+    private val syncRepository: SyncRepository,
+) {
+    suspend operator fun invoke(
+        entityId: com.feniqo.mobile.domain.model.EntityId,
+        resolution: com.feniqo.mobile.domain.repository.ConflictResolution,
+    ): RepositoryResult<Unit> = syncRepository.resolveConflict(entityId, resolution)
+}

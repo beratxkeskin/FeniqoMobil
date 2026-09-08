@@ -6,6 +6,7 @@ import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.YearMonth
 import com.feniqo.mobile.domain.usecase.CalculateMoneyScoreUseCase
 import com.feniqo.mobile.domain.usecase.MoneyScoreInput
+import com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase
 import com.feniqo.mobile.domain.usecase.ObserveCategoriesForHistoryLookupUseCase
 import com.feniqo.mobile.domain.usecase.ObserveDashboardSummaryUseCase
 import com.feniqo.mobile.domain.usecase.ObserveTransactionsUseCase
@@ -42,6 +43,7 @@ class DashboardViewModel @Inject constructor(
     private val observeTransactionsUseCase: ObserveTransactionsUseCase,
     private val observeCategoriesForHistoryLookupUseCase: ObserveCategoriesForHistoryLookupUseCase,
     private val calculateMoneyScoreUseCase: CalculateMoneyScoreUseCase,
+    private val observeActiveWorkspaceUseCase: ObserveActiveWorkspaceUseCase,
     private val currentDateProvider: CurrentDateProvider,
 ) : ViewModel() {
 
@@ -106,13 +108,16 @@ class DashboardViewModel @Inject constructor(
         observationResultFlow,
         _selectedMonth,
         _userMessage,
-    ) { obsResult, selectedMonth, userMessage ->
+        observeActiveWorkspaceUseCase(),
+    ) { obsResult, selectedMonth, userMessage, activeWorkspace ->
         val currentMonth = selectedMonth ?: initialMonth
+        val workspaceName = activeWorkspace?.name
         when (obsResult) {
             is ObservationResult.Loading -> DashboardUiState(
                 isLoading = true,
                 dashboard = null,
                 selectedMonth = currentMonth,
+                activeWorkspaceName = workspaceName,
                 userMessage = userMessage,
                 observationError = null,
             )
@@ -121,6 +126,7 @@ class DashboardViewModel @Inject constructor(
                 isLoading = false,
                 dashboard = obsResult.dashboard,
                 selectedMonth = currentMonth,
+                activeWorkspaceName = workspaceName,
                 userMessage = userMessage,
                 observationError = null,
             )
@@ -129,6 +135,7 @@ class DashboardViewModel @Inject constructor(
                 isLoading = false,
                 dashboard = null,
                 selectedMonth = currentMonth,
+                activeWorkspaceName = workspaceName,
                 userMessage = userMessage,
                 observationError = obsResult.message,
             )
@@ -140,6 +147,7 @@ class DashboardViewModel @Inject constructor(
             isLoading = true,
             dashboard = null,
             selectedMonth = null,
+            activeWorkspaceName = null,
             userMessage = null,
             observationError = null,
         ),

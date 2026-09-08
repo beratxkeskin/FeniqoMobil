@@ -34,6 +34,7 @@ import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.presentation.category.CategoriesUiState
 import com.feniqo.mobile.presentation.category.CategoryDisplayModel
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.component.ActiveWorkspaceIndicator
 import com.feniqo.mobile.presentation.component.CategoryDeleteDialog
 import com.feniqo.mobile.presentation.component.CategoryListItem
 import com.feniqo.mobile.presentation.component.CategoryMessageBanner
@@ -77,12 +78,21 @@ fun CategoriesScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Kategoriler",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                    ) {
+                        Text(
+                            text = "Kategoriler",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                        ActiveWorkspaceIndicator(
+                            workspaceName = state.activeWorkspaceName,
+                            isCompact = true,
+                        )
+                    }
                     Text(
                         text = "Gelir ve giderlerinizi kendi kategorilerinizle düzenleyin.",
                         style = MaterialTheme.typography.bodyMedium,

@@ -40,6 +40,7 @@ import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.PaymentMethod
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.component.ActiveWorkspaceIndicator
 import com.feniqo.mobile.presentation.component.ReceiptAttachmentSection
 import com.feniqo.mobile.presentation.component.TransactionAmountField
 import com.feniqo.mobile.presentation.component.TransactionCategoryPicker
@@ -90,6 +91,7 @@ fun TransactionFormScreen(
             // Üst Başlık ve Geri Dön Butonu
             TransactionFormHeader(
                 isEditMode = uiState.isEditMode,
+                activeWorkspaceName = uiState.activeWorkspaceName,
                 onBack = onBack,
                 isBackEnabled = !uiState.isSubmitting,
             )
@@ -143,6 +145,7 @@ fun TransactionFormScreen(
 @Composable
 private fun TransactionFormHeader(
     isEditMode: Boolean,
+    activeWorkspaceName: String?,
     onBack: () -> Unit,
     isBackEnabled: Boolean,
     modifier: Modifier = Modifier,
@@ -157,28 +160,38 @@ private fun TransactionFormHeader(
                 .fillMaxWidth()
                 .padding(horizontal = FeniqoSpacing.Medium, vertical = FeniqoSpacing.Small),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            TextButton(
-                onClick = onBack,
-                enabled = isBackEnabled,
-                modifier = Modifier
-                    .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-                    .semantics { contentDescription = "Geri dön" },
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
             ) {
+                TextButton(
+                    onClick = onBack,
+                    enabled = isBackEnabled,
+                    modifier = Modifier
+                        .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                        .semantics { contentDescription = "Geri dön" },
+                ) {
+                    Text(
+                        text = "Geri",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (isBackEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+
                 Text(
-                    text = "Geri",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (isBackEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                    fontWeight = FontWeight.SemiBold,
+                    text = if (isEditMode) "İşlemi Düzenle" else "İşlem Ekle",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(start = FeniqoSpacing.Small),
                 )
             }
 
-            Text(
-                text = if (isEditMode) "İşlemi Düzenle" else "İşlem Ekle",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(start = FeniqoSpacing.Small),
+            ActiveWorkspaceIndicator(
+                workspaceName = activeWorkspaceName,
+                isCompact = true,
             )
         }
     }

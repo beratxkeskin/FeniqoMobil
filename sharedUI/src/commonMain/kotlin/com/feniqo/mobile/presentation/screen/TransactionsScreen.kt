@@ -37,6 +37,7 @@ import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.usecase.InstallmentDeleteScope
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.component.ActiveTransactionFilterChips
+import com.feniqo.mobile.presentation.component.ActiveWorkspaceIndicator
 import com.feniqo.mobile.presentation.component.InstallmentTransactionDeleteDialog
 import com.feniqo.mobile.presentation.component.SingleTransactionDeleteDialog
 import com.feniqo.mobile.presentation.component.TransactionDateGroupHeader
@@ -100,12 +101,21 @@ fun TransactionsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = "İşlemler",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                ) {
+                    Text(
+                        text = "İşlemler",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                    ActiveWorkspaceIndicator(
+                        workspaceName = state.activeWorkspaceName,
+                        isCompact = true,
+                    )
+                }
 
                 if (canAddTransaction) {
                     Button(

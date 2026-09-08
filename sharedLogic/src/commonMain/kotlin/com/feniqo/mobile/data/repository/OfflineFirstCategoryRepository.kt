@@ -34,6 +34,7 @@ class OfflineFirstCategoryRepository(
     private val authRepository: AuthRepository,
     private val categoryDao: CategoryDao,
     private val offlineWriteQueue: OfflineWriteQueue,
+    private val activeWorkspaceScope: ActiveWorkspaceScope = PersonalActiveWorkspaceScope,
     private val nowEpochMillisProvider: () -> Long = { kotlin.time.Clock.System.now().toEpochMilliseconds() },
 ) : CategoryRepository {
     private val json = Json {
@@ -50,11 +51,14 @@ class OfflineFirstCategoryRepository(
             if (session == null) {
                 flowOf(emptyList())
             } else {
-                categoryDao.observeAll(
-                    ownerId = session.userId.value,
-                    workspaceId = workspaceId?.value,
-                    typeCode = type?.name,
-                ).map { entities -> entities.map(CategoryEntity::toDomain) }
+                activeWorkspaceScope.observe(session.userId).flatMapLatest { activeWorkspaceId ->
+                    if (workspaceId != null && workspaceId != activeWorkspaceId) flowOf(emptyList())
+                    else categoryDao.observeAll(
+                        ownerId = session.userId.value,
+                        workspaceId = activeWorkspaceId?.value,
+                        typeCode = type?.name,
+                    ).map { entities -> entities.map(CategoryEntity::toDomain) }
+                }
             }
         }
     }
@@ -64,8 +68,10 @@ class OfflineFirstCategoryRepository(
             if (session == null) {
                 flowOf(null)
             } else {
-                categoryDao.observeByIdAndOwner(id.value, session.userId.value)
-                    .map { entity -> entity?.toDomain() }
+                activeWorkspaceScope.observe(session.userId).flatMapLatest { activeWorkspaceId ->
+                    categoryDao.observeByIdAndOwner(id.value, session.userId.value)
+                        .map { entity -> entity?.takeIf { it.workspaceId == activeWorkspaceId?.value }?.toDomain() }
+                }
             }
         }
     }
@@ -75,10 +81,13 @@ class OfflineFirstCategoryRepository(
             if (session == null) {
                 flowOf(emptyList())
             } else {
-                categoryDao.observeAllForHistoryLookup(
-                    ownerId = session.userId.value,
-                    workspaceId = workspaceId?.value,
-                ).map { entities -> entities.map(CategoryEntity::toDomain) }
+                activeWorkspaceScope.observe(session.userId).flatMapLatest { activeWorkspaceId ->
+                    if (workspaceId != null && workspaceId != activeWorkspaceId) flowOf(emptyList())
+                    else categoryDao.observeAllForHistoryLookup(
+                        ownerId = session.userId.value,
+                        workspaceId = activeWorkspaceId?.value,
+                    ).map { entities -> entities.map(CategoryEntity::toDomain) }
+                }
             }
         }
     }
@@ -95,11 +104,12 @@ class OfflineFirstCategoryRepository(
             if (category.ownerId != session.userId) {
                 return RepositoryResult.Failure(AppError.Authentication("category_owner_mismatch"))
             }
+            val scopedCategory = category.copy(workspaceId = activeWorkspaceScope.current(session.userId))
 
             val now = nowEpochMillisProvider()
             val sync = newSyncMetadata(now)
-            val entity = category.toEntity(sync)
-            val dto = category.toDto().copy(slug = entity.slug)
+            val entity = scopedCategory.toEntity(sync)
+            val dto = scopedCategory.toDto().copy(slug = entity.slug)
             val payloadJson = json.encodeToString(dto)
 
             offlineWriteQueue.enqueueCategoryV2(
@@ -107,7 +117,7 @@ class OfflineFirstCategoryRepository(
                 type = OutboxOperationType.CREATE,
                 payloadJson = payloadJson,
             )
-            return RepositoryResult.Success(category.id)
+            return RepositoryResult.Success(scopedCategory.id)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -130,6 +140,10 @@ class OfflineFirstCategoryRepository(
 
             val existing = categoryDao.getByIdAndOwner(category.id.value, session.userId.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("category_not_found"))
+            if (existing.workspaceId != activeWorkspaceScope.current(session.userId)?.value ||
+                category.workspaceId?.value != existing.workspaceId) {
+                return RepositoryResult.Failure(AppError.Validation("category_not_found"))
+            }
 
             val now = nowEpochMillisProvider()
             val updatedSync = existing.sync.toPendingUpdate(now)
@@ -163,6 +177,9 @@ class OfflineFirstCategoryRepository(
 
             val existing = categoryDao.getByIdAndOwner(id.value, session.userId.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("category_not_found"))
+            if (existing.workspaceId != activeWorkspaceScope.current(session.userId)?.value) {
+                return RepositoryResult.Failure(AppError.Validation("category_not_found"))
+            }
 
             if (existing.isDefault || existing.ownerId == null) {
                 return RepositoryResult.Failure(AppError.Validation("category_default_cannot_be_deleted"))

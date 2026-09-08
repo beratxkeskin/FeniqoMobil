@@ -5,6 +5,7 @@ import com.feniqo.mobile.data.local.entity.SyncOperationEntity
 import com.feniqo.mobile.data.remote.core.ConditionalRemoteWriteResult
 import com.feniqo.mobile.data.remote.core.IdempotentConditionalRemoteWriter
 import com.feniqo.mobile.data.remote.core.RemoteWriteOperation
+import com.feniqo.mobile.data.remote.codec.WorkspaceMembershipPayloadCodec
 import com.feniqo.mobile.data.remote.codec.WorkspacePayloadCodec
 import com.feniqo.mobile.data.remote.dto.BudgetDto
 import com.feniqo.mobile.data.remote.dto.CategoryDto
@@ -73,6 +74,8 @@ class V2OutboxOperationExecutor(
             SyncEntityType.DEBT -> executeDebt(operation, writeOp, payloadJson)
             SyncEntityType.DEBT_PAYMENT -> executeDebtPayment(operation, writeOp, payloadJson)
             SyncEntityType.WORKSPACE -> executeWorkspace(operation, writeOp, payloadJson)
+            SyncEntityType.WORKSPACE_MEMBER -> executeWorkspaceMember(operation, writeOp, payloadJson)
+            SyncEntityType.WORKSPACE_INVITATION -> executeWorkspaceInvitation(operation, writeOp, payloadJson)
         }
     }
 
@@ -449,6 +452,82 @@ class V2OutboxOperationExecutor(
                 } else {
                     error("Çalışma alanı koşullu yazma sırasında bulunamadı (NOT_FOUND): ${operation.entityId}")
                 }
+            }
+        }
+    }
+
+    private suspend fun executeWorkspaceMember(
+        operation: SyncOperationEntity,
+        writeOp: RemoteWriteOperation,
+        payloadJson: String,
+    ): OutboxExecutionResult {
+        require(writeOp in setOf(RemoteWriteOperation.UPDATE, RemoteWriteOperation.DELETE)) {
+            "WORKSPACE_MEMBER için generic outbox CREATE/JOIN işlemi desteklenmez. Alınan: $writeOp (${operation.operationId})"
+        }
+        val validatedPayload = WorkspaceMembershipPayloadCodec.parseAndValidateMember(
+            operationId = operation.operationId,
+            entityId = operation.entityId,
+            operation = writeOp,
+            baseVersion = operation.baseVersion,
+            payloadJson = payloadJson,
+        )
+
+        return when (val result = writer.writeWorkspaceMember(operation.operationId, writeOp, operation.baseVersion, validatedPayload)) {
+            is ConditionalRemoteWriteResult.Applied -> OutboxExecutionResult.WorkspaceMemberApplied(result.record)
+            is ConditionalRemoteWriteResult.Conflict -> OutboxExecutionResult.ConflictDetected(
+                SyncConflictEntity(
+                    entityTypeCode = operation.entityTypeCode,
+                    entityId = operation.entityId,
+                    operationId = operation.operationId,
+                    localVersion = operation.baseVersion ?: 0L,
+                    remoteVersion = result.remoteRecord.version,
+                    localPayloadJson = payloadJson,
+                    remotePayloadJson = json.encodeToString(result.remoteRecord),
+                    detectedAtEpochMillis = nowEpochMillisProvider(),
+                ),
+            )
+            ConditionalRemoteWriteResult.NotFound -> {
+                if (writeOp == RemoteWriteOperation.DELETE) {
+                    OutboxExecutionResult.MissingDeleteAcknowledged
+                } else {
+                    error("Workspace üyesi koşullu yazma sırasında bulunamadı (NOT_FOUND): ${operation.entityId}")
+                }
+            }
+        }
+    }
+
+    private suspend fun executeWorkspaceInvitation(
+        operation: SyncOperationEntity,
+        writeOp: RemoteWriteOperation,
+        payloadJson: String,
+    ): OutboxExecutionResult {
+        require(writeOp == RemoteWriteOperation.CREATE) {
+            "WORKSPACE_INVITATION için yalnız CREATE işlemi desteklenir."
+        }
+        val validatedPayload = WorkspaceMembershipPayloadCodec.parseAndValidateInvitation(
+            operationId = operation.operationId,
+            entityId = operation.entityId,
+            operation = writeOp,
+            baseVersion = operation.baseVersion,
+            payloadJson = payloadJson,
+        )
+
+        return when (val result = writer.writeWorkspaceInvitation(operation.operationId, writeOp, operation.baseVersion, validatedPayload)) {
+            is ConditionalRemoteWriteResult.Applied -> OutboxExecutionResult.WorkspaceInvitationApplied(result.record)
+            is ConditionalRemoteWriteResult.Conflict -> OutboxExecutionResult.ConflictDetected(
+                SyncConflictEntity(
+                    entityTypeCode = operation.entityTypeCode,
+                    entityId = operation.entityId,
+                    operationId = operation.operationId,
+                    localVersion = operation.baseVersion ?: 0L,
+                    remoteVersion = result.remoteRecord.version,
+                    localPayloadJson = payloadJson,
+                    remotePayloadJson = json.encodeToString(result.remoteRecord),
+                    detectedAtEpochMillis = nowEpochMillisProvider(),
+                ),
+            )
+            ConditionalRemoteWriteResult.NotFound -> {
+                error("Workspace daveti koşullu yazma sırasında bulunamadı (NOT_FOUND): ${operation.entityId}")
             }
         }
     }

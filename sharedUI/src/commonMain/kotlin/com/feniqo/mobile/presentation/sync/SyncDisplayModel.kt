@@ -13,6 +13,7 @@ enum class SyncDisplaySeverity {
 enum class SyncDisplayActionType {
     MANUAL_SYNC,
     RETRY_FAILED,
+    RESOLVE_CONFLICT,
 }
 
 data class SyncDisplayModel(
@@ -41,16 +42,17 @@ fun resolveSyncDisplayModel(
     uiState: SyncStatusUiState,
     nowEpochMillis: Long = 0L,
 ): SyncDisplayModel {
-    // 1. Çakışma (En yüksek öncelik - otomatik aksiyon gösterilmez)
+    // 1. Çakışma (En yüksek öncelik - yalnız Workspace çakışması varsa Çöz aksiyonu üretilir)
     if (uiState.conflictCount > 0) {
+        val hasResolvable = uiState.hasResolvableWorkspaceConflict
         return SyncDisplayModel(
             severity = SyncDisplaySeverity.CONFLICT,
             title = "Çakışma",
             message = "${uiState.conflictCount} çakışma mevcut (yerel ve sunucu kopyaları korundu).",
             showProgress = false,
-            actionType = null,
-            actionText = null,
-            isActionEnabled = false,
+            actionType = if (hasResolvable) SyncDisplayActionType.RESOLVE_CONFLICT else null,
+            actionText = if (hasResolvable) "Çöz" else null,
+            isActionEnabled = hasResolvable && !uiState.isResolvingConflict,
         )
     }
 

@@ -39,6 +39,7 @@ import com.feniqo.mobile.domain.model.TransactionTag
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.YearMonth
 import kotlinx.datetime.Instant
+import kotlinx.serialization.json.Json
 
 
 fun Category.toEntity(sync: SyncMetadata, slug: String? = null): CategoryEntity = CategoryEntity(
@@ -73,6 +74,8 @@ fun Transaction.toEntity(sync: SyncMetadata): TransactionEntity = TransactionEnt
     id = id.value,
     ownerId = ownerId.value,
     workspaceId = workspaceId?.value,
+    paidByUserId = paidByUserId.value,
+    participantUserIdsJson = Json.encodeToString(participantUserIds.map(EntityId::value)),
     amountMinor = amount.amountMinor,
     currencyCode = amount.currency.code,
     typeCode = type.name,
@@ -93,6 +96,8 @@ fun TransactionEntity.toDomain(): Transaction = Transaction(
     id = EntityId(id),
     ownerId = EntityId(ownerId),
     workspaceId = workspaceId?.let(::EntityId),
+    paidByUserId = paidByUserId?.let(::EntityId) ?: EntityId(ownerId),
+    participantUserIds = participantUserIds(),
     amount = Money(amountMinor, Currency.valueOf(currencyCode)),
     type = TransactionType.valueOf(typeCode),
     categoryId = EntityId(categoryId),
@@ -103,6 +108,12 @@ fun TransactionEntity.toDomain(): Transaction = Transaction(
     installment = installmentInfo(),
     createdAt = Instant.fromEpochMilliseconds(createdAtEpochMillis),
 )
+
+private fun TransactionEntity.participantUserIds(): List<EntityId> = participantUserIdsJson
+    ?.let { Json.decodeFromString<List<String>>(it) }
+    ?.map(::EntityId)
+    ?.takeIf { it.isNotEmpty() }
+    ?: listOf(EntityId(paidByUserId ?: ownerId))
 
 private fun TransactionEntity.installmentInfo(): InstallmentInfo? {
     val values = listOf(installmentNumber, totalInstallments, installmentGroupId)

@@ -189,6 +189,16 @@ class OfflineFirstGoalDebtRepositoryWriteTest {
         override suspend fun deleteWorkspaceMemberRows(workspaceId: String): Int = 0
         override suspend fun rebaseWorkspaceVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun markWorkspaceSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
+        override suspend fun upsertWorkspaceMemberRow(entity: com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity) = Unit
+        override suspend fun upsertWorkspaceInvitationRow(entity: com.feniqo.mobile.data.local.entity.WorkspaceInvitationEntity) = Unit
+        override suspend fun deleteWorkspaceInvitationRow(id: String): Int = 0
+        override suspend fun getWorkspaceInvitationById(id: String): com.feniqo.mobile.data.local.entity.WorkspaceInvitationEntity? = null
+        override suspend fun getWorkspaceInvitationByTokenHash(tokenHash: String): com.feniqo.mobile.data.local.entity.WorkspaceInvitationEntity? = null
+        override suspend fun getWorkspaceMember(workspaceId: String, userId: String): com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity? = null
+        override suspend fun clearActiveWorkspaceIfMatches(profileId: String, workspaceId: String): Int = 0
+        override suspend fun rebaseWorkspaceMemberVersion(workspaceId: String, userId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun rebaseWorkspaceInvitationVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun markWorkspaceMemberSyncedIfDeleted(workspaceId: String, userId: String, nowEpochMillis: Long): Int = 0
         override suspend fun upsertGoalRow(entity: GoalEntity) = Unit
         override suspend fun upsertGoalContributionRow(entity: GoalContributionEntity) = Unit
         override suspend fun upsertDebtRow(entity: DebtEntity) = Unit
@@ -302,6 +312,16 @@ class OfflineFirstGoalDebtRepositoryWriteTest {
         override suspend fun coalescePendingPayload(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 1
         override suspend fun convertToPendingDelete(operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 1
     }
+
+    private val defaultSync = SyncMetadata(
+        syncStatus = "SYNCED",
+        updatedAtEpochMillis = 1000L,
+        localUpdatedAtEpochMillis = 1000L,
+        deletedAtEpochMillis = null,
+        version = 1L,
+        baseVersion = 1L,
+        lastSyncError = null,
+    )
 
     private val testSession = AuthSession(
         userId = EntityId("user-1"),
@@ -471,5 +491,180 @@ class OfflineFirstGoalDebtRepositoryWriteTest {
                 ),
             )
         }
+    }
+
+    private class TestActiveWorkspaceScope(
+        initial: EntityId? = null,
+    ) : ActiveWorkspaceScope {
+        val flow = kotlinx.coroutines.flow.MutableStateFlow(initial)
+        override fun observe(profileId: EntityId): Flow<EntityId?> = flow
+        override suspend fun current(profileId: EntityId): EntityId? = flow.value
+    }
+
+    @Test
+    fun goalRepository_activeWorkspaceScope_enforcesScopedWrites() = runTest {
+        val auth = FakeAuthRepository(testSession)
+        val goalDao = FakeGoalDao()
+        val mutationDao = FakeLocalMutationDao()
+        val queue = OfflineWriteQueue(mutationDao, FakeSyncOperationDao())
+        val scope = TestActiveWorkspaceScope(EntityId("ws-1"))
+        val repo = OfflineFirstGoalRepository(
+            authRepository = auth,
+            goalDao = goalDao,
+            offlineWriteQueue = queue,
+            entityIdGenerator = { EntityId("g-ws-1") },
+            activeWorkspaceScope = scope,
+        )
+
+        // 1. ws-1 scope'unda goal oluştur
+        val createResult = repo.create(
+            CreateGoalCommand(
+                name = "Şirket Rezervi",
+                targetAmount = Money(500_000, Currency.TRY),
+                targetDate = LocalDate(2027, 12, 31),
+                color = CategoryColor("#2E7D32"),
+            ),
+        )
+        assertIs<RepositoryResult.Success<EntityId>>(createResult)
+        assertEquals("ws-1", mutationDao.lastGoal?.workspaceId)
+
+        // 2. ws-1 goal'üne katkı ekle
+        goalDao.goals["g-ws-1"] = mutationDao.lastGoal!!
+        val contribResult = repo.addContribution(
+            AddGoalContributionCommand(
+                goalId = EntityId("g-ws-1"),
+                amount = Money(50_000, Currency.TRY),
+                direction = GoalContributionDirection.ADD,
+                occurredOn = LocalDate(2026, 9, 1),
+            ),
+        )
+        assertIs<RepositoryResult.Success<EntityId>>(contribResult)
+
+        // 3. Başka workspace'e (ws-2) ait goal'e katkı eklemeyi dene -> fail-closed
+        goalDao.goals["g-ws-2"] = GoalEntity(
+            id = "g-ws-2",
+            ownerId = "user-1",
+            workspaceId = "ws-2",
+            name = "Başka Workspace Hedefi",
+            targetAmountMinor = 500_000L,
+            currentAmountMinor = 0L,
+            currencyCode = "TRY",
+            targetDate = "2027-12-31",
+            colorHex = "#2E7D32",
+            iconKey = "flag",
+            createdAtEpochMillis = 1000L,
+            sync = defaultSync,
+        )
+        val otherContribResult = repo.addContribution(
+            AddGoalContributionCommand(
+                goalId = EntityId("g-ws-2"),
+                amount = Money(50_000, Currency.TRY),
+                direction = GoalContributionDirection.ADD,
+                occurredOn = LocalDate(2026, 9, 1),
+            ),
+        )
+        assertIs<RepositoryResult.Failure>(otherContribResult)
+        assertEquals(AppError.Validation("goal_not_found"), otherContribResult.error)
+
+        // 4. Başka workspace'e ait goal güncelleme -> fail-closed
+        val otherUpdateResult = repo.update(
+            UpdateGoalCommand(
+                id = EntityId("g-ws-2"),
+                name = "Başka",
+                targetAmount = Money(600_000, Currency.TRY),
+                targetDate = LocalDate(2028, 1, 1),
+                color = CategoryColor("#2E7D32"),
+            ),
+        )
+        assertIs<RepositoryResult.Failure>(otherUpdateResult)
+        assertEquals(AppError.Validation("goal_not_found"), otherUpdateResult.error)
+
+        // 5. Başka workspace'e ait goal silme -> fail-closed
+        val otherDeleteResult = repo.softDelete(EntityId("g-ws-2"))
+        assertIs<RepositoryResult.Failure>(otherDeleteResult)
+        assertEquals(AppError.Validation("goal_not_found"), otherDeleteResult.error)
+    }
+
+    @Test
+    fun debtRepository_activeWorkspaceScope_enforcesScopedWrites() = runTest {
+        val auth = FakeAuthRepository(testSession)
+        val debtDao = FakeDebtDao()
+        val mutationDao = FakeLocalMutationDao()
+        val queue = OfflineWriteQueue(mutationDao, FakeSyncOperationDao())
+        val scope = TestActiveWorkspaceScope(EntityId("ws-1"))
+        val repo = OfflineFirstDebtRepository(
+            authRepository = auth,
+            debtDao = debtDao,
+            offlineWriteQueue = queue,
+            entityIdGenerator = { EntityId("d-ws-1") },
+            activeWorkspaceScope = scope,
+        )
+
+        // 1. ws-1 scope'unda debt oluştur
+        val createResult = repo.create(
+            CreateDebtCommand(
+                title = "Şirket Kredisi",
+                amount = Money(1_000_000, Currency.TRY),
+                type = DebtType.DEBT,
+                dueDate = LocalDate(2027, 12, 31),
+            ),
+        )
+        assertIs<RepositoryResult.Success<EntityId>>(createResult)
+        assertEquals("ws-1", mutationDao.lastDebt?.workspaceId)
+
+        // 2. ws-1 debt'ine ödeme ekle
+        debtDao.debts["d-ws-1"] = mutationDao.lastDebt!!
+        val paymentResult = repo.addPayment(
+            AddDebtPaymentCommand(
+                debtId = EntityId("d-ws-1"),
+                amount = Money(100_000, Currency.TRY),
+                paidOn = LocalDate(2026, 9, 1),
+            ),
+        )
+        assertIs<RepositoryResult.Success<EntityId>>(paymentResult)
+
+        // 3. Başka workspace'e (ws-2) ait debt'e ödeme eklemeyi dene -> fail-closed
+        debtDao.debts["d-ws-2"] = DebtEntity(
+            id = "d-ws-2",
+            ownerId = "user-1",
+            workspaceId = "ws-2",
+            title = "Başka Borç",
+            amountMinor = 1_000_000L,
+            currencyCode = "TRY",
+            typeCode = "DEBT",
+            dueDate = "2027-12-31",
+            statusCode = "OPEN",
+            description = null,
+            createdAtEpochMillis = 1000L,
+            sync = defaultSync,
+        )
+        val otherPaymentResult = repo.addPayment(
+            AddDebtPaymentCommand(
+                debtId = EntityId("d-ws-2"),
+                amount = Money(100_000, Currency.TRY),
+                paidOn = LocalDate(2026, 9, 1),
+            ),
+        )
+        assertIs<RepositoryResult.Failure>(otherPaymentResult)
+        assertEquals(AppError.Validation("debt_not_found"), otherPaymentResult.error)
+
+        // 4. Başka workspace'e ait debt güncelleme -> fail-closed
+        val otherUpdateResult = repo.update(
+            UpdateDebtCommand(
+                id = EntityId("d-ws-2"),
+                title = "Başka Borç",
+                amount = Money(1_000_000, Currency.TRY),
+                type = DebtType.DEBT,
+                dueDate = LocalDate(2028, 1, 1),
+                description = null,
+            ),
+        )
+        assertIs<RepositoryResult.Failure>(otherUpdateResult)
+        assertEquals(AppError.Validation("debt_not_found"), otherUpdateResult.error)
+
+        // 5. Başka workspace'e ait debt silme -> fail-closed
+        val otherDeleteResult = repo.softDelete(EntityId("d-ws-2"))
+        assertIs<RepositoryResult.Failure>(otherDeleteResult)
+        assertEquals(AppError.Validation("debt_not_found"), otherDeleteResult.error)
     }
 }

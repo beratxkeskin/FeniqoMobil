@@ -83,6 +83,8 @@ enum class WorkspaceValidationError {
     OWNER_ROLE_CHANGE_REQUIRES_TRANSFER,
     TARGET_MEMBER_NOT_FOUND,
     CANNOT_REMOVE_LAST_OWNER,
+    CANNOT_REMOVE_SELF_MEMBER,
+    CANNOT_REMOVE_WORKSPACE_OWNER,
     CANNOT_LEAVE_AS_LAST_OWNER,
     TRANSFER_ACTOR_NOT_OWNER,
     TRANSFER_TARGET_ALREADY_OWNER,
@@ -241,18 +243,19 @@ object WorkspaceValidationRules {
         val actorMember = currentMembers.firstOrNull { it.first == actorUserId }
             ?: return WorkspaceValidationResult.Invalid(WorkspaceValidationError.ACTOR_NOT_MEMBER)
 
-        if (!WorkspacePermissionPolicy.can(actorMember.second, WorkspacePermission.REMOVE_MEMBER)) {
+        if (actorMember.second != WorkspaceRole.OWNER || !WorkspacePermissionPolicy.can(actorMember.second, WorkspacePermission.REMOVE_MEMBER)) {
             return WorkspaceValidationResult.Invalid(WorkspaceValidationError.ACTOR_NOT_PERMITTED)
+        }
+
+        if (actorUserId == targetUserId) {
+            return WorkspaceValidationResult.Invalid(WorkspaceValidationError.CANNOT_REMOVE_SELF_MEMBER)
         }
 
         val targetMember = currentMembers.firstOrNull { it.first == targetUserId }
             ?: return WorkspaceValidationResult.Invalid(WorkspaceValidationError.TARGET_MEMBER_NOT_FOUND)
 
         if (targetMember.second == WorkspaceRole.OWNER) {
-            val remainingOwners = currentMembers.count { it.first != targetUserId && it.second == WorkspaceRole.OWNER }
-            if (remainingOwners < 1) {
-                return WorkspaceValidationResult.Invalid(WorkspaceValidationError.CANNOT_REMOVE_LAST_OWNER)
-            }
+            return WorkspaceValidationResult.Invalid(WorkspaceValidationError.CANNOT_REMOVE_WORKSPACE_OWNER)
         }
 
         return WorkspaceValidationResult.Valid(Unit)

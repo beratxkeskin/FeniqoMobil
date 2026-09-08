@@ -33,6 +33,7 @@ data class RecurringTransactionsUiState(
     val items: List<RecurringTransactionDisplayModel> = emptyList(),
     val observationError: FinanceUiMessage? = null,
     val mutationState: RecurringTransactionMutationState = RecurringTransactionMutationState(),
+    val activeWorkspaceName: String? = null,
 ) {
     val isEmpty: Boolean get() = !isLoading && observationError == null && items.isEmpty()
 }

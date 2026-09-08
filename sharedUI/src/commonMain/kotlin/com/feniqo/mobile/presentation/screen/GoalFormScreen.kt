@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.LocalDate
+import com.feniqo.mobile.presentation.component.ActiveWorkspaceIndicator
 import com.feniqo.mobile.presentation.goal.GOAL_PRESET_COLORS
 import com.feniqo.mobile.presentation.goal.GoalFormFieldError
 import com.feniqo.mobile.presentation.goal.GoalFormInput
@@ -81,6 +82,7 @@ fun GoalFormScreen(
     onSubmit: () -> Unit,
     onAddContribution: (() -> Unit)? = null,
     contributionsHistory: List<com.feniqo.mobile.presentation.goal.GoalContributionHistoryItemUiModel> = emptyList(),
+    activeWorkspaceName: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val isEnabled = !isSubmitting
@@ -121,16 +123,26 @@ fun GoalFormScreen(
                     )
                 }
 
-                if (isEditMode) {
-                    OutlinedButton(
-                        onClick = onRequestDelete,
-                        enabled = isEnabled,
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error,
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
-                    ) {
-                        Text("Sil")
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                ) {
+                    ActiveWorkspaceIndicator(
+                        workspaceName = activeWorkspaceName,
+                        isCompact = true,
+                    )
+
+                    if (isEditMode) {
+                        OutlinedButton(
+                            onClick = onRequestDelete,
+                            enabled = isEnabled,
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error,
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                        ) {
+                            Text("Sil")
+                        }
                     }
                 }
             }

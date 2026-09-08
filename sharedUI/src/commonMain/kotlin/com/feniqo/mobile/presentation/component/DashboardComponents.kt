@@ -54,17 +54,28 @@ import com.feniqo.mobile.presentation.util.ColorParser
 fun DashboardHeader(
     formattedMonth: String,
     modifier: Modifier = Modifier,
+    activeWorkspaceName: String? = null,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
     ) {
-        Text(
-            text = "Finansal görünümün",
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.primary,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Finansal görünümün",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            ActiveWorkspaceIndicator(
+                workspaceName = activeWorkspaceName,
+                isCompact = true,
+            )
+        }
         Text(
             text = "Genel Bakış",
             style = MaterialTheme.typography.headlineLarge,

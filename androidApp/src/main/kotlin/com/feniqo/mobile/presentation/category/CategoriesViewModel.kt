@@ -3,9 +3,11 @@ package com.feniqo.mobile.presentation.category
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.feniqo.mobile.domain.model.Category
+import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.repository.RepositoryResult
 import com.feniqo.mobile.domain.usecase.DeleteCategoryUseCase
+import com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase
 import com.feniqo.mobile.domain.usecase.ObserveCategoriesUseCase
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.common.toFinanceUiMessage
@@ -35,6 +37,7 @@ import javax.inject.Inject
 class CategoriesViewModel @Inject constructor(
     private val observeCategoriesUseCase: ObserveCategoriesUseCase,
     private val deleteCategoryUseCase: DeleteCategoryUseCase,
+    private val observeActiveWorkspaceUseCase: ObserveActiveWorkspaceUseCase,
 ) : ViewModel() {
 
     private val _selectedType = MutableStateFlow(TransactionType.EXPENSE)
@@ -44,6 +47,23 @@ class CategoriesViewModel @Inject constructor(
     private val _generalMessage = MutableStateFlow<FinanceUiMessage?>(null)
 
     private var activeDeleteJob: Job? = null
+
+    init {
+        viewModelScope.launch {
+            var previousWorkspaceId: EntityId? = null
+            var isFirstEmission = true
+            observeActiveWorkspaceUseCase().collect { workspace ->
+                val currentWorkspaceId = workspace?.id
+                if (!isFirstEmission && currentWorkspaceId != previousWorkspaceId) {
+                    activeDeleteJob?.cancel()
+                    _deleteTargetCategory.value = null
+                    _isDeleteInProgress.value = false
+                }
+                isFirstEmission = false
+                previousWorkspaceId = currentWorkspaceId
+            }
+        }
+    }
 
     private data class ObservationQuery(
         val type: TransactionType,
@@ -83,13 +103,29 @@ class CategoriesViewModel @Inject constructor(
             }
     }
 
-    val uiState: StateFlow<CategoriesUiState> = combine(
-        _selectedType,
-        observationResultFlow,
+    private val _extrasFlow = combine(
         _deleteTargetCategory,
         _isDeleteInProgress,
         _generalMessage,
-    ) { selectedType, observationResult, deleteTarget, isDeleteInProgress, generalMessage ->
+        observeActiveWorkspaceUseCase(),
+    ) { deleteTarget, isDeleteInProgress, generalMessage, activeWorkspace ->
+        CategoryUiExtras(
+            deleteTarget = deleteTarget,
+            isDeleteInProgress = isDeleteInProgress,
+            generalMessage = generalMessage,
+            workspaceName = activeWorkspace?.name,
+        )
+    }
+
+    val uiState: StateFlow<CategoriesUiState> = combine(
+        _selectedType,
+        observationResultFlow,
+        _extrasFlow,
+    ) { selectedType, observationResult, extras ->
+        val workspaceName = extras.workspaceName
+        val deleteTarget = extras.deleteTarget
+        val isDeleteInProgress = extras.isDeleteInProgress
+        val generalMessage = extras.generalMessage
         when (observationResult) {
             is ObservationResult.Loading -> CategoriesUiState(
                 isLoading = true,
@@ -98,6 +134,7 @@ class CategoriesViewModel @Inject constructor(
                 customCategories = emptyList(),
                 deleteTargetCategory = deleteTarget,
                 isDeleteInProgress = isDeleteInProgress,
+                activeWorkspaceName = workspaceName,
                 generalMessage = generalMessage,
             )
             is ObservationResult.Success -> CategoriesUiState(
@@ -107,6 +144,7 @@ class CategoriesViewModel @Inject constructor(
                 customCategories = observationResult.customCategories,
                 deleteTargetCategory = deleteTarget,
                 isDeleteInProgress = isDeleteInProgress,
+                activeWorkspaceName = workspaceName,
                 generalMessage = generalMessage,
             )
             is ObservationResult.Failure -> CategoriesUiState(
@@ -116,6 +154,7 @@ class CategoriesViewModel @Inject constructor(
                 customCategories = emptyList(),
                 deleteTargetCategory = deleteTarget,
                 isDeleteInProgress = isDeleteInProgress,
+                activeWorkspaceName = workspaceName,
                 generalMessage = generalMessage ?: observationResult.message,
             )
         }
@@ -196,4 +235,11 @@ private fun Category.toDisplayModel(): CategoryDisplayModel = CategoryDisplayMod
     colorHex = color.hex,
     iconKey = icon?.key,
     isDefault = isDefault,
+)
+
+private data class CategoryUiExtras(
+    val deleteTarget: CategoryDisplayModel?,
+    val isDeleteInProgress: Boolean,
+    val generalMessage: FinanceUiMessage?,
+    val workspaceName: String?,
 )

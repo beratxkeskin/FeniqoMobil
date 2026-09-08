@@ -63,4 +63,48 @@ data class WorkspaceMemberDto(
     val version: Long,
 )
 
+/** Supabase `workspace_invitations` satırının ağ temsilidir. Ham token içermez. */
+@Serializable
+data class WorkspaceInvitationDto(
+    val id: String,
+    @SerialName("workspace_id")
+    val workspaceId: String,
+    @SerialName("inviter_id")
+    val inviterId: String,
+    @SerialName("role_code")
+    val roleCode: String,
+    @SerialName("created_at")
+    val createdAt: String,
+    @SerialName("expires_at")
+    val expiresAt: String,
+    @SerialName("max_uses")
+    val maxUses: Int,
+    @SerialName("uses_count")
+    val usesCount: Int,
+    @SerialName("deleted_at")
+    val deletedAt: String? = null,
+    val version: Long,
+)
 
+/**
+ * `redeem_workspace_invitation_v1` RPC dönüş sonucudur.
+ * Token veya hash içermez; güvenli WorkspaceDto ve WorkspaceMemberDto taşır.
+ */
+@Serializable
+data class WorkspaceInvitationRedeemResultDto(
+    val workspace: WorkspaceDto,
+    val member: WorkspaceMemberDto,
+)
+
+/**
+ * `transfer_workspace_ownership_v1` RPC dönüş sonucudur.
+ * Atomik güncellenen WorkspaceDto, eski sahip (artık EDITOR) ve yeni sahip (artık OWNER) taşır.
+ */
+@Serializable
+data class WorkspaceOwnershipTransferResultDto(
+    val workspace: WorkspaceDto,
+    @SerialName("actor_member")
+    val actorMember: WorkspaceMemberDto,
+    @SerialName("target_member")
+    val targetMember: WorkspaceMemberDto,
+)

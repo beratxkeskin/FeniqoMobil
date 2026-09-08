@@ -82,6 +82,7 @@ fun CategoryFormScreen(
                 description = description,
                 onBack = onBack,
                 isBackEnabled = !state.isSubmitting,
+                activeWorkspaceName = state.activeWorkspaceName,
             )
 
             Spacer(modifier = Modifier.height(FeniqoSpacing.Medium))

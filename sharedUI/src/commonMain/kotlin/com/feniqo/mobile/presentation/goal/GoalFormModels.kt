@@ -316,6 +316,7 @@ data class GoalFormUiState(
     val errors: GoalFormInputErrors = GoalFormInputErrors(),
     val isSubmitting: Boolean = false,
     val pendingDeleteConfirmation: Boolean = false,
+    val activeWorkspaceName: String? = null,
     val contributionsHistory: List<GoalContributionHistoryItemUiModel> = emptyList(),
 )
 

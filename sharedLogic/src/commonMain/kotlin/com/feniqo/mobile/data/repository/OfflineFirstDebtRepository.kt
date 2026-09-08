@@ -43,6 +43,7 @@ class OfflineFirstDebtRepository(
         explicitNulls = true
         ignoreUnknownKeys = true
     },
+    private val activeWorkspaceScope: ActiveWorkspaceScope = PersonalActiveWorkspaceScope,
     private val nowEpochMillisProvider: () -> Long = { kotlin.time.Clock.System.now().toEpochMilliseconds() },
 ) : DebtRepository {
 
@@ -51,8 +52,10 @@ class OfflineFirstDebtRepository(
             if (session == null) {
                 flowOf(emptyList())
             } else {
-                debtDao.observeAll(session.userId.value, workspaceId = null)
-                    .map { entities -> entities.map { it.toDomain() } }
+                activeWorkspaceScope.observe(session.userId).flatMapLatest { activeWorkspaceId ->
+                    debtDao.observeAll(session.userId.value, workspaceId = activeWorkspaceId?.value)
+                        .map { entities -> entities.map { it.toDomain() } }
+                }
             }
         }
 
@@ -61,8 +64,10 @@ class OfflineFirstDebtRepository(
             if (session == null) {
                 flowOf(null)
             } else {
-                debtDao.observeById(id.value).map { entity ->
-                    entity?.takeIf { it.ownerId == session.userId.value && it.workspaceId == null }?.toDomain()
+                activeWorkspaceScope.observe(session.userId).flatMapLatest { activeWorkspaceId ->
+                    debtDao.observeById(id.value).map { entity ->
+                        entity?.takeIf { it.ownerId == session.userId.value && it.workspaceId == activeWorkspaceId?.value }?.toDomain()
+                    }
                 }
             }
         }
@@ -72,12 +77,14 @@ class OfflineFirstDebtRepository(
             if (session == null) {
                 flowOf(emptyList())
             } else {
-                debtDao.observeById(debtId.value).flatMapLatest { parentDebt ->
-                    if (parentDebt == null || parentDebt.ownerId != session.userId.value || parentDebt.workspaceId != null) {
-                        flowOf(emptyList())
-                    } else {
-                        debtDao.observePaymentsByDebtId(debtId.value)
-                            .map { entities -> entities.map { it.toDomain() } }
+                activeWorkspaceScope.observe(session.userId).flatMapLatest { activeWorkspaceId ->
+                    debtDao.observeById(debtId.value).flatMapLatest { parentDebt ->
+                        if (parentDebt == null || parentDebt.ownerId != session.userId.value || parentDebt.workspaceId != activeWorkspaceId?.value) {
+                            flowOf(emptyList())
+                        } else {
+                            debtDao.observePaymentsByDebtId(debtId.value)
+                                .map { entities -> entities.map { it.toDomain() } }
+                        }
                     }
                 }
             }
@@ -91,13 +98,14 @@ class OfflineFirstDebtRepository(
                 is GoalDebtValidationResult.Valid -> result.value
                 is GoalDebtValidationResult.Invalid -> return validationFailure(result)
             }
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
 
             val now = nowEpochMillisProvider()
             val debtId = entityIdGenerator.nextId()
             val debt = Debt(
                 id = debtId,
                 ownerId = session.userId,
-                workspaceId = null,
+                workspaceId = activeWorkspaceId,
                 title = validCommand.title,
                 amount = validCommand.amount,
                 type = validCommand.type,
@@ -125,9 +133,10 @@ class OfflineFirstDebtRepository(
         try {
             val session = authRepository.observeSession().first()
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
             val existingEntity = debtDao.getById(command.id.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("debt_not_found"))
-            if (existingEntity.ownerId != session.userId.value || existingEntity.workspaceId != null || existingEntity.sync.deletedAtEpochMillis != null) {
+            if (existingEntity.ownerId != session.userId.value || existingEntity.workspaceId != activeWorkspaceId?.value || existingEntity.sync.deletedAtEpochMillis != null) {
                 return RepositoryResult.Failure(AppError.Validation("debt_not_found"))
             }
 
@@ -159,9 +168,10 @@ class OfflineFirstDebtRepository(
         try {
             val session = authRepository.observeSession().first()
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
             val parentDebtEntity = debtDao.getById(command.debtId.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("debt_not_found"))
-            if (parentDebtEntity.ownerId != session.userId.value || parentDebtEntity.workspaceId != null || parentDebtEntity.sync.deletedAtEpochMillis != null) {
+            if (parentDebtEntity.ownerId != session.userId.value || parentDebtEntity.workspaceId != activeWorkspaceId?.value || parentDebtEntity.sync.deletedAtEpochMillis != null) {
                 return RepositoryResult.Failure(AppError.Validation("debt_not_found"))
             }
 
@@ -207,9 +217,10 @@ class OfflineFirstDebtRepository(
         try {
             val session = authRepository.observeSession().first()
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
             val existingEntity = debtDao.getById(id.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("debt_not_found"))
-            if (existingEntity.ownerId != session.userId.value || existingEntity.workspaceId != null || existingEntity.sync.deletedAtEpochMillis != null) {
+            if (existingEntity.ownerId != session.userId.value || existingEntity.workspaceId != activeWorkspaceId?.value || existingEntity.sync.deletedAtEpochMillis != null) {
                 return RepositoryResult.Failure(AppError.Validation("debt_not_found"))
             }
 

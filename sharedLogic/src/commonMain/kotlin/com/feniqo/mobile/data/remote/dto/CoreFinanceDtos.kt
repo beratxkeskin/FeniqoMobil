@@ -37,6 +37,10 @@ data class TransactionDto(
     val userId: String,
     @SerialName("workspace_id")
     val workspaceId: String? = null,
+    @SerialName("paid_by_user_id")
+    val paidByUserId: String? = null,
+    @SerialName("participant_user_ids")
+    val participantUserIds: List<String> = emptyList(),
     @SerialName("amount_minor")
     val amountMinor: Long,
     val currency: String = "TRY",

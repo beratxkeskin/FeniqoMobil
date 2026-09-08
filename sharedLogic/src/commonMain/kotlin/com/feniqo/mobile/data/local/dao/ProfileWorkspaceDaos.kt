@@ -16,6 +16,34 @@ interface ProfileDao {
 
     @Upsert
     suspend fun upsert(entity: UserProfileEntity)
+
+    @Query(
+        """
+        UPDATE profiles
+        SET active_workspace_id = :workspaceId
+        WHERE id = :profileId
+          AND deleted_at_epoch_ms IS NULL
+          AND EXISTS (
+              SELECT 1 FROM workspaces w
+              INNER JOIN workspace_members m ON m.workspace_id = w.id
+              WHERE w.id = :workspaceId
+                AND w.deleted_at_epoch_ms IS NULL
+                AND m.user_id = :profileId
+                AND m.deleted_at_epoch_ms IS NULL
+          )
+        """,
+    )
+    suspend fun setActiveWorkspaceGuarded(profileId: String, workspaceId: String): Int
+
+    @Query(
+        """
+        UPDATE profiles
+        SET active_workspace_id = NULL
+        WHERE id = :profileId
+          AND deleted_at_epoch_ms IS NULL
+        """,
+    )
+    suspend fun clearActiveWorkspace(profileId: String): Int
 }
 
 @Dao
@@ -36,9 +64,11 @@ interface WorkspaceDao {
         """
         SELECT w.* FROM workspaces w
         INNER JOIN profiles p ON p.active_workspace_id = w.id
+        INNER JOIN workspace_members m ON m.workspace_id = w.id AND m.user_id = p.id
         WHERE p.id = :profileId
           AND p.deleted_at_epoch_ms IS NULL
           AND w.deleted_at_epoch_ms IS NULL
+          AND m.deleted_at_epoch_ms IS NULL
         LIMIT 1
         """,
     )
@@ -66,6 +96,36 @@ interface WorkspaceDao {
 
     @Query("SELECT * FROM workspaces WHERE id = :id LIMIT 1")
     suspend fun getWorkspaceById(id: String): WorkspaceEntity?
+
+    @Query(
+        """
+        SELECT * FROM workspace_invitations
+        WHERE token_hash = :tokenHash
+          AND deleted_at_epoch_ms IS NULL
+        LIMIT 1
+        """,
+    )
+    suspend fun getInvitationByTokenHash(tokenHash: String): WorkspaceInvitationEntity?
+
+    @Query(
+        """
+        SELECT * FROM workspace_members
+        WHERE workspace_id = :workspaceId
+          AND user_id = :userId
+        LIMIT 1
+        """,
+    )
+    suspend fun getMember(workspaceId: String, userId: String): WorkspaceMemberEntity?
+
+    @Query(
+        """
+        SELECT user_id FROM workspace_members
+        WHERE workspace_id = :workspaceId
+          AND deleted_at_epoch_ms IS NULL
+        ORDER BY user_id ASC
+        """,
+    )
+    suspend fun getActiveMemberUserIds(workspaceId: String): List<String>
 
     @Upsert
     suspend fun upsertWorkspace(entity: WorkspaceEntity)

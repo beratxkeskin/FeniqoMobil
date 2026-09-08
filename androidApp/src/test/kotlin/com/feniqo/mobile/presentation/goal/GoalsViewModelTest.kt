@@ -80,8 +80,10 @@ class GoalsViewModelTest {
     )
 
     private fun createViewModel(repository: GoalRepository): GoalsViewModel {
+        val fakeWorkspaceRepo = com.feniqo.mobile.presentation.common.FakeWorkspaceRepository()
         return GoalsViewModel(
             observeGoalsUseCase = ObserveGoalsUseCase(repository),
+            observeActiveWorkspaceUseCase = com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase(fakeWorkspaceRepo),
         )
     }
 

@@ -137,4 +137,18 @@ private class FakeProfileDao : ProfileDao {
     override suspend fun upsert(entity: UserProfileEntity) {
         profile.value = entity
     }
+
+    override suspend fun setActiveWorkspaceGuarded(profileId: String, workspaceId: String): Int {
+        val current = profile.value ?: return 0
+        if (current.id != profileId) return 0
+        profile.value = current.copy(activeWorkspaceId = workspaceId)
+        return 1
+    }
+
+    override suspend fun clearActiveWorkspace(profileId: String): Int {
+        val current = profile.value ?: return 0
+        if (current.id != profileId) return 0
+        profile.value = current.copy(activeWorkspaceId = null)
+        return 1
+    }
 }

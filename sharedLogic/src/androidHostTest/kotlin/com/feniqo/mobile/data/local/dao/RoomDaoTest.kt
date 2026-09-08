@@ -88,6 +88,73 @@ class RoomDaoTest {
     }
 
     @Test
+    fun sharedWorkspaceQueries_includeMembersRows_butPersonalScopeStaysPrivate() = runTest {
+        val database = inMemoryDatabase()
+        try {
+            val workspaceId = EntityId("workspace-shared")
+            database.workspaceDao().upsertWorkspace(
+                Workspace(id = workspaceId, name = "Ev", ownerId = USER_ID, createdAt = NOW).toEntity(SYNC),
+            )
+
+            val ownSharedCategory = category().copy(workspaceId = workspaceId, name = "Benim kategori")
+            val memberSharedCategory = category().copy(
+                id = EntityId("category-member"),
+                ownerId = EntityId("user-2"),
+                workspaceId = workspaceId,
+                name = "Üye kategori",
+            )
+            val otherPersonalCategory = category().copy(
+                id = EntityId("category-other-personal"),
+                ownerId = EntityId("user-2"),
+                name = "Gizli kategori",
+            )
+            database.categoryDao().upsert(ownSharedCategory.toEntity(SYNC))
+            database.categoryDao().upsert(memberSharedCategory.toEntity(SYNC))
+            database.categoryDao().upsert(otherPersonalCategory.toEntity(SYNC))
+
+            val ownSharedTransaction = transaction().copy(workspaceId = workspaceId)
+            val memberSharedTransaction = transaction().copy(
+                id = EntityId("transaction-member"),
+                ownerId = EntityId("user-2"),
+                workspaceId = workspaceId,
+                categoryId = memberSharedCategory.id,
+            )
+            val otherPersonalTransaction = transaction().copy(
+                id = EntityId("transaction-other-personal"),
+                ownerId = EntityId("user-2"),
+                categoryId = otherPersonalCategory.id,
+            )
+            database.transactionDao().upsert(ownSharedTransaction.toEntity(SYNC))
+            database.transactionDao().upsert(memberSharedTransaction.toEntity(SYNC))
+            database.transactionDao().upsert(otherPersonalTransaction.toEntity(SYNC))
+
+            database.budgetDao().upsert(budget("budget-mine", USER_ID, workspaceId, ownSharedCategory.id).toEntity(SYNC))
+            database.budgetDao().upsert(budget("budget-member", EntityId("user-2"), workspaceId, memberSharedCategory.id).toEntity(SYNC))
+            database.budgetDao().upsert(budget("budget-other-personal", EntityId("user-2"), null, otherPersonalCategory.id).toEntity(SYNC))
+
+            val sharedCategories = database.categoryDao().observeAll(USER_ID.value, workspaceId.value, null).first()
+            val sharedTransactions = database.transactionDao().observeAll(
+                USER_ID.value, workspaceId.value, null, null, null, null, null, null,
+            ).first()
+            val sharedBudgets = database.budgetDao().getForMonth(USER_ID.value, workspaceId.value, "2026-08")
+            assertEquals(setOf(ownSharedCategory.id.value, memberSharedCategory.id.value), sharedCategories.map { it.id }.toSet())
+            assertEquals(setOf(ownSharedTransaction.id.value, memberSharedTransaction.id.value), sharedTransactions.map { it.id }.toSet())
+            assertEquals(setOf("budget-mine", "budget-member"), sharedBudgets.map { it.id }.toSet())
+
+            val personalCategories = database.categoryDao().observeAll(USER_ID.value, null, null).first()
+            val personalTransactions = database.transactionDao().observeAll(
+                USER_ID.value, null, null, null, null, null, null, null,
+            ).first()
+            val personalBudgets = database.budgetDao().getForMonth(USER_ID.value, null, "2026-08")
+            assertTrue(personalCategories.none { it.ownerId == "user-2" })
+            assertTrue(personalTransactions.none { it.ownerId == "user-2" })
+            assertTrue(personalBudgets.none { it.ownerId == "user-2" })
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
     fun soft_deleted_row_is_hidden_from_normal_queries() = runTest {
         val database = inMemoryDatabase()
         try {
@@ -619,6 +686,103 @@ class RoomDaoTest {
             v2Cursor.close()
         } finally {
             v5Db.close()
+            context.deleteDatabase(testDbName)
+        }
+    }
+
+    @Test
+    fun migration_11_to_12_adds_split_columns_and_backfills_transactions() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val testDbName = "migration_test_v11_to_v12.db"
+        val testDbPath = context.getDatabasePath(testDbName).absolutePath
+        context.deleteDatabase(testDbName)
+
+        val v11Db = migrationHelper.createDatabase(testDbPath, 11)
+        try {
+            v11Db.execSQL(
+                """
+                INSERT INTO categories (
+                    id, owner_id, workspace_id, scope_key, name, normalized_name, slug,
+                    type_code, color_hex, icon_key, is_default, created_at_epoch_ms,
+                    sync_status, updated_at_epoch_ms, local_updated_at_epoch_ms, deleted_at_epoch_ms,
+                    version, base_version, last_sync_error
+                ) VALUES (
+                    'cat-1', 'user-1', NULL, 'user-1', 'Market', 'market', 'market',
+                    'EXPENSE', '#123456', NULL, 0, 1000,
+                    'SYNCED', 1000, 1000, NULL,
+                    1, 1, NULL
+                )
+                """.trimIndent(),
+            )
+            v11Db.execSQL(
+                """
+                INSERT INTO transactions (
+                    id, owner_id, workspace_id, amount_minor, currency_code, type_code,
+                    category_id, description, search_text, payment_method_code, transaction_date,
+                    receipt_path, installment_number, total_installments, installment_group_id,
+                    created_at_epoch_ms, sync_status, updated_at_epoch_ms,
+                    local_updated_at_epoch_ms, deleted_at_epoch_ms, version, base_version, last_sync_error
+                ) VALUES (
+                    'tx-v11-1', 'user-1', NULL, 12550, 'TRY', 'EXPENSE',
+                    'cat-1', 'market', 'market', 'DEBIT_CARD', '2026-08-05',
+                    NULL, NULL, NULL, NULL,
+                    1000, 'SYNCED', 1000,
+                    1000, NULL, 1, 1, NULL
+                )
+                """.trimIndent(),
+            )
+        } finally {
+            v11Db.close()
+        }
+
+        val v12Db = migrationHelper.runMigrationsAndValidate(
+            testDbPath,
+            12,
+            true,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_11_12,
+        )
+        try {
+            val cursor = v12Db.query(
+                "SELECT id, owner_id, paid_by_user_id, participant_user_ids_json FROM transactions WHERE id = 'tx-v11-1'",
+            )
+            assertTrue(cursor.moveToFirst())
+            assertEquals("tx-v11-1", cursor.getString(0))
+            assertEquals("user-1", cursor.getString(1))
+            assertEquals("user-1", cursor.getString(2))
+            assertEquals("[\"user-1\"]", cursor.getString(3))
+            cursor.close()
+
+            // Insert new transaction with explicit split values
+            v12Db.execSQL(
+                """
+                INSERT INTO transactions (
+                    id, owner_id, workspace_id, paid_by_user_id, participant_user_ids_json,
+                    amount_minor, currency_code, type_code,
+                    category_id, description, search_text, payment_method_code, transaction_date,
+                    receipt_path, installment_number, total_installments, installment_group_id,
+                    created_at_epoch_ms, sync_status, updated_at_epoch_ms,
+                    local_updated_at_epoch_ms, deleted_at_epoch_ms, version, base_version, last_sync_error
+                ) VALUES (
+                    'tx-v12-2', 'user-1', NULL, 'user-2', '["user-1","user-2"]',
+                    25000, 'TRY', 'EXPENSE',
+                    'cat-1', 'dinner', 'dinner', 'CREDIT_CARD', '2026-09-08',
+                    NULL, NULL, NULL, NULL,
+                    2000, 'SYNCED', 2000,
+                    2000, NULL, 1, 1, NULL
+                )
+                """.trimIndent(),
+            )
+
+            val v12Cursor = v12Db.query(
+                "SELECT id, paid_by_user_id, participant_user_ids_json FROM transactions WHERE id = 'tx-v12-2'",
+            )
+            assertTrue(v12Cursor.moveToFirst())
+            assertEquals("tx-v12-2", v12Cursor.getString(0))
+            assertEquals("user-2", v12Cursor.getString(1))
+            assertEquals("[\"user-1\",\"user-2\"]", v12Cursor.getString(2))
+            v12Cursor.close()
+        } finally {
+            v12Db.close()
             context.deleteDatabase(testDbName)
         }
     }

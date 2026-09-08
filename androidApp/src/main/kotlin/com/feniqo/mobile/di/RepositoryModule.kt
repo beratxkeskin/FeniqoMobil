@@ -5,6 +5,7 @@ import com.feniqo.mobile.data.local.dao.ProfileDao
 import com.feniqo.mobile.data.local.dao.RemoteSyncDao
 import com.feniqo.mobile.data.local.dao.SyncStateDao
 import com.feniqo.mobile.data.local.dao.TransactionDao
+import com.feniqo.mobile.data.local.dao.WorkspaceDao
 import com.feniqo.mobile.data.remote.auth.AuthRemoteDataSource
 import com.feniqo.mobile.data.remote.core.CoreRemoteDataSource
 import com.feniqo.mobile.data.remote.core.ConditionalRemoteWriter
@@ -13,6 +14,8 @@ import com.feniqo.mobile.data.repository.OfflineFirstAuthRepository
 import com.feniqo.mobile.data.repository.OfflineFirstCategoryRepository
 import com.feniqo.mobile.data.repository.OfflineFirstSyncRepository
 import com.feniqo.mobile.data.repository.OfflineFirstTransactionRepository
+import com.feniqo.mobile.data.repository.ActiveWorkspaceScope
+import com.feniqo.mobile.data.repository.RoomActiveWorkspaceScope
 import com.feniqo.mobile.data.sync.InitialRemoteSync
 import com.feniqo.mobile.data.sync.IncrementalRemoteSync
 import com.feniqo.mobile.data.sync.OutboxProcessor
@@ -38,6 +41,11 @@ object RepositoryModule {
 
     @Provides
     @Singleton
+    fun provideActiveWorkspaceScope(workspaceDao: WorkspaceDao): ActiveWorkspaceScope =
+        RoomActiveWorkspaceScope(workspaceDao)
+
+    @Provides
+    @Singleton
     fun provideAuthRepository(
         remoteDataSource: AuthRemoteDataSource,
         profileDao: ProfileDao,
@@ -54,10 +62,14 @@ object RepositoryModule {
         authRepository: AuthRepository,
         transactionDao: TransactionDao,
         offlineWriteQueue: OfflineWriteQueue,
+        workspaceDao: WorkspaceDao,
+        activeWorkspaceScope: ActiveWorkspaceScope,
     ): TransactionRepository = OfflineFirstTransactionRepository(
         authRepository = authRepository,
         transactionDao = transactionDao,
         offlineWriteQueue = offlineWriteQueue,
+        workspaceDao = workspaceDao,
+        activeWorkspaceScope = activeWorkspaceScope,
     )
 
     @Provides
@@ -66,10 +78,12 @@ object RepositoryModule {
         authRepository: AuthRepository,
         categoryDao: CategoryDao,
         offlineWriteQueue: OfflineWriteQueue,
+        activeWorkspaceScope: ActiveWorkspaceScope,
     ): CategoryRepository = OfflineFirstCategoryRepository(
         authRepository = authRepository,
         categoryDao = categoryDao,
         offlineWriteQueue = offlineWriteQueue,
+        activeWorkspaceScope = activeWorkspaceScope,
     )
 
     @Provides
@@ -80,12 +94,14 @@ object RepositoryModule {
         categoryDao: CategoryDao,
         offlineWriteQueue: OfflineWriteQueue,
         entityIdGenerator: com.feniqo.mobile.domain.model.EntityIdGenerator,
+        activeWorkspaceScope: ActiveWorkspaceScope,
     ): com.feniqo.mobile.domain.repository.BudgetRepository = com.feniqo.mobile.data.repository.OfflineFirstBudgetRepository(
         authRepository = authRepository,
         budgetDao = budgetDao,
         categoryDao = categoryDao,
         offlineWriteQueue = offlineWriteQueue,
         entityIdGenerator = entityIdGenerator,
+        activeWorkspaceScope = activeWorkspaceScope,
     )
 
     @Provides
@@ -96,6 +112,7 @@ object RepositoryModule {
         recurringTransactionDao: com.feniqo.mobile.data.local.dao.RecurringTransactionDao,
         offlineWriteQueue: OfflineWriteQueue,
         entityIdGenerator: com.feniqo.mobile.domain.model.EntityIdGenerator,
+        activeWorkspaceScope: ActiveWorkspaceScope,
     ): com.feniqo.mobile.domain.repository.RecurringTransactionRepository =
         com.feniqo.mobile.data.repository.OfflineFirstRecurringTransactionRepository(
             authRepository = authRepository,
@@ -103,6 +120,7 @@ object RepositoryModule {
             recurringTransactionDao = recurringTransactionDao,
             offlineWriteQueue = offlineWriteQueue,
             entityIdGenerator = entityIdGenerator,
+            activeWorkspaceScope = activeWorkspaceScope,
         )
 
     @Provides
@@ -113,6 +131,7 @@ object RepositoryModule {
         subscriptionDao: com.feniqo.mobile.data.local.dao.SubscriptionDao,
         offlineWriteQueue: OfflineWriteQueue,
         entityIdGenerator: com.feniqo.mobile.domain.model.EntityIdGenerator,
+        activeWorkspaceScope: ActiveWorkspaceScope,
     ): com.feniqo.mobile.domain.repository.SubscriptionRepository =
         com.feniqo.mobile.data.repository.OfflineFirstSubscriptionRepository(
             authRepository = authRepository,
@@ -120,6 +139,7 @@ object RepositoryModule {
             subscriptionDao = subscriptionDao,
             offlineWriteQueue = offlineWriteQueue,
             entityIdGenerator = entityIdGenerator,
+            activeWorkspaceScope = activeWorkspaceScope,
         )
 
     @Provides
@@ -129,12 +149,14 @@ object RepositoryModule {
         goalDao: com.feniqo.mobile.data.local.dao.GoalDao,
         offlineWriteQueue: com.feniqo.mobile.data.local.outbox.OfflineWriteQueue,
         entityIdGenerator: com.feniqo.mobile.domain.model.EntityIdGenerator,
+        activeWorkspaceScope: ActiveWorkspaceScope,
     ): com.feniqo.mobile.domain.repository.GoalRepository =
         com.feniqo.mobile.data.repository.OfflineFirstGoalRepository(
             authRepository = authRepository,
             goalDao = goalDao,
             offlineWriteQueue = offlineWriteQueue,
             entityIdGenerator = entityIdGenerator,
+            activeWorkspaceScope = activeWorkspaceScope,
         )
 
     @Provides
@@ -144,16 +166,37 @@ object RepositoryModule {
         debtDao: com.feniqo.mobile.data.local.dao.DebtDao,
         offlineWriteQueue: com.feniqo.mobile.data.local.outbox.OfflineWriteQueue,
         entityIdGenerator: com.feniqo.mobile.domain.model.EntityIdGenerator,
+        activeWorkspaceScope: ActiveWorkspaceScope,
     ): com.feniqo.mobile.domain.repository.DebtRepository =
         com.feniqo.mobile.data.repository.OfflineFirstDebtRepository(
             authRepository = authRepository,
             debtDao = debtDao,
             offlineWriteQueue = offlineWriteQueue,
             entityIdGenerator = entityIdGenerator,
+            activeWorkspaceScope = activeWorkspaceScope,
         )
 
 
 
+
+    @Provides
+    @Singleton
+    fun provideWorkspaceRepository(
+        authRepository: AuthRepository,
+        workspaceDao: com.feniqo.mobile.data.local.dao.WorkspaceDao,
+        localMutationDao: com.feniqo.mobile.data.local.dao.LocalMutationDao,
+        profileDao: ProfileDao,
+        remoteDataSource: CoreRemoteDataSource,
+        remoteSyncDao: RemoteSyncDao,
+    ): com.feniqo.mobile.domain.repository.WorkspaceRepository =
+        com.feniqo.mobile.data.repository.OfflineFirstWorkspaceRepository(
+            authRepository = authRepository,
+            workspaceDao = workspaceDao,
+            localMutationDao = localMutationDao,
+            remoteDataSource = remoteDataSource,
+            remoteSyncDao = remoteSyncDao,
+            profileDao = profileDao,
+        )
 
     @Provides
     @Singleton

@@ -100,7 +100,7 @@ class MapperRoundTripTest {
     private fun transaction() = Transaction(
         id = EntityId("transaction-1"),
         ownerId = USER_ID,
-        workspaceId = null,
+        workspaceId = EntityId("workspace-1"),
         amount = Money(12_550, Currency.TRY),
         type = TransactionType.EXPENSE,
         categoryId = CATEGORY_ID,
@@ -110,6 +110,8 @@ class MapperRoundTripTest {
         receiptPath = ReceiptPath("user-1/transaction-1/receipt.jpg"),
         installment = InstallmentInfo(1, 3, EntityId("installment-group-1")),
         createdAt = NOW,
+        paidByUserId = EntityId("user-2"),
+        participantUserIds = listOf(USER_ID, EntityId("user-2"), EntityId("user-3")),
     )
 
     @Test

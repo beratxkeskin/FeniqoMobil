@@ -50,6 +50,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Instant
@@ -104,7 +105,7 @@ class OfflineFirstRecurringTransactionRepositoryTest {
         val occurrences = mutableMapOf<Pair<String, String>, RecurringTransactionOccurrenceEntity>()
 
         override fun observeAll(ownerId: String, workspaceId: String?): Flow<List<RecurringTransactionEntity>> =
-            flowOf(rules.values.toList())
+            flowOf(rules.values.filter { it.ownerId == ownerId && it.workspaceId == workspaceId && it.sync.deletedAtEpochMillis == null })
         override fun observeById(id: String): Flow<RecurringTransactionEntity?> = flowOf(rules[id])
         override suspend fun getById(id: String): RecurringTransactionEntity? = rules[id]
         override suspend fun getAnyById(id: String): RecurringTransactionEntity? = rules[id]
@@ -236,6 +237,16 @@ class OfflineFirstRecurringTransactionRepositoryTest {
         override suspend fun deleteWorkspaceMemberRows(workspaceId: String): Int = 0
         override suspend fun rebaseWorkspaceVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun markWorkspaceSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
+        override suspend fun upsertWorkspaceMemberRow(entity: com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity) {}
+        override suspend fun upsertWorkspaceInvitationRow(entity: com.feniqo.mobile.data.local.entity.WorkspaceInvitationEntity) {}
+        override suspend fun deleteWorkspaceInvitationRow(id: String): Int = 0
+        override suspend fun getWorkspaceInvitationById(id: String): com.feniqo.mobile.data.local.entity.WorkspaceInvitationEntity? = null
+        override suspend fun getWorkspaceInvitationByTokenHash(tokenHash: String): com.feniqo.mobile.data.local.entity.WorkspaceInvitationEntity? = null
+        override suspend fun getWorkspaceMember(workspaceId: String, userId: String): com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity? = null
+        override suspend fun clearActiveWorkspaceIfMatches(profileId: String, workspaceId: String): Int = 0
+        override suspend fun rebaseWorkspaceMemberVersion(workspaceId: String, userId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun rebaseWorkspaceInvitationVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun markWorkspaceMemberSyncedIfDeleted(workspaceId: String, userId: String, nowEpochMillis: Long): Int = 0
         override suspend fun upsertGoalRow(entity: com.feniqo.mobile.data.local.entity.GoalEntity) = Unit
         override suspend fun upsertGoalContributionRow(entity: com.feniqo.mobile.data.local.entity.GoalContributionEntity) = Unit
         override suspend fun upsertDebtRow(entity: com.feniqo.mobile.data.local.entity.DebtEntity) = Unit
@@ -716,4 +727,84 @@ class OfflineFirstRecurringTransactionRepositoryTest {
             endDate = null,
         ),
     )
+
+    private class TestActiveWorkspaceScope(
+        initial: EntityId? = null,
+    ) : ActiveWorkspaceScope {
+        val flow = kotlinx.coroutines.flow.MutableStateFlow(initial)
+        override fun observe(profileId: EntityId): Flow<EntityId?> = flow
+        override suspend fun current(profileId: EntityId): EntityId? = flow.value
+    }
+
+    @Test
+    fun activeWorkspaceScope_isolatesObserveAndEnforcesScopedWrites() = runTest {
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "token", nowInstant))
+        val categoryDao = FakeCategoryDao().apply {
+            upsert(
+                createCategory(
+                    id = "cat-ws-1",
+                    ownerId = "user-1",
+                ).copy(workspaceId = "ws-1", scopeKey = "workspace:ws-1"),
+            )
+        }
+        val recurringDao = FakeRecurringTransactionDao()
+        val mutationDao = FakeLocalMutationDao(recurringDao)
+        val writeQueue = OfflineWriteQueue(
+            mutationDao = mutationDao,
+            operationDao = FakeSyncOperationDao(),
+        )
+        val scope = TestActiveWorkspaceScope(null) // Personal mode initially
+
+        val repo = OfflineFirstRecurringTransactionRepository(
+            authRepository = authRepo,
+            categoryDao = categoryDao,
+            recurringTransactionDao = recurringDao,
+            offlineWriteQueue = writeQueue,
+            entityIdGenerator = { EntityId("rec-ws-1") },
+            activeWorkspaceScope = scope,
+            nowEpochMillisProvider = { nowEpoch },
+        )
+
+        // 1. Personal entity ekle
+        recurringDao.upsert(
+            createRecurringEntity(id = "rec-personal", workspaceId = null),
+        )
+        // 2. Workspace entity ekle
+        recurringDao.upsert(
+            createRecurringEntity(id = "rec-ws-existing", workspaceId = "ws-1"),
+        )
+
+        // 3. Personal modda yalnız personal kayıt gözlemlenmeli
+        val personalList = repo.observeRecurringTransactions().first()
+        assertEquals(1, personalList.size)
+        assertEquals(EntityId("rec-personal"), personalList.first().id)
+
+        // 4. Scope ws-1 olunca yalnız ws-1 kayıt gözlemlenmeli
+        scope.flow.value = EntityId("ws-1")
+        val wsList = repo.observeRecurringTransactions().first()
+        assertEquals(1, wsList.size)
+        assertEquals(EntityId("rec-ws-existing"), wsList.first().id)
+
+        // 5. ws-1 scope'unda yeni kayıt oluşturma
+        val createResult = repo.create(createCommand(categoryId = "cat-ws-1"))
+        assertTrue(createResult is RepositoryResult.Success)
+        val createdEntity = recurringDao.rules["rec-ws-1"]
+        assertNotNull(createdEntity)
+        assertEquals("ws-1", createdEntity.workspaceId)
+        val outboxItem = mutationDao.enqueuedOutbox.last()
+        assertEquals("RECURRING_TRANSACTION", outboxItem.entityTypeCode)
+
+        // 6. Başka workspace'e (ws-2) ait kaydı güncellemeye çalışma -> fail-closed
+        recurringDao.upsert(
+            createRecurringEntity(id = "rec-ws-2", workspaceId = "ws-2"),
+        )
+        val updateOtherWsResult = repo.update(updateCommand("rec-ws-2", 60000L))
+        assertTrue(updateOtherWsResult is RepositoryResult.Failure)
+        assertEquals(AppError.Validation("recurring_transaction_not_found"), updateOtherWsResult.error)
+
+        // 7. Başka workspace'e (ws-2) ait kaydı silmeye çalışma -> fail-closed
+        val deleteOtherWsResult = repo.softDelete(EntityId("rec-ws-2"))
+        assertTrue(deleteOtherWsResult is RepositoryResult.Failure)
+        assertEquals(AppError.Validation("recurring_transaction_not_found"), deleteOtherWsResult.error)
+    }
 }

@@ -35,6 +35,9 @@ import androidx.compose.ui.unit.dp
 import com.feniqo.mobile.presentation.component.SyncStatusIndicator
 import com.feniqo.mobile.presentation.sync.SyncStatusUiState
 
+import com.feniqo.mobile.domain.repository.ConflictResolution
+import com.feniqo.mobile.presentation.component.WorkspaceConflictResolutionDialog
+
 enum class AppSection(val label: String) {
     DASHBOARD("Ana Sayfa"),
     TRANSACTIONS("İşlemler"),
@@ -55,6 +58,9 @@ fun FeniqoAppShell(
     syncStatus: SyncStatusUiState = SyncStatusUiState.Initial,
     onManualSync: () -> Unit = {},
     onRetryFailed: () -> Unit = {},
+    onResolveConflict: () -> Unit = {},
+    onResolveConflictDecision: (ConflictResolution) -> Unit = {},
+    onDismissConflictDialog: () -> Unit = {},
     showNavigationChrome: Boolean = true,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
@@ -143,6 +149,7 @@ fun FeniqoAppShell(
                     uiState = syncStatus,
                     onManualSync = onManualSync,
                     onRetryFailed = onRetryFailed,
+                    onResolveConflict = onResolveConflict,
                 )
             }
 
@@ -152,6 +159,15 @@ fun FeniqoAppShell(
                     .fillMaxWidth(),
             ) {
                 content()
+
+                // Çakışma çözüm diyaloğu overlay gösterimi (en az müdahaleli render noktası)
+                syncStatus.activeConflictDialog?.let { dialogState ->
+                    WorkspaceConflictResolutionDialog(
+                        dialogState = dialogState,
+                        onResolve = onResolveConflictDecision,
+                        onDismiss = onDismissConflictDialog,
+                    )
+                }
             }
         }
     }

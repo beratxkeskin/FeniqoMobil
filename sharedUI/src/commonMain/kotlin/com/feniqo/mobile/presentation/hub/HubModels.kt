@@ -119,7 +119,7 @@ object MoreHubRegistry {
         title = "Ortak Alanlar",
         subtitle = "Aile ve ekip paylaşımlı bütçe takibi",
         iconSymbol = "◉",
-        status = HubItemStatus.COMING_SOON,
+        status = HubItemStatus.AVAILABLE,
     )
 
     val BANKS = HubMenuItem(

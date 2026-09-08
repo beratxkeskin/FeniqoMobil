@@ -200,6 +200,16 @@ class OfflineFirstSubscriptionRepositoryTest {
         override suspend fun deleteWorkspaceMemberRows(workspaceId: String): Int = 0
         override suspend fun rebaseWorkspaceVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun markWorkspaceSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
+        override suspend fun upsertWorkspaceMemberRow(entity: com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity) = Unit
+        override suspend fun upsertWorkspaceInvitationRow(entity: com.feniqo.mobile.data.local.entity.WorkspaceInvitationEntity) = Unit
+        override suspend fun deleteWorkspaceInvitationRow(id: String): Int = 0
+        override suspend fun getWorkspaceInvitationById(id: String): com.feniqo.mobile.data.local.entity.WorkspaceInvitationEntity? = null
+        override suspend fun getWorkspaceInvitationByTokenHash(tokenHash: String): com.feniqo.mobile.data.local.entity.WorkspaceInvitationEntity? = null
+        override suspend fun getWorkspaceMember(workspaceId: String, userId: String): com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity? = null
+        override suspend fun clearActiveWorkspaceIfMatches(profileId: String, workspaceId: String): Int = 0
+        override suspend fun rebaseWorkspaceMemberVersion(workspaceId: String, userId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun rebaseWorkspaceInvitationVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun markWorkspaceMemberSyncedIfDeleted(workspaceId: String, userId: String, nowEpochMillis: Long): Int = 0
         override suspend fun upsertGoalRow(entity: com.feniqo.mobile.data.local.entity.GoalEntity) = Unit
         override suspend fun upsertGoalContributionRow(entity: com.feniqo.mobile.data.local.entity.GoalContributionEntity) = Unit
         override suspend fun upsertDebtRow(entity: com.feniqo.mobile.data.local.entity.DebtEntity) = Unit
@@ -1145,6 +1155,126 @@ class OfflineFirstSubscriptionRepositoryTest {
         assertFailsWith<CancellationException> {
             repo.softDelete(EntityId("sub-1"))
         }
+    }
+
+    private class TestActiveWorkspaceScope(
+        initial: EntityId? = null,
+    ) : ActiveWorkspaceScope {
+        val flow = kotlinx.coroutines.flow.MutableStateFlow(initial)
+        override fun observe(profileId: EntityId): Flow<EntityId?> = flow
+        override suspend fun current(profileId: EntityId): EntityId? = flow.value
+    }
+
+    private fun subscriptionEntity(
+        id: String = "sub-1",
+        ownerId: String = "user-1",
+        workspaceId: String? = null,
+        categoryId: String? = null,
+        amountMinor: Long = 5999L,
+    ) = SubscriptionEntity(
+        id = id,
+        ownerId = ownerId,
+        workspaceId = workspaceId,
+        name = "Spotify",
+        amountMinor = amountMinor,
+        currencyCode = "TRY",
+        categoryId = categoryId,
+        frequencyCode = "MONTHLY",
+        interval = 1,
+        startDate = "2026-08-01",
+        endDate = null,
+        nextRenewalDate = "2026-09-01",
+        isActive = true,
+        createdAtEpochMillis = nowEpoch,
+        sync = defaultSync,
+    )
+
+    @Test
+    fun activeWorkspaceScope_isolatesObserveAndEnforcesScopedWrites() = runTest {
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "token", nowInstant))
+        val categoryDao = FakeCategoryDao().apply {
+            upsert(
+                expenseCategory("cat-ws-1", ownerId = "user-1").copy(
+                    workspaceId = "ws-1",
+                    scopeKey = "workspace:ws-1",
+                ),
+            )
+        }
+        val subscriptionDao = FakeSubscriptionDao()
+        val mutationDao = FakeLocalMutationDao(subscriptionDao)
+        val writeQueue = OfflineWriteQueue(
+            mutationDao = mutationDao,
+            operationDao = FakeSyncOperationDao(),
+        )
+        val scope = TestActiveWorkspaceScope(null) // Personal mode initially
+
+        val repo = OfflineFirstSubscriptionRepository(
+            authRepository = authRepo,
+            categoryDao = categoryDao,
+            subscriptionDao = subscriptionDao,
+            offlineWriteQueue = writeQueue,
+            entityIdGenerator = { EntityId("sub-ws-1") },
+            activeWorkspaceScope = scope,
+            nowEpochMillisProvider = { nowEpoch },
+        )
+
+        // 1. Personal entity ekle
+        subscriptionDao.upsert(
+            subscriptionEntity(id = "sub-personal", workspaceId = null),
+        )
+        // 2. Workspace entity ekle
+        subscriptionDao.upsert(
+            subscriptionEntity(id = "sub-ws-existing", workspaceId = "ws-1"),
+        )
+
+        // 3. Personal modda yalnız personal kayıt gözlemlenmeli
+        val personalList = repo.observeSubscriptions().first()
+        assertEquals(1, personalList.size)
+        assertEquals(EntityId("sub-personal"), personalList.first().id)
+
+        // 4. Scope ws-1 olunca yalnız ws-1 kayıt gözlemlenmeli
+        scope.flow.value = EntityId("ws-1")
+        val wsList = repo.observeSubscriptions().first()
+        assertEquals(1, wsList.size)
+        assertEquals(EntityId("sub-ws-existing"), wsList.first().id)
+
+        // 5. ws-1 scope'unda yeni kayıt oluşturma
+        val createResult = repo.create(
+            CreateSubscriptionCommand(
+                name = "GitHub Copilot Enterprise",
+                amount = Money(3900L, Currency.TRY),
+                categoryId = EntityId("cat-ws-1"),
+                renewalRule = RecurrenceRule(RecurrenceFrequency.MONTHLY, 1, LocalDate(2026, 8, 1), null),
+                nextRenewalDate = LocalDate(2026, 9, 1),
+            ),
+        )
+        assertTrue(createResult is RepositoryResult.Success)
+        val createdEntity = subscriptionDao.subscriptions["sub-ws-1"]
+        assertNotNull(createdEntity)
+        assertEquals("ws-1", createdEntity.workspaceId)
+        val outboxItem = mutationDao.enqueuedOutbox.last()
+        assertEquals("SUBSCRIPTION", outboxItem.entityTypeCode)
+
+        // 6. Başka workspace'e (ws-2) ait kaydı güncellemeye çalışma -> fail-closed
+        subscriptionDao.upsert(
+            subscriptionEntity(id = "sub-ws-2", workspaceId = "ws-2"),
+        )
+        val updateOtherWsResult = repo.update(
+            UpdateSubscriptionCommand(
+                id = EntityId("sub-ws-2"),
+                name = "GitHub Copilot Business",
+                amount = Money(4500L, Currency.TRY),
+                categoryId = EntityId("cat-ws-1"),
+                renewalRule = RecurrenceRule(RecurrenceFrequency.MONTHLY, 1, LocalDate(2026, 8, 1), null),
+            ),
+        )
+        assertTrue(updateOtherWsResult is RepositoryResult.Failure)
+        assertEquals(AppError.Validation("subscription_not_found"), updateOtherWsResult.error)
+
+        // 7. Başka workspace'e (ws-2) ait kaydı silmeye çalışma -> fail-closed
+        val deleteOtherWsResult = repo.softDelete(EntityId("sub-ws-2"))
+        assertTrue(deleteOtherWsResult is RepositoryResult.Failure)
+        assertEquals(AppError.Validation("subscription_not_found"), deleteOtherWsResult.error)
     }
 }
 

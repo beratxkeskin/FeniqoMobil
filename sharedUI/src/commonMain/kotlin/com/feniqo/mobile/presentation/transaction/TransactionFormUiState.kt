@@ -73,6 +73,7 @@ data class TransactionFormUiState(
     val isLoadingTransaction: Boolean = false,
     val existingInstallment: InstallmentDisplayModel? = null,
     val isSubmitting: Boolean = false,
+    val activeWorkspaceName: String? = null,
     val loadError: FinanceUiMessage? = null,
     val categoryLoadError: FinanceUiMessage? = null,
     val amountError: TransactionFormFieldError? = null,

@@ -13,6 +13,7 @@ import com.feniqo.mobile.domain.repository.RepositoryResult
 import com.feniqo.mobile.domain.usecase.AdvanceSubscriptionRenewalUseCase
 import com.feniqo.mobile.domain.usecase.CreateSubscriptionUseCase
 import com.feniqo.mobile.domain.usecase.DeleteSubscriptionUseCase
+import com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase
 import com.feniqo.mobile.domain.usecase.ObserveCategoriesUseCase
 import com.feniqo.mobile.domain.usecase.ObserveSubscriptionUseCase
 import com.feniqo.mobile.domain.usecase.ObserveSubscriptionsUseCase
@@ -55,9 +56,9 @@ class SubscriptionsViewModel @Inject constructor(
     private val setSubscriptionActiveUseCase: SetSubscriptionActiveUseCase,
     private val advanceSubscriptionRenewalUseCase: AdvanceSubscriptionRenewalUseCase,
     private val deleteSubscriptionUseCase: DeleteSubscriptionUseCase,
+    private val observeActiveWorkspaceUseCase: ObserveActiveWorkspaceUseCase,
     private val currentDateProvider: CurrentDateProvider,
 ) : ViewModel() {
-
 
     private val _retryTrigger = MutableStateFlow(0L)
     private val _mutationState = MutableStateFlow(SubscriptionMutationState())
@@ -72,6 +73,22 @@ class SubscriptionsViewModel @Inject constructor(
     val events: Flow<SubscriptionUiEvent> = _events.receiveAsFlow()
 
     private var activeMutationJob: Job? = null
+
+    init {
+        viewModelScope.launch {
+            var previousWorkspaceId: EntityId? = null
+            var isFirstEmission = true
+            observeActiveWorkspaceUseCase().collect { workspace ->
+                val currentWorkspaceId = workspace?.id
+                if (!isFirstEmission && currentWorkspaceId != previousWorkspaceId) {
+                    editLoadJob?.cancel()
+                    _editLoadState.value = SubscriptionEditLoadState.Idle
+                }
+                isFirstEmission = false
+                previousWorkspaceId = currentWorkspaceId
+            }
+        }
+    }
 
     private sealed interface ObservationResult {
         data object Loading : ObservationResult
@@ -107,25 +124,30 @@ class SubscriptionsViewModel @Inject constructor(
     val uiState: StateFlow<SubscriptionsUiState> = combine(
         observationResultFlow,
         _mutationState,
-    ) { observationResult, mutationState ->
+        observeActiveWorkspaceUseCase(),
+    ) { observationResult, mutationState, activeWorkspace ->
+        val workspaceName = activeWorkspace?.name
         when (observationResult) {
             is ObservationResult.Loading -> SubscriptionsUiState(
                 isLoading = true,
                 items = emptyList(),
                 observationError = null,
                 mutationState = mutationState,
+                activeWorkspaceName = workspaceName,
             )
             is ObservationResult.Failure -> SubscriptionsUiState(
                 isLoading = false,
                 items = emptyList(),
                 observationError = observationResult.message,
                 mutationState = mutationState,
+                activeWorkspaceName = workspaceName,
             )
             is ObservationResult.Success -> SubscriptionsUiState(
                 isLoading = false,
                 items = observationResult.items,
                 observationError = null,
                 mutationState = mutationState,
+                activeWorkspaceName = workspaceName,
             )
         }
     }.stateIn(

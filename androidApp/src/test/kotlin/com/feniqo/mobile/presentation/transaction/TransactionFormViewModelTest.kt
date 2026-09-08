@@ -172,9 +172,29 @@ class TransactionFormViewModelTest {
         override fun nextId(): EntityId = EntityId("gen-${++count}")
     }
 
+    private class FakeWorkspaceRepository : com.feniqo.mobile.domain.repository.WorkspaceRepository {
+        val activeWorkspaceFlow = MutableStateFlow<com.feniqo.mobile.domain.model.Workspace?>(null)
+        override fun observeActiveWorkspace(): Flow<com.feniqo.mobile.domain.model.Workspace?> = activeWorkspaceFlow
+        override fun observeWorkspaces(): Flow<List<com.feniqo.mobile.domain.model.Workspace>> = MutableStateFlow(emptyList())
+        override fun observeMembers(workspaceId: EntityId): Flow<List<com.feniqo.mobile.domain.model.WorkspaceMember>> = MutableStateFlow(emptyList())
+        override suspend fun create(name: String): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("ws-1"))
+        override suspend fun createWorkspace(command: com.feniqo.mobile.domain.model.CreateWorkspaceCommand): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("ws-1"))
+        override suspend fun updateWorkspace(command: com.feniqo.mobile.domain.model.UpdateWorkspaceCommand): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        override suspend fun deleteWorkspace(id: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        override suspend fun setActive(workspaceId: EntityId?): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        override suspend fun createInvite(workspaceId: EntityId): RepositoryResult<com.feniqo.mobile.domain.repository.WorkspaceInviteCode> =
+            RepositoryResult.Success(com.feniqo.mobile.domain.repository.WorkspaceInviteCode("INV123"))
+        override suspend fun join(inviteCode: com.feniqo.mobile.domain.repository.WorkspaceInviteCode): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("ws-1"))
+        override suspend fun changeMemberRole(workspaceId: EntityId, userId: EntityId, role: com.feniqo.mobile.domain.model.WorkspaceRole): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        override suspend fun leave(workspaceId: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        override suspend fun transferOwnership(workspaceId: EntityId, targetUserId: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        override suspend fun removeMember(workspaceId: EntityId, userId: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+    }
+
     private lateinit var authRepo: FakeAuthRepository
     private lateinit var trxRepo: FakeTransactionRepository
     private lateinit var catRepo: FakeCategoryRepository
+    private lateinit var workspaceRepo: FakeWorkspaceRepository
     private lateinit var idGenerator: SequentialEntityIdGenerator
     private lateinit var countingInstantProvider: CountingInstantProvider
 
@@ -184,6 +204,7 @@ class TransactionFormViewModelTest {
         authRepo = FakeAuthRepository()
         trxRepo = FakeTransactionRepository()
         catRepo = FakeCategoryRepository()
+        workspaceRepo = FakeWorkspaceRepository()
         idGenerator = SequentialEntityIdGenerator()
         countingInstantProvider = CountingInstantProvider(fixedInstant)
     }
@@ -208,6 +229,7 @@ class TransactionFormViewModelTest {
             observeTransactionUseCase = ObserveTransactionUseCase(trxRepo),
             observeCategoriesUseCase = ObserveCategoriesUseCase(catRepo),
             observeCategoriesForHistoryLookupUseCase = ObserveCategoriesForHistoryLookupUseCase(catRepo),
+            observeActiveWorkspaceUseCase = com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase(workspaceRepo),
             currentDateProvider = fakeDateProvider,
             currentInstantProvider = instantProvider,
             entityIdGenerator = idGenerator,
@@ -223,6 +245,7 @@ class TransactionFormViewModelTest {
             observeTransactionUseCase = ObserveTransactionUseCase(trxRepo),
             observeCategoriesUseCase = ObserveCategoriesUseCase(catRepo),
             observeCategoriesForHistoryLookupUseCase = ObserveCategoriesForHistoryLookupUseCase(catRepo),
+            observeActiveWorkspaceUseCase = com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase(workspaceRepo),
             currentDateProvider = fakeDateProvider,
             currentInstantProvider = countingInstantProvider,
             entityIdGenerator = idGenerator,

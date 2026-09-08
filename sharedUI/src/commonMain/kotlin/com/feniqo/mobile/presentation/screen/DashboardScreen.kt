@@ -135,6 +135,7 @@ fun DashboardScreen(
                 state.dashboard != null -> {
                     DashboardContent(
                         dashboard = state.dashboard,
+                        activeWorkspaceName = state.activeWorkspaceName,
                         onAddTransaction = onAddTransaction,
                         onViewAllTransactions = onViewAllTransactions,
                         onTransactionClick = onTransactionClick,
@@ -149,6 +150,7 @@ fun DashboardScreen(
 @Composable
 private fun DashboardContent(
     dashboard: DashboardDisplayModel,
+    activeWorkspaceName: String?,
     onAddTransaction: () -> Unit,
     onViewAllTransactions: () -> Unit,
     onTransactionClick: (EntityId) -> Unit,
@@ -166,7 +168,10 @@ private fun DashboardContent(
     ) {
         // 1. Ay Başlığı
         item(key = "header") {
-            DashboardHeader(formattedMonth = dashboard.formattedMonth)
+            DashboardHeader(
+                formattedMonth = dashboard.formattedMonth,
+                activeWorkspaceName = activeWorkspaceName,
+            )
         }
 
         // 2. Bütçe Uyarısı (varsa)

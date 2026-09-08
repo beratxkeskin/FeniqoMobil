@@ -11,6 +11,7 @@ import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.repository.RepositoryResult
 import com.feniqo.mobile.domain.usecase.AddCategoryCommand
 import com.feniqo.mobile.domain.usecase.AddCategoryUseCase
+import com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase
 import com.feniqo.mobile.domain.usecase.ObserveCategoryUseCase
 import com.feniqo.mobile.domain.usecase.UpdateCategoryCommand
 import com.feniqo.mobile.domain.usecase.UpdateCategoryUseCase
@@ -44,6 +45,7 @@ class CategoryFormViewModel @Inject constructor(
     private val addCategoryUseCase: AddCategoryUseCase,
     private val updateCategoryUseCase: UpdateCategoryUseCase,
     private val observeCategoryUseCase: ObserveCategoryUseCase,
+    private val observeActiveWorkspaceUseCase: ObserveActiveWorkspaceUseCase,
     private val currentInstantProvider: CurrentInstantProvider,
     private val entityIdGenerator: EntityIdGenerator,
     savedStateHandle: SavedStateHandle,
@@ -58,6 +60,26 @@ class CategoryFormViewModel @Inject constructor(
     private var activeSubmitJob: Job? = null
 
     init {
+        viewModelScope.launch {
+            var previousWorkspaceId: EntityId? = null
+            var isFirstEmission = true
+            observeActiveWorkspaceUseCase().collect { activeWorkspace ->
+                val currentWorkspaceId = activeWorkspace?.id
+                val workspaceName = activeWorkspace?.name
+                _uiState.update { it.copy(activeWorkspaceName = workspaceName) }
+
+                if (!isFirstEmission && currentWorkspaceId != previousWorkspaceId) {
+                    activeSubmitJob?.cancel()
+                    val editingId = _uiState.value.categoryId
+                    if (editingId != null) {
+                        loadCategoryForEdit(editingId)
+                    }
+                }
+                isFirstEmission = false
+                previousWorkspaceId = currentWorkspaceId
+            }
+        }
+
         resolveRoute(savedStateHandle)
     }
 

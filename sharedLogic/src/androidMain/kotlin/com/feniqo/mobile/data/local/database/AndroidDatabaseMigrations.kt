@@ -365,3 +365,20 @@ val ANDROID_MIGRATION_9_10 = Migration(9, 10) { database ->
     database.execSQL("CREATE INDEX IF NOT EXISTS index_workspace_invitations_expires_at_epoch_ms ON workspace_invitations(expires_at_epoch_ms)")
     database.execSQL("CREATE INDEX IF NOT EXISTS index_workspace_invitations_deleted_at_epoch_ms ON workspace_invitations(deleted_at_epoch_ms)")
 }
+
+/** v11, workspace_invitations tablosuna token_hash alanını ve indeksini ekler. */
+val ANDROID_MIGRATION_10_11 = Migration(10, 11) { database ->
+    database.execSQL("ALTER TABLE workspace_invitations ADD COLUMN token_hash TEXT")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_workspace_invitations_token_hash ON workspace_invitations(token_hash)")
+}
+
+/** v12, ortak gider ödeşmesi için ödeme yapan ve katılımcı snapshot'ını transaction ile saklar. */
+val ANDROID_MIGRATION_11_12 = Migration(11, 12) { database ->
+    database.execSQL("ALTER TABLE transactions ADD COLUMN paid_by_user_id TEXT")
+    database.execSQL("ALTER TABLE transactions ADD COLUMN participant_user_ids_json TEXT")
+    database.execSQL("UPDATE transactions SET paid_by_user_id = owner_id WHERE paid_by_user_id IS NULL")
+    database.execSQL(
+        "UPDATE transactions SET participant_user_ids_json = '[\"' || owner_id || '\"]' " +
+            "WHERE participant_user_ids_json IS NULL",
+    )
+}

@@ -12,6 +12,7 @@ import com.feniqo.mobile.domain.model.UserProfile
 import com.feniqo.mobile.domain.model.Workspace
 import com.feniqo.mobile.domain.model.WorkspaceMember
 import com.feniqo.mobile.domain.model.WorkspaceRole
+import com.feniqo.mobile.domain.model.WorkspaceType
 import kotlinx.datetime.Instant
 
 fun UserProfile.toEntity(sync: SyncMetadata): UserProfileEntity = UserProfileEntity(
@@ -33,7 +34,7 @@ fun UserProfileEntity.toDomain(): UserProfile = UserProfile(
     currency = Currency.valueOf(currencyCode),
     themePreference = ThemePreference.valueOf(themeCode),
     language = AppLanguage.valueOf(languageCode),
-    activeWorkspaceId = activeWorkspaceId?.let(::EntityId),
+    activeWorkspaceId = activeWorkspaceId?.let { EntityId(it) },
     createdAt = Instant.fromEpochMilliseconds(createdAtEpochMillis),
 )
 
@@ -42,6 +43,9 @@ fun Workspace.toEntity(sync: SyncMetadata): WorkspaceEntity = WorkspaceEntity(
     name = name.trim(),
     normalizedName = name.normalizeForStorage(),
     ownerId = ownerId.value,
+    typeCode = type.name.lowercase(),
+    currencyCode = currency.code,
+    description = description,
     createdAtEpochMillis = createdAt.toEpochMilliseconds(),
     sync = sync,
 )
@@ -51,6 +55,9 @@ fun WorkspaceEntity.toDomain(): Workspace = Workspace(
     name = name,
     ownerId = EntityId(ownerId),
     createdAt = Instant.fromEpochMilliseconds(createdAtEpochMillis),
+    type = runCatching { WorkspaceType.valueOf(typeCode.uppercase()) }.getOrDefault(WorkspaceType.SHARED),
+    currency = runCatching { Currency.valueOf(currencyCode) }.getOrDefault(Currency.TRY),
+    description = description,
 )
 
 fun WorkspaceMember.toEntity(sync: SyncMetadata): WorkspaceMemberEntity = WorkspaceMemberEntity(

@@ -13,6 +13,7 @@ import com.feniqo.mobile.domain.repository.RepositoryResult
 import com.feniqo.mobile.domain.usecase.CopyBudgetsUseCase
 import com.feniqo.mobile.domain.usecase.CreateBudgetUseCase
 import com.feniqo.mobile.domain.usecase.DeleteBudgetUseCase
+import com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase
 import com.feniqo.mobile.domain.usecase.ObserveBudgetUseCase
 import com.feniqo.mobile.domain.usecase.ObserveBudgetsWithProgressUseCase
 import com.feniqo.mobile.domain.usecase.UpdateBudgetUseCase
@@ -62,6 +63,7 @@ class BudgetViewModel @Inject constructor(
     private val updateBudgetUseCase: UpdateBudgetUseCase,
     private val deleteBudgetUseCase: DeleteBudgetUseCase,
     private val copyBudgetsUseCase: CopyBudgetsUseCase,
+    private val observeActiveWorkspaceUseCase: ObserveActiveWorkspaceUseCase,
     private val currentDateProvider: CurrentDateProvider,
 ) : ViewModel() {
 
@@ -82,6 +84,24 @@ class BudgetViewModel @Inject constructor(
 
     private val _events = Channel<BudgetUiEvent>(Channel.BUFFERED)
     val events: Flow<BudgetUiEvent> = _events.receiveAsFlow()
+
+    init {
+        viewModelScope.launch {
+            var previousWorkspaceId: EntityId? = null
+            var isFirstEmission = true
+            observeActiveWorkspaceUseCase().collect { workspace ->
+                val currentWorkspaceId = workspace?.id
+                if (!isFirstEmission && currentWorkspaceId != previousWorkspaceId) {
+                    editLoadJob?.cancel()
+                    _editLoadState.value = BudgetEditLoadState.Idle
+                    _deleteConfirmation.value = null
+                    _copyConfirmation.value = null
+                }
+                isFirstEmission = false
+                previousWorkspaceId = currentWorkspaceId
+            }
+        }
+    }
 
     private sealed interface ObservationResult {
         data object Loading : ObservationResult
@@ -110,14 +130,28 @@ class BudgetViewModel @Inject constructor(
     private val _deleteConfirmation = MutableStateFlow<BudgetDeleteConfirmationState?>(null)
     private val _copyConfirmation = MutableStateFlow<BudgetCopyConfirmationState?>(null)
 
+    private val _confirmationsAndWorkspaceFlow = combine(
+        _deleteConfirmation,
+        _copyConfirmation,
+        observeActiveWorkspaceUseCase(),
+    ) { deleteConfirmation, copyConfirmation, activeWorkspace ->
+        BudgetConfirmationsAndWorkspace(
+            deleteConfirmation = deleteConfirmation,
+            copyConfirmation = copyConfirmation,
+            workspaceName = activeWorkspace?.name,
+        )
+    }
+
     val uiState: StateFlow<BudgetsUiState> = combine(
         observationResultFlow,
         _selectedMonth,
         _mutationState,
-        _deleteConfirmation,
-        _copyConfirmation,
-    ) { obsResult, selectedMonth, mutationState, deleteConfirmation, copyConfirmation ->
+        _confirmationsAndWorkspaceFlow,
+    ) { obsResult, selectedMonth, mutationState, extra ->
         val currentMonth = selectedMonth ?: initialSelectedMonth
+        val workspaceName = extra.workspaceName
+        val deleteConfirmation = extra.deleteConfirmation
+        val copyConfirmation = extra.copyConfirmation
         when (obsResult) {
             is ObservationResult.Loading -> BudgetsUiState(
                 isLoading = true,
@@ -125,6 +159,7 @@ class BudgetViewModel @Inject constructor(
                 budgets = emptyList(),
                 observationError = null,
                 mutationState = mutationState,
+                activeWorkspaceName = workspaceName,
                 deleteConfirmation = deleteConfirmation,
                 copyConfirmation = copyConfirmation,
             )
@@ -134,6 +169,7 @@ class BudgetViewModel @Inject constructor(
                 budgets = obsResult.budgets,
                 observationError = null,
                 mutationState = mutationState,
+                activeWorkspaceName = workspaceName,
                 deleteConfirmation = deleteConfirmation,
                 copyConfirmation = copyConfirmation,
             )
@@ -143,6 +179,7 @@ class BudgetViewModel @Inject constructor(
                 budgets = emptyList(),
                 observationError = obsResult.message,
                 mutationState = mutationState,
+                activeWorkspaceName = workspaceName,
                 deleteConfirmation = deleteConfirmation,
                 copyConfirmation = copyConfirmation,
             )
@@ -510,3 +547,9 @@ class BudgetViewModel @Inject constructor(
         BudgetValidationError.SOURCE_AND_TARGET_MONTH_SAME -> BudgetFormFieldError.SOURCE_AND_TARGET_MONTH_SAME
     }
 }
+
+private data class BudgetConfirmationsAndWorkspace(
+    val deleteConfirmation: BudgetDeleteConfirmationState?,
+    val copyConfirmation: BudgetCopyConfirmationState?,
+    val workspaceName: String?,
+)

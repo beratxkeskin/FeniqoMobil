@@ -527,41 +527,32 @@ class WorkspaceValidationRulesTest {
     }
 
     @Test
-    fun validateMemberRemoval_removingLastOwner_rejected() {
+    fun validateMemberRemoval_removingOwner_rejected() {
         val owner2 = EntityId("user-owner-2")
         val membersWithTwoOwners = listOf(
             userOwner to WorkspaceRole.OWNER,
             owner2 to WorkspaceRole.OWNER,
         )
-        val removeWithTwoOwners = WorkspaceValidationRules.validateMemberRemoval(
+        val removeOwner = WorkspaceValidationRules.validateMemberRemoval(
             actorUserId = owner2,
             targetUserId = userOwner,
             currentMembers = membersWithTwoOwners,
         )
-        assertTrue(removeWithTwoOwners is WorkspaceValidationResult.Valid)
+        assertEquals(WorkspaceValidationResult.Invalid(WorkspaceValidationError.CANNOT_REMOVE_WORKSPACE_OWNER), removeOwner)
+    }
 
+    @Test
+    fun validateMemberRemoval_removingSelf_rejected() {
         val singleOwnerMembers = listOf(
             userOwner to WorkspaceRole.OWNER,
             userEditor to WorkspaceRole.EDITOR,
         )
-        // userEditor (veya aktör) tek owner'ı çıkarmaya çalışsa dahi:
-        // Eğer editor denerse ACTOR_NOT_PERMITTED olur, eğer başka bir senaryoda denenirse veya
-        // iki owner'lı bir listede tek owner kalma durumu:
-        // Not: userOwner kendini çıkaramaz veya actor member listesinde olmalıdır.
-        val nonPermittedRemoveSingleOwner = WorkspaceValidationRules.validateMemberRemoval(
-            actorUserId = userEditor,
-            targetUserId = userOwner,
-            currentMembers = singleOwnerMembers,
-        )
-        assertEquals(WorkspaceValidationResult.Invalid(WorkspaceValidationError.ACTOR_NOT_PERMITTED), nonPermittedRemoveSingleOwner)
-
-        // Bir OWNER tarafından tek OWNER (kendisi) çıkarılmaya çalışılırsa CANNOT_REMOVE_LAST_OWNER döner
-        val removeLastOwnerBySelf = WorkspaceValidationRules.validateMemberRemoval(
+        val removeSelf = WorkspaceValidationRules.validateMemberRemoval(
             actorUserId = userOwner,
             targetUserId = userOwner,
             currentMembers = singleOwnerMembers,
         )
-        assertEquals(WorkspaceValidationResult.Invalid(WorkspaceValidationError.CANNOT_REMOVE_LAST_OWNER), removeLastOwnerBySelf)
+        assertEquals(WorkspaceValidationResult.Invalid(WorkspaceValidationError.CANNOT_REMOVE_SELF_MEMBER), removeSelf)
     }
 
     @Test

@@ -40,6 +40,15 @@ import kotlinx.datetime.Instant
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.decodeFromString
 
+import com.feniqo.mobile.data.local.dao.WorkspaceConflictStaleResolutionException
+import com.feniqo.mobile.data.local.dao.WorkspaceResolutionPrecondition
+import com.feniqo.mobile.data.local.dao.toSnapshot
+import com.feniqo.mobile.data.local.dao.validateWorkspaceChain
+import com.feniqo.mobile.data.local.outbox.OutboxOperationType
+import com.feniqo.mobile.data.remote.codec.WorkspacePayloadCodec
+import com.feniqo.mobile.data.remote.dto.WorkspaceDto
+import com.feniqo.mobile.data.remote.mapper.toEntity
+import com.feniqo.mobile.domain.model.SyncStatus
 import com.feniqo.mobile.data.local.entity.SyncUserStateEntity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flatMapLatest
@@ -138,6 +147,11 @@ class OfflineFirstSyncRepository(
 
             incrementalRemoteSync.pullFor(session.userId)
             workspaceIncrementalRemoteSync.pull()
+            remoteSyncDao.getAllKnownLiveWorkspaceIds()
+                .sorted()
+                .forEach { workspaceId ->
+                    incrementalRemoteSync.pullWorkspaceFinance(EntityId(workspaceId))
+                }
             val remainingConflicts = syncStateDao.getConflictCount()
             val conflictDetected = outboxResult.conflictOperationId != null || remainingConflicts > 0
 
@@ -178,26 +192,51 @@ class OfflineFirstSyncRepository(
             val conflict = syncStateDao.getConflict(entityId.value)
                 ?: return@withLock RepositoryResult.Failure(AppError.Conflict("sync.conflict_not_found"))
 
-            when (resolution) {
+            val resolutionError = when (resolution) {
                 ConflictResolution.KEEP_REMOTE -> keepRemote(conflict)
-                ConflictResolution.KEEP_LOCAL -> remoteSyncDao.resolveKeepLocal(
-                    conflict = conflict,
-                    operationTypeCode = localOperationType(conflict),
-                    nowEpochMillis = nowEpochMillisProvider(),
-                )
+                ConflictResolution.KEEP_LOCAL -> keepLocal(conflict)
+            }
+            if (resolutionError != null) {
+                return@withLock RepositoryResult.Failure(resolutionError)
             }
             lastError.value = null
             RepositoryResult.Success(Unit)
         } catch (cancelled: CancellationException) {
             throw cancelled
+        } catch (stale: WorkspaceConflictStaleResolutionException) {
+            RepositoryResult.Failure(AppError.Conflict("sync.conflict_resolution_stale"))
         } catch (_: Throwable) {
             RepositoryResult.Failure(AppError.Storage("sync.conflict_resolution_failed"))
         }
     }
 
-    private suspend fun keepRemote(conflict: SyncConflictEntity) {
+    private suspend fun keepRemote(conflict: SyncConflictEntity): AppError? {
         val receivedAt = nowEpochMillisProvider()
         when (SyncEntityType.valueOf(conflict.entityTypeCode)) {
+            SyncEntityType.WORKSPACE -> {
+                val dto = snapshotJson.decodeFromString<WorkspaceDto>(conflict.remotePayloadJson)
+                require(dto.id == conflict.entityId) {
+                    "Uzak snapshot kimliği (${dto.id}) çakışan varlık kimliği (${conflict.entityId}) ile uyuşmuyor."
+                }
+                val localWs = remoteSyncDao.getWorkspaceRow(conflict.entityId)
+                    ?: return AppError.Conflict("sync.conflict_resolution_stale")
+                val operations = remoteSyncDao.getAllWorkspaceOperations(conflict.entityId)
+                val opSnapshots = operations.map { it.toSnapshot() }
+                val tail = runCatching { validateWorkspaceChain(opSnapshots) }.getOrNull()
+                    ?: return AppError.Conflict("sync.conflict_resolution_stale")
+                if (tail.operationId != conflict.operationId) {
+                    return AppError.Conflict("sync.conflict_resolution_stale")
+                }
+                val precondition = WorkspaceResolutionPrecondition(
+                    expectedConflict = conflict.toSnapshot(),
+                    expectedWorkspace = localWs.toSnapshot(),
+                    expectedOperations = opSnapshots,
+                )
+                remoteSyncDao.resolveWorkspaceKeepRemote(
+                    precondition = precondition,
+                    remoteEntity = dto.toEntity(receivedAt),
+                )
+            }
             SyncEntityType.PROFILE -> {
                 val dto = snapshotJson.decodeFromString<ProfileDto>(conflict.remotePayloadJson)
                 remoteSyncDao.resolveProfileKeepRemote(dto.toDomain().toEntity(dto.toRemoteSyncMetadata(receivedAt)))
@@ -219,8 +258,102 @@ class OfflineFirstSyncRepository(
                 }
                 remoteSyncDao.resolveRecurringTransactionKeepRemote(dto.toDomain().toEntity(dto.toRemoteSyncMetadata(receivedAt)))
             }
-            else -> error("V1 conflict çözümü ${conflict.entityTypeCode} türünü desteklemiyor.")
+            else -> error("V1/V2 conflict çözümü ${conflict.entityTypeCode} türünü desteklemiyor.")
         }
+        return null
+    }
+
+    private suspend fun keepLocal(conflict: SyncConflictEntity): AppError? {
+        val now = nowEpochMillisProvider()
+        return when (SyncEntityType.valueOf(conflict.entityTypeCode)) {
+            SyncEntityType.WORKSPACE -> keepLocalWorkspace(conflict, now)
+            else -> {
+                remoteSyncDao.resolveKeepLocal(
+                    conflict = conflict,
+                    operationTypeCode = localOperationType(conflict),
+                    nowEpochMillis = now,
+                )
+                null
+            }
+        }
+    }
+
+    private suspend fun keepLocalWorkspace(
+        conflict: SyncConflictEntity,
+        nowEpochMillis: Long,
+    ): AppError? {
+        val workspaceId = conflict.entityId
+        val localWs = remoteSyncDao.getWorkspaceRow(workspaceId)
+            ?: return AppError.Conflict("sync.conflict_resolution_stale")
+        val operations = remoteSyncDao.getAllWorkspaceOperations(workspaceId)
+        val opSnapshots = operations.map { it.toSnapshot() }
+        val tail = runCatching { validateWorkspaceChain(opSnapshots) }.getOrNull()
+            ?: return AppError.Conflict("sync.conflict_resolution_stale")
+        if (tail.operationId != conflict.operationId) {
+            return AppError.Conflict("sync.conflict_resolution_stale")
+        }
+
+        val targetOperationType: String
+        val targetPayloadJson: String?
+
+        when (tail.operationTypeCode) {
+            "CREATE" -> {
+                val remoteDto = runCatching {
+                    snapshotJson.decodeFromString<WorkspaceDto>(conflict.remotePayloadJson)
+                }.getOrNull() ?: return AppError.Conflict("sync.conflict_resolution_stale")
+
+                require(remoteDto.id == workspaceId) {
+                    "Uzak snapshot kimliği (${remoteDto.id}) çakışan varlık kimliği ($workspaceId) ile uyuşmuyor."
+                }
+
+                if (remoteDto.deletedAt != null) {
+                    return AppError.Conflict("sync.workspace_create_conflict_remote_tombstone")
+                }
+
+                val session = authRepository.observeSession().first()
+                val actorId = session?.userId?.value
+                if (actorId == null || remoteDto.ownerId != actorId || localWs.ownerId != actorId) {
+                    return AppError.Conflict("sync.workspace_create_conflict_owner_mismatch")
+                }
+
+                val updateEntity = localWs.copy(
+                    sync = localWs.sync.copy(
+                        syncStatus = SyncStatus.PENDING_UPDATE.name,
+                        baseVersion = conflict.remoteVersion,
+                        deletedAtEpochMillis = null,
+                    ),
+                )
+                targetOperationType = "UPDATE"
+                targetPayloadJson = WorkspacePayloadCodec.encode(
+                    entity = updateEntity,
+                    operationType = OutboxOperationType.UPDATE,
+                )
+            }
+            "UPDATE" -> {
+                targetOperationType = "UPDATE"
+                targetPayloadJson = tail.payloadJson
+            }
+            "DELETE" -> {
+                targetOperationType = "DELETE"
+                targetPayloadJson = tail.payloadJson
+            }
+            else -> return AppError.Conflict("sync.conflict_resolution_stale")
+        }
+
+        val precondition = WorkspaceResolutionPrecondition(
+            expectedConflict = conflict.toSnapshot(),
+            expectedWorkspace = localWs.toSnapshot(),
+            expectedOperations = opSnapshots,
+        )
+
+        remoteSyncDao.resolveWorkspaceKeepLocal(
+            precondition = precondition,
+            retainedOperationId = tail.operationId,
+            targetOperationTypeCode = targetOperationType,
+            targetPayloadJson = targetPayloadJson,
+            nowEpochMillis = nowEpochMillis,
+        )
+        return null
     }
 
     private suspend fun localOperationType(conflict: SyncConflictEntity): String = when (

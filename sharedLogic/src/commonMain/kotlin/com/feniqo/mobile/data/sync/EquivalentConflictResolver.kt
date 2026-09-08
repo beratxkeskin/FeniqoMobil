@@ -40,9 +40,17 @@ object EquivalentConflictResolver {
         val local = runCatching { json.decodeFromString<TransactionDto>(localJson) }.getOrNull() ?: return false
         val remote = runCatching { json.decodeFromString<TransactionDto>(remoteJson) }.getOrNull() ?: return false
 
+        val localPayer = local.paidByUserId?.takeIf { it.isNotBlank() } ?: local.userId
+        val remotePayer = remote.paidByUserId?.takeIf { it.isNotBlank() } ?: remote.userId
+
+        val localParticipants = local.participantUserIds.filter { it.isNotBlank() }.ifEmpty { listOf(localPayer) }
+        val remoteParticipants = remote.participantUserIds.filter { it.isNotBlank() }.ifEmpty { listOf(remotePayer) }
+
         return local.id == remote.id &&
             local.userId == remote.userId &&
             local.workspaceId == remote.workspaceId &&
+            localPayer == remotePayer &&
+            localParticipants == remoteParticipants &&
             local.amountMinor == remote.amountMinor &&
             local.currency.trim().uppercase() == remote.currency.trim().uppercase() &&
             local.type.trim().lowercase() == remote.type.trim().lowercase() &&

@@ -204,6 +204,32 @@ data object MoreRoute : FeniqoRoute
 @Serializable
 data object SettingsRoute : FeniqoRoute
 
+@Serializable
+data object WorkspacePickerRoute : FeniqoRoute
+
+@Serializable
+data object WorkspaceCreateRoute : FeniqoRoute
+
+@Serializable
+data object WorkspaceJoinRoute : FeniqoRoute
+
+@Serializable
+data class WorkspaceDetailsRoute(
+    val workspaceId: String,
+) : FeniqoRoute
+
+sealed interface WorkspaceDetailsRouteIdResult {
+    data class ValidId(val id: com.feniqo.mobile.domain.model.EntityId) : WorkspaceDetailsRouteIdResult
+    data object InvalidId : WorkspaceDetailsRouteIdResult
+}
+
+fun parseWorkspaceDetailsRouteId(rawId: String?): WorkspaceDetailsRouteIdResult {
+    if (rawId.isNullOrBlank()) return WorkspaceDetailsRouteIdResult.InvalidId
+    return runCatching { WorkspaceDetailsRouteIdResult.ValidId(com.feniqo.mobile.domain.model.EntityId(rawId.trim())) }
+        .getOrElse { WorkspaceDetailsRouteIdResult.InvalidId }
+}
+
+
 /**
  * Feniqo ana kabuğundaki (Bottom Navigation) üst seviye sekmelerin sözleşmesidir.
  * Yalnız hedef kimliğini ve type-safe rota nesnesi eşlemesini taşır;

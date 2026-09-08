@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.DebtStatus
 import com.feniqo.mobile.domain.model.DebtType
+import com.feniqo.mobile.presentation.component.ActiveWorkspaceIndicator
 import com.feniqo.mobile.presentation.debt.DebtFormFieldError
 import com.feniqo.mobile.presentation.debt.DebtFormInput
 import com.feniqo.mobile.presentation.debt.DebtFormInputErrors
@@ -68,6 +69,7 @@ fun DebtFormScreen(
     onAddPayment: (() -> Unit)? = null,
     paymentsHistory: List<com.feniqo.mobile.presentation.debt.DebtPaymentHistoryItemUiModel> = emptyList(),
     balanceSummary: com.feniqo.mobile.presentation.debt.DebtBalanceSummaryUiModel? = null,
+    activeWorkspaceName: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val isEnabled = !isSubmitting
@@ -107,16 +109,26 @@ fun DebtFormScreen(
                     )
                 }
 
-                if (isEditMode) {
-                    OutlinedButton(
-                        onClick = onRequestDelete,
-                        enabled = isEnabled,
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error,
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
-                    ) {
-                        Text("Sil")
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                ) {
+                    ActiveWorkspaceIndicator(
+                        workspaceName = activeWorkspaceName,
+                        isCompact = true,
+                    )
+
+                    if (isEditMode) {
+                        OutlinedButton(
+                            onClick = onRequestDelete,
+                            enabled = isEnabled,
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error,
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                        ) {
+                            Text("Sil")
+                        }
                     }
                 }
             }

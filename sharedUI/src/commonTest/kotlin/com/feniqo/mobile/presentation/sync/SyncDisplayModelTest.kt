@@ -33,6 +33,76 @@ class SyncDisplayModelTest {
     }
 
     @Test
+    fun testPriority1_workspaceConflictPresent_producesResolveAction() {
+        val state = SyncStatusUiState(
+            connectionState = SyncConnectionUiState.ONLINE,
+            isSyncing = false,
+            pendingCount = 0,
+            failedCount = 0,
+            conflictCount = 1,
+            lastSuccessfulSyncAtEpochMillis = null,
+            errorType = null,
+            canManualSync = false,
+            canRetryFailed = false,
+            hasResolvableWorkspaceConflict = true,
+        )
+
+        val model = resolveSyncDisplayModel(state)
+        assertEquals(SyncDisplaySeverity.CONFLICT, model.severity)
+        assertEquals(SyncDisplayActionType.RESOLVE_CONFLICT, model.actionType)
+        assertEquals("Çöz", model.actionText)
+        assertTrue(model.isActionEnabled)
+    }
+
+    @Test
+    fun testPriority1_workspaceConflictResolving_disablesResolveAction() {
+        val state = SyncStatusUiState(
+            connectionState = SyncConnectionUiState.ONLINE,
+            isSyncing = false,
+            pendingCount = 0,
+            failedCount = 0,
+            conflictCount = 1,
+            lastSuccessfulSyncAtEpochMillis = null,
+            errorType = null,
+            canManualSync = false,
+            canRetryFailed = false,
+            hasResolvableWorkspaceConflict = true,
+            activeConflictDialog = WorkspaceConflictDialogState(
+                conflict = WorkspaceConflictUiModel("ws-1", 1L, 2L),
+                isResolving = true,
+            ),
+        )
+
+        val model = resolveSyncDisplayModel(state)
+        assertEquals(SyncDisplaySeverity.CONFLICT, model.severity)
+        assertEquals(SyncDisplayActionType.RESOLVE_CONFLICT, model.actionType)
+        assertEquals("Çöz", model.actionText)
+        assertFalse(model.isActionEnabled)
+    }
+
+    @Test
+    fun testPriority1_onlyNonWorkspaceConflict_keepsPassiveWarningWithoutAction() {
+        val state = SyncStatusUiState(
+            connectionState = SyncConnectionUiState.ONLINE,
+            isSyncing = false,
+            pendingCount = 1,
+            failedCount = 0,
+            conflictCount = 3,
+            lastSuccessfulSyncAtEpochMillis = null,
+            errorType = null,
+            canManualSync = true,
+            canRetryFailed = false,
+            hasResolvableWorkspaceConflict = false,
+        )
+
+        val model = resolveSyncDisplayModel(state)
+        assertEquals(SyncDisplaySeverity.CONFLICT, model.severity)
+        assertNull(model.actionType)
+        assertNull(model.actionText)
+        assertFalse(model.isActionEnabled)
+    }
+
+    @Test
     fun testPriority2_errorWithFailedCountOffersRetryAction() {
         val state = SyncStatusUiState(
             connectionState = SyncConnectionUiState.ONLINE,

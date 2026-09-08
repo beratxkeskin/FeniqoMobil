@@ -32,9 +32,11 @@ interface TransactionDao {
     @Query(
         """
         SELECT * FROM transactions
-        WHERE owner_id = :ownerId
-          AND deleted_at_epoch_ms IS NULL
-          AND ((:workspaceId IS NULL AND workspace_id IS NULL) OR workspace_id = :workspaceId)
+        WHERE deleted_at_epoch_ms IS NULL
+          AND (
+            (:workspaceId IS NULL AND owner_id = :ownerId AND workspace_id IS NULL) OR
+            (:workspaceId IS NOT NULL AND workspace_id = :workspaceId)
+          )
           AND (:startDate IS NULL OR transaction_date >= :startDate)
           AND (:endDate IS NULL OR transaction_date <= :endDate)
           AND (:typeCode IS NULL OR type_code = :typeCode)

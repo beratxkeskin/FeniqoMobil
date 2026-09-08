@@ -217,7 +217,9 @@ internal fun validateCategoryAccess(
         return AppError.Validation("transaction_category_not_found")
     }
 
-    if (category.workspaceId != targetWorkspaceId) {
+    // A null command scope means “current active scope”; observeCategory already
+    // exposes only that Room-backed scope. Explicit route scopes must still match.
+    if (targetWorkspaceId != null && category.workspaceId != targetWorkspaceId) {
         return AppError.Validation("category_workspace_mismatch")
     }
 

@@ -6,14 +6,20 @@
 
 ## Güncel durum
 
-- Aktif çalışma: **Faz 8.4 — Ortak Çalışma Alanları (Workspaces)** (Domain/validation ve Room v9→v10 şema/DAO dilimleri tamamlandı; Workspace V2 outbox/sync tasarımı sıradadır).
+- Aktif çalışma: **Faz 8.4 — Ortak Çalışma Alanları (Workspaces)** (Domain/validation, Room v9→v10 şema/DAO, E12-A2 davet koduyla güvenli katılma, E12-B üye rol değişimi/ayrılma V2 outbox, E12-C OWNER davet oluşturma / üye rol yönetimi UI entegrasyonu, E12-D Workspace sahiplik devri atomik altyapısı, E12-E Workspace sahiplik devri UI entegrasyonu ve E12-F OWNER üye çıkarma akışı tamamlandı; Workspace CRUD V2 outbox/sync tasarımı sıradadır).
 - Görsel yenileme: Feniqo production UI tasarımının ikinci dilimi tamamlandı; tema ve alt navigasyona ek olarak Dashboard net bakiye hero hiyerarşisi, düz finans metrikleri, gelir/gider semantiği ve Plan/Profil modül menülerinin sade yüzey dili güncellendi.
 - Tamamlanan fazlar:
+  - Faz 8.4 E12-F — OWNER Üye Çıkarma Akışı (`WORKSPACE_MEMBER DELETE` V2 outbox + UI entegrasyonu) tamamlandı.
+  - Faz 8.4 E12-E — Workspace Sahiplik Devri UI Entegrasyonu tamamlandı.
+  - Faz 8.4 E12-D — Workspace Sahiplik Devri Atomik ve Fail-Closed Altyapısı tamamlandı.
+  - Faz 8.4 E12-C — OWNER Workspace Davet Oluşturma ve EDITOR/VIEWER Rol Yönetimi UI Entegrasyonu tamamlandı.
+  - Faz 8.4 E12-B — Workspace Üye Rol Değişimi (`UPDATE`) ve Alandan Ayrılma (`DELETE`) V2 Outbox Altyapısı tamamlandı.
+  - Faz 8.4 E12-A2 — Davet Kodu ile Workspace'e Güvenli Katılma tamamlandı.
   - Faz 8.3 — Hedefler ve Borçlar (Goals & Debts) başarıyla tamamlandı.
   - Mobil Navigasyon Bilgi Mimarisi (Ana Sayfa, İşlemler, + hızlı eylem, Plan hub [Bütçeler, Tekrarlayanlar, Abonelikler], Daha Fazla hub [Kategoriler, Ayarlar]) 5'li kalıcı alt bar, type-safe route'lar, pasif Yakında modülleri ve Android emülatör manuel smoke kabulü başarıyla tamamlandı.
   - Faz 8.2 — Tekrarlayan İşlemler ve Abonelikler (Recurring Transactions & Subscriptions) başarıyla tamamlandı.
   - Faz 8.1 — Bütçeler (Budgets) başarıyla tamamlandı.
-- Sıradaki teknik iş: Faz 8.4 Ortak Çalışma Alanları (Workspaces) V2 outbox mutasyonları ve Supabase senkronizasyon altyapısı tasarımı.
+- Sıradaki teknik iş: Faz 8.4 Ortak Çalışma Alanları (Workspaces) CRUD V2 outbox mutasyonları ve Supabase senkronizasyon altyapısı tasarımı.
 - Production Supabase durumu: migration uygulanmadı.
 - Staging: `FeniqoMobil-Staging` (ref: `rxfaiynkhaxrksosxvxp`); 15/15 migration (`20260901000100_sync_write_v2_goals_and_debts.sql`, `20260901000200_reconcile_goals_debts_sync_contract.sql` dâhil), RLS, `sync_write_v2` RPC ve SQL sözleşme testi doğrulandı; koşulsuz ROLLBACK ile test verisi bırakılmadı (goals, contributions, debts, payments ve sync receipts = 0 kalıntı).
 
@@ -48,6 +54,8 @@ Planlanan Kapsam:
 - Ortak harcama/işlem ve bütçe görünürlüğü.
 - Kimin ne kadar ödediği ve borç dağılımı (split) hesaplama motoru.
 - V2 Outbox ve Supabase senkronizasyonu.
+
+İlerleme notu (2026-09-08): E13-A–C ile finans kayıtları aktif workspace Room SSOT kapsamına bağlandı; kişisel ve ortak alan verileri repository seviyesinde fail-closed ayrışır ve tüm ilgili ekran/formlarda aktif alan bağlamı görünür. E13-D1 ile Room sorguları ortak alanda tüm üye işlem/bütçe/kategorilerini, kişisel alanda yalnız aktif kullanıcının kayıtlarını döndürür. E13-D2 ile ortak kategori ve işlem kayıtları üyelik pull'undan sonra workspace'e özel bağımsız cursor'larla Room'a alınır; kişisel cursor'lar korunur. E14-A ile henüz kalıcı veri modeline bağlanmayan, kuruş artığını deterministik dağıtan ve transfer önerileri üreten saf ortak gider ödeşme hesaplayıcısı tamamlandı. E14-B2 ile `paidByUserId` ve `participantUserIds` split alanlarının Room v12 şeması, V2 outbox yazımı, incremental pull'u, ACK'ı, equivalent conflict tespiti ve domain/PostgreSQL normalizasyon kuralları tamamlandı.
 
 ## Sonraki fazlar
 

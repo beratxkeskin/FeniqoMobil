@@ -168,6 +168,9 @@ class BudgetViewModelTest {
     private val deleteBudgetUseCase = DeleteBudgetUseCase(fakeBudgetRepo)
     private val copyBudgetsUseCase = CopyBudgetsUseCase(fakeBudgetRepo)
 
+    private val fakeWorkspaceRepo = com.feniqo.mobile.presentation.common.FakeWorkspaceRepository()
+    private val observeActiveWorkspaceUseCase = com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase(fakeWorkspaceRepo)
+
     private fun createViewModel(): BudgetViewModel = BudgetViewModel(
         observeBudgetsWithProgressUseCase = observeBudgetsWithProgressUseCase,
         observeBudgetUseCase = observeBudgetUseCase,
@@ -176,6 +179,7 @@ class BudgetViewModelTest {
         deleteBudgetUseCase = deleteBudgetUseCase,
         copyBudgetsUseCase = copyBudgetsUseCase,
         currentDateProvider = testDateProvider,
+        observeActiveWorkspaceUseCase = observeActiveWorkspaceUseCase,
     )
 
     private val testOwnerId = EntityId("user-1")

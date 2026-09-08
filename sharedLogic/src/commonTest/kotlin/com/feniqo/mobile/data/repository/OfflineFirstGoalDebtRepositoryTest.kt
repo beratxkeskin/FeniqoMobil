@@ -65,7 +65,7 @@ class OfflineFirstGoalDebtRepositoryTest {
 
         override fun observeAll(ownerId: String, workspaceId: String?): Flow<List<GoalEntity>> = flow {
             cancellationExceptionToThrow?.let { ex ->
-                currentCoroutineContext().job.parent?.cancel(ex)
+                currentCoroutineContext().job.cancel(ex)
                 throw ex
             }
             observeAllException?.let { throw it }
@@ -129,7 +129,7 @@ class OfflineFirstGoalDebtRepositoryTest {
 
         override fun observeAll(ownerId: String, workspaceId: String?): Flow<List<DebtEntity>> = flow {
             cancellationExceptionToThrow?.let { ex ->
-                currentCoroutineContext().job.parent?.cancel(ex)
+                currentCoroutineContext().job.cancel(ex)
                 throw ex
             }
             observeAllException?.let { throw it }
@@ -361,9 +361,14 @@ class OfflineFirstGoalDebtRepositoryTest {
         goalDao.observeAllException = null
 
         // CancellationException is rethrown directly without converting to empty list or other error
-        goalDao.cancellationExceptionToThrow = CancellationException("goal_observe_cancelled")
+        val cancellingAuthRepo = object : AuthRepository by authRepo {
+            override fun observeSession(): Flow<AuthSession?> = flow {
+                throw CancellationException("goal_observe_cancelled")
+            }
+        }
+        val cancellingRepo = OfflineFirstGoalRepository(cancellingAuthRepo, goalDao)
         assertFailsWith<CancellationException> {
-            repo.observeGoals().first()
+            cancellingRepo.observeGoals().first()
         }
     }
 
@@ -461,10 +466,95 @@ class OfflineFirstGoalDebtRepositoryTest {
         debtDao.observeAllException = null
 
         // CancellationException is rethrown directly without converting to empty list or other error
-        debtDao.cancellationExceptionToThrow = CancellationException("debt_observe_cancelled")
-        assertFailsWith<CancellationException> {
-            repo.observeDebts().first()
+        val cancellingAuthRepo = object : AuthRepository by authRepo {
+            override fun observeSession(): Flow<AuthSession?> = flow {
+                throw CancellationException("debt_observe_cancelled")
+            }
         }
+        val cancellingRepo = OfflineFirstDebtRepository(cancellingAuthRepo, debtDao)
+        assertFailsWith<CancellationException> {
+            cancellingRepo.observeDebts().first()
+        }
+    }
+
+    private class TestActiveWorkspaceScope(
+        initial: EntityId? = null,
+    ) : ActiveWorkspaceScope {
+        val flow = kotlinx.coroutines.flow.MutableStateFlow(initial)
+        override fun observe(profileId: EntityId): Flow<EntityId?> = flow
+        override suspend fun current(profileId: EntityId): EntityId? = flow.value
+    }
+
+    @Test
+    fun goalRepository_activeWorkspaceScope_isolatesObserve() = runTest {
+        val authRepo = FakeAuthRepository(session = testSession)
+        val goalDao = FakeGoalDao()
+        val scope = TestActiveWorkspaceScope(null) // personal
+        val repo = OfflineFirstGoalRepository(
+            authRepository = authRepo,
+            goalDao = goalDao,
+            activeWorkspaceScope = scope,
+        )
+
+        goalDao.goals["g-personal"] = sampleGoalEntity(id = "g-personal", ownerId = "user-1", workspaceId = null)
+        goalDao.goals["g-ws1"] = sampleGoalEntity(id = "g-ws1", ownerId = "user-1", workspaceId = "ws-1")
+
+        // 1. Personal mod
+        val personalGoals = repo.observeGoals().first()
+        assertEquals(1, personalGoals.size)
+        assertEquals(EntityId("g-personal"), personalGoals.first().id)
+
+        val personalGoal = repo.observeGoal(EntityId("g-personal")).first()
+        assertNotNull(personalGoal)
+        val crossScopeGoal = repo.observeGoal(EntityId("g-ws1")).first()
+        assertNull(crossScopeGoal)
+
+        // 2. ws-1 scope'u
+        scope.flow.value = EntityId("ws-1")
+        val wsGoals = repo.observeGoals().first()
+        assertEquals(1, wsGoals.size)
+        assertEquals(EntityId("g-ws1"), wsGoals.first().id)
+
+        val wsGoal = repo.observeGoal(EntityId("g-ws1")).first()
+        assertNotNull(wsGoal)
+        val oldPersonalGoal = repo.observeGoal(EntityId("g-personal")).first()
+        assertNull(oldPersonalGoal)
+    }
+
+    @Test
+    fun debtRepository_activeWorkspaceScope_isolatesObserve() = runTest {
+        val authRepo = FakeAuthRepository(session = testSession)
+        val debtDao = FakeDebtDao()
+        val scope = TestActiveWorkspaceScope(null) // personal
+        val repo = OfflineFirstDebtRepository(
+            authRepository = authRepo,
+            debtDao = debtDao,
+            activeWorkspaceScope = scope,
+        )
+
+        debtDao.debts["d-personal"] = sampleDebtEntity(id = "d-personal", ownerId = "user-1", workspaceId = null)
+        debtDao.debts["d-ws1"] = sampleDebtEntity(id = "d-ws1", ownerId = "user-1", workspaceId = "ws-1")
+
+        // 1. Personal mod
+        val personalDebts = repo.observeDebts().first()
+        assertEquals(1, personalDebts.size)
+        assertEquals(EntityId("d-personal"), personalDebts.first().id)
+
+        val personalDebt = repo.observeDebt(EntityId("d-personal")).first()
+        assertNotNull(personalDebt)
+        val crossScopeDebt = repo.observeDebt(EntityId("d-ws1")).first()
+        assertNull(crossScopeDebt)
+
+        // 2. ws-1 scope'u
+        scope.flow.value = EntityId("ws-1")
+        val wsDebts = repo.observeDebts().first()
+        assertEquals(1, wsDebts.size)
+        assertEquals(EntityId("d-ws1"), wsDebts.first().id)
+
+        val wsDebt = repo.observeDebt(EntityId("d-ws1")).first()
+        assertNotNull(wsDebt)
+        val oldPersonalDebt = repo.observeDebt(EntityId("d-personal")).first()
+        assertNull(oldPersonalDebt)
     }
 
     // endregion

@@ -15,6 +15,9 @@ data class Workspace(
     val name: String,
     val ownerId: EntityId,
     val createdAt: Instant,
+    val type: WorkspaceType = WorkspaceType.SHARED,
+    val currency: Currency = Currency.TRY,
+    val description: String? = null,
 ) {
     init {
         require(name.isNotBlank()) { "Çalışma alanı adı boş olamaz." }

@@ -102,6 +102,7 @@ class InitialRemoteSyncTest {
         override suspend fun upsertProfileRow(entity: UserProfileEntity) { profile = entity }
         override suspend fun upsertWorkspaceRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceEntity>) = Unit
         override suspend fun upsertWorkspaceMemberRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity>) = Unit
+        override suspend fun clearActiveWorkspaceIfMatches(profileId: String, workspaceId: String): Int = 0
         override suspend fun upsertCategoryRows(entities: List<CategoryEntity>) { categories = entities }
         override suspend fun upsertTransactionRows(entities: List<TransactionEntity>) {
             subscriptionsInsertedBeforeTransactions = subscriptions.isNotEmpty()
@@ -139,6 +140,13 @@ class InitialRemoteSyncTest {
         override suspend fun rebaseTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseRecurringTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseSubscriptionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun getActiveWorkspaceTailOperation(workspaceId: String): com.feniqo.mobile.data.local.entity.SyncOperationEntity? = null
+        override suspend fun markWorkspaceConflict(entityId: String, error: String): Int = 0
+        override suspend fun getAllWorkspaceOperations(workspaceId: String): List<com.feniqo.mobile.data.local.entity.SyncOperationEntity> = emptyList()
+        override suspend fun deleteSpecificWorkspaceOperations(workspaceId: String, operationIds: List<String>): Int = 0
+        override suspend fun rebaseWorkspaceForRetry(workspaceId: String, syncStatus: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun resetWorkspaceConflictOperation(operationId: String, operationTypeCode: String, payloadJson: String?, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun getConflictRow(entityTypeCode: String, entityId: String): SyncConflictEntity? = null
     }
 
 
@@ -184,16 +192,16 @@ class InitialRemoteSyncTest {
             return RemotePage(items, query.page, totalCount = 2)
         }
 
-        override suspend fun fetchBudgets(query: BudgetRemoteQuery): RemotePage<BudgetDto> = error("Kapsam dışı")
-        override suspend fun fetchGoals(query: com.feniqo.mobile.data.remote.core.GoalRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.GoalDto> = error("Kapsam dışı")
-        override suspend fun fetchGoalContributions(query: com.feniqo.mobile.data.remote.core.GoalContributionRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.GoalContributionDto> = error("Kapsam dışı")
-        override suspend fun fetchDebts(query: com.feniqo.mobile.data.remote.core.DebtRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.DebtDto> = error("Kapsam dışı")
-        override suspend fun fetchDebtPayments(query: com.feniqo.mobile.data.remote.core.DebtPaymentRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.DebtPaymentDto> = error("Kapsam dışı")
-        override suspend fun fetchTags(scope: RemoteWorkspaceScope, page: RemotePageRequest): RemotePage<TagDto> = error("Kapsam dışı")
+        override suspend fun fetchBudgets(query: BudgetRemoteQuery): RemotePage<BudgetDto> = RemotePage(emptyList(), query.page, totalCount = 0)
+        override suspend fun fetchGoals(query: com.feniqo.mobile.data.remote.core.GoalRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.GoalDto> = RemotePage(emptyList(), query.page, totalCount = 0)
+        override suspend fun fetchGoalContributions(query: com.feniqo.mobile.data.remote.core.GoalContributionRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.GoalContributionDto> = RemotePage(emptyList(), query.page, totalCount = 0)
+        override suspend fun fetchDebts(query: com.feniqo.mobile.data.remote.core.DebtRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.DebtDto> = RemotePage(emptyList(), query.page, totalCount = 0)
+        override suspend fun fetchDebtPayments(query: com.feniqo.mobile.data.remote.core.DebtPaymentRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.DebtPaymentDto> = RemotePage(emptyList(), query.page, totalCount = 0)
+        override suspend fun fetchTags(scope: RemoteWorkspaceScope, page: RemotePageRequest): RemotePage<TagDto> = RemotePage(emptyList(), page, totalCount = 0)
 
 
-        override suspend fun fetchWorkspaces(page: RemotePageRequest): RemotePage<WorkspaceDto> = error("Kapsam dışı")
-        override suspend fun fetchWorkspaceMembers(workspaceId: String, page: RemotePageRequest): RemotePage<WorkspaceMemberDto> = error("Kapsam dışı")
+        override suspend fun fetchWorkspaces(page: RemotePageRequest): RemotePage<WorkspaceDto> = RemotePage(emptyList(), page, totalCount = 0)
+        override suspend fun fetchWorkspaceMembers(workspaceId: String, page: RemotePageRequest): RemotePage<WorkspaceMemberDto> = RemotePage(emptyList(), page, totalCount = 0)
         override suspend fun fetchTransactionTags(transactionId: String): List<TransactionTagDto> = error("Kapsam dışı")
         override suspend fun upsertProfile(dto: ProfileDto) = error("Kapsam dışı")
         override suspend fun upsertCategory(dto: CategoryDto) = error("Kapsam dışı")

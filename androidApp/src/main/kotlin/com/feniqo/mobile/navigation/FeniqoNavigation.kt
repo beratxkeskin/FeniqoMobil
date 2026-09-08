@@ -61,7 +61,13 @@ import com.feniqo.mobile.presentation.shell.AppSection
 import com.feniqo.mobile.presentation.shell.FeniqoAppShell
 import com.feniqo.mobile.presentation.sync.SyncStatusUiState
 import com.feniqo.mobile.presentation.theme.ThemeMode
+import com.feniqo.mobile.presentation.workspace.WorkspacePickerScreenRoute
+import com.feniqo.mobile.presentation.workspace.WorkspaceCreateScreenRoute
+import com.feniqo.mobile.presentation.workspace.WorkspaceJoinScreenRoute
+import com.feniqo.mobile.presentation.workspace.WorkspaceDetailsScreenRoute
 import kotlinx.coroutines.launch
+
+import com.feniqo.mobile.domain.repository.ConflictResolution
 
 /**
  * Android kök navigasyon bileşeni.
@@ -74,6 +80,9 @@ fun FeniqoNavigation(
     syncStatus: SyncStatusUiState,
     onManualSync: () -> Unit,
     onRetryFailed: () -> Unit,
+    onResolveConflict: () -> Unit = {},
+    onResolveConflictDecision: (ConflictResolution) -> Unit = {},
+    onDismissConflictDialog: () -> Unit = {},
     themeMode: ThemeMode,
     onThemeModeChange: suspend (ThemeMode) -> Unit,
     modifier: Modifier = Modifier,
@@ -90,6 +99,9 @@ fun FeniqoNavigation(
                 syncStatus = syncStatus,
                 onManualSync = onManualSync,
                 onRetryFailed = onRetryFailed,
+                onResolveConflict = onResolveConflict,
+                onResolveConflictDecision = onResolveConflictDecision,
+                onDismissConflictDialog = onDismissConflictDialog,
                 themeMode = themeMode,
                 onThemeModeChange = onThemeModeChange,
                 modifier = modifier,
@@ -156,6 +168,9 @@ fun MainNavHost(
     syncStatus: SyncStatusUiState,
     onManualSync: () -> Unit,
     onRetryFailed: () -> Unit,
+    onResolveConflict: () -> Unit = {},
+    onResolveConflictDecision: (ConflictResolution) -> Unit = {},
+    onDismissConflictDialog: () -> Unit = {},
     themeMode: ThemeMode,
     onThemeModeChange: suspend (ThemeMode) -> Unit,
     modifier: Modifier = Modifier,
@@ -173,12 +188,16 @@ fun MainNavHost(
     val isGoalContributionForm = destination?.hasRoute<GoalContributionFormRoute>() == true
     val isDebtForm = destination?.hasRoute<DebtFormRoute>() == true
     val isDebtPaymentForm = destination?.hasRoute<DebtPaymentFormRoute>() == true
-    val isDetailForm = isTransactionForm || isCategoryForm || isBudgetForm || isRecurringForm || isSubscriptionForm || isGoalForm || isGoalContributionForm || isDebtForm || isDebtPaymentForm
+    val isWorkspacePicker = destination?.hasRoute<WorkspacePickerRoute>() == true
+    val isWorkspaceCreate = destination?.hasRoute<WorkspaceCreateRoute>() == true
+    val isWorkspaceJoin = destination?.hasRoute<WorkspaceJoinRoute>() == true
+    val isWorkspaceDetails = destination?.hasRoute<WorkspaceDetailsRoute>() == true
+    val isDetailForm = isTransactionForm || isCategoryForm || isBudgetForm || isRecurringForm || isSubscriptionForm || isGoalForm || isGoalContributionForm || isDebtForm || isDebtPaymentForm || isWorkspacePicker || isWorkspaceCreate || isWorkspaceJoin || isWorkspaceDetails
 
     val currentSection = when {
         destination?.hasRoute<TransactionsRoute>() == true || isTransactionForm -> AppSection.TRANSACTIONS
         destination?.hasRoute<PlanRoute>() == true || destination?.hasRoute<BudgetsRoute>() == true || isBudgetForm || destination?.hasRoute<RecurringTransactionsRoute>() == true || isRecurringForm || destination?.hasRoute<SubscriptionsRoute>() == true || isSubscriptionForm || destination?.hasRoute<GoalsRoute>() == true || isGoalForm || isGoalContributionForm || destination?.hasRoute<DebtsRoute>() == true || isDebtForm || isDebtPaymentForm -> AppSection.PLAN
-        destination?.hasRoute<MoreRoute>() == true || destination?.hasRoute<CategoriesRoute>() == true || isCategoryForm || destination?.hasRoute<SettingsRoute>() == true -> AppSection.MORE
+        destination?.hasRoute<MoreRoute>() == true || destination?.hasRoute<CategoriesRoute>() == true || isCategoryForm || destination?.hasRoute<SettingsRoute>() == true || isWorkspacePicker || isWorkspaceCreate || isWorkspaceJoin || isWorkspaceDetails -> AppSection.MORE
         else -> AppSection.DASHBOARD
     }
 
@@ -203,6 +222,9 @@ fun MainNavHost(
         syncStatus = syncStatus,
         onManualSync = onManualSync,
         onRetryFailed = onRetryFailed,
+        onResolveConflict = onResolveConflict,
+        onResolveConflictDecision = onResolveConflictDecision,
+        onDismissConflictDialog = onDismissConflictDialog,
         showNavigationChrome = !isDetailForm,
         modifier = modifier,
     ) {
@@ -392,7 +414,40 @@ fun MainNavHost(
                             launchSingleTop = true
                         }
                     },
+                    onNavigateToSharedSpaces = {
+                        navController.navigate(WorkspacePickerRoute) {
+                            launchSingleTop = true
+                        }
+                    },
                 )
+            }
+            composable<WorkspacePickerRoute> {
+                WorkspacePickerScreenRoute(
+                    onNavigateBack = {
+                        if (!navController.popBackStack()) {
+                            navController.navigate(MoreRoute) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                            }
+                        }
+                    },
+                    onCreateWorkspace = { navController.navigate(WorkspaceCreateRoute) { launchSingleTop = true } },
+                    onJoinWorkspace = { navController.navigate(WorkspaceJoinRoute) { launchSingleTop = true } },
+                    onWorkspaceDetails = { workspaceId ->
+                        navController.navigate(WorkspaceDetailsRoute(workspaceId.value)) { launchSingleTop = true }
+                    },
+                )
+            }
+            composable<WorkspaceCreateRoute> {
+                WorkspaceCreateScreenRoute(onBack = { navController.popBackStack() })
+            }
+            composable<WorkspaceJoinRoute> {
+                WorkspaceJoinScreenRoute(onBack = { navController.popBackStack() })
+            }
+            composable<WorkspaceDetailsRoute> {
+                WorkspaceDetailsScreenRoute(onBack = { navController.popBackStack() })
             }
             composable<CategoriesRoute> {
                 CategoriesScreenRoute(

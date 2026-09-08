@@ -45,6 +45,7 @@ class OfflineFirstSubscriptionRepository(
         explicitNulls = true
         ignoreUnknownKeys = true
     },
+    private val activeWorkspaceScope: ActiveWorkspaceScope = PersonalActiveWorkspaceScope,
     private val nowEpochMillisProvider: () -> Long = { kotlin.time.Clock.System.now().toEpochMilliseconds() },
 ) : SubscriptionRepository {
 
@@ -53,8 +54,10 @@ class OfflineFirstSubscriptionRepository(
             if (session == null) {
                 flowOf(emptyList())
             } else {
-                subscriptionDao.observeAll(session.userId.value, workspaceId = null)
-                    .map { entities -> entities.map { it.toDomain() } }
+                activeWorkspaceScope.observe(session.userId).flatMapLatest { activeWorkspaceId ->
+                    subscriptionDao.observeAll(session.userId.value, workspaceId = activeWorkspaceId?.value)
+                        .map { entities -> entities.map { it.toDomain() } }
+                }
             }
         }
 
@@ -63,8 +66,10 @@ class OfflineFirstSubscriptionRepository(
             if (session == null) {
                 flowOf(null)
             } else {
-                subscriptionDao.observeById(id.value).map { entity ->
-                    entity?.takeIf { it.ownerId == session.userId.value && it.workspaceId == null }?.toDomain()
+                activeWorkspaceScope.observe(session.userId).flatMapLatest { activeWorkspaceId ->
+                    subscriptionDao.observeById(id.value).map { entity ->
+                        entity?.takeIf { it.ownerId == session.userId.value && it.workspaceId == activeWorkspaceId?.value }?.toDomain()
+                    }
                 }
             }
         }
@@ -77,13 +82,14 @@ class OfflineFirstSubscriptionRepository(
                 is SubscriptionValidationResult.Valid -> result.value
                 is SubscriptionValidationResult.Invalid -> return validationFailure(result)
             }
-            validatePersonalExpenseCategory(validCommand.categoryId, session.userId.value)?.let { return it }
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
+            validateExpenseCategoryForScope(validCommand.categoryId, session.userId.value, activeWorkspaceId?.value)?.let { return it }
 
             val now = nowEpochMillisProvider()
             val subscription = Subscription(
                 id = entityIdGenerator.nextId(),
                 ownerId = session.userId,
-                workspaceId = null,
+                workspaceId = activeWorkspaceId,
                 name = validCommand.name,
                 amount = validCommand.amount,
                 categoryId = validCommand.categoryId,
@@ -109,13 +115,14 @@ class OfflineFirstSubscriptionRepository(
         try {
             val session = authRepository.observeSession().first()
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
-            val existing = personalExisting(command.id, session.userId.value)
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
+            val existing = scopedExisting(command.id, session.userId.value, activeWorkspaceId?.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("subscription_not_found"))
             val updated = when (val result = SubscriptionValidationRules.applySubscriptionUpdate(existing.toDomain(), command)) {
                 is SubscriptionValidationResult.Valid -> result.value
                 is SubscriptionValidationResult.Invalid -> return validationFailure(result)
             }
-            validatePersonalExpenseCategory(updated.categoryId, session.userId.value)?.let { return it }
+            validateExpenseCategoryForScope(updated.categoryId, session.userId.value, activeWorkspaceId?.value)?.let { return it }
 
             val now = nowEpochMillisProvider()
             offlineWriteQueue.enqueueSubscriptionV2(
@@ -135,7 +142,8 @@ class OfflineFirstSubscriptionRepository(
         try {
             val session = authRepository.observeSession().first()
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
-            val existing = personalExisting(command.id, session.userId.value)
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
+            val existing = scopedExisting(command.id, session.userId.value, activeWorkspaceId?.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("subscription_not_found"))
             val now = nowEpochMillisProvider()
             val updated = existing.toDomain().copy(isActive = command.isActive)
@@ -156,7 +164,8 @@ class OfflineFirstSubscriptionRepository(
         try {
             val session = authRepository.observeSession().first()
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
-            val existing = personalExisting(id, session.userId.value)
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
+            val existing = scopedExisting(id, session.userId.value, activeWorkspaceId?.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("subscription_not_found"))
             val domainSubscription = existing.toDomain()
             val progressionResult = SubscriptionRenewalProgressionCalculator.calculateNextRenewal(domainSubscription)
@@ -187,12 +196,12 @@ class OfflineFirstSubscriptionRepository(
         }
     }
 
-
     override suspend fun softDelete(id: EntityId): RepositoryResult<Unit> {
         try {
             val session = authRepository.observeSession().first()
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
-            val existing = personalExisting(id, session.userId.value)
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
+            val existing = scopedExisting(id, session.userId.value, activeWorkspaceId?.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("subscription_not_found"))
             val now = nowEpochMillisProvider()
             offlineWriteQueue.enqueueSubscriptionV2(
@@ -208,12 +217,13 @@ class OfflineFirstSubscriptionRepository(
         }
     }
 
-    private suspend fun personalExisting(id: EntityId, ownerId: String) =
-        subscriptionDao.getById(id.value)?.takeIf { it.ownerId == ownerId && it.workspaceId == null }
+    private suspend fun scopedExisting(id: EntityId, ownerId: String, workspaceId: String?) =
+        subscriptionDao.getById(id.value)?.takeIf { it.ownerId == ownerId && it.workspaceId == workspaceId }
 
-    private suspend fun validatePersonalExpenseCategory(
+    private suspend fun validateExpenseCategoryForScope(
         categoryId: EntityId?,
         ownerId: String,
+        workspaceId: String?,
     ): RepositoryResult.Failure? {
         if (categoryId == null) return null
         val category = categoryDao.getByIdAndOwner(categoryId.value, ownerId)
@@ -221,9 +231,9 @@ class OfflineFirstSubscriptionRepository(
         if (category.sync.deletedAtEpochMillis != null || category.typeCode != "EXPENSE") {
             return RepositoryResult.Failure(AppError.Validation("subscription_category_type_mismatch"))
         }
-        val ownedOrDefault = (category.isDefault && category.ownerId == null && category.workspaceId == null) ||
-            (category.ownerId == ownerId && category.workspaceId == null)
-        return if (ownedOrDefault) null else RepositoryResult.Failure(
+        val allowedScope = (category.isDefault && category.ownerId == null && category.workspaceId == null) ||
+            (category.ownerId == ownerId && category.workspaceId == workspaceId)
+        return if (allowedScope) null else RepositoryResult.Failure(
             AppError.Authentication("subscription_category_owner_mismatch"),
         )
     }

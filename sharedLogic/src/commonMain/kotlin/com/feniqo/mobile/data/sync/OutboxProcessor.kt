@@ -15,6 +15,8 @@ import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
 import com.feniqo.mobile.data.remote.dto.SubscriptionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceDto
+import com.feniqo.mobile.data.remote.dto.WorkspaceInvitationDto
+import com.feniqo.mobile.data.remote.dto.WorkspaceMemberDto
 import kotlinx.coroutines.CancellationException
 
 /** Outbox işleminin sunucuda yürütülmesi sonrası dönen tip güvenli sonuç. */
@@ -31,6 +33,8 @@ sealed interface OutboxExecutionResult {
     data class DebtApplied(val record: DebtDto) : OutboxExecutionResult
     data class DebtPaymentApplied(val record: DebtPaymentSyncRecordDto) : OutboxExecutionResult
     data class WorkspaceApplied(val record: WorkspaceDto) : OutboxExecutionResult
+    data class WorkspaceMemberApplied(val record: WorkspaceMemberDto) : OutboxExecutionResult
+    data class WorkspaceInvitationApplied(val record: WorkspaceInvitationDto) : OutboxExecutionResult
     data object MissingDeleteAcknowledged : OutboxExecutionResult
     data class ConflictDetected(val conflict: com.feniqo.mobile.data.local.entity.SyncConflictEntity) : OutboxExecutionResult
 }

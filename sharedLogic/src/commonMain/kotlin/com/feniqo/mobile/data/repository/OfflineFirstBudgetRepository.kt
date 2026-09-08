@@ -46,6 +46,7 @@ class OfflineFirstBudgetRepository(
     private val categoryDao: CategoryDao,
     private val offlineWriteQueue: OfflineWriteQueue,
     private val entityIdGenerator: EntityIdGenerator = RandomHexEntityIdGenerator(),
+    private val activeWorkspaceScope: ActiveWorkspaceScope = PersonalActiveWorkspaceScope,
     private val nowEpochMillisProvider: () -> Long = { kotlin.time.Clock.System.now().toEpochMilliseconds() },
 ) : BudgetRepository {
 
@@ -60,14 +61,17 @@ class OfflineFirstBudgetRepository(
         workspaceId: EntityId?,
     ): Flow<List<Budget>> {
         return authRepository.observeSession().flatMapLatest { session ->
-            if (session == null || workspaceId != null) {
+            if (session == null) {
                 flowOf(emptyList())
             } else {
-                budgetDao.observeForMonth(
-                    ownerId = session.userId.value,
-                    workspaceId = null,
-                    month = month.value,
-                ).map { entities -> entities.map(BudgetEntity::toDomain) }
+                activeWorkspaceScope.observe(session.userId).flatMapLatest { activeWorkspaceId ->
+                    if (workspaceId != null && workspaceId != activeWorkspaceId) flowOf(emptyList())
+                    else budgetDao.observeForMonth(
+                        ownerId = session.userId.value,
+                        workspaceId = activeWorkspaceId?.value,
+                        month = month.value,
+                    ).map { entities -> entities.map(BudgetEntity::toDomain) }
+                }
             }
         }
     }
@@ -77,11 +81,13 @@ class OfflineFirstBudgetRepository(
             if (session == null) {
                 flowOf(null)
             } else {
-                budgetDao.observeById(id.value).map { entity ->
-                    if (entity != null && entity.ownerId == session.userId.value && entity.workspaceId == null) {
+                activeWorkspaceScope.observe(session.userId).flatMapLatest { activeWorkspaceId ->
+                    budgetDao.observeById(id.value).map { entity ->
+                    if (entity != null && entity.ownerId == session.userId.value && entity.workspaceId == activeWorkspaceId?.value) {
                         entity.toDomain()
                     } else {
                         null
+                    }
                     }
                 }
             }
@@ -95,19 +101,20 @@ class OfflineFirstBudgetRepository(
 
             val category = categoryDao.getByIdAndOwner(command.categoryId.value, session.userId.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("budget_category_not_found"))
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
 
             if (category.typeCode != TransactionType.EXPENSE.name) {
                 return RepositoryResult.Failure(AppError.Validation("budget_category_must_be_expense"))
             }
 
-            val isValidCategoryOwner = (category.isDefault && category.ownerId == null && category.workspaceId == null) ||
-                (category.ownerId == session.userId.value && category.workspaceId == null)
+            val isValidCategoryOwner = (category.isDefault && category.ownerId == null) ||
+                (category.ownerId == session.userId.value && category.workspaceId == activeWorkspaceId?.value)
 
             if (!isValidCategoryOwner) {
                 return RepositoryResult.Failure(AppError.Authentication("budget_category_owner_mismatch"))
             }
 
-            val scopeKey = "user:${session.userId.value}"
+            val scopeKey = activeWorkspaceId?.let { "workspace:${it.value}" } ?: "user:${session.userId.value}"
             val existing = budgetDao.getAnyByScopeCategoryAndMonth(
                 scopeKey = scopeKey,
                 categoryId = command.categoryId.value,
@@ -125,7 +132,7 @@ class OfflineFirstBudgetRepository(
                 val domainBudget = Budget(
                     id = budgetId,
                     ownerId = session.userId,
-                    workspaceId = null,
+                    workspaceId = activeWorkspaceId,
                     categoryId = command.categoryId,
                     month = command.month,
                     limit = command.limit,
@@ -146,7 +153,7 @@ class OfflineFirstBudgetRepository(
                 val restoredDomain = Budget(
                     id = restoredId,
                     ownerId = session.userId,
-                    workspaceId = null,
+                    workspaceId = activeWorkspaceId,
                     categoryId = command.categoryId,
                     month = command.month,
                     limit = command.limit,
@@ -182,7 +189,8 @@ class OfflineFirstBudgetRepository(
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
 
             val existing = budgetDao.getByIdAndOwner(command.id.value, session.userId.value)
-            if (existing == null || existing.workspaceId != null) {
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
+            if (existing == null || existing.workspaceId != activeWorkspaceId?.value) {
                 return RepositoryResult.Failure(AppError.Validation("budget_not_found"))
             }
 
@@ -190,7 +198,7 @@ class OfflineFirstBudgetRepository(
             val updatedDomain = Budget(
                 id = command.id,
                 ownerId = session.userId,
-                workspaceId = null,
+                workspaceId = activeWorkspaceId,
                 categoryId = EntityId(existing.categoryId),
                 month = YearMonth(existing.month),
                 limit = command.limit,
@@ -219,7 +227,8 @@ class OfflineFirstBudgetRepository(
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
 
             val existing = budgetDao.getByIdAndOwner(id.value, session.userId.value)
-            if (existing == null || existing.workspaceId != null) {
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
+            if (existing == null || existing.workspaceId != activeWorkspaceId?.value) {
                 return RepositoryResult.Failure(AppError.Validation("budget_not_found"))
             }
 
@@ -245,10 +254,11 @@ class OfflineFirstBudgetRepository(
         try {
             val session = authRepository.observeSession().first()
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
 
             val sourceBudgets = budgetDao.getForMonth(
                 ownerId = session.userId.value,
-                workspaceId = null,
+                workspaceId = activeWorkspaceId?.value,
                 month = command.sourceMonth.value,
             ).sortedBy { it.categoryId }
 
@@ -262,7 +272,7 @@ class OfflineFirstBudgetRepository(
             }
 
             val now = nowEpochMillisProvider()
-            val scopeKey = "user:${session.userId.value}"
+            val scopeKey = activeWorkspaceId?.let { "workspace:${it.value}" } ?: "user:${session.userId.value}"
             val mutationInputs = mutableListOf<BudgetMutationInputV2>()
             val skippedCategoryIds = mutableListOf<EntityId>()
 
@@ -271,8 +281,8 @@ class OfflineFirstBudgetRepository(
                 val isValidCategory = category != null &&
                     category.sync.deletedAtEpochMillis == null &&
                     category.typeCode == TransactionType.EXPENSE.name &&
-                    ((category.isDefault && category.ownerId == null && category.workspaceId == null) ||
-                        (category.ownerId == session.userId.value && category.workspaceId == null))
+                    ((category.isDefault && category.ownerId == null) ||
+                        (category.ownerId == session.userId.value && category.workspaceId == activeWorkspaceId?.value))
 
                 if (!isValidCategory) {
                     skippedCategoryIds.add(EntityId(source.categoryId))
@@ -295,7 +305,7 @@ class OfflineFirstBudgetRepository(
                     val domainBudget = Budget(
                         id = newId,
                         ownerId = session.userId,
-                        workspaceId = null,
+                        workspaceId = activeWorkspaceId,
                         categoryId = EntityId(source.categoryId),
                         month = command.targetMonth,
                         limit = Money(source.limitMinor, Currency.valueOf(source.currencyCode)),
@@ -315,7 +325,7 @@ class OfflineFirstBudgetRepository(
                     val domainBudget = Budget(
                         id = restoredId,
                         ownerId = session.userId,
-                        workspaceId = null,
+                        workspaceId = activeWorkspaceId,
                         categoryId = EntityId(source.categoryId),
                         month = command.targetMonth,
                         limit = Money(source.limitMinor, Currency.valueOf(source.currencyCode)),

@@ -60,6 +60,7 @@ fun BudgetHeader(
     onAddBudget: () -> Unit = {},
     onCopyBudgets: () -> Unit = {},
     canCopy: Boolean = true,
+    activeWorkspaceName: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val formattedMonth = if (selectedMonth != null) {
@@ -78,12 +79,21 @@ fun BudgetHeader(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Bütçeler",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                ) {
+                    Text(
+                        text = "Bütçeler",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                    ActiveWorkspaceIndicator(
+                        workspaceName = activeWorkspaceName,
+                        isCompact = true,
+                    )
+                }
                 Text(
                     text = "Aylık harcama limitlerinizi ve ilerlemenizi takip edin.",
                     style = MaterialTheme.typography.bodyMedium,

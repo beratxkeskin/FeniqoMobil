@@ -20,6 +20,10 @@ enum class TransactionValidationError {
     CATEGORY_REQUIRED,
     DATE_FUTURE,
     DESCRIPTION_TOO_LONG,
+    SPLIT_PARTICIPANTS_EMPTY,
+    SPLIT_PARTICIPANTS_DUPLICATE,
+    SPLIT_PAYER_NOT_IN_PARTICIPANTS,
+    SPLIT_MEMBER_NOT_IN_WORKSPACE,
 }
 
 object TransactionValidationRules {
@@ -59,5 +63,45 @@ object TransactionValidationRules {
             return TransactionValidationResult.Invalid(TransactionValidationError.DESCRIPTION_TOO_LONG)
         }
         return TransactionValidationResult.Valid(normalized)
+    }
+
+    /**
+     * Ortak gider split bilgisini doğrular veya kişisel/gelir işlemleri için güvenli şekilde normalize eder.
+     * Kişisel veya INCOME işlemlerde: payer ve tek katılımcı ownerId yapılır.
+     * Ortak EXPENSE işlemlerde: payer ve katılımcılar workspace aktif üyeleri olmalı, payer katılımcı listesinde bulunmalıdır.
+     */
+    fun normalizeAndValidateSplit(
+        transaction: Transaction,
+        activeMemberUserIds: Set<EntityId>? = null,
+    ): TransactionValidationResult<Transaction> {
+        if (transaction.workspaceId == null || transaction.type != com.feniqo.mobile.domain.model.TransactionType.EXPENSE) {
+            val normalized = transaction.copy(
+                paidByUserId = transaction.ownerId,
+                participantUserIds = listOf(transaction.ownerId),
+            )
+            return TransactionValidationResult.Valid(normalized)
+        }
+
+        if (transaction.participantUserIds.isEmpty()) {
+            return TransactionValidationResult.Invalid(TransactionValidationError.SPLIT_PARTICIPANTS_EMPTY)
+        }
+
+        if (transaction.participantUserIds.distinct().size != transaction.participantUserIds.size) {
+            return TransactionValidationResult.Invalid(TransactionValidationError.SPLIT_PARTICIPANTS_DUPLICATE)
+        }
+
+        if (transaction.paidByUserId !in transaction.participantUserIds) {
+            return TransactionValidationResult.Invalid(TransactionValidationError.SPLIT_PAYER_NOT_IN_PARTICIPANTS)
+        }
+
+        if (activeMemberUserIds != null) {
+            if (transaction.paidByUserId !in activeMemberUserIds ||
+                transaction.participantUserIds.any { it !in activeMemberUserIds }
+            ) {
+                return TransactionValidationResult.Invalid(TransactionValidationError.SPLIT_MEMBER_NOT_IN_WORKSPACE)
+            }
+        }
+
+        return TransactionValidationResult.Valid(transaction)
     }
 }

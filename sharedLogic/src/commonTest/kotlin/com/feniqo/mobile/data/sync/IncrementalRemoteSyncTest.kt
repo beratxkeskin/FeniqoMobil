@@ -64,6 +64,31 @@ class IncrementalRemoteSyncTest {
     }
 
     @Test
+    fun workspace_finance_pull_uses_workspace_scope_and_its_own_cursor() = runTest {
+        val workspaceId = EntityId("30000000-0000-0000-0000-000000000001")
+        val workspaceCategoryCursorKey = "CATEGORY:WORKSPACE:${workspaceId.value}"
+        val personalCursor = storedCategoryCursor()
+        val workspaceCursor = personalCursor.copy(entityTypeCode = workspaceCategoryCursorKey)
+        val cursors = mutableMapOf(
+            CATEGORY to personalCursor,
+            workspaceCategoryCursorKey to workspaceCursor,
+        )
+        val dao = RecordingRemoteSyncDao(cursors = cursors)
+        val remote = FakeRemote(category = remoteCategory(version = 2, workspaceId = workspaceId.value))
+
+        val result = IncrementalRemoteSync(remote, dao, FakeSyncStateDao(cursors)) { RECEIVED_AT }
+            .pullWorkspaceFinance(workspaceId)
+
+        assertEquals(RemoteWorkspaceScope.Workspace(workspaceId), remote.receivedCategoryScope)
+        assertEquals(STORED_UPDATED_AT, remote.receivedCategoryCursor?.updatedAt)
+        assertEquals(1, result.receivedCategoryCount)
+        assertEquals(1, result.appliedCount)
+        assertEquals(REMOTE_ID, cursors[workspaceCategoryCursorKey]?.entityId)
+        assertEquals(STORED_ID, cursors[CATEGORY]?.entityId)
+        assertEquals(workspaceId.value, dao.category?.workspaceId)
+    }
+
+    @Test
     fun newer_remote_version_does_not_overwrite_pending_local_change() = runTest {
         val cursors = mutableMapOf(CATEGORY to storedCategoryCursor())
         val local = localPendingCategory()
@@ -274,6 +299,7 @@ class IncrementalRemoteSyncTest {
         private val subscription: SubscriptionDto? = null,
     ) : CoreRemoteDataSource {
         var receivedCategoryCursor: com.feniqo.mobile.data.remote.core.RemoteSyncCursor? = null
+        var receivedCategoryScope: RemoteWorkspaceScope? = null
         var receivedRecurringCursor: com.feniqo.mobile.data.remote.core.RemoteSyncCursor? = null
         var receivedSubscriptionCursor: com.feniqo.mobile.data.remote.core.RemoteSyncCursor? = null
 
@@ -281,6 +307,7 @@ class IncrementalRemoteSyncTest {
 
         override suspend fun fetchCategories(query: CategoryRemoteQuery): RemotePage<CategoryDto> {
             receivedCategoryCursor = query.updatedAfter
+            receivedCategoryScope = query.workspaceScope
             val items = if (category != null && query.page.pageIndex == 0) listOf(category) else emptyList()
             return RemotePage(items, query.page, totalCount = items.size.toLong())
         }
@@ -300,16 +327,16 @@ class IncrementalRemoteSyncTest {
         override suspend fun fetchTransactions(query: TransactionRemoteQuery): RemotePage<TransactionDto> =
             RemotePage(emptyList(), query.page, totalCount = 0)
 
-        override suspend fun fetchBudgets(query: BudgetRemoteQuery): RemotePage<BudgetDto> = error("Test kapsamı dışı")
-        override suspend fun fetchGoals(query: com.feniqo.mobile.data.remote.core.GoalRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.GoalDto> = error("Test kapsamı dışı")
-        override suspend fun fetchGoalContributions(query: com.feniqo.mobile.data.remote.core.GoalContributionRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.GoalContributionDto> = error("Test kapsamı dışı")
-        override suspend fun fetchDebts(query: com.feniqo.mobile.data.remote.core.DebtRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.DebtDto> = error("Test kapsamı dışı")
-        override suspend fun fetchDebtPayments(query: com.feniqo.mobile.data.remote.core.DebtPaymentRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.DebtPaymentDto> = error("Test kapsamı dışı")
-        override suspend fun fetchTags(scope: RemoteWorkspaceScope, page: RemotePageRequest): RemotePage<TagDto> = error("Test kapsamı dışı")
+        override suspend fun fetchBudgets(query: BudgetRemoteQuery): RemotePage<BudgetDto> = RemotePage(emptyList(), query.page, totalCount = 0)
+        override suspend fun fetchGoals(query: com.feniqo.mobile.data.remote.core.GoalRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.GoalDto> = RemotePage(emptyList(), query.page, totalCount = 0)
+        override suspend fun fetchGoalContributions(query: com.feniqo.mobile.data.remote.core.GoalContributionRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.GoalContributionDto> = RemotePage(emptyList(), query.page, totalCount = 0)
+        override suspend fun fetchDebts(query: com.feniqo.mobile.data.remote.core.DebtRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.DebtDto> = RemotePage(emptyList(), query.page, totalCount = 0)
+        override suspend fun fetchDebtPayments(query: com.feniqo.mobile.data.remote.core.DebtPaymentRemoteQuery): RemotePage<com.feniqo.mobile.data.remote.dto.DebtPaymentDto> = RemotePage(emptyList(), query.page, totalCount = 0)
+        override suspend fun fetchTags(scope: RemoteWorkspaceScope, page: RemotePageRequest): RemotePage<TagDto> = RemotePage(emptyList(), page, totalCount = 0)
 
 
-        override suspend fun fetchWorkspaces(page: RemotePageRequest): RemotePage<WorkspaceDto> = error("Test kapsamı dışı")
-        override suspend fun fetchWorkspaceMembers(workspaceId: String, page: RemotePageRequest): RemotePage<WorkspaceMemberDto> = error("Test kapsamı dışı")
+        override suspend fun fetchWorkspaces(page: RemotePageRequest): RemotePage<WorkspaceDto> = RemotePage(emptyList(), page, totalCount = 0)
+        override suspend fun fetchWorkspaceMembers(workspaceId: String, page: RemotePageRequest): RemotePage<WorkspaceMemberDto> = RemotePage(emptyList(), page, totalCount = 0)
         override suspend fun fetchTransactionTags(transactionId: String): List<TransactionTagDto> = error("Test kapsamı dışı")
         override suspend fun upsertProfile(dto: ProfileDto) = error("Test kapsamı dışı")
         override suspend fun upsertCategory(dto: CategoryDto) = error("Test kapsamı dışı")
@@ -367,6 +394,7 @@ class IncrementalRemoteSyncTest {
         override suspend fun upsertProfileRow(entity: UserProfileEntity) = Unit
         override suspend fun upsertWorkspaceRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceEntity>) = Unit
         override suspend fun upsertWorkspaceMemberRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity>) = Unit
+        override suspend fun clearActiveWorkspaceIfMatches(profileId: String, workspaceId: String): Int = 0
         override suspend fun upsertCategoryRows(entities: List<CategoryEntity>) { category = entities.single() }
         override suspend fun upsertTransactionRows(entities: List<TransactionEntity>) = Unit
         override suspend fun upsertRecurringTransactionRows(entities: List<RecurringTransactionEntity>) { recurring = entities.single() }
@@ -409,6 +437,13 @@ class IncrementalRemoteSyncTest {
         override suspend fun rebaseTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseRecurringTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseSubscriptionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun getActiveWorkspaceTailOperation(workspaceId: String): com.feniqo.mobile.data.local.entity.SyncOperationEntity? = null
+        override suspend fun markWorkspaceConflict(entityId: String, error: String): Int = 0
+        override suspend fun getAllWorkspaceOperations(workspaceId: String): List<com.feniqo.mobile.data.local.entity.SyncOperationEntity> = emptyList()
+        override suspend fun deleteSpecificWorkspaceOperations(workspaceId: String, operationIds: List<String>): Int = 0
+        override suspend fun rebaseWorkspaceForRetry(workspaceId: String, syncStatus: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun resetWorkspaceConflictOperation(operationId: String, operationTypeCode: String, payloadJson: String?, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun getConflictRow(entityTypeCode: String, entityId: String): SyncConflictEntity? = null
     }
 
 
@@ -443,9 +478,10 @@ class IncrementalRemoteSyncTest {
             entityId = STORED_ID,
         )
 
-        fun remoteCategory(version: Long) = CategoryDto(
+        fun remoteCategory(version: Long, workspaceId: String? = null) = CategoryDto(
             id = REMOTE_ID,
             userId = USER_ID,
+            workspaceId = workspaceId,
             name = "Uzak değişiklik",
             type = "expense",
             color = "#123456",

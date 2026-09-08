@@ -10,6 +10,7 @@ data class DashboardUiState(
     val isLoading: Boolean = true,
     val dashboard: DashboardDisplayModel? = null,
     val selectedMonth: YearMonth? = null,
+    val activeWorkspaceName: String? = null,
     val userMessage: FinanceUiMessage? = null,
     val observationError: FinanceUiMessage? = null,
 )

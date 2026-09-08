@@ -11,6 +11,7 @@ import com.feniqo.mobile.domain.model.UpdateRecurringTransactionCommand
 import com.feniqo.mobile.domain.repository.RepositoryResult
 import com.feniqo.mobile.domain.usecase.CreateRecurringTransactionUseCase
 import com.feniqo.mobile.domain.usecase.DeleteRecurringTransactionUseCase
+import com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase
 import com.feniqo.mobile.domain.usecase.ObserveCategoriesUseCase
 import com.feniqo.mobile.domain.usecase.ObserveRecurringTransactionUseCase
 import com.feniqo.mobile.domain.usecase.ObserveRecurringTransactionsUseCase
@@ -49,6 +50,7 @@ class RecurringTransactionsViewModel @Inject constructor(
     private val updateRecurringTransactionUseCase: UpdateRecurringTransactionUseCase,
     private val setRecurringTransactionActiveUseCase: SetRecurringTransactionActiveUseCase,
     private val deleteRecurringTransactionUseCase: DeleteRecurringTransactionUseCase,
+    private val observeActiveWorkspaceUseCase: ObserveActiveWorkspaceUseCase,
 ) : ViewModel() {
 
     private val _retryTrigger = MutableStateFlow(0L)
@@ -64,6 +66,22 @@ class RecurringTransactionsViewModel @Inject constructor(
     val events: Flow<RecurringTransactionUiEvent> = _events.receiveAsFlow()
 
     private var activeMutationJob: Job? = null
+
+    init {
+        viewModelScope.launch {
+            var previousWorkspaceId: EntityId? = null
+            var isFirstEmission = true
+            observeActiveWorkspaceUseCase().collect { workspace ->
+                val currentWorkspaceId = workspace?.id
+                if (!isFirstEmission && currentWorkspaceId != previousWorkspaceId) {
+                    editLoadJob?.cancel()
+                    _editLoadState.value = RecurringTransactionEditLoadState.Idle
+                }
+                isFirstEmission = false
+                previousWorkspaceId = currentWorkspaceId
+            }
+        }
+    }
 
     private sealed interface ObservationResult {
         data object Loading : ObservationResult
@@ -98,25 +116,30 @@ class RecurringTransactionsViewModel @Inject constructor(
     val uiState: StateFlow<RecurringTransactionsUiState> = combine(
         observationResultFlow,
         _mutationState,
-    ) { observationResult, mutationState ->
+        observeActiveWorkspaceUseCase(),
+    ) { observationResult, mutationState, activeWorkspace ->
+        val workspaceName = activeWorkspace?.name
         when (observationResult) {
             is ObservationResult.Loading -> RecurringTransactionsUiState(
                 isLoading = true,
                 items = emptyList(),
                 observationError = null,
                 mutationState = mutationState,
+                activeWorkspaceName = workspaceName,
             )
             is ObservationResult.Failure -> RecurringTransactionsUiState(
                 isLoading = false,
                 items = emptyList(),
                 observationError = observationResult.message,
                 mutationState = mutationState,
+                activeWorkspaceName = workspaceName,
             )
             is ObservationResult.Success -> RecurringTransactionsUiState(
                 isLoading = false,
                 items = observationResult.items,
                 observationError = null,
                 mutationState = mutationState,
+                activeWorkspaceName = workspaceName,
             )
         }
     }.stateIn(

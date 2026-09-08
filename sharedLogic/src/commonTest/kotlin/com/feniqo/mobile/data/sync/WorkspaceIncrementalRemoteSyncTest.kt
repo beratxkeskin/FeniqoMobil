@@ -100,7 +100,7 @@ class WorkspaceIncrementalRemoteSyncTest {
         version = version,
     )
 
-    private class RecordingRemoteSyncDao : RemoteSyncDao {
+    private open class RecordingRemoteSyncDao : RemoteSyncDao {
         var appliedWorkspaces: List<WorkspaceEntity>? = null
         var appliedMembers: List<WorkspaceMemberEntity>? = null
         var appliedCursors: List<SyncCursorEntity>? = null
@@ -126,16 +126,41 @@ class WorkspaceIncrementalRemoteSyncTest {
         override suspend fun getGoalContributionRow(id: String): GoalContributionEntity? = null
         override suspend fun getDebtRow(id: String): DebtEntity? = null
         override suspend fun getDebtPaymentRow(id: String): DebtPaymentEntity? = null
-        override suspend fun getWorkspaceRow(id: String): WorkspaceEntity? = null
         override suspend fun getWorkspaceMemberRow(workspaceId: String, userId: String): WorkspaceMemberEntity? = null
         override suspend fun getWorkspaceMemberRows(workspaceId: String): List<WorkspaceMemberEntity> = emptyList()
         var knownLiveWorkspaceIds: List<String> = emptyList()
         override suspend fun getAllKnownLiveWorkspaceIds(): List<String> = knownLiveWorkspaceIds
         override suspend fun getFirstOutboxOperationId(entityTypeCode: String, entityId: String): String? = null
+        var appliedPlan: com.feniqo.mobile.data.local.dao.WorkspaceIncrementalPlan? = null
+        var localWorkspaceRows: MutableMap<String, WorkspaceEntity> = mutableMapOf()
+        var activeTailOperations: MutableMap<String, com.feniqo.mobile.data.local.entity.SyncOperationEntity> = mutableMapOf()
+        var markedConflicts: MutableMap<String, String> = mutableMapOf()
+
+        override suspend fun applyWorkspaceIncrementalPlan(plan: com.feniqo.mobile.data.local.dao.WorkspaceIncrementalPlan) {
+            applyCallCount++
+            appliedPlan = plan
+            appliedWorkspaces = plan.applyItems.map { it.entity }
+            appliedMembers = plan.memberRows
+            appliedCursors = plan.cursorsToPersist
+            plan.conflictItems.forEach {
+                markedConflicts[it.conflict.entityId] = RemoteSyncDao.CONFLICT_ERROR
+            }
+        }
+
+        override suspend fun getWorkspaceRow(id: String): WorkspaceEntity? = localWorkspaceRows[id]
+
+        override suspend fun getActiveWorkspaceTailOperation(workspaceId: String): com.feniqo.mobile.data.local.entity.SyncOperationEntity? =
+            activeTailOperations[workspaceId]
+
+        override suspend fun markWorkspaceConflict(entityId: String, error: String): Int {
+            markedConflicts[entityId] = error
+            return 1
+        }
         override suspend fun countOutboxRows(entityTypeCode: String, entityId: String): Int = 0
         override suspend fun upsertProfileRow(entity: UserProfileEntity) = Unit
         override suspend fun upsertWorkspaceRows(entities: List<WorkspaceEntity>) = Unit
         override suspend fun upsertWorkspaceMemberRows(entities: List<WorkspaceMemberEntity>) = Unit
+        override suspend fun clearActiveWorkspaceIfMatches(profileId: String, workspaceId: String): Int = 0
         override suspend fun upsertCategoryRows(entities: List<CategoryEntity>) = Unit
         override suspend fun upsertTransactionRows(entities: List<TransactionEntity>) = Unit
         override suspend fun upsertRecurringTransactionRows(entities: List<RecurringTransactionEntity>) = Unit
@@ -164,6 +189,11 @@ class WorkspaceIncrementalRemoteSyncTest {
         override suspend fun rebaseTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseRecurringTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseSubscriptionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun getAllWorkspaceOperations(workspaceId: String): List<com.feniqo.mobile.data.local.entity.SyncOperationEntity> = emptyList()
+        override suspend fun deleteSpecificWorkspaceOperations(workspaceId: String, operationIds: List<String>): Int = 0
+        override suspend fun rebaseWorkspaceForRetry(workspaceId: String, syncStatus: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun resetWorkspaceConflictOperation(operationId: String, operationTypeCode: String, payloadJson: String?, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun getConflictRow(entityTypeCode: String, entityId: String): SyncConflictEntity? = null
     }
 
     private class FakeSyncStateDao(
@@ -794,5 +824,390 @@ class WorkspaceIncrementalRemoteSyncTest {
         assertNull(dao.appliedMembers)
         assertNull(dao.appliedCursors)
     }
-}
 
+    @Test
+    fun pending_update_with_newer_remote_version_creates_conflict_and_advances_cursor() = runTest {
+        val storedWsCursor = RemoteSyncCursor(updatedAt = "2026-03-01T10:00:00Z", entityId = "ws-1")
+        val syncStateDao = FakeSyncStateDao(
+            initialCursors = mapOf(
+                "WORKSPACE" to WorkspaceSyncCursorKeys.workspaceCursorToEntity(storedWsCursor),
+                "WORKSPACE_MEMBER:ws-1" to SyncCursorEntity("WORKSPACE_MEMBER:ws-1", 1000L, "u-1"),
+            ),
+        )
+
+        val localWs = WorkspaceEntity(
+            id = "ws-1",
+            name = "Yerel Değişiklik",
+            normalizedName = "yerel değişiklik",
+            ownerId = "u-1",
+            typeCode = "personal",
+            currencyCode = "TRY",
+            description = "Açıklama",
+            createdAtEpochMillis = 1000L,
+            sync = com.feniqo.mobile.data.local.entity.SyncMetadata(
+                syncStatus = "PENDING_UPDATE",
+                updatedAtEpochMillis = 1100L,
+                localUpdatedAtEpochMillis = 1100L,
+                deletedAtEpochMillis = null,
+                version = 1L,
+                baseVersion = 1L,
+                lastSyncError = null,
+            ),
+        )
+
+        val tailOp = com.feniqo.mobile.data.local.entity.SyncOperationEntity(
+            operationId = "op-ws-1",
+            entityTypeCode = "WORKSPACE",
+            entityId = "ws-1",
+            operationTypeCode = "UPDATE",
+            payloadJson = """{"name":"Yerel Değişiklik"}""",
+            baseVersion = 1L,
+            attemptCount = 0,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1100L,
+            updatedAtEpochMillis = 1100L,
+            statusCode = "PENDING",
+            protocolVersion = 2,
+        )
+
+        val remoteWs = sampleWorkspaceDto(
+            id = "ws-1",
+            name = "Uzak Sunucu Değişikliği",
+            version = 2L,
+            updatedAt = "2026-03-01T12:00:00Z",
+        )
+
+        val remote = FakeCoreRemoteDataSource(
+            workspacePages = listOf(
+                RemotePage(items = listOf(remoteWs), request = RemotePageRequest(pageIndex = 0), totalCount = 1),
+            ),
+            memberPagesByWorkspaceId = mapOf(
+                "ws-1" to listOf(
+                    RemotePage(items = emptyList(), request = RemotePageRequest(pageIndex = 0), totalCount = 0),
+                ),
+            ),
+        )
+
+        val dao = RecordingRemoteSyncDao()
+        dao.localWorkspaceRows["ws-1"] = localWs
+        dao.activeTailOperations["ws-1"] = tailOp
+        val coordinator = WorkspaceIncrementalRemoteSync(remote, dao, syncStateDao) { 15_000L }
+
+        val result = coordinator.pull()
+
+        assertEquals(0, result.appliedWorkspacesCount)
+        assertEquals(1, result.conflictCount)
+        assertEquals(1, dao.applyCallCount)
+
+        val plan = dao.appliedPlan
+        assertNotNull(plan)
+        assertEquals(0, plan.applyItems.size)
+        assertEquals(1, plan.conflictItems.size)
+        assertEquals(0, plan.preserveItems.size)
+
+        val conflictItem = plan.conflictItems[0]
+        assertEquals("ws-1", conflictItem.conflict.entityId)
+        assertEquals("WORKSPACE", conflictItem.conflict.entityTypeCode)
+        assertEquals("op-ws-1", conflictItem.conflict.operationId)
+        assertEquals(1L, conflictItem.conflict.localVersion)
+        assertEquals(2L, conflictItem.conflict.remoteVersion)
+        assertEquals("""{"name":"Yerel Değişiklik"}""", conflictItem.conflict.localPayloadJson)
+        // remotePayloadJson must be valid serialized WorkspaceDto
+        kotlinx.serialization.json.Json.decodeFromString<WorkspaceDto>(conflictItem.conflict.remotePayloadJson)
+
+        // Cursors are advanced despite conflict
+        val appliedCursors = dao.appliedCursors
+        assertNotNull(appliedCursors)
+        val wsCursor = appliedCursors.find { it.entityTypeCode == "WORKSPACE" }
+        assertNotNull(wsCursor)
+        assertEquals("ws-1", wsCursor.entityId)
+    }
+
+    @Test
+    fun pending_update_with_older_or_equal_remote_version_is_preserved_and_cursor_advances() = runTest {
+        val storedWsCursor = RemoteSyncCursor(updatedAt = "2026-03-01T10:00:00Z", entityId = "ws-1")
+        val syncStateDao = FakeSyncStateDao(
+            initialCursors = mapOf(
+                "WORKSPACE" to WorkspaceSyncCursorKeys.workspaceCursorToEntity(storedWsCursor),
+                "WORKSPACE_MEMBER:ws-1" to SyncCursorEntity("WORKSPACE_MEMBER:ws-1", 1000L, "u-1"),
+            ),
+        )
+
+        val localWs = WorkspaceEntity(
+            id = "ws-1",
+            name = "Yerel Güncelleme",
+            normalizedName = "yerel güncelleme",
+            ownerId = "u-1",
+            typeCode = "personal",
+            currencyCode = "TRY",
+            description = null,
+            createdAtEpochMillis = 1000L,
+            sync = com.feniqo.mobile.data.local.entity.SyncMetadata(
+                syncStatus = "PENDING_UPDATE",
+                updatedAtEpochMillis = 1100L,
+                localUpdatedAtEpochMillis = 1100L,
+                deletedAtEpochMillis = null,
+                version = 2L,
+                baseVersion = 2L,
+                lastSyncError = null,
+            ),
+        )
+
+        val tailOp = com.feniqo.mobile.data.local.entity.SyncOperationEntity(
+            operationId = "op-ws-2",
+            entityTypeCode = "WORKSPACE",
+            entityId = "ws-1",
+            operationTypeCode = "UPDATE",
+            payloadJson = """{"name":"Yerel Güncelleme"}""",
+            baseVersion = 2L,
+            attemptCount = 0,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1100L,
+            updatedAtEpochMillis = 1100L,
+            statusCode = "PENDING",
+            protocolVersion = 2,
+        )
+
+        // Remote version is 2L, which is <= baseVersion (2L)
+        val remoteWs = sampleWorkspaceDto(
+            id = "ws-1",
+            name = "Eski Remote",
+            version = 2L,
+            updatedAt = "2026-03-01T12:00:00Z",
+        )
+
+        val remote = FakeCoreRemoteDataSource(
+            workspacePages = listOf(
+                RemotePage(items = listOf(remoteWs), request = RemotePageRequest(pageIndex = 0), totalCount = 1),
+            ),
+            memberPagesByWorkspaceId = mapOf(
+                "ws-1" to listOf(
+                    RemotePage(items = emptyList(), request = RemotePageRequest(pageIndex = 0), totalCount = 0),
+                ),
+            ),
+        )
+
+        val dao = RecordingRemoteSyncDao()
+        dao.localWorkspaceRows["ws-1"] = localWs
+        dao.activeTailOperations["ws-1"] = tailOp
+        val coordinator = WorkspaceIncrementalRemoteSync(remote, dao, syncStateDao) { 15_000L }
+
+        val result = coordinator.pull()
+
+        assertEquals(0, result.appliedWorkspacesCount)
+        assertEquals(0, result.conflictCount)
+        assertEquals(1, dao.applyCallCount)
+
+        val plan = dao.appliedPlan
+        assertNotNull(plan)
+        assertEquals(0, plan.applyItems.size)
+        assertEquals(0, plan.conflictItems.size)
+        assertEquals(1, plan.preserveItems.size)
+        assertEquals("ws-1", plan.preserveItems[0].workspaceId)
+
+        val appliedCursors = dao.appliedCursors
+        assertNotNull(appliedCursors)
+        val wsCursor = appliedCursors.find { it.entityTypeCode == "WORKSPACE" }
+        assertNotNull(wsCursor)
+        assertEquals("ws-1", wsCursor.entityId)
+    }
+
+    @Test
+    fun synced_workspace_with_newer_remote_is_applied() = runTest {
+        val storedWsCursor = RemoteSyncCursor(updatedAt = "2026-03-01T10:00:00Z", entityId = "ws-1")
+        val syncStateDao = FakeSyncStateDao(
+            initialCursors = mapOf(
+                "WORKSPACE" to WorkspaceSyncCursorKeys.workspaceCursorToEntity(storedWsCursor),
+                "WORKSPACE_MEMBER:ws-1" to SyncCursorEntity("WORKSPACE_MEMBER:ws-1", 1000L, "u-1"),
+            ),
+        )
+
+        val localWs = WorkspaceEntity(
+            id = "ws-1",
+            name = "Mevcut Senkronize",
+            normalizedName = "mevcut senkronize",
+            ownerId = "u-1",
+            typeCode = "personal",
+            currencyCode = "TRY",
+            description = null,
+            createdAtEpochMillis = 1000L,
+            sync = com.feniqo.mobile.data.local.entity.SyncMetadata(
+                syncStatus = "SYNCED",
+                updatedAtEpochMillis = 1000L,
+                localUpdatedAtEpochMillis = 1000L,
+                deletedAtEpochMillis = null,
+                version = 1L,
+                baseVersion = 1L,
+                lastSyncError = null,
+            ),
+        )
+
+        val remoteWs = sampleWorkspaceDto(
+            id = "ws-1",
+            name = "Yeni Senkronize İsim",
+            version = 2L,
+            updatedAt = "2026-03-01T12:00:00Z",
+        )
+
+        val remote = FakeCoreRemoteDataSource(
+            workspacePages = listOf(
+                RemotePage(items = listOf(remoteWs), request = RemotePageRequest(pageIndex = 0), totalCount = 1),
+            ),
+            memberPagesByWorkspaceId = mapOf(
+                "ws-1" to listOf(
+                    RemotePage(items = emptyList(), request = RemotePageRequest(pageIndex = 0), totalCount = 0),
+                ),
+            ),
+        )
+
+        val dao = RecordingRemoteSyncDao()
+        dao.localWorkspaceRows["ws-1"] = localWs
+        val coordinator = WorkspaceIncrementalRemoteSync(remote, dao, syncStateDao) { 15_000L }
+
+        val result = coordinator.pull()
+
+        assertEquals(1, result.appliedWorkspacesCount)
+        assertEquals(0, result.conflictCount)
+        assertEquals(1, dao.applyCallCount)
+
+        val plan = dao.appliedPlan
+        assertNotNull(plan)
+        assertEquals(1, plan.applyItems.size)
+        assertEquals("ws-1", plan.applyItems[0].entity.id)
+        assertEquals("Yeni Senkronize İsim", plan.applyItems[0].entity.name)
+        assertEquals(0, plan.conflictItems.size)
+        assertEquals(0, plan.preserveItems.size)
+    }
+
+    @Test
+    fun metadata_conflict_allows_workspace_members_to_be_applied_atomically() = runTest {
+        val storedWsCursor = RemoteSyncCursor(updatedAt = "2026-03-01T10:00:00Z", entityId = "ws-1")
+        val syncStateDao = FakeSyncStateDao(
+            initialCursors = mapOf(
+                "WORKSPACE" to WorkspaceSyncCursorKeys.workspaceCursorToEntity(storedWsCursor),
+                "WORKSPACE_MEMBER:ws-1" to SyncCursorEntity("WORKSPACE_MEMBER:ws-1", 1000L, "u-1"),
+            ),
+        )
+
+        val localWs = WorkspaceEntity(
+            id = "ws-1",
+            name = "Pending Name",
+            normalizedName = "pending name",
+            ownerId = "u-1",
+            typeCode = "personal",
+            currencyCode = "TRY",
+            description = null,
+            createdAtEpochMillis = 1000L,
+            sync = com.feniqo.mobile.data.local.entity.SyncMetadata(
+                syncStatus = "PENDING_UPDATE",
+                updatedAtEpochMillis = 1100L,
+                localUpdatedAtEpochMillis = 1100L,
+                deletedAtEpochMillis = null,
+                version = 1L,
+                baseVersion = 1L,
+                lastSyncError = null,
+            ),
+        )
+
+        val tailOp = com.feniqo.mobile.data.local.entity.SyncOperationEntity(
+            operationId = "op-1",
+            entityTypeCode = "WORKSPACE",
+            entityId = "ws-1",
+            operationTypeCode = "UPDATE",
+            payloadJson = """{"name":"Pending Name"}""",
+            baseVersion = 1L,
+            attemptCount = 0,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1100L,
+            updatedAtEpochMillis = 1100L,
+            statusCode = "PENDING",
+            protocolVersion = 2,
+        )
+
+        val remoteWs = sampleWorkspaceDto(
+            id = "ws-1",
+            name = "Server Name",
+            version = 3L,
+            updatedAt = "2026-03-01T13:00:00Z",
+        )
+
+        val newMember = sampleMemberDto(
+            workspaceId = "ws-1",
+            userId = "new-member-u2",
+            roleCode = "VIEWER",
+            updatedAt = "2026-03-01T13:00:00Z",
+        )
+
+        val remote = FakeCoreRemoteDataSource(
+            workspacePages = listOf(
+                RemotePage(items = listOf(remoteWs), request = RemotePageRequest(pageIndex = 0), totalCount = 1),
+            ),
+            memberPagesByWorkspaceId = mapOf(
+                "ws-1" to listOf(
+                    RemotePage(items = listOf(newMember), request = RemotePageRequest(pageIndex = 0), totalCount = 1),
+                ),
+            ),
+        )
+
+        val dao = RecordingRemoteSyncDao()
+        dao.localWorkspaceRows["ws-1"] = localWs
+        dao.activeTailOperations["ws-1"] = tailOp
+        val coordinator = WorkspaceIncrementalRemoteSync(remote, dao, syncStateDao) { 15_000L }
+
+        val result = coordinator.pull()
+
+        assertEquals(0, result.appliedWorkspacesCount)
+        assertEquals(1, result.conflictCount)
+        assertEquals(1, result.appliedMembersCount)
+
+        val plan = dao.appliedPlan
+        assertNotNull(plan)
+        assertEquals(1, plan.conflictItems.size)
+        assertEquals(1, plan.memberRows.size)
+        assertEquals("new-member-u2", plan.memberRows[0].userId)
+    }
+
+    @Test
+    fun stale_plan_exception_from_dao_fails_closed_without_updating_cursors() = runTest {
+        val storedWsCursor = RemoteSyncCursor(updatedAt = "2026-03-01T10:00:00Z", entityId = "ws-1")
+        val syncStateDao = FakeSyncStateDao(
+            initialCursors = mapOf(
+                "WORKSPACE" to WorkspaceSyncCursorKeys.workspaceCursorToEntity(storedWsCursor),
+                "WORKSPACE_MEMBER:ws-1" to SyncCursorEntity("WORKSPACE_MEMBER:ws-1", 1000L, "u-1"),
+            ),
+        )
+
+        val remoteWs = sampleWorkspaceDto(id = "ws-1", version = 2L)
+        val remote = FakeCoreRemoteDataSource(
+            workspacePages = listOf(
+                RemotePage(items = listOf(remoteWs), request = RemotePageRequest(pageIndex = 0), totalCount = 1),
+            ),
+            memberPagesByWorkspaceId = mapOf(
+                "ws-1" to listOf(
+                    RemotePage(items = emptyList(), request = RemotePageRequest(pageIndex = 0), totalCount = 0),
+                ),
+            ),
+        )
+
+        val dao = object : RecordingRemoteSyncDao() {
+            override suspend fun applyWorkspaceIncrementalPlan(plan: com.feniqo.mobile.data.local.dao.WorkspaceIncrementalPlan) {
+                throw com.feniqo.mobile.data.local.dao.WorkspaceSyncStalePlanException("Concurrent update detected!")
+            }
+        }
+        val coordinator = WorkspaceIncrementalRemoteSync(remote, dao, syncStateDao) { 15_000L }
+
+        assertFailsWith<com.feniqo.mobile.data.local.dao.WorkspaceSyncStalePlanException> {
+            coordinator.pull()
+        }
+
+        // Stored cursor must NOT be advanced
+        assertEquals("ws-1", syncStateDao.getCursor("WORKSPACE")?.entityId)
+        assertEquals(
+            WorkspaceSyncCursorKeys.workspaceCursorToEntity(storedWsCursor).updatedAtEpochMillis,
+            syncStateDao.getCursor("WORKSPACE")?.updatedAtEpochMillis,
+        )
+    }
+}

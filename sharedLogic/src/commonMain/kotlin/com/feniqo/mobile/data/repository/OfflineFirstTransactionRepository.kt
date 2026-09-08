@@ -26,6 +26,9 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
+import com.feniqo.mobile.data.local.dao.WorkspaceDao
+import com.feniqo.mobile.domain.validation.TransactionValidationResult
+import com.feniqo.mobile.domain.validation.TransactionValidationRules
 import com.feniqo.mobile.data.local.dao.TransactionCreateInputV2
 import com.feniqo.mobile.data.local.dao.TransactionDeleteInputV2
 import com.feniqo.mobile.data.remote.mapper.toDto
@@ -37,6 +40,8 @@ class OfflineFirstTransactionRepository(
     private val authRepository: AuthRepository,
     private val transactionDao: TransactionDao,
     private val offlineWriteQueue: OfflineWriteQueue,
+    private val workspaceDao: WorkspaceDao,
+    private val activeWorkspaceScope: ActiveWorkspaceScope = PersonalActiveWorkspaceScope,
     private val nowEpochMillisProvider: () -> Long = { kotlin.time.Clock.System.now().toEpochMilliseconds() },
 ) : TransactionRepository {
     private val json = Json {
@@ -50,16 +55,19 @@ class OfflineFirstTransactionRepository(
             if (session == null) {
                 flowOf(emptyList())
             } else {
-                transactionDao.observeAll(
-                    ownerId = session.userId.value,
-                    workspaceId = filter.workspaceId?.value,
-                    startDate = filter.period?.startDate?.toString(),
-                    endDate = filter.period?.endDate?.toString(),
-                    typeCode = filter.type?.name,
-                    categoryId = filter.categoryId?.value,
-                    paymentMethodCode = filter.paymentMethod?.name,
-                    searchQuery = filter.query?.trim()?.ifBlank { null },
-                ).map { entities -> entities.map(TransactionEntity::toDomain) }
+                activeWorkspaceScope.observe(session.userId).flatMapLatest { activeWorkspaceId ->
+                    if (filter.workspaceId != null && filter.workspaceId != activeWorkspaceId) flowOf(emptyList())
+                    else transactionDao.observeAll(
+                        ownerId = session.userId.value,
+                        workspaceId = activeWorkspaceId?.value,
+                        startDate = filter.period?.startDate?.toString(),
+                        endDate = filter.period?.endDate?.toString(),
+                        typeCode = filter.type?.name,
+                        categoryId = filter.categoryId?.value,
+                        paymentMethodCode = filter.paymentMethod?.name,
+                        searchQuery = filter.query?.trim()?.ifBlank { null },
+                    ).map { entities -> entities.map(TransactionEntity::toDomain) }
+                }
             }
         }
     }
@@ -69,8 +77,10 @@ class OfflineFirstTransactionRepository(
             if (session == null) {
                 flowOf(null)
             } else {
-                transactionDao.observeByIdAndOwner(id.value, session.userId.value)
-                    .map { entity -> entity?.toDomain() }
+                activeWorkspaceScope.observe(session.userId).flatMapLatest { activeWorkspaceId ->
+                    transactionDao.observeByIdAndOwner(id.value, session.userId.value)
+                        .map { entity -> entity?.takeIf { it.workspaceId == activeWorkspaceId?.value }?.toDomain() }
+                }
             }
         }
     }
@@ -80,10 +90,14 @@ class OfflineFirstTransactionRepository(
             if (session == null) {
                 flowOf(emptyList())
             } else {
-                transactionDao.observeInstallmentGroupAndOwner(
-                    groupId = groupId.value,
-                    ownerId = session.userId.value,
-                ).map { entities -> entities.map(TransactionEntity::toDomain) }
+                activeWorkspaceScope.observe(session.userId).flatMapLatest { activeWorkspaceId ->
+                    transactionDao.observeInstallmentGroupAndOwner(
+                        groupId = groupId.value,
+                        ownerId = session.userId.value,
+                    ).map { entities ->
+                        entities.filter { it.workspaceId == activeWorkspaceId?.value }.map(TransactionEntity::toDomain)
+                    }
+                }
             }
         }
     }
@@ -96,11 +110,23 @@ class OfflineFirstTransactionRepository(
             if (transaction.ownerId != session.userId) {
                 return RepositoryResult.Failure(AppError.Authentication("transaction_owner_mismatch"))
             }
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
+            val activeMemberIds = if (activeWorkspaceId != null) {
+                workspaceDao.getActiveMemberUserIds(activeWorkspaceId.value).map(::EntityId).toSet()
+            } else {
+                null
+            }
+            val scopedTransaction = transaction.copy(workspaceId = activeWorkspaceId)
+            val splitValidation = TransactionValidationRules.normalizeAndValidateSplit(scopedTransaction, activeMemberIds)
+            val validatedTransaction = when (splitValidation) {
+                is TransactionValidationResult.Valid -> splitValidation.value
+                is TransactionValidationResult.Invalid -> return RepositoryResult.Failure(AppError.Validation(splitValidation.error.name.lowercase()))
+            }
 
             val now = nowEpochMillisProvider()
             val sync = newSyncMetadata(now)
-            val entity = transaction.toEntity(sync)
-            val dto = transaction.toDto()
+            val entity = validatedTransaction.toEntity(sync)
+            val dto = validatedTransaction.toDto()
             val payloadJson = json.encodeToString(dto)
 
             offlineWriteQueue.enqueueTransactionV2(
@@ -110,7 +136,7 @@ class OfflineFirstTransactionRepository(
                 type = OutboxOperationType.CREATE,
                 payloadJson = payloadJson,
             )
-            return RepositoryResult.Success(transaction.id)
+            return RepositoryResult.Success(validatedTransaction.id)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -129,6 +155,12 @@ class OfflineFirstTransactionRepository(
 
             if (transactions.any { it.ownerId != session.userId }) {
                 return RepositoryResult.Failure(AppError.Authentication("transaction_owner_mismatch"))
+            }
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
+            val activeMemberIds = if (activeWorkspaceId != null) {
+                workspaceDao.getActiveMemberUserIds(activeWorkspaceId.value).map(::EntityId).toSet()
+            } else {
+                null
             }
 
             if (transactions.map { it.id.value }.distinct().size != transactions.size) {
@@ -179,16 +211,25 @@ class OfflineFirstTransactionRepository(
             }
 
             val now = nowEpochMillisProvider()
-            val inputs = transactions.map { trx ->
+            val inputs = ArrayList<TransactionCreateInputV2>(transactions.size)
+            for (trx in transactions) {
+                val scopedTransaction = trx.copy(workspaceId = activeWorkspaceId)
+                val splitValidation = TransactionValidationRules.normalizeAndValidateSplit(scopedTransaction, activeMemberIds)
+                val validatedTransaction = when (splitValidation) {
+                    is TransactionValidationResult.Valid -> splitValidation.value
+                    is TransactionValidationResult.Invalid -> return RepositoryResult.Failure(AppError.Validation(splitValidation.error.name.lowercase()))
+                }
                 val sync = newSyncMetadata(now)
-                val entity = trx.toEntity(sync)
-                val dto = trx.toDto()
+                val entity = validatedTransaction.toEntity(sync)
+                val dto = validatedTransaction.toDto()
                 val payloadJson = json.encodeToString(dto)
-                TransactionCreateInputV2(
-                    entity = entity,
-                    tags = emptyList(),
-                    tagLinks = emptyList(),
-                    payloadJson = payloadJson,
+                inputs.add(
+                    TransactionCreateInputV2(
+                        entity = entity,
+                        tags = emptyList(),
+                        tagLinks = emptyList(),
+                        payloadJson = payloadJson,
+                    ),
                 )
             }
 
@@ -212,11 +253,28 @@ class OfflineFirstTransactionRepository(
 
             val existing = transactionDao.getByIdAndOwner(transaction.id.value, session.userId.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("transaction_not_found"))
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
+            if (existing.workspaceId != activeWorkspaceId?.value ||
+                transaction.workspaceId?.value != existing.workspaceId) {
+                return RepositoryResult.Failure(AppError.Validation("transaction_not_found"))
+            }
+
+            val activeMemberIds = if (activeWorkspaceId != null) {
+                workspaceDao.getActiveMemberUserIds(activeWorkspaceId.value).map(::EntityId).toSet()
+            } else {
+                null
+            }
+            val scopedTransaction = transaction.copy(workspaceId = activeWorkspaceId)
+            val splitValidation = TransactionValidationRules.normalizeAndValidateSplit(scopedTransaction, activeMemberIds)
+            val validatedTransaction = when (splitValidation) {
+                is TransactionValidationResult.Valid -> splitValidation.value
+                is TransactionValidationResult.Invalid -> return RepositoryResult.Failure(AppError.Validation(splitValidation.error.name.lowercase()))
+            }
 
             val now = nowEpochMillisProvider()
             val updatedSync = existing.sync.toPendingUpdate(now)
-            val updatedEntity = transaction.toEntity(updatedSync)
-            val dto = transaction.toDto()
+            val updatedEntity = validatedTransaction.toEntity(updatedSync)
+            val dto = validatedTransaction.toDto()
             val payloadJson = json.encodeToString(dto)
 
             val outboxType = if (existing.sync.syncStatus == SyncStatus.PENDING_CREATE.name) {
@@ -245,6 +303,9 @@ class OfflineFirstTransactionRepository(
 
             val existing = transactionDao.getByIdAndOwner(id.value, session.userId.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("transaction_not_found"))
+            if (existing.workspaceId != activeWorkspaceScope.current(session.userId)?.value) {
+                return RepositoryResult.Failure(AppError.Validation("transaction_not_found"))
+            }
 
             val now = nowEpochMillisProvider()
             val deletedSync = existing.sync.toPendingDelete(now)
@@ -281,6 +342,9 @@ class OfflineFirstTransactionRepository(
             }
 
             if (existingList.map { it.id }.toSet() != stringIds.toSet()) {
+                return RepositoryResult.Failure(AppError.Validation("transaction_not_found"))
+            }
+            if (existingList.any { it.workspaceId != activeWorkspaceScope.current(session.userId)?.value }) {
                 return RepositoryResult.Failure(AppError.Validation("transaction_not_found"))
             }
 

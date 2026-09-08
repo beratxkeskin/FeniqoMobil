@@ -79,6 +79,7 @@ data class WorkspaceEntity(
     ],
     indices = [
         Index(value = ["workspace_id"]),
+        Index(value = ["token_hash"]),
         Index(value = ["expires_at_epoch_ms"]),
         Index(value = ["deleted_at_epoch_ms"]),
     ],
@@ -91,6 +92,8 @@ data class WorkspaceInvitationEntity(
     val workspaceId: String,
     @ColumnInfo(name = "inviter_id")
     val inviterId: String,
+    @ColumnInfo(name = "token_hash")
+    val tokenHash: String? = null,
     @ColumnInfo(name = "role_code")
     val roleCode: String,
     @ColumnInfo(name = "created_at_epoch_ms")

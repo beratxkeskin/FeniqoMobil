@@ -51,6 +51,7 @@ data class TransactionsUiState(
     val searchQuery: String = "",
     val filter: TransactionFilterUiModel = TransactionFilterUiModel(),
     val isFilterExpanded: Boolean = false,
+    val activeWorkspaceName: String? = null,
     val userMessage: FinanceUiMessage? = null,
     val deleteDialog: TransactionDeleteDialogState? = null,
     val isDeleteInProgress: Boolean = false,

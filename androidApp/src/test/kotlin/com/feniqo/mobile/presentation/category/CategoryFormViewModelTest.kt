@@ -152,8 +152,28 @@ class CategoryFormViewModelTest {
         override suspend fun softDelete(id: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
     }
 
+    private class FakeWorkspaceRepository : com.feniqo.mobile.domain.repository.WorkspaceRepository {
+        val activeWorkspaceFlow = MutableStateFlow<com.feniqo.mobile.domain.model.Workspace?>(null)
+        override fun observeActiveWorkspace(): Flow<com.feniqo.mobile.domain.model.Workspace?> = activeWorkspaceFlow
+        override fun observeWorkspaces(): Flow<List<com.feniqo.mobile.domain.model.Workspace>> = MutableStateFlow(emptyList())
+        override fun observeMembers(workspaceId: EntityId): Flow<List<com.feniqo.mobile.domain.model.WorkspaceMember>> = MutableStateFlow(emptyList())
+        override suspend fun create(name: String): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("ws-1"))
+        override suspend fun createWorkspace(command: com.feniqo.mobile.domain.model.CreateWorkspaceCommand): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("ws-1"))
+        override suspend fun updateWorkspace(command: com.feniqo.mobile.domain.model.UpdateWorkspaceCommand): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        override suspend fun deleteWorkspace(id: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        override suspend fun setActive(workspaceId: EntityId?): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        override suspend fun createInvite(workspaceId: EntityId): RepositoryResult<com.feniqo.mobile.domain.repository.WorkspaceInviteCode> =
+            RepositoryResult.Success(com.feniqo.mobile.domain.repository.WorkspaceInviteCode("INV123"))
+        override suspend fun join(inviteCode: com.feniqo.mobile.domain.repository.WorkspaceInviteCode): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("ws-1"))
+        override suspend fun changeMemberRole(workspaceId: EntityId, userId: EntityId, role: com.feniqo.mobile.domain.model.WorkspaceRole): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        override suspend fun leave(workspaceId: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        override suspend fun transferOwnership(workspaceId: EntityId, targetUserId: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        override suspend fun removeMember(workspaceId: EntityId, userId: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+    }
+
     private val authRepo = FakeAuthRepository(userSession)
     private val catRepo = FakeCategoryRepository()
+    private val workspaceRepo = FakeWorkspaceRepository()
     private val countingInstantProvider = CountingInstantProvider(fixedInstant)
     private val idGenerator = FakeIdGenerator()
 
@@ -168,6 +188,7 @@ class CategoryFormViewModelTest {
             addCategoryUseCase = AddCategoryUseCase(authRepo, catRepo),
             updateCategoryUseCase = UpdateCategoryUseCase(authRepo, catRepo),
             observeCategoryUseCase = ObserveCategoryUseCase(catRepo),
+            observeActiveWorkspaceUseCase = com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase(workspaceRepo),
             currentInstantProvider = countingInstantProvider,
             entityIdGenerator = idGenerator,
             savedStateHandle = handle,
@@ -179,6 +200,7 @@ class CategoryFormViewModelTest {
             addCategoryUseCase = AddCategoryUseCase(authRepo, catRepo),
             updateCategoryUseCase = UpdateCategoryUseCase(authRepo, catRepo),
             observeCategoryUseCase = ObserveCategoryUseCase(catRepo),
+            observeActiveWorkspaceUseCase = com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase(workspaceRepo),
             currentInstantProvider = countingInstantProvider,
             entityIdGenerator = idGenerator,
             savedStateHandle = handle,

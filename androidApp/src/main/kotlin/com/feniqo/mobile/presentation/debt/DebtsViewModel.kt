@@ -2,6 +2,7 @@ package com.feniqo.mobile.presentation.debt
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase
 import com.feniqo.mobile.domain.usecase.ObserveDebtPaymentsUseCase
 import com.feniqo.mobile.domain.usecase.ObserveDebtsUseCase
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
@@ -29,6 +30,7 @@ import javax.inject.Inject
 class DebtsViewModel @Inject constructor(
     private val observeDebtsUseCase: ObserveDebtsUseCase,
     private val observeDebtPaymentsUseCase: ObserveDebtPaymentsUseCase,
+    private val observeActiveWorkspaceUseCase: ObserveActiveWorkspaceUseCase,
 ) : ViewModel() {
 
     private val _retryTrigger = MutableStateFlow(0L)
@@ -68,26 +70,32 @@ class DebtsViewModel @Inject constructor(
                 }
         }
 
-    val uiState: StateFlow<DebtsUiState> = observationResultFlow
-        .map { observationResult ->
-            when (observationResult) {
-                is ObservationResult.Loading -> DebtsUiState(
-                    isLoading = true,
-                    debts = emptyList(),
-                    observationError = null,
-                )
-                is ObservationResult.Failure -> DebtsUiState(
-                    isLoading = false,
-                    debts = emptyList(),
-                    observationError = observationResult.message,
-                )
-                is ObservationResult.Success -> DebtsUiState(
-                    isLoading = false,
-                    debts = observationResult.debts,
-                    observationError = null,
-                )
-            }
+    val uiState: StateFlow<DebtsUiState> = combine(
+        observationResultFlow,
+        observeActiveWorkspaceUseCase(),
+    ) { observationResult, activeWorkspace ->
+        val workspaceName = activeWorkspace?.name
+        when (observationResult) {
+            is ObservationResult.Loading -> DebtsUiState(
+                isLoading = true,
+                debts = emptyList(),
+                activeWorkspaceName = workspaceName,
+                observationError = null,
+            )
+            is ObservationResult.Failure -> DebtsUiState(
+                isLoading = false,
+                debts = emptyList(),
+                activeWorkspaceName = workspaceName,
+                observationError = observationResult.message,
+            )
+            is ObservationResult.Success -> DebtsUiState(
+                isLoading = false,
+                debts = observationResult.debts,
+                activeWorkspaceName = workspaceName,
+                observationError = null,
+            )
         }
+    }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000L),

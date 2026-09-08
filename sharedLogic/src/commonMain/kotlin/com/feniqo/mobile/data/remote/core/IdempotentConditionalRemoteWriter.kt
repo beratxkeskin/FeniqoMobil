@@ -13,6 +13,8 @@ import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
 import com.feniqo.mobile.data.remote.dto.SubscriptionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceDto
+import com.feniqo.mobile.data.remote.dto.WorkspaceInvitationDto
+import com.feniqo.mobile.data.remote.dto.WorkspaceMemberDto
 import kotlinx.serialization.json.JsonObject
 
 /**
@@ -95,4 +97,18 @@ interface IdempotentConditionalRemoteWriter {
         baseVersion: Long?,
         payload: JsonObject,
     ): ConditionalRemoteWriteResult<WorkspaceDto> = error("writeWorkspace not implemented in test fake")
+
+    suspend fun writeWorkspaceMember(
+        operationId: String,
+        operation: RemoteWriteOperation,
+        baseVersion: Long?,
+        payload: JsonObject,
+    ): ConditionalRemoteWriteResult<WorkspaceMemberDto> = error("writeWorkspaceMember not implemented in test fake")
+
+    suspend fun writeWorkspaceInvitation(
+        operationId: String,
+        operation: RemoteWriteOperation,
+        baseVersion: Long?,
+        payload: JsonObject,
+    ): ConditionalRemoteWriteResult<WorkspaceInvitationDto> = error("writeWorkspaceInvitation not implemented in test fake")
 }

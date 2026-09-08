@@ -88,9 +88,11 @@ class DebtsViewModelTest {
     )
 
     private fun createViewModel(repository: DebtRepository): DebtsViewModel {
+        val fakeWorkspaceRepo = com.feniqo.mobile.presentation.common.FakeWorkspaceRepository()
         return DebtsViewModel(
             observeDebtsUseCase = ObserveDebtsUseCase(repository),
             observeDebtPaymentsUseCase = ObserveDebtPaymentsUseCase(repository),
+            observeActiveWorkspaceUseCase = com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase(fakeWorkspaceRepo),
         )
     }
 

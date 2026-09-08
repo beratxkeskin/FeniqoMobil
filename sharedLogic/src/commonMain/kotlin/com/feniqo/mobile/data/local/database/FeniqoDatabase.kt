@@ -65,7 +65,7 @@ import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
         DebtEntity::class,
         DebtPaymentEntity::class,
     ],
-    version = 10,
+    version = 12,
     exportSchema = true,
 )
 @ConstructedBy(FeniqoDatabaseConstructor::class)

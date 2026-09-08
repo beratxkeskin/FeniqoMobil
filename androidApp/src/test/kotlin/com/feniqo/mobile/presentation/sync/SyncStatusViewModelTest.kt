@@ -7,12 +7,16 @@ import com.feniqo.mobile.domain.network.NetworkStatus
 import com.feniqo.mobile.domain.repository.ConflictResolution
 import com.feniqo.mobile.domain.repository.RepositoryResult
 import com.feniqo.mobile.domain.repository.SyncConflict
+import com.feniqo.mobile.domain.repository.SyncEntityType
 import com.feniqo.mobile.domain.repository.SyncOverview
 import com.feniqo.mobile.domain.repository.SyncPhase
 import com.feniqo.mobile.domain.repository.SyncRepository
+import com.feniqo.mobile.domain.usecase.ObserveSyncConflictsUseCase
 import com.feniqo.mobile.domain.usecase.ObserveSyncOverviewUseCase
 import com.feniqo.mobile.domain.usecase.RequestManualSyncUseCase
+import com.feniqo.mobile.domain.usecase.ResolveSyncConflictUseCase
 import com.feniqo.mobile.domain.usecase.RetryFailedSyncOperationsUseCase
+import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -24,6 +28,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -31,6 +36,7 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.datetime.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -80,13 +86,19 @@ class SyncStatusViewModelTest {
                 lastError = null,
             ),
         )
+        val conflictsState = MutableStateFlow<List<SyncConflict>>(emptyList())
         var requestSyncCallCount = 0
         var retryFailedCallCount = 0
+        var resolveCallCount = 0
+        var lastResolvedEntityId: EntityId? = null
+        var lastResolution: ConflictResolution? = null
+        var resolveResult: RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        var resolveDelayMillis: Long = 0
         var actionDelayMillis: Long = 0
         var actionShouldThrow: Exception? = null
 
         override fun observeOverview(): Flow<SyncOverview> = overviewState
-        override fun observeConflicts(): Flow<List<SyncConflict>> = flowOf(emptyList())
+        override fun observeConflicts(): Flow<List<SyncConflict>> = conflictsState
 
         override suspend fun requestSync(): RepositoryResult<Unit> {
             requestSyncCallCount++
@@ -105,7 +117,13 @@ class SyncStatusViewModelTest {
         override suspend fun resolveConflict(
             entityId: EntityId,
             resolution: ConflictResolution,
-        ): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        ): RepositoryResult<Unit> {
+            resolveCallCount++
+            lastResolvedEntityId = entityId
+            lastResolution = resolution
+            if (resolveDelayMillis > 0) delay(resolveDelayMillis)
+            return resolveResult
+        }
     }
 
     @Before
@@ -117,6 +135,8 @@ class SyncStatusViewModelTest {
             observeSyncOverviewUseCase = ObserveSyncOverviewUseCase(fakeSyncRepository),
             requestManualSyncUseCase = RequestManualSyncUseCase(fakeSyncRepository),
             retryFailedSyncOperationsUseCase = RetryFailedSyncOperationsUseCase(fakeSyncRepository),
+            observeSyncConflictsUseCase = ObserveSyncConflictsUseCase(fakeSyncRepository),
+            resolveSyncConflictUseCase = ResolveSyncConflictUseCase(fakeSyncRepository),
             networkObserver = fakeNetworkObserver,
         )
     }
@@ -365,5 +385,213 @@ class SyncStatusViewModelTest {
         advanceUntilIdle()
 
         assertEquals(2, fakeSyncRepository.requestSyncCallCount)
+    }
+
+    @Test
+    fun test14_nonWorkspaceOnlyConflict_hasResolvableWorkspaceConflictIsFalse() = runTest {
+        subscribeState()
+        fakeSyncRepository.conflictsState.value = listOf(
+            SyncConflict(EntityId("tx-1"), SyncEntityType.TRANSACTION, 1L, 2L),
+        )
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.hasResolvableWorkspaceConflict)
+        viewModel.openConflictDialog()
+        assertNull(viewModel.uiState.value.activeConflictDialog)
+    }
+
+    @Test
+    fun test15_workspaceConflictPresent_hasResolvableWorkspaceConflictIsTrueAndOpensDialog() = runTest {
+        subscribeState()
+        fakeSyncRepository.conflictsState.value = listOf(
+            SyncConflict(EntityId("ws-1"), SyncEntityType.WORKSPACE, 1L, 2L),
+        )
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.hasResolvableWorkspaceConflict)
+        viewModel.openConflictDialog()
+        val dialog = checkNotNull(viewModel.uiState.value.activeConflictDialog)
+        assertEquals("ws-1", dialog.conflict.entityId)
+        assertEquals(1L, dialog.conflict.localVersion)
+        assertEquals(2L, dialog.conflict.remoteVersion)
+        assertFalse(dialog.isResolving)
+        assertNull(dialog.error)
+    }
+
+    @Test
+    fun test16_mixedConflicts_targetsCorrectWorkspaceId() = runTest {
+        subscribeState()
+        fakeSyncRepository.conflictsState.value = listOf(
+            SyncConflict(EntityId("tx-1"), SyncEntityType.TRANSACTION, 1L, 2L),
+            SyncConflict(EntityId("ws-target"), SyncEntityType.WORKSPACE, 3L, 4L),
+        )
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.hasResolvableWorkspaceConflict)
+        viewModel.openConflictDialog()
+        val dialog = checkNotNull(viewModel.uiState.value.activeConflictDialog)
+        assertEquals("ws-target", dialog.conflict.entityId)
+    }
+
+    @Test
+    fun test17_idPinning_listReorderingDoesNotChangeTarget() = runTest {
+        subscribeState()
+        fakeSyncRepository.conflictsState.value = listOf(
+            SyncConflict(EntityId("ws-A"), SyncEntityType.WORKSPACE, 1L, 2L),
+            SyncConflict(EntityId("ws-B"), SyncEntityType.WORKSPACE, 3L, 4L),
+        )
+        advanceUntilIdle()
+
+        viewModel.openConflictDialog()
+        assertEquals("ws-A", viewModel.uiState.value.activeConflictDialog?.conflict?.entityId)
+
+        // Flow'dan liste sırası ters çevrildiğinde açık diyalogdaki hedef değişmemeli
+        fakeSyncRepository.conflictsState.value = listOf(
+            SyncConflict(EntityId("ws-B"), SyncEntityType.WORKSPACE, 3L, 4L),
+            SyncConflict(EntityId("ws-A"), SyncEntityType.WORKSPACE, 1L, 2L),
+        )
+        advanceUntilIdle()
+
+        assertEquals("ws-A", viewModel.uiState.value.activeConflictDialog?.conflict?.entityId)
+
+        viewModel.resolveWorkspaceConflict(ConflictResolution.KEEP_REMOTE)
+        advanceUntilIdle()
+
+        assertEquals(EntityId("ws-A"), fakeSyncRepository.lastResolvedEntityId)
+        assertEquals(ConflictResolution.KEEP_REMOTE, fakeSyncRepository.lastResolution)
+    }
+
+    @Test
+    fun test18_selectedConflictDisappearsWhenNotResolving_dialogClosesWithoutSwitching() = runTest {
+        subscribeState()
+        fakeSyncRepository.conflictsState.value = listOf(
+            SyncConflict(EntityId("ws-A"), SyncEntityType.WORKSPACE, 1L, 2L),
+            SyncConflict(EntityId("ws-B"), SyncEntityType.WORKSPACE, 3L, 4L),
+        )
+        advanceUntilIdle()
+
+        viewModel.openConflictDialog()
+        assertEquals("ws-A", viewModel.uiState.value.activeConflictDialog?.conflict?.entityId)
+
+        // ws-A listeden çıktığında ve çözüm sürmüyorken diyalog kapanmalı; asla ws-B'ye geçmemeli
+        fakeSyncRepository.conflictsState.value = listOf(
+            SyncConflict(EntityId("ws-B"), SyncEntityType.WORKSPACE, 3L, 4L),
+        )
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.activeConflictDialog)
+        assertFalse(viewModel.uiState.value.isConflictDialogVisible)
+    }
+
+    @Test
+    fun test19_resolveInProgress_flowUpdatesDoNotDoubleCallOrSwitch() = runTest {
+        subscribeState()
+        fakeSyncRepository.conflictsState.value = listOf(
+            SyncConflict(EntityId("ws-A"), SyncEntityType.WORKSPACE, 1L, 2L),
+        )
+        advanceUntilIdle()
+
+        viewModel.openConflictDialog()
+        fakeSyncRepository.resolveDelayMillis = 100L
+
+        viewModel.resolveWorkspaceConflict(ConflictResolution.KEEP_LOCAL)
+        assertTrue(viewModel.uiState.value.isResolvingConflict)
+
+        // Çözüm sürerken Flow güncellense dahi işlem devam eder
+        fakeSyncRepository.conflictsState.value = listOf(
+            SyncConflict(EntityId("ws-B"), SyncEntityType.WORKSPACE, 5L, 6L),
+        )
+        advanceTimeBy(10L)
+
+        // Çözüm sürerken ikinci kez resolve çağrısı engellenir (çift çağrı koruması)
+        viewModel.resolveWorkspaceConflict(ConflictResolution.KEEP_REMOTE)
+        assertEquals(1, fakeSyncRepository.resolveCallCount)
+
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.isResolvingConflict)
+        assertEquals(EntityId("ws-A"), fakeSyncRepository.lastResolvedEntityId)
+        assertEquals(ConflictResolution.KEEP_LOCAL, fakeSyncRepository.lastResolution)
+    }
+
+    @Test
+    fun test20_fastFailIfConflictNotFoundBeforeResolve() = runTest {
+        subscribeState()
+        fakeSyncRepository.conflictsState.value = listOf(
+            SyncConflict(EntityId("ws-A"), SyncEntityType.WORKSPACE, 1L, 2L),
+        )
+        advanceUntilIdle()
+
+        viewModel.openConflictDialog()
+        assertNotNull(viewModel.uiState.value.activeConflictDialog)
+
+        fakeSyncRepository.conflictsState.value = emptyList()
+        advanceUntilIdle()
+
+        viewModel.resolveWorkspaceConflict(ConflictResolution.KEEP_LOCAL)
+        assertEquals(0, fakeSyncRepository.resolveCallCount)
+    }
+
+    @Test
+    fun test21_keepRemoteAndKeepLocalSuccess() = runTest {
+        subscribeState()
+        fakeSyncRepository.conflictsState.value = listOf(
+            SyncConflict(EntityId("ws-1"), SyncEntityType.WORKSPACE, 1L, 2L),
+        )
+        advanceUntilIdle()
+
+        // KEEP_REMOTE başarısı
+        viewModel.openConflictDialog()
+        viewModel.resolveWorkspaceConflict(ConflictResolution.KEEP_REMOTE)
+        advanceUntilIdle()
+
+        assertEquals(EntityId("ws-1"), fakeSyncRepository.lastResolvedEntityId)
+        assertEquals(ConflictResolution.KEEP_REMOTE, fakeSyncRepository.lastResolution)
+        assertNull(viewModel.uiState.value.activeConflictDialog)
+
+        // KEEP_LOCAL başarısı
+        viewModel.openConflictDialog()
+        viewModel.resolveWorkspaceConflict(ConflictResolution.KEEP_LOCAL)
+        advanceUntilIdle()
+
+        assertEquals(ConflictResolution.KEEP_LOCAL, fakeSyncRepository.lastResolution)
+        assertNull(viewModel.uiState.value.activeConflictDialog)
+    }
+
+    @Test
+    fun test22_errorDisplay_stale_ownerMismatch_tombstone_andDismiss() = runTest {
+        subscribeState()
+        fakeSyncRepository.conflictsState.value = listOf(
+            SyncConflict(EntityId("ws-1"), SyncEntityType.WORKSPACE, 1L, 2L),
+        )
+        advanceUntilIdle()
+
+        // Senaryo A: Stale Resolution Hatası
+        viewModel.openConflictDialog()
+        fakeSyncRepository.resolveResult = RepositoryResult.Failure(AppError.Conflict("sync.conflict_resolution_stale"))
+        viewModel.resolveWorkspaceConflict(ConflictResolution.KEEP_LOCAL)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.isConflictDialogVisible)
+        assertFalse(viewModel.uiState.value.isResolvingConflict)
+        assertEquals(FinanceUiMessage.CONFLICT_RESOLUTION_STALE, viewModel.uiState.value.activeConflictDialog?.error)
+
+        // Senaryo B: Owner Mismatch Hatası
+        fakeSyncRepository.resolveResult = RepositoryResult.Failure(AppError.Conflict("sync.workspace_create_conflict_owner_mismatch"))
+        viewModel.resolveWorkspaceConflict(ConflictResolution.KEEP_LOCAL)
+        advanceUntilIdle()
+
+        assertEquals(FinanceUiMessage.WORKSPACE_CONFLICT_OWNER_MISMATCH, viewModel.uiState.value.activeConflictDialog?.error)
+
+        // Senaryo C: Remote Tombstone Hatası
+        fakeSyncRepository.resolveResult = RepositoryResult.Failure(AppError.Conflict("sync.workspace_create_conflict_remote_tombstone"))
+        viewModel.resolveWorkspaceConflict(ConflictResolution.KEEP_LOCAL)
+        advanceUntilIdle()
+
+        assertEquals(FinanceUiMessage.WORKSPACE_CONFLICT_REMOTE_TOMBSTONE, viewModel.uiState.value.activeConflictDialog?.error)
+
+        // Senaryo D: Vazgeç ile kapatma
+        viewModel.dismissConflictDialog()
+        assertNull(viewModel.uiState.value.activeConflictDialog)
+        assertFalse(viewModel.uiState.value.isConflictDialogVisible)
     }
 }

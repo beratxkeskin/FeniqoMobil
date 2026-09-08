@@ -87,6 +87,7 @@ class GoalDebtRemoteSyncTest {
         override suspend fun upsertProfileRow(entity: UserProfileEntity) {}
         override suspend fun upsertWorkspaceRows(entities: List<WorkspaceEntity>) {}
         override suspend fun upsertWorkspaceMemberRows(entities: List<WorkspaceMemberEntity>) {}
+        override suspend fun clearActiveWorkspaceIfMatches(profileId: String, workspaceId: String): Int = 0
         override suspend fun upsertCategoryRows(entities: List<CategoryEntity>) {}
         override suspend fun upsertTransactionRows(entities: List<TransactionEntity>) {}
         override suspend fun upsertRecurringTransactionRows(entities: List<RecurringTransactionEntity>) {}
@@ -134,6 +135,13 @@ class GoalDebtRemoteSyncTest {
         override suspend fun rebaseTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseRecurringTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseSubscriptionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun getActiveWorkspaceTailOperation(workspaceId: String): com.feniqo.mobile.data.local.entity.SyncOperationEntity? = null
+        override suspend fun markWorkspaceConflict(entityId: String, error: String): Int = 0
+        override suspend fun getAllWorkspaceOperations(workspaceId: String): List<com.feniqo.mobile.data.local.entity.SyncOperationEntity> = emptyList()
+        override suspend fun deleteSpecificWorkspaceOperations(workspaceId: String, operationIds: List<String>): Int = 0
+        override suspend fun rebaseWorkspaceForRetry(workspaceId: String, syncStatus: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun resetWorkspaceConflictOperation(operationId: String, operationTypeCode: String, payloadJson: String?, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun getConflictRow(entityTypeCode: String, entityId: String): SyncConflictEntity? = null
     }
 
     private class FakeSyncStateDao(private val cursors: MutableMap<String, SyncCursorEntity>) : SyncStateDao {
@@ -547,4 +555,3 @@ class GoalDebtRemoteSyncTest {
         assertNull(dao.cursors["DEBT_PAYMENT"])
     }
 }
-

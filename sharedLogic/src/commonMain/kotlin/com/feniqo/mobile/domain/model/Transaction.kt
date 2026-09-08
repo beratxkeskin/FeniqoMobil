@@ -43,12 +43,20 @@ data class Transaction(
     val receiptPath: ReceiptPath?,
     val installment: InstallmentInfo?,
     val createdAt: Instant,
+    /** Shared expense payer. Personal and legacy records default to the transaction owner. */
+    val paidByUserId: EntityId = ownerId,
+    /** Members included in an equal shared-expense split. */
+    val participantUserIds: List<EntityId> = listOf(ownerId),
 ) {
     init {
         require(amount.amountMinor > 0) { "İşlem tutarı sıfırdan büyük olmalıdır." }
         require(description == null || (description.isNotBlank() && description.length <= MAX_DESCRIPTION_LENGTH)) {
             "İşlem açıklaması boş olamaz ve 500 karakteri geçemez."
         }
+        require(participantUserIds.isNotEmpty() && participantUserIds.distinct().size == participantUserIds.size) {
+            "Ortak gider katılımcıları boş veya tekrarlı olamaz."
+        }
+        require(paidByUserId in participantUserIds) { "Ödeme yapan kişi katılımcı olmalıdır." }
     }
 
     companion object {

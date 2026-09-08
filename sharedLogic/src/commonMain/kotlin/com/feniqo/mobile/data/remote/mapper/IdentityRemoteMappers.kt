@@ -2,9 +2,11 @@ package com.feniqo.mobile.data.remote.mapper
 
 import com.feniqo.mobile.data.local.entity.SyncMetadata
 import com.feniqo.mobile.data.local.entity.WorkspaceEntity
+import com.feniqo.mobile.data.local.entity.WorkspaceInvitationEntity
 import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
 import com.feniqo.mobile.data.remote.dto.ProfileDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceDto
+import com.feniqo.mobile.data.remote.dto.WorkspaceInvitationDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceMemberDto
 import com.feniqo.mobile.domain.model.AppLanguage
 import com.feniqo.mobile.domain.model.Currency
@@ -12,6 +14,7 @@ import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.ThemePreference
 import com.feniqo.mobile.domain.model.UserProfile
 import com.feniqo.mobile.domain.model.Workspace
+import com.feniqo.mobile.domain.model.WorkspaceInvitation
 import com.feniqo.mobile.domain.model.WorkspaceMember
 import com.feniqo.mobile.domain.model.WorkspaceRole
 import kotlin.time.Instant
@@ -111,6 +114,58 @@ fun WorkspaceMemberDto.toEntity(receivedAtEpochMillis: Long): WorkspaceMemberEnt
         sync = SyncMetadata(
             syncStatus = "SYNCED",
             updatedAtEpochMillis = updatedAtInstant.toEpochMilliseconds(),
+            localUpdatedAtEpochMillis = receivedAtEpochMillis,
+            deletedAtEpochMillis = deletedAtInstant?.toEpochMilliseconds(),
+            version = version,
+            baseVersion = null,
+            lastSyncError = null,
+        ),
+    )
+}
+
+fun WorkspaceInvitationDto.toDomain(): WorkspaceInvitation = WorkspaceInvitation(
+    id = EntityId(id.requireRemoteValue("workspace_invitations.id")),
+    workspaceId = EntityId(workspaceId.requireRemoteValue("workspace_invitations.workspace_id")),
+    inviterId = EntityId(inviterId.requireRemoteValue("workspace_invitations.inviter_id")),
+    role = roleCode.toWorkspaceRole(),
+    createdAt = createdAt.toRemoteInstant("workspace_invitations.created_at"),
+    expiresAt = expiresAt.toRemoteInstant("workspace_invitations.expires_at"),
+    maxUses = maxUses,
+    usesCount = usesCount,
+)
+
+fun WorkspaceInvitationDto.toEntity(receivedAtEpochMillis: Long): WorkspaceInvitationEntity {
+    val cleanRole = roleCode.toWorkspaceRole()
+    if (cleanRole == WorkspaceRole.OWNER) {
+        throw RemoteMappingException("workspace_invitations.role_code OWNER olamaz.")
+    }
+    if (maxUses <= 0) {
+        throw RemoteMappingException("workspace_invitations.max_uses pozitif olmalıdır: $maxUses")
+    }
+    if (usesCount < 0) {
+        throw RemoteMappingException("workspace_invitations.uses_count negatif olamaz: $usesCount")
+    }
+    if (version <= 0L) {
+        throw RemoteMappingException("workspace_invitations.version pozitif olmalıdır: $version")
+    }
+
+    val createdAtInstant = createdAt.toRemoteInstant("workspace_invitations.created_at")
+    val expiresAtInstant = expiresAt.toRemoteInstant("workspace_invitations.expires_at")
+    val deletedAtInstant = deletedAt?.toRemoteInstant("workspace_invitations.deleted_at")
+
+    return WorkspaceInvitationEntity(
+        id = id.requireRemoteValue("workspace_invitations.id"),
+        workspaceId = workspaceId.requireRemoteValue("workspace_invitations.workspace_id"),
+        inviterId = inviterId.requireRemoteValue("workspace_invitations.inviter_id"),
+        tokenHash = null,
+        roleCode = cleanRole.name,
+        createdAtEpochMillis = createdAtInstant.toEpochMilliseconds(),
+        expiresAtEpochMillis = expiresAtInstant.toEpochMilliseconds(),
+        maxUses = maxUses,
+        usesCount = usesCount,
+        sync = SyncMetadata(
+            syncStatus = "SYNCED",
+            updatedAtEpochMillis = createdAtInstant.toEpochMilliseconds(),
             localUpdatedAtEpochMillis = receivedAtEpochMillis,
             deletedAtEpochMillis = deletedAtInstant?.toEpochMilliseconds(),
             version = version,

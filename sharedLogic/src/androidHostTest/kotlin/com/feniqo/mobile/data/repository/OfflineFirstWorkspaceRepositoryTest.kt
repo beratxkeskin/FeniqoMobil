@@ -5,8 +5,10 @@ import androidx.test.core.app.ApplicationProvider
 import com.feniqo.mobile.data.local.database.FeniqoDatabase
 import com.feniqo.mobile.data.local.database.FeniqoDatabaseConstructor
 import com.feniqo.mobile.data.local.entity.SyncMetadata
+import com.feniqo.mobile.data.local.entity.UserProfileEntity
 import com.feniqo.mobile.data.local.entity.WorkspaceEntity
 import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
+import com.feniqo.mobile.data.mapper.newSyncMetadata
 import com.feniqo.mobile.domain.model.AppError
 import com.feniqo.mobile.domain.model.CreateWorkspaceCommand
 import com.feniqo.mobile.domain.model.Currency
@@ -85,6 +87,8 @@ class OfflineFirstWorkspaceRepositoryTest {
                 authRepository = authRepo,
                 workspaceDao = workspaceDao,
                 localMutationDao = localMutationDao,
+                remoteDataSource = FakeWorkspaceCoreRemoteDataSource(),
+                remoteSyncDao = database.remoteSyncDao(),
                 entityIdGenerator = EntityIdGenerator { EntityId("ws-${idCounter++}") },
                 operationIdFactory = ::testOpIdFactory,
                 nowEpochMillisProvider = { 1757160000000L },
@@ -169,6 +173,8 @@ class OfflineFirstWorkspaceRepositoryTest {
                 authRepository = authRepo,
                 workspaceDao = workspaceDao,
                 localMutationDao = localMutationDao,
+                remoteDataSource = FakeWorkspaceCoreRemoteDataSource(),
+                remoteSyncDao = database.remoteSyncDao(),
                 operationIdFactory = ::testOpIdFactory,
                 nowEpochMillisProvider = { 1757160000000L },
             )
@@ -212,6 +218,8 @@ class OfflineFirstWorkspaceRepositoryTest {
                 authRepository = authRepo,
                 workspaceDao = workspaceDao,
                 localMutationDao = localMutationDao,
+                remoteDataSource = FakeWorkspaceCoreRemoteDataSource(),
+                remoteSyncDao = database.remoteSyncDao(),
                 operationIdFactory = ::testOpIdFactory,
                 nowEpochMillisProvider = { 1757170000000L },
             )
@@ -312,6 +320,8 @@ class OfflineFirstWorkspaceRepositoryTest {
                 authRepository = authRepo,
                 workspaceDao = workspaceDao,
                 localMutationDao = localMutationDao,
+                remoteDataSource = FakeWorkspaceCoreRemoteDataSource(),
+                remoteSyncDao = database.remoteSyncDao(),
                 operationIdFactory = ::testOpIdFactory,
                 nowEpochMillisProvider = { 1757180000000L },
             )
@@ -404,6 +414,8 @@ class OfflineFirstWorkspaceRepositoryTest {
                 authRepository = authRepo,
                 workspaceDao = workspaceDao,
                 localMutationDao = localMutationDao,
+                remoteDataSource = FakeWorkspaceCoreRemoteDataSource(),
+                remoteSyncDao = database.remoteSyncDao(),
                 operationIdFactory = ::testOpIdFactory,
                 nowEpochMillisProvider = { 1757190000000L },
             )
@@ -505,6 +517,8 @@ class OfflineFirstWorkspaceRepositoryTest {
                 authRepository = authRepo,
                 workspaceDao = workspaceDao,
                 localMutationDao = localMutationDao,
+                remoteDataSource = FakeWorkspaceCoreRemoteDataSource(),
+                remoteSyncDao = database.remoteSyncDao(),
             )
 
             // Workspace 1: Aktif kullanıcı üye (SYNCED)
@@ -649,6 +663,8 @@ class OfflineFirstWorkspaceRepositoryTest {
                 authRepository = authRepo,
                 workspaceDao = workspaceDao,
                 localMutationDao = localMutationDao,
+                remoteDataSource = FakeWorkspaceCoreRemoteDataSource(),
+                remoteSyncDao = database.remoteSyncDao(),
                 entityIdGenerator = EntityIdGenerator { EntityId("ws-coalesce") },
                 operationIdFactory = ::testOpIdFactory,
                 nowEpochMillisProvider = { 1000L },
@@ -726,6 +742,8 @@ class OfflineFirstWorkspaceRepositoryTest {
                 authRepository = authRepo,
                 workspaceDao = workspaceDao,
                 localMutationDao = localMutationDao,
+                remoteDataSource = FakeWorkspaceCoreRemoteDataSource(),
+                remoteSyncDao = database.remoteSyncDao(),
                 entityIdGenerator = EntityIdGenerator { EntityId("ws-hard-delete") },
                 operationIdFactory = ::testOpIdFactory,
                 nowEpochMillisProvider = { 1000L },
@@ -764,22 +782,319 @@ class OfflineFirstWorkspaceRepositoryTest {
     }
 
     @Test
-    fun setActive_fails_closed_in_this_phase() = runTest {
+    fun setActive_succeeds_when_user_is_live_member_of_live_workspace_and_updates_active_flow() = runTest {
         val database = inMemoryDatabase()
         try {
             val authRepo = FakeAuthRepository()
             val workspaceDao = database.workspaceDao()
             val localMutationDao = database.localMutationDao()
+            val profileDao = database.profileDao()
+            val operationDao = database.syncOperationDao()
+
+            // 1. Profil ekle
+            profileDao.upsert(
+                UserProfileEntity(
+                    id = "user-1",
+                    email = "user1@example.com",
+                    fullName = "Test Kullanıcı",
+                    currencyCode = "TRY",
+                    themeCode = "dark",
+                    languageCode = "tr",
+                    activeWorkspaceId = null,
+                    createdAtEpochMillis = 1000L,
+                    sync = newSyncMetadata(nowEpochMillis = 1000L),
+                ),
+            )
+
+            // 2. Canlı Workspace ve Member ekle
+            workspaceDao.upsertWorkspace(
+                WorkspaceEntity(
+                    id = "ws-valid",
+                    name = "Canlı Alan",
+                    normalizedName = "canlı alan",
+                    ownerId = "user-1",
+                    createdAtEpochMillis = 1000L,
+                    sync = newSyncMetadata(nowEpochMillis = 1000L),
+                ),
+            )
+            workspaceDao.upsertMember(
+                WorkspaceMemberEntity(
+                    workspaceId = "ws-valid",
+                    userId = "user-1",
+                    roleCode = "OWNER",
+                    joinedAtEpochMillis = 1000L,
+                    sync = newSyncMetadata(nowEpochMillis = 1000L),
+                ),
+            )
 
             val repo = OfflineFirstWorkspaceRepository(
                 authRepository = authRepo,
                 workspaceDao = workspaceDao,
                 localMutationDao = localMutationDao,
+                remoteDataSource = FakeWorkspaceCoreRemoteDataSource(),
+                remoteSyncDao = database.remoteSyncDao(),
+                profileDao = profileDao,
             )
 
-            val result = repo.setActive(EntityId("ws-100"))
-            assertTrue(result is RepositoryResult.Failure)
-            assertEquals("active_workspace_v2_not_implemented_in_this_phase", result.error.code)
+            // Başlangıçta aktif alan null olmalı
+            assertNull(repo.observeActiveWorkspace().first())
+
+            // setActive başarılı olmalı
+            val result = repo.setActive(EntityId("ws-valid"))
+            assertTrue(result is RepositoryResult.Success)
+
+            // observeActiveWorkspace akışı güncellenmiş olmalı
+            val active = repo.observeActiveWorkspace().first()
+            assertNotNull(active)
+            assertEquals("ws-valid", active.id.value)
+            assertEquals("Canlı Alan", active.name)
+
+            // Profil entity'si güncellenmiş olmalı
+            val profile = profileDao.observeById("user-1").first()
+            assertNotNull(profile)
+            assertEquals("ws-valid", profile.activeWorkspaceId)
+
+            // Kesinlikle outbox/sync operation üretilmemiş olmalı (yerel tercih kuralı)
+            val readyOps = operationDao.getReadyOperations(nowEpochMillis = 5000L, limit = 10)
+            assertTrue(readyOps.isEmpty())
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun setActive_fails_closed_when_workspace_does_not_exist_or_is_tombstoned() = runTest {
+        val database = inMemoryDatabase()
+        try {
+            val authRepo = FakeAuthRepository()
+            val workspaceDao = database.workspaceDao()
+            val localMutationDao = database.localMutationDao()
+            val profileDao = database.profileDao()
+
+            profileDao.upsert(
+                UserProfileEntity(
+                    id = "user-1",
+                    email = "user1@example.com",
+                    fullName = "Test Kullanıcı",
+                    currencyCode = "TRY",
+                    themeCode = "dark",
+                    languageCode = "tr",
+                    activeWorkspaceId = null,
+                    createdAtEpochMillis = 1000L,
+                    sync = newSyncMetadata(nowEpochMillis = 1000L),
+                ),
+            )
+
+            // Tombstoned Workspace
+            workspaceDao.upsertWorkspace(
+                WorkspaceEntity(
+                    id = "ws-tombstone",
+                    name = "Silinmiş Alan",
+                    normalizedName = "silinmiş alan",
+                    ownerId = "user-1",
+                    createdAtEpochMillis = 1000L,
+                    sync = newSyncMetadata(nowEpochMillis = 1000L).copy(
+                        deletedAtEpochMillis = 2000L,
+                    ),
+                ),
+            )
+            workspaceDao.upsertMember(
+                WorkspaceMemberEntity(
+                    workspaceId = "ws-tombstone",
+                    userId = "user-1",
+                    roleCode = "OWNER",
+                    joinedAtEpochMillis = 1000L,
+                    sync = newSyncMetadata(nowEpochMillis = 1000L),
+                ),
+            )
+
+            val repo = OfflineFirstWorkspaceRepository(
+                authRepository = authRepo,
+                workspaceDao = workspaceDao,
+                localMutationDao = localMutationDao,
+                remoteDataSource = FakeWorkspaceCoreRemoteDataSource(),
+                remoteSyncDao = database.remoteSyncDao(),
+                profileDao = profileDao,
+            )
+
+            // 1. Hiç var olmayan workspace
+            val notFoundResult = repo.setActive(EntityId("ws-non-existent"))
+            assertTrue(notFoundResult is RepositoryResult.Failure)
+            assertEquals("workspace_not_found", notFoundResult.error.code)
+
+            // 2. Tombstoned workspace
+            val tombstoneResult = repo.setActive(EntityId("ws-tombstone"))
+            assertTrue(tombstoneResult is RepositoryResult.Failure)
+            assertEquals("workspace_not_found", tombstoneResult.error.code)
+
+            // Profil kesinlikle değişmemiş olmalı
+            val profile = profileDao.observeById("user-1").first()
+            assertNotNull(profile)
+            assertNull(profile.activeWorkspaceId)
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun setActive_fails_closed_when_user_is_not_member_or_member_is_tombstoned() = runTest {
+        val database = inMemoryDatabase()
+        try {
+            val authRepo = FakeAuthRepository()
+            val workspaceDao = database.workspaceDao()
+            val localMutationDao = database.localMutationDao()
+            val profileDao = database.profileDao()
+
+            profileDao.upsert(
+                UserProfileEntity(
+                    id = "user-1",
+                    email = "user1@example.com",
+                    fullName = "Test Kullanıcı",
+                    currencyCode = "TRY",
+                    themeCode = "dark",
+                    languageCode = "tr",
+                    activeWorkspaceId = null,
+                    createdAtEpochMillis = 1000L,
+                    sync = newSyncMetadata(nowEpochMillis = 1000L),
+                ),
+            )
+
+            // Canlı Workspace ancak üyelik başka kullanıcıya ait
+            workspaceDao.upsertWorkspace(
+                WorkspaceEntity(
+                    id = "ws-other",
+                    name = "Başkasının Alanı",
+                    normalizedName = "başkasının alanı",
+                    ownerId = "user-2",
+                    createdAtEpochMillis = 1000L,
+                    sync = newSyncMetadata(nowEpochMillis = 1000L),
+                ),
+            )
+            workspaceDao.upsertMember(
+                WorkspaceMemberEntity(
+                    workspaceId = "ws-other",
+                    userId = "user-2",
+                    roleCode = "OWNER",
+                    joinedAtEpochMillis = 1000L,
+                    sync = newSyncMetadata(nowEpochMillis = 1000L),
+                ),
+            )
+
+            // Canlı Workspace ve user-1 üyesi ama üyelik tombstoned
+            workspaceDao.upsertWorkspace(
+                WorkspaceEntity(
+                    id = "ws-tombstone-member",
+                    name = "Üyeliği Silinmiş Alan",
+                    normalizedName = "üyeliği silinmiş alan",
+                    ownerId = "user-2",
+                    createdAtEpochMillis = 1000L,
+                    sync = newSyncMetadata(nowEpochMillis = 1000L),
+                ),
+            )
+            workspaceDao.upsertMember(
+                WorkspaceMemberEntity(
+                    workspaceId = "ws-tombstone-member",
+                    userId = "user-1",
+                    roleCode = "VIEWER",
+                    joinedAtEpochMillis = 1000L,
+                    sync = newSyncMetadata(nowEpochMillis = 1000L).copy(
+                        deletedAtEpochMillis = 2000L,
+                    ),
+                ),
+            )
+
+            val repo = OfflineFirstWorkspaceRepository(
+                authRepository = authRepo,
+                workspaceDao = workspaceDao,
+                localMutationDao = localMutationDao,
+                remoteDataSource = FakeWorkspaceCoreRemoteDataSource(),
+                remoteSyncDao = database.remoteSyncDao(),
+                profileDao = profileDao,
+            )
+
+            // 1. Üyelik yok
+            val notMemberResult = repo.setActive(EntityId("ws-other"))
+            assertTrue(notMemberResult is RepositoryResult.Failure)
+            assertEquals("workspace_not_found", notMemberResult.error.code)
+
+            // 2. Üyelik tombstoned
+            val tombstoneMemberResult = repo.setActive(EntityId("ws-tombstone-member"))
+            assertTrue(tombstoneMemberResult is RepositoryResult.Failure)
+            assertEquals("workspace_not_found", tombstoneMemberResult.error.code)
+
+            // Profil değişmemeli
+            val profile = profileDao.observeById("user-1").first()
+            assertNotNull(profile)
+            assertNull(profile.activeWorkspaceId)
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun setActive_null_clears_active_workspace_only_for_current_profile_and_reverts_to_personal_mode() = runTest {
+        val database = inMemoryDatabase()
+        try {
+            val authRepo = FakeAuthRepository()
+            val workspaceDao = database.workspaceDao()
+            val localMutationDao = database.localMutationDao()
+            val profileDao = database.profileDao()
+            val operationDao = database.syncOperationDao()
+
+            // 2 farklı kullanıcı profili
+            profileDao.upsert(
+                UserProfileEntity(
+                    id = "user-1",
+                    email = "user1@example.com",
+                    fullName = "User 1",
+                    currencyCode = "TRY",
+                    themeCode = "dark",
+                    languageCode = "tr",
+                    activeWorkspaceId = "ws-shared",
+                    createdAtEpochMillis = 1000L,
+                    sync = newSyncMetadata(nowEpochMillis = 1000L),
+                ),
+            )
+            profileDao.upsert(
+                UserProfileEntity(
+                    id = "user-2",
+                    email = "user2@example.com",
+                    fullName = "User 2",
+                    currencyCode = "TRY",
+                    themeCode = "light",
+                    languageCode = "tr",
+                    activeWorkspaceId = "ws-shared",
+                    createdAtEpochMillis = 1000L,
+                    sync = newSyncMetadata(nowEpochMillis = 1000L),
+                ),
+            )
+
+            val repo = OfflineFirstWorkspaceRepository(
+                authRepository = authRepo,
+                workspaceDao = workspaceDao,
+                localMutationDao = localMutationDao,
+                remoteDataSource = FakeWorkspaceCoreRemoteDataSource(),
+                remoteSyncDao = database.remoteSyncDao(),
+                profileDao = profileDao,
+            )
+
+            // user-1 için setActive(null) çağrısı
+            val clearResult = repo.setActive(null)
+            assertTrue(clearResult is RepositoryResult.Success)
+
+            // user-1 profilinde active_workspace_id temizlenmiş olmalı
+            val p1 = profileDao.observeById("user-1").first()
+            assertNotNull(p1)
+            assertNull(p1.activeWorkspaceId)
+
+            // user-2 profilinde active_workspace_id KESİNLİKLE DEĞİŞMEMİŞ olmalı
+            val p2 = profileDao.observeById("user-2").first()
+            assertNotNull(p2)
+            assertEquals("ws-shared", p2.activeWorkspaceId)
+
+            // Outbox işlemi üretilmemiş olmalı
+            val ops = operationDao.getReadyOperations(nowEpochMillis = 5000L, limit = 10)
+            assertTrue(ops.isEmpty())
         } finally {
             database.close()
         }

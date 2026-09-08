@@ -16,6 +16,7 @@ import com.feniqo.mobile.domain.repository.RepositoryResult
 import com.feniqo.mobile.domain.usecase.AddInstallmentGroupCommand
 import com.feniqo.mobile.domain.usecase.AddInstallmentGroupUseCase
 import com.feniqo.mobile.domain.usecase.AddTransactionUseCase
+import com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase
 import com.feniqo.mobile.domain.usecase.ObserveCategoriesForHistoryLookupUseCase
 import com.feniqo.mobile.domain.usecase.ObserveCategoriesUseCase
 import com.feniqo.mobile.domain.usecase.ObserveTransactionUseCase
@@ -78,6 +79,7 @@ class TransactionFormViewModel @Inject constructor(
     private val observeTransactionUseCase: ObserveTransactionUseCase,
     private val observeCategoriesUseCase: ObserveCategoriesUseCase,
     private val observeCategoriesForHistoryLookupUseCase: ObserveCategoriesForHistoryLookupUseCase,
+    private val observeActiveWorkspaceUseCase: ObserveActiveWorkspaceUseCase,
     private val currentDateProvider: CurrentDateProvider,
     private val currentInstantProvider: CurrentInstantProvider,
     private val entityIdGenerator: EntityIdGenerator,
@@ -158,6 +160,32 @@ class TransactionFormViewModel @Inject constructor(
 
     init {
         setupCategoryObservationPipeline()
+
+        viewModelScope.launch {
+            var previousWorkspaceId: EntityId? = null
+            var isFirstEmission = true
+            observeActiveWorkspaceUseCase().collect { activeWorkspace ->
+                val currentWorkspaceId = activeWorkspace?.id
+                val workspaceName = activeWorkspace?.name
+                _uiState.update { it.copy(activeWorkspaceName = workspaceName) }
+
+                if (!isEditMode) {
+                    _workspaceIdState.value = currentWorkspaceId
+                    if (!isFirstEmission && currentWorkspaceId != previousWorkspaceId) {
+                        submitJob?.cancel()
+                        _uiState.update { it.copy(selectedCategoryId = null) }
+                    }
+                } else if (!isFirstEmission && currentWorkspaceId != previousWorkspaceId) {
+                    submitJob?.cancel()
+                    val txWorkspaceId = _workspaceIdState.value
+                    if (currentWorkspaceId != txWorkspaceId) {
+                        _uiState.update { it.copy(loadError = FinanceUiMessage.TRANSACTION_NOT_FOUND) }
+                    }
+                }
+                isFirstEmission = false
+                previousWorkspaceId = currentWorkspaceId
+            }
+        }
 
         if (targetTransactionId != null && initialLoadError == null) {
             loadExistingTransaction(targetTransactionId)

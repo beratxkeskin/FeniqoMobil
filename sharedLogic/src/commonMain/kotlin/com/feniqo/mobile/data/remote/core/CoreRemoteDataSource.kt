@@ -14,6 +14,8 @@ import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.remote.dto.TransactionTagDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceMemberDto
+import com.feniqo.mobile.data.remote.dto.WorkspaceInvitationRedeemResultDto
+import com.feniqo.mobile.data.remote.dto.WorkspaceOwnershipTransferResultDto
 
 interface CoreRemoteDataSource {
     suspend fun fetchProfile(userId: String): ProfileDto?
@@ -43,6 +45,18 @@ interface CoreRemoteDataSource {
         fetchWorkspaceMembers(WorkspaceMemberRemoteQuery(page = page, workspaceId = com.feniqo.mobile.domain.model.EntityId(workspaceId)))
 
     suspend fun fetchTransactionTags(transactionId: String): List<TransactionTagDto>
+
+    suspend fun redeemWorkspaceInvitation(token: String): WorkspaceInvitationRedeemResultDto =
+        error("redeemWorkspaceInvitation is not implemented in this CoreRemoteDataSource implementation")
+
+    suspend fun transferWorkspaceOwnership(
+        workspaceId: String,
+        targetUserId: String,
+        expectedWorkspaceVersion: Long,
+        expectedCurrentOwnerMemberVersion: Long,
+        expectedTargetMemberVersion: Long,
+    ): WorkspaceOwnershipTransferResultDto =
+        error("transferWorkspaceOwnership is not implemented in this CoreRemoteDataSource implementation")
 
 
 

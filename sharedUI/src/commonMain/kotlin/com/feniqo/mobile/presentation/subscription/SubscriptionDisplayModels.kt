@@ -42,6 +42,7 @@ data class SubscriptionsUiState(
     val items: List<SubscriptionDisplayModel> = emptyList(),
     val observationError: FinanceUiMessage? = null,
     val mutationState: SubscriptionMutationState = SubscriptionMutationState(),
+    val activeWorkspaceName: String? = null,
 ) {
     val isEmpty: Boolean get() = !isLoading && observationError == null && items.isEmpty()
 }

@@ -133,6 +133,7 @@ data class RecurringTransactionFormUiState(
     val draft: RecurringTransactionFormDraft,
     val availableCategories: List<Category> = emptyList(),
     val mutationState: RecurringTransactionMutationState = RecurringTransactionMutationState(),
+    val activeWorkspaceName: String? = null,
 ) {
     val isEditMode: Boolean get() = draft.isEditMode
     val isCreateMode: Boolean get() = draft.isCreateMode

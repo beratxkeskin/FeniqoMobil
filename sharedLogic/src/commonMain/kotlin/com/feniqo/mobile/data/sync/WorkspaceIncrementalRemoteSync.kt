@@ -13,6 +13,8 @@ import com.feniqo.mobile.data.remote.dto.WorkspaceDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceMemberDto
 import com.feniqo.mobile.data.remote.mapper.toEntity
 import com.feniqo.mobile.domain.model.EntityId
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /**
  * Uzak kaynaktan cursor sonrasında değişen Workspace ve ilgili WorkspaceMember kayıtlarını deterministik olarak çeker,
@@ -32,6 +34,7 @@ class WorkspaceIncrementalRemoteSync(
     private val syncStateDao: SyncStateDao,
     private val nowEpochMillisProvider: () -> Long,
 ) {
+    private val snapshotJson = Json { encodeDefaults = true; explicitNulls = true }
     /**
      * Kalıcı `SyncStateDao` cursor'larını okur, incremental remote pull gerçekleştirir ve
      * güncellenmiş cursor'ları snapshot ile atomik olarak kaydeder.
@@ -115,7 +118,6 @@ class WorkspaceIncrementalRemoteSync(
         }
 
         // 3. DTO'ları D2 mapper'ları ile Room entity'lerine dönüştür (tombstone'lar dahil)
-        val workspaceEntities = workspaceDtos.map { it.toEntity(receivedAt) }
         val memberEntities = memberDtos.map { it.toEntity(receivedAt) }
 
         // 4. Güncellenen / ilerleyen cursor'ları üret
@@ -132,16 +134,109 @@ class WorkspaceIncrementalRemoteSync(
             emptyList()
         }
 
-        // 5. Tüm fetch ve map adımları başarılıysa tek atomik snapshot olarak Room SSOT'a uygula
-        remoteSyncDao.applyWorkspaceSnapshot(
-            workspaces = workspaceEntities,
-            members = memberEntities,
-            cursors = cursorEntitiesToPersist,
+        // 5. In-memory karar matrisi ve plan oluştur
+        val applyItems = mutableListOf<com.feniqo.mobile.data.local.dao.WorkspaceApplyItem>()
+        val conflictItems = mutableListOf<com.feniqo.mobile.data.local.dao.WorkspaceConflictItem>()
+        val preserveItems = mutableListOf<com.feniqo.mobile.data.local.dao.WorkspacePreserveItem>()
+
+        for (dto in workspaceDtos) {
+            val localWs = remoteSyncDao.getWorkspaceRow(dto.id)
+            val localOp = remoteSyncDao.getActiveWorkspaceTailOperation(dto.id)
+
+            if (localWs == null) {
+                // Yerelde yok -> APPLY
+                val precondition = com.feniqo.mobile.data.local.dao.WorkspacePrecondition(
+                    expectedPresence = false,
+                    expectedActiveOperationId = null,
+                )
+                applyItems += com.feniqo.mobile.data.local.dao.WorkspaceApplyItem(
+                    entity = dto.toEntity(receivedAt),
+                    precondition = precondition,
+                )
+            } else if (localWs.sync.syncStatus == "SYNCED") {
+                val precondition = com.feniqo.mobile.data.local.dao.WorkspacePrecondition(
+                    expectedPresence = true,
+                    expectedSyncStatus = "SYNCED",
+                    expectedVersion = localWs.sync.version,
+                    expectedBaseVersion = localWs.sync.baseVersion,
+                    expectedDeletedAtEpochMillis = localWs.sync.deletedAtEpochMillis,
+                    expectedLocalUpdatedAtEpochMillis = localWs.sync.localUpdatedAtEpochMillis,
+                    expectedActiveOperationId = null,
+                    expectedOperationUpdatedAtEpochMillis = null,
+                )
+                if (dto.version > localWs.sync.version) {
+                    applyItems += com.feniqo.mobile.data.local.dao.WorkspaceApplyItem(
+                        entity = dto.toEntity(receivedAt),
+                        precondition = precondition,
+                    )
+                } else {
+                    preserveItems += com.feniqo.mobile.data.local.dao.WorkspacePreserveItem(
+                        workspaceId = dto.id,
+                        precondition = precondition,
+                    )
+                }
+            } else {
+                // Yerel non-SYNCED (PENDING_CREATE, PENDING_UPDATE, PENDING_DELETE, IN_FLIGHT, FAILED, CONFLICT)
+                val tailOp = requireNotNull(localOp) {
+                    "Pending yerel workspace (${dto.id}) için aktif outbox işlemi bulunamadı."
+                }
+                val localPayload = requireNotNull(tailOp.payloadJson?.takeIf { it.isNotBlank() }) {
+                    "Aktif outbox işlemi (${tailOp.operationId}) için payload_json bulunamadı veya boş."
+                }
+
+                val precondition = com.feniqo.mobile.data.local.dao.WorkspacePrecondition(
+                    expectedPresence = true,
+                    expectedSyncStatus = localWs.sync.syncStatus,
+                    expectedVersion = localWs.sync.version,
+                    expectedBaseVersion = localWs.sync.baseVersion,
+                    expectedDeletedAtEpochMillis = localWs.sync.deletedAtEpochMillis,
+                    expectedLocalUpdatedAtEpochMillis = localWs.sync.localUpdatedAtEpochMillis,
+                    expectedActiveOperationId = tailOp.operationId,
+                    expectedOperationUpdatedAtEpochMillis = tailOp.updatedAtEpochMillis,
+                )
+
+                val baseVersion = localWs.sync.baseVersion ?: 0L
+                if (dto.version > baseVersion) {
+                    // CONFLICT
+                    val conflictEntity = com.feniqo.mobile.data.local.entity.SyncConflictEntity(
+                        entityTypeCode = "WORKSPACE",
+                        entityId = dto.id,
+                        operationId = tailOp.operationId,
+                        localVersion = localWs.sync.version,
+                        remoteVersion = dto.version,
+                        localPayloadJson = localPayload,
+                        remotePayloadJson = snapshotJson.encodeToString(dto),
+                        detectedAtEpochMillis = receivedAt,
+                    )
+                    conflictItems += com.feniqo.mobile.data.local.dao.WorkspaceConflictItem(
+                        conflict = conflictEntity,
+                        precondition = precondition,
+                    )
+                } else {
+                    // PRESERVE
+                    preserveItems += com.feniqo.mobile.data.local.dao.WorkspacePreserveItem(
+                        workspaceId = dto.id,
+                        precondition = precondition,
+                    )
+                }
+            }
+        }
+
+        val plan = com.feniqo.mobile.data.local.dao.WorkspaceIncrementalPlan(
+            applyItems = applyItems,
+            conflictItems = conflictItems,
+            preserveItems = preserveItems,
+            memberRows = memberEntities,
+            cursorsToPersist = cursorEntitiesToPersist,
         )
 
+        // 6. Planı tek atomik transaction olarak Room SSOT'a uygula
+        remoteSyncDao.applyWorkspaceIncrementalPlan(plan)
+
         return WorkspaceIncrementalSyncResult(
-            appliedWorkspacesCount = workspaceEntities.size,
+            appliedWorkspacesCount = applyItems.size,
             appliedMembersCount = memberEntities.size,
+            conflictCount = conflictItems.size,
             nextWorkspaceCursor = nextWorkspaceCursor,
             nextMemberCursors = nextMemberCursors,
         )
@@ -213,6 +308,7 @@ class WorkspaceIncrementalRemoteSync(
 data class WorkspaceIncrementalSyncResult(
     val appliedWorkspacesCount: Int,
     val appliedMembersCount: Int,
+    val conflictCount: Int = 0,
     val nextWorkspaceCursor: RemoteSyncCursor?,
     val nextMemberCursors: Map<String, WorkspaceMemberSyncCursor>,
 )

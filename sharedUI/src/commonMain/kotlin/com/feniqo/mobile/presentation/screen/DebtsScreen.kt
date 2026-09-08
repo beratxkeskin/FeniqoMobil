@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.presentation.component.ActiveWorkspaceIndicator
 import com.feniqo.mobile.presentation.component.DebtCard
 import com.feniqo.mobile.presentation.component.EmptyState
 import com.feniqo.mobile.presentation.component.ErrorState
@@ -81,12 +82,21 @@ fun DebtsScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f, fill = false)) {
-                    Text(
-                        text = "Borç / Alacak",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                    ) {
+                        Text(
+                            text = "Borç / Alacak",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                        ActiveWorkspaceIndicator(
+                            workspaceName = state.activeWorkspaceName,
+                            isCompact = true,
+                        )
+                    }
                     Spacer(modifier = Modifier.height(FeniqoSpacing.ExtraSmall))
                     Text(
                         text = "Kişi ve kurum bazlı borç ve alacaklarınızı takip edin.",

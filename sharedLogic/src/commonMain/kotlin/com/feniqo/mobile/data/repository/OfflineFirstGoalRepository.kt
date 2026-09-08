@@ -44,6 +44,7 @@ class OfflineFirstGoalRepository(
         explicitNulls = true
         ignoreUnknownKeys = true
     },
+    private val activeWorkspaceScope: ActiveWorkspaceScope = PersonalActiveWorkspaceScope,
     private val nowEpochMillisProvider: () -> Long = { kotlin.time.Clock.System.now().toEpochMilliseconds() },
 ) : GoalRepository {
 
@@ -52,8 +53,10 @@ class OfflineFirstGoalRepository(
             if (session == null) {
                 flowOf(emptyList())
             } else {
-                goalDao.observeAll(session.userId.value, workspaceId = null)
-                    .map { entities -> entities.map { it.toDomain() } }
+                activeWorkspaceScope.observe(session.userId).flatMapLatest { activeWorkspaceId ->
+                    goalDao.observeAll(session.userId.value, workspaceId = activeWorkspaceId?.value)
+                        .map { entities -> entities.map { it.toDomain() } }
+                }
             }
         }
 
@@ -62,8 +65,10 @@ class OfflineFirstGoalRepository(
             if (session == null) {
                 flowOf(null)
             } else {
-                goalDao.observeById(id.value).map { entity ->
-                    entity?.takeIf { it.ownerId == session.userId.value && it.workspaceId == null }?.toDomain()
+                activeWorkspaceScope.observe(session.userId).flatMapLatest { activeWorkspaceId ->
+                    goalDao.observeById(id.value).map { entity ->
+                        entity?.takeIf { it.ownerId == session.userId.value && it.workspaceId == activeWorkspaceId?.value }?.toDomain()
+                    }
                 }
             }
         }
@@ -73,12 +78,14 @@ class OfflineFirstGoalRepository(
             if (session == null) {
                 flowOf(emptyList())
             } else {
-                goalDao.observeById(goalId.value).flatMapLatest { parentGoal ->
-                    if (parentGoal == null || parentGoal.ownerId != session.userId.value || parentGoal.workspaceId != null) {
-                        flowOf(emptyList())
-                    } else {
-                        goalDao.observeContributionsByGoalId(goalId.value)
-                            .map { entities -> entities.map { it.toDomain() } }
+                activeWorkspaceScope.observe(session.userId).flatMapLatest { activeWorkspaceId ->
+                    goalDao.observeById(goalId.value).flatMapLatest { parentGoal ->
+                        if (parentGoal == null || parentGoal.ownerId != session.userId.value || parentGoal.workspaceId != activeWorkspaceId?.value) {
+                            flowOf(emptyList())
+                        } else {
+                            goalDao.observeContributionsByGoalId(goalId.value)
+                                .map { entities -> entities.map { it.toDomain() } }
+                        }
                     }
                 }
             }
@@ -92,13 +99,14 @@ class OfflineFirstGoalRepository(
                 is GoalDebtValidationResult.Valid -> result.value
                 is GoalDebtValidationResult.Invalid -> return validationFailure(result)
             }
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
 
             val now = nowEpochMillisProvider()
             val goalId = entityIdGenerator.nextId()
             val goal = Goal(
                 id = goalId,
                 ownerId = session.userId,
-                workspaceId = null,
+                workspaceId = activeWorkspaceId,
                 name = validCommand.name,
                 targetAmount = validCommand.targetAmount,
                 currentAmount = validCommand.initialAmount ?: Money(0L, validCommand.targetAmount.currency),
@@ -126,9 +134,10 @@ class OfflineFirstGoalRepository(
         try {
             val session = authRepository.observeSession().first()
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
             val existingEntity = goalDao.getById(command.id.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("goal_not_found"))
-            if (existingEntity.ownerId != session.userId.value || existingEntity.workspaceId != null || existingEntity.sync.deletedAtEpochMillis != null) {
+            if (existingEntity.ownerId != session.userId.value || existingEntity.workspaceId != activeWorkspaceId?.value || existingEntity.sync.deletedAtEpochMillis != null) {
                 return RepositoryResult.Failure(AppError.Validation("goal_not_found"))
             }
 
@@ -159,9 +168,10 @@ class OfflineFirstGoalRepository(
         try {
             val session = authRepository.observeSession().first()
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
             val parentGoalEntity = goalDao.getById(command.goalId.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("goal_not_found"))
-            if (parentGoalEntity.ownerId != session.userId.value || parentGoalEntity.workspaceId != null || parentGoalEntity.sync.deletedAtEpochMillis != null) {
+            if (parentGoalEntity.ownerId != session.userId.value || parentGoalEntity.workspaceId != activeWorkspaceId?.value || parentGoalEntity.sync.deletedAtEpochMillis != null) {
                 return RepositoryResult.Failure(AppError.Validation("goal_not_found"))
             }
 
@@ -211,9 +221,10 @@ class OfflineFirstGoalRepository(
         try {
             val session = authRepository.observeSession().first()
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
             val existingEntity = goalDao.getById(id.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("goal_not_found"))
-            if (existingEntity.ownerId != session.userId.value || existingEntity.workspaceId != null || existingEntity.sync.deletedAtEpochMillis != null) {
+            if (existingEntity.ownerId != session.userId.value || existingEntity.workspaceId != activeWorkspaceId?.value || existingEntity.sync.deletedAtEpochMillis != null) {
                 return RepositoryResult.Failure(AppError.Validation("goal_not_found"))
             }
 

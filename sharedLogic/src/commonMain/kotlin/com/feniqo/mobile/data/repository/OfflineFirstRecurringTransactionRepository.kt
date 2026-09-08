@@ -50,6 +50,7 @@ class OfflineFirstRecurringTransactionRepository(
         ignoreUnknownKeys = true
     },
     private val planDueRecurringOccurrencesUseCase: PlanDueRecurringOccurrencesUseCase = PlanDueRecurringOccurrencesUseCase(),
+    private val activeWorkspaceScope: ActiveWorkspaceScope = PersonalActiveWorkspaceScope,
     private val nowEpochMillisProvider: () -> Long = { kotlin.time.Clock.System.now().toEpochMilliseconds() },
 ) : RecurringTransactionRepository {
 
@@ -58,8 +59,10 @@ class OfflineFirstRecurringTransactionRepository(
             if (session == null) {
                 flowOf(emptyList())
             } else {
-                recurringTransactionDao.observeAll(session.userId.value, workspaceId = null)
-                    .map { entities -> entities.map { it.toDomain() } }
+                activeWorkspaceScope.observe(session.userId).flatMapLatest { activeWorkspaceId ->
+                    recurringTransactionDao.observeAll(session.userId.value, workspaceId = activeWorkspaceId?.value)
+                        .map { entities -> entities.map { it.toDomain() } }
+                }
             }
         }
 
@@ -68,8 +71,10 @@ class OfflineFirstRecurringTransactionRepository(
             if (session == null) {
                 flowOf(null)
             } else {
-                recurringTransactionDao.observeById(id.value).map { entity ->
-                    entity?.takeIf { it.ownerId == session.userId.value && it.workspaceId == null }?.toDomain()
+                activeWorkspaceScope.observe(session.userId).flatMapLatest { activeWorkspaceId ->
+                    recurringTransactionDao.observeById(id.value).map { entity ->
+                        entity?.takeIf { it.ownerId == session.userId.value && it.workspaceId == activeWorkspaceId?.value }?.toDomain()
+                    }
                 }
             }
         }
@@ -82,13 +87,14 @@ class OfflineFirstRecurringTransactionRepository(
                 is RecurringTransactionValidationResult.Valid -> result.value
                 is RecurringTransactionValidationResult.Invalid -> return validationFailure(result)
             }
-            validatePersonalExpenseCategory(validCommand.categoryId, validCommand.type, session.userId.value)?.let { return it }
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
+            validateExpenseCategoryForScope(validCommand.categoryId, validCommand.type, session.userId.value, activeWorkspaceId?.value)?.let { return it }
 
             val now = nowEpochMillisProvider()
             val recurring = RecurringTransaction(
                 id = entityIdGenerator.nextId(),
                 ownerId = session.userId,
-                workspaceId = null,
+                workspaceId = activeWorkspaceId,
                 amount = validCommand.amount,
                 type = validCommand.type,
                 categoryId = validCommand.categoryId,
@@ -116,13 +122,14 @@ class OfflineFirstRecurringTransactionRepository(
         try {
             val session = authRepository.observeSession().first()
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
-            val existing = personalExisting(command.id, session.userId.value)
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
+            val existing = scopedExisting(command.id, session.userId.value, activeWorkspaceId?.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("recurring_transaction_not_found"))
             val updated = when (val result = RecurringTransactionValidationRules.applyRecurringRuleUpdate(existing.toDomain(), command)) {
                 is RecurringTransactionValidationResult.Valid -> result.value
                 is RecurringTransactionValidationResult.Invalid -> return validationFailure(result)
             }
-            validatePersonalExpenseCategory(updated.categoryId, updated.type, session.userId.value)?.let { return it }
+            validateExpenseCategoryForScope(updated.categoryId, updated.type, session.userId.value, activeWorkspaceId?.value)?.let { return it }
 
             val now = nowEpochMillisProvider()
             offlineWriteQueue.enqueueRecurringTransactionV2(
@@ -142,7 +149,8 @@ class OfflineFirstRecurringTransactionRepository(
         try {
             val session = authRepository.observeSession().first()
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
-            val existing = personalExisting(command.id, session.userId.value)
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
+            val existing = scopedExisting(command.id, session.userId.value, activeWorkspaceId?.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("recurring_transaction_not_found"))
             val now = nowEpochMillisProvider()
             val updated = existing.toDomain().copy(isActive = command.isActive)
@@ -163,7 +171,8 @@ class OfflineFirstRecurringTransactionRepository(
         try {
             val session = authRepository.observeSession().first()
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
-            val existing = personalExisting(id, session.userId.value)
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
+            val existing = scopedExisting(id, session.userId.value, activeWorkspaceId?.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("recurring_transaction_not_found"))
             val now = nowEpochMillisProvider()
             offlineWriteQueue.enqueueRecurringTransactionV2(
@@ -179,22 +188,23 @@ class OfflineFirstRecurringTransactionRepository(
         }
     }
 
-    private suspend fun personalExisting(id: EntityId, ownerId: String) =
-        recurringTransactionDao.getById(id.value)?.takeIf { it.ownerId == ownerId && it.workspaceId == null }
+    private suspend fun scopedExisting(id: EntityId, ownerId: String, workspaceId: String?) =
+        recurringTransactionDao.getById(id.value)?.takeIf { it.ownerId == ownerId && it.workspaceId == workspaceId }
 
-    private suspend fun validatePersonalExpenseCategory(
+    private suspend fun validateExpenseCategoryForScope(
         categoryId: EntityId,
         type: TransactionType,
         ownerId: String,
+        workspaceId: String?,
     ): RepositoryResult.Failure? {
         val category = categoryDao.getByIdAndOwner(categoryId.value, ownerId)
             ?: return RepositoryResult.Failure(AppError.Validation("recurring_transaction_category_not_found"))
         if (category.sync.deletedAtEpochMillis != null || category.typeCode != type.name) {
             return RepositoryResult.Failure(AppError.Validation("recurring_transaction_category_type_mismatch"))
         }
-        val ownedOrDefault = (category.isDefault && category.ownerId == null && category.workspaceId == null) ||
-            (category.ownerId == ownerId && category.workspaceId == null)
-        return if (ownedOrDefault) null else RepositoryResult.Failure(
+        val allowedScope = (category.isDefault && category.ownerId == null && category.workspaceId == null) ||
+            (category.ownerId == ownerId && category.workspaceId == workspaceId)
+        return if (allowedScope) null else RepositoryResult.Failure(
             AppError.Authentication("recurring_transaction_category_owner_mismatch"),
         )
     }
@@ -215,11 +225,12 @@ class OfflineFirstRecurringTransactionRepository(
             val session = authRepository.observeSession().first()
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
 
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
             val activeEntities = recurringTransactionDao.getActiveRules()
-            val personalEntities = activeEntities.filter {
-                it.ownerId == session.userId.value && it.workspaceId == null
+            val scopedEntities = activeEntities.filter {
+                it.ownerId == session.userId.value && it.workspaceId == activeWorkspaceId?.value
             }
-            val domainRules = personalEntities.map { it.toDomain() }
+            val domainRules = scopedEntities.map { it.toDomain() }
 
             val dueOccurrences = planDueRecurringOccurrencesUseCase(
                 recurringTransactions = domainRules,
@@ -240,7 +251,12 @@ class OfflineFirstRecurringTransactionRepository(
 
                 // Category validity check
                 val category = categoryDao.getByIdAndOwner(recurring.categoryId.value, session.userId.value)
-                if (category == null || category.sync.deletedAtEpochMillis != null || category.typeCode != recurring.type.name) {
+                val categoryScopeAllowed = category != null &&
+                    category.sync.deletedAtEpochMillis == null &&
+                    category.typeCode == recurring.type.name &&
+                    ((category.isDefault && category.ownerId == null && category.workspaceId == null) ||
+                        (category.ownerId == session.userId.value && category.workspaceId == activeWorkspaceId?.value))
+                if (!categoryScopeAllowed) {
                     skippedRecurringIds.add(recurringId)
                     continue
                 }
@@ -255,7 +271,7 @@ class OfflineFirstRecurringTransactionRepository(
                 val transaction = Transaction(
                     id = newTransactionId,
                     ownerId = session.userId,
-                    workspaceId = null,
+                    workspaceId = activeWorkspaceId,
                     amount = recurring.amount,
                     type = recurring.type,
                     categoryId = recurring.categoryId,

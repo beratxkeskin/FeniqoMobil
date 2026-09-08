@@ -54,6 +54,9 @@ class MainActivity : ComponentActivity() {
                     syncStatus = syncStatus,
                     onManualSync = syncStatusViewModel::requestManualSync,
                     onRetryFailed = syncStatusViewModel::retryFailedOperations,
+                    onResolveConflict = syncStatusViewModel::openConflictDialog,
+                    onResolveConflictDecision = syncStatusViewModel::resolveWorkspaceConflict,
+                    onDismissConflictDialog = syncStatusViewModel::dismissConflictDialog,
                     themeMode = themeMode,
                     onThemeModeChange = themePreferences::saveThemeMode,
                 )

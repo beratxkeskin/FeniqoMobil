@@ -46,6 +46,7 @@ data class CategoriesUiState(
     val customCategories: List<CategoryDisplayModel> = emptyList(),
     val deleteTargetCategory: CategoryDisplayModel? = null,
     val isDeleteInProgress: Boolean = false,
+    val activeWorkspaceName: String? = null,
     val generalMessage: FinanceUiMessage? = null,
 ) {
     val isEmpty: Boolean get() = !isLoading && systemCategories.isEmpty() && customCategories.isEmpty()
@@ -63,6 +64,7 @@ data class CategoryFormUiState(
     val colorHex: String = "#10B981",
     val iconKey: String? = null,
     val isSubmitting: Boolean = false,
+    val activeWorkspaceName: String? = null,
     val nameError: CategoryFormFieldError? = null,
     val colorError: CategoryFormFieldError? = null,
     val generalMessage: FinanceUiMessage? = null,

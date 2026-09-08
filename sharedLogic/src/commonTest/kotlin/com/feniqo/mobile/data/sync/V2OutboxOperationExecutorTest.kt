@@ -18,11 +18,21 @@ import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceDto
 
+import com.feniqo.mobile.data.remote.codec.WorkspaceMembershipPayloadCodec
+import com.feniqo.mobile.data.remote.dto.WorkspaceInvitationDto
+import com.feniqo.mobile.data.remote.dto.WorkspaceMemberDto
+import com.feniqo.mobile.data.util.WorkspaceInvitationCrypto
+import com.feniqo.mobile.data.util.WorkspaceMemberEntityId
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class V2OutboxOperationExecutorTest {
 
@@ -592,15 +602,563 @@ class V2OutboxOperationExecutorTest {
         assertEquals(null, writer.lastOperationId)
     }
 
+    @Test
+    fun execute_rejects_workspace_member_create_fail_closed() = runTest {
+        val writer = RecordingV2Writer()
+        val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+        val wsId = "11111111-1111-1111-1111-111111111111"
+        val userId = "22222222-2222-2222-2222-222222222222"
+        val op = SyncOperationEntity(
+            operationId = "00000000000000000000000000000099",
+            entityTypeCode = "WORKSPACE_MEMBER",
+            entityId = "$wsId:$userId",
+            operationTypeCode = "CREATE",
+            baseVersion = null,
+            payloadJson = """{"workspace_id":"$wsId","user_id":"$userId","role_code":"EDITOR"}""",
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "IN_FLIGHT",
+            attemptCount = 1,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+
+        val ex = assertFailsWith<IllegalArgumentException> {
+            executor.execute(op)
+        }
+        assertEquals(true, ex.message?.contains("generic outbox CREATE/JOIN işlemi desteklenmez"))
+    }
+
+    @Test
+    fun execute_workspace_invitation_create_applied_verifies_hash_only_payload() = runTest {
+        val rawToken = WorkspaceInvitationCrypto.generateSecureInvitationToken()
+        val tokenHash = WorkspaceInvitationCrypto.hashInvitationToken(rawToken)
+        val invitationId = "33333333-3333-3333-3333-333333333333"
+        val wsId = "44444444-4444-4444-4444-444444444444"
+
+        val payloadJson = WorkspaceMembershipPayloadCodec.encodeInvitationCreate(
+            id = invitationId,
+            workspaceId = wsId,
+            tokenHash = tokenHash,
+            roleCode = "EDITOR",
+            expiresAtIso = "2026-09-15T00:00:00Z",
+            maxUses = 10,
+            createdAtIso = "2026-09-08T00:00:00Z",
+        )
+
+        assertFalse(payloadJson.contains(rawToken))
+        assertTrue(payloadJson.contains(tokenHash))
+
+        val remoteInvitation = WorkspaceInvitationDto(
+            id = invitationId,
+            workspaceId = wsId,
+            inviterId = USER_ID,
+            roleCode = "EDITOR",
+            createdAt = "2026-09-08T00:00:00Z",
+            expiresAt = "2026-09-15T00:00:00Z",
+            maxUses = 10,
+            usesCount = 0,
+            deletedAt = null,
+            version = 1L,
+        )
+
+        val writer = RecordingV2Writer(
+            invitationResult = ConditionalRemoteWriteResult.Applied(remoteInvitation),
+        )
+        val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+        val op = SyncOperationEntity(
+            operationId = "00000000000000000000000000000101",
+            entityTypeCode = "WORKSPACE_INVITATION",
+            entityId = invitationId,
+            operationTypeCode = "CREATE",
+            baseVersion = null,
+            payloadJson = payloadJson,
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "IN_FLIGHT",
+            attemptCount = 1,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+
+        val result = executor.execute(op)
+        assertIs<OutboxExecutionResult.WorkspaceInvitationApplied>(result)
+        assertEquals(1L, result.record.version)
+        assertEquals("00000000000000000000000000000101", writer.lastOperationId)
+        assertEquals(RemoteWriteOperation.CREATE, writer.lastOperation)
+        assertEquals(null, writer.lastBaseVersion)
+
+        val writerPayload = writer.lastInvitationPayload
+        assertNotNull(writerPayload)
+        assertEquals(tokenHash, writerPayload["token_hash"]?.toString()?.replace("\"", ""))
+        assertFalse(writerPayload.toString().contains(rawToken))
+    }
+
+    @Test
+    fun execute_workspace_invitation_create_conflict_detected() = runTest {
+        val rawToken = WorkspaceInvitationCrypto.generateSecureInvitationToken()
+        val tokenHash = WorkspaceInvitationCrypto.hashInvitationToken(rawToken)
+        val invitationId = "33333333-3333-3333-3333-333333333333"
+        val wsId = "44444444-4444-4444-4444-444444444444"
+
+        val payloadJson = WorkspaceMembershipPayloadCodec.encodeInvitationCreate(
+            id = invitationId,
+            workspaceId = wsId,
+            tokenHash = tokenHash,
+            roleCode = "EDITOR",
+            expiresAtIso = "2026-09-15T00:00:00Z",
+            maxUses = 10,
+        )
+
+        val remoteRecord = WorkspaceInvitationDto(
+            id = invitationId,
+            workspaceId = wsId,
+            inviterId = USER_ID,
+            roleCode = "EDITOR",
+            createdAt = "2026-09-08T00:00:00Z",
+            expiresAt = "2026-09-15T00:00:00Z",
+            maxUses = 10,
+            usesCount = 0,
+            deletedAt = null,
+            version = 4L,
+        )
+
+        val writer = RecordingV2Writer(
+            invitationResult = ConditionalRemoteWriteResult.Conflict(remoteRecord),
+        )
+        val executor = V2OutboxOperationExecutor(writer) { 2000L }
+
+        val op = SyncOperationEntity(
+            operationId = "00000000000000000000000000000102",
+            entityTypeCode = "WORKSPACE_INVITATION",
+            entityId = invitationId,
+            operationTypeCode = "CREATE",
+            baseVersion = null,
+            payloadJson = payloadJson,
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "IN_FLIGHT",
+            attemptCount = 1,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+
+        val result = executor.execute(op)
+        assertIs<OutboxExecutionResult.ConflictDetected>(result)
+        assertEquals("WORKSPACE_INVITATION", result.conflict.entityTypeCode)
+        assertEquals(invitationId, result.conflict.entityId)
+        assertEquals(4L, result.conflict.remoteVersion)
+        assertEquals(0L, result.conflict.localVersion)
+        assertEquals(2000L, result.conflict.detectedAtEpochMillis)
+        assertFalse(result.conflict.toString().contains(rawToken))
+    }
+
+    @Test
+    fun execute_workspace_invitation_network_failure_bubbles_for_retry() = runTest {
+        val rawToken = WorkspaceInvitationCrypto.generateSecureInvitationToken()
+        val tokenHash = WorkspaceInvitationCrypto.hashInvitationToken(rawToken)
+        val invitationId = "33333333-3333-3333-3333-333333333333"
+        val wsId = "44444444-4444-4444-4444-444444444444"
+
+        val payloadJson = WorkspaceMembershipPayloadCodec.encodeInvitationCreate(
+            id = invitationId,
+            workspaceId = wsId,
+            tokenHash = tokenHash,
+            roleCode = "EDITOR",
+            expiresAtIso = "2026-09-15T00:00:00Z",
+            maxUses = 10,
+        )
+
+        val writer = object : IdempotentConditionalRemoteWriter {
+            override suspend fun writeWorkspaceInvitation(
+                operationId: String,
+                operation: RemoteWriteOperation,
+                baseVersion: Long?,
+                payload: kotlinx.serialization.json.JsonObject,
+            ): ConditionalRemoteWriteResult<WorkspaceInvitationDto> {
+                throw IllegalStateException("connection_refused_network_timeout")
+            }
+        }
+        val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+        val op = SyncOperationEntity(
+            operationId = "00000000000000000000000000000103",
+            entityTypeCode = "WORKSPACE_INVITATION",
+            entityId = invitationId,
+            operationTypeCode = "CREATE",
+            baseVersion = null,
+            payloadJson = payloadJson,
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "IN_FLIGHT",
+            attemptCount = 1,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+
+        val ex = assertFailsWith<IllegalStateException> {
+            executor.execute(op)
+        }
+        assertEquals("connection_refused_network_timeout", ex.message)
+        assertFalse(ex.message!!.contains(rawToken))
+    }
+
+    @Test
+    fun execute_workspace_invitation_rejects_non_create() = runTest {
+        val writer = RecordingV2Writer()
+        val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+        val invitationId = "33333333-3333-3333-3333-333333333333"
+        val op = SyncOperationEntity(
+            operationId = "00000000000000000000000000000104",
+            entityTypeCode = "WORKSPACE_INVITATION",
+            entityId = invitationId,
+            operationTypeCode = "UPDATE",
+            baseVersion = 1L,
+            payloadJson = "{}",
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "IN_FLIGHT",
+            attemptCount = 1,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+
+        val ex = assertFailsWith<IllegalArgumentException> {
+            executor.execute(op)
+        }
+        assertTrue(ex.message!!.contains("WORKSPACE_INVITATION için yalnız CREATE işlemi desteklenir"))
+    }
+
+    @Test
+    fun execute_workspace_member_create_rejectedFailClosed() = runTest {
+        val writer = RecordingV2Writer()
+        val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+        val wsId = "11111111-1111-1111-1111-111111111111"
+        val userId = "22222222-2222-2222-2222-222222222222"
+        val entityId = WorkspaceMemberEntityId.encode(wsId, userId)
+
+        val op = SyncOperationEntity(
+            operationId = "00000000000000000000000000000201",
+            entityTypeCode = "WORKSPACE_MEMBER",
+            entityId = entityId,
+            operationTypeCode = "CREATE",
+            baseVersion = null,
+            payloadJson = """{"workspace_id":"$wsId","user_id":"$userId","role_code":"EDITOR"}""",
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "IN_FLIGHT",
+            attemptCount = 1,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+
+        val ex = assertFailsWith<IllegalArgumentException> {
+            executor.execute(op)
+        }
+        assertTrue(ex.message!!.contains("WORKSPACE_MEMBER için generic outbox CREATE"))
+        assertNull(writer.lastOperationId)
+    }
+
+    @Test
+    fun execute_workspace_member_update_success() = runTest {
+        val wsId = "11111111-1111-1111-1111-111111111111"
+        val userId = "22222222-2222-2222-2222-222222222222"
+        val entityId = WorkspaceMemberEntityId.encode(wsId, userId)
+
+        val expectedMember = WorkspaceMemberDto(
+            workspaceId = wsId,
+            userId = userId,
+            roleCode = "VIEWER",
+            joinedAt = "2026-03-01T10:00:00Z",
+            updatedAt = "2026-03-01T10:00:05Z",
+            deletedAt = null,
+            version = 3L,
+        )
+        val writer = RecordingV2Writer(
+            memberResult = ConditionalRemoteWriteResult.Applied(expectedMember)
+        )
+        val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+        val payloadJson = WorkspaceMembershipPayloadCodec.encodeMemberRoleChange(wsId, userId, "VIEWER")
+        val op = SyncOperationEntity(
+            operationId = "00000000000000000000000000000202",
+            entityTypeCode = "WORKSPACE_MEMBER",
+            entityId = entityId,
+            operationTypeCode = "UPDATE",
+            baseVersion = 2L,
+            payloadJson = payloadJson,
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "IN_FLIGHT",
+            attemptCount = 1,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+
+        val result = executor.execute(op)
+        assertIs<OutboxExecutionResult.WorkspaceMemberApplied>(result)
+        assertEquals(expectedMember, result.record)
+        assertEquals("00000000000000000000000000000202", writer.lastOperationId)
+        assertEquals(RemoteWriteOperation.UPDATE, writer.lastOperation)
+        assertEquals(2L, writer.lastBaseVersion)
+        assertNotNull(writer.lastMemberPayload)
+        assertEquals(wsId, writer.lastMemberPayload!!["workspace_id"]?.jsonPrimitive?.content)
+        assertEquals(userId, writer.lastMemberPayload!!["user_id"]?.jsonPrimitive?.content)
+        assertEquals("VIEWER", writer.lastMemberPayload!!["role_code"]?.jsonPrimitive?.content)
+    }
+
+    @Test
+    fun execute_workspace_member_update_conflict() = runTest {
+        val wsId = "11111111-1111-1111-1111-111111111111"
+        val userId = "22222222-2222-2222-2222-222222222222"
+        val entityId = WorkspaceMemberEntityId.encode(wsId, userId)
+
+        val conflictRemoteMember = WorkspaceMemberDto(
+            workspaceId = wsId,
+            userId = userId,
+            roleCode = "EDITOR",
+            joinedAt = "2026-03-01T10:00:00Z",
+            updatedAt = "2026-03-01T10:00:10Z",
+            deletedAt = null,
+            version = 4L,
+        )
+        val writer = RecordingV2Writer(
+            memberResult = ConditionalRemoteWriteResult.Conflict(conflictRemoteMember)
+        )
+        val executor = V2OutboxOperationExecutor(writer) { 2000L }
+
+        val payloadJson = WorkspaceMembershipPayloadCodec.encodeMemberRoleChange(wsId, userId, "VIEWER")
+        val op = SyncOperationEntity(
+            operationId = "00000000000000000000000000000203",
+            entityTypeCode = "WORKSPACE_MEMBER",
+            entityId = entityId,
+            operationTypeCode = "UPDATE",
+            baseVersion = 2L,
+            payloadJson = payloadJson,
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "IN_FLIGHT",
+            attemptCount = 1,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+
+        val result = executor.execute(op)
+        assertIs<OutboxExecutionResult.ConflictDetected>(result)
+        assertEquals("WORKSPACE_MEMBER", result.conflict.entityTypeCode)
+        assertEquals(entityId, result.conflict.entityId)
+        assertEquals(2L, result.conflict.localVersion)
+        assertEquals(4L, result.conflict.remoteVersion)
+    }
+
+    @Test
+    fun execute_workspace_member_update_network_failure_bubbles_for_retry() = runTest {
+        val wsId = "11111111-1111-1111-1111-111111111111"
+        val userId = "22222222-2222-2222-2222-222222222222"
+        val entityId = WorkspaceMemberEntityId.encode(wsId, userId)
+
+        val writer = object : IdempotentConditionalRemoteWriter {
+            override suspend fun writeWorkspaceMember(
+                operationId: String,
+                operation: RemoteWriteOperation,
+                baseVersion: Long?,
+                payload: kotlinx.serialization.json.JsonObject,
+            ): ConditionalRemoteWriteResult<WorkspaceMemberDto> {
+                throw IllegalStateException("connection_refused_network_timeout")
+            }
+        }
+        val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+        val payloadJson = WorkspaceMembershipPayloadCodec.encodeMemberRoleChange(wsId, userId, "VIEWER")
+        val op = SyncOperationEntity(
+            operationId = "00000000000000000000000000000204",
+            entityTypeCode = "WORKSPACE_MEMBER",
+            entityId = entityId,
+            operationTypeCode = "UPDATE",
+            baseVersion = 2L,
+            payloadJson = payloadJson,
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "IN_FLIGHT",
+            attemptCount = 1,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+
+        val ex = assertFailsWith<IllegalStateException> {
+            executor.execute(op)
+        }
+        assertEquals("connection_refused_network_timeout", ex.message)
+    }
+
+    @Test
+    fun execute_workspace_member_delete_success() = runTest {
+        val wsId = "11111111-1111-1111-1111-111111111111"
+        val userId = "22222222-2222-2222-2222-222222222222"
+        val entityId = WorkspaceMemberEntityId.encode(wsId, userId)
+
+        val expectedMember = WorkspaceMemberDto(
+            workspaceId = wsId,
+            userId = userId,
+            roleCode = "VIEWER",
+            joinedAt = "2026-03-01T10:00:00Z",
+            updatedAt = "2026-03-01T10:00:05Z",
+            deletedAt = "2026-03-01T10:00:05Z",
+            version = 3L,
+        )
+        val writer = RecordingV2Writer(
+            memberResult = ConditionalRemoteWriteResult.Applied(expectedMember)
+        )
+        val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+        val payloadJson = WorkspaceMembershipPayloadCodec.encodeMemberLeave(wsId, userId)
+        val op = SyncOperationEntity(
+            operationId = "00000000000000000000000000000205",
+            entityTypeCode = "WORKSPACE_MEMBER",
+            entityId = entityId,
+            operationTypeCode = "DELETE",
+            baseVersion = 2L,
+            payloadJson = payloadJson,
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "IN_FLIGHT",
+            attemptCount = 1,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+
+        val result = executor.execute(op)
+        assertIs<OutboxExecutionResult.WorkspaceMemberApplied>(result)
+        assertEquals(expectedMember, result.record)
+        assertEquals(RemoteWriteOperation.DELETE, writer.lastOperation)
+        assertEquals(2L, writer.lastBaseVersion)
+    }
+
+    @Test
+    fun execute_workspace_member_delete_notFound_returnsMissingDeleteAcknowledged() = runTest {
+        val wsId = "11111111-1111-1111-1111-111111111111"
+        val userId = "22222222-2222-2222-2222-222222222222"
+        val entityId = WorkspaceMemberEntityId.encode(wsId, userId)
+
+        val writer = RecordingV2Writer(
+            memberResult = ConditionalRemoteWriteResult.NotFound
+        )
+        val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+        val payloadJson = WorkspaceMembershipPayloadCodec.encodeMemberLeave(wsId, userId)
+        val op = SyncOperationEntity(
+            operationId = "00000000000000000000000000000206",
+            entityTypeCode = "WORKSPACE_MEMBER",
+            entityId = entityId,
+            operationTypeCode = "DELETE",
+            baseVersion = 2L,
+            payloadJson = payloadJson,
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "IN_FLIGHT",
+            attemptCount = 1,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+
+        val result = executor.execute(op)
+        assertIs<OutboxExecutionResult.MissingDeleteAcknowledged>(result)
+    }
+
+    @Test
+    fun execute_workspace_member_payload_rejects_extra_fields() = runTest {
+        val writer = RecordingV2Writer()
+        val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+        val wsId = "11111111-1111-1111-1111-111111111111"
+        val userId = "22222222-2222-2222-2222-222222222222"
+        val entityId = WorkspaceMemberEntityId.encode(wsId, userId)
+
+        // Forbidden fields like token or token_hash
+        val forbiddenPayload = """
+            {
+                "workspace_id": "$wsId",
+                "user_id": "$userId",
+                "role_code": "VIEWER",
+                "token_hash": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+            }
+        """.trimIndent()
+
+        val op = SyncOperationEntity(
+            operationId = "00000000000000000000000000000207",
+            entityTypeCode = "WORKSPACE_MEMBER",
+            entityId = entityId,
+            operationTypeCode = "UPDATE",
+            baseVersion = 2L,
+            payloadJson = forbiddenPayload,
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "IN_FLIGHT",
+            attemptCount = 1,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+
+        val ex = assertFailsWith<IllegalArgumentException> {
+            executor.execute(op)
+        }
+        assertTrue(ex.message!!.contains("izin verilmeyen alanlar var"))
+        assertNull(writer.lastOperationId)
+    }
+
     private class RecordingV2Writer(
         var categoryResult: ConditionalRemoteWriteResult<CategoryDto> = ConditionalRemoteWriteResult.NotFound,
         var workspaceResult: ConditionalRemoteWriteResult<WorkspaceDto> = ConditionalRemoteWriteResult.NotFound,
+        var invitationResult: ConditionalRemoteWriteResult<WorkspaceInvitationDto> = ConditionalRemoteWriteResult.NotFound,
+        var memberResult: ConditionalRemoteWriteResult<WorkspaceMemberDto> = ConditionalRemoteWriteResult.NotFound,
     ) : IdempotentConditionalRemoteWriter {
         var lastOperationId: String? = null
         var lastOperation: RemoteWriteOperation? = null
         var lastBaseVersion: Long? = null
         var lastCategoryDto: CategoryDto? = null
         var lastWorkspacePayload: kotlinx.serialization.json.JsonObject? = null
+        var lastInvitationPayload: kotlinx.serialization.json.JsonObject? = null
+        var lastMemberPayload: kotlinx.serialization.json.JsonObject? = null
 
         override suspend fun writeCategory(
             operationId: String,
@@ -626,6 +1184,32 @@ class V2OutboxOperationExecutorTest {
             lastBaseVersion = baseVersion
             lastWorkspacePayload = payload
             return workspaceResult
+        }
+
+        override suspend fun writeWorkspaceMember(
+            operationId: String,
+            operation: RemoteWriteOperation,
+            baseVersion: Long?,
+            payload: kotlinx.serialization.json.JsonObject,
+        ): ConditionalRemoteWriteResult<WorkspaceMemberDto> {
+            lastOperationId = operationId
+            lastOperation = operation
+            lastBaseVersion = baseVersion
+            lastMemberPayload = payload
+            return memberResult
+        }
+
+        override suspend fun writeWorkspaceInvitation(
+            operationId: String,
+            operation: RemoteWriteOperation,
+            baseVersion: Long?,
+            payload: kotlinx.serialization.json.JsonObject,
+        ): ConditionalRemoteWriteResult<WorkspaceInvitationDto> {
+            lastOperationId = operationId
+            lastOperation = operation
+            lastBaseVersion = baseVersion
+            lastInvitationPayload = payload
+            return invitationResult
         }
 
         override suspend fun writeProfile(
@@ -689,6 +1273,7 @@ class V2OutboxOperationExecutorTest {
         override suspend fun upsertProfileRow(entity: UserProfileEntity) = Unit
         override suspend fun upsertWorkspaceRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceEntity>) = Unit
         override suspend fun upsertWorkspaceMemberRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity>) = Unit
+        override suspend fun clearActiveWorkspaceIfMatches(profileId: String, workspaceId: String): Int = 0
         override suspend fun upsertCategoryRows(entities: List<CategoryEntity>) {
             category = entities.single()
         }
@@ -721,6 +1306,13 @@ class V2OutboxOperationExecutorTest {
         override suspend fun rebaseTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
         override suspend fun rebaseRecurringTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
         override suspend fun rebaseSubscriptionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
+        override suspend fun getActiveWorkspaceTailOperation(workspaceId: String): SyncOperationEntity? = null
+        override suspend fun markWorkspaceConflict(entityId: String, error: String): Int = 1
+        override suspend fun getAllWorkspaceOperations(workspaceId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun deleteSpecificWorkspaceOperations(workspaceId: String, operationIds: List<String>): Int = 0
+        override suspend fun rebaseWorkspaceForRetry(workspaceId: String, syncStatus: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun resetWorkspaceConflictOperation(operationId: String, operationTypeCode: String, payloadJson: String?, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun getConflictRow(entityTypeCode: String, entityId: String): SyncConflictEntity? = null
     }
 
 

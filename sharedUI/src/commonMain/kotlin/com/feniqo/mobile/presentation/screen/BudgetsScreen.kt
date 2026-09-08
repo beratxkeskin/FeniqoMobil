@@ -76,6 +76,7 @@ fun BudgetsScreen(
                     }
                 },
                 canCopy = !state.isLoading && state.observationError == null,
+                activeWorkspaceName = state.activeWorkspaceName,
             )
 
             Spacer(modifier = Modifier.height(FeniqoSpacing.Medium))

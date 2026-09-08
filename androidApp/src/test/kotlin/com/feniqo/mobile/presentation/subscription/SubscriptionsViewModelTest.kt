@@ -640,6 +640,7 @@ class SubscriptionsViewModelTest {
         subscriptionRepo: FakeSubscriptionRepository,
         categoryRepo: FakeCategoryRepository,
     ): SubscriptionsViewModel {
+        val fakeWorkspaceRepo = com.feniqo.mobile.presentation.common.FakeWorkspaceRepository()
         return SubscriptionsViewModel(
             observeSubscriptionsUseCase = ObserveSubscriptionsUseCase(subscriptionRepo),
             observeSubscriptionUseCase = ObserveSubscriptionUseCase(subscriptionRepo),
@@ -650,6 +651,7 @@ class SubscriptionsViewModelTest {
             advanceSubscriptionRenewalUseCase = AdvanceSubscriptionRenewalUseCase(subscriptionRepo),
             deleteSubscriptionUseCase = DeleteSubscriptionUseCase(subscriptionRepo),
             currentDateProvider = dateProvider,
+            observeActiveWorkspaceUseCase = com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase(fakeWorkspaceRepo),
         )
     }
 

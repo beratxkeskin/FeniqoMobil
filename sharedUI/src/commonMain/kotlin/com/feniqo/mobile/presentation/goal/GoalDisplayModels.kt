@@ -18,6 +18,7 @@ import com.feniqo.mobile.presentation.util.MoneyFormatter
 data class GoalsUiState(
     val isLoading: Boolean = true,
     val goals: List<GoalDisplayModel> = emptyList(),
+    val activeWorkspaceName: String? = null,
     val observationError: FinanceUiMessage? = null,
 ) {
     val isEmpty: Boolean get() = !isLoading && observationError == null && goals.isEmpty()

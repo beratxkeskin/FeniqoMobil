@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.presentation.component.ActiveWorkspaceIndicator
 import com.feniqo.mobile.presentation.component.EmptyState
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
@@ -85,6 +86,10 @@ fun SubscriptionsScreen(
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
+                )
+                ActiveWorkspaceIndicator(
+                    workspaceName = state.activeWorkspaceName,
+                    isCompact = true,
                 )
             }
 

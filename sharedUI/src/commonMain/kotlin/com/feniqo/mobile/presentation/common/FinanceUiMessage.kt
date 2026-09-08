@@ -47,7 +47,30 @@ enum class FinanceUiMessage {
     GOAL_CONTRIBUTION_ADDED,
     DEBT_SAVED,
     DEBT_DELETED,
-    DEBT_PAYMENT_ADDED;
+    DEBT_PAYMENT_ADDED,
+    CONFLICT_RESOLUTION_STALE,
+    WORKSPACE_CONFLICT_REMOTE_TOMBSTONE,
+    WORKSPACE_CONFLICT_OWNER_MISMATCH,
+    CONFLICT_NOT_FOUND,
+    CONFLICT_RESOLUTION_FAILED,
+    WORKSPACE_NOT_FOUND,
+    WORKSPACE_INVITATION_NOT_FOUND,
+    WORKSPACE_INVITATION_EXPIRED,
+    WORKSPACE_INVITATION_LIMIT_REACHED,
+    WORKSPACE_CANNOT_LEAVE_AS_OWNER,
+    WORKSPACE_ACTOR_NOT_MEMBER,
+    WORKSPACE_ACTOR_NOT_PERMITTED,
+    WORKSPACE_CANNOT_CHANGE_OWN_ROLE,
+    WORKSPACE_OWNER_ROLE_CHANGE_REQUIRES_TRANSFER,
+    WORKSPACE_TARGET_MEMBER_NOT_FOUND,
+    WORKSPACE_LOCAL_MEMBER_VERSION_UNAVAILABLE,
+    WORKSPACE_TRANSFER_ACTOR_NOT_OWNER,
+    WORKSPACE_TRANSFER_TARGET_NOT_MEMBER,
+    WORKSPACE_TRANSFER_TARGET_ALREADY_OWNER,
+    WORKSPACE_TRANSFER_VERSION_CONFLICT,
+    WORKSPACE_LOCAL_CHANGES_PREVENT_TRANSFER,
+    WORKSPACE_CANNOT_REMOVE_SELF_MEMBER,
+    WORKSPACE_CANNOT_REMOVE_WORKSPACE_OWNER;
 
 
     val isError: Boolean
@@ -116,8 +139,30 @@ enum class FinanceUiMessage {
         DEBT_SAVED -> "Borç / alacak kaydı başarıyla kaydedildi."
         DEBT_DELETED -> "Borç / alacak kaydı başarıyla silindi."
         DEBT_PAYMENT_ADDED -> "Ödeme / tahsilat başarıyla kaydedildi."
+        CONFLICT_RESOLUTION_STALE -> "Çakışma bilgisi güncel değil veya yeni bir değişiklik yapıldı. Lütfen tekrar deneyin."
+        WORKSPACE_CONFLICT_REMOTE_TOMBSTONE -> "Çalışma alanı sunucuda silinmiş olduğundan oluşturma işlemi korunamadı."
+        WORKSPACE_CONFLICT_OWNER_MISMATCH -> "Çalışma alanı sahibi eşleşmediğinden yerel değişiklik uygulanamadı."
+        CONFLICT_NOT_FOUND -> "Çakışma kaydı bulunamadı."
+        CONFLICT_RESOLUTION_FAILED -> "Çakışma çözülemedi. Lütfen daha sonra tekrar deneyin."
+        WORKSPACE_NOT_FOUND -> "Çalışma alanı bulunamadı veya erişim yetkiniz yok."
+        WORKSPACE_INVITATION_NOT_FOUND -> "Davet kodu bulunamadı veya geçersiz."
+        WORKSPACE_INVITATION_EXPIRED -> "Davet kodunun süresi dolmuş."
+        WORKSPACE_INVITATION_LIMIT_REACHED -> "Davet kodunun kullanım limiti dolmuş."
+        WORKSPACE_CANNOT_LEAVE_AS_OWNER -> "Çalışma alanı sahibi ayrılmadan önce sahipliği devretmelidir."
+        WORKSPACE_ACTOR_NOT_MEMBER -> "Bu çalışma alanının üyesi değilsiniz."
+        WORKSPACE_ACTOR_NOT_PERMITTED -> "Bu işlem için yetkiniz bulunmuyor."
+        WORKSPACE_CANNOT_CHANGE_OWN_ROLE -> "Kendi rolünüzü değiştiremezsiniz."
+        WORKSPACE_OWNER_ROLE_CHANGE_REQUIRES_TRANSFER -> "Sahiplik rolü atamak için sahiplik devri yapılmalıdır."
+        WORKSPACE_TARGET_MEMBER_NOT_FOUND -> "İşlem yapılmak istenen üye bulunamadı."
+        WORKSPACE_LOCAL_MEMBER_VERSION_UNAVAILABLE -> "Üyelik sürüm bilgisi alınamadı. Lütfen senkronizasyonun tamamlanmasını bekleyin."
+        WORKSPACE_TRANSFER_ACTOR_NOT_OWNER -> "Sahiplik devrini yalnızca çalışma alanı sahibi gerçekleştirebilir."
+        WORKSPACE_TRANSFER_TARGET_NOT_MEMBER -> "Sahipliğin devredileceği üye bulunamadı."
+        WORKSPACE_TRANSFER_TARGET_ALREADY_OWNER -> "Seçilen üye zaten bu çalışma alanının sahibidir."
+        WORKSPACE_TRANSFER_VERSION_CONFLICT -> "Çalışma alanı bilgileri güncel değil. Lütfen sayfayı yenileyip tekrar deneyin."
+        WORKSPACE_LOCAL_CHANGES_PREVENT_TRANSFER -> "Bekleyen yerel değişiklikler varken sahiplik devri yapılamaz. Lütfen senkronizasyonun tamamlanmasını bekleyin."
+        WORKSPACE_CANNOT_REMOVE_SELF_MEMBER -> "Kendinizi üye çıkarma işlemiyle çıkaramazsınız. Alandan ayrılmak için alandan ayrılma seçeneğini kullanın."
+        WORKSPACE_CANNOT_REMOVE_WORKSPACE_OWNER -> "Çalışma alanı sahibi üyelikten çıkarılamaz."
     }
-
 
 }
 
@@ -127,6 +172,20 @@ enum class FinanceUiMessage {
  */
 fun AppError.toFinanceUiMessage(): FinanceUiMessage = when (this) {
     is AppError.Validation -> when (code) {
+        "workspace_not_found" -> FinanceUiMessage.WORKSPACE_NOT_FOUND
+        "workspace_invitation_not_found" -> FinanceUiMessage.WORKSPACE_INVITATION_NOT_FOUND
+        "workspace_invitation_expired" -> FinanceUiMessage.WORKSPACE_INVITATION_EXPIRED
+        "workspace_invitation_limit_reached" -> FinanceUiMessage.WORKSPACE_INVITATION_LIMIT_REACHED
+        "cannot_leave_as_owner_requires_transfer" -> FinanceUiMessage.WORKSPACE_CANNOT_LEAVE_AS_OWNER
+        "cannot_remove_self_member" -> FinanceUiMessage.WORKSPACE_CANNOT_REMOVE_SELF_MEMBER
+        "cannot_remove_workspace_owner", "cannot_remove_last_owner" -> FinanceUiMessage.WORKSPACE_CANNOT_REMOVE_WORKSPACE_OWNER
+        "cannot_change_own_role" -> FinanceUiMessage.WORKSPACE_CANNOT_CHANGE_OWN_ROLE
+        "owner_role_change_requires_transfer" -> FinanceUiMessage.WORKSPACE_OWNER_ROLE_CHANGE_REQUIRES_TRANSFER
+        "target_member_not_found" -> FinanceUiMessage.WORKSPACE_TARGET_MEMBER_NOT_FOUND
+        "ownership_transfer_target_not_member" -> FinanceUiMessage.WORKSPACE_TRANSFER_TARGET_NOT_MEMBER
+        "ownership_transfer_target_already_owner", "transfer_target_already_owner" -> FinanceUiMessage.WORKSPACE_TRANSFER_TARGET_ALREADY_OWNER
+        "ownership_transfer_actor_not_owner" -> FinanceUiMessage.WORKSPACE_TRANSFER_ACTOR_NOT_OWNER
+        "local_member_version_unavailable" -> FinanceUiMessage.WORKSPACE_LOCAL_MEMBER_VERSION_UNAVAILABLE
         "amount_empty" -> FinanceUiMessage.AMOUNT_REQUIRED
         "amount_invalid_format", "amount_out_of_range" -> FinanceUiMessage.INVALID_AMOUNT
         "amount_not_positive", "transaction_amount_must_be_positive" -> FinanceUiMessage.INVALID_AMOUNT
@@ -156,12 +215,26 @@ fun AppError.toFinanceUiMessage(): FinanceUiMessage = when (this) {
     }
     is AppError.Authentication -> when (code) {
         "auth_session_required", "auth_session_expired" -> FinanceUiMessage.SESSION_EXPIRED
+        "actor_not_member" -> FinanceUiMessage.WORKSPACE_ACTOR_NOT_MEMBER
+        "actor_not_permitted" -> FinanceUiMessage.WORKSPACE_ACTOR_NOT_PERMITTED
+        "ownership_transfer_actor_not_owner", "transfer_actor_not_owner" -> FinanceUiMessage.WORKSPACE_TRANSFER_ACTOR_NOT_OWNER
         "transaction_owner_mismatch", "category_owner_mismatch", "budget_owner_mismatch" -> FinanceUiMessage.PERMISSION_DENIED
         else -> FinanceUiMessage.GENERIC_ERROR
     }
     is AppError.Network -> FinanceUiMessage.NETWORK_ERROR
-    is AppError.Storage -> FinanceUiMessage.STORAGE_ERROR
-    is AppError.Conflict -> FinanceUiMessage.CONFLICT
+    is AppError.Storage -> when (code) {
+        "sync.conflict_resolution_failed" -> FinanceUiMessage.CONFLICT_RESOLUTION_FAILED
+        else -> FinanceUiMessage.STORAGE_ERROR
+    }
+    is AppError.Conflict -> when (code) {
+        "sync.conflict_resolution_stale" -> FinanceUiMessage.CONFLICT_RESOLUTION_STALE
+        "sync.workspace_create_conflict_remote_tombstone" -> FinanceUiMessage.WORKSPACE_CONFLICT_REMOTE_TOMBSTONE
+        "sync.workspace_create_conflict_owner_mismatch" -> FinanceUiMessage.WORKSPACE_CONFLICT_OWNER_MISMATCH
+        "sync.conflict_not_found" -> FinanceUiMessage.CONFLICT_NOT_FOUND
+        "ownership_transfer_version_conflict" -> FinanceUiMessage.WORKSPACE_TRANSFER_VERSION_CONFLICT
+        "local_uncommitted_changes_prevent_ownership_transfer" -> FinanceUiMessage.WORKSPACE_LOCAL_CHANGES_PREVENT_TRANSFER
+        else -> FinanceUiMessage.CONFLICT
+    }
     is AppError.Unknown -> FinanceUiMessage.GENERIC_ERROR
 }
 

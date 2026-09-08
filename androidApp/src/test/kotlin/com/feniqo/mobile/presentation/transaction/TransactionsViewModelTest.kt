@@ -162,12 +162,14 @@ class TransactionsViewModelTest {
         val observeCatHistory = ObserveCategoriesForHistoryLookupUseCase(catRepo)
         val observeCatActive = ObserveCategoriesUseCase(catRepo)
         val deleteTrx = DeleteTransactionUseCase(authRepo, trxRepo)
+        val fakeWorkspaceRepo = com.feniqo.mobile.presentation.common.FakeWorkspaceRepository()
         val vm = TransactionsViewModel(
             observeTransactionsUseCase = observeTrx,
             observeCategoriesForHistoryLookupUseCase = observeCatHistory,
             observeCategoriesUseCase = observeCatActive,
             deleteTransactionUseCase = deleteTrx,
             currentDateProvider = testDateProvider,
+            observeActiveWorkspaceUseCase = com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase(fakeWorkspaceRepo),
         )
         return Triple(vm, trxRepo, catRepo)
     }

@@ -28,6 +28,7 @@ import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 fun MoreHubScreen(
     onNavigateToCategories: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToSharedSpaces: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -72,6 +73,7 @@ fun MoreHubScreen(
                     onClick = when (item.id) {
                         MoreHubRegistry.CATEGORIES.id -> onNavigateToCategories
                         MoreHubRegistry.SETTINGS.id -> onNavigateToSettings
+                        MoreHubRegistry.SHARED_SPACES.id -> onNavigateToSharedSpaces
                         else -> null
                     },
                 )

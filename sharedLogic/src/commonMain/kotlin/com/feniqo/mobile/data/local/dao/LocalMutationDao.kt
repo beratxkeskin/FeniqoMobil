@@ -22,6 +22,7 @@ import com.feniqo.mobile.data.local.entity.TransactionEntity
 import com.feniqo.mobile.data.local.entity.TransactionTagCrossRef
 import com.feniqo.mobile.data.local.entity.UserProfileEntity
 import com.feniqo.mobile.data.local.entity.WorkspaceEntity
+import com.feniqo.mobile.data.local.entity.WorkspaceInvitationEntity
 import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
 import com.feniqo.mobile.data.local.outbox.OutboxOperationType
 import com.feniqo.mobile.data.mapper.toEntity
@@ -38,6 +39,11 @@ import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
 import com.feniqo.mobile.data.remote.dto.SubscriptionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceDto
+import com.feniqo.mobile.data.remote.dto.WorkspaceInvitationDto
+import com.feniqo.mobile.data.remote.dto.WorkspaceMemberDto
+import com.feniqo.mobile.data.remote.mapper.toEntity
+import com.feniqo.mobile.data.util.WorkspaceInvitationCrypto
+import com.feniqo.mobile.data.util.WorkspaceMemberEntityId
 import com.feniqo.mobile.data.remote.mapper.toDomain
 import com.feniqo.mobile.data.remote.mapper.toEntity
 import com.feniqo.mobile.domain.model.SyncStatus
@@ -64,7 +70,9 @@ data class V2EnqueueResult(
 interface LocalMutationDao {
     @Upsert suspend fun upsertProfileRow(entity: UserProfileEntity)
     @Upsert suspend fun upsertWorkspaceRow(entity: WorkspaceEntity)
+    @Upsert suspend fun upsertWorkspaceMemberRow(entity: WorkspaceMemberEntity)
     @Upsert suspend fun upsertWorkspaceMemberRows(entities: List<WorkspaceMemberEntity>)
+    @Upsert suspend fun upsertWorkspaceInvitationRow(entity: WorkspaceInvitationEntity)
     @Upsert suspend fun upsertCategoryRow(entity: CategoryEntity)
     @Upsert suspend fun upsertBudgetRow(entity: BudgetEntity)
     @Upsert suspend fun upsertTransactionRow(entity: TransactionEntity)
@@ -286,6 +294,21 @@ interface LocalMutationDao {
     @Query("DELETE FROM workspace_members WHERE workspace_id = :workspaceId")
     suspend fun deleteWorkspaceMemberRows(workspaceId: String): Int
 
+    @Query("DELETE FROM workspace_invitations WHERE id = :id")
+    suspend fun deleteWorkspaceInvitationRow(id: String): Int
+
+    @Query("SELECT * FROM workspace_invitations WHERE id = :id LIMIT 1")
+    suspend fun getWorkspaceInvitationById(id: String): WorkspaceInvitationEntity?
+
+    @Query("SELECT * FROM workspace_invitations WHERE token_hash = :tokenHash AND deleted_at_epoch_ms IS NULL LIMIT 1")
+    suspend fun getWorkspaceInvitationByTokenHash(tokenHash: String): WorkspaceInvitationEntity?
+
+    @Query("SELECT * FROM workspace_members WHERE workspace_id = :workspaceId AND user_id = :userId LIMIT 1")
+    suspend fun getWorkspaceMember(workspaceId: String, userId: String): WorkspaceMemberEntity?
+
+    @Query("UPDATE profiles SET active_workspace_id = NULL WHERE id = :profileId AND active_workspace_id = :workspaceId")
+    suspend fun clearActiveWorkspaceIfMatches(profileId: String, workspaceId: String): Int
+
     @Query("DELETE FROM goals WHERE id = :id")
     suspend fun deleteGoalRow(id: String): Int
 
@@ -386,6 +409,43 @@ interface LocalMutationDao {
         """,
     )
     suspend fun markWorkspaceSyncedIfDeleted(id: String, nowEpochMillis: Long): Int
+
+    @Query(
+        """
+        UPDATE workspace_members
+        SET version = :appliedVersion,
+            base_version = :appliedVersion,
+            sync_status = 'SYNCED',
+            local_updated_at_epoch_ms = :nowEpochMillis,
+            last_sync_error = NULL
+        WHERE workspace_id = :workspaceId AND user_id = :userId
+        """,
+    )
+    suspend fun rebaseWorkspaceMemberVersion(workspaceId: String, userId: String, appliedVersion: Long, nowEpochMillis: Long): Int
+
+    @Query(
+        """
+        UPDATE workspace_invitations
+        SET version = :appliedVersion,
+            base_version = :appliedVersion,
+            sync_status = 'SYNCED',
+            local_updated_at_epoch_ms = :nowEpochMillis,
+            last_sync_error = NULL
+        WHERE id = :id
+        """,
+    )
+    suspend fun rebaseWorkspaceInvitationVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int
+
+    @Query(
+        """
+        UPDATE workspace_members
+        SET sync_status = 'SYNCED',
+            local_updated_at_epoch_ms = :nowEpochMillis,
+            last_sync_error = NULL
+        WHERE workspace_id = :workspaceId AND user_id = :userId AND deleted_at_epoch_ms IS NOT NULL
+        """,
+    )
+    suspend fun markWorkspaceMemberSyncedIfDeleted(workspaceId: String, userId: String, nowEpochMillis: Long): Int
 
     @Query(
         """
@@ -1397,6 +1457,163 @@ interface LocalMutationDao {
     }
 
     @Transaction
+    suspend fun ackWorkspaceMemberWriteV2(
+        operationId: String,
+        record: WorkspaceMemberDto,
+        nowEpochMillis: Long,
+    ): Boolean {
+        val appliedVersion = record.version
+        require(appliedVersion >= 1) { "appliedVersion en az 1 olmalıdır: $appliedVersion" }
+
+        val predecessor = getOutboxById(operationId)
+        requireNotNull(predecessor) { "Outbox operasyonu bulunamadı: $operationId" }
+        check(predecessor.protocolVersion == 2) {
+            "V2 ACK yalnız protocolVersion=2 için geçerlidir: ${predecessor.protocolVersion}"
+        }
+        check(predecessor.statusCode == "IN_FLIGHT") {
+            "Outbox operasyonu IN_FLIGHT durumunda olmalıdır: ${predecessor.statusCode}"
+        }
+        check(predecessor.attemptCount > 0) {
+            "Outbox operasyonu attempt_count > 0 olmalıdır: ${predecessor.attemptCount}"
+        }
+        check(predecessor.entityTypeCode == "WORKSPACE_MEMBER") {
+            "Outbox operasyonu entityTypeCode WORKSPACE_MEMBER olmalıdır: ${predecessor.entityTypeCode}"
+        }
+        val canonicalEntityId = WorkspaceMemberEntityId.encode(record.workspaceId, record.userId)
+        check(predecessor.entityId == canonicalEntityId) {
+            "Outbox operasyonu entityId (${predecessor.entityId}) ile canonical id ($canonicalEntityId) eşleşmelidir."
+        }
+
+        when (predecessor.operationTypeCode) {
+            "CREATE", "UPDATE" -> {
+                check(record.deletedAt == null) {
+                    "${predecessor.operationTypeCode} ACK için record.deletedAt null olmalıdır: ${record.deletedAt}"
+                }
+            }
+            "DELETE" -> {
+                check(record.deletedAt != null) {
+                    "DELETE ACK için record.deletedAt zorunludur: id=$canonicalEntityId"
+                }
+            }
+            else -> error("Bilinmeyen veya desteklenmeyen outbox operasyon türü: ${predecessor.operationTypeCode}")
+        }
+
+        val successors = getSuccessors(operationId)
+        check(successors.size <= 1) { "Birden fazla successor bulundu: $operationId" }
+        val successor = successors.firstOrNull()
+
+        if (successor == null) {
+            upsertWorkspaceMemberRow(record.toEntity(nowEpochMillis))
+            deleteConflictRow("WORKSPACE_MEMBER", canonicalEntityId)
+            val deleted = deleteOutboxRow(operationId)
+            check(deleted == 1) { "Outbox kaydı silinemedi: $operationId" }
+        } else {
+            check(successor.protocolVersion == 2) { "Successor protocolVersion == 2 olmalıdır: ${successor.protocolVersion}" }
+            check(successor.predecessorOperationId == predecessor.operationId) { "Successor predecessor_operation_id eşleşmelidir" }
+            check(successor.entityTypeCode == "WORKSPACE_MEMBER") { "Successor entityTypeCode eşleşmelidir" }
+            check(successor.entityId == canonicalEntityId) { "Successor entityId eşleşmelidir" }
+            check(successor.statusCode == "PENDING") { "Successor statusCode == PENDING olmalıdır: ${successor.statusCode}" }
+            check(successor.attemptCount == 0) { "Successor attemptCount == 0 olmalıdır: ${successor.attemptCount}" }
+            check(successor.isBlocked) { "Successor isBlocked == true olmalıdır" }
+
+            val rebased = rebaseWorkspaceMemberVersion(record.workspaceId, record.userId, appliedVersion, nowEpochMillis)
+            check(rebased == 1) { "WorkspaceMember sürümü rebase edilemedi: $canonicalEntityId" }
+
+            deleteConflictRow("WORKSPACE_MEMBER", canonicalEntityId)
+            val deleted = deleteOutboxRow(operationId)
+            check(deleted == 1) { "Predecessor outbox silinemedi: $operationId" }
+
+            val unblocked = unblockSuccessor(
+                operationId = successor.operationId,
+                predecessorOperationId = operationId,
+                appliedVersion = appliedVersion,
+                nowEpochMillis = nowEpochMillis,
+            )
+            check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
+        }
+        return true
+    }
+
+    @Transaction
+    suspend fun ackWorkspaceInvitationWriteV2(
+        operationId: String,
+        record: WorkspaceInvitationDto,
+        nowEpochMillis: Long,
+    ): Boolean {
+        val appliedVersion = record.version
+        require(appliedVersion >= 1) { "appliedVersion en az 1 olmalıdır: $appliedVersion" }
+
+        val predecessor = getOutboxById(operationId)
+        requireNotNull(predecessor) { "Outbox operasyonu bulunamadı: $operationId" }
+        check(predecessor.protocolVersion == 2) {
+            "V2 ACK yalnız protocolVersion=2 için geçerlidir: ${predecessor.protocolVersion}"
+        }
+        check(predecessor.statusCode == "IN_FLIGHT") {
+            "Outbox operasyonu IN_FLIGHT durumunda olmalıdır: ${predecessor.statusCode}"
+        }
+        check(predecessor.attemptCount > 0) {
+            "Outbox operasyonu attempt_count > 0 olmalıdır: ${predecessor.attemptCount}"
+        }
+        check(predecessor.entityTypeCode == "WORKSPACE_INVITATION") {
+            "Outbox operasyonu entityTypeCode WORKSPACE_INVITATION olmalıdır: ${predecessor.entityTypeCode}"
+        }
+        check(predecessor.entityId == record.id) {
+            "Outbox operasyonu entityId (${predecessor.entityId}) ile uzak kayıt id (${record.id}) eşleşmelidir."
+        }
+
+        when (predecessor.operationTypeCode) {
+            "CREATE", "UPDATE" -> {
+                check(record.deletedAt == null) {
+                    "${predecessor.operationTypeCode} ACK için record.deletedAt null olmalıdır: ${record.deletedAt}"
+                }
+            }
+            "DELETE" -> {
+                check(record.deletedAt != null) {
+                    "DELETE ACK için record.deletedAt zorunludur: id=${record.id}"
+                }
+            }
+            else -> error("Bilinmeyen veya desteklenmeyen outbox operasyon türü: ${predecessor.operationTypeCode}")
+        }
+
+        val successors = getSuccessors(operationId)
+        check(successors.size <= 1) { "Birden fazla successor bulundu: $operationId" }
+        val successor = successors.firstOrNull()
+
+        if (successor == null) {
+            val existing = getWorkspaceInvitationById(record.id)
+            val preservedTokenHash = existing?.tokenHash
+            upsertWorkspaceInvitationRow(record.toEntity(nowEpochMillis).copy(tokenHash = preservedTokenHash))
+            deleteConflictRow("WORKSPACE_INVITATION", record.id)
+            val deleted = deleteOutboxRow(operationId)
+            check(deleted == 1) { "Outbox kaydı silinemedi: $operationId" }
+        } else {
+            check(successor.protocolVersion == 2) { "Successor protocolVersion == 2 olmalıdır: ${successor.protocolVersion}" }
+            check(successor.predecessorOperationId == predecessor.operationId) { "Successor predecessor_operation_id eşleşmelidir" }
+            check(successor.entityTypeCode == "WORKSPACE_INVITATION") { "Successor entityTypeCode eşleşmelidir" }
+            check(successor.entityId == record.id) { "Successor entityId eşleşmelidir" }
+            check(successor.statusCode == "PENDING") { "Successor statusCode == PENDING olmalıdır: ${successor.statusCode}" }
+            check(successor.attemptCount == 0) { "Successor attemptCount == 0 olmalıdır: ${successor.attemptCount}" }
+            check(successor.isBlocked) { "Successor isBlocked == true olmalıdır" }
+
+            val rebased = rebaseWorkspaceInvitationVersion(record.id, appliedVersion, nowEpochMillis)
+            check(rebased == 1) { "WorkspaceInvitation sürümü rebase edilemedi: ${record.id}" }
+
+            deleteConflictRow("WORKSPACE_INVITATION", record.id)
+            val deleted = deleteOutboxRow(operationId)
+            check(deleted == 1) { "Predecessor outbox silinemedi: $operationId" }
+
+            val unblocked = unblockSuccessor(
+                operationId = successor.operationId,
+                predecessorOperationId = operationId,
+                appliedVersion = appliedVersion,
+                nowEpochMillis = nowEpochMillis,
+            )
+            check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
+        }
+        return true
+    }
+
+    @Transaction
     suspend fun ackMissingDeleteV2(
         operationId: String,
         entityTypeCode: String,
@@ -1443,6 +1660,11 @@ interface LocalMutationDao {
             "WORKSPACE" -> {
                 val marked = markWorkspaceSyncedIfDeleted(entityId, nowEpochMillis)
                 check(marked == 1) { "Silinmiş yerel Workspace kaydı bulunamadı veya güncellenemedi: $entityId" }
+            }
+            "WORKSPACE_MEMBER" -> {
+                val (wsId, uId) = WorkspaceMemberEntityId.decode(entityId)
+                val marked = markWorkspaceMemberSyncedIfDeleted(wsId, uId, nowEpochMillis)
+                check(marked == 1) { "Silinmiş yerel WorkspaceMember kaydı bulunamadı veya güncellenemedi: $entityId" }
             }
         }
         deleteConflictRow(entityTypeCode, entityId)
@@ -1628,6 +1850,8 @@ interface LocalMutationDao {
             is OutboxExecutionResult.DebtApplied -> ackDebtWriteV2(operationId, result.record, nowEpochMillis)
             is OutboxExecutionResult.DebtPaymentApplied -> ackDebtPaymentWriteV2(operationId, result.record, nowEpochMillis)
             is OutboxExecutionResult.WorkspaceApplied -> ackWorkspaceWriteV2(operationId, result.record, nowEpochMillis)
+            is OutboxExecutionResult.WorkspaceMemberApplied -> ackWorkspaceMemberWriteV2(operationId, result.record, nowEpochMillis)
+            is OutboxExecutionResult.WorkspaceInvitationApplied -> ackWorkspaceInvitationWriteV2(operationId, result.record, nowEpochMillis)
             is OutboxExecutionResult.MissingDeleteAcknowledged -> {
 
                 val op = checkNotNull(getOutboxById(operationId)) { "Outbox işlemi bulunamadı: $operationId" }
@@ -2646,6 +2870,262 @@ interface LocalMutationDao {
         )
         insertOutboxRow(op)
         return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+    }
+
+    @Transaction
+    suspend fun mutateWorkspaceInvitationCreateV2(
+        entity: WorkspaceInvitationEntity,
+        payloadJson: String,
+        operationIdFactory: () -> String,
+        nowEpochMillis: Long,
+    ): V2EnqueueResult {
+        require(payloadJson.isNotBlank()) { "Workspace invitation payload JSON boş olamaz." }
+
+        val sync = entity.sync
+        val status = SyncStatus.valueOf(sync.syncStatus)
+        require(status == SyncStatus.PENDING_CREATE) {
+            "CREATE işleminde syncStatus PENDING_CREATE olmalıdır: ${entity.id}"
+        }
+        require(sync.baseVersion == null) { "CREATE işleminde baseVersion null olmalıdır: ${entity.id}" }
+        require(sync.deletedAtEpochMillis == null) { "CREATE işleminde deletedAtEpochMillis null olmalıdır: ${entity.id}" }
+
+        val tokenHash = entity.tokenHash
+        requireNotNull(tokenHash) { "Workspace invitation tokenHash null olamaz: ${entity.id}" }
+        require(WorkspaceInvitationCrypto.isValidTokenHash(tokenHash)) {
+            "Workspace invitation tokenHash geçerli 64 karakter SHA-256 hex olmalıdır: ${entity.id}"
+        }
+        require(entity.maxUses > 0) { "maxUses 0'dan büyük olmalıdır: ${entity.maxUses}" }
+        require(entity.expiresAtEpochMillis > entity.createdAtEpochMillis) {
+            "expiresAtEpochMillis (${entity.expiresAtEpochMillis}) createdAtEpochMillis (${entity.createdAtEpochMillis}) sonrasında olmalıdır."
+        }
+
+        val tailCandidates = getActiveTailCandidates("WORKSPACE_INVITATION", entity.id)
+        check(tailCandidates.size <= 1) { "Birden fazla aktif workspace invitation kuyruk sonu tespit edildi: ${entity.id}" }
+        val tail = tailCandidates.firstOrNull()
+
+        upsertWorkspaceInvitationRow(entity)
+
+        val newOpId = operationIdFactory()
+        validateOperationId(newOpId)
+        val op = SyncOperationEntity(
+            operationId = newOpId,
+            entityTypeCode = "WORKSPACE_INVITATION",
+            entityId = entity.id,
+            operationTypeCode = OutboxOperationType.CREATE.name,
+            baseVersion = if (tail != null) null else entity.sync.baseVersion,
+            payloadJson = payloadJson,
+            predecessorOperationId = tail?.operationId,
+            isBlocked = tail != null,
+            protocolVersion = 2,
+            statusCode = "PENDING",
+            attemptCount = 0,
+            lastError = null,
+            nextAttemptAtEpochMillis = nowEpochMillis,
+            createdAtEpochMillis = nowEpochMillis,
+            updatedAtEpochMillis = nowEpochMillis,
+        )
+        insertOutboxRow(op)
+        return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+    }
+
+    @Transaction
+    suspend fun mutateWorkspaceMemberRoleV2(
+        entity: WorkspaceMemberEntity,
+        payloadJson: String,
+        operationIdFactory: () -> String,
+        nowEpochMillis: Long,
+    ): V2EnqueueResult {
+        require(payloadJson.isNotBlank()) { "Workspace member payload JSON boş olamaz." }
+
+        val sync = entity.sync
+        val status = SyncStatus.valueOf(sync.syncStatus)
+        require(status == SyncStatus.PENDING_UPDATE || status == SyncStatus.PENDING_CREATE) {
+            "UPDATE işleminde syncStatus PENDING_UPDATE veya PENDING_CREATE olmalıdır: ${entity.workspaceId}:${entity.userId}"
+        }
+        require(sync.deletedAtEpochMillis == null) {
+            "UPDATE işleminde deletedAtEpochMillis null olmalıdır: ${entity.workspaceId}:${entity.userId}"
+        }
+        val baseVersion = sync.baseVersion ?: sync.version
+        require(baseVersion > 0L) {
+            "UPDATE işleminde baseVersion pozitif olmalıdır: ${entity.workspaceId}:${entity.userId}"
+        }
+
+        val canonicalEntityId = WorkspaceMemberEntityId.encode(entity.workspaceId, entity.userId)
+        val tailCandidates = getActiveTailCandidates("WORKSPACE_MEMBER", canonicalEntityId)
+        check(tailCandidates.size <= 1) {
+            "Birden fazla aktif workspace member kuyruk sonu tespit edildi: $canonicalEntityId"
+        }
+        val tail = tailCandidates.firstOrNull()
+
+        if (tail != null && tail.protocolVersion == 2) {
+            if (tail.attemptCount == 0 && tail.statusCode == "PENDING") {
+                if (tail.operationTypeCode == OutboxOperationType.UPDATE.name) {
+                    upsertWorkspaceMemberRow(entity)
+                    val updated = coalescePendingPayload(tail.operationId, payloadJson, nowEpochMillis)
+                    check(updated == 1) { "Outbox payload coalesce edilemedi: ${tail.operationId}" }
+                    return V2EnqueueResult(tail.operationId, V2EnqueueDecision.COALESCED)
+                }
+            }
+
+            upsertWorkspaceMemberRow(entity)
+            val newOpId = operationIdFactory()
+            validateOperationId(newOpId)
+            val successor = SyncOperationEntity(
+                operationId = newOpId,
+                entityTypeCode = "WORKSPACE_MEMBER",
+                entityId = canonicalEntityId,
+                operationTypeCode = OutboxOperationType.UPDATE.name,
+                baseVersion = null,
+                payloadJson = payloadJson,
+                predecessorOperationId = tail.operationId,
+                isBlocked = true,
+                protocolVersion = 2,
+                statusCode = "PENDING",
+                attemptCount = 0,
+                lastError = null,
+                nextAttemptAtEpochMillis = nowEpochMillis,
+                createdAtEpochMillis = nowEpochMillis,
+                updatedAtEpochMillis = nowEpochMillis,
+            )
+            insertOutboxRow(successor)
+            return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+        }
+
+        upsertWorkspaceMemberRow(entity)
+        val newOpId = operationIdFactory()
+        validateOperationId(newOpId)
+        val op = SyncOperationEntity(
+            operationId = newOpId,
+            entityTypeCode = "WORKSPACE_MEMBER",
+            entityId = canonicalEntityId,
+            operationTypeCode = OutboxOperationType.UPDATE.name,
+            baseVersion = baseVersion,
+            payloadJson = payloadJson,
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "PENDING",
+            attemptCount = 0,
+            lastError = null,
+            nextAttemptAtEpochMillis = nowEpochMillis,
+            createdAtEpochMillis = nowEpochMillis,
+            updatedAtEpochMillis = nowEpochMillis,
+        )
+        insertOutboxRow(op)
+        return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+    }
+
+    @Transaction
+    suspend fun mutateWorkspaceMemberLeaveV2(
+        entity: WorkspaceMemberEntity,
+        activeProfileId: String?,
+        payloadJson: String,
+        operationIdFactory: () -> String,
+        nowEpochMillis: Long,
+    ): V2EnqueueResult {
+        require(payloadJson.isNotBlank()) { "Workspace member payload JSON boş olamaz." }
+
+        val sync = entity.sync
+        val status = SyncStatus.valueOf(sync.syncStatus)
+        require(status == SyncStatus.PENDING_DELETE) {
+            "DELETE işleminde syncStatus PENDING_DELETE olmalıdır: ${entity.workspaceId}:${entity.userId}"
+        }
+        requireNotNull(sync.deletedAtEpochMillis) {
+            "DELETE işleminde deletedAtEpochMillis zorunludur: ${entity.workspaceId}:${entity.userId}"
+        }
+        val baseVersion = sync.baseVersion ?: sync.version
+        require(baseVersion > 0L) {
+            "DELETE işleminde baseVersion pozitif olmalıdır: ${entity.workspaceId}:${entity.userId}"
+        }
+
+        val canonicalEntityId = WorkspaceMemberEntityId.encode(entity.workspaceId, entity.userId)
+        val tailCandidates = getActiveTailCandidates("WORKSPACE_MEMBER", canonicalEntityId)
+        check(tailCandidates.size <= 1) {
+            "Birden fazla aktif workspace member kuyruk sonu tespit edildi: $canonicalEntityId"
+        }
+        val tail = tailCandidates.firstOrNull()
+
+        if (tail != null && tail.protocolVersion == 2) {
+            if (tail.attemptCount == 0 && tail.statusCode == "PENDING") {
+                if (tail.operationTypeCode == OutboxOperationType.UPDATE.name) {
+                    upsertWorkspaceMemberRow(entity)
+                    if (activeProfileId != null) {
+                        clearActiveWorkspaceIfMatches(activeProfileId, entity.workspaceId)
+                    }
+                    val updated = convertToPendingDelete(tail.operationId, payloadJson, nowEpochMillis)
+                    check(updated == 1) { "Outbox kaydı DELETE'e dönüştürülemedi: ${tail.operationId}" }
+                    return V2EnqueueResult(tail.operationId, V2EnqueueDecision.CONVERTED_TO_DELETE)
+                }
+            }
+
+            upsertWorkspaceMemberRow(entity)
+            if (activeProfileId != null) {
+                clearActiveWorkspaceIfMatches(activeProfileId, entity.workspaceId)
+            }
+            val newOpId = operationIdFactory()
+            validateOperationId(newOpId)
+            val successor = SyncOperationEntity(
+                operationId = newOpId,
+                entityTypeCode = "WORKSPACE_MEMBER",
+                entityId = canonicalEntityId,
+                operationTypeCode = OutboxOperationType.DELETE.name,
+                baseVersion = null,
+                payloadJson = payloadJson,
+                predecessorOperationId = tail.operationId,
+                isBlocked = true,
+                protocolVersion = 2,
+                statusCode = "PENDING",
+                attemptCount = 0,
+                lastError = null,
+                nextAttemptAtEpochMillis = nowEpochMillis,
+                createdAtEpochMillis = nowEpochMillis,
+                updatedAtEpochMillis = nowEpochMillis,
+            )
+            insertOutboxRow(successor)
+            return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+        }
+
+        upsertWorkspaceMemberRow(entity)
+        if (activeProfileId != null) {
+            clearActiveWorkspaceIfMatches(activeProfileId, entity.workspaceId)
+        }
+        val newOpId = operationIdFactory()
+        validateOperationId(newOpId)
+        val op = SyncOperationEntity(
+            operationId = newOpId,
+            entityTypeCode = "WORKSPACE_MEMBER",
+            entityId = canonicalEntityId,
+            operationTypeCode = OutboxOperationType.DELETE.name,
+            baseVersion = baseVersion,
+            payloadJson = payloadJson,
+            predecessorOperationId = null,
+            isBlocked = false,
+            protocolVersion = 2,
+            statusCode = "PENDING",
+            attemptCount = 0,
+            lastError = null,
+            nextAttemptAtEpochMillis = nowEpochMillis,
+            createdAtEpochMillis = nowEpochMillis,
+            updatedAtEpochMillis = nowEpochMillis,
+        )
+        insertOutboxRow(op)
+        return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+    }
+
+    @Transaction
+    suspend fun mutateWorkspaceMemberRemovalV2(
+        entity: WorkspaceMemberEntity,
+        payloadJson: String,
+        operationIdFactory: () -> String,
+        nowEpochMillis: Long,
+    ): V2EnqueueResult {
+        return mutateWorkspaceMemberLeaveV2(
+            entity = entity,
+            activeProfileId = null,
+            payloadJson = payloadJson,
+            operationIdFactory = operationIdFactory,
+            nowEpochMillis = nowEpochMillis,
+        )
     }
 
     @Transaction

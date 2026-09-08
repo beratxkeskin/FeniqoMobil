@@ -372,4 +372,45 @@ class FeniqoRoutesTest {
         val topLevelRoutes = TopLevelDestination.entries.map { it.route }
         assertTrue("DebtSnowballPlanRoute top-level hedef olmamalıdır", DebtSnowballPlanRoute !in topLevelRoutes)
     }
+
+    @Test
+    fun workspacePickerRoute_implementsFeniqoRoute_andIsNotTopLevel() {
+        assertTrue(WorkspacePickerRoute is FeniqoRoute)
+        val topLevelRoutes = TopLevelDestination.entries.map { it.route }
+        assertTrue("WorkspacePickerRoute top-level hedef olmamalıdır", WorkspacePickerRoute !in topLevelRoutes)
+    }
+
+    @Test
+    fun workspaceCreateRoute_implementsFeniqoRoute_andIsNotTopLevel() {
+        assertTrue(WorkspaceCreateRoute is FeniqoRoute)
+        val topLevelRoutes = TopLevelDestination.entries.map { it.route }
+        assertTrue("WorkspaceCreateRoute top-level hedef olmamalıdır", WorkspaceCreateRoute !in topLevelRoutes)
+    }
+
+    @Test
+    fun workspaceJoinRoute_implementsFeniqoRoute_andIsNotTopLevel() {
+        assertTrue(WorkspaceJoinRoute is FeniqoRoute)
+        val topLevelRoutes = TopLevelDestination.entries.map { it.route }
+        assertTrue("WorkspaceJoinRoute top-level hedef olmamalıdır", WorkspaceJoinRoute !in topLevelRoutes)
+    }
+
+    @Test
+    fun workspaceDetailsRoute_implementsFeniqoRoute_andIsNotTopLevel() {
+        val route = WorkspaceDetailsRoute("ws-1")
+        assertTrue(route is FeniqoRoute)
+        assertEquals("ws-1", route.workspaceId)
+        val topLevelRoutes = TopLevelDestination.entries.map { it.route }
+        assertTrue("WorkspaceDetailsRoute top-level hedef olmamalıdır", route !in topLevelRoutes)
+    }
+
+    @Test
+    fun parseWorkspaceDetailsRouteId_correctlyDifferentiatesModesAndFailsClosed() {
+        assertTrue(parseWorkspaceDetailsRouteId(null) is WorkspaceDetailsRouteIdResult.InvalidId)
+        assertTrue(parseWorkspaceDetailsRouteId("") is WorkspaceDetailsRouteIdResult.InvalidId)
+        assertTrue(parseWorkspaceDetailsRouteId("   ") is WorkspaceDetailsRouteIdResult.InvalidId)
+
+        val valid = parseWorkspaceDetailsRouteId("  ws-123  ")
+        assertTrue(valid is WorkspaceDetailsRouteIdResult.ValidId)
+        assertEquals(com.feniqo.mobile.domain.model.EntityId("ws-123"), (valid as WorkspaceDetailsRouteIdResult.ValidId).id)
+    }
 }

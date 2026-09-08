@@ -16,7 +16,10 @@ import com.feniqo.mobile.data.remote.dto.TagDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.remote.dto.TransactionTagDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceDto
+import com.feniqo.mobile.data.remote.dto.WorkspaceInvitationDto
+import com.feniqo.mobile.data.remote.dto.WorkspaceInvitationRedeemResultDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceMemberDto
+import com.feniqo.mobile.data.remote.dto.WorkspaceOwnershipTransferResultDto
 
 import com.feniqo.mobile.domain.model.PaymentMethod
 import io.github.jan.supabase.SupabaseClient
@@ -484,6 +487,66 @@ class SupabaseCoreRemoteDataSource(
     ): ConditionalRemoteWriteResult<WorkspaceDto> =
         idempotentConditionalWrite(operationId, WORKSPACE, operation, baseVersion, payload)
 
+    override suspend fun writeWorkspaceMember(
+        operationId: String,
+        operation: RemoteWriteOperation,
+        baseVersion: Long?,
+        payload: JsonObject,
+    ): ConditionalRemoteWriteResult<WorkspaceMemberDto> {
+        require(operation in setOf(RemoteWriteOperation.UPDATE, RemoteWriteOperation.DELETE)) {
+            "WORKSPACE_MEMBER için generic outbox CREATE işlemi desteklenmez ($operationId)"
+        }
+        return idempotentConditionalWrite(operationId, WORKSPACE_MEMBER, operation, baseVersion, payload)
+    }
+
+    override suspend fun writeWorkspaceInvitation(
+        operationId: String,
+        operation: RemoteWriteOperation,
+        baseVersion: Long?,
+        payload: JsonObject,
+    ): ConditionalRemoteWriteResult<WorkspaceInvitationDto> =
+        idempotentConditionalWrite(operationId, WORKSPACE_INVITATION, operation, baseVersion, payload)
+
+    override suspend fun redeemWorkspaceInvitation(token: String): WorkspaceInvitationRedeemResultDto {
+        val cleanToken = token.trim()
+        require(cleanToken.isNotBlank()) { "Davet kodu boş olamaz." }
+        return client.postgrest.rpc(
+            function = REDEEM_WORKSPACE_INVITATION_RPC,
+            parameters = rpcJson.encodeToJsonElement(
+                RedeemWorkspaceInvitationRpcParameters(pToken = cleanToken)
+            ).jsonObject,
+        ).decodeAs<WorkspaceInvitationRedeemResultDto>()
+    }
+
+    override suspend fun transferWorkspaceOwnership(
+        workspaceId: String,
+        targetUserId: String,
+        expectedWorkspaceVersion: Long,
+        expectedCurrentOwnerMemberVersion: Long,
+        expectedTargetMemberVersion: Long,
+    ): WorkspaceOwnershipTransferResultDto {
+        val cleanWorkspaceId = workspaceId.trim()
+        val cleanTargetUserId = targetUserId.trim()
+        require(cleanWorkspaceId.isNotBlank()) { "Workspace ID boş olamaz." }
+        require(cleanTargetUserId.isNotBlank()) { "Target user ID boş olamaz." }
+        require(expectedWorkspaceVersion > 0L) { "Expected workspace version pozitif olmalıdır." }
+        require(expectedCurrentOwnerMemberVersion > 0L) { "Expected actor member version pozitif olmalıdır." }
+        require(expectedTargetMemberVersion > 0L) { "Expected target member version pozitif olmalıdır." }
+
+        return client.postgrest.rpc(
+            function = TRANSFER_WORKSPACE_OWNERSHIP_RPC,
+            parameters = rpcJson.encodeToJsonElement(
+                TransferWorkspaceOwnershipRpcParameters(
+                    workspaceId = cleanWorkspaceId,
+                    targetUserId = cleanTargetUserId,
+                    expectedWorkspaceVersion = expectedWorkspaceVersion,
+                    expectedCurrentOwnerMemberVersion = expectedCurrentOwnerMemberVersion,
+                    expectedTargetMemberVersion = expectedTargetMemberVersion,
+                )
+            ).jsonObject,
+        ).decodeAs<WorkspaceOwnershipTransferResultDto>()
+    }
+
 
 
 
@@ -638,6 +701,8 @@ class SupabaseCoreRemoteDataSource(
     private companion object {
         const val CONDITIONAL_WRITE_RPC = "sync_write_v1"
         const val SYNC_WRITE_V2_RPC = "sync_write_v2"
+        const val REDEEM_WORKSPACE_INVITATION_RPC = "redeem_workspace_invitation_v1"
+        const val TRANSFER_WORKSPACE_OWNERSHIP_RPC = "transfer_workspace_ownership_v1"
         const val PROFILE = "PROFILE"
         const val CATEGORY = "CATEGORY"
         const val TRANSACTION = "TRANSACTION"
@@ -649,6 +714,8 @@ class SupabaseCoreRemoteDataSource(
         const val DEBT = "DEBT"
         const val DEBT_PAYMENT = "DEBT_PAYMENT"
         const val WORKSPACE = "WORKSPACE"
+        const val WORKSPACE_MEMBER = "WORKSPACE_MEMBER"
+        const val WORKSPACE_INVITATION = "WORKSPACE_INVITATION"
 
         const val STATUS = "status"
 
@@ -700,4 +767,24 @@ private data class SyncWriteV2RpcParameters(
     val baseVersion: Long?,
     @SerialName("p_payload")
     val payload: JsonElement,
+)
+
+@Serializable
+private data class RedeemWorkspaceInvitationRpcParameters(
+    @SerialName("p_token")
+    val pToken: String,
+)
+
+@Serializable
+private data class TransferWorkspaceOwnershipRpcParameters(
+    @SerialName("p_workspace_id")
+    val workspaceId: String,
+    @SerialName("p_target_user_id")
+    val targetUserId: String,
+    @SerialName("p_expected_workspace_version")
+    val expectedWorkspaceVersion: Long,
+    @SerialName("p_expected_current_owner_member_version")
+    val expectedCurrentOwnerMemberVersion: Long,
+    @SerialName("p_expected_target_member_version")
+    val expectedTargetMemberVersion: Long,
 )

@@ -240,6 +240,7 @@ data class BudgetsUiState(
     val budgets: List<BudgetProgressDisplayModel> = emptyList(),
     val observationError: FinanceUiMessage? = null,
     val mutationState: BudgetMutationState = BudgetMutationState(),
+    val activeWorkspaceName: String? = null,
     val deleteConfirmation: BudgetDeleteConfirmationState? = null,
     val copyConfirmation: BudgetCopyConfirmationState? = null,
 ) {
