@@ -1,5 +1,6 @@
 package com.feniqo.mobile.data.mapper
 
+import com.feniqo.mobile.data.local.entity.AssetEntity
 import com.feniqo.mobile.data.local.entity.BudgetEntity
 import com.feniqo.mobile.data.local.entity.CategoryEntity
 import com.feniqo.mobile.data.local.entity.DebtEntity
@@ -11,6 +12,9 @@ import com.feniqo.mobile.data.local.entity.SyncMetadata
 import com.feniqo.mobile.data.local.entity.TagEntity
 import com.feniqo.mobile.data.local.entity.TransactionEntity
 import com.feniqo.mobile.data.local.entity.TransactionTagCrossRef
+import com.feniqo.mobile.domain.model.Asset
+import com.feniqo.mobile.domain.model.AssetQuantity
+import com.feniqo.mobile.domain.model.AssetType
 import com.feniqo.mobile.domain.model.Budget
 import com.feniqo.mobile.domain.model.Category
 import com.feniqo.mobile.domain.model.CategoryColor
@@ -40,6 +44,42 @@ import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.YearMonth
 import kotlinx.datetime.Instant
 import kotlinx.serialization.json.Json
+
+fun Asset.toEntity(sync: SyncMetadata): AssetEntity = AssetEntity(
+    id = id.value,
+    ownerId = ownerId.value,
+    name = name.trim(),
+    typeCode = type.name,
+    currentValueMinor = currentValue.amountMinor,
+    currencyCode = currentValue.currency.code,
+    quantityUnscaled = quantity?.unscaledValue,
+    quantityScale = quantity?.scale,
+    purchaseUnitPriceMinor = purchaseUnitPrice?.amountMinor,
+    trackingSymbol = trackingSymbol?.trim()?.takeIf(String::isNotEmpty),
+    autoTrack = autoTrack,
+    createdAtEpochMillis = createdAt.toEpochMilliseconds(),
+    sync = sync,
+)
+
+fun AssetEntity.toDomain(): Asset {
+    require((quantityUnscaled == null) == (quantityScale == null)) {
+        "Yerel varlık miktarı alanları birlikte dolu veya birlikte boş olmalıdır."
+    }
+    val currency = Currency.valueOf(currencyCode)
+    return Asset(
+        id = EntityId(id),
+        ownerId = EntityId(ownerId),
+        workspaceId = null,
+        name = name,
+        type = AssetType.valueOf(typeCode),
+        currentValue = Money(currentValueMinor, currency),
+        quantity = quantityUnscaled?.let { AssetQuantity(it, requireNotNull(quantityScale)) },
+        purchaseUnitPrice = purchaseUnitPriceMinor?.let { Money(it, currency) },
+        trackingSymbol = trackingSymbol,
+        autoTrack = autoTrack,
+        createdAt = Instant.fromEpochMilliseconds(createdAtEpochMillis),
+    )
+}
 
 
 fun Category.toEntity(sync: SyncMetadata, slug: String? = null): CategoryEntity = CategoryEntity(
@@ -81,7 +121,7 @@ fun Transaction.toEntity(sync: SyncMetadata): TransactionEntity = TransactionEnt
     typeCode = type.name,
     categoryId = categoryId.value,
     description = description,
-    searchText = description.orEmpty().normalizeForStorage(),
+    searchText = listOfNotNull(description, note).joinToString(" ").normalizeForStorage(),
     paymentMethodCode = paymentMethod.name,
     transactionDate = transactionDate.toString(),
     receiptPath = receiptPath?.value,
@@ -89,6 +129,7 @@ fun Transaction.toEntity(sync: SyncMetadata): TransactionEntity = TransactionEnt
     totalInstallments = installment?.total,
     installmentGroupId = installment?.groupId?.value,
     createdAtEpochMillis = createdAt.toEpochMilliseconds(),
+    note = note,
     sync = sync,
 )
 
@@ -107,6 +148,7 @@ fun TransactionEntity.toDomain(): Transaction = Transaction(
     receiptPath = receiptPath?.let(::ReceiptPath),
     installment = installmentInfo(),
     createdAt = Instant.fromEpochMilliseconds(createdAtEpochMillis),
+    note = note,
 )
 
 private fun TransactionEntity.participantUserIds(): List<EntityId> = participantUserIdsJson

@@ -13,6 +13,16 @@ import com.feniqo.mobile.domain.repository.CategoryRepository
 import com.feniqo.mobile.domain.repository.RepositoryResult
 import com.feniqo.mobile.domain.usecase.DeleteCategoryUseCase
 import com.feniqo.mobile.domain.usecase.ObserveCategoriesUseCase
+import com.feniqo.mobile.domain.model.Currency
+import com.feniqo.mobile.domain.model.LocalDate
+import com.feniqo.mobile.domain.model.Money
+import com.feniqo.mobile.domain.model.PaymentMethod
+import com.feniqo.mobile.domain.model.Transaction
+import com.feniqo.mobile.domain.model.YearMonth
+import com.feniqo.mobile.domain.repository.TransactionFilter
+import com.feniqo.mobile.domain.repository.TransactionRepository
+import com.feniqo.mobile.domain.usecase.ObserveTransactionsUseCase
+import com.feniqo.mobile.presentation.common.CurrentDateProvider
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.sync.MainDispatcherRule
 import kotlinx.coroutines.CancellationException
@@ -105,18 +115,54 @@ class CategoriesViewModelTest {
         }
     }
 
+    private class FakeTransactionRepo : TransactionRepository {
+        val transactionsFlow = MutableStateFlow<List<Transaction>>(emptyList())
+        var lastFilter: TransactionFilter? = null
+        val requestedFilters = mutableListOf<TransactionFilter>()
+
+        override fun observeTransactions(filter: TransactionFilter): Flow<List<Transaction>> {
+            lastFilter = filter
+            requestedFilters.add(filter)
+            return flow {
+                transactionsFlow.collect { list ->
+                    emit(list.filter { tx -> filter.type == null || tx.type == filter.type })
+                }
+            }
+        }
+
+        override fun observeTransaction(id: EntityId): Flow<Transaction?> = flowOf(null)
+        override fun observeInstallmentGroup(groupId: EntityId): Flow<List<Transaction>> = flowOf(emptyList())
+        override suspend fun create(transaction: Transaction) = RepositoryResult.Success(transaction.id)
+        override suspend fun createInstallmentGroup(transactions: List<Transaction>) = RepositoryResult.Success(EntityId("grp-1"))
+        override suspend fun update(transaction: Transaction) = RepositoryResult.Success(Unit)
+        override suspend fun softDelete(id: EntityId) = RepositoryResult.Success(Unit)
+        override suspend fun softDeleteInstallments(ids: Set<EntityId>) = RepositoryResult.Success(Unit)
+    }
+
     private val authRepository = FakeAuthRepository(userSession)
     private val categoryRepository = FakeCategoryRepository()
+    private val transactionRepository = FakeTransactionRepo()
     private val observeCategoriesUseCase = ObserveCategoriesUseCase(categoryRepository)
     private val deleteCategoryUseCase = DeleteCategoryUseCase(authRepository, categoryRepository)
     private val fakeWorkspaceRepo = com.feniqo.mobile.presentation.common.FakeWorkspaceRepository()
     private val observeActiveWorkspaceUseCase = com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase(fakeWorkspaceRepo)
+    private val observeTransactionsUseCase = ObserveTransactionsUseCase(transactionRepository)
+    private val testToday = LocalDate(2026, 9, 15)
+    private val testDateProvider = CurrentDateProvider { testToday }
 
-    private fun createViewModel(): CategoriesViewModel =
-        CategoriesViewModel(observeCategoriesUseCase, deleteCategoryUseCase, observeActiveWorkspaceUseCase)
+    private fun createViewModel(
+        dateProvider: CurrentDateProvider = testDateProvider,
+    ): CategoriesViewModel =
+        CategoriesViewModel(
+            observeCategoriesUseCase = observeCategoriesUseCase,
+            deleteCategoryUseCase = deleteCategoryUseCase,
+            observeActiveWorkspaceUseCase = observeActiveWorkspaceUseCase,
+            observeTransactionsUseCase = observeTransactionsUseCase,
+            currentDateProvider = dateProvider,
+        )
 
     @Test
-    fun initialState_observesExpenseType_andSeparatesSystemAndCustomCategories() = runTest {
+    fun initialState_observesAllCategories_andSeparatesSystemAndCustomCategories() = runTest {
         val sysExpense = Category(
             id = EntityId("sys-market"),
             ownerId = null,
@@ -159,12 +205,10 @@ class CategoriesViewModelTest {
 
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
-        assertEquals(TransactionType.EXPENSE, state.selectedType)
-        assertEquals(1, state.systemCategories.size)
-        assertEquals("Market", state.systemCategories[0].name)
-        assertEquals(true, state.systemCategories[0].isDefault)
-        assertFalse(state.systemCategories[0].canEdit)
-        assertFalse(state.systemCategories[0].canDelete)
+        assertNull(state.selectedTypeFilter)
+        assertEquals(2, state.systemCategories.size)
+        assertTrue(state.systemCategories.any { it.name == "Market" })
+        assertTrue(state.systemCategories.any { it.name == "Maaş" })
 
         assertEquals(1, state.customCategories.size)
         assertEquals("Kişisel Gider", state.customCategories[0].name)
@@ -206,14 +250,17 @@ class CategoriesViewModelTest {
             viewModel.uiState.collect()
         }
 
-        assertEquals(TransactionType.EXPENSE, viewModel.uiState.value.selectedType)
+        viewModel.onTypeFilterSelected(TransactionType.EXPENSE)
+        advanceUntilIdle()
+
+        assertEquals(TransactionType.EXPENSE, viewModel.uiState.value.selectedTypeFilter)
         assertEquals(1, viewModel.uiState.value.systemCategories.size)
         assertEquals("Market", viewModel.uiState.value.systemCategories[0].name)
 
         viewModel.onTypeSelected(TransactionType.INCOME)
         advanceUntilIdle()
 
-        assertEquals(TransactionType.INCOME, viewModel.uiState.value.selectedType)
+        assertEquals(TransactionType.INCOME, viewModel.uiState.value.selectedTypeFilter)
         assertEquals(TransactionType.INCOME, categoryRepository.lastObservedType)
         assertEquals(1, viewModel.uiState.value.systemCategories.size)
         assertEquals("Maaş", viewModel.uiState.value.systemCategories[0].name)
@@ -551,7 +598,9 @@ class CategoriesViewModelTest {
         }
 
         // Başlangıç EXPENSE listesi yüklendi
-        assertEquals(TransactionType.EXPENSE, viewModel.uiState.value.selectedType)
+        viewModel.onTypeFilterSelected(TransactionType.EXPENSE)
+        advanceUntilIdle()
+        assertEquals(TransactionType.EXPENSE, viewModel.uiState.value.selectedTypeFilter)
         assertFalse(viewModel.uiState.value.isLoading)
         assertEquals(1, viewModel.uiState.value.systemCategories.size)
         assertEquals("Market", viewModel.uiState.value.systemCategories[0].name)
@@ -564,7 +613,7 @@ class CategoriesViewModelTest {
 
         // Ara durum: INCOME seçili, loading true, eski liste temizlenmiş ve boş
         val intermediateState = viewModel.uiState.value
-        assertEquals(TransactionType.INCOME, intermediateState.selectedType)
+        assertEquals(TransactionType.INCOME, intermediateState.selectedTypeFilter)
         assertTrue(intermediateState.isLoading)
         assertTrue(intermediateState.systemCategories.isEmpty())
         assertTrue(intermediateState.customCategories.isEmpty())
@@ -576,7 +625,7 @@ class CategoriesViewModelTest {
 
         // Son durum: loading kapalı ve INCOME listesi yüklendi
         val finalState = viewModel.uiState.value
-        assertEquals(TransactionType.INCOME, finalState.selectedType)
+        assertEquals(TransactionType.INCOME, finalState.selectedTypeFilter)
         assertFalse(finalState.isLoading)
         assertEquals(1, finalState.systemCategories.size)
         assertEquals("Maaş", finalState.systemCategories[0].name)
@@ -689,5 +738,388 @@ class CategoriesViewModelTest {
         assertEquals(FinanceUiMessage.CATEGORY_DELETED, viewModel.uiState.value.generalMessage)
 
         collector.cancel()
+    }
+
+    @Test
+    fun periodNavigation_previousMonth_decrementsMonth() = runTest {
+        val viewModel = createViewModel()
+        val collector = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+
+        assertEquals(YearMonth("2026-09"), viewModel.uiState.value.selectedYearMonth)
+        viewModel.onPreviousMonth()
+        assertEquals(YearMonth("2026-08"), viewModel.uiState.value.selectedYearMonth)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun periodNavigation_nextMonth_doesNotExceedCurrentMonth() = runTest {
+        val viewModel = createViewModel()
+        val collector = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+
+        assertEquals(YearMonth("2026-09"), viewModel.uiState.value.selectedYearMonth)
+        // Gelecek aya gitmeyi dene (2026-10) -> engellenmeli
+        viewModel.onNextMonth()
+        assertEquals(YearMonth("2026-09"), viewModel.uiState.value.selectedYearMonth)
+
+        // Önce geriye git, sonra ileri gel -> çalışmalı
+        viewModel.onPreviousMonth()
+        assertEquals(YearMonth("2026-08"), viewModel.uiState.value.selectedYearMonth)
+        viewModel.onNextMonth()
+        assertEquals(YearMonth("2026-09"), viewModel.uiState.value.selectedYearMonth)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun periodPicker_dialogRequestDismiss_andValidPastMonthSelection() = runTest {
+        val viewModel = createViewModel()
+        val collector = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+
+        assertFalse(viewModel.uiState.value.isPeriodPickerVisible)
+        viewModel.onPeriodPickerRequested()
+        assertTrue(viewModel.uiState.value.isPeriodPickerVisible)
+
+        viewModel.onPeriodPickerDismissed()
+        assertFalse(viewModel.uiState.value.isPeriodPickerVisible)
+
+        // Geçmiş geçerli ay seçimi
+        viewModel.onPeriodPickerRequested()
+        viewModel.onYearMonthSelected(YearMonth("2026-05"))
+        assertEquals(YearMonth("2026-05"), viewModel.uiState.value.selectedYearMonth)
+        assertFalse(viewModel.uiState.value.isPeriodPickerVisible)
+
+        // Gelecek ay seçimi reddedilmeli
+        viewModel.onYearMonthSelected(YearMonth("2026-11"))
+        assertEquals(YearMonth("2026-05"), viewModel.uiState.value.selectedYearMonth)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun typeFilter_updatesFilter_correctly() = runTest {
+        val viewModel = createViewModel()
+        val collector = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+
+        assertNull(viewModel.uiState.value.selectedTypeFilter)
+
+        viewModel.onTypeFilterSelected(TransactionType.EXPENSE)
+        assertEquals(TransactionType.EXPENSE, viewModel.uiState.value.selectedTypeFilter)
+
+        viewModel.onTypeFilterSelected(TransactionType.INCOME)
+        assertEquals(TransactionType.INCOME, viewModel.uiState.value.selectedTypeFilter)
+
+        viewModel.onTypeFilterSelected(null)
+        assertNull(viewModel.uiState.value.selectedTypeFilter)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun filterChange_andPeriodChange_resetsDeleteTargetCategorySafely() = runTest {
+        val customCategory = Category(
+            id = EntityId("cust-1"),
+            ownerId = userId,
+            workspaceId = null,
+            name = "Kişisel",
+            type = TransactionType.EXPENSE,
+            color = CategoryColor("#10B981"),
+            icon = null,
+            isDefault = false,
+            createdAt = Instant.parse("2026-08-21T00:00:00Z"),
+        )
+        categoryRepository.categoriesFlow.value = listOf(customCategory)
+
+        val customDisplayModel = CategoryDisplayModel(
+            id = customCategory.id,
+            name = customCategory.name,
+            type = customCategory.type,
+            colorHex = "#10B981",
+            iconKey = null,
+            isDefault = false,
+        )
+
+        val viewModel = createViewModel()
+        val collector = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+
+        viewModel.onDeleteClicked(customDisplayModel)
+        assertEquals(EntityId("cust-1"), viewModel.uiState.value.deleteTargetCategory?.id)
+
+        // Filtre değişince silme hedefi sıfırlanmalı
+        viewModel.onTypeFilterSelected(TransactionType.INCOME)
+        assertNull(viewModel.uiState.value.deleteTargetCategory)
+
+        // Tekrar hedef seçilsin
+        viewModel.onDeleteClicked(customDisplayModel)
+        assertEquals(EntityId("cust-1"), viewModel.uiState.value.deleteTargetCategory?.id)
+
+        // Ay değişince silme hedefi sıfırlanmalı
+        viewModel.onPreviousMonth()
+        assertNull(viewModel.uiState.value.deleteTargetCategory)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun futureMonth_isBlockedByBothNextMonthAndYearMonthSelected() = runTest {
+        val viewModel = createViewModel()
+        val collector = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+
+        // testDateProvider 2026-09-15 döner; maxAllowedMonth = 2026-09
+        assertEquals(YearMonth("2026-09"), viewModel.uiState.value.selectedYearMonth)
+
+        // onNextMonth geleceğe geçmemeli
+        viewModel.onNextMonth()
+        assertEquals(YearMonth("2026-09"), viewModel.uiState.value.selectedYearMonth)
+
+        // onYearMonthSelected geleceği reddetmeli
+        viewModel.onYearMonthSelected(YearMonth("2026-10"))
+        assertEquals(YearMonth("2026-09"), viewModel.uiState.value.selectedYearMonth)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun multiCurrencyTransactions_failClosedWithGenericError() = runTest {
+        val expenseCat = Category(
+            id = EntityId("sys-market"),
+            ownerId = null,
+            workspaceId = null,
+            name = "Market",
+            type = TransactionType.EXPENSE,
+            color = CategoryColor("#EF4444"),
+            icon = null,
+            isDefault = true,
+            createdAt = Instant.parse("2026-08-21T00:00:00Z"),
+        )
+        categoryRepository.categoriesFlow.value = listOf(expenseCat)
+
+        val usdTx = Transaction(
+            id = EntityId("tx-usd"),
+            ownerId = userId,
+            workspaceId = EntityId("ws-1"),
+            type = TransactionType.EXPENSE,
+            amount = Money(5000, Currency.USD),
+            categoryId = EntityId("sys-market"),
+            description = "Test USD",
+            paymentMethod = PaymentMethod.CASH,
+            transactionDate = LocalDate(2026, 8, 10),
+            receiptPath = null,
+            installment = null,
+            createdAt = Instant.parse("2026-08-21T00:00:00Z"),
+        )
+        transactionRepository.transactionsFlow.value = listOf(usdTx)
+
+        val viewModel = createViewModel()
+        val collector = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+
+        // Fail-closed hata mesajı dönmeli ve boş liste kalmalı
+        assertEquals(FinanceUiMessage.GENERIC_ERROR, viewModel.uiState.value.generalMessage)
+        assertTrue(viewModel.uiState.value.items.isEmpty())
+
+        collector.cancel()
+    }
+
+    @Test
+    fun allFilter_displaysBothIncomeAndExpenseCategoriesWithoutAddingThemTogether() = runTest {
+        val marketCat = Category(
+            id = EntityId("sys-market"),
+            ownerId = null,
+            workspaceId = null,
+            name = "Market",
+            type = TransactionType.EXPENSE,
+            color = CategoryColor("#EF4444"),
+            icon = null,
+            isDefault = true,
+            createdAt = Instant.parse("2026-08-21T00:00:00Z"),
+        )
+        val salaryCat = Category(
+            id = EntityId("sys-salary"),
+            ownerId = null,
+            workspaceId = null,
+            name = "Maaş",
+            type = TransactionType.INCOME,
+            color = CategoryColor("#10B981"),
+            icon = null,
+            isDefault = true,
+            createdAt = Instant.parse("2026-08-21T00:00:00Z"),
+        )
+        categoryRepository.categoriesFlow.value = listOf(marketCat, salaryCat)
+
+        val expenseTx = Transaction(
+            id = EntityId("tx-1"),
+            ownerId = userId,
+            workspaceId = EntityId("ws-1"),
+            type = TransactionType.EXPENSE,
+            amount = Money(150_00, Currency.TRY),
+            categoryId = EntityId("sys-market"),
+            description = "Market harcaması",
+            paymentMethod = PaymentMethod.CASH,
+            transactionDate = LocalDate(2026, 8, 10),
+            receiptPath = null,
+            installment = null,
+            createdAt = Instant.parse("2026-08-21T00:00:00Z"),
+        )
+        val incomeTx = Transaction(
+            id = EntityId("tx-2"),
+            ownerId = userId,
+            workspaceId = EntityId("ws-1"),
+            type = TransactionType.INCOME,
+            amount = Money(500_00, Currency.TRY),
+            categoryId = EntityId("sys-salary"),
+            description = "Maaş girişi",
+            paymentMethod = PaymentMethod.CASH,
+            transactionDate = LocalDate(2026, 8, 11),
+            receiptPath = null,
+            installment = null,
+            createdAt = Instant.parse("2026-08-21T00:00:00Z"),
+        )
+        transactionRepository.transactionsFlow.value = listOf(expenseTx, incomeTx)
+
+        val viewModel = createViewModel()
+        val collector = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+
+        val state = viewModel.uiState.value
+        assertNull(state.selectedTypeFilter)
+        assertEquals(2, state.items.size)
+
+        val marketItem = state.items.first { it.category.id == EntityId("sys-market") }
+        val salaryItem = state.items.first { it.category.id == EntityId("sys-salary") }
+
+        assertEquals(150_00L, marketItem.currentPeriodAmount.amountMinor)
+        assertEquals(500_00L, salaryItem.currentPeriodAmount.amountMinor)
+
+        // Özet kartı en yüksek gideri göstermeli
+        assertEquals("Market", state.summary.topExpenseCategoryName)
+        assertEquals("150,00 ₺", state.summary.formattedTopExpenseAmount)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun typeFilter_narrowsTransactionFilters_andSeparatesIncomeAndExpenseScope() = runTest {
+        val marketCat = Category(
+            id = EntityId("cat-market"),
+            ownerId = null,
+            workspaceId = null,
+            name = "Market",
+            type = TransactionType.EXPENSE,
+            color = CategoryColor("#EF4444"),
+            icon = null,
+            isDefault = true,
+            createdAt = Instant.parse("2026-08-21T00:00:00Z"),
+        )
+        val salaryCat = Category(
+            id = EntityId("cat-salary"),
+            ownerId = null,
+            workspaceId = null,
+            name = "Maaş",
+            type = TransactionType.INCOME,
+            color = CategoryColor("#10B981"),
+            icon = null,
+            isDefault = true,
+            createdAt = Instant.parse("2026-08-21T00:00:00Z"),
+        )
+        categoryRepository.categoriesFlow.value = listOf(marketCat, salaryCat)
+
+        val expenseTx = Transaction(
+            id = EntityId("tx-1"),
+            ownerId = userId,
+            workspaceId = EntityId("ws-1"),
+            type = TransactionType.EXPENSE,
+            amount = Money(200_00, Currency.TRY),
+            categoryId = EntityId("cat-market"),
+            description = "Market",
+            paymentMethod = PaymentMethod.CASH,
+            transactionDate = LocalDate(2026, 9, 10),
+            receiptPath = null,
+            installment = null,
+            createdAt = Instant.parse("2026-08-21T00:00:00Z"),
+        )
+        val incomeTx = Transaction(
+            id = EntityId("tx-2"),
+            ownerId = userId,
+            workspaceId = EntityId("ws-1"),
+            type = TransactionType.INCOME,
+            amount = Money(1000_00, Currency.TRY),
+            categoryId = EntityId("cat-salary"),
+            description = "Maaş",
+            paymentMethod = PaymentMethod.CASH,
+            transactionDate = LocalDate(2026, 9, 10),
+            receiptPath = null,
+            installment = null,
+            createdAt = Instant.parse("2026-08-21T00:00:00Z"),
+        )
+        transactionRepository.transactionsFlow.value = listOf(expenseTx, incomeTx)
+
+        val viewModel = createViewModel()
+        val collector = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+
+        // 1. Tümü filtresi
+        assertEquals(null, viewModel.uiState.value.selectedTypeFilter)
+        assertEquals(2, viewModel.uiState.value.items.size)
+        assertEquals("Market", viewModel.uiState.value.summary.topExpenseCategoryName)
+        assertEquals("200,00 ₺", viewModel.uiState.value.summary.formattedTopExpenseAmount)
+
+        // 2. Gider filtresine geçiş
+        viewModel.onTypeFilterSelected(TransactionType.EXPENSE)
+        advanceUntilIdle()
+
+        assertEquals(TransactionType.EXPENSE, viewModel.uiState.value.selectedTypeFilter)
+        assertEquals(1, viewModel.uiState.value.items.size)
+        assertEquals("Market", viewModel.uiState.value.items[0].category.name)
+        // Repository TransactionType.EXPENSE ile sorgulanmış olmalı
+        assertTrue(transactionRepository.requestedFilters.any { it.type == TransactionType.EXPENSE })
+        assertEquals("Market", viewModel.uiState.value.summary.topExpenseCategoryName)
+
+        // 3. Gelir filtresine geçiş
+        viewModel.onTypeFilterSelected(TransactionType.INCOME)
+        advanceUntilIdle()
+
+        assertEquals(TransactionType.INCOME, viewModel.uiState.value.selectedTypeFilter)
+        assertEquals(1, viewModel.uiState.value.items.size)
+        assertEquals("Maaş", viewModel.uiState.value.items[0].category.name)
+        // Repository TransactionType.INCOME ile sorgulanmış olmalı
+        assertTrue(transactionRepository.requestedFilters.any { it.type == TransactionType.INCOME })
+        // Gelir görünümünde en yüksek kategori gelir olmalı
+        assertEquals("Maaş", viewModel.uiState.value.summary.topCategoryName)
+        assertEquals(TransactionType.INCOME, viewModel.uiState.value.summary.topCategoryType)
+        assertEquals("1.000,00 ₺", viewModel.uiState.value.summary.formattedTopCategoryAmount)
+        assertTrue(viewModel.uiState.value.summary.insightText?.contains("en yüksek gelir") == true)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun initialState_selectedYearMonth_reflectsSystemDateAcrossMultipleDates() = runTest {
+        // 1. Sistem Tarihi: 2026-04-15 -> İlk frame dahil 2026-04
+        val date1 = LocalDate(2026, 4, 15)
+        val provider1 = CurrentDateProvider { date1 }
+        val vm1 = createViewModel(dateProvider = provider1)
+        assertEquals(YearMonth("2026-04"), vm1.uiState.value.selectedYearMonth)
+
+        // 2. Sistem Tarihi: 2025-12-01 -> İlk frame dahil 2025-12
+        val date2 = LocalDate(2025, 12, 1)
+        val provider2 = CurrentDateProvider { date2 }
+        val vm2 = createViewModel(dateProvider = provider2)
+        assertEquals(YearMonth("2025-12"), vm2.uiState.value.selectedYearMonth)
     }
 }

@@ -268,6 +268,8 @@ class OfflineFirstRecurringTransactionRepository(
                 }
 
                 val newTransactionId = entityIdGenerator.nextId()
+                val transactionTitle = recurring.description?.trim()?.takeIf { it.isNotBlank() }
+                    ?: category.name.trim().take(Transaction.MAX_TITLE_LENGTH)
                 val transaction = Transaction(
                     id = newTransactionId,
                     ownerId = session.userId,
@@ -275,12 +277,13 @@ class OfflineFirstRecurringTransactionRepository(
                     amount = recurring.amount,
                     type = recurring.type,
                     categoryId = recurring.categoryId,
-                    description = recurring.description,
+                    description = transactionTitle,
                     paymentMethod = recurring.paymentMethod,
                     transactionDate = candidate.dueDate,
                     receiptPath = null,
                     installment = null,
                     createdAt = createdAt,
+                    note = null,
                 )
 
                 val dto = transaction.toDto()

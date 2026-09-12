@@ -23,16 +23,16 @@ class FeniqoRoutesTest {
     @Test
     fun topLevelDestinations_mapsToExpectedRouteObjects() {
         assertSame(DashboardRoute, TopLevelDestination.DASHBOARD.route)
-        assertSame(TransactionsRoute, TopLevelDestination.TRANSACTIONS.route)
-        assertSame(PlanRoute, TopLevelDestination.PLAN.route)
+        assertEquals(TransactionsRoute(), TopLevelDestination.TRANSACTIONS.route)
+        assertSame(BudgetsRoute, TopLevelDestination.BUDGET.route)
         assertSame(MoreRoute, TopLevelDestination.MORE.route)
     }
 
     @Test
-    fun planRoute_and_moreRoute_implementFeniqoRoute() {
-        assertTrue(PlanRoute is FeniqoRoute)
+    fun budgetRoute_and_moreRoute_implementFeniqoRoute() {
+        assertTrue(BudgetsRoute is FeniqoRoute)
         assertTrue(MoreRoute is FeniqoRoute)
-        assertSame(PlanRoute, PlanRoute)
+        assertSame(BudgetsRoute, BudgetsRoute)
         assertSame(MoreRoute, MoreRoute)
     }
 
@@ -50,6 +50,12 @@ class FeniqoRoutesTest {
     fun transactionFormRoute_nullTransactionId_representsAddMode() {
         val route = TransactionFormRoute(transactionId = null)
         assertEquals(null, route.transactionId)
+        assertEquals("EXPENSE", route.initialTypeCode)
+    }
+
+    @Test
+    fun transactionFormRoute_preservesQuickAddInitialType() {
+        assertEquals("INCOME", TransactionFormRoute(initialTypeCode = "INCOME").initialTypeCode)
     }
 
     @Test
@@ -135,11 +141,48 @@ class FeniqoRoutesTest {
         assertTrue("BudgetFormRoute top-level hedef olmamalıdır", topLevelRoutes.none { it is BudgetFormRoute })
         assertTrue("RecurringTransactionFormRoute top-level hedef olmamalıdır", topLevelRoutes.none { it is RecurringTransactionFormRoute })
         assertTrue("SubscriptionFormRoute top-level hedef olmamalıdır", topLevelRoutes.none { it is SubscriptionFormRoute })
-        assertTrue("BudgetsRoute top-level hedef olmamalıdır", topLevelRoutes.none { it == BudgetsRoute })
+        assertTrue("BudgetsRoute top-level hedef olmalıdır", topLevelRoutes.any { it == BudgetsRoute })
         assertTrue("CategoriesRoute top-level hedef olmamalıdır", topLevelRoutes.none { it == CategoriesRoute })
         assertTrue("SettingsRoute top-level hedef olmamalıdır", topLevelRoutes.none { it == SettingsRoute })
         assertTrue("RecurringTransactionsRoute top-level hedef olmamalıdır", topLevelRoutes.none { it == RecurringTransactionsRoute })
         assertTrue("SubscriptionsRoute top-level hedef olmamalıdır", topLevelRoutes.none { it == SubscriptionsRoute })
+        assertTrue("AssetsRoute top-level hedef olmamalıdır", topLevelRoutes.none { it == AssetsRoute })
+        assertTrue("AssetFormRoute top-level hedef olmamalıdır", topLevelRoutes.none { it is AssetFormRoute })
+    }
+
+    @Test
+    fun assetRoutes_createEditAndFailClosedParsing_areDeterministic() {
+        assertTrue(AssetsRoute is FeniqoRoute)
+        assertNull(AssetFormRoute().assetId)
+        assertEquals("asset-123", AssetFormRoute("asset-123").assetId)
+        assertEquals(AssetRouteIdResult.CreateMode, parseAssetRouteId(null))
+        assertEquals(AssetRouteIdResult.InvalidId, parseAssetRouteId(""))
+        assertEquals(AssetRouteIdResult.InvalidId, parseAssetRouteId("   "))
+
+        val valid = parseAssetRouteId("  asset-123  ")
+        assertTrue(valid is AssetRouteIdResult.ValidId)
+        assertEquals(
+            com.feniqo.mobile.domain.model.EntityId("asset-123"),
+            (valid as AssetRouteIdResult.ValidId).id,
+        )
+    }
+
+    @Test
+    fun transactionsRoute_implementsFeniqoRoute_andSupportsFilterParameters() {
+        assertTrue(TransactionsRoute() is FeniqoRoute)
+        val defaultRoute = TransactionsRoute()
+        assertNull(defaultRoute.categoryId)
+        assertNull(defaultRoute.startDate)
+        assertNull(defaultRoute.endDate)
+
+        val filteredRoute = TransactionsRoute(
+            categoryId = "cat-food",
+            startDate = "2026-09-01",
+            endDate = "2026-09-30",
+        )
+        assertEquals("cat-food", filteredRoute.categoryId)
+        assertEquals("2026-09-01", filteredRoute.startDate)
+        assertEquals("2026-09-30", filteredRoute.endDate)
     }
 
     @Test
@@ -412,5 +455,34 @@ class FeniqoRoutesTest {
         val valid = parseWorkspaceDetailsRouteId("  ws-123  ")
         assertTrue(valid is WorkspaceDetailsRouteIdResult.ValidId)
         assertEquals(com.feniqo.mobile.domain.model.EntityId("ws-123"), (valid as WorkspaceDetailsRouteIdResult.ValidId).id)
+    }
+
+    @Test
+    fun workspaceSettlementRoute_implementsFeniqoRoute_andIsNotTopLevel() {
+        val route = WorkspaceSettlementRoute("ws-1")
+        assertTrue(route is FeniqoRoute)
+        assertEquals("ws-1", route.workspaceId)
+        val topLevelRoutes = TopLevelDestination.entries.map { it.route }
+        assertTrue("WorkspaceSettlementRoute top-level hedef olmamalıdır", route !in topLevelRoutes)
+    }
+
+    @Test
+    fun parseWorkspaceSettlementRouteId_correctlyDifferentiatesModesAndFailsClosed() {
+        assertTrue(parseWorkspaceSettlementRouteId(null) is WorkspaceSettlementRouteIdResult.InvalidId)
+        assertTrue(parseWorkspaceSettlementRouteId("") is WorkspaceSettlementRouteIdResult.InvalidId)
+        assertTrue(parseWorkspaceSettlementRouteId("   ") is WorkspaceSettlementRouteIdResult.InvalidId)
+
+        val valid = parseWorkspaceSettlementRouteId("  ws-123  ")
+        assertTrue(valid is WorkspaceSettlementRouteIdResult.ValidId)
+        assertEquals(com.feniqo.mobile.domain.model.EntityId("ws-123"), (valid as WorkspaceSettlementRouteIdResult.ValidId).id)
+    }
+
+    @Test
+    fun transactionSuccessRoute_implementsFeniqoRoute_andIsNotTopLevel() {
+        val route = TransactionSuccessRoute("tx-123")
+        assertTrue(route is FeniqoRoute)
+        assertEquals("tx-123", route.transactionId)
+        val topLevelRoutes = TopLevelDestination.entries.map { it.route }
+        assertTrue("TransactionSuccessRoute top-level hedef olmamalıdır", route !in topLevelRoutes)
     }
 }

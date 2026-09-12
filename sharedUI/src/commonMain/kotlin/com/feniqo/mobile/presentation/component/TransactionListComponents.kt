@@ -39,28 +39,81 @@ import com.feniqo.mobile.presentation.theme.FeniqoStatusColor
 import com.feniqo.mobile.presentation.transaction.TransactionDisplayModel
 import com.feniqo.mobile.presentation.util.ColorParser
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
+
 /**
  * İşlem listesi için tarih grubu başlığı bileşenidir.
+ * Sağ tarafta para güvenliği doğrulanmış günlük net toplamı görüntüler.
  */
 @Composable
 fun TransactionDateGroupHeader(
     formattedDate: String,
+    secondaryDateText: String? = null,
+    dailyNetFormatted: String? = null,
+    isDailyNetNegative: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.background,
+    val fullDateLabel = if (!secondaryDateText.isNullOrBlank()) {
+        "$formattedDate, $secondaryDateText"
+    } else {
+        formattedDate
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = formattedDate,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(
-                horizontal = FeniqoSpacing.Large,
-                vertical = FeniqoSpacing.Small,
-            ),
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.weight(1f, fill = false),
+        ) {
+            Text(
+                text = formattedDate,
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.5.sp,
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            if (!secondaryDateText.isNullOrBlank()) {
+                Text(
+                    text = secondaryDateText,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.sp,
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        if (!dailyNetFormatted.isNullOrBlank()) {
+            val netDescription = if (isDailyNetNegative) {
+                "Günlük net gider: $dailyNetFormatted"
+            } else {
+                "Günlük net gelir: $dailyNetFormatted"
+            }
+            Text(
+                text = dailyNetFormatted,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp,
+                ),
+                color = if (isDailyNetNegative) MaterialTheme.colorScheme.onSurfaceVariant else FeniqoStatusColor.Success,
+                modifier = Modifier.semantics {
+                    contentDescription = "$fullDateLabel için $netDescription"
+                },
+            )
+        }
     }
 }
 
@@ -140,122 +193,114 @@ fun TransactionListItem(
         modifier.fillMaxWidth()
     }
 
-    val categoryColor = ColorParser.parseHexColorOrNull(item.categoryColorHex)
-        ?: MaterialTheme.colorScheme.surfaceVariant
-
+    // Giderler lüks koyu kömür / onSurface rengi, gelirler zümrüt yeşili
     val amountColor = if (item.type == TransactionType.INCOME) {
         FeniqoStatusColor.Success
     } else {
-        MaterialTheme.colorScheme.error
+        MaterialTheme.colorScheme.onSurface
+    }
+
+    val title = if (!item.description.isNullOrBlank()) item.description else item.categoryName
+    val subtitle = if (!item.description.isNullOrBlank()) {
+        "${item.categoryName} • ${item.paymentMethod.toDisplayText()}"
+    } else {
+        item.paymentMethod.toDisplayText()
     }
 
     Card(
-        modifier = cardModifier,
-        shape = RoundedCornerShape(FeniqoRadius.Medium),
+        modifier = cardModifier.defaultMinSize(minHeight = 48.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(FeniqoSpacing.Medium),
+                .padding(horizontal = 14.dp, vertical = 9.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            // Sol taraf: Kategori rengi, adı, açıklama, ödeme yöntemi, rozetler
+            // Sol: 42dp Tonal Kategori İkonu
+            val categoryColor = ColorParser.parseHexColorOrNull(item.categoryColorHex)
+                ?: Color(0xFF4E735F)
+            CategoryTonalIcon(
+                iconKey = item.categoryIconKey,
+                color = categoryColor,
+                containerSize = 42.dp,
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Orta: Başlık, kategori, rozetler
             Column(
-                modifier = Modifier
-                    .weight(0.68f)
-                    .padding(end = FeniqoSpacing.Small),
-                verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(1.dp),
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .background(categoryColor, CircleShape),
-                    )
-                    Text(
-                        text = item.categoryName,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.5.sp,
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
 
-                if (!item.description.isNullOrBlank()) {
-                    Text(
-                        text = item.description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.sp,
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
 
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
-                    verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
-                ) {
-                    Text(
-                        text = item.paymentMethod.toDisplayText(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-
-                    if (item.installment != null) {
-                        InstallmentBadge(badgeText = item.installment.badgeText)
-                    }
-
-                    if (item.hasReceipt) {
-                        ReceiptBadge()
+                if (item.installment != null || item.hasReceipt) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
+                        modifier = Modifier.padding(top = 2.dp),
+                    ) {
+                        if (item.installment != null) {
+                            InstallmentBadge(badgeText = item.installment.badgeText)
+                        }
+                        if (item.hasReceipt) {
+                            ReceiptBadge()
+                        }
                     }
                 }
             }
 
-            // Sağ taraf: Tutar ve Sil Butonu
-            Column(
-                modifier = Modifier.weight(0.32f),
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Sağ: Tutar ve Zarif İnce Chevron
+            val typePrefix = if (item.type == TransactionType.INCOME) "Gelir" else "Gider"
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
                     text = item.formattedAmount,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.5.sp,
+                    ),
                     color = amountColor,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.semantics {
-                        contentDescription = item.formattedAmount
+                        contentDescription = "$typePrefix: ${item.formattedAmount}"
                     },
                 )
 
-                TextButton(
-                    onClick = { onDeleteClicked(item) },
-                    enabled = item.canDelete && !isDeleteInProgress,
-                    modifier = Modifier
-                        .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-                        .semantics {
-                            contentDescription = "${item.categoryName} ${item.formattedAmount} işlemini sil"
-                        },
-                ) {
-                    Text(
-                        text = "Sil",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (item.canDelete && !isDeleteInProgress) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                        },
-                    )
-                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.size(16.dp),
+                )
             }
         }
     }

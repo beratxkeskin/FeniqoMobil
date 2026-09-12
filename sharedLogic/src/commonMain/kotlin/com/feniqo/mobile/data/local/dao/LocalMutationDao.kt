@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Upsert
 import com.feniqo.mobile.data.local.entity.BudgetEntity
+import com.feniqo.mobile.data.local.entity.AssetEntity
 import com.feniqo.mobile.data.local.entity.CategoryEntity
 import com.feniqo.mobile.data.local.entity.DebtEntity
 import com.feniqo.mobile.data.local.entity.DebtPaymentEntity
@@ -27,6 +28,7 @@ import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
 import com.feniqo.mobile.data.local.outbox.OutboxOperationType
 import com.feniqo.mobile.data.mapper.toEntity
 import com.feniqo.mobile.data.remote.dto.BudgetDto
+import com.feniqo.mobile.data.remote.dto.AssetDto
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.DebtDto
 import com.feniqo.mobile.data.remote.dto.DebtPaymentDto
@@ -75,6 +77,7 @@ interface LocalMutationDao {
     @Upsert suspend fun upsertWorkspaceInvitationRow(entity: WorkspaceInvitationEntity)
     @Upsert suspend fun upsertCategoryRow(entity: CategoryEntity)
     @Upsert suspend fun upsertBudgetRow(entity: BudgetEntity)
+    @Upsert suspend fun upsertAssetRow(entity: AssetEntity)
     @Upsert suspend fun upsertTransactionRow(entity: TransactionEntity)
     @Insert(onConflict = OnConflictStrategy.ABORT) suspend fun insertTransactionRow(entity: TransactionEntity)
     @Upsert suspend fun upsertTagRows(entities: List<TagEntity>)
@@ -86,6 +89,27 @@ interface LocalMutationDao {
     @Upsert suspend fun upsertGoalContributionRow(entity: GoalContributionEntity)
     @Upsert suspend fun upsertDebtRow(entity: DebtEntity)
     @Upsert suspend fun upsertDebtPaymentRow(entity: DebtPaymentEntity)
+
+    @Query("DELETE FROM assets WHERE id = :id")
+    suspend fun deleteAssetRow(id: String): Int
+
+    @Query(
+        """
+        UPDATE assets SET version = :appliedVersion, base_version = :appliedVersion,
+            local_updated_at_epoch_ms = :nowEpochMillis, last_sync_error = NULL
+        WHERE id = :id
+        """,
+    )
+    suspend fun rebaseAssetVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int
+
+    @Query(
+        """
+        UPDATE assets
+        SET sync_status = 'SYNCED', local_updated_at_epoch_ms = :nowEpochMillis, last_sync_error = NULL
+        WHERE id = :id AND deleted_at_epoch_ms IS NOT NULL
+        """,
+    )
+    suspend fun markAssetSyncedIfDeleted(id: String, nowEpochMillis: Long): Int
 
 
 
@@ -1655,6 +1679,10 @@ interface LocalMutationDao {
             "BUDGET" -> markBudgetSyncedIfDeleted(entityId, nowEpochMillis)
             "RECURRING_TRANSACTION" -> markRecurringTransactionSyncedIfDeleted(entityId, nowEpochMillis)
             "SUBSCRIPTION" -> markSubscriptionSyncedIfDeleted(entityId, nowEpochMillis)
+            "ASSET" -> {
+                val marked = markAssetSyncedIfDeleted(entityId, nowEpochMillis)
+                check(marked == 1) { "Silinmiş yerel Asset kaydı bulunamadı veya güncellenemedi: $entityId" }
+            }
             "GOAL" -> markGoalSyncedIfDeleted(entityId, nowEpochMillis)
             "DEBT" -> markDebtSyncedIfDeleted(entityId, nowEpochMillis)
             "WORKSPACE" -> {
@@ -1843,6 +1871,7 @@ interface LocalMutationDao {
             is OutboxExecutionResult.CategoryApplied -> ackCategoryWriteV2(operationId, result.record, nowEpochMillis)
             is OutboxExecutionResult.TransactionApplied -> ackTransactionWriteV2(operationId, result.record, nowEpochMillis)
             is OutboxExecutionResult.BudgetApplied -> ackBudgetWriteV2(operationId, result.record, nowEpochMillis)
+            is OutboxExecutionResult.AssetApplied -> ackAssetWriteV2(operationId, result.record, nowEpochMillis)
             is OutboxExecutionResult.RecurringTransactionApplied -> ackRecurringTransactionWriteV2(operationId, result.record, nowEpochMillis)
             is OutboxExecutionResult.SubscriptionApplied -> ackSubscriptionWriteV2(operationId, result.record, nowEpochMillis)
             is OutboxExecutionResult.GoalApplied -> ackGoalWriteV2(operationId, result.record, nowEpochMillis)
@@ -1858,6 +1887,31 @@ interface LocalMutationDao {
                 ackMissingDeleteV2(operationId, op.entityTypeCode, op.entityId, nowEpochMillis)
             }
             is OutboxExecutionResult.ConflictDetected -> recordV2Conflict(result.conflict, nowEpochMillis)
+        }
+        return true
+    }
+
+    @Transaction
+    suspend fun ackAssetWriteV2(operationId: String, record: AssetDto, nowEpochMillis: Long): Boolean {
+        val version = requireNotNull(record.version) { "Uzak varlık sürümü yok: $operationId" }
+        require(version >= 1L) { "Uzak varlık sürümü geçersiz: $version" }
+        val operation = requireNotNull(getOutboxById(operationId)) { "Varlık outbox işlemi bulunamadı: $operationId" }
+        check(operation.entityTypeCode == "ASSET" && operation.entityId == record.id) { "Varlık ACK kimliği eşleşmiyor." }
+        check(operation.protocolVersion == 2 && operation.statusCode == "IN_FLIGHT") { "Varlık ACK yalnız IN_FLIGHT V2 kayıt içindir." }
+        val successors = getSuccessors(operationId)
+        check(successors.size <= 1) { "Varlık ACK için birden çok successor bulundu: $operationId" }
+        val successor = successors.firstOrNull()
+        if (successor == null) {
+            upsertAssetRow(record.toDomain().toEntity(record.toRemoteSyncMetadata(nowEpochMillis)))
+            deleteConflictRow("ASSET", record.id)
+        } else {
+            check(rebaseAssetVersion(record.id, version, nowEpochMillis) == 1) { "Varlık sürümü rebase edilemedi: ${record.id}" }
+        }
+        check(deleteOutboxRow(operationId) == 1) { "Varlık outbox kaydı silinemedi: $operationId" }
+        if (successor != null) {
+            check(unblockSuccessor(successor.operationId, operationId, version, nowEpochMillis) == 1) {
+                "Varlık successor kaydı açılamadı: ${successor.operationId}"
+            }
         }
         return true
     }
@@ -2459,6 +2513,81 @@ interface LocalMutationDao {
         )
         insertOutboxRow(op)
         return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+    }
+
+    /** Kişisel varlığı ve immutable V2 payload snapshot'ını tek Room transaction'ında yazar. */
+    @Transaction
+    suspend fun mutateAssetV2(
+        entity: AssetEntity,
+        type: OutboxOperationType,
+        payloadJson: String,
+        operationIdFactory: () -> String,
+        nowEpochMillis: Long,
+    ): V2EnqueueResult {
+        require(payloadJson.isNotBlank()) { "Varlık outbox payload'ı boş olamaz." }
+        val tailCandidates = getActiveTailCandidates("ASSET", entity.id)
+        check(tailCandidates.size <= 1) { "Birden fazla aktif varlık kuyruk sonu bulundu: ${entity.id}" }
+        val tail = tailCandidates.firstOrNull()
+
+        if (tail != null && tail.protocolVersion == 2 && tail.attemptCount == 0 && tail.statusCode == "PENDING") {
+            when (type) {
+                OutboxOperationType.UPDATE -> {
+                    upsertAssetRow(entity)
+                    val updated = if (tail.operationTypeCode == OutboxOperationType.DELETE.name) {
+                        convertPendingDeleteToUpdate(tail.operationId, payloadJson, nowEpochMillis)
+                    } else {
+                        coalescePendingPayload(tail.operationId, payloadJson, nowEpochMillis)
+                    }
+                    check(updated == 1) { "Varlık outbox kaydı güncellenemedi: ${tail.operationId}" }
+                    return V2EnqueueResult(
+                        tail.operationId,
+                        if (tail.operationTypeCode == OutboxOperationType.DELETE.name) {
+                            V2EnqueueDecision.CONVERTED_TO_UPDATE
+                        } else {
+                            V2EnqueueDecision.COALESCED
+                        },
+                    )
+                }
+                OutboxOperationType.DELETE -> {
+                    if (tail.operationTypeCode == OutboxOperationType.CREATE.name && tail.predecessorOperationId == null) {
+                        val entityDeleted = deleteAssetRow(entity.id)
+                        check(entityDeleted == 1) { "Varlık satırı silinemedi: ${entity.id}" }
+                        val outboxDeleted = deleteOutboxRow(tail.operationId)
+                        check(outboxDeleted == 1) { "Varlık outbox kaydı silinemedi: ${tail.operationId}" }
+                        return V2EnqueueResult(tail.operationId, V2EnqueueDecision.HARD_DELETED)
+                    }
+                    upsertAssetRow(entity)
+                    val updated = convertToPendingDelete(tail.operationId, payloadJson, nowEpochMillis)
+                    check(updated == 1) { "Varlık outbox kaydı DELETE'e dönüştürülemedi: ${tail.operationId}" }
+                    return V2EnqueueResult(tail.operationId, V2EnqueueDecision.CONVERTED_TO_DELETE)
+                }
+                OutboxOperationType.CREATE -> error("ASSET CREATE mevcut aktif kuyruk sonuyla tekrar yazılamaz.")
+            }
+        }
+
+        upsertAssetRow(entity)
+        val operationId = operationIdFactory()
+        validateOperationId(operationId)
+        insertOutboxRow(
+            SyncOperationEntity(
+                operationId = operationId,
+                entityTypeCode = "ASSET",
+                entityId = entity.id,
+                operationTypeCode = type.name,
+                baseVersion = if (tail == null) entity.sync.baseVersion else null,
+                payloadJson = payloadJson,
+                predecessorOperationId = tail?.operationId,
+                isBlocked = tail != null,
+                protocolVersion = 2,
+                statusCode = "PENDING",
+                attemptCount = 0,
+                lastError = null,
+                nextAttemptAtEpochMillis = nowEpochMillis,
+                createdAtEpochMillis = nowEpochMillis,
+                updatedAtEpochMillis = nowEpochMillis,
+            ),
+        )
+        return V2EnqueueResult(operationId, V2EnqueueDecision.INSERTED)
     }
 
     @Transaction
@@ -3228,6 +3357,43 @@ interface LocalMutationDao {
         }
     }
 
+    /** Backup restore is all-or-nothing across categories, transactions and their V2 outbox rows. */
+    @Transaction
+    suspend fun importPersonalBackupV1(
+        categoryInputs: List<BackupCategoryCreateInputV1>,
+        transactionInputs: List<TransactionCreateInputV2>,
+        operationIdFactory: () -> String,
+        nowEpochMillis: Long,
+    ): List<String> {
+        val categoryIds = categoryInputs.map { it.entity.id }
+        val transactionIds = transactionInputs.map { it.entity.id }
+        require(categoryIds.distinct().size == categoryIds.size) { "Yinelenen kategori kimliği." }
+        require(transactionIds.distinct().size == transactionIds.size) { "Yinelenen işlem kimliği." }
+        val operationIds = mutableListOf<String>()
+        categoryInputs.forEach { input ->
+            operationIds += mutateCategoryV2(
+                entity = input.entity,
+                type = OutboxOperationType.CREATE,
+                payloadJson = input.payloadJson,
+                operationIdFactory = operationIdFactory,
+                nowEpochMillis = nowEpochMillis,
+            ).operationId
+        }
+        transactionInputs.forEach { input ->
+            operationIds += mutateTransactionV2(
+                entity = input.entity,
+                tags = input.tags,
+                tagLinks = input.tagLinks,
+                type = OutboxOperationType.CREATE,
+                payloadJson = input.payloadJson,
+                operationIdFactory = operationIdFactory,
+                nowEpochMillis = nowEpochMillis,
+            ).operationId
+        }
+        return operationIds
+    }
+
+
     @Transaction
     suspend fun mutateTransactionDeletionsV2(
         inputs: List<TransactionDeleteInputV2>,
@@ -3390,6 +3556,11 @@ data class TransactionCreateInputV2(
     val entity: TransactionEntity,
     val tags: List<TagEntity> = emptyList(),
     val tagLinks: List<TransactionTagCrossRef> = emptyList(),
+    val payloadJson: String,
+)
+
+data class BackupCategoryCreateInputV1(
+    val entity: CategoryEntity,
     val payloadJson: String,
 )
 

@@ -66,6 +66,47 @@ data class BudgetAlertDisplayModel(
 )
 
 /**
+ * Dashboard ekranındaki bütçe ilerleme satırı presentation modelidir.
+ */
+data class DashboardBudgetProgressItem(
+    val categoryName: String,
+    val categoryIconKey: String? = null,
+    val categoryColorHex: String? = null,
+    val formattedSpent: String,
+    val formattedLimit: String,
+    val progressRatio: Float,
+)
+
+/**
+ * Yaklaşan fatura/ödeme satırı presentation modelidir.
+ */
+data class DashboardUpcomingBillItem(
+    val title: String,
+    val formattedDueDate: String,
+    val formattedAmount: String,
+    val iconKey: String? = null,
+)
+
+/**
+ * Dashboard üzerindeki öne çıkan mini birikim hedefi modelidir.
+ */
+data class DashboardSavingsGoalItem(
+    val goalName: String,
+    val formattedCurrent: String,
+    val formattedTarget: String,
+    val progressRatio: Float,
+)
+
+/**
+ * Feniqo İçgörü banner presentation modelidir.
+ */
+data class DashboardInsightModel(
+    val title: String = "Feniqo İçgörü",
+    val message: String,
+    val percentageText: String? = null,
+)
+
+/**
  * Dashboard ekranı için birleştirilmiş ve formatlanmış presentation modelidir.
  */
 data class DashboardDisplayModel(
@@ -76,4 +117,14 @@ data class DashboardDisplayModel(
     val recentTransactions: List<TransactionDisplayModel>,
     val moneyScore: MoneyScoreDisplayModel?,
     val budgetAlert: BudgetAlertDisplayModel? = null,
+    val userName: String = "Sarah",
+    val balanceTrendPercentage: String = "+%12",
+    val balanceTrendDifference: String = "+₺460 geçen aydan bu yana",
+    val incomeTrendPercentage: String = "+%8",
+    val expenseTrendPercentage: String = "-%14",
+    val savedTrendPercentage: String = "+%22",
+    val budgetProgressItems: List<DashboardBudgetProgressItem> = emptyList(),
+    val upcomingBills: List<DashboardUpcomingBillItem> = emptyList(),
+    val savingsGoal: DashboardSavingsGoalItem? = null,
+    val insight: DashboardInsightModel? = null,
 )

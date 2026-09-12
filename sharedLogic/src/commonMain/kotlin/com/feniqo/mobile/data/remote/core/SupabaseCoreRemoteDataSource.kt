@@ -1,6 +1,7 @@
 package com.feniqo.mobile.data.remote.core
 
 import com.feniqo.mobile.data.remote.dto.BudgetDto
+import com.feniqo.mobile.data.remote.dto.AssetDto
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.DebtDto
 import com.feniqo.mobile.data.remote.dto.DebtPaymentDto
@@ -205,6 +206,24 @@ class SupabaseCoreRemoteDataSource(
             updatedAt = { it.updatedAt ?: it.createdAt },
             id = GoalDto::id,
         )
+    }
+
+    override suspend fun fetchAssets(query: AssetRemoteQuery): RemotePage<AssetDto> {
+        val result = client.from(ASSETS).select {
+            count(Count.EXACT)
+            range(query.page.range)
+            order("updated_at", Order.ASCENDING)
+            order("id", Order.ASCENDING)
+            filter {
+                query.updatedAfter?.let { cursor ->
+                    or {
+                        gt("updated_at", cursor.updatedAt)
+                        and { eq("updated_at", cursor.updatedAt); gt("id", cursor.entityId) }
+                    }
+                }
+            }
+        }
+        return result.toCursorPage(query.page, query.updatedAfter, { it.updatedAt ?: it.createdAt }, AssetDto::id)
     }
 
     override suspend fun fetchGoalContributions(query: GoalContributionRemoteQuery): RemotePage<GoalContributionDto> {
@@ -454,6 +473,14 @@ class SupabaseCoreRemoteDataSource(
         dto: GoalDto,
     ): ConditionalRemoteWriteResult<GoalDto> =
         idempotentConditionalWrite(operationId, GOAL, operation, baseVersion, dto)
+
+    override suspend fun writeAsset(
+        operationId: String,
+        operation: RemoteWriteOperation,
+        baseVersion: Long?,
+        dto: AssetDto,
+    ): ConditionalRemoteWriteResult<AssetDto> =
+        idempotentConditionalWrite(operationId, ASSET, operation, baseVersion, dto)
 
     override suspend fun writeGoalContribution(
         operationId: String,
@@ -710,6 +737,7 @@ class SupabaseCoreRemoteDataSource(
         const val RECURRING_TRANSACTION = "RECURRING_TRANSACTION"
         const val SUBSCRIPTION = "SUBSCRIPTION"
         const val GOAL = "GOAL"
+        const val ASSET = "ASSET"
         const val GOAL_CONTRIBUTION = "GOAL_CONTRIBUTION"
         const val DEBT = "DEBT"
         const val DEBT_PAYMENT = "DEBT_PAYMENT"
@@ -730,6 +758,7 @@ class SupabaseCoreRemoteDataSource(
         const val RECURRING_TRANSACTIONS = "recurring_transactions"
         const val SUBSCRIPTIONS = "subscriptions"
         const val GOALS = "goals"
+        const val ASSETS = "assets"
         const val GOAL_CONTRIBUTIONS = "goal_contributions"
         const val DEBTS = "debts"
         const val DEBT_PAYMENTS = "debt_payments"

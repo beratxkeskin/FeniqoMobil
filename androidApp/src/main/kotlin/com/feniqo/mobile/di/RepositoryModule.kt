@@ -12,6 +12,7 @@ import com.feniqo.mobile.data.remote.core.ConditionalRemoteWriter
 import com.feniqo.mobile.data.remote.realtime.RealtimeInvalidationSource
 import com.feniqo.mobile.data.repository.OfflineFirstAuthRepository
 import com.feniqo.mobile.data.repository.OfflineFirstCategoryRepository
+import com.feniqo.mobile.data.repository.OfflineFirstMarketPriceRepository
 import com.feniqo.mobile.data.repository.OfflineFirstSyncRepository
 import com.feniqo.mobile.data.repository.OfflineFirstTransactionRepository
 import com.feniqo.mobile.data.repository.ActiveWorkspaceScope
@@ -25,6 +26,7 @@ import com.feniqo.mobile.data.sync.V1OutboxOperationExecutor
 import com.feniqo.mobile.data.local.outbox.OfflineWriteQueue
 import com.feniqo.mobile.domain.repository.AuthRepository
 import com.feniqo.mobile.domain.repository.CategoryRepository
+import com.feniqo.mobile.domain.repository.MarketPriceRepository
 import com.feniqo.mobile.domain.repository.SyncRepository
 import com.feniqo.mobile.domain.repository.TransactionRepository
 import com.feniqo.mobile.domain.sync.BackgroundSyncScheduler
@@ -144,6 +146,32 @@ object RepositoryModule {
 
     @Provides
     @Singleton
+    fun provideAssetRepository(
+        authRepository: AuthRepository,
+        assetDao: com.feniqo.mobile.data.local.dao.AssetDao,
+        offlineWriteQueue: OfflineWriteQueue,
+        entityIdGenerator: com.feniqo.mobile.domain.model.EntityIdGenerator,
+    ): com.feniqo.mobile.domain.repository.AssetRepository =
+        com.feniqo.mobile.data.repository.OfflineFirstAssetRepository(
+            authRepository = authRepository,
+            assetDao = assetDao,
+            offlineWriteQueue = offlineWriteQueue,
+            entityIdGenerator = entityIdGenerator,
+        )
+
+    @Provides
+    @Singleton
+    fun provideMarketPriceRepository(
+        marketPriceDao: com.feniqo.mobile.data.local.dao.MarketPriceDao,
+        remoteDataSource: com.feniqo.mobile.data.remote.marketprice.MarketPriceRemoteDataSource,
+    ): MarketPriceRepository = OfflineFirstMarketPriceRepository(
+        dao = marketPriceDao,
+        remote = remoteDataSource,
+        nowEpochMillisProvider = { System.currentTimeMillis() },
+    )
+
+    @Provides
+    @Singleton
     fun provideGoalRepository(
         authRepository: AuthRepository,
         goalDao: com.feniqo.mobile.data.local.dao.GoalDao,
@@ -227,10 +255,12 @@ object RepositoryModule {
     fun provideInitialRemoteSync(
         remoteDataSource: CoreRemoteDataSource,
         remoteSyncDao: RemoteSyncDao,
+        assetDao: com.feniqo.mobile.data.local.dao.AssetDao,
     ): InitialRemoteSync = InitialRemoteSync(
         remote = remoteDataSource,
         remoteSyncDao = remoteSyncDao,
         nowEpochMillisProvider = { System.currentTimeMillis() },
+        assetDao = assetDao,
     )
 
     @Provides
@@ -239,11 +269,13 @@ object RepositoryModule {
         remoteDataSource: CoreRemoteDataSource,
         remoteSyncDao: RemoteSyncDao,
         syncStateDao: SyncStateDao,
+        assetDao: com.feniqo.mobile.data.local.dao.AssetDao,
     ): IncrementalRemoteSync = IncrementalRemoteSync(
         remote = remoteDataSource,
         remoteSyncDao = remoteSyncDao,
         syncStateDao = syncStateDao,
         nowEpochMillisProvider = { System.currentTimeMillis() },
+        assetDao = assetDao,
     )
 
     @Provides

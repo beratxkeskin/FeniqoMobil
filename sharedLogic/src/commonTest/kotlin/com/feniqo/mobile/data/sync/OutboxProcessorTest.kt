@@ -67,13 +67,13 @@ class OutboxProcessorTest {
 
         val result = OutboxProcessor(queue, OutboxOperationExecutor {
             sent += it.operationId
-            if (it.operationId == "one") error("ağ kesildi")
+            if (it.operationId == "one") error("Bearer secret-token; payload={\"amount_minor\":12345}")
             OutboxExecutionResult.V1Completed
         }).processReadyOperations()
 
         assertEquals(listOf("one"), sent)
         assertEquals(listOf("one"), queue.failures.map { it.first })
-        assertEquals("ağ kesildi", queue.failures.single().second)
+        assertEquals(OutboxProcessor.SAFE_FAILURE_CODE, queue.failures.single().second)
         assertEquals(emptyList(), queue.succeeded)
         assertEquals("one", result.failedOperationId)
     }
@@ -87,6 +87,7 @@ class OutboxProcessorTest {
         }).processReadyOperations()
 
         assertEquals(listOf("one"), queue.conflicts.map { it.first })
+        assertEquals(OutboxProcessor.SAFE_CONFLICT_CODE, queue.conflicts.single().second)
         assertEquals(emptyList(), queue.failures)
         assertEquals(null, result.failedOperationId)
         assertEquals("one", result.conflictOperationId)

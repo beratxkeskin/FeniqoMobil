@@ -3,6 +3,7 @@ package com.feniqo.mobile.presentation.common
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.PaymentMethod
 import com.feniqo.mobile.domain.model.TransactionType
+import com.feniqo.mobile.domain.model.YearMonth
 import com.feniqo.mobile.presentation.category.CategoriesUiState
 import com.feniqo.mobile.presentation.transaction.TransactionFilterUiModel
 import com.feniqo.mobile.presentation.transaction.TransactionFormUiState
@@ -68,7 +69,7 @@ class FinanceUiStateTest {
         val transactionsState = TransactionsUiState()
         assertTrue(transactionsState.isLoading)
 
-        val categoriesState = CategoriesUiState()
+        val categoriesState = CategoriesUiState(selectedYearMonth = YearMonth("2026-09"))
         assertTrue(categoriesState.isLoading)
     }
 }

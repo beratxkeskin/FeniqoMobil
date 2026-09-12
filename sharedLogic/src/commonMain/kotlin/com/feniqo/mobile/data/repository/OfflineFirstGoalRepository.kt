@@ -125,8 +125,8 @@ class OfflineFirstGoalRepository(
             return RepositoryResult.Success(goal.id)
         } catch (cancelled: CancellationException) {
             throw cancelled
-        } catch (t: Throwable) {
-            return RepositoryResult.Failure(AppError.Unknown(t.message ?: "unknown_error"))
+        } catch (_: Throwable) {
+            return RepositoryResult.Failure(AppError.Unknown("goal_write_failed"))
         }
     }
 
@@ -159,8 +159,8 @@ class OfflineFirstGoalRepository(
             return RepositoryResult.Success(Unit)
         } catch (cancelled: CancellationException) {
             throw cancelled
-        } catch (t: Throwable) {
-            return RepositoryResult.Failure(AppError.Unknown(t.message ?: "unknown_error"))
+        } catch (_: Throwable) {
+            return RepositoryResult.Failure(AppError.Unknown("goal_write_failed"))
         }
     }
 
@@ -212,8 +212,8 @@ class OfflineFirstGoalRepository(
             return RepositoryResult.Success(contrib.id)
         } catch (cancelled: CancellationException) {
             throw cancelled
-        } catch (t: Throwable) {
-            return RepositoryResult.Failure(AppError.Unknown(t.message ?: "unknown_error"))
+        } catch (_: Throwable) {
+            return RepositoryResult.Failure(AppError.Unknown("goal_write_failed"))
         }
     }
 
@@ -240,14 +240,13 @@ class OfflineFirstGoalRepository(
             return RepositoryResult.Success(Unit)
         } catch (cancelled: CancellationException) {
             throw cancelled
-        } catch (t: Throwable) {
-            return RepositoryResult.Failure(AppError.Unknown(t.message ?: "unknown_error"))
+        } catch (_: Throwable) {
+            return RepositoryResult.Failure(AppError.Unknown("goal_write_failed"))
         }
     }
 
     private fun <T> validationFailure(invalid: GoalDebtValidationResult.Invalid): RepositoryResult<T> =
         RepositoryResult.Failure(AppError.Validation(invalid.error.name))
 }
-
 
 

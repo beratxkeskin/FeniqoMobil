@@ -1,7 +1,9 @@
 package com.feniqo.mobile.presentation.category
 
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.TransactionType
+import com.feniqo.mobile.domain.model.YearMonth
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 
 /**
@@ -37,11 +39,87 @@ enum class CategoryFormLoadError {
 }
 
 /**
- * Kategori listesi ekranı UI durum modelidir.
+ * Kategori dönem karşılaştırmasında hareket yönüdür.
+ */
+enum class TrendMovement {
+    INCREASED,
+    DECREASED,
+    UNCHANGED,
+}
+
+/**
+ * Kategori trendinin kullanıcı açısından duygu/anlam karşılığıdır.
+ * Gider artışı NEGATIVE (kırmızı), gider azalışı POSITIVE (yeşil).
+ * Gelir artışı POSITIVE (yeşil), gelir azalışı NEGATIVE (kırmızı).
+ */
+enum class TrendSentiment {
+    POSITIVE,
+    NEGATIVE,
+    NEUTRAL,
+}
+
+/**
+ * Kategori önceki aya göre değişim durumudur.
+ */
+sealed interface CategoryTrend {
+    data object None : CategoryTrend
+    data object New : CategoryTrend
+    data class Changed(
+        val changeBasisPoints: Int,
+        val movement: TrendMovement,
+        val sentiment: TrendSentiment,
+    ) : CategoryTrend
+}
+
+/**
+ * Seçili dönem harcama ve hareket analizini taşıyan kategori satırı display modelidir.
+ */
+data class CategorySpendingDisplayModel(
+    val category: CategoryDisplayModel,
+    val transactionCount: Int,
+    val currentPeriodAmount: Money,
+    val previousPeriodAmount: Money,
+    val formattedCurrentAmount: String,
+    val trend: CategoryTrend,
+    val proportionBasisPoints: Int = 0,
+)
+
+/**
+ * Kategoriler ekranı üst özet kartı presentation modelidir.
+ * Float/Double içermez; mini bar oranları 0..10_000 baz puan aralığındadır.
+ */
+data class CategoriesSummaryUiModel(
+    val totalCategoriesCount: Int = 0,
+    val customCategoriesCount: Int = 0,
+    val topCategoryName: String? = null,
+    val formattedTopCategoryAmount: String? = null,
+    val topCategoryType: TransactionType = TransactionType.EXPENSE,
+    val topCategoryShareBasisPoints: Int = 0,
+    val miniBarProportionsBasisPoints: List<Int> = emptyList(),
+    val insightText: String? = null,
+    val balanceMessage: String = "Harcamaların dengede.",
+) {
+    val topExpenseCategoryName: String?
+        get() = if (topCategoryType == TransactionType.EXPENSE) topCategoryName else null
+
+    val formattedTopExpenseAmount: String?
+        get() = if (topCategoryType == TransactionType.EXPENSE) formattedTopCategoryAmount else null
+
+    val topExpenseShareBasisPoints: Int
+        get() = if (topCategoryType == TransactionType.EXPENSE) topCategoryShareBasisPoints else 0
+}
+
+/**
+ * Kategori listesi ve analiz ekranı UI durum modelidir.
  */
 data class CategoriesUiState(
     val isLoading: Boolean = true,
+    val selectedYearMonth: YearMonth,
+    val selectedTypeFilter: TransactionType? = null, // null = Tümü, EXPENSE = Gider, INCOME = Gelir
     val selectedType: TransactionType = TransactionType.EXPENSE,
+    val isPeriodPickerVisible: Boolean = false,
+    val summary: CategoriesSummaryUiModel = CategoriesSummaryUiModel(),
+    val items: List<CategorySpendingDisplayModel> = emptyList(),
     val systemCategories: List<CategoryDisplayModel> = emptyList(),
     val customCategories: List<CategoryDisplayModel> = emptyList(),
     val deleteTargetCategory: CategoryDisplayModel? = null,
@@ -49,7 +127,7 @@ data class CategoriesUiState(
     val activeWorkspaceName: String? = null,
     val generalMessage: FinanceUiMessage? = null,
 ) {
-    val isEmpty: Boolean get() = !isLoading && systemCategories.isEmpty() && customCategories.isEmpty()
+    val isEmpty: Boolean get() = !isLoading && items.isEmpty() && systemCategories.isEmpty() && customCategories.isEmpty()
 }
 
 /**

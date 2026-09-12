@@ -7,6 +7,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.TransactionType
+import com.feniqo.mobile.domain.model.YearMonth
 import com.feniqo.mobile.presentation.screen.CategoriesScreen
 
 /**
@@ -17,6 +18,7 @@ import com.feniqo.mobile.presentation.screen.CategoriesScreen
 fun CategoriesScreenRoute(
     onAddCategory: (TransactionType) -> Unit,
     onEditCategory: (EntityId) -> Unit,
+    onCategoryClick: (EntityId, YearMonth) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
     viewModel: CategoriesViewModel = hiltViewModel(),
 ) {
@@ -24,7 +26,15 @@ fun CategoriesScreenRoute(
 
     CategoriesScreen(
         state = state,
-        onTypeSelected = viewModel::onTypeSelected,
+        onPreviousMonth = viewModel::onPreviousMonth,
+        onNextMonth = viewModel::onNextMonth,
+        onPeriodPickerClick = viewModel::onPeriodPickerRequested,
+        onPeriodSelect = viewModel::onYearMonthSelected,
+        onDismissPeriodPicker = viewModel::onPeriodPickerDismissed,
+        onFilterSelected = viewModel::onTypeFilterSelected,
+        onCategoryClick = { categoryId ->
+            onCategoryClick(categoryId, state.selectedYearMonth)
+        },
         onAddCategory = onAddCategory,
         onEditCategory = onEditCategory,
         onDeleteCategory = viewModel::onDeleteClicked,

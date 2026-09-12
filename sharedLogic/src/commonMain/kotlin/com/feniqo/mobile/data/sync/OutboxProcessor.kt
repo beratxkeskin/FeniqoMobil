@@ -3,6 +3,7 @@ package com.feniqo.mobile.data.sync
 import com.feniqo.mobile.data.local.entity.SyncOperationEntity
 import com.feniqo.mobile.data.local.outbox.OfflineWriteQueue
 import com.feniqo.mobile.data.remote.dto.BudgetDto
+import com.feniqo.mobile.data.remote.dto.AssetDto
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.DebtDto
 import com.feniqo.mobile.data.remote.dto.DebtPaymentDto
@@ -26,6 +27,7 @@ sealed interface OutboxExecutionResult {
     data class CategoryApplied(val record: CategoryDto) : OutboxExecutionResult
     data class TransactionApplied(val record: TransactionDto) : OutboxExecutionResult
     data class BudgetApplied(val record: BudgetDto) : OutboxExecutionResult
+    data class AssetApplied(val record: AssetDto) : OutboxExecutionResult
     data class RecurringTransactionApplied(val record: RecurringTransactionDto) : OutboxExecutionResult
     data class SubscriptionApplied(val record: SubscriptionDto) : OutboxExecutionResult
     data class GoalApplied(val record: GoalDto) : OutboxExecutionResult
@@ -73,11 +75,11 @@ class OutboxProcessor(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (conflict: OutboxConflictException) {
-                queue.markConflict(claimed.operationId, conflict.message.orEmpty())
+                queue.markConflict(claimed.operationId, SAFE_CONFLICT_CODE)
                 conflictOperationId = claimed.operationId
                 break
             } catch (error: Throwable) {
-                queue.recordFailure(claimed.operationId, error.message.orEmpty())
+                queue.recordFailure(claimed.operationId, SAFE_FAILURE_CODE)
                 failedOperationId = claimed.operationId
                 lastError = error
                 break
@@ -88,6 +90,8 @@ class OutboxProcessor(
 
     companion object {
         const val DEFAULT_BATCH_SIZE = 50
+        const val SAFE_CONFLICT_CODE = "sync_conflict"
+        const val SAFE_FAILURE_CODE = "sync_operation_failed"
     }
 }
 

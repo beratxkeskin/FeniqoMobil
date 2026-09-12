@@ -41,14 +41,14 @@ import com.feniqo.mobile.presentation.component.WorkspaceConflictResolutionDialo
 enum class AppSection(val label: String) {
     DASHBOARD("Ana Sayfa"),
     TRANSACTIONS("İşlemler"),
-    PLAN("Plan"),
-    MORE("Profil"),
+    BUDGET("Bütçe"),
+    MORE("Daha Fazla"),
 }
 
 /**
  * Platformdan bağımsız, durumsuz (stateless) uygulama ana kabuğudur.
  * Navigation durumunu barındırmaz; seçili sekmeyi, birincil eylemi ve içerik slot'unu dışarıdan alır.
- * 5 görsel alt bar öğesi sunar: Ana Sayfa, İşlemler, + (hızlı işlem), Plan, Profil.
+ * 5 görsel alt bar öğesi sunar: Ana Sayfa, İşlemler, + (hızlı işlem), Bütçe, Daha Fazla.
  */
 @Composable
 fun FeniqoAppShell(
@@ -120,12 +120,12 @@ fun FeniqoAppShell(
                         ),
                     )
 
-                    // 4. Plan
+                    // 4. Bütçe
                     NavigationBarItem(
-                        selected = selectedSection == AppSection.PLAN,
-                        onClick = { onSectionSelect(AppSection.PLAN) },
-                        icon = { FeniqoBottomBarIcon(AppSection.PLAN) },
-                        label = { Text(AppSection.PLAN.label) },
+                        selected = selectedSection == AppSection.BUDGET,
+                        onClick = { onSectionSelect(AppSection.BUDGET) },
+                        icon = { FeniqoBottomBarIcon(AppSection.BUDGET) },
+                        label = { Text(AppSection.BUDGET.label) },
                     )
 
                     // 5. Daha Fazla
@@ -215,35 +215,31 @@ private fun FeniqoBottomBarIcon(
             }
 
             AppSection.TRANSACTIONS -> {
-                drawLine(color, Offset(w * 0.34f, h * 0.2f), Offset(w * 0.34f, h * 0.8f), strokeWidth, StrokeCap.Round)
-                drawLine(color, Offset(w * 0.2f, h * 0.34f), Offset(w * 0.34f, h * 0.2f), strokeWidth, StrokeCap.Round)
-                drawLine(color, Offset(w * 0.48f, h * 0.34f), Offset(w * 0.34f, h * 0.2f), strokeWidth, StrokeCap.Round)
-                drawLine(color, Offset(w * 0.66f, h * 0.2f), Offset(w * 0.66f, h * 0.8f), strokeWidth, StrokeCap.Round)
-                drawLine(color, Offset(w * 0.52f, h * 0.66f), Offset(w * 0.66f, h * 0.8f), strokeWidth, StrokeCap.Round)
-                drawLine(color, Offset(w * 0.8f, h * 0.66f), Offset(w * 0.66f, h * 0.8f), strokeWidth, StrokeCap.Round)
-            }
-
-            AppSection.PLAN -> {
+                // Belge / Satırlı İşlem Listesi İkonu (Mockup uyumlu)
                 drawRoundRect(
                     color = color,
-                    topLeft = Offset(w * 0.2f, h * 0.22f),
-                    size = Size(w * 0.6f, h * 0.62f),
+                    topLeft = Offset(w * 0.22f, h * 0.16f),
+                    size = Size(w * 0.56f, h * 0.68f),
                     cornerRadius = CornerRadius(w * 0.08f),
                     style = stroke,
                 )
-                drawLine(color, Offset(w * 0.34f, h * 0.16f), Offset(w * 0.34f, h * 0.3f), strokeWidth, StrokeCap.Round)
-                drawLine(color, Offset(w * 0.66f, h * 0.16f), Offset(w * 0.66f, h * 0.3f), strokeWidth, StrokeCap.Round)
-                drawLine(color, Offset(w * 0.32f, h * 0.48f), Offset(w * 0.68f, h * 0.48f), strokeWidth, StrokeCap.Round)
-                drawLine(color, Offset(w * 0.32f, h * 0.64f), Offset(w * 0.58f, h * 0.64f), strokeWidth, StrokeCap.Round)
+                drawLine(color, Offset(w * 0.35f, h * 0.34f), Offset(w * 0.65f, h * 0.34f), strokeWidth, StrokeCap.Round)
+                drawLine(color, Offset(w * 0.35f, h * 0.48f), Offset(w * 0.65f, h * 0.48f), strokeWidth, StrokeCap.Round)
+                drawLine(color, Offset(w * 0.35f, h * 0.62f), Offset(w * 0.52f, h * 0.62f), strokeWidth, StrokeCap.Round)
+            }
+
+            AppSection.BUDGET -> {
+                // Bar Chart / Bütçe Sütun Grafiği İkonu (Mockup uyumlu)
+                drawLine(color, Offset(w * 0.28f, h * 0.76f), Offset(w * 0.28f, h * 0.52f), strokeWidth * 1.5f, StrokeCap.Round)
+                drawLine(color, Offset(w * 0.50f, h * 0.76f), Offset(w * 0.50f, h * 0.30f), strokeWidth * 1.5f, StrokeCap.Round)
+                drawLine(color, Offset(w * 0.72f, h * 0.76f), Offset(w * 0.72f, h * 0.42f), strokeWidth * 1.5f, StrokeCap.Round)
             }
 
             AppSection.MORE -> {
-                drawCircle(color, radius = w * 0.16f, center = Offset(w * 0.5f, h * 0.34f), style = stroke)
-                val shoulders = Path().apply {
-                    moveTo(w * 0.22f, h * 0.82f)
-                    cubicTo(w * 0.25f, h * 0.58f, w * 0.75f, h * 0.58f, w * 0.78f, h * 0.82f)
-                }
-                drawPath(shoulders, color, style = stroke)
+                // Analytics / Pasta-Daire Grafik İkonu (Mockup uyumlu)
+                drawCircle(color, radius = w * 0.32f, center = Offset(w * 0.5f, h * 0.5f), style = stroke)
+                drawLine(color, Offset(w * 0.5f, h * 0.5f), Offset(w * 0.5f, h * 0.22f), strokeWidth, StrokeCap.Round)
+                drawLine(color, Offset(w * 0.5f, h * 0.5f), Offset(w * 0.72f, h * 0.62f), strokeWidth, StrokeCap.Round)
             }
         }
     }

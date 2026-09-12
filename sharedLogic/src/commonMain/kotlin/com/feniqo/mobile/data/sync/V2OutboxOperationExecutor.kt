@@ -8,6 +8,7 @@ import com.feniqo.mobile.data.remote.core.RemoteWriteOperation
 import com.feniqo.mobile.data.remote.codec.WorkspaceMembershipPayloadCodec
 import com.feniqo.mobile.data.remote.codec.WorkspacePayloadCodec
 import com.feniqo.mobile.data.remote.dto.BudgetDto
+import com.feniqo.mobile.data.remote.dto.AssetDto
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.DebtDto
 import com.feniqo.mobile.data.remote.dto.DebtPaymentDto
@@ -59,6 +60,10 @@ class V2OutboxOperationExecutor(
             }
         }
 
+        if (operation.entityTypeCode == "ASSET") {
+            return executeAsset(operation, writeOp, payloadJson)
+        }
+
         val entityType = runCatching { SyncEntityType.valueOf(operation.entityTypeCode) }
             .getOrElse { error("Desteklenmeyen entity type: ${operation.entityTypeCode}") }
 
@@ -76,6 +81,34 @@ class V2OutboxOperationExecutor(
             SyncEntityType.WORKSPACE -> executeWorkspace(operation, writeOp, payloadJson)
             SyncEntityType.WORKSPACE_MEMBER -> executeWorkspaceMember(operation, writeOp, payloadJson)
             SyncEntityType.WORKSPACE_INVITATION -> executeWorkspaceInvitation(operation, writeOp, payloadJson)
+        }
+    }
+
+    private suspend fun executeAsset(
+        operation: SyncOperationEntity,
+        writeOp: RemoteWriteOperation,
+        payloadJson: String,
+    ): OutboxExecutionResult {
+        val dto = json.decodeFromString<AssetDto>(payloadJson)
+        require(dto.id == operation.entityId) { "Asset payload id ile outbox entityId eşleşmiyor." }
+        return when (val result = writer.writeAsset(operation.operationId, writeOp, operation.baseVersion, dto)) {
+            is ConditionalRemoteWriteResult.Applied -> OutboxExecutionResult.AssetApplied(result.record)
+            is ConditionalRemoteWriteResult.Conflict -> OutboxExecutionResult.ConflictDetected(
+                SyncConflictEntity(
+                    entityTypeCode = operation.entityTypeCode,
+                    entityId = operation.entityId,
+                    operationId = operation.operationId,
+                    localVersion = operation.baseVersion ?: 0L,
+                    remoteVersion = result.remoteRecord.version ?: 0L,
+                    localPayloadJson = payloadJson,
+                    remotePayloadJson = json.encodeToString(result.remoteRecord),
+                    detectedAtEpochMillis = nowEpochMillisProvider(),
+                ),
+            )
+            ConditionalRemoteWriteResult.NotFound -> {
+                if (writeOp == RemoteWriteOperation.DELETE) OutboxExecutionResult.MissingDeleteAcknowledged
+                else error("Varlık koşullu yazma sırasında bulunamadı.")
+            }
         }
     }
 
@@ -532,4 +565,3 @@ class V2OutboxOperationExecutor(
         }
     }
 }
-

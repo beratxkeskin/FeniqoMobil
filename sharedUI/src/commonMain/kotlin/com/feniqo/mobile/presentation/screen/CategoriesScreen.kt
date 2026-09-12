@@ -1,21 +1,18 @@
 package com.feniqo.mobile.presentation.screen
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -23,35 +20,60 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.TransactionType
+import com.feniqo.mobile.domain.model.YearMonth
+import com.feniqo.mobile.presentation.category.CategoriesSummaryUiModel
 import com.feniqo.mobile.presentation.category.CategoriesUiState
 import com.feniqo.mobile.presentation.category.CategoryDisplayModel
+import com.feniqo.mobile.presentation.category.CategorySpendingDisplayModel
+import com.feniqo.mobile.presentation.category.CategoryTrend
+import com.feniqo.mobile.presentation.category.TrendMovement
+import com.feniqo.mobile.presentation.category.TrendSentiment
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.component.ActiveWorkspaceIndicator
+import com.feniqo.mobile.presentation.component.CategoryAnalyticsListItem
 import com.feniqo.mobile.presentation.component.CategoryDeleteDialog
-import com.feniqo.mobile.presentation.component.CategoryListItem
+import com.feniqo.mobile.presentation.component.CategoryFilterChips
+import com.feniqo.mobile.presentation.component.CategoryInsightCard
 import com.feniqo.mobile.presentation.component.CategoryMessageBanner
+import com.feniqo.mobile.presentation.component.CategoryPeriodSelector
 import com.feniqo.mobile.presentation.component.CategorySectionHeader
-import com.feniqo.mobile.presentation.component.CategoryTypeSelector
-import com.feniqo.mobile.presentation.theme.FeniqoRadius
+import com.feniqo.mobile.presentation.component.CategorySummaryCard
+import com.feniqo.mobile.presentation.component.CreateCategoryActionCard
+import com.feniqo.mobile.presentation.component.MonthYearPickerDialog
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTheme
+import com.feniqo.mobile.presentation.theme.FeniqoTypographyTokens
 
 /**
- * Kategori listesi ve yönetimi ekranının durumsuz (stateless) ana Compose sunumudur.
- * Yalnızca UI state ve etkileşim callback'lerini tüketir; ViewModel, DAO veya Supabase bağımlılığı içermez.
+ * Kategoriler ekranının warm-luxury, durumsuz (stateless) ana Compose sunumudur.
+ * 1'den 8'e kadar olan kesin görsel hiyerarşi sırasını takip eder:
+ * 1. Başlık ve Açıklama + ActiveWorkspaceIndicator
+ * 2. Dönem Seçici (Önceki / Seçili Ay / Sonraki)
+ * 3. Özet Kartı (Kategori sayıları, en yüksek harcama, mini bar oranları)
+ * 4. "Kategorilerin" Bölüm Başlığı
+ * 5. Filtre Chip'leri (Tümü / Gider / Gelir)
+ * 6. Kategori Analiz Listesi (ikon, ad, işlem sayısı, tutar, trend rozeti, overflow menü)
+ * 7. Feniqo İçgörü Kartı
+ * 8. "Yeni kategori oluştur" Aksiyon Kartı
  */
 @Composable
 fun CategoriesScreen(
     state: CategoriesUiState,
-    onTypeSelected: (TransactionType) -> Unit,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit,
+    onPeriodPickerClick: () -> Unit,
+    onPeriodSelect: (YearMonth) -> Unit,
+    onDismissPeriodPicker: () -> Unit,
+    onFilterSelected: (TransactionType?) -> Unit,
+    onCategoryClick: (EntityId) -> Unit,
     onAddCategory: (TransactionType) -> Unit,
     onEditCategory: (EntityId) -> Unit,
     onDeleteCategory: (CategoryDisplayModel) -> Unit,
@@ -64,28 +86,40 @@ fun CategoriesScreen(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = FeniqoSpacing.Large),
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                horizontal = FeniqoSpacing.Large,
+                vertical = FeniqoSpacing.Medium,
+            ),
+            verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
         ) {
-            Spacer(modifier = Modifier.height(FeniqoSpacing.Medium))
+            // Genel mesaj banner'ı (varsa)
+            if (state.generalMessage != null) {
+                item(key = "message_banner") {
+                    CategoryMessageBanner(
+                        message = state.generalMessage,
+                        onDismiss = onDismissMessage,
+                        isDismissEnabled = !state.isDeleteInProgress,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+            }
 
-            // 1. Üst Başlık ve Kategori Ekle Aksiyon Satırı
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
+            // 1. “Kategoriler” başlığı, açıklaması ve ActiveWorkspaceIndicator
+            item(key = "header_section") {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
                     ) {
                         Text(
                             text = "Kategoriler",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
+                            style = FeniqoTypographyTokens.DisplayTitle,
                             color = MaterialTheme.colorScheme.onBackground,
                         )
                         ActiveWorkspaceIndicator(
@@ -94,237 +128,258 @@ fun CategoriesScreen(
                         )
                     }
                     Text(
-                        text = "Gelir ve giderlerinizi kendi kategorilerinizle düzenleyin.",
+                        text = "Gelir ve giderlerinizi netlikle organize edin.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                Spacer(modifier = Modifier.height(6.dp))
+            }
 
-                Button(
-                    onClick = { onAddCategory(state.selectedType) },
+            // 2. Kompakt harcama/gelir özet kartı
+            item(key = "summary_card") {
+                CategorySummaryCard(summary = state.summary)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            // 3. “Kategorilerin” bölüm başlığı ve kategori sayısı
+            item(key = "categories_section_header") {
+                CategorySectionHeader(
+                    title = "Kategorilerin",
+                    count = state.items.size,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+            }
+
+            // 4. Modern dönem seçici
+            item(key = "period_selector") {
+                CategoryPeriodSelector(
+                    selectedYearMonth = state.selectedYearMonth,
+                    isNextMonthEnabled = true, // ViewModel kontrolleriyle senkron
+                    onPreviousMonth = onPreviousMonth,
+                    onNextMonth = onNextMonth,
+                    onPeriodPickerClick = onPeriodPickerClick,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+
+            // 5. “Tümü / Gider / Gelir” filtreleri
+            item(key = "filter_chips") {
+                CategoryFilterChips(
+                    selectedTypeFilter = state.selectedTypeFilter,
+                    onFilterSelected = onFilterSelected,
                     enabled = !state.isDeleteInProgress,
-                    shape = RoundedCornerShape(FeniqoRadius.Medium),
-                    modifier = Modifier
-                        .defaultMinSize(minHeight = 48.dp)
-                        .semantics {
-                            contentDescription = "Yeni kategori ekle"
-                        },
-                ) {
-                    Text(
-                        text = "Kategori Ekle",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+
+            // 6. Kompakt kategori listesi
+            if (state.isLoading) {
+                item(key = "loading_indicator") {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = FeniqoSpacing.ExtraLarge),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            } else if (state.items.isEmpty()) {
+                item(key = "empty_state") {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(FeniqoSpacing.Large),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            Text(
+                                text = "Bu filtreye uygun kategori bulunamadı.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            } else {
+                items(
+                    items = state.items,
+                    key = { it.category.id.value },
+                ) { item ->
+                    CategoryAnalyticsListItem(
+                        item = item,
+                        onClick = { onCategoryClick(item.category.id) },
+                        onEditClick = onEditCategory,
+                        onDeleteClick = onDeleteCategory,
+                        isActionsEnabled = !state.isDeleteInProgress,
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(FeniqoSpacing.Medium))
+            // 7. Feniqo İçgörü kartı
+            if (state.summary.insightText != null) {
+                item(key = "insight_card") {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    CategoryInsightCard(insightText = state.summary.insightText)
+                }
+            }
 
-            // 2. Tür Seçici (Gider / Gelir)
-            CategoryTypeSelector(
-                selectedType = state.selectedType,
-                onTypeSelected = onTypeSelected,
-                enabled = !state.isDeleteInProgress,
-            )
-
-            // 3. Genel Mesaj Bannerı (Hata veya Bilgilendirme)
-            if (state.generalMessage != null) {
-                Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
-                CategoryMessageBanner(
-                    message = state.generalMessage,
-                    onDismiss = onDismissMessage,
-                    isDismissEnabled = !state.isDeleteInProgress,
+            // 8. Yeni kategori oluştur kartı
+            item(key = "create_category_card") {
+                Spacer(modifier = Modifier.height(8.dp))
+                CreateCategoryActionCard(
+                    onClick = {
+                        onAddCategory(state.selectedTypeFilter ?: TransactionType.EXPENSE)
+                    },
                 )
             }
 
-            Spacer(modifier = Modifier.height(FeniqoSpacing.Medium))
-
-            // 4. Ana Liste veya Durum Alanı
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-            ) {
-                when {
-                    state.isLoading -> {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(vertical = FeniqoSpacing.ExtraLarge),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(40.dp),
-                                color = MaterialTheme.colorScheme.primary,
-                                strokeWidth = 3.dp,
-                            )
-                            Spacer(modifier = Modifier.height(FeniqoSpacing.Medium))
-                            Text(
-                                text = "Kategoriler yükleniyor...",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-
-                    state.isEmpty -> {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(vertical = FeniqoSpacing.ExtraLarge),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                        ) {
-                            Text(
-                                text = "Henüz kategori bulunmuyor.",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Spacer(modifier = Modifier.height(FeniqoSpacing.ExtraSmall))
-                            Text(
-                                text = "İlk özel kategorinizi ekleyebilirsiniz.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                            )
-                        }
-                    }
-
-                    else -> {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                            contentPadding = PaddingValues(bottom = FeniqoSpacing.Screen),
-                        ) {
-                            // A. Hazır Kategoriler (Sistem)
-                            if (state.systemCategories.isNotEmpty()) {
-                                item(key = "section_system_header") {
-                                    CategorySectionHeader(
-                                        title = "Hazır Kategoriler",
-                                        count = state.systemCategories.size,
-                                    )
-                                }
-
-                                items(
-                                    items = state.systemCategories,
-                                    key = { it.id.value },
-                                ) { category ->
-                                    CategoryListItem(
-                                        category = category,
-                                        onEditClick = onEditCategory,
-                                        onDeleteClick = onDeleteCategory,
-                                        isActionsEnabled = !state.isDeleteInProgress,
-                                    )
-                                }
-
-                                item(key = "section_system_spacer") {
-                                    Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
-                                }
-                            }
-
-                            // B. Kategorilerim (Özel)
-                            item(key = "section_custom_header") {
-                                CategorySectionHeader(
-                                    title = "Kategorilerim",
-                                    count = state.customCategories.size,
-                                )
-                            }
-
-                            if (state.customCategories.isEmpty()) {
-                                item(key = "empty_custom_categories_message") {
-                                    Surface(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(FeniqoRadius.Medium),
-                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                    ) {
-                                        Text(
-                                            text = "Henüz özel kategori eklemediniz.",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            textAlign = TextAlign.Center,
-                                            modifier = Modifier.padding(FeniqoSpacing.Large),
-                                        )
-                                    }
-                                }
-                            } else {
-                                items(
-                                    items = state.customCategories,
-                                    key = { it.id.value },
-                                ) { category ->
-                                    CategoryListItem(
-                                        category = category,
-                                        onEditClick = onEditCategory,
-                                        onDeleteClick = onDeleteCategory,
-                                        isActionsEnabled = !state.isDeleteInProgress,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+            // Alt boşluk
+            item(key = "bottom_spacer") {
+                Spacer(modifier = Modifier.height(FeniqoSpacing.Screen))
             }
         }
-
-        // 5. Kategori Silme Onay Diyaloğu
-        if (state.deleteTargetCategory != null) {
-            CategoryDeleteDialog(
-                targetCategory = state.deleteTargetCategory,
-                isDeleteInProgress = state.isDeleteInProgress,
-                onConfirm = onConfirmDelete,
-                onDismiss = onDismissDeleteDialog,
-            )
-        }
     }
+
+    // Ay / Yıl Seçici Dialog
+    if (state.isPeriodPickerVisible) {
+        MonthYearPickerDialog(
+            selectedYearMonth = state.selectedYearMonth,
+            maxYearMonth = YearMonth("2099-12"),
+            onYearMonthSelected = onPeriodSelect,
+            onDismiss = onDismissPeriodPicker,
+        )
+    }
+
+    // Kategori Silme Onay Diyaloğu
+    CategoryDeleteDialog(
+        targetCategory = state.deleteTargetCategory,
+        isDeleteInProgress = state.isDeleteInProgress,
+        onConfirm = onConfirmDelete,
+        onDismiss = onDismissDeleteDialog,
+    )
 }
 
-// -------------------------------------------------------------------------
+// ==========================================
 // PREVIEWS
-// -------------------------------------------------------------------------
+// ==========================================
 
-private val previewSystemExpenseCategories = listOf(
-    CategoryDisplayModel(
-        id = EntityId("sys-market"),
-        name = "Market",
-        type = TransactionType.EXPENSE,
-        colorHex = "#EF4444",
-        iconKey = "shopping-cart",
-        isDefault = true,
-    ),
-    CategoryDisplayModel(
-        id = EntityId("sys-ulasim"),
-        name = "Ulaşım",
-        type = TransactionType.EXPENSE,
-        colorHex = "#F59E0B",
-        iconKey = "car",
-        isDefault = true,
-    ),
-)
-
-private val previewCustomExpenseCategories = listOf(
-    CategoryDisplayModel(
-        id = EntityId("cust-evcil-hayvan"),
-        name = "Evcil Hayvan",
-        type = TransactionType.EXPENSE,
-        colorHex = "#10B981",
-        iconKey = "heart-pulse",
-        isDefault = false,
-    ),
-)
-
-@Preview(name = "Categories Screen - Full State Light", showBackground = true)
+@Preview(name = "Kategoriler Ekranı - Veri Bulunan Durum", showBackground = true)
 @Composable
-private fun CategoriesScreenFullPreviewLight() {
-    FeniqoTheme(darkTheme = false) {
+private fun CategoriesScreenLoadedPreview() {
+    val sampleSummary = CategoriesSummaryUiModel(
+        totalCategoriesCount = 10,
+        customCategoriesCount = 3,
+        topCategoryName = "Yeme & İçme",
+        formattedTopCategoryAmount = "₺5.110",
+        topCategoryType = TransactionType.EXPENSE,
+        topCategoryShareBasisPoints = 3800,
+        miniBarProportionsBasisPoints = listOf(10_000, 6_400, 4_300, 3_900, 3_200),
+        insightText = "Yeme & İçme bu ayki en yüksek harcaman. Toplam giderlerinin %38'ini oluşturuyor.",
+        balanceMessage = "Harcamaların dengede.",
+    )
+
+    val sampleItems = listOf(
+        CategorySpendingDisplayModel(
+            category = CategoryDisplayModel(
+                id = EntityId("cat-1"),
+                name = "Yeme & İçme",
+                type = TransactionType.EXPENSE,
+                colorHex = "#10B981",
+                iconKey = "utensils",
+                isDefault = true,
+            ),
+            transactionCount = 48,
+            currentPeriodAmount = Money(511000L, Currency.TRY),
+            previousPeriodAmount = Money(456000L, Currency.TRY),
+            formattedCurrentAmount = "₺5.110",
+            trend = CategoryTrend.Changed(1200, TrendMovement.INCREASED, TrendSentiment.NEGATIVE),
+        ),
+        CategorySpendingDisplayModel(
+            category = CategoryDisplayModel(
+                id = EntityId("cat-2"),
+                name = "Alışveriş",
+                type = TransactionType.EXPENSE,
+                colorHex = "#F59E0B",
+                iconKey = "shopping-bag",
+                isDefault = true,
+            ),
+            transactionCount = 28,
+            currentPeriodAmount = Money(328000L, Currency.TRY),
+            previousPeriodAmount = Money(312000L, Currency.TRY),
+            formattedCurrentAmount = "₺3.280",
+            trend = CategoryTrend.Changed(500, TrendMovement.INCREASED, TrendSentiment.NEGATIVE),
+        ),
+        CategorySpendingDisplayModel(
+            category = CategoryDisplayModel(
+                id = EntityId("cat-3"),
+                name = "Ulaşım",
+                type = TransactionType.EXPENSE,
+                colorHex = "#3B82F6",
+                iconKey = "directions-car",
+                isDefault = true,
+            ),
+            transactionCount = 18,
+            currentPeriodAmount = Money(219000L, Currency.TRY),
+            previousPeriodAmount = Money(238000L, Currency.TRY),
+            formattedCurrentAmount = "₺2.190",
+            trend = CategoryTrend.Changed(800, TrendMovement.DECREASED, TrendSentiment.POSITIVE),
+        ),
+        CategorySpendingDisplayModel(
+            category = CategoryDisplayModel(
+                id = EntityId("cat-4"),
+                name = "Maaş",
+                type = TransactionType.INCOME,
+                colorHex = "#10B981",
+                iconKey = "briefcase",
+                isDefault = true,
+            ),
+            transactionCount = 1,
+            currentPeriodAmount = Money(4500000L, Currency.TRY),
+            previousPeriodAmount = Money(3500000L, Currency.TRY),
+            formattedCurrentAmount = "₺45.000",
+            trend = CategoryTrend.Changed(2800, TrendMovement.INCREASED, TrendSentiment.POSITIVE),
+        ),
+        CategorySpendingDisplayModel(
+            category = CategoryDisplayModel(
+                id = EntityId("cat-5"),
+                name = "Özel Hobiler",
+                type = TransactionType.EXPENSE,
+                colorHex = "#8B5CF6",
+                iconKey = "heart-pulse",
+                isDefault = false,
+            ),
+            transactionCount = 4,
+            currentPeriodAmount = Money(98000L, Currency.TRY),
+            previousPeriodAmount = Money(0L, Currency.TRY),
+            formattedCurrentAmount = "₺980",
+            trend = CategoryTrend.New,
+        ),
+    )
+
+    FeniqoTheme {
         CategoriesScreen(
             state = CategoriesUiState(
                 isLoading = false,
-                selectedType = TransactionType.EXPENSE,
-                systemCategories = previewSystemExpenseCategories,
-                customCategories = previewCustomExpenseCategories,
+                selectedYearMonth = YearMonth("2026-09"),
+                selectedTypeFilter = null,
+                summary = sampleSummary,
+                items = sampleItems,
+                activeWorkspaceName = "Kişisel",
             ),
-            onTypeSelected = {},
+            onPreviousMonth = {},
+            onNextMonth = {},
+            onPeriodPickerClick = {},
+            onPeriodSelect = {},
+            onDismissPeriodPicker = {},
+            onFilterSelected = {},
+            onCategoryClick = {},
             onAddCategory = {},
             onEditCategory = {},
             onDeleteCategory = {},
@@ -335,60 +390,22 @@ private fun CategoriesScreenFullPreviewLight() {
     }
 }
 
-@Preview(name = "Categories Screen - Full State Dark", showBackground = true)
+@Preview(name = "Kategoriler Ekranı - Yükleniyor", showBackground = true)
 @Composable
-private fun CategoriesScreenFullPreviewDark() {
-    FeniqoTheme(darkTheme = true) {
-        CategoriesScreen(
-            state = CategoriesUiState(
-                isLoading = false,
-                selectedType = TransactionType.EXPENSE,
-                systemCategories = previewSystemExpenseCategories,
-                customCategories = previewCustomExpenseCategories,
-            ),
-            onTypeSelected = {},
-            onAddCategory = {},
-            onEditCategory = {},
-            onDeleteCategory = {},
-            onConfirmDelete = {},
-            onDismissDeleteDialog = {},
-            onDismissMessage = {},
-        )
-    }
-}
-
-@Preview(name = "Categories Screen - Custom Empty Light", showBackground = true)
-@Composable
-private fun CategoriesScreenCustomEmptyPreviewLight() {
-    FeniqoTheme(darkTheme = false) {
-        CategoriesScreen(
-            state = CategoriesUiState(
-                isLoading = false,
-                selectedType = TransactionType.EXPENSE,
-                systemCategories = previewSystemExpenseCategories,
-                customCategories = emptyList(),
-            ),
-            onTypeSelected = {},
-            onAddCategory = {},
-            onEditCategory = {},
-            onDeleteCategory = {},
-            onConfirmDelete = {},
-            onDismissDeleteDialog = {},
-            onDismissMessage = {},
-        )
-    }
-}
-
-@Preview(name = "Categories Screen - Loading Light", showBackground = true)
-@Composable
-private fun CategoriesScreenLoadingPreviewLight() {
-    FeniqoTheme(darkTheme = false) {
+private fun CategoriesScreenLoadingPreview() {
+    FeniqoTheme {
         CategoriesScreen(
             state = CategoriesUiState(
                 isLoading = true,
-                selectedType = TransactionType.EXPENSE,
+                selectedYearMonth = YearMonth("2026-09"),
             ),
-            onTypeSelected = {},
+            onPreviousMonth = {},
+            onNextMonth = {},
+            onPeriodPickerClick = {},
+            onPeriodSelect = {},
+            onDismissPeriodPicker = {},
+            onFilterSelected = {},
+            onCategoryClick = {},
             onAddCategory = {},
             onEditCategory = {},
             onDeleteCategory = {},
@@ -399,42 +416,51 @@ private fun CategoriesScreenLoadingPreviewLight() {
     }
 }
 
-@Preview(name = "Categories Screen - Delete Dialog Light", showBackground = true)
+@Preview(name = "Kategoriler Ekranı - Sıfır İşlem", showBackground = true)
 @Composable
-private fun CategoriesScreenDeleteDialogPreviewLight() {
-    FeniqoTheme(darkTheme = false) {
-        CategoriesScreen(
-            state = CategoriesUiState(
-                isLoading = false,
-                selectedType = TransactionType.EXPENSE,
-                systemCategories = previewSystemExpenseCategories,
-                customCategories = previewCustomExpenseCategories,
-                deleteTargetCategory = previewCustomExpenseCategories[0],
-            ),
-            onTypeSelected = {},
-            onAddCategory = {},
-            onEditCategory = {},
-            onDeleteCategory = {},
-            onConfirmDelete = {},
-            onDismissDeleteDialog = {},
-            onDismissMessage = {},
-        )
-    }
-}
+private fun CategoriesScreenZeroTransactionsPreview() {
+    val sampleSummary = CategoriesSummaryUiModel(
+        totalCategoriesCount = 3,
+        customCategoriesCount = 1,
+        topCategoryName = null,
+        formattedTopCategoryAmount = null,
+        insightText = "Bu dönemde henüz işlem kaydı yok. Kategorilerinizi düzenleyerek harcamalarınızı kolayca takip edin.",
+        balanceMessage = "Harcamaların dengede.",
+    )
 
-@Preview(name = "Categories Screen - Message Banner Light", showBackground = true)
-@Composable
-private fun CategoriesScreenMessageBannerPreviewLight() {
-    FeniqoTheme(darkTheme = false) {
+    val sampleItems = listOf(
+        CategorySpendingDisplayModel(
+            category = CategoryDisplayModel(
+                id = EntityId("cat-1"),
+                name = "Yeme & İçme",
+                type = TransactionType.EXPENSE,
+                colorHex = "#10B981",
+                iconKey = "utensils",
+                isDefault = true,
+            ),
+            transactionCount = 0,
+            currentPeriodAmount = Money(0L, Currency.TRY),
+            previousPeriodAmount = Money(0L, Currency.TRY),
+            formattedCurrentAmount = "₺0",
+            trend = CategoryTrend.None,
+        ),
+    )
+
+    FeniqoTheme {
         CategoriesScreen(
             state = CategoriesUiState(
                 isLoading = false,
-                selectedType = TransactionType.EXPENSE,
-                systemCategories = previewSystemExpenseCategories,
-                customCategories = previewCustomExpenseCategories,
-                generalMessage = FinanceUiMessage.CATEGORY_DELETED,
+                selectedYearMonth = YearMonth("2026-09"),
+                summary = sampleSummary,
+                items = sampleItems,
             ),
-            onTypeSelected = {},
+            onPreviousMonth = {},
+            onNextMonth = {},
+            onPeriodPickerClick = {},
+            onPeriodSelect = {},
+            onDismissPeriodPicker = {},
+            onFilterSelected = {},
+            onCategoryClick = {},
             onAddCategory = {},
             onEditCategory = {},
             onDeleteCategory = {},

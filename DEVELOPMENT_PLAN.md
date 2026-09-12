@@ -6,9 +6,22 @@
 
 ## Güncel durum
 
-- Aktif çalışma: **Faz 8.4 — Ortak Çalışma Alanları (Workspaces)** (Domain/validation, Room v9→v10 şema/DAO, E12-A2 davet koduyla güvenli katılma, E12-B üye rol değişimi/ayrılma V2 outbox, E12-C OWNER davet oluşturma / üye rol yönetimi UI entegrasyonu, E12-D Workspace sahiplik devri atomik altyapısı, E12-E Workspace sahiplik devri UI entegrasyonu ve E12-F OWNER üye çıkarma akışı tamamlandı; Workspace CRUD V2 outbox/sync tasarımı sıradadır).
-- Görsel yenileme: Feniqo production UI tasarımının ikinci dilimi tamamlandı; tema ve alt navigasyona ek olarak Dashboard net bakiye hero hiyerarşisi, düz finans metrikleri, gelir/gider semantiği ve Plan/Profil modül menülerinin sade yüzey dili güncellendi.
+- Aktif çalışma: **Hızlı Ekle (+ / Ekle), İşlem Formu ve Başarı Ekranı Yeniden Tasarımı** uygulandı, manuel kabul bekliyor: Alt bar merkez "+" modal sheet (Gider, Gelir, Transfer [Yakında], Borç/Alacak, Tekrarlayan İşlem ve ipucu kartı); sıcak-lüks işlem formu (büyük tutar, zorunlu 100 karakter işlem adı, kategori, ödeme yöntemi, tarih ve isteğe bağlı not/taksit/makbuz/split akordiyonu); Room v14→v15 note kolonu ileri yönlü migration'ı (15.json şeması ve veri koruma testi); Room SSOT'tan gözlemleyen başarı ekranı (özet kartı, yeni işlem ekle, işlemi görüntüle, geri dönüş back-stack); hedefli testler ve debug APK derlemesi başarıyla doğrulandı; staging/production Supabase'e dokunulmadı.
+- Önceki çalışma: **Faz 9.2 — Makbuz OCR** temel akışı tamamlandı fakat gerçek makbuzlarda fiyat/toplam algılama doğruluğu yetersiz bulundu; ürün kabulü ve fixture tabanlı doğruluk iyileştirmesi ileri bir dilime ertelendi.
+- Ek güvenli domain dilimi: merchant/marka tanımanın platformdan bağımsız sözleşmesi, Türkçe
+  normalleştiricisi, alias türü/kapsamı, kişisel→workspace→banka doğrulama önceliği, onaylı
+  0–100 güven matrisi, 10 puanlık çakışma eşiği ve temsilî başlangıç kataloğu tamamlandı.
+  Room/Supabase/UI/logo sağlayıcısı entegrasyonu yapılmadı.
+- Kategori analitiği ve yönetim ekranı: sıcak-lüks görsel hiyerarşi, taşma korumalı tamsayı basis-point motoru (`CategoryAnalyticsCalculator`), fail-closed para birimi ve kategori türü tutarlılığı, filtre kapsam uyumu, kategori ve dönem filtreli İşlemler navigasyonu ve özel kategori yönetimi tamamlandı; tüm birim/host testleri ve APK derlemesi doğrulandı; emülatör görsel ve akış kabulü aşamasında.
+- Mobil bilgi mimarisi: alt navigasyon Ana Sayfa / İşlemler / + / Bütçe / Daha Fazla olarak düzenlendi; Daha Fazla yalnız finansal modülleri gruplayan Financial Hub, avatar ise Profil/Hesap girişi olarak ayrıştırıldı.
 - Tamamlanan fazlar:
+  - Faz 8.5 E15-A — Kişisel Asset offline-first CRUD tamamlandı.
+  - Faz 8.5 E15-B — Para birimi bazlı offline-first net değer özeti tamamlandı.
+  - Faz 8.5 E15-C — Güvenli piyasa fiyat sözleşmesi, Room cache ve mobil fresh/stale/manual fallback tamamlandı; gerçek Edge runtime/provider smoke kabulü dış ortam bulunana kadar açık.
+  - Faz 9.1 — Biyometrik uygulama kilidi, cihaz PIN/desen/parola geri dönüşü ve otomatik kilit süreleri tamamlandı.
+  - Faz 8.4 E14-D — Workspace Ödeşme Ekranı ve Transfer Önerileri (MVI UI, `ObserveWorkspaceSettlementUseCase`, net bakiye ve transfer önerileri) tamamlandı.
+  - Faz 8.4 E14-C — Ortak Gider Split Formu UI Entegrasyonu tamamlandı.
+  - Faz 8.4 E14-B2 — Ortak Gider Split Senkronizasyonu ve Room v12 Altyapısı tamamlandı.
   - Faz 8.4 E12-F — OWNER Üye Çıkarma Akışı (`WORKSPACE_MEMBER DELETE` V2 outbox + UI entegrasyonu) tamamlandı.
   - Faz 8.4 E12-E — Workspace Sahiplik Devri UI Entegrasyonu tamamlandı.
   - Faz 8.4 E12-D — Workspace Sahiplik Devri Atomik ve Fail-Closed Altyapısı tamamlandı.
@@ -16,10 +29,14 @@
   - Faz 8.4 E12-B — Workspace Üye Rol Değişimi (`UPDATE`) ve Alandan Ayrılma (`DELETE`) V2 Outbox Altyapısı tamamlandı.
   - Faz 8.4 E12-A2 — Davet Kodu ile Workspace'e Güvenli Katılma tamamlandı.
   - Faz 8.3 — Hedefler ve Borçlar (Goals & Debts) başarıyla tamamlandı.
-  - Mobil Navigasyon Bilgi Mimarisi (Ana Sayfa, İşlemler, + hızlı eylem, Plan hub [Bütçeler, Tekrarlayanlar, Abonelikler], Daha Fazla hub [Kategoriler, Ayarlar]) 5'li kalıcı alt bar, type-safe route'lar, pasif Yakında modülleri ve Android emülatör manuel smoke kabulü başarıyla tamamlandı.
+  - Mobil Navigasyon Bilgi Mimarisi (Ana Sayfa, İşlemler, + hızlı eylem, Bütçe, Financial Hub) type-safe route'lar ve pasif Yakında kayıtlarıyla tamamlandı.
   - Faz 8.2 — Tekrarlayan İşlemler ve Abonelikler (Recurring Transactions & Subscriptions) başarıyla tamamlandı.
   - Faz 8.1 — Bütçeler (Budgets) başarıyla tamamlandı.
-- Sıradaki teknik iş: Faz 8.4 Ortak Çalışma Alanları (Workspaces) CRUD V2 outbox mutasyonları ve Supabase senkronizasyon altyapısı tasarımı.
+- Sıradaki merchant dilimi: kullanıcı doğrulamalarının ve isteğe bağlı transaction→merchant
+  bağlantısının Room SSOT modeli; migration/outbox/sync kapsamı ayrı tasarım ve test dilimi olarak
+  ele alınacak. Genel sıradaki teknik iş Faz 10.1 otomatik test envanteridir. Navigation takip
+  listesi: gerçek domain/veri/UI akışları tamamlandığında Transfer hızlı eylemi, Reports, Kişisel
+  Bilgiler, Hesap, Bildirimler ve Tercihler pasif `Yakında` durumundan aktif route'lara geçirilecek.
 - Production Supabase durumu: migration uygulanmadı.
 - Staging: `FeniqoMobil-Staging` (ref: `rxfaiynkhaxrksosxvxp`); 15/15 migration (`20260901000100_sync_write_v2_goals_and_debts.sql`, `20260901000200_reconcile_goals_debts_sync_contract.sql` dâhil), RLS, `sync_write_v2` RPC ve SQL sözleşme testi doğrulandı; koşulsuz ROLLBACK ile test verisi bırakılmadı (goals, contributions, debts, payments ve sync receipts = 0 kalıntı).
 
@@ -39,23 +56,37 @@
 | 7.4 Dashboard | Tamamlandı | Stateless DashboardScreen, DashboardViewModel, Hilt modülleri, dinamik ay Room Flow SSOT, son işlemler, işlem/düzenleme navigasyonları, geçici MoneyScore kartı ve ön değerlendirme |
 | 8.1 Bütçeler | Tamamlandı | Bütçe listesi, dinamik ay gezinimi, %80 uyarı ve %100 aşım, harcama kategorisiyle bütçe ekleme, ID tabanlı Room SSOT form düzenlemesi, onaylı silme ve kopyalama akışları, Room V2 outbox/ACK, Staging V2 SQL migration, sözleşme testi ve Android emülatör manuel smoke kabulü |
 | 8.2 Tekrarlayan işlemler ve abonelikler | Tamamlandı | Tekrar vade hesaplayıcı, occurrence idempotency, kural/abonelik CRUD komutları, Room v6/v7/v8, V2 outbox/ACK/pull/conflict, Staging 13/13 migration, 38 senaryolu SQL sözleşme testi, MVI Compose liste ve form ekranları, hatırlatıcı planlayıcı, Room receipt claim, Android bildirim Worker'ı, 24h periyodik scheduler, Android 13+ izin CTA'sı ve Android emülatör manuel smoke kabulü |
-| Mobil Navigasyon Bilgi Mimarisi | Tamamlandı | 5'li kalıcı alt navigasyon kabuğu (Ana Sayfa, İşlemler, + hızlı eylem, Plan hub [Bütçeler, Tekrarlayanlar, Abonelikler], Daha Fazla hub [Kategoriler, Ayarlar]), type-safe route'lar, pasif Yakında modülleri ve Android emülatör manuel smoke kabulü |
+| Mobil Navigasyon Bilgi Mimarisi | Tamamlandı | 5'li kalıcı alt navigasyon (Ana Sayfa, İşlemler, + hızlı eylem, Bütçe, Daha Fazla), semantic Financial Hub, avatar tabanlı Profil/Hesap ayrımı, type-safe route'lar ve geliştirilmemiş modüller için pasif Yakında durumu |
 | 8.3 Hedefler ve borçlar | Tamamlandı | Goals (birikim CRUD, katkı ekleme/çıkarma, ilerleme/tahmini süre), Debts & Receivables (borç/alacak CRUD, ödeme/tahsilat geçmişi, fail-closed reaktif bakiye hesabı), Borç snowball planlayıcısı ve ekranı, Room v9/v10/v11 tabloları, V2 outbox/ACK/pull/conflict sync, Staging 15/15 migration, SQL sözleşme testi (0 kalıntı) ve Android emülatör manuel smoke kabulü |
 
 5.1'de Android için build configuration ve güvenli oturum saklama uygulanmıştır. iOS `.xcconfig`,
 Keychain ve üretim güvenlik adaptörlerinin kalan kısmı Android-first kararı gereği 10.4'te tamamlanır.
 
-## Aktif faz: Faz 8.4 — Ortak Çalışma Alanları (Workspaces)
+## Tamamlanan faz: Faz 9.3 — İçe/dışa aktarma ve gizlilik
 
-Amaç: Ortak çalışma alanları (çalışma alanı oluşturma, katılma, ayrılma, aktif alan seçimi, üye listesi, rol tabanlı yetki matrisi, ortak işlem ve bütçe görünürlüğü, kimin ne kadar ödediği ve borç dağılımı hesaplaması) modülünün saf domain modelleri, validation invariant'ları, Room DAO/V2 outbox ve sync altyapısının planlanması ve geliştirilmesi.
+İlk dilim (2026-09-10): Aktif Room çalışma alanındaki işlemler için güvenli CSV dışa aktarma
+tamamlandı. Android sistem dosya seçicisi kullanılır; küçük para birimi korunur, private makbuz
+yolu/owner kimliği dışlanır ve elektronik tablo formül enjeksiyonu etkisizleştirilir. Kişisel
+kategori/işlem verisi için fail-closed doğrulanan JSON yedek v1 sözleşmesi ve tek Room
+transaction'ında atomik, yeni kimlikli içe aktarma tamamlandı. Android dosya seçici 10 MiB sınırı,
+kayıt sayısı önizlemesi ve açık onay uygular. Üretim kaynakları ile Edge Function kodunda hassas
+log/ağ gövdesi taraması tamamlandı; doğrudan logger bulunmadı, ham exception mesajlarının
+repository ve outbox kalıcı hata alanlarına taşınması güvenli kararlı kodlarla kapatıldı. Yirmi
+hedefli test ve Android debug APK derlemesi geçti. Faz 9.3 tamamlandı; sıradaki faz 10.1'dir.
 
-Planlanan Kapsam:
-- Workspace CRUD, davet, üyelik ve rol tabanlı (`OWNER`, `EDITOR`, `VIEWER`) kurallar.
-- Ortak harcama/işlem ve bütçe görünürlüğü.
-- Kimin ne kadar ödediği ve borç dağılımı (split) hesaplama motoru.
-- V2 Outbox ve Supabase senkronizasyonu.
+## Ertelenen kabul: Faz 9.2 — Makbuz OCR
 
-İlerleme notu (2026-09-08): E13-A–C ile finans kayıtları aktif workspace Room SSOT kapsamına bağlandı; kişisel ve ortak alan verileri repository seviyesinde fail-closed ayrışır ve tüm ilgili ekran/formlarda aktif alan bağlamı görünür. E13-D1 ile Room sorguları ortak alanda tüm üye işlem/bütçe/kategorilerini, kişisel alanda yalnız aktif kullanıcının kayıtlarını döndürür. E13-D2 ile ortak kategori ve işlem kayıtları üyelik pull'undan sonra workspace'e özel bağımsız cursor'larla Room'a alınır; kişisel cursor'lar korunur. E14-A ile henüz kalıcı veri modeline bağlanmayan, kuruş artığını deterministik dağıtan ve transfer önerileri üreten saf ortak gider ödeşme hesaplayıcısı tamamlandı. E14-B2 ile `paidByUserId` ve `participantUserIds` split alanlarının Room v12 şeması, V2 outbox yazımı, incremental pull'u, ACK'ı, equivalent conflict tespiti ve domain/PostgreSQL normalizasyon kuralları tamamlandı.
+Amaç: Makbuz görüntüsünü kamera veya galeriden alıp cihaz içinde metne dönüştüren, bulunan tutar/tarih/işyeri adaylarını kullanıcı onayı olmadan finans kayıtlarına yazmayan güvenli OCR akışı oluşturmak.
+
+İlk dilim (2026-09-09): Ham metni saklamayan geçici aday modeli ve `Double` kullanmayan
+deterministik parser tamamlandı. Etiketli toplamlar, geçerli tarihler ve düşük güvenli işyeri adayı
+ayrıştırılır; para birimi form bağlamından gelir ve tüm adaylar kullanıcı onayına tabidir.
+
+Android akışı (2026-09-09): CameraX arka kamera ve sistem galeri seçimi, bundled ML Kit tanıma,
+izin ret/ayarlar geri dönüşü ve ayrı aday onay diyaloğu işlem formuna bağlandı. Geçici kamera
+dosyası OCR sonrasında silinir; “Forma Aktar” seçilmeden hiçbir form alanı veya finans kaydı değişmez.
+
+Faz 9.1 kapanış notu (2026-09-09): Ortak `SecuritySettings`, fail-closed kilit politikası, Android Preferences DataStore/Hilt repository, AndroidX `BiometricPrompt`, biyometri + cihaz PIN/desen/parola geri dönüşü ve navigation'dan önce çalışan lifecycle kilit kapısı tamamlandı. Uygulama kilidi SQLCipher anahtarından ayrı kaldığı için arka plan senkronizasyonu korunur. Otomatik testler, debug APK ve kullanıcı Android manuel kabulü geçti.
 
 ## Sonraki fazlar
 

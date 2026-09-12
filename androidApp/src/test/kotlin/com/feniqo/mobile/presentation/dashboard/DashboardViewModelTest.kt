@@ -140,10 +140,59 @@ class DashboardViewModelTest {
         val fakeWorkspaceRepo = com.feniqo.mobile.presentation.common.FakeWorkspaceRepository()
         val observeActiveWorkspaceUseCase = com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase(fakeWorkspaceRepo)
 
+        val fakeBudgetRepo = object : com.feniqo.mobile.domain.repository.BudgetRepository {
+            override fun observeBudgets(month: YearMonth, workspaceId: EntityId?): Flow<List<com.feniqo.mobile.domain.model.Budget>> = MutableStateFlow(emptyList())
+            override fun observeBudget(id: EntityId): Flow<com.feniqo.mobile.domain.model.Budget?> = MutableStateFlow(null)
+            override suspend fun create(command: com.feniqo.mobile.domain.model.CreateBudgetCommand): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("b-1"))
+            override suspend fun update(command: com.feniqo.mobile.domain.model.UpdateBudgetCommand): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+            override suspend fun softDelete(id: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+            override suspend fun copyBudgets(command: com.feniqo.mobile.domain.model.CopyBudgetsCommand): RepositoryResult<com.feniqo.mobile.domain.model.CopyBudgetsResult> = RepositoryResult.Success(com.feniqo.mobile.domain.model.CopyBudgetsResult(copiedCount = 0, skippedCategoryIds = emptyList()))
+        }
+        val observeBudgets = com.feniqo.mobile.domain.usecase.ObserveBudgetsWithProgressUseCase(
+            budgetRepository = fakeBudgetRepo,
+            transactionRepository = transactionRepo,
+            categoryRepository = categoryRepo,
+        )
+
+        val fakeSubRepo = object : com.feniqo.mobile.domain.repository.SubscriptionRepository {
+            override fun observeSubscriptions(): Flow<List<com.feniqo.mobile.domain.model.Subscription>> = MutableStateFlow(emptyList())
+            override fun observeSubscription(id: EntityId): Flow<com.feniqo.mobile.domain.model.Subscription?> = MutableStateFlow(null)
+            override suspend fun create(command: com.feniqo.mobile.domain.model.CreateSubscriptionCommand): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("s-1"))
+            override suspend fun update(command: com.feniqo.mobile.domain.model.UpdateSubscriptionCommand): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+            override suspend fun setActive(command: com.feniqo.mobile.domain.model.SetSubscriptionActiveCommand): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+            override suspend fun advanceRenewal(id: EntityId): RepositoryResult<com.feniqo.mobile.domain.validation.SubscriptionRenewalProgressionResult> = RepositoryResult.Success(com.feniqo.mobile.domain.validation.SubscriptionRenewalProgressionResult.Completed)
+            override suspend fun softDelete(id: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        }
+        val observeSubscriptions = com.feniqo.mobile.domain.usecase.ObserveSubscriptionsUseCase(fakeSubRepo)
+
+        val fakeGoalRepo = object : com.feniqo.mobile.domain.repository.GoalRepository {
+            override fun observeGoals(): Flow<List<com.feniqo.mobile.domain.model.Goal>> = MutableStateFlow(emptyList())
+            override fun observeGoal(id: EntityId): Flow<com.feniqo.mobile.domain.model.Goal?> = MutableStateFlow(null)
+            override fun observeContributions(goalId: EntityId): Flow<List<com.feniqo.mobile.domain.model.GoalContribution>> = MutableStateFlow(emptyList())
+            override suspend fun create(command: com.feniqo.mobile.domain.model.CreateGoalCommand): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("g-1"))
+            override suspend fun update(command: com.feniqo.mobile.domain.model.UpdateGoalCommand): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+            override suspend fun addContribution(command: com.feniqo.mobile.domain.model.AddGoalContributionCommand): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("gc-1"))
+            override suspend fun softDelete(id: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        }
+        val observeGoals = com.feniqo.mobile.domain.usecase.ObserveGoalsUseCase(fakeGoalRepo)
+
+        val fakeAuthRepo = object : com.feniqo.mobile.domain.repository.AuthRepository {
+            override fun observeSession(): Flow<com.feniqo.mobile.domain.repository.AuthSession?> = MutableStateFlow(null)
+            override fun observeCurrentProfile(): Flow<com.feniqo.mobile.domain.model.UserProfile?> = MutableStateFlow(null)
+            override suspend fun signIn(email: String, password: String): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+            override suspend fun signUp(email: String, password: String, fullName: String?): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("u-1"))
+            override suspend fun refreshSession(): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+            override suspend fun signOut(): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        }
+
         return DashboardViewModel(
             observeDashboardSummaryUseCase = observeSummary,
             observeTransactionsUseCase = observeTransactions,
             observeCategoriesForHistoryLookupUseCase = observeCategoriesHistory,
+            observeBudgetsWithProgressUseCase = observeBudgets,
+            observeSubscriptionsUseCase = observeSubscriptions,
+            observeGoalsUseCase = observeGoals,
+            authRepository = fakeAuthRepo,
             calculateMoneyScoreUseCase = moneyScoreCalculator,
             currentDateProvider = dateProvider,
             observeActiveWorkspaceUseCase = observeActiveWorkspaceUseCase,

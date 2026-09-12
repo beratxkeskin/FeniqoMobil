@@ -146,6 +146,8 @@ class OfflineFirstRecurringTransactionRepositoryTest {
             recurringDao.upsert(entity)
         }
         override suspend fun upsertSubscriptionRow(entity: com.feniqo.mobile.data.local.entity.SubscriptionEntity) {}
+        override suspend fun upsertAssetRow(entity: com.feniqo.mobile.data.local.entity.AssetEntity) {}
+        override suspend fun deleteAssetRow(id: String): Int = 0
         override suspend fun upsertRecurringOccurrenceRow(entity: RecurringTransactionOccurrenceEntity) {
             recurringDao.upsertOccurrence(entity)
         }
@@ -226,6 +228,8 @@ class OfflineFirstRecurringTransactionRepositoryTest {
         override suspend fun rebaseBudgetVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseRecurringTransactionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseSubscriptionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun rebaseAssetVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun markAssetSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
         override suspend fun deleteRecurringTransactionRow(id: String): Int = 0
         override suspend fun deleteSubscriptionRow(id: String): Int = 0
         override suspend fun markCategorySyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0

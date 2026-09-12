@@ -88,8 +88,29 @@ dosyasında tutulur.
 
 ## 7. Referanslar
 
+### Merchant tanıma ve kategori sunumu
+
+- Kategori ve merchant ayrı kavramlardır; transaction'ın merchant bağlantısı isteğe bağlıdır.
+- Sistem kategorileri silinemez, yalnız gizlenebilir. Kullanılmış özel kategoriler silinmek yerine
+  arşivlenir; kullanıcı kendi gelir ve gider kategorilerini oluşturabilir.
+- Kategori ikonları `food_dining`, `fuel`, `salary` gibi platformdan bağımsız semantik anahtarlarla
+  taşınır. Kanonik görsel sözlük 18 gider ve 9 gelir anahtarının Türkçe/İngilizce adı, ikon anlamı,
+  renk ve kapsamını tanımlar; platformlar bu anahtarları kendi ikon bileşenlerine çözümler.
+- Ham banka açıklaması korunur; eşleştirme ayrı, temizlenmiş açıklama üzerinden yapılır.
+- Merchant tahmini 0–100 güven puanlıdır. 75 altındaki sonuçta merchant logosu gösterilmez ve
+  kullanıcının doğrulanmış düzeltmesi sistem tahmininden önceliklidir.
+- Eşleşme önceliği kişisel doğrulama, çalışma alanı doğrulaması, banka tarafından doğrulanmış
+  merchant kimliği ve sistem alias'ı sırasındadır. Sistem puanları tam benzersiz alias için 95,
+  yasal ad için 92, marka+hizmet için 90, şube/POS kalıbı için 86, güçlü marka için 80 ve kısa
+  alias için 65'tir. En iyi iki farklı merchant arasındaki fark 10'dan azsa otomatik seçim yapılmaz.
+- Kişisel transferler ile maaş, kredi kartı ödemesi, hesaplar arası transfer ve yatırım/birikim
+  aktarımları merchant değildir. Nakit çekim/yatırma ve bakiye düzeltmesi de gelir/gider bütçe
+  kategorisi değil, ayrı sistem hareketidir ve merchant eşleştirmesine girmez.
+- Logo fallback sırası doğrulanmış merchant logosu, kullanıcının seçtiği merchant görseli,
+  kategori ikonu, merchant/açıklama baş harfi ve genel işlem ikonudur. Logo servisi temel çalışma
+  için zorunlu değildir; ham finansal açıklama üçüncü taraf logo servisine gönderilemez.
+
 - Ayrıntılı web ekranı ve kullanıcı akışları: [docs/WEB_REFERANS_ENVANTERI.md](docs/WEB_REFERANS_ENVANTERI.md)
 - Güncel özellik durumu: [FEATURES.md](FEATURES.md)
 - Uygulama sırası: [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)
 - Ayrıntılı tarihsel yol haritası: [FENIQO_MOBIL_YOL_HARITASI.md](FENIQO_MOBIL_YOL_HARITASI.md)
-

@@ -23,11 +23,21 @@ data object RegisterRoute : FeniqoRoute
 data object DashboardRoute : FeniqoRoute
 
 @Serializable
-data object TransactionsRoute : FeniqoRoute
+data class TransactionsRoute(
+    val categoryId: String? = null,
+    val startDate: String? = null,
+    val endDate: String? = null,
+) : FeniqoRoute
 
 @Serializable
 data class TransactionFormRoute(
     val transactionId: String? = null,
+    val initialTypeCode: String = "EXPENSE",
+) : FeniqoRoute
+
+@Serializable
+data class TransactionSuccessRoute(
+    val transactionId: String,
 ) : FeniqoRoute
 
 @Serializable
@@ -202,6 +212,31 @@ data object PlanRoute : FeniqoRoute
 data object MoreRoute : FeniqoRoute
 
 @Serializable
+data object ProfileRoute : FeniqoRoute
+
+@Serializable
+data object AssetsRoute : FeniqoRoute
+
+@Serializable
+data class AssetFormRoute(
+    val assetId: String? = null,
+) : FeniqoRoute
+
+sealed interface AssetRouteIdResult {
+    data object CreateMode : AssetRouteIdResult
+    data class ValidId(val id: com.feniqo.mobile.domain.model.EntityId) : AssetRouteIdResult
+    data object InvalidId : AssetRouteIdResult
+}
+
+fun parseAssetRouteId(rawId: String?): AssetRouteIdResult {
+    if (rawId == null) return AssetRouteIdResult.CreateMode
+    if (rawId.isBlank()) return AssetRouteIdResult.InvalidId
+    return runCatching {
+        AssetRouteIdResult.ValidId(com.feniqo.mobile.domain.model.EntityId(rawId.trim()))
+    }.getOrElse { AssetRouteIdResult.InvalidId }
+}
+
+@Serializable
 data object SettingsRoute : FeniqoRoute
 
 @Serializable
@@ -229,16 +264,32 @@ fun parseWorkspaceDetailsRouteId(rawId: String?): WorkspaceDetailsRouteIdResult 
         .getOrElse { WorkspaceDetailsRouteIdResult.InvalidId }
 }
 
+@Serializable
+data class WorkspaceSettlementRoute(
+    val workspaceId: String,
+) : FeniqoRoute
+
+sealed interface WorkspaceSettlementRouteIdResult {
+    data class ValidId(val id: com.feniqo.mobile.domain.model.EntityId) : WorkspaceSettlementRouteIdResult
+    data object InvalidId : WorkspaceSettlementRouteIdResult
+}
+
+fun parseWorkspaceSettlementRouteId(rawId: String?): WorkspaceSettlementRouteIdResult {
+    if (rawId.isNullOrBlank()) return WorkspaceSettlementRouteIdResult.InvalidId
+    return runCatching { WorkspaceSettlementRouteIdResult.ValidId(com.feniqo.mobile.domain.model.EntityId(rawId.trim())) }
+        .getOrElse { WorkspaceSettlementRouteIdResult.InvalidId }
+}
+
 
 /**
  * Feniqo ana kabuğundaki (Bottom Navigation) üst seviye sekmelerin sözleşmesidir.
  * Yalnız hedef kimliğini ve type-safe rota nesnesi eşlemesini taşır;
  * UI metinleri ve ikonlar sunum katmanına aittir.
- * 4 gerçek sekmeyi temsil eder: DASHBOARD, TRANSACTIONS, PLAN, MORE.
+ * 4 gerçek sekmeyi temsil eder: DASHBOARD, TRANSACTIONS, BUDGET, MORE.
  */
 enum class TopLevelDestination(val route: FeniqoRoute) {
     DASHBOARD(DashboardRoute),
-    TRANSACTIONS(TransactionsRoute),
-    PLAN(PlanRoute),
+    TRANSACTIONS(TransactionsRoute()),
+    BUDGET(BudgetsRoute),
     MORE(MoreRoute),
 }

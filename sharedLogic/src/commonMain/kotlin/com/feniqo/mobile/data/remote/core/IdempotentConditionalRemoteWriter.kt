@@ -1,6 +1,7 @@
 package com.feniqo.mobile.data.remote.core
 
 import com.feniqo.mobile.data.remote.dto.BudgetDto
+import com.feniqo.mobile.data.remote.dto.AssetDto
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.DebtDto
 import com.feniqo.mobile.data.remote.dto.DebtPaymentDto
@@ -21,6 +22,13 @@ import kotlinx.serialization.json.JsonObject
  * Outbox işlemini operation_id ile sunucuda idempotent ve koşullu olarak uygulayan V2 uzak yazıcı sözleşmesi.
  */
 interface IdempotentConditionalRemoteWriter {
+    suspend fun writeAsset(
+        operationId: String,
+        operation: RemoteWriteOperation,
+        baseVersion: Long?,
+        dto: AssetDto,
+    ): ConditionalRemoteWriteResult<AssetDto> = error("writeAsset not implemented in test fake")
+
     suspend fun writeProfile(
         operationId: String,
         operation: RemoteWriteOperation,

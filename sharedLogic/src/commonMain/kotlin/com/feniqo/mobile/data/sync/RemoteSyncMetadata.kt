@@ -2,6 +2,7 @@ package com.feniqo.mobile.data.sync
 
 import com.feniqo.mobile.data.local.entity.SyncMetadata
 import com.feniqo.mobile.data.remote.dto.BudgetDto
+import com.feniqo.mobile.data.remote.dto.AssetDto
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.DebtDto
 import com.feniqo.mobile.data.remote.dto.DebtPaymentDto
@@ -36,6 +37,13 @@ internal fun TransactionDto.toRemoteSyncMetadata(receivedAtEpochMillis: Long): S
 )
 
 internal fun BudgetDto.toRemoteSyncMetadata(receivedAtEpochMillis: Long): SyncMetadata = remoteSyncMetadata(
+    updatedAt = updatedAt ?: createdAt,
+    deletedAt = deletedAt,
+    version = version,
+    receivedAtEpochMillis = receivedAtEpochMillis,
+)
+
+internal fun AssetDto.toRemoteSyncMetadata(receivedAtEpochMillis: Long): SyncMetadata = remoteSyncMetadata(
     updatedAt = updatedAt ?: createdAt,
     deletedAt = deletedAt,
     version = version,

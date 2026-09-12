@@ -47,11 +47,16 @@ data class Transaction(
     val paidByUserId: EntityId = ownerId,
     /** Members included in an equal shared-expense split. */
     val participantUserIds: List<EntityId> = listOf(ownerId),
+    /** İsteğe bağlı işlem notu / açıklaması. */
+    val note: String? = null,
 ) {
     init {
         require(amount.amountMinor > 0) { "İşlem tutarı sıfırdan büyük olmalıdır." }
         require(description == null || (description.isNotBlank() && description.length <= MAX_DESCRIPTION_LENGTH)) {
             "İşlem açıklaması boş olamaz ve 500 karakteri geçemez."
+        }
+        require(note == null || (note.isNotBlank() && note.length <= MAX_NOTE_LENGTH)) {
+            "İşlem notu boş olamaz ve 500 karakteri geçemez."
         }
         require(participantUserIds.isNotEmpty() && participantUserIds.distinct().size == participantUserIds.size) {
             "Ortak gider katılımcıları boş veya tekrarlı olamaz."
@@ -60,9 +65,14 @@ data class Transaction(
     }
 
     companion object {
+        const val MAX_TITLE_LENGTH = 100
         const val MAX_DESCRIPTION_LENGTH = 500
+        const val MAX_NOTE_LENGTH = 500
 
         /** Form verisini saklamadan önce kırpar; boş açıklamayı null yapar. */
         fun normalizeDescription(value: String?): String? = value?.trim()?.ifBlank { null }
+
+        /** İsteğe bağlı notu saklamadan önce kırpar; boş notu null yapar. */
+        fun normalizeNote(value: String?): String? = value?.trim()?.ifBlank { null }
     }
 }

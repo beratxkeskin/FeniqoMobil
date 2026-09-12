@@ -16,10 +16,17 @@
 
 ## 2. Room şeması
 
-Güncel Room şema sürümü **3**'tür. Export edilen şemalar
+Güncel Room şema sürümü **14**'tür. Export edilen şemalar
 `sharedLogic/schemas/com.feniqo.mobile.data.local.database.FeniqoDatabase/` altında commit edilir.
 
 ### İş verisi tabloları
+
+Canonical sistem kategorileri sabit UUID'lerle uygulama başlangıcında Room'a idempotent olarak
+uzlaştırılır. Kanonik sözlük 9 gelir ve 18 gider kategorisidir; eşdeğer eski kayıtlar UUID'sini ve
+sync metadata'sını korurken ad, renk ve semantik ikon anahtarı güncellenir. Anlamı belirsiz eski
+`Tasarruf & Yatırım` ile `Kredi Ödemeleri` kayıtları başka kategoriye otomatik çevrilmez; seçimden
+gizlenirken tarihsel yabancı anahtarları korunur. Bu bir veri uzlaştırmasıdır, tablo şeması
+değişmediği için yeni Room sürümü gerektirmez.
 
 | Tablo | Amaç | Temel ilişkiler |
 |---|---|---|
@@ -71,6 +78,17 @@ Domain modelleri bu teknik metadata'nın tamamını bilmek zorunda değildir; d�
 - `created_at`, `updated_at`, `deleted_at`: UTC sunucu zamanları.
 - Room, UTC metadata zamanlarını epoch-millis `Long` olarak saklar.
 - Artımlı pull sırası yalnız timestamp değildir; `(updated_at, id)` bileşik cursor kullanılır.
+
+### Piyasa fiyatı read model'i
+
+- `market_prices`, kullanıcı Asset kaydından ayrı, genel ve sağlayıcıdan bağımsız bir uzak cache'tir.
+- Kararlı anahtar `(asset_type, symbol, quote_currency)` bileşimidir.
+- Birim fiyat `price_unscaled` + `price_scale` ile tutulur; `Double` kullanılmaz ve ölçek `0..12` aralığındadır.
+- Yalnız `CRYPTO`, `STOCKS` ve `PRECIOUS_METALS` türleri otomatik fiyat kapsamındadır.
+- `authenticated` rolü yalnız okuyabilir; `anon` erişemez ve yazma yalnız güvenilir backend `service_role` akışına açıktır.
+- `observed_at`, `fetched_at`, `expires_at` ve `source` alanları fiyatın kaynağını ve tazeliğini görünür tutar.
+- Mobil istemci üçüncü taraf servis anahtarı veya sağlayıcı endpoint'i taşımaz.
+- Edge Function isteği authenticated kullanıcı başına atomik, dakikalık kota RPC'sinden geçer; istemci kota tablosunu doğrudan okuyamaz veya değiştiremez.
 
 ## 6. Soft-delete ve sürümleme
 
@@ -182,4 +200,3 @@ Production veritabanında işlem yapmadan önce aşağıdakilerin tümü gerekir
 - RLS, para backfill, tombstone, cursor ve conflict senaryoları staging'de geçmeli;
 - uygulanacak dosyalar ve hedef proje açıkça belirtilmeli;
 - proje sahibi production uygulaması için ayrıca açık onay vermeli.
-

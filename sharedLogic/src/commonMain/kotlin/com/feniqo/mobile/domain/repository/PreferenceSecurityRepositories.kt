@@ -30,12 +30,15 @@ enum class DatabaseProtectionStatus {
 
 data class SecuritySettings(
     val biometricLockEnabled: Boolean,
-    val autoLockTimeoutSeconds: Int,
+    val autoLockTimeout: AutoLockTimeout,
     val databaseProtectionStatus: DatabaseProtectionStatus,
-) {
-    init {
-        require(autoLockTimeoutSeconds >= 0) { "Otomatik kilit süresi negatif olamaz." }
-    }
+)
+
+enum class AutoLockTimeout(val seconds: Int) {
+    IMMEDIATELY(0),
+    AFTER_30_SECONDS(30),
+    AFTER_1_MINUTE(60),
+    AFTER_5_MINUTES(300),
 }
 
 /** BiometricPrompt, Keystore ve Keychain bu ortak sözleşmenin platform uygulamalarıdır. */
@@ -44,7 +47,7 @@ interface SecurityRepository {
 
     suspend fun setBiometricLockEnabled(enabled: Boolean): RepositoryResult<Unit>
 
-    suspend fun setAutoLockTimeoutSeconds(seconds: Int): RepositoryResult<Unit>
+    suspend fun setAutoLockTimeout(timeout: AutoLockTimeout): RepositoryResult<Unit>
 
     suspend fun clearSecureSession(): RepositoryResult<Unit>
 }

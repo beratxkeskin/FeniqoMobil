@@ -66,6 +66,7 @@ fun WorkspaceDetailsScreen(
     onRequestRemoveMember: (member: WorkspaceMemberUiModel) -> Unit = {},
     onDismissMemberRemovalConfirmation: () -> Unit = {},
     onConfirmMemberRemoval: () -> Unit = {},
+    onNavigateToSettlement: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -225,6 +226,31 @@ fun WorkspaceDetailsScreen(
                                             fontWeight = FontWeight.Bold,
                                         )
                                     }
+                                }
+                            }
+                        }
+
+                        // 1.2 Ödeşme Butonu (çalışma alanı üyeleri için)
+                        if (state.currentUserRole != null || state.members.any { it.isCurrentUser }) {
+                            item(key = "workspace_settlement_action") {
+                                Button(
+                                    onClick = onNavigateToSettlement,
+                                    enabled = !state.isLeaving,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondary,
+                                        contentColor = MaterialTheme.colorScheme.onSecondary,
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .semantics {
+                                            contentDescription = "Ödeşme ve transfer önerileri"
+                                        },
+                                ) {
+                                    Text(
+                                        text = "Ödeşme ve Transferler",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold,
+                                    )
                                 }
                             }
                         }

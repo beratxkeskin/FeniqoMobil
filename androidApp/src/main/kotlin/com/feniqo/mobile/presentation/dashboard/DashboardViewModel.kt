@@ -42,6 +42,10 @@ class DashboardViewModel @Inject constructor(
     private val observeDashboardSummaryUseCase: ObserveDashboardSummaryUseCase,
     private val observeTransactionsUseCase: ObserveTransactionsUseCase,
     private val observeCategoriesForHistoryLookupUseCase: ObserveCategoriesForHistoryLookupUseCase,
+    private val observeBudgetsWithProgressUseCase: com.feniqo.mobile.domain.usecase.ObserveBudgetsWithProgressUseCase,
+    private val observeSubscriptionsUseCase: com.feniqo.mobile.domain.usecase.ObserveSubscriptionsUseCase,
+    private val observeGoalsUseCase: com.feniqo.mobile.domain.usecase.ObserveGoalsUseCase,
+    private val authRepository: com.feniqo.mobile.domain.repository.AuthRepository,
     private val calculateMoneyScoreUseCase: CalculateMoneyScoreUseCase,
     private val observeActiveWorkspaceUseCase: ObserveActiveWorkspaceUseCase,
     private val currentDateProvider: CurrentDateProvider,
@@ -71,29 +75,48 @@ class DashboardViewModel @Inject constructor(
         (selected ?: initialMonth) to retryCount
     }.flatMapLatest { (month, _) ->
         combine(
-            observeDashboardSummaryUseCase(month = month, currency = Currency.TRY),
-            observeTransactionsUseCase(),
-            observeCategoriesForHistoryLookupUseCase(),
-        ) { summary, transactions, categories ->
+            combine(
+                observeDashboardSummaryUseCase(month = month, currency = Currency.TRY),
+                observeTransactionsUseCase(),
+                observeCategoriesForHistoryLookupUseCase(),
+                observeBudgetsWithProgressUseCase(month = month),
+            ) { summary, transactions, categories, budgets ->
+                summary to Triple(transactions, categories, budgets)
+            },
+            combine(
+                observeSubscriptionsUseCase(),
+                observeGoalsUseCase(),
+                authRepository.observeCurrentProfile(),
+            ) { subscriptions, goals, profile ->
+                Triple(subscriptions, goals, profile)
+            },
+        ) { (summary, primaryTriple), (subscriptions, goals, profile) ->
+            val (transactions, categories, budgets) = primaryTriple
             val monthlyTransactions = transactions.filter { it.transactionDate.toString().startsWith(month.value) }
             val moneyScoreInput = MoneyScoreInput(
                 income = summary.income,
                 expense = summary.expense,
-                budgets = emptyList(),
+                budgets = budgets.map { it.progress.budget },
                 transactions = monthlyTransactions,
                 debts = emptyList(),
-                goals = emptyList(),
+                goals = goals,
                 today = currentDateProvider.today(),
             )
             val calculatedScore = calculateMoneyScoreUseCase(moneyScoreInput)
             val summaryWithScore = summary.copy(moneyScore = calculatedScore)
 
+            val userName = profile?.fullName?.takeIf { it.isNotBlank() } ?: "Kullanıcı"
+
             val displayModel = DashboardDisplayModelBuilder.build(
                 summary = summaryWithScore,
                 transactions = transactions,
                 categories = categories,
+                budgets = budgets,
+                subscriptions = subscriptions,
+                goals = goals,
                 moneyScoreIsProvisional = true,
                 moneyScoreExplanationText = PROVISIONAL_MONEY_SCORE_EXPLANATION,
+                userName = userName,
             )
             ObservationResult.Success(displayModel) as ObservationResult
         }.catch { throwable ->

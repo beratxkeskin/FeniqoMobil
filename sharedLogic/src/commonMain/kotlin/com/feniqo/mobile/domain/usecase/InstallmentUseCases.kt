@@ -37,6 +37,9 @@ data class AddInstallmentGroupCommand(
     val anchorDate: LocalDate,
     val receiptPath: ReceiptPath?,
     val installmentCount: Int,
+    val paidByUserId: EntityId? = null,
+    val participantUserIds: List<EntityId> = emptyList(),
+    val note: String? = null,
 )
 
 class AddInstallmentGroupUseCase(
@@ -65,9 +68,16 @@ class AddInstallmentGroupUseCase(
             return RepositoryResult.Failure(AppError.Validation("transaction_date_cannot_be_future"))
         }
 
+        if (command.description.isNullOrBlank()) {
+            return RepositoryResult.Failure(AppError.Validation("transaction_title_required"))
+        }
         val normalizedDescription = Transaction.normalizeDescription(command.description)
-        if (normalizedDescription != null && normalizedDescription.length > Transaction.MAX_DESCRIPTION_LENGTH) {
-            return RepositoryResult.Failure(AppError.Validation("transaction_description_too_long"))
+        if (normalizedDescription != null && normalizedDescription.length > Transaction.MAX_TITLE_LENGTH) {
+            return RepositoryResult.Failure(AppError.Validation("transaction_title_too_long"))
+        }
+        val normalizedNote = Transaction.normalizeNote(command.note)
+        if (normalizedNote != null && normalizedNote.length > Transaction.MAX_NOTE_LENGTH) {
+            return RepositoryResult.Failure(AppError.Validation("transaction_note_too_long"))
         }
 
         val category = categoryRepository.observeCategory(command.categoryId).first()
@@ -101,6 +111,9 @@ class AddInstallmentGroupUseCase(
             return RepositoryResult.Failure(AppError.Unknown("entity_id_generation_failed"))
         }
 
+        val paidByUserId = command.paidByUserId ?: session.userId
+        val participantUserIds = command.participantUserIds.ifEmpty { listOf(paidByUserId) }
+
         val transactions = allocations.mapIndexed { index, allocation ->
             Transaction(
                 id = transactionIds[index],
@@ -119,6 +132,9 @@ class AddInstallmentGroupUseCase(
                     groupId = groupId,
                 ),
                 createdAt = createdAt,
+                paidByUserId = paidByUserId,
+                participantUserIds = participantUserIds,
+                note = normalizedNote,
             )
         }
 

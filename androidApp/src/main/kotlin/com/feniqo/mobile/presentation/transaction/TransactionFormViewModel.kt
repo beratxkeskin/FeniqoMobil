@@ -11,15 +11,18 @@ import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.PaymentMethod
 import com.feniqo.mobile.domain.model.ReceiptPath
+import com.feniqo.mobile.domain.model.ReceiptOcrDraft
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.repository.RepositoryResult
 import com.feniqo.mobile.domain.usecase.AddInstallmentGroupCommand
 import com.feniqo.mobile.domain.usecase.AddInstallmentGroupUseCase
 import com.feniqo.mobile.domain.usecase.AddTransactionUseCase
 import com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase
+import com.feniqo.mobile.domain.usecase.ObserveAuthSessionUseCase
 import com.feniqo.mobile.domain.usecase.ObserveCategoriesForHistoryLookupUseCase
 import com.feniqo.mobile.domain.usecase.ObserveCategoriesUseCase
 import com.feniqo.mobile.domain.usecase.ObserveTransactionUseCase
+import com.feniqo.mobile.domain.usecase.ObserveWorkspaceMembersUseCase
 import com.feniqo.mobile.domain.usecase.TransactionCommand
 import com.feniqo.mobile.domain.usecase.UpdateTransactionUseCase
 import com.feniqo.mobile.domain.validation.InstallmentPlanCalculator
@@ -33,6 +36,7 @@ import com.feniqo.mobile.presentation.common.CurrentDateProvider
 import com.feniqo.mobile.presentation.common.CurrentInstantProvider
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.common.toFinanceUiMessage
+import com.feniqo.mobile.presentation.workspace.WorkspaceMemberUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
@@ -59,6 +63,7 @@ import javax.inject.Inject
  */
 sealed interface TransactionFormEvent {
     data object NavigateBack : TransactionFormEvent
+    data class TransactionCreated(val transactionId: EntityId) : TransactionFormEvent
 }
 
 private data class CategoryPipelineInput(
@@ -80,6 +85,8 @@ class TransactionFormViewModel @Inject constructor(
     private val observeCategoriesUseCase: ObserveCategoriesUseCase,
     private val observeCategoriesForHistoryLookupUseCase: ObserveCategoriesForHistoryLookupUseCase,
     private val observeActiveWorkspaceUseCase: ObserveActiveWorkspaceUseCase,
+    private val observeWorkspaceMembersUseCase: ObserveWorkspaceMembersUseCase,
+    private val observeAuthSessionUseCase: ObserveAuthSessionUseCase,
     private val currentDateProvider: CurrentDateProvider,
     private val currentInstantProvider: CurrentInstantProvider,
     private val entityIdGenerator: EntityIdGenerator,
@@ -89,6 +96,7 @@ class TransactionFormViewModel @Inject constructor(
     private val targetTransactionId: EntityId?
     private val initialLoadError: FinanceUiMessage?
     private val isEditMode: Boolean
+    private val initialTransactionType: TransactionType
 
     init {
         val routeResult = try {
@@ -103,7 +111,14 @@ class TransactionFormViewModel @Inject constructor(
             isEditMode = true
             targetTransactionId = null
             initialLoadError = FinanceUiMessage.TRANSACTION_NOT_FOUND
+            initialTransactionType = TransactionType.EXPENSE
         } else {
+            initialTransactionType = if (routeResult.transactionId == null) {
+                runCatching { TransactionType.valueOf(routeResult.initialTypeCode) }
+                    .getOrDefault(TransactionType.EXPENSE)
+            } else {
+                TransactionType.EXPENSE
+            }
             val rawId = routeResult.transactionId
             when {
                 rawId == null -> {
@@ -135,7 +150,7 @@ class TransactionFormViewModel @Inject constructor(
         }
     }
 
-    private val _typeState = MutableStateFlow(TransactionType.EXPENSE)
+    private val _typeState = MutableStateFlow(initialTransactionType)
     private val _workspaceIdState = MutableStateFlow<EntityId?>(null)
     private val _historicalCategoryState = MutableStateFlow<TransactionCategoryOptionUiModel?>(null)
     private val _retryTrigger = MutableStateFlow(0)
@@ -145,10 +160,11 @@ class TransactionFormViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(
         TransactionFormUiState(
             transactionDate = currentDateProvider.today(),
-            type = TransactionType.EXPENSE,
+            type = initialTransactionType,
             isEditMode = isEditMode,
             isLoadingTransaction = isEditMode && initialLoadError == null,
             loadError = initialLoadError,
+            isReceiptFeatureAvailable = !isEditMode,
         ),
     )
     val uiState: StateFlow<TransactionFormUiState> = _uiState.asStateFlow()
@@ -160,6 +176,7 @@ class TransactionFormViewModel @Inject constructor(
 
     init {
         setupCategoryObservationPipeline()
+        setupWorkspaceMembersPipeline()
 
         viewModelScope.launch {
             var previousWorkspaceId: EntityId? = null
@@ -167,7 +184,12 @@ class TransactionFormViewModel @Inject constructor(
             observeActiveWorkspaceUseCase().collect { activeWorkspace ->
                 val currentWorkspaceId = activeWorkspace?.id
                 val workspaceName = activeWorkspace?.name
-                _uiState.update { it.copy(activeWorkspaceName = workspaceName) }
+                _uiState.update {
+                    it.copy(
+                        activeWorkspaceId = currentWorkspaceId,
+                        activeWorkspaceName = workspaceName,
+                    )
+                }
 
                 if (!isEditMode) {
                     _workspaceIdState.value = currentWorkspaceId
@@ -243,6 +265,90 @@ class TransactionFormViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
+    private fun setupWorkspaceMembersPipeline() {
+        combine(_typeState, _workspaceIdState) { type, wsId ->
+            Pair(type, wsId)
+        }
+            .distinctUntilChanged()
+            .flatMapLatest { (type, wsId) ->
+                if (type == TransactionType.EXPENSE && wsId != null) {
+                    _uiState.update { it.copy(isLoadingWorkspaceMembers = true) }
+                    combine(
+                        observeWorkspaceMembersUseCase(wsId),
+                        observeAuthSessionUseCase(),
+                    ) { members, session ->
+                        val currentUserId = session?.userId
+                        val uiMembers = members.map { member ->
+                            val isCurrentUser = currentUserId != null && member.userId == currentUserId
+                            val displayName = if (isCurrentUser) {
+                                "Siz"
+                            } else {
+                                "Kullanıcı ${member.userId.value.take(8)}"
+                            }
+                            WorkspaceMemberUiModel(
+                                userId = member.userId,
+                                displayName = displayName,
+                                role = member.role,
+                                isCurrentUser = isCurrentUser,
+                            )
+                        }.sortedWith(
+                            compareByDescending<WorkspaceMemberUiModel> { it.isCurrentUser }
+                                .thenBy { it.displayName }
+                                .thenBy { it.userId.value },
+                        )
+                        uiMembers to currentUserId
+                    }
+                        .map { (uiMembers, currentUserId) ->
+                            _uiState.update { state ->
+                                val activeMemberIds = uiMembers.map { it.userId }.toSet()
+
+                                var selectedPayer = state.selectedPaidByUserId
+                                var selectedParticipants = state.selectedParticipantUserIds.filter { activeMemberIds.contains(it) }.toSet()
+
+                                if (selectedPayer != null && !activeMemberIds.contains(selectedPayer)) {
+                                    selectedPayer = selectedParticipants.firstOrNull()
+                                        ?: (if (currentUserId != null && activeMemberIds.contains(currentUserId)) currentUserId else uiMembers.firstOrNull()?.userId)
+                                } else if (selectedPayer == null) {
+                                    selectedPayer = if (currentUserId != null && activeMemberIds.contains(currentUserId)) currentUserId else uiMembers.firstOrNull()?.userId
+                                }
+
+                                if (selectedPayer != null && !selectedParticipants.contains(selectedPayer)) {
+                                    selectedParticipants = selectedParticipants + selectedPayer
+                                }
+
+                                if (selectedParticipants.isEmpty() && selectedPayer != null) {
+                                    selectedParticipants = setOf(selectedPayer)
+                                }
+
+                                state.copy(
+                                    workspaceMembers = uiMembers,
+                                    isLoadingWorkspaceMembers = false,
+                                    selectedPaidByUserId = selectedPayer,
+                                    selectedParticipantUserIds = selectedParticipants,
+                                )
+                            }
+                        }
+                        .catch { e ->
+                            if (e is CancellationException) throw e
+                            if (e !is Exception) throw e
+                            _uiState.update { it.copy(isLoadingWorkspaceMembers = false) }
+                        }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            workspaceMembers = emptyList(),
+                            isLoadingWorkspaceMembers = false,
+                            selectedPaidByUserId = null,
+                            selectedParticipantUserIds = emptySet(),
+                            splitError = null,
+                        )
+                    }
+                    kotlinx.coroutines.flow.emptyFlow()
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
     fun retryCategories() {
         _retryTrigger.update { it + 1 }
     }
@@ -288,6 +394,8 @@ class TransactionFormViewModel @Inject constructor(
                         type = transaction.type,
                         selectedCategoryId = transaction.categoryId,
                         transactionDate = transaction.transactionDate,
+                        title = transaction.description ?: "",
+                        note = transaction.note ?: "",
                         description = transaction.description ?: "",
                         paymentMethod = transaction.paymentMethod,
                         isInstallmentEnabled = false,
@@ -298,6 +406,8 @@ class TransactionFormViewModel @Inject constructor(
                                 badgeText = "${inst.number}/${inst.total}",
                             )
                         },
+                        selectedPaidByUserId = transaction.paidByUserId,
+                        selectedParticipantUserIds = transaction.participantUserIds.toSet(),
                         isLoadingTransaction = false,
                     )
                 }
@@ -394,10 +504,47 @@ class TransactionFormViewModel @Inject constructor(
         }
     }
 
-    fun onDescriptionChanged(description: String) {
+    fun onTitleChanged(title: String) {
         _uiState.update {
             it.copy(
-                description = description,
+                title = title,
+                description = title,
+                titleError = null,
+                descriptionError = null,
+                generalMessage = null,
+            )
+        }
+    }
+
+    fun onNoteChanged(note: String) {
+        _uiState.update {
+            it.copy(
+                note = note,
+                noteError = null,
+                generalMessage = null,
+            )
+        }
+    }
+
+    fun onDescriptionChanged(description: String) {
+        onTitleChanged(description)
+    }
+
+    /** OCR adayları yalnız kullanıcı onayından sonra form alanlarına uygulanır; kayıt oluşturmaz. */
+    fun applyReceiptOcrDraft(draft: ReceiptOcrDraft) {
+        _uiState.update { state ->
+            val merchantName = draft.merchantName?.value
+            val newTitle = merchantName ?: state.title.ifEmpty { state.description }
+            state.copy(
+                amountText = draft.total?.value?.let {
+                    formatMinorUnitsToInputText(it.amountMinor, state.currency)
+                } ?: state.amountText,
+                transactionDate = draft.transactionDate?.value ?: state.transactionDate,
+                title = newTitle,
+                description = merchantName ?: state.description,
+                amountError = null,
+                dateError = null,
+                titleError = null,
                 descriptionError = null,
                 generalMessage = null,
             )
@@ -431,6 +578,50 @@ class TransactionFormViewModel @Inject constructor(
             it.copy(
                 installmentCountText = countText,
                 installmentCountError = null,
+                generalMessage = null,
+            )
+        }
+    }
+
+    fun onPaidByUserSelected(userId: EntityId) {
+        val currentState = _uiState.value
+        val isMember = currentState.workspaceMembers.any { it.userId == userId }
+        if (!isMember) return
+
+        _uiState.update { state ->
+            val updatedParticipants = if (!state.selectedParticipantUserIds.contains(userId)) {
+                state.selectedParticipantUserIds + userId
+            } else {
+                state.selectedParticipantUserIds
+            }
+            state.copy(
+                selectedPaidByUserId = userId,
+                selectedParticipantUserIds = updatedParticipants,
+                splitError = null,
+                generalMessage = null,
+            )
+        }
+    }
+
+    fun onParticipantToggled(userId: EntityId) {
+        val currentState = _uiState.value
+        val isMember = currentState.workspaceMembers.any { it.userId == userId }
+        if (!isMember) return
+
+        _uiState.update { state ->
+            if (state.selectedPaidByUserId == userId && state.selectedParticipantUserIds.contains(userId)) {
+                return@update state
+            }
+
+            val updatedParticipants = if (state.selectedParticipantUserIds.contains(userId)) {
+                state.selectedParticipantUserIds - userId
+            } else {
+                state.selectedParticipantUserIds + userId
+            }
+
+            state.copy(
+                selectedParticipantUserIds = updatedParticipants,
+                splitError = null,
                 generalMessage = null,
             )
         }
@@ -490,12 +681,22 @@ class TransactionFormViewModel @Inject constructor(
             }
         }
 
-        // 4. Açıklama Doğrulaması
-        val descValidation = TransactionValidationRules.validateDescription(currentState.description)
-        val descriptionError: TransactionFormFieldError? = if (descValidation is TransactionValidationResult.Invalid) {
-            TransactionFormFieldError.DESCRIPTION_TOO_LONG
-        } else {
-            null
+        // 4. İşlem Adı ve Not Doğrulaması
+        val effectiveTitle = currentState.title.ifEmpty { currentState.description }
+        val titleValidation = TransactionValidationRules.validateTitle(effectiveTitle)
+        val titleError: TransactionFormFieldError? = when (titleValidation) {
+            is TransactionValidationResult.Valid -> null
+            is TransactionValidationResult.Invalid -> when (titleValidation.error) {
+                TransactionValidationError.TITLE_EMPTY -> TransactionFormFieldError.TITLE_REQUIRED
+                TransactionValidationError.TITLE_TOO_LONG -> TransactionFormFieldError.TITLE_TOO_LONG
+                else -> TransactionFormFieldError.TITLE_REQUIRED
+            }
+        }
+
+        val noteValidation = TransactionValidationRules.validateNote(currentState.note)
+        val noteError: TransactionFormFieldError? = when (noteValidation) {
+            is TransactionValidationResult.Valid -> null
+            is TransactionValidationResult.Invalid -> TransactionFormFieldError.NOTE_TOO_LONG
         }
 
         // 5. Taksit Doğrulaması ve Ön Hesaplama
@@ -522,14 +723,35 @@ class TransactionFormViewModel @Inject constructor(
             }
         }
 
-        if (amountError != null || categoryError != null || dateError != null || descriptionError != null || installmentError != null || amountMinor == null || date == null) {
+        // 6. Split Doğrulaması
+        var splitError: TransactionFormFieldError? = null
+        if (currentState.isSharedExpense) {
+            val payer = currentState.selectedPaidByUserId
+            val participants = currentState.selectedParticipantUserIds
+            val memberIds = currentState.workspaceMembers.map { it.userId }.toSet()
+
+            if (currentState.isLoadingWorkspaceMembers) {
+                splitError = TransactionFormFieldError.SPLIT_PAYER_REQUIRED
+            } else if (payer == null || !memberIds.contains(payer)) {
+                splitError = TransactionFormFieldError.SPLIT_PAYER_REQUIRED
+            } else if (participants.isEmpty() || !participants.all { memberIds.contains(it) }) {
+                splitError = TransactionFormFieldError.SPLIT_PARTICIPANTS_REQUIRED
+            } else if (!participants.contains(payer)) {
+                splitError = TransactionFormFieldError.SPLIT_PAYER_NOT_IN_PARTICIPANTS
+            }
+        }
+
+        if (amountError != null || categoryError != null || dateError != null || titleError != null || noteError != null || installmentError != null || splitError != null || amountMinor == null || date == null) {
             _uiState.update {
                 it.copy(
                     amountError = amountError,
                     categoryError = categoryError,
                     dateError = dateError,
-                    descriptionError = descriptionError,
+                    titleError = titleError,
+                    noteError = noteError,
+                    descriptionError = titleError,
                     installmentCountError = installmentError,
+                    splitError = splitError,
                     generalMessage = null,
                 )
             }
@@ -537,6 +759,10 @@ class TransactionFormViewModel @Inject constructor(
         }
 
         val categoryId = currentState.selectedCategoryId!!
+        val paidByUserId = if (currentState.isSharedExpense) currentState.selectedPaidByUserId else null
+        val participantUserIds = if (currentState.isSharedExpense) currentState.selectedParticipantUserIds.toList() else emptyList()
+        val effectiveTitleTrimmed = effectiveTitle.trim()
+        val normalizedNote = currentState.note.trim().ifEmpty { null }
 
         _uiState.update {
             it.copy(
@@ -544,27 +770,42 @@ class TransactionFormViewModel @Inject constructor(
                 amountError = null,
                 categoryError = null,
                 dateError = null,
+                titleError = null,
+                noteError = null,
                 descriptionError = null,
                 installmentCountError = null,
+                splitError = null,
                 generalMessage = null,
             )
         }
 
         val job = viewModelScope.launch(start = CoroutineStart.LAZY) {
             try {
-                val result: RepositoryResult<*> = if (currentState.isEditMode) {
+                if (currentState.isEditMode) {
                     val command = TransactionCommand(
                         id = targetTransactionId!!,
                         workspaceId = _workspaceIdState.value,
                         amount = Money(amountMinor, currentState.currency),
                         type = currentState.type,
                         categoryId = categoryId,
-                        description = currentState.description,
+                        description = effectiveTitleTrimmed,
                         paymentMethod = currentState.paymentMethod,
                         transactionDate = date,
                         receiptPath = existingReceiptPath,
+                        paidByUserId = paidByUserId,
+                        participantUserIds = participantUserIds,
+                        note = normalizedNote,
                     )
-                    updateTransactionUseCase(command, today)
+                    when (val result = updateTransactionUseCase(command, today)) {
+                        is RepositoryResult.Success -> {
+                            _events.send(TransactionFormEvent.NavigateBack)
+                        }
+                        is RepositoryResult.Failure -> {
+                            _uiState.update {
+                                it.copy(generalMessage = result.error.toFinanceUiMessage())
+                            }
+                        }
+                    }
                 } else if (currentState.isInstallmentOptionAvailable && currentState.isInstallmentEnabled && installmentCount != null) {
                     val now = currentInstantProvider.now()
                     val command = AddInstallmentGroupCommand(
@@ -572,36 +813,50 @@ class TransactionFormViewModel @Inject constructor(
                         totalAmount = Money(amountMinor, currentState.currency),
                         type = TransactionType.EXPENSE,
                         categoryId = categoryId,
-                        description = currentState.description,
+                        description = effectiveTitleTrimmed,
                         paymentMethod = PaymentMethod.CREDIT_CARD,
                         anchorDate = date,
                         receiptPath = null,
                         installmentCount = installmentCount,
+                        paidByUserId = paidByUserId,
+                        participantUserIds = participantUserIds,
+                        note = normalizedNote,
                     )
-                    addInstallmentGroupUseCase(command, today, now)
+                    when (val result = addInstallmentGroupUseCase(command, today, now)) {
+                        is RepositoryResult.Success -> {
+                            _events.send(TransactionFormEvent.TransactionCreated(result.value))
+                        }
+                        is RepositoryResult.Failure -> {
+                            _uiState.update {
+                                it.copy(generalMessage = result.error.toFinanceUiMessage())
+                            }
+                        }
+                    }
                 } else {
                     val now = currentInstantProvider.now()
+                    val newId = entityIdGenerator.nextId()
                     val command = TransactionCommand(
-                        id = entityIdGenerator.nextId(),
+                        id = newId,
                         workspaceId = _workspaceIdState.value,
                         amount = Money(amountMinor, currentState.currency),
                         type = currentState.type,
                         categoryId = categoryId,
-                        description = currentState.description,
+                        description = effectiveTitleTrimmed,
                         paymentMethod = currentState.paymentMethod,
                         transactionDate = date,
                         receiptPath = null,
+                        paidByUserId = paidByUserId,
+                        participantUserIds = participantUserIds,
+                        note = normalizedNote,
                     )
-                    addTransactionUseCase(command, today, now)
-                }
-
-                when (result) {
-                    is RepositoryResult.Success -> {
-                        _events.send(TransactionFormEvent.NavigateBack)
-                    }
-                    is RepositoryResult.Failure -> {
-                        _uiState.update {
-                            it.copy(generalMessage = result.error.toFinanceUiMessage())
+                    when (val result = addTransactionUseCase(command, today, now)) {
+                        is RepositoryResult.Success -> {
+                            _events.send(TransactionFormEvent.TransactionCreated(newId))
+                        }
+                        is RepositoryResult.Failure -> {
+                            _uiState.update {
+                                it.copy(generalMessage = result.error.toFinanceUiMessage())
+                            }
                         }
                     }
                 }

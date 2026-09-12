@@ -1,5 +1,6 @@
 package com.feniqo.mobile.data.remote.mapper
 
+import com.feniqo.mobile.data.remote.dto.AssetDto
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.domain.model.Currency
@@ -19,6 +20,34 @@ class CoreFinanceRemoteMappersTest {
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
+    }
+
+    @Test
+    fun asset_contract_round_trips_without_workspace_scope() {
+        val dto = AssetDto(
+            id = "asset-1", userId = "user-1", name = "  BTC  ", type = "crypto",
+            currentValueMinor = 125_000L, currency = "TRY", quantityUnscaled = 25_000_000L,
+            quantityScale = 8, purchaseUnitPriceMinor = 100_000L, trackingSymbol = " btc ",
+            autoTrack = true, createdAt = "2026-09-08T10:00:00Z",
+        )
+
+        val roundTrip = dto.toDomain().toDto()
+
+        assertEquals("BTC", roundTrip.name)
+        assertEquals("CRYPTO", roundTrip.type)
+        assertEquals("btc", roundTrip.trackingSymbol)
+        assertEquals(25_000_000L, roundTrip.quantityUnscaled)
+    }
+
+    @Test
+    fun asset_contract_rejects_auto_tracking_without_symbol() {
+        assertFailsWith<RemoteMappingException> {
+            AssetDto(
+                id = "asset-1", userId = "user-1", name = "BTC", type = "CRYPTO",
+                currentValueMinor = 1L, currency = "TRY", autoTrack = true,
+                createdAt = "2026-09-08T10:00:00Z",
+            ).toDomain()
+        }
     }
 
     @Test

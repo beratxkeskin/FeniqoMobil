@@ -35,6 +35,33 @@ object FinanceUseCaseModule {
 
     @Provides
     @Singleton
+    fun provideBackupImportPlanner(
+        entityIdGenerator: com.feniqo.mobile.domain.model.EntityIdGenerator,
+    ): com.feniqo.mobile.data.backup.BackupImportPlanner =
+        com.feniqo.mobile.data.backup.BackupImportPlanner(entityIdGenerator)
+
+    @Provides
+    @Singleton
+    fun providePersonalBackupImporter(
+        authRepository: AuthRepository,
+        activeWorkspaceScope: com.feniqo.mobile.data.repository.ActiveWorkspaceScope,
+        offlineWriteQueue: com.feniqo.mobile.data.local.outbox.OfflineWriteQueue,
+        planner: com.feniqo.mobile.data.backup.BackupImportPlanner,
+    ): com.feniqo.mobile.data.backup.PersonalBackupImporter =
+        com.feniqo.mobile.data.backup.PersonalBackupImporter(
+            authRepository = authRepository,
+            activeWorkspaceScope = activeWorkspaceScope,
+            writeQueue = offlineWriteQueue,
+            planner = planner,
+        )
+
+    @Provides
+    @Singleton
+    fun provideTransactionCsvExporter(): com.feniqo.mobile.domain.usecase.TransactionCsvExporter =
+        com.feniqo.mobile.domain.usecase.TransactionCsvExporter()
+
+    @Provides
+    @Singleton
     fun provideCurrentDateProvider(): com.feniqo.mobile.presentation.common.CurrentDateProvider =
         com.feniqo.mobile.presentation.common.SystemCurrentDateProvider()
 
@@ -475,5 +502,28 @@ object FinanceUseCaseModule {
         debtRepository: com.feniqo.mobile.domain.repository.DebtRepository,
     ): com.feniqo.mobile.domain.usecase.DeleteDebtUseCase =
         com.feniqo.mobile.domain.usecase.DeleteDebtUseCase(repository = debtRepository)
-}
 
+    @Provides
+    @Singleton
+    fun provideObserveAssetsUseCase(
+        assetRepository: com.feniqo.mobile.domain.repository.AssetRepository,
+    ): com.feniqo.mobile.domain.usecase.ObserveAssetsUseCase =
+        com.feniqo.mobile.domain.usecase.ObserveAssetsUseCase(repository = assetRepository)
+
+    @Provides @Singleton
+    fun provideCalculateNetWorthUseCase() =
+        com.feniqo.mobile.domain.usecase.CalculateNetWorthUseCase()
+
+    @Provides @Singleton
+    fun provideObserveAssetUseCase(repository: com.feniqo.mobile.domain.repository.AssetRepository) =
+        com.feniqo.mobile.domain.usecase.ObserveAssetUseCase(repository)
+    @Provides @Singleton
+    fun provideCreateAssetUseCase(repository: com.feniqo.mobile.domain.repository.AssetRepository) =
+        com.feniqo.mobile.domain.usecase.CreateAssetUseCase(repository)
+    @Provides @Singleton
+    fun provideUpdateAssetUseCase(repository: com.feniqo.mobile.domain.repository.AssetRepository) =
+        com.feniqo.mobile.domain.usecase.UpdateAssetUseCase(repository)
+    @Provides @Singleton
+    fun provideDeleteAssetUseCase(repository: com.feniqo.mobile.domain.repository.AssetRepository) =
+        com.feniqo.mobile.domain.usecase.DeleteAssetUseCase(repository)
+}

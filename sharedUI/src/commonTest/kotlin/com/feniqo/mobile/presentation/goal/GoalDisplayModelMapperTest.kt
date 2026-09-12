@@ -151,16 +151,15 @@ class GoalDisplayModelMapperTest {
 
     @Test
     fun goalsUiState_isEmptyContract() {
-        assertTrue(GoalsUiState(isLoading = false, goals = emptyList(), observationError = null).isEmpty)
-        assertFalse(GoalsUiState(isLoading = true, goals = emptyList(), observationError = null).isEmpty)
-        assertFalse(GoalsUiState(isLoading = false, goals = emptyList(), observationError = com.feniqo.mobile.presentation.common.FinanceUiMessage.GENERIC_ERROR).isEmpty)
+        assertTrue(GoalsUiState(isLoading = false, allGoals = emptyList(), observationError = null).isEmpty)
+        assertFalse(GoalsUiState(isLoading = true, allGoals = emptyList(), observationError = null).isEmpty)
+        assertFalse(GoalsUiState(isLoading = false, allGoals = emptyList(), observationError = com.feniqo.mobile.presentation.common.FinanceUiMessage.GENERIC_ERROR).isEmpty)
         assertFalse(
             GoalsUiState(
                 isLoading = false,
-                goals = listOf(GoalDisplayModelMapper.mapItem(sampleGoal("g-1"))),
+                allGoals = listOf(GoalDisplayModelMapper.mapItem(sampleGoal("g-1"))),
                 observationError = null,
             ).isEmpty,
         )
     }
 }
-

@@ -79,11 +79,14 @@ class GoalsViewModelTest {
         createdAt = Instant.fromEpochMilliseconds(1000L),
     )
 
-    private fun createViewModel(repository: GoalRepository): GoalsViewModel {
-        val fakeWorkspaceRepo = com.feniqo.mobile.presentation.common.FakeWorkspaceRepository()
+    private fun createViewModel(
+        repository: GoalRepository,
+        fakeWorkspaceRepo: com.feniqo.mobile.presentation.common.FakeWorkspaceRepository = com.feniqo.mobile.presentation.common.FakeWorkspaceRepository(),
+    ): GoalsViewModel {
         return GoalsViewModel(
             observeGoalsUseCase = ObserveGoalsUseCase(repository),
             observeActiveWorkspaceUseCase = com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase(fakeWorkspaceRepo),
+            currentDateProvider = com.feniqo.mobile.presentation.common.CurrentDateProvider { LocalDate(2026, 9, 12) },
         )
     }
 
@@ -94,7 +97,7 @@ class GoalsViewModelTest {
 
         val state = viewModel.uiState.value
         assertTrue(state.isLoading)
-        assertTrue(state.goals.isEmpty())
+        assertTrue(state.visibleGoals.isEmpty())
         assertNull(state.observationError)
         assertFalse(state.isEmpty)
     }
@@ -115,9 +118,9 @@ class GoalsViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
         assertNull(state.observationError)
-        assertEquals(2, state.goals.size)
-        assertEquals("g-1", state.goals[0].id.value)
-        assertEquals("g-2", state.goals[1].id.value)
+        assertEquals(2, state.visibleGoals.size)
+        assertEquals("g-1", state.visibleGoals[0].id.value)
+        assertEquals("g-2", state.visibleGoals[1].id.value)
         assertFalse(state.isEmpty)
     }
 
@@ -135,7 +138,7 @@ class GoalsViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
         assertNull(state.observationError)
-        assertTrue(state.goals.isEmpty())
+        assertTrue(state.visibleGoals.isEmpty())
         assertTrue(state.isEmpty)
     }
 
@@ -152,7 +155,7 @@ class GoalsViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
         assertEquals(FinanceUiMessage.GENERIC_ERROR, state.observationError)
-        assertTrue(state.goals.isEmpty())
+        assertTrue(state.visibleGoals.isEmpty())
         assertFalse(state.isEmpty)
     }
 
@@ -177,8 +180,8 @@ class GoalsViewModelTest {
         state = viewModel.uiState.value
         assertFalse(state.isLoading)
         assertNull(state.observationError)
-        assertEquals(1, state.goals.size)
-        assertEquals("g-1", state.goals[0].id.value)
+        assertEquals(1, state.visibleGoals.size)
+        assertEquals("g-1", state.visibleGoals[0].id.value)
     }
 
     @Test
@@ -216,6 +219,47 @@ class GoalsViewModelTest {
         // With flatMapLatest, previous subscriptions are cancelled and only the latest is active
         repo.goalsFlow.value = listOf(sampleGoal("g-1"))
         val state = viewModel.uiState.value
-        assertEquals(1, state.goals.size)
+        assertEquals(1, state.visibleGoals.size)
+    }
+
+    @Test
+    fun filterChange_updatesVisibleGoalsWithoutRestartingRoomObservation() = runTest {
+        val repo = FakeGoalRepository()
+        val viewModel = createViewModel(repo)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
+        repo.goalsFlow.value = listOf(sampleGoal("active", currentAmountMinor = 20_000L), sampleGoal("done", currentAmountMinor = 100_000L))
+
+        viewModel.onIntent(GoalsIntent.SelectFilter(GoalStatusFilter.ACHIEVED))
+
+        assertEquals(GoalStatusFilter.ACHIEVED, viewModel.uiState.value.selectedFilter)
+        assertEquals(listOf("done"), viewModel.uiState.value.visibleGoals.map { it.id.value })
+    }
+
+    @Test
+    fun workspaceName_updatesFromActiveWorkspaceFlow() = runTest {
+        val repo = FakeGoalRepository()
+        val workspaceRepo = com.feniqo.mobile.presentation.common.FakeWorkspaceRepository()
+        val viewModel = createViewModel(repo, workspaceRepo)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
+
+        workspaceRepo.activeWorkspaceFlow.value = com.feniqo.mobile.domain.model.Workspace(
+            id = EntityId("workspace"), name = "Ev Planı", ownerId = EntityId("owner"), createdAt = Instant.DISTANT_PAST,
+        )
+
+        assertEquals("Ev Planı", viewModel.uiState.value.activeWorkspaceName)
+    }
+
+    @Test
+    fun summaryOverflow_keepsVisibleGoalsAvailable() = runTest {
+        val repo = FakeGoalRepository()
+        val viewModel = createViewModel(repo)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
+        repo.goalsFlow.value = listOf(
+            sampleGoal("a", targetAmountMinor = Money.MAX_AMOUNT_MINOR, currentAmountMinor = 1L),
+            sampleGoal("b", targetAmountMinor = Money.MAX_AMOUNT_MINOR, currentAmountMinor = 1L),
+        )
+
+        assertTrue(viewModel.uiState.value.isSummaryCalculationError)
+        assertEquals(2, viewModel.uiState.value.visibleGoals.size)
     }
 }

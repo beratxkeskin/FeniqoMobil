@@ -21,11 +21,12 @@ anlamına gelmez. Özellik ancak ekran, iş akışı, hata durumları ve kabul t
 
 | Özellik | Durum | Tamamlanan kısım | Kalan kullanıcı işi |
 |---|---|---|---|
-| Tema ve uygulama kabuğu | Tamamlandı | Material 3, açık/koyu/sistem, Feniqo Emerald/obsidyen yüzey token'ları, 12/16/24 dp radius, 4–32 dp spacing, 48/56 dp dokunma hedefleri, type-safe Navigation Compose, bağımsız Auth/Main NavHost, 5'li kalıcı alt navigasyon, Dashboard hero ve sade modül menüleri | Form, liste ve detay ekranlarının yeni görsel sisteme aşamalı taşınması ve Profil hedefinin gerçek ekrana bağlanması |
+| Tema ve uygulama kabuğu | Tamamlandı | Material 3, açık/koyu/sistem, Feniqo Emerald/obsidyen yüzey token'ları, 12/16/24 dp radius, 4–32 dp spacing, 48/56 dp dokunma hedefleri, type-safe Navigation Compose, bağımsız Auth/Main NavHost, Ana Sayfa/İşlemler/+/Bütçe/Daha Fazla alt navigasyonu, Financial Hub ve avatar tabanlı Profil girişi | Transfer hızlı eylemi, Reports, Kişisel Bilgiler, Hesap, Bildirimler ve Tercihler gerçek özellikleri tamamlandığında mevcut pasif kayıtları aktifleştirilecek |
 | Kimlik doğrulama | Tamamlandı | Supabase kayıt/giriş/yenileme/çıkış, domain hata eşleme, LoginScreen, RegisterScreen, alan validation, güvenli hata mesajları, e-posta doğrulama bekleme akışı, session tabanlı yönlendirme | Biyometrik giriş ve şifre sıfırlama (kapsam dışı / sonraki fazlar) |
 | Profil | Altyapı hazır | Domain, Room, DTO, RLS, başlangıç ve artımlı sync | Profil ayarları ekranı |
-| Kategoriler | Altyapı hazır | Domain/use case, Room/DAO, offline mutation, DTO, RLS ve sync | Liste, seçim ve yönetim ekranları |
-| Gelir/gider işlemleri | Altyapı hazır | Domain/use case, Room/DAO, outbox, koşullu RPC, conflict ve sync | Liste, ekleme, düzenleme, silme ve filtre UI'ı |
+| Kategoriler | Devam ediyor | Sıcak-lüks analiz ve yönetim ekranı (Kategoriler), Room SSOT, basis points tamsayı grafiği, trend rozeti, dönem ve filtre bazlı işlem navigasyonu, 3 noktalı özel kategori yönetimi, fail-closed çoklu para birimi ve taşma güvenliği | Android emülatör görsel ve akış kabulü; uzak seed sözleşmesini yeni kanonik UUID'lerle eşleme, sistem kategorisini kullanıcı tercihine göre gizleme kontrolü ve ayrı sistem hareketi türleri |
+| Merchant/marka tanıma | Altyapı hazır | Saf KMP merchant/alias türü ve kapsamı/negatif alias sözleşmeleri, kişisel→workspace→banka doğrulama önceliği, onaylı güven matrisi, çakışma eşiği, işlem sınıfı filtresi ve başlangıç kataloğu testleri | Transaction/Room bağlantısı, kullanıcı düzeltme kalıcılığı, UI fallback ve opsiyonel logo adaptörü |
+| Gelir/gider işlemleri | Devam ediyor | Liste ve yenilenen filtreleme; sıcak-lüks Hızlı Ekle (+ modal sheet); sıcak-lüks işlem formu (büyük tutar, zorunlu 100 kar. işlem adı, kategori, ödeme yöntemi, tarih, isteğe bağlı not/taksit/makbuz/split akordiyonu); Room SSOT başarı ekranı; Room v14→v15 note kolonu ileri migration ve export şeması tamamlandı; hedefli testler ve debug APK derlemesi başarılı | Android emülatör manuel smoke kabulü (uygulandı, manuel kabul bekliyor) |
 | Dashboard ve MoneyScore | Tamamlandı | Stateless DashboardScreen, DashboardViewModel, dinamik ay Room Flow SSOT, aylık gelir/gider/bakiye/tasarruf kartları, en yüksek harcama kategorisi, son işlemler, navigasyonlar, geçici MoneyScore kartı ve ön değerlendirme şeffaflığı | İleride bütçe/borç/hedef modülleri tamamlandığında tam skor bağlantısı |
 | Offline-first okuma/yazma | Tamamlandı | Room SSOT, atomik entity + outbox, kapanıp açılma kalıcılığı | UI üzerinden uçtan uca kullanıcı kabulü |
 | Senkronizasyon motoru | Tamamlandı | Initial pull, sıralı push, incremental pull, retry, cursor ve conflict | WorkManager ile arka plan planlama |
@@ -37,6 +38,7 @@ anlamına gelmez. Özellik ancak ekran, iş akışı, hata durumları ve kabul t
 | Tekrarlayan işlemler | Tamamlandı | Vade takvim hesaplayıcı, deterministik aday planlayıcı, Room atomik occurrence ve V2 outbox/ACK/sync/pull, WorkManager 24h periyodik işi, saf kural komutları ve doğrulama sözleşmesi, Staging V2 SQL migration, 38 senaryolu sözleşme kabulü, kural listesi ve ekleme/düzenleme/duraklatma/silme MVI Compose ekranları (Android emülatör manuel smoke kabulü yapıldı) | — |
 | Abonelikler | Tamamlandı | Abonelik CRUD komut ve doğrulama kuralları, Room v7/v8 tabloları, V2 outbox/ACK/sync/pull, MVI Compose liste ve form ekranları, yenileme/duraklatma/silme, yaklaşan ve vade günü hatırlatıcı planlayıcı, Room receipt claim, Android notification Worker, 24h scheduler ve Android 13+ izin CTA'sı (Android emülatör manuel smoke kabulü yapıldı) | — |
 | Hedefler ve borçlar | Tamamlandı | Goals (birikim CRUD, katkı ekleme/çıkarma, ilerleme/tahmini süre), Debts & Receivables (borç/alacak CRUD, ödeme/tahsilat geçmişi, fail-closed reaktif bakiye hesabı), Borç snowball planlayıcısı ve ekranı, Room v9/v10/v11 tabloları, V2 outbox/ACK/pull/conflict sync, Staging 15/15 migration, SQL sözleşme testi (0 kalıntı) ve Android emülatör manuel smoke kabulü | Workspace borç dağılımı (Faz 8.4) |
+| Varlıklar | Tamamlandı | Kişisel Asset CRUD, Room v13 SSOT, atomik V2 outbox/ACK, initial/incremental pull ve conflict koruması, owner RLS/RPC, liste/form UI, para birimi bazlı reaktif net değer özeti, hedefli testler ve Android manuel smoke kabulü | Güvenli piyasa fiyat servisi |
 | Ortak çalışma alanları (Workspaces) | Devam ediyor | Saf domain modelleri/komutları (`CreateWorkspaceCommand`, `UpdateWorkspaceCommand`, `WorkspaceInvitation`), rol yetki matrisi (`WorkspacePermissionPolicy`), fail-closed ön kontroller (`WorkspaceValidationRules`), Room v9→v10 şeması, `workspaces` genişletme/backfill ve `workspace_invitations` salt-okunur/pull cache DAO altyapısı (`WorkspaceDao.observeInvitations`, `upsertInvitation`) | Room LocalMutationDao/V2 outbox, sync motoru, remote writer, Supabase SQL/RLS/RPC, üye listesi ve workspace yönetim MVI Compose ekranları |
 
 ## Teknik temel
@@ -88,10 +90,11 @@ V1 tamamlanmadan önce aşağıdaki kullanıcı senaryoları geçmelidir:
 
 ### Cihaz ve veri özellikleri
 
-- biyometrik uygulama kilidi;
-- makbuz OCR;
+- Android biyometri veya cihaz PIN/desen/parolasıyla uygulama kilidi;
+- makbuz OCR (temel CameraX/galeri ve kullanıcı onaylı akış var; gerçek makbuzlarda toplam/fiyat doğruluğu iyileştirmesi ertelendi);
 - bildirimler;
-- CSV/JSON dışa ve içe aktarma;
+- CSV işlem dışa aktarma ve sürümlü JSON v1 yedek içe aktarma (doğrulanan, atomik ve kişisel kapsamlı) tamamlandı; JSON yedek dışa aktarma devam edecek;
+- hassas uygulama verileri için üretim loglaması ve ham exception mesajı denetimi tamamlandı; kalıcı hata alanları yalnız güvenli kod taşır;
 - tamamlanmış SwiftUI iOS istemcisi.
 
 ## Kapsam değişikliği kuralı

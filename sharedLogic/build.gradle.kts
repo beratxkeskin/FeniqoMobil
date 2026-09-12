@@ -48,6 +48,7 @@ kotlin {
             implementation(libs.ktor.serialization.kotlinx.json)
             api(libs.supabase.auth)
             api(libs.supabase.postgrest)
+            api(libs.supabase.functions)
             api(libs.supabase.storage)
             api(libs.supabase.realtime)
             api(libs.androidx.room.runtime)

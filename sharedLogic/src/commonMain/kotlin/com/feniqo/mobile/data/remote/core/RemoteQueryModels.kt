@@ -105,6 +105,11 @@ data class GoalRemoteQuery(
     val updatedAfter: RemoteSyncCursor? = null,
 )
 
+data class AssetRemoteQuery(
+    val page: RemotePageRequest = RemotePageRequest(),
+    val updatedAfter: RemoteSyncCursor? = null,
+)
+
 data class GoalContributionRemoteQuery(
     val page: RemotePageRequest = RemotePageRequest(),
     val goalId: EntityId? = null,
@@ -148,4 +153,3 @@ data class WorkspaceMemberRemoteQuery(
     val workspaceId: EntityId? = null,
     val updatedAfter: WorkspaceMemberSyncCursor? = null,
 )
-

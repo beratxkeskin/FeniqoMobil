@@ -7,6 +7,8 @@ import com.feniqo.mobile.data.remote.auth.SupabaseAuthRemoteDataSource
 import com.feniqo.mobile.data.remote.core.CoreRemoteDataSource
 import com.feniqo.mobile.data.remote.core.ConditionalRemoteWriter
 import com.feniqo.mobile.data.remote.core.SupabaseCoreRemoteDataSource
+import com.feniqo.mobile.data.remote.marketprice.MarketPriceRemoteDataSource
+import com.feniqo.mobile.data.remote.marketprice.SupabaseMarketPriceRemoteDataSource
 import com.feniqo.mobile.data.remote.realtime.RealtimeInvalidationSource
 import com.feniqo.mobile.data.remote.realtime.SupabaseRealtimeInvalidationSource
 import com.feniqo.mobile.data.remote.storage.ReceiptStorageDataSource
@@ -71,6 +73,12 @@ object RemoteModule {
     fun provideConditionalRemoteWriter(
         dataSource: SupabaseCoreRemoteDataSource,
     ): ConditionalRemoteWriter = dataSource
+
+    @Provides
+    @Singleton
+    fun provideMarketPriceRemoteDataSource(
+        client: SupabaseClient,
+    ): MarketPriceRemoteDataSource = SupabaseMarketPriceRemoteDataSource(client)
 
     @Provides
     @Singleton

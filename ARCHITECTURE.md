@@ -90,6 +90,12 @@ Room Flow -> Repository -> Use case -> ViewModel StateFlow -> UI
 Supabase yanıtı veya Realtime mesajı doğrudan UI state değildir. Uzak kayıt önce doğrulanır,
 Room'a yazılır ve UI mevcut Room `Flow` akışı üzerinden kendiliğinden güncellenir.
 
+Piyasa fiyatı gibi üçüncü taraf veriler mobil istemciden doğrudan alınmaz. Mobil, doğrulanmış
+Supabase JWT ile Edge Function'a gider; sağlayıcı anahtarı ve service-role yalnız Function secret
+ortamında kalır. Sağlayıcı endpoint'i backend adaptöründe sabittir. Normalize fiyat önce genel
+Supabase cache'ine, ardından repository üzerinden Room cache'ine yazılır; UI yalnız Room Flow'u
+gözlemler. Kullanıcı Asset kaydı sistem fiyatı tarafından sessizce değiştirilmez.
+
 ### Yerel yazma
 
 ```text
@@ -145,6 +151,16 @@ Realtime SUBSCRIBED/değişiklik sinyali -> SyncRepository -> incremental pull -
 | Biyometri | BiometricPrompt | LocalAuthentication |
 | OCR | CameraX + ML Kit | Gelecekte iOS platform adaptörü |
 
+Android biyometrik uygulama kilidi bir UI erişim kapısıdır; SQLCipher anahtarının açılmasını
+kullanıcı doğrulamasına bağlamaz. Böylece uygulama arka plandayken WorkManager senkronizasyonu
+çalışabilir. Kilit tercihi ve süre DataStore'da tutulur, geçici kilit/açık durumu yalnız süreç
+belleğinde yaşar; cihaz saati geriye alınırsa politika güvenli tarafta kalıp yeniden doğrulama ister.
+
+Makbuz OCR Android'de cihaz içi ML Kit adaptörüyle çalışır. Ham OCR metni Room, outbox, log veya
+uzak servise yazılmaz; ortak katmana yalnız geçici ve güven düzeyli tutar/tarih/işyeri adayları
+geçer. Bu adaylar bir `Transaction` değildir ve yalnız kullanıcı işlem formunda açıkça onayladıktan
+sonra mevcut repository yazma akışına girebilir. Para birimi OCR metninden tahmin edilmez.
+
 ## 9. Hata ve durum yönetimi
 
 - Data/SDK hataları kullanıcı metni olmayan kararlı `AppError` türlerine çevrilir.
@@ -155,6 +171,18 @@ Realtime SUBSCRIBED/değişiklik sinyali -> SyncRepository -> incremental pull -
 
 ## 10. Test sınırları
 
+### Merchant tanıma sınırı
+
+Merchant normalleştirme, işlem sınıflandırma ve güven puanlı alias eşleştirme saf KMP domain
+mantığıdır. Ham açıklama değişmeden korunur; motor yalnız ayrı normalize edilmiş metni işler.
+Kullanıcı doğrulaması tahminden üstündür, özel alias genel aliastan önce gelir ve kişisel/sistem
+hareketleri katalog taramasından önce elenir. Alias türü ve kişisel/çalışma alanı/genel kapsamı
+domain sözleşmesidir; doğrulama kaynakları kişisel, çalışma alanı ve banka kimliği sırasını izler.
+Farklı merchant adaylarının puan farkı 10'dan azsa motor fail-closed biçimde belirsiz sonuç verir.
+Bu ilk dilimde Room, Supabase, DTO, outbox, sync,
+UI veya logo sağlayıcısı bağlantısı yoktur. Gelecekteki logo adaptörü ham finansal açıklama alamaz
+ve uygulamanın temel çalışması için zorunlu bağımlılık olamaz.
+
 - Saf domain ve use case kuralları `commonTest` içinde test edilir.
 - Sync motoru fake remote/DAO sınırlarıyla deterministik test edilir.
 - Room DAO ve migration davranışları Android host/instrumentation testlerinde doğrulanır.
@@ -163,6 +191,13 @@ Realtime SUBSCRIBED/değişiklik sinyali -> SyncRepository -> incremental pull -
 
 ## 11. Mimari değişiklik süreci
 
+### Veri taşınabilirliği sınırı
+
+- JSON yedekleri açık `format_version` ile sürümlenir; v1 yalnız kişisel kategori ve işlemleri kapsar.
+- Token/oturum, owner kimliği, private makbuz yolu, OCR içeriği, sync metadata, outbox ve conflict kayıtları yedeğe girmez.
+- Decode ve tüm referans doğrulamaları herhangi bir Room yazmasından önce tamamlanır; bilinmeyen sürüm veya alan fail-closed reddedilir.
+- İçe aktarma bütünüyle tek Room transaction'ında entity + V2 outbox üretir; herhangi bir hata hiçbir kalıcı değişiklik bırakmaz.
+
 Yeni araç veya geliştirici:
 
 1. Önce [AGENTS.md](AGENTS.md) ve bu belgeyi okur.
@@ -170,4 +205,3 @@ Yeni araç veya geliştirici:
 3. Değişiklik bu sözleşmeyi etkiliyorsa önce kısa bir mimari karar önerir.
 4. Onaylanan karar bu belgede ve gerekirse `docs/adr/` altında güncellenir.
 5. Kod, test ve ilgili belgeler aynı değişiklik setinde tutulur.
-

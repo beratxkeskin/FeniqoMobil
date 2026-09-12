@@ -1,6 +1,10 @@
 package com.feniqo.mobile.presentation.theme
 
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /** Ortak ekran ve bileşen boşlukları için 4dp tabanlı ölçek. */
 object FeniqoSpacing {
@@ -32,4 +36,15 @@ object FeniqoStatusColor {
 object FeniqoTouchTarget {
     val Minimum = 48.dp
     val PrimaryAction = 56.dp
+}
+
+/** Tekrar kullanılabilir warm-luxury ve display tipografi belirteçleri. */
+object FeniqoTypographyTokens {
+    val DisplayTitle = TextStyle(
+        fontFamily = FontFamily.Serif,
+        fontWeight = FontWeight.Bold,
+        fontSize = 28.sp,
+        lineHeight = 34.sp,
+        letterSpacing = (-0.5).sp,
+    )
 }

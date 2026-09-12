@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -77,33 +76,12 @@ fun DashboardScreen(
     onAddTransaction: () -> Unit,
     onViewAllTransactions: () -> Unit,
     onTransactionClick: (EntityId) -> Unit,
+    onProfileClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = {
-            if (!state.isLoading && state.observationError == null) {
-                FloatingActionButton(
-                    onClick = onAddTransaction,
-                    shape = RoundedCornerShape(FeniqoRadius.Medium),
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier
-                        .defaultMinSize(minHeight = 48.dp, minWidth = 48.dp)
-                        .semantics {
-                            contentDescription = "Yeni işlem ekle"
-                        },
-                ) {
-                    Text(
-                        text = "+ İşlem Ekle",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = FeniqoSpacing.Medium),
-                    )
-                }
-            }
-        },
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -139,6 +117,7 @@ fun DashboardScreen(
                         onAddTransaction = onAddTransaction,
                         onViewAllTransactions = onViewAllTransactions,
                         onTransactionClick = onTransactionClick,
+                        onProfileClick = onProfileClick,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -154,6 +133,7 @@ private fun DashboardContent(
     onAddTransaction: () -> Unit,
     onViewAllTransactions: () -> Unit,
     onTransactionClick: (EntityId) -> Unit,
+    onProfileClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -161,90 +141,81 @@ private fun DashboardContent(
         contentPadding = PaddingValues(
             start = FeniqoSpacing.Large,
             end = FeniqoSpacing.Large,
-            top = FeniqoSpacing.Large,
-            bottom = 88.dp, // FAB için alt boşluk
+            top = FeniqoSpacing.Medium,
+            bottom = FeniqoSpacing.Screen,
         ),
         verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Large),
     ) {
-        // 1. Ay Başlığı
-        item(key = "header") {
+        // 1. Üst Karşılama ve Logo
+        item(key = "zen_header") {
             DashboardHeader(
                 formattedMonth = dashboard.formattedMonth,
+                userName = dashboard.userName,
                 activeWorkspaceName = activeWorkspaceName,
+                onProfileClick = onProfileClick,
             )
         }
 
-        // 2. Bütçe Uyarısı (varsa)
-        dashboard.budgetAlert?.let { alert ->
-            item(key = "budget_alert") {
-                BudgetAlertBanner(alert = alert)
-            }
+        // 2. Toplam Bakiye ve Bézier Dalgalı Çizgi Grafik Kartı
+        item(key = "total_balance_card") {
+            com.feniqo.mobile.presentation.component.TotalBalanceCard(
+                summary = dashboard.monthlySummary,
+                trendPercentage = dashboard.balanceTrendPercentage,
+                trendDifference = dashboard.balanceTrendDifference,
+            )
         }
 
-        // 3. Finansal Özet Kartları (Gelir, Gider, Net Bakiye, Tasarruf Oranı)
-        item(key = "monthly_summary") {
-            MonthlySummaryGrid(summary = dashboard.monthlySummary)
+        // 3. 3'lü Özet Kartları (Gelir, Harcama, Birikim)
+        item(key = "monthly_summary_grid") {
+            MonthlySummaryGrid(
+                summary = dashboard.monthlySummary,
+                incomeTrend = dashboard.incomeTrendPercentage,
+                expenseTrend = dashboard.expenseTrendPercentage,
+                savedTrend = dashboard.savedTrendPercentage,
+            )
         }
 
-        // 4. En Yüksek Gider Kategorisi (varsa)
-        dashboard.topExpenseCategory?.let { topExpense ->
-            item(key = "top_expense") {
-                TopExpenseCategorySection(topExpenseCategory = topExpense)
-            }
+        // 4. Bütçeler Bölümü (Kategori Renkli İlerleme Barları)
+        item(key = "zen_budgets") {
+            com.feniqo.mobile.presentation.component.ZenBudgetsSection(
+                items = dashboard.budgetProgressItems,
+                onViewAllClick = onViewAllTransactions,
+            )
         }
 
-        // 5. MoneyScore Kartı (varsa)
+        // 5. Feniqo İçgörü Banner (Botanik & Parıltı Kartı)
+        item(key = "zen_insight") {
+            com.feniqo.mobile.presentation.component.ZenInsightBanner(
+                title = dashboard.insight?.title ?: "Feniqo İçgörü",
+                message = dashboard.insight?.message
+                    ?: "Bu ay yeme-içmeye %18 daha az harcadın. Harika ilerleme!",
+            )
+        }
+
+        // 6. Yan Yana İki Sütunlu Bölüm (Son İşlemler & Yaklaşan Faturalar / Hedef)
+        item(key = "zen_recent_and_upcoming") {
+            com.feniqo.mobile.presentation.component.ZenRecentAndUpcomingSection(
+                recentTransactions = dashboard.recentTransactions,
+                upcomingBills = dashboard.upcomingBills,
+                savingsGoal = dashboard.savingsGoal,
+                onViewAllTransactions = onViewAllTransactions,
+                onViewAllBills = onViewAllTransactions,
+                onTransactionClick = onTransactionClick,
+                onGoalClick = onAddTransaction,
+            )
+        }
+
+        // 7. MoneyScore Finansal Sağlık (varsa ek zenginlik olarak)
         dashboard.moneyScore?.let { score ->
             item(key = "money_score") {
                 MoneyScoreSection(moneyScore = score)
             }
         }
 
-        // 6. Son İşlemler Bölüm Başlığı
-        item(key = "recent_transactions_header") {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = "Son İşlemler",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-
-                TextButton(
-                    onClick = onViewAllTransactions,
-                    modifier = Modifier
-                        .defaultMinSize(minHeight = 48.dp, minWidth = 48.dp)
-                        .semantics {
-                            contentDescription = "Tüm işlemleri gör"
-                        },
-                ) {
-                    Text(
-                        text = "Tümünü Gör",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-            }
-        }
-
-        // 7. Son İşlemler Listesi veya Boş Durum
-        if (dashboard.recentTransactions.isEmpty()) {
-            item(key = "recent_transactions_empty") {
-                EmptyRecentTransactionsCard(onAddTransaction = onAddTransaction)
-            }
-        } else {
-            items(
-                items = dashboard.recentTransactions,
-                key = { it.id.value },
-            ) { item ->
-                DashboardTransactionItem(
-                    item = item,
-                    onClick = onTransactionClick,
-                )
+        // 8. Varsa Bütçe Aşım Uyarısı
+        dashboard.budgetAlert?.let { alert ->
+            item(key = "budget_alert") {
+                BudgetAlertBanner(alert = alert)
             }
         }
     }

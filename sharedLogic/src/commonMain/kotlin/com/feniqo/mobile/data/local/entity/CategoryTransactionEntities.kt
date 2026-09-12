@@ -127,6 +127,8 @@ data class TransactionEntity(
     val installmentGroupId: String?,
     @ColumnInfo(name = "created_at_epoch_ms")
     val createdAtEpochMillis: Long,
+    @ColumnInfo(name = "note")
+    val note: String? = null,
     @Embedded
     val sync: SyncMetadata,
 )

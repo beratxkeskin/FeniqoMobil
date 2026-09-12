@@ -29,8 +29,12 @@ object DashboardDisplayModelBuilder {
         summary: DashboardSummary,
         transactions: List<Transaction>,
         categories: List<Category>,
+        budgets: List<com.feniqo.mobile.domain.usecase.BudgetProgressItem> = emptyList(),
+        subscriptions: List<com.feniqo.mobile.domain.model.Subscription> = emptyList(),
+        goals: List<com.feniqo.mobile.domain.model.Goal> = emptyList(),
         moneyScoreIsProvisional: Boolean = false,
         moneyScoreExplanationText: String = "",
+        userName: String = "Kullanıcı",
     ): DashboardDisplayModel {
         val categoryMap = categories.associateBy { it.id }
         val transactionMap = transactions.associateBy { it.id }
@@ -112,7 +116,74 @@ object DashboardDisplayModelBuilder {
             )
         }
 
-        // 4. MoneyScore Finansal Sağlık Skoru
+        // 4. Gerçek Bütçe İlerleme Satırları
+        val budgetProgressItems = budgets.map { item ->
+            val spent = item.progress.spent
+            val limit = item.progress.budget.limit
+            val ratio = if (limit.amountMinor > 0) {
+                (spent.amountMinor.toFloat() / limit.amountMinor.toFloat()).coerceIn(0f, 1f)
+            } else 0f
+
+            DashboardBudgetProgressItem(
+                categoryName = item.category?.name ?: FALLBACK_CATEGORY_NAME,
+                categoryIconKey = item.category?.icon?.key,
+                categoryColorHex = item.category?.color?.hex,
+                formattedSpent = MoneyFormatter.format(spent),
+                formattedLimit = MoneyFormatter.format(limit),
+                progressRatio = ratio,
+            )
+        }
+
+        // 5. Gerçek Yaklaşan Faturalar (Aktif Abonelikler)
+        val upcomingBills = subscriptions
+            .filter { it.isActive }
+            .sortedBy { it.nextRenewalDate }
+            .take(3)
+            .map { sub ->
+                DashboardUpcomingBillItem(
+                    title = sub.name,
+                    formattedDueDate = DateFormatter.formatReadableDate(sub.nextRenewalDate),
+                    formattedAmount = MoneyFormatter.format(sub.amount),
+                    iconKey = "subscriptions",
+                )
+            }
+
+        // 6. Gerçek Birikim Hedefi (Hedefler listesinden ilki)
+        val savingsGoal = goals
+            .firstOrNull { it.targetAmount.amountMinor > 0 }
+            ?.let { goal ->
+                val ratio = (goal.currentAmount.amountMinor.toFloat() / goal.targetAmount.amountMinor.toFloat()).coerceIn(0f, 1f)
+                DashboardSavingsGoalItem(
+                    goalName = goal.name,
+                    formattedCurrent = MoneyFormatter.format(goal.currentAmount),
+                    formattedTarget = MoneyFormatter.format(goal.targetAmount),
+                    progressRatio = ratio,
+                )
+            }
+
+        // 7. Dinamik Feniqo İçgörü (Gerçek veri analizi)
+        val dynamicInsight = when {
+            topExpenseCategory != null -> {
+                DashboardInsightModel(
+                    title = "Feniqo İçgörü",
+                    message = "Bu ay en yüksek harcaman ${topExpenseCategory.categoryName} kategorisinde (${topExpenseCategory.formattedAmount}). Harcamalarını dengede tutmak için harika bir fırsat!",
+                )
+            }
+            summary.savingsRate.value > 1500 -> {
+                DashboardInsightModel(
+                    title = "Feniqo İçgörü",
+                    message = "Bu ay %${summary.savingsRate.value / 100} tasarruf oranına ulaştın. Harika bir finansal disiplin sergiliyorsun!",
+                )
+            }
+            else -> {
+                DashboardInsightModel(
+                    title = "Feniqo İçgörü",
+                    message = "Küçük adımlarla finansal hedeflerine doğru ilerliyorsun. Günlük harcamalarını düzenli kaydetmeyi unutma!",
+                )
+            }
+        }
+
+        // 8. MoneyScore Finansal Sağlık Skoru
         val moneyScore = summary.moneyScore?.let { score ->
             MoneyScoreDisplayModel(
                 totalScore = score.total,
@@ -139,6 +210,11 @@ object DashboardDisplayModelBuilder {
             recentTransactions = recentTransactions,
             moneyScore = moneyScore,
             budgetAlert = null,
+            userName = userName,
+            budgetProgressItems = budgetProgressItems,
+            upcomingBills = upcomingBills,
+            savingsGoal = savingsGoal,
+            insight = dynamicInsight,
         )
     }
 }

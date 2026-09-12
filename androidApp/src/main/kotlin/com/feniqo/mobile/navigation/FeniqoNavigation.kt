@@ -9,6 +9,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -23,6 +25,7 @@ import androidx.navigation.toRoute
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.YearMonth
+import com.feniqo.mobile.domain.repository.AutoLockTimeout
 import com.feniqo.mobile.presentation.category.CategoriesScreenRoute
 import com.feniqo.mobile.presentation.category.CategoriesViewModel
 import com.feniqo.mobile.presentation.category.CategoryFormScreenRoute
@@ -38,6 +41,8 @@ import com.feniqo.mobile.presentation.goal.GoalFormViewModel
 import com.feniqo.mobile.presentation.goal.GoalsScreenRoute
 import com.feniqo.mobile.presentation.auth.LoginViewModel
 import com.feniqo.mobile.presentation.auth.RegisterViewModel
+import com.feniqo.mobile.presentation.asset.AssetsScreenRoute
+import com.feniqo.mobile.presentation.asset.AssetFormScreenRoute
 import com.feniqo.mobile.presentation.budget.BudgetFormScreenRoute
 import com.feniqo.mobile.presentation.budget.BudgetScreenRoute
 import com.feniqo.mobile.presentation.budget.BudgetViewModel
@@ -47,11 +52,11 @@ import com.feniqo.mobile.presentation.recurring.RecurringTransactionsScreenRoute
 import com.feniqo.mobile.presentation.recurring.RecurringTransactionsViewModel
 import com.feniqo.mobile.presentation.recurring.toDomainCategory
 import com.feniqo.mobile.presentation.screen.LoginScreen
-import com.feniqo.mobile.presentation.screen.MoreHubScreen
-import com.feniqo.mobile.presentation.screen.PlanHubScreen
+import com.feniqo.mobile.presentation.hub.MoreHubScreenRoute
+import com.feniqo.mobile.presentation.screen.ProfileScreen
 import com.feniqo.mobile.presentation.screen.RegisterScreen
 import com.feniqo.mobile.presentation.screen.SplashLoadingScreen
-import com.feniqo.mobile.presentation.screen.ThemeSettingsPlaceholderScreen
+import com.feniqo.mobile.presentation.settings.SettingsScreenRoute
 import com.feniqo.mobile.presentation.subscription.SubscriptionFormScreenRoute
 import com.feniqo.mobile.presentation.subscription.SubscriptionsScreenRoute
 import com.feniqo.mobile.presentation.subscription.SubscriptionsViewModel
@@ -59,12 +64,15 @@ import com.feniqo.mobile.presentation.transaction.TransactionFormScreenRoute
 import com.feniqo.mobile.presentation.transaction.TransactionsScreenRoute
 import com.feniqo.mobile.presentation.shell.AppSection
 import com.feniqo.mobile.presentation.shell.FeniqoAppShell
+import com.feniqo.mobile.presentation.component.QuickAddAction
+import com.feniqo.mobile.presentation.component.QuickAddSheet
 import com.feniqo.mobile.presentation.sync.SyncStatusUiState
 import com.feniqo.mobile.presentation.theme.ThemeMode
 import com.feniqo.mobile.presentation.workspace.WorkspacePickerScreenRoute
 import com.feniqo.mobile.presentation.workspace.WorkspaceCreateScreenRoute
 import com.feniqo.mobile.presentation.workspace.WorkspaceJoinScreenRoute
 import com.feniqo.mobile.presentation.workspace.WorkspaceDetailsScreenRoute
+import com.feniqo.mobile.presentation.workspace.WorkspaceSettlementScreenRoute
 import kotlinx.coroutines.launch
 
 import com.feniqo.mobile.domain.repository.ConflictResolution
@@ -85,6 +93,11 @@ fun FeniqoNavigation(
     onDismissConflictDialog: () -> Unit = {},
     themeMode: ThemeMode,
     onThemeModeChange: suspend (ThemeMode) -> Unit,
+    biometricLockEnabled: Boolean = false,
+    biometricLockAvailable: Boolean = false,
+    autoLockTimeout: AutoLockTimeout = AutoLockTimeout.AFTER_1_MINUTE,
+    onBiometricLockChange: (Boolean) -> Unit = {},
+    onAutoLockTimeoutChange: (AutoLockTimeout) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     when (authState) {
@@ -104,6 +117,11 @@ fun FeniqoNavigation(
                 onDismissConflictDialog = onDismissConflictDialog,
                 themeMode = themeMode,
                 onThemeModeChange = onThemeModeChange,
+                biometricLockEnabled = biometricLockEnabled,
+                biometricLockAvailable = biometricLockAvailable,
+                autoLockTimeout = autoLockTimeout,
+                onBiometricLockChange = onBiometricLockChange,
+                onAutoLockTimeoutChange = onAutoLockTimeoutChange,
                 modifier = modifier,
             )
         }
@@ -173,6 +191,11 @@ fun MainNavHost(
     onDismissConflictDialog: () -> Unit = {},
     themeMode: ThemeMode,
     onThemeModeChange: suspend (ThemeMode) -> Unit,
+    biometricLockEnabled: Boolean = false,
+    biometricLockAvailable: Boolean = false,
+    autoLockTimeout: AutoLockTimeout = AutoLockTimeout.AFTER_1_MINUTE,
+    onBiometricLockChange: (Boolean) -> Unit = {},
+    onAutoLockTimeoutChange: (AutoLockTimeout) -> Unit = {},
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
 ) {
@@ -180,6 +203,7 @@ fun MainNavHost(
     val destination = navBackStackEntry?.destination
 
     val isTransactionForm = destination?.hasRoute<TransactionFormRoute>() == true
+    val isTransactionSuccess = destination?.hasRoute<TransactionSuccessRoute>() == true
     val isCategoryForm = destination?.hasRoute<CategoryFormRoute>() == true
     val isBudgetForm = destination?.hasRoute<BudgetFormRoute>() == true
     val isRecurringForm = destination?.hasRoute<RecurringTransactionFormRoute>() == true
@@ -192,12 +216,17 @@ fun MainNavHost(
     val isWorkspaceCreate = destination?.hasRoute<WorkspaceCreateRoute>() == true
     val isWorkspaceJoin = destination?.hasRoute<WorkspaceJoinRoute>() == true
     val isWorkspaceDetails = destination?.hasRoute<WorkspaceDetailsRoute>() == true
-    val isDetailForm = isTransactionForm || isCategoryForm || isBudgetForm || isRecurringForm || isSubscriptionForm || isGoalForm || isGoalContributionForm || isDebtForm || isDebtPaymentForm || isWorkspacePicker || isWorkspaceCreate || isWorkspaceJoin || isWorkspaceDetails
+    val isWorkspaceSettlement = destination?.hasRoute<WorkspaceSettlementRoute>() == true
+    val isAssetForm = destination?.hasRoute<AssetFormRoute>() == true
+    val isProfile = destination?.hasRoute<ProfileRoute>() == true
+    val isSettings = destination?.hasRoute<SettingsRoute>() == true
+    val isDetailForm = isTransactionForm || isTransactionSuccess || isCategoryForm || isBudgetForm || isRecurringForm || isSubscriptionForm || isGoalForm || isGoalContributionForm || isDebtForm || isDebtPaymentForm || isWorkspacePicker || isWorkspaceCreate || isWorkspaceJoin || isWorkspaceDetails || isWorkspaceSettlement || isAssetForm || isProfile || isSettings
+    var showQuickAdd by remember { mutableStateOf(false) }
 
     val currentSection = when {
         destination?.hasRoute<TransactionsRoute>() == true || isTransactionForm -> AppSection.TRANSACTIONS
-        destination?.hasRoute<PlanRoute>() == true || destination?.hasRoute<BudgetsRoute>() == true || isBudgetForm || destination?.hasRoute<RecurringTransactionsRoute>() == true || isRecurringForm || destination?.hasRoute<SubscriptionsRoute>() == true || isSubscriptionForm || destination?.hasRoute<GoalsRoute>() == true || isGoalForm || isGoalContributionForm || destination?.hasRoute<DebtsRoute>() == true || isDebtForm || isDebtPaymentForm -> AppSection.PLAN
-        destination?.hasRoute<MoreRoute>() == true || destination?.hasRoute<CategoriesRoute>() == true || isCategoryForm || destination?.hasRoute<SettingsRoute>() == true || isWorkspacePicker || isWorkspaceCreate || isWorkspaceJoin || isWorkspaceDetails -> AppSection.MORE
+        destination?.hasRoute<BudgetsRoute>() == true || isBudgetForm -> AppSection.BUDGET
+        destination?.hasRoute<MoreRoute>() == true || destination?.hasRoute<AssetsRoute>() == true || isAssetForm || destination?.hasRoute<CategoriesRoute>() == true || isCategoryForm || destination?.hasRoute<RecurringTransactionsRoute>() == true || isRecurringForm || destination?.hasRoute<SubscriptionsRoute>() == true || isSubscriptionForm || destination?.hasRoute<GoalsRoute>() == true || isGoalForm || isGoalContributionForm || destination?.hasRoute<DebtsRoute>() == true || isDebtForm || isDebtPaymentForm || isWorkspacePicker || isWorkspaceCreate || isWorkspaceJoin || isWorkspaceDetails || isWorkspaceSettlement -> AppSection.MORE
         else -> AppSection.DASHBOARD
     }
 
@@ -215,9 +244,7 @@ fun MainNavHost(
             }
         },
         onPrimaryAction = {
-            navController.navigate(TransactionFormRoute(null)) {
-                launchSingleTop = true
-            }
+            showQuickAdd = true
         },
         syncStatus = syncStatus,
         onManualSync = onManualSync,
@@ -240,7 +267,7 @@ fun MainNavHost(
                         }
                     },
                     onViewAllTransactions = {
-                        navController.navigate(TransactionsRoute) {
+                        navController.navigate(TransactionsRoute()) {
                             popUpTo(navController.graph.findStartDestination().id) {
                                 saveState = true
                             }
@@ -252,6 +279,9 @@ fun MainNavHost(
                         navController.navigate(TransactionFormRoute(transactionId.value)) {
                             launchSingleTop = true
                         }
+                    },
+                    onProfileClick = {
+                        navController.navigate(ProfileRoute) { launchSingleTop = true }
                     },
                 )
             }
@@ -273,12 +303,18 @@ fun MainNavHost(
                 TransactionFormScreenRoute(
                     onNavigateBack = {
                         if (!navController.popBackStack()) {
-                            navController.navigate(TransactionsRoute) {
+                            navController.navigate(TransactionsRoute()) {
                                 popUpTo(navController.graph.findStartDestination().id) {
                                     saveState = true
                                 }
                                 launchSingleTop = true
                             }
+                        }
+                    },
+                    onTransactionCreated = { createdId ->
+                        navController.navigate(TransactionSuccessRoute(createdId.value)) {
+                            popUpTo<TransactionFormRoute> { inclusive = true }
+                            launchSingleTop = true
                         }
                     },
                     onAddCategory = { transactionType ->
@@ -293,30 +329,25 @@ fun MainNavHost(
                     },
                 )
             }
-            composable<PlanRoute> {
-                PlanHubScreen(
-                    onNavigateToBudgets = {
-                        navController.navigate(BudgetsRoute) {
+            composable<TransactionSuccessRoute> {
+                com.feniqo.mobile.presentation.transaction.TransactionSuccessScreenRoute(
+                    onAddNewTransaction = { type ->
+                        navController.navigate(TransactionFormRoute(initialTypeCode = type.name)) {
+                            popUpTo<TransactionSuccessRoute> { inclusive = true }
                             launchSingleTop = true
                         }
                     },
-                    onNavigateToRecurringTransactions = {
-                        navController.navigate(RecurringTransactionsRoute) {
+                    onViewTransaction = { id ->
+                        navController.navigate(TransactionFormRoute(transactionId = id.value)) {
+                            popUpTo<TransactionSuccessRoute> { inclusive = true }
                             launchSingleTop = true
                         }
                     },
-                    onNavigateToSubscriptions = {
-                        navController.navigate(SubscriptionsRoute) {
-                            launchSingleTop = true
-                        }
-                    },
-                    onNavigateToGoals = {
-                        navController.navigate(GoalsRoute) {
-                            launchSingleTop = true
-                        }
-                    },
-                    onNavigateToDebts = {
-                        navController.navigate(DebtsRoute) {
+                    onClose = {
+                        navController.navigate(TransactionsRoute()) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
                             launchSingleTop = true
                         }
                     },
@@ -403,14 +434,14 @@ fun MainNavHost(
                 }
             }
             composable<MoreRoute> {
-                MoreHubScreen(
+                MoreHubScreenRoute(
+                    onNavigateToAssets = { navController.navigate(AssetsRoute) { launchSingleTop = true } },
+                    onNavigateToGoals = { navController.navigate(GoalsRoute) { launchSingleTop = true } },
+                    onNavigateToDebts = { navController.navigate(DebtsRoute) { launchSingleTop = true } },
+                    onNavigateToSubscriptions = { navController.navigate(SubscriptionsRoute) { launchSingleTop = true } },
+                    onNavigateToRecurringTransactions = { navController.navigate(RecurringTransactionsRoute) { launchSingleTop = true } },
                     onNavigateToCategories = {
                         navController.navigate(CategoriesRoute) {
-                            launchSingleTop = true
-                        }
-                    },
-                    onNavigateToSettings = {
-                        navController.navigate(SettingsRoute) {
                             launchSingleTop = true
                         }
                     },
@@ -419,7 +450,44 @@ fun MainNavHost(
                             launchSingleTop = true
                         }
                     },
+                    onNavigateToSettings = {
+                        navController.navigate(SettingsRoute) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToProfile = {
+                        navController.navigate(ProfileRoute) {
+                            launchSingleTop = true
+                        }
+                    },
                 )
+            }
+            composable<ProfileRoute> {
+                ProfileScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenSettings = { navController.navigate(SettingsRoute) { launchSingleTop = true } },
+                )
+            }
+            composable<AssetsRoute> {
+                AssetsScreenRoute(
+                    onAddAsset = { navController.navigate(AssetFormRoute()) },
+                    onAssetClick = { navController.navigate(AssetFormRoute(it.value)) },
+                )
+            }
+            composable<AssetFormRoute> { backStackEntry ->
+                val route = backStackEntry.toRoute<AssetFormRoute>()
+                val parsed = remember(route.assetId) { parseAssetRouteId(route.assetId) }
+                val snackbarHostState = remember { SnackbarHostState() }
+                val scope = rememberCoroutineScope()
+                Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
+                    AssetFormScreenRoute(
+                        initialAssetId = (parsed as? AssetRouteIdResult.ValidId)?.id,
+                        hasInvalidRouteId = parsed == AssetRouteIdResult.InvalidId,
+                        onNavigateBack = { if (!navController.popBackStack()) navController.navigate(AssetsRoute) },
+                        onMessage = { message -> scope.launch { snackbarHostState.showSnackbar(message.toDisplayText()) } },
+                        modifier = Modifier.padding(padding),
+                    )
+                }
             }
             composable<WorkspacePickerRoute> {
                 WorkspacePickerScreenRoute(
@@ -447,7 +515,15 @@ fun MainNavHost(
                 WorkspaceJoinScreenRoute(onBack = { navController.popBackStack() })
             }
             composable<WorkspaceDetailsRoute> {
-                WorkspaceDetailsScreenRoute(onBack = { navController.popBackStack() })
+                WorkspaceDetailsScreenRoute(
+                    onBack = { navController.popBackStack() },
+                    onNavigateToSettlement = { workspaceId ->
+                        navController.navigate(WorkspaceSettlementRoute(workspaceId)) { launchSingleTop = true }
+                    },
+                )
+            }
+            composable<WorkspaceSettlementRoute> {
+                WorkspaceSettlementScreenRoute(onBack = { navController.popBackStack() })
             }
             composable<CategoriesRoute> {
                 CategoriesScreenRoute(
@@ -471,6 +547,18 @@ fun MainNavHost(
                             launchSingleTop = true
                         }
                     },
+                    onCategoryClick = { categoryId, yearMonth ->
+                        val (currentPeriod, _) = com.feniqo.mobile.presentation.category.CategoryAnalyticsCalculator.calculateReportPeriods(yearMonth)
+                        navController.navigate(
+                            TransactionsRoute(
+                                categoryId = categoryId.value,
+                                startDate = currentPeriod.startDate.toString(),
+                                endDate = currentPeriod.endDate.toString(),
+                            ),
+                        ) {
+                            launchSingleTop = true
+                        }
+                    },
                 )
             }
             composable<CategoryFormRoute> {
@@ -488,9 +576,14 @@ fun MainNavHost(
                 )
             }
             composable<SettingsRoute> {
-                ThemeSettingsPlaceholderScreen(
+                SettingsScreenRoute(
                     themeMode = themeMode,
                     onThemeModeChange = onThemeModeChange,
+                    biometricLockEnabled = biometricLockEnabled,
+                    biometricLockAvailable = biometricLockAvailable,
+                    autoLockTimeout = autoLockTimeout,
+                    onBiometricLockChange = onBiometricLockChange,
+                    onAutoLockTimeoutChange = onAutoLockTimeoutChange,
                 )
             }
             composable<SubscriptionsRoute> {
@@ -817,5 +910,21 @@ fun MainNavHost(
                 }
             }
         }
+    }
+
+    if (showQuickAdd) {
+        QuickAddSheet(
+            onDismiss = { showQuickAdd = false },
+            onAction = { action ->
+                showQuickAdd = false
+                when (action) {
+                    QuickAddAction.EXPENSE -> navController.navigate(TransactionFormRoute(initialTypeCode = TransactionType.EXPENSE.name))
+                    QuickAddAction.INCOME -> navController.navigate(TransactionFormRoute(initialTypeCode = TransactionType.INCOME.name))
+                    QuickAddAction.DEBT_RECEIVABLE -> navController.navigate(DebtFormRoute())
+                    QuickAddAction.RECURRING_TRANSACTION -> navController.navigate(RecurringTransactionFormRoute())
+                    QuickAddAction.TRANSFER -> Unit
+                }
+            },
+        )
     }
 }

@@ -153,6 +153,8 @@ class OfflineFirstGoalDebtRepositoryWriteTest {
         override suspend fun upsertTransactionTagRows(entities: List<TransactionTagCrossRef>) = Unit
         override suspend fun upsertRecurringTransactionRow(entity: RecurringTransactionEntity) = Unit
         override suspend fun upsertSubscriptionRow(entity: SubscriptionEntity) = Unit
+        override suspend fun upsertAssetRow(entity: com.feniqo.mobile.data.local.entity.AssetEntity) = Unit
+        override suspend fun deleteAssetRow(id: String): Int = 0
         override suspend fun upsertRecurringOccurrenceRow(entity: RecurringTransactionOccurrenceEntity) = Unit
         override suspend fun getOccurrence(recurringTransactionId: String, dueDate: String): RecurringTransactionOccurrenceEntity? = null
         override suspend fun getRecurringTransactionById(id: String): RecurringTransactionEntity? = null
@@ -178,6 +180,8 @@ class OfflineFirstGoalDebtRepositoryWriteTest {
         override suspend fun rebaseBudgetVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseRecurringTransactionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseSubscriptionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun rebaseAssetVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun markAssetSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
         override suspend fun deleteRecurringTransactionRow(id: String): Int = 0
         override suspend fun deleteSubscriptionRow(id: String): Int = 0
         override suspend fun markCategorySyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0

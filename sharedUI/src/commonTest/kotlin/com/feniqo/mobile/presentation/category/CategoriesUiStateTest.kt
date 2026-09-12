@@ -2,6 +2,7 @@ package com.feniqo.mobile.presentation.category
 
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.TransactionType
+import com.feniqo.mobile.domain.model.YearMonth
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -11,8 +12,9 @@ class CategoriesUiStateTest {
 
     @Test
     fun categoriesUiState_defaultValues_matchContract() {
-        val state = CategoriesUiState()
+        val state = CategoriesUiState(selectedYearMonth = YearMonth("2026-09"))
         assertTrue(state.isLoading)
+        assertEquals(YearMonth("2026-09"), state.selectedYearMonth)
         assertEquals(TransactionType.EXPENSE, state.selectedType)
         assertTrue(state.systemCategories.isEmpty())
         assertTrue(state.customCategories.isEmpty())
@@ -23,14 +25,25 @@ class CategoriesUiStateTest {
 
     @Test
     fun categoriesUiState_isEmpty_returnsTrue_onlyWhenNotLoadingAndBothListsEmpty() {
-        val loadingEmpty = CategoriesUiState(isLoading = true, systemCategories = emptyList(), customCategories = emptyList())
+        val loadingEmpty = CategoriesUiState(
+            isLoading = true,
+            selectedYearMonth = YearMonth("2026-09"),
+            systemCategories = emptyList(),
+            customCategories = emptyList(),
+        )
         assertFalse(loadingEmpty.isEmpty)
 
-        val loadedEmpty = CategoriesUiState(isLoading = false, systemCategories = emptyList(), customCategories = emptyList())
+        val loadedEmpty = CategoriesUiState(
+            isLoading = false,
+            selectedYearMonth = YearMonth("2026-09"),
+            systemCategories = emptyList(),
+            customCategories = emptyList(),
+        )
         assertTrue(loadedEmpty.isEmpty)
 
         val withSystem = CategoriesUiState(
             isLoading = false,
+            selectedYearMonth = YearMonth("2026-09"),
             systemCategories = listOf(
                 CategoryDisplayModel(
                     id = EntityId("sys-1"),
@@ -46,6 +59,7 @@ class CategoriesUiStateTest {
 
         val withCustom = CategoriesUiState(
             isLoading = false,
+            selectedYearMonth = YearMonth("2026-09"),
             systemCategories = emptyList(),
             customCategories = listOf(
                 CategoryDisplayModel(

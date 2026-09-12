@@ -265,10 +265,10 @@ class InstallmentUseCasesTest {
         val idGen = SequentialIdGenerator()
         val useCase = AddInstallmentGroupUseCase(authRepo, catRepo, trxRepo, idGen)
 
-        val longDesc = "a".repeat(Transaction.MAX_DESCRIPTION_LENGTH + 1)
+        val longDesc = "a".repeat(Transaction.MAX_TITLE_LENGTH + 1)
         val result = useCase(sampleCommand(description = longDesc), today, now)
         val failure = assertIs<RepositoryResult.Failure>(result)
-        assertEquals("transaction_description_too_long", assertIs<AppError.Validation>(failure.error).code)
+        assertEquals("transaction_title_too_long", assertIs<AppError.Validation>(failure.error).code)
         assertEquals(0, trxRepo.createInstallmentGroupCalls.size)
     }
 

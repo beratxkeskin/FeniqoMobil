@@ -40,6 +40,7 @@ interface RemoteSyncDao {
     @Query("SELECT * FROM subscriptions WHERE id = :id LIMIT 1")
     suspend fun getSubscriptionRow(id: String): SubscriptionEntity?
 
+
     @Query("SELECT * FROM goals WHERE id = :id LIMIT 1")
     suspend fun getGoalRow(id: String): GoalEntity?
 
@@ -174,6 +175,51 @@ interface RemoteSyncDao {
     @Upsert
     suspend fun upsertCategoryRows(entities: List<CategoryEntity>)
 
+    @Transaction
+    suspend fun ensureDefaultCategoryRows(categories: List<CategoryEntity>) {
+        val reconciled = categories.map { candidate ->
+            val existing = getCategoryRow(candidate.id)
+            if (existing == null) {
+                candidate
+            } else {
+                require(existing.ownerId == null && existing.workspaceId == null && existing.isDefault) {
+                    "Canonical sistem kategori kimliği farklı kapsamda kullanılıyor: ${candidate.id}"
+                }
+                if (existing.sync.deletedAtEpochMillis != null) {
+                    candidate
+                } else {
+                    candidate.copy(
+                        createdAtEpochMillis = existing.createdAtEpochMillis,
+                        sync = existing.sync,
+                    )
+                }
+            }
+        }
+        if (reconciled.isNotEmpty()) upsertCategoryRows(reconciled)
+    }
+
+    @Transaction
+    suspend fun hideLegacyDefaultCategoryRows(ids: List<String>, hiddenAtEpochMillis: Long) {
+        val rowsToHide = ids.mapNotNull { id ->
+            getCategoryRow(id)?.let { existing ->
+                require(existing.ownerId == null && existing.workspaceId == null && existing.isDefault) {
+                    "Eski sistem kategori kimliği farklı kapsamda kullanılıyor: $id"
+                }
+                if (existing.sync.deletedAtEpochMillis == null) {
+                    existing.copy(
+                        sync = existing.sync.copy(
+                            localUpdatedAtEpochMillis = hiddenAtEpochMillis,
+                            deletedAtEpochMillis = hiddenAtEpochMillis,
+                        ),
+                    )
+                } else {
+                    null
+                }
+            }
+        }
+        if (rowsToHide.isNotEmpty()) upsertCategoryRows(rowsToHide)
+    }
+
     @Upsert
     suspend fun upsertTransactionRows(entities: List<TransactionEntity>)
 
@@ -182,6 +228,7 @@ interface RemoteSyncDao {
 
     @Upsert
     suspend fun upsertSubscriptionRows(entities: List<SubscriptionEntity>)
+
 
     @Upsert
     suspend fun upsertGoalRows(entities: List<GoalEntity>)
@@ -218,6 +265,7 @@ interface RemoteSyncDao {
 
     @Query("UPDATE subscriptions SET sync_status = 'CONFLICT', last_sync_error = :error WHERE id = :entityId")
     suspend fun markSubscriptionConflict(entityId: String, error: String): Int
+
 
     @Query("UPDATE goals SET sync_status = 'CONFLICT', last_sync_error = :error WHERE id = :entityId")
     suspend fun markGoalConflict(entityId: String, error: String): Int
@@ -628,6 +676,7 @@ interface RemoteSyncDao {
         upsertCursorRows(listOf(cursor))
     }
 
+
     @Transaction
     suspend fun applyGoalPull(entity: GoalEntity, cursor: SyncCursorEntity) {
         upsertGoalRows(listOf(entity))
@@ -684,6 +733,7 @@ interface RemoteSyncDao {
         upsertSubscriptionRows(listOf(entity))
         deleteConflictRow("SUBSCRIPTION", entity.id)
     }
+
 
     @Transaction
     suspend fun applyGoalWrite(entity: GoalEntity) {
@@ -768,6 +818,7 @@ interface RemoteSyncDao {
         recordSubscriptionConflict(conflict)
         upsertCursorRows(listOf(cursor))
     }
+
 
     @Transaction
     suspend fun recordGoalConflict(conflict: SyncConflictEntity) {

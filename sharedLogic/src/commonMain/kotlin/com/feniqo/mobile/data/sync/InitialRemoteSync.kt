@@ -1,9 +1,11 @@
 package com.feniqo.mobile.data.sync
 
 import com.feniqo.mobile.data.local.dao.RemoteSyncDao
+import com.feniqo.mobile.data.local.dao.AssetDao
 import com.feniqo.mobile.data.local.entity.SyncCursorEntity
 import com.feniqo.mobile.data.mapper.toEntity
 import com.feniqo.mobile.data.remote.core.CategoryRemoteQuery
+import com.feniqo.mobile.data.remote.core.AssetRemoteQuery
 import com.feniqo.mobile.data.remote.core.CoreRemoteDataSource
 import com.feniqo.mobile.data.remote.core.DebtPaymentRemoteQuery
 import com.feniqo.mobile.data.remote.core.DebtRemoteQuery
@@ -32,7 +34,14 @@ class InitialRemoteSync(
     private val remote: CoreRemoteDataSource,
     private val remoteSyncDao: RemoteSyncDao,
     private val nowEpochMillisProvider: () -> Long,
+    private val assetDao: AssetDao? = null,
 ) {
+    constructor(
+        remote: CoreRemoteDataSource,
+        remoteSyncDao: RemoteSyncDao,
+        nowEpochMillisProvider: () -> Long,
+    ) : this(remote, remoteSyncDao, nowEpochMillisProvider, null)
+
     suspend fun pullFor(userId: EntityId): InitialSyncResult {
         val profile = requireNotNull(remote.fetchProfile(userId.value)) {
             "Geçerli oturum için uzak profil bulunamadı."
@@ -46,6 +55,7 @@ class InitialRemoteSync(
         val subscriptions = fetchAll { page ->
             remote.fetchSubscriptions(SubscriptionRemoteQuery(page, workspaceScope = RemoteWorkspaceScope.Personal))
         }
+        val assets = if (assetDao == null) emptyList() else fetchAll { page -> remote.fetchAssets(AssetRemoteQuery(page)) }
         val goals = fetchAll { page ->
             remote.fetchGoals(GoalRemoteQuery(page, workspaceScope = RemoteWorkspaceScope.Personal))
         }
@@ -121,11 +131,16 @@ class InitialRemoteSync(
                 cursorFor(TRANSACTION, transactions.map { it.id to (it.updatedAt ?: it.createdAt) }),
             ),
         )
+        assetDao?.applyInitialSnapshot(
+            assets.map { it.toDomain().toEntity(it.toRemoteSyncMetadata(receivedAt)) },
+            cursorFor(ASSET, assets.map { it.id to (it.updatedAt ?: it.createdAt) }),
+        )
         return InitialSyncResult(
             categoryCount = categories.size,
             transactionCount = transactions.size,
             recurringTransactionCount = recurringTransactions.size,
             subscriptionCount = subscriptions.size,
+            assetCount = assets.size,
             goalCount = goals.size,
             goalContributionCount = goalContributions.size,
             debtCount = debts.size,
@@ -160,6 +175,7 @@ class InitialRemoteSync(
         const val CATEGORY = "CATEGORY"
         const val RECURRING_TRANSACTION = "RECURRING_TRANSACTION"
         const val SUBSCRIPTION = "SUBSCRIPTION"
+        const val ASSET = "ASSET"
         const val GOAL = "GOAL"
         const val GOAL_CONTRIBUTION = "GOAL_CONTRIBUTION"
         const val DEBT = "DEBT"
@@ -173,6 +189,7 @@ data class InitialSyncResult(
     val transactionCount: Int,
     val recurringTransactionCount: Int = 0,
     val subscriptionCount: Int = 0,
+    val assetCount: Int = 0,
     val goalCount: Int = 0,
     val goalContributionCount: Int = 0,
     val debtCount: Int = 0,

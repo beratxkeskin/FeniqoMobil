@@ -1,8 +1,10 @@
 package com.feniqo.mobile.data.sync
 
 import com.feniqo.mobile.data.local.dao.RemoteSyncDao
+import com.feniqo.mobile.data.local.dao.AssetDao
 import com.feniqo.mobile.data.local.dao.SyncStateDao
 import com.feniqo.mobile.data.local.entity.CategoryEntity
+import com.feniqo.mobile.data.local.entity.AssetEntity
 import com.feniqo.mobile.data.local.entity.DebtEntity
 import com.feniqo.mobile.data.local.entity.DebtPaymentEntity
 import com.feniqo.mobile.data.local.entity.GoalContributionEntity
@@ -16,6 +18,7 @@ import com.feniqo.mobile.data.local.entity.UserProfileEntity
 import com.feniqo.mobile.data.mapper.toDomain
 import com.feniqo.mobile.data.mapper.toEntity
 import com.feniqo.mobile.data.remote.core.CategoryRemoteQuery
+import com.feniqo.mobile.data.remote.core.AssetRemoteQuery
 import com.feniqo.mobile.data.remote.core.CoreRemoteDataSource
 import com.feniqo.mobile.data.remote.core.DebtPaymentRemoteQuery
 import com.feniqo.mobile.data.remote.core.DebtRemoteQuery
@@ -29,6 +32,7 @@ import com.feniqo.mobile.data.remote.core.RemoteWorkspaceScope
 import com.feniqo.mobile.data.remote.core.SubscriptionRemoteQuery
 import com.feniqo.mobile.data.remote.core.TransactionRemoteQuery
 import com.feniqo.mobile.data.remote.dto.CategoryDto
+import com.feniqo.mobile.data.remote.dto.AssetDto
 import com.feniqo.mobile.data.remote.dto.DebtDto
 import com.feniqo.mobile.data.remote.dto.DebtPaymentDto
 import com.feniqo.mobile.data.remote.dto.GoalContributionDto
@@ -52,7 +56,15 @@ class IncrementalRemoteSync(
     private val remoteSyncDao: RemoteSyncDao,
     private val syncStateDao: SyncStateDao,
     private val nowEpochMillisProvider: () -> Long,
+    private val assetDao: AssetDao? = null,
 ) {
+    constructor(
+        remote: CoreRemoteDataSource,
+        remoteSyncDao: RemoteSyncDao,
+        syncStateDao: SyncStateDao,
+        nowEpochMillisProvider: () -> Long,
+    ) : this(remote, remoteSyncDao, syncStateDao, nowEpochMillisProvider, null)
+
     private val snapshotJson = Json { encodeDefaults = true; explicitNulls = true }
 
     suspend fun pullFor(userId: EntityId): IncrementalSyncResult {
@@ -112,6 +124,16 @@ class IncrementalRemoteSync(
         }
         subscriptions.forEach { dto ->
             val result = applySubscription(dto)
+            applied += result.applied
+            conflicts += result.conflicts
+        }
+
+        val assetCursor = syncStateDao.getCursor(ASSET)
+        val assets = if (assetDao == null) emptyList() else fetchAll { page ->
+            remote.fetchAssets(AssetRemoteQuery(page = page, updatedAfter = assetCursor?.toRemoteCursor()))
+        }
+        assets.forEach { dto ->
+            val result = applyAsset(dto)
             applied += result.applied
             conflicts += result.conflicts
         }
@@ -219,6 +241,7 @@ class IncrementalRemoteSync(
             receivedTransactionCount = transactions.size,
             receivedRecurringTransactionCount = recurringTransactions.size,
             receivedSubscriptionCount = subscriptions.size,
+            receivedAssetCount = assets.size,
             receivedGoalCount = goals.size,
             receivedGoalContributionCount = goalContributions.size,
             receivedDebtCount = debts.size,
@@ -414,6 +437,33 @@ class IncrementalRemoteSync(
         )
     }
 
+    private suspend fun applyAsset(dto: AssetDto): ApplyResult {
+        val cursor = dto.cursor(ASSET)
+        val dao = requireNotNull(assetDao)
+        val local = dao.getAnyById(dto.id)
+        val remoteEntity = dto.toDomain().toEntity(dto.toRemoteSyncMetadata(nowEpochMillisProvider()))
+        return applyOrConflict(
+            local = local,
+            remoteVersion = dto.requiredVersion(ASSET),
+            apply = { dao.applyPull(remoteEntity, cursor) },
+            conflict = {
+                dao.recordPullConflict(
+                    conflict = pullConflict(
+                        entityType = ASSET,
+                        entityId = dto.id,
+                        operationId = requiredOutboxOperationId(ASSET, dto.id),
+                        localVersion = local!!.sync.version,
+                        remoteVersion = dto.requiredVersion(ASSET),
+                        local = local.toDomain().toDto(),
+                        remote = dto,
+                    ),
+                    cursor = cursor,
+                )
+            },
+            advance = { remoteSyncDao.advancePullCursor(cursor) },
+        )
+    }
+
     private suspend fun applyGoalContribution(dto: GoalContributionDto): ApplyResult {
         val cursor = dto.cursor(GOAL_CONTRIBUTION)
         if (dto.deletedAt == null) {
@@ -548,6 +598,7 @@ class IncrementalRemoteSync(
             is TransactionEntity -> local.sync
             is RecurringTransactionEntity -> local.sync
             is SubscriptionEntity -> local.sync
+            is AssetEntity -> local.sync
             is GoalEntity -> local.sync
             is GoalContributionEntity -> local.sync
             is DebtEntity -> local.sync
@@ -624,6 +675,7 @@ class IncrementalRemoteSync(
     private fun TransactionDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
     private fun RecurringTransactionDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
     private fun SubscriptionDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
+    private fun AssetDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
     private fun GoalDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
     private fun GoalContributionDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
     private fun DebtDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
@@ -640,6 +692,7 @@ class IncrementalRemoteSync(
     private fun TransactionDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
     private fun RecurringTransactionDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
     private fun SubscriptionDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
+    private fun AssetDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
     private fun GoalDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
     private fun GoalContributionDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
     private fun DebtDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
@@ -659,6 +712,7 @@ class IncrementalRemoteSync(
         const val CATEGORY = "CATEGORY"
         const val RECURRING_TRANSACTION = "RECURRING_TRANSACTION"
         const val SUBSCRIPTION = "SUBSCRIPTION"
+        const val ASSET = "ASSET"
         const val GOAL = "GOAL"
         const val GOAL_CONTRIBUTION = "GOAL_CONTRIBUTION"
         const val DEBT = "DEBT"
@@ -674,6 +728,7 @@ data class IncrementalSyncResult(
     val receivedTransactionCount: Int,
     val receivedRecurringTransactionCount: Int = 0,
     val receivedSubscriptionCount: Int = 0,
+    val receivedAssetCount: Int = 0,
     val receivedGoalCount: Int = 0,
     val receivedGoalContributionCount: Int = 0,
     val receivedDebtCount: Int = 0,

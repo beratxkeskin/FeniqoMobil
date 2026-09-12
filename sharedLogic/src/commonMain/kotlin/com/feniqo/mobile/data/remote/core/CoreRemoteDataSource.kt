@@ -1,6 +1,7 @@
 package com.feniqo.mobile.data.remote.core
 
 import com.feniqo.mobile.data.remote.dto.BudgetDto
+import com.feniqo.mobile.data.remote.dto.AssetDto
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.DebtDto
 import com.feniqo.mobile.data.remote.dto.DebtPaymentDto
@@ -25,6 +26,8 @@ interface CoreRemoteDataSource {
     suspend fun fetchRecurringTransactions(query: RecurringTransactionRemoteQuery): RemotePage<RecurringTransactionDto>
     suspend fun fetchSubscriptions(query: SubscriptionRemoteQuery): RemotePage<SubscriptionDto>
     suspend fun fetchGoals(query: GoalRemoteQuery): RemotePage<GoalDto>
+    suspend fun fetchAssets(query: AssetRemoteQuery): RemotePage<AssetDto> =
+        error("fetchAssets(query) is not implemented in this CoreRemoteDataSource implementation")
     suspend fun fetchGoalContributions(query: GoalContributionRemoteQuery): RemotePage<GoalContributionDto>
     suspend fun fetchDebts(query: DebtRemoteQuery): RemotePage<DebtDto>
     suspend fun fetchDebtPayments(query: DebtPaymentRemoteQuery): RemotePage<DebtPaymentDto>

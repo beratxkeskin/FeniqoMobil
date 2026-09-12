@@ -116,12 +116,21 @@ class TransactionsViewModelTest {
         var lastHistoryWorkspaceId: EntityId? = null
         var activeObserveCallCount = 0
         var historyObserveCallCount = 0
+        var observeDeferred: CompletableDeferred<Unit>? = null
 
         override fun observeCategories(type: TransactionType?, workspaceId: EntityId?): Flow<List<Category>> {
             activeObserveCallCount++
             lastActiveType = type
             lastActiveWorkspaceId = workspaceId
-            return activeCategoriesFlow
+            val deferred = observeDeferred
+            return if (deferred != null) {
+                flow {
+                    deferred.await()
+                    activeCategoriesFlow.collect { emit(it) }
+                }
+            } else {
+                activeCategoriesFlow
+            }
         }
 
         override fun observeCategory(id: EntityId): Flow<Category?> =
@@ -157,12 +166,13 @@ class TransactionsViewModelTest {
         trxRepo: FakeTransactionRepo = FakeTransactionRepo(),
         catRepo: FakeCategoryRepo = FakeCategoryRepo(),
         authRepo: FakeAuthRepo = FakeAuthRepo(),
+        fakeWorkspaceRepo: com.feniqo.mobile.presentation.common.FakeWorkspaceRepository = com.feniqo.mobile.presentation.common.FakeWorkspaceRepository(),
+        savedStateHandle: androidx.lifecycle.SavedStateHandle = androidx.lifecycle.SavedStateHandle(),
     ): Triple<TransactionsViewModel, FakeTransactionRepo, FakeCategoryRepo> {
         val observeTrx = ObserveTransactionsUseCase(trxRepo)
         val observeCatHistory = ObserveCategoriesForHistoryLookupUseCase(catRepo)
         val observeCatActive = ObserveCategoriesUseCase(catRepo)
         val deleteTrx = DeleteTransactionUseCase(authRepo, trxRepo)
-        val fakeWorkspaceRepo = com.feniqo.mobile.presentation.common.FakeWorkspaceRepository()
         val vm = TransactionsViewModel(
             observeTransactionsUseCase = observeTrx,
             observeCategoriesForHistoryLookupUseCase = observeCatHistory,
@@ -170,6 +180,7 @@ class TransactionsViewModelTest {
             deleteTransactionUseCase = deleteTrx,
             currentDateProvider = testDateProvider,
             observeActiveWorkspaceUseCase = com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase(fakeWorkspaceRepo),
+            savedStateHandle = savedStateHandle,
         )
         return Triple(vm, trxRepo, catRepo)
     }
@@ -937,5 +948,613 @@ class TransactionsViewModelTest {
         assertNull(viewModel.uiState.value.deleteDialog)
 
         collectJob.cancel()
+    }
+
+    @Test
+    fun init_withSavedStateHandle_seedsInitialFilter() = runTest {
+        val handle = androidx.lifecycle.SavedStateHandle(
+            mapOf(
+                "categoryId" to "cat-food",
+                "startDate" to "2026-09-01",
+                "endDate" to "2026-09-30",
+            )
+        )
+        val catRepo = FakeCategoryRepo()
+        val catFood = Category(
+            id = EntityId("cat-food"),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            name = "Yemek",
+            type = TransactionType.EXPENSE,
+            color = CategoryColor("#10B981"),
+            icon = null,
+            isDefault = false,
+            createdAt = Instant.parse("2026-08-01T00:00:00Z"),
+        )
+        catRepo.activeCategoriesFlow.value = listOf(catFood)
+
+        val (vm, _, _) = createViewModel(catRepo = catRepo, savedStateHandle = handle)
+        val collector = launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm.uiState.collect()
+        }
+
+        assertEquals(EntityId("cat-food"), vm.uiState.value.filter.categoryId)
+        assertNotNull(vm.uiState.value.filter.customPeriod)
+        assertEquals(LocalDate(2026, 9, 1), vm.uiState.value.filter.customPeriod?.startDate)
+        assertEquals(LocalDate(2026, 9, 30), vm.uiState.value.filter.customPeriod?.endDate)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun summary_calculatesNormalTryIncomeAndSpending() = runTest {
+        val (vm, trxRepo, catRepo) = createViewModel()
+        val expenseTx = Transaction(
+            id = EntityId("tx-exp"),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            amount = Money(150_00L, Currency.TRY),
+            type = TransactionType.EXPENSE,
+            categoryId = EntityId("cat-1"),
+            description = null,
+            paymentMethod = PaymentMethod.CASH,
+            transactionDate = fixedToday,
+            receiptPath = null,
+            installment = null,
+            createdAt = Instant.parse("2026-08-21T10:00:00Z"),
+        )
+        val incomeTx = Transaction(
+            id = EntityId("tx-inc"),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            amount = Money(350_00L, Currency.TRY),
+            type = TransactionType.INCOME,
+            categoryId = EntityId("cat-2"),
+            description = null,
+            paymentMethod = PaymentMethod.BANK_TRANSFER,
+            transactionDate = fixedToday,
+            receiptPath = null,
+            installment = null,
+            createdAt = Instant.parse("2026-08-21T10:00:00Z"),
+        )
+        trxRepo.transactionsFlow.value = listOf(expenseTx, incomeTx)
+
+        val collector = launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm.uiState.collect()
+        }
+
+        val summary = vm.uiState.value.summary
+        assertEquals("150,00 ₺", summary.totalSpendingFormatted)
+        assertEquals("350,00 ₺", summary.totalIncomeFormatted)
+        assertEquals(2, summary.transactionCount)
+        assertNull(vm.uiState.value.observationError)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun summary_handlesEmptyTransactionList() = runTest {
+        val (vm, trxRepo, _) = createViewModel()
+        trxRepo.transactionsFlow.value = emptyList()
+
+        val collector = launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm.uiState.collect()
+        }
+
+        val summary = vm.uiState.value.summary
+        assertEquals("0,00 ₺", summary.totalSpendingFormatted)
+        assertEquals("0,00 ₺", summary.totalIncomeFormatted)
+        assertEquals(0, summary.transactionCount)
+        assertNull(vm.uiState.value.observationError)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun summary_failsClosed_onMixedCurrency() = runTest {
+        val (vm, trxRepo, _) = createViewModel()
+        val tryTx = Transaction(
+            id = EntityId("tx-try"),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            amount = Money(100_00L, Currency.TRY),
+            type = TransactionType.EXPENSE,
+            categoryId = EntityId("cat-1"),
+            description = null,
+            paymentMethod = PaymentMethod.CASH,
+            transactionDate = fixedToday,
+            receiptPath = null,
+            installment = null,
+            createdAt = Instant.parse("2026-08-21T10:00:00Z"),
+        )
+        val usdTx = Transaction(
+            id = EntityId("tx-usd"),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            amount = Money(50_00L, Currency.USD),
+            type = TransactionType.EXPENSE,
+            categoryId = EntityId("cat-1"),
+            description = null,
+            paymentMethod = PaymentMethod.CASH,
+            transactionDate = fixedToday,
+            receiptPath = null,
+            installment = null,
+            createdAt = Instant.parse("2026-08-21T10:00:00Z"),
+        )
+        trxRepo.transactionsFlow.value = listOf(tryTx, usdTx)
+
+        val collector = launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm.uiState.collect()
+        }
+
+        // Fail-closed hata üretilmeli, kısmi özet veya liste gösterilmemeli
+        assertEquals(FinanceUiMessage.GENERIC_ERROR, vm.uiState.value.observationError)
+        assertTrue(vm.uiState.value.groupedItems.isEmpty())
+
+        collector.cancel()
+    }
+
+    @Test
+    fun summary_failsClosed_onLongOverflow() = runTest {
+        val (vm, trxRepo, _) = createViewModel()
+        val hugeTx1 = Transaction(
+            id = EntityId("tx-huge-1"),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            amount = Money(Money.MAX_AMOUNT_MINOR, Currency.TRY),
+            type = TransactionType.EXPENSE,
+            categoryId = EntityId("cat-1"),
+            description = null,
+            paymentMethod = PaymentMethod.CASH,
+            transactionDate = fixedToday,
+            receiptPath = null,
+            installment = null,
+            createdAt = Instant.parse("2026-08-21T10:00:00Z"),
+        )
+        val hugeTx2 = Transaction(
+            id = EntityId("tx-huge-2"),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            amount = Money(Money.MAX_AMOUNT_MINOR, Currency.TRY),
+            type = TransactionType.EXPENSE,
+            categoryId = EntityId("cat-1"),
+            description = null,
+            paymentMethod = PaymentMethod.CASH,
+            transactionDate = fixedToday,
+            receiptPath = null,
+            installment = null,
+            createdAt = Instant.parse("2026-08-21T10:00:00Z"),
+        )
+        trxRepo.transactionsFlow.value = listOf(hugeTx1, hugeTx2)
+
+        val collector = launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm.uiState.collect()
+        }
+
+        // safeAdd veya Money toplam sınırı nedeniyle fail-closed hata vermeli
+        assertEquals(FinanceUiMessage.GENERIC_ERROR, vm.uiState.value.observationError)
+        assertTrue(vm.uiState.value.groupedItems.isEmpty())
+
+        collector.cancel()
+    }
+
+    @Test
+    fun summary_handlesOnlyIncome_andOnlyExpense() = runTest {
+        val (vm, trxRepo, _) = createViewModel()
+        val onlyIncome = Transaction(
+            id = EntityId("tx-inc"),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            amount = Money(500_00L, Currency.TRY),
+            type = TransactionType.INCOME,
+            categoryId = EntityId("cat-1"),
+            description = null,
+            paymentMethod = PaymentMethod.BANK_TRANSFER,
+            transactionDate = fixedToday,
+            receiptPath = null,
+            installment = null,
+            createdAt = Instant.parse("2026-08-21T10:00:00Z"),
+        )
+        trxRepo.transactionsFlow.value = listOf(onlyIncome)
+
+        val collector = launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm.uiState.collect()
+        }
+
+        assertEquals("0,00 ₺", vm.uiState.value.summary.totalSpendingFormatted)
+        assertEquals("500,00 ₺", vm.uiState.value.summary.totalIncomeFormatted)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun routeCategory_categoriesLoading_transactionsEmitTwiceThenCategoryArrives_filterPreserved() = runTest {
+        val catId = "cat-valid"
+        val handle = androidx.lifecycle.SavedStateHandle(mapOf("categoryId" to catId))
+        val catRepo = FakeCategoryRepo()
+        val trxRepo = FakeTransactionRepo()
+
+        // Kategoriler loading durumunda tutulur
+        val categoryGate = CompletableDeferred<Unit>()
+        catRepo.observeDeferred = categoryGate
+
+        val (vm, _, _) = createViewModel(trxRepo = trxRepo, catRepo = catRepo, savedStateHandle = handle)
+        val collector = launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm.uiState.collect()
+        }
+
+        // Transactions 1. kez yayın yapar
+        val tx1 = Transaction(
+            id = EntityId("tx-1"),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            amount = Money(100_00L, Currency.TRY),
+            type = TransactionType.EXPENSE,
+            categoryId = EntityId(catId),
+            description = null,
+            paymentMethod = PaymentMethod.CASH,
+            transactionDate = fixedToday,
+            receiptPath = null,
+            installment = null,
+            createdAt = Instant.parse("2026-08-21T10:00:00Z"),
+        )
+        trxRepo.transactionsFlow.value = listOf(tx1)
+        advanceUntilIdle()
+
+        // Transactions 2. kez yayın yapar (kategoriler hâlâ loading)
+        val tx2 = Transaction(
+            id = EntityId("tx-2"),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            amount = Money(200_00L, Currency.TRY),
+            type = TransactionType.EXPENSE,
+            categoryId = EntityId(catId),
+            description = null,
+            paymentMethod = PaymentMethod.CASH,
+            transactionDate = fixedToday,
+            receiptPath = null,
+            installment = null,
+            createdAt = Instant.parse("2026-08-21T10:00:00Z"),
+        )
+        trxRepo.transactionsFlow.value = listOf(tx1, tx2)
+        advanceUntilIdle()
+
+        // Kategoriler henüz yüklenirken route filtresi erken temizlenmemeli
+        assertEquals(EntityId(catId), vm.uiState.value.filter.categoryId)
+
+        // Sonra geçerli kategori gelir
+        val validCat = Category(
+            id = EntityId(catId),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            name = "Market",
+            type = TransactionType.EXPENSE,
+            color = CategoryColor("#10B981"),
+            icon = null,
+            isDefault = false,
+            createdAt = Instant.parse("2026-08-01T00:00:00Z"),
+        )
+        catRepo.activeCategoriesFlow.value = listOf(validCat)
+        categoryGate.complete(Unit)
+        advanceUntilIdle()
+
+        // Geçerli kategori yüklendiğinde filtre korunur
+        assertEquals(EntityId(catId), vm.uiState.value.filter.categoryId)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun routeCategory_initialReliableCategorySnapshotEmpty_invalidRouteFilterCleared() = runTest {
+        val catId = "cat-invalid"
+        val handle = androidx.lifecycle.SavedStateHandle(mapOf("categoryId" to catId))
+        val catRepo = FakeCategoryRepo()
+        // İlk gerçek Room snapshot'ı boş gelir
+        catRepo.activeCategoriesFlow.value = emptyList()
+        catRepo.historyCategoriesFlow.value = emptyList()
+
+        val (vm, _, _) = createViewModel(catRepo = catRepo, savedStateHandle = handle)
+        val collector = launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        // İlk güvenilir kategori snapshot'ı boş geldiğinde geçersiz route filtresi temizlenir
+        assertNull(vm.uiState.value.filter.categoryId)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun routeCategory_historicalCategoryFoundInSnapshot_filterPreserved() = runTest {
+        val catId = "cat-historical"
+        val handle = androidx.lifecycle.SavedStateHandle(mapOf("categoryId" to catId))
+        val catRepo = FakeCategoryRepo()
+        val historicalCat = Category(
+            id = EntityId(catId),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            name = "Eski Kategori",
+            type = TransactionType.EXPENSE,
+            color = CategoryColor("#10B981"),
+            icon = null,
+            isDefault = false,
+            createdAt = Instant.parse("2026-08-01T00:00:00Z"),
+        )
+        catRepo.activeCategoriesFlow.value = emptyList()
+        catRepo.historyCategoriesFlow.value = listOf(historicalCat)
+
+        val (vm, _, _) = createViewModel(catRepo = catRepo, savedStateHandle = handle)
+        val collector = launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        // Tarihsel kategori snapshot'ta bulunduğu için filtre korunur
+        assertEquals(EntityId(catId), vm.uiState.value.filter.categoryId)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun routeCategory_workspaceChanged_filterCleared() = runTest {
+        val catId = "cat-1"
+        val handle = androidx.lifecycle.SavedStateHandle(mapOf("categoryId" to catId))
+        val catRepo = FakeCategoryRepo()
+        val cat1 = Category(
+            id = EntityId(catId),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            name = "Market",
+            type = TransactionType.EXPENSE,
+            color = CategoryColor("#10B981"),
+            icon = null,
+            isDefault = false,
+            createdAt = Instant.parse("2026-08-01T00:00:00Z"),
+        )
+        catRepo.activeCategoriesFlow.value = listOf(cat1)
+
+        val fakeWorkspaceRepo = com.feniqo.mobile.presentation.common.FakeWorkspaceRepository(
+            initialActiveWorkspace = com.feniqo.mobile.domain.model.Workspace(
+                id = EntityId("ws-1"),
+                name = "Workspace 1",
+                ownerId = EntityId("user-1"),
+                currency = Currency.TRY,
+                createdAt = Instant.parse("2026-08-01T00:00:00Z"),
+            ),
+        )
+
+        val (vm, _, _) = createViewModel(
+            catRepo = catRepo,
+            fakeWorkspaceRepo = fakeWorkspaceRepo,
+            savedStateHandle = handle,
+        )
+        val collector = launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        // Başlangıçta kategori korunur
+        assertEquals(EntityId(catId), vm.uiState.value.filter.categoryId)
+
+        // Workspace değiştiğinde
+        fakeWorkspaceRepo.activeWorkspaceFlow.value = com.feniqo.mobile.domain.model.Workspace(
+            id = EntityId("ws-2"),
+            name = "Workspace 2",
+            ownerId = EntityId("user-1"),
+            currency = Currency.TRY,
+            createdAt = Instant.parse("2026-08-01T00:00:00Z"),
+        )
+        advanceUntilIdle()
+
+        // Workspace değişimi filtreyi temizlemelidir
+        assertNull(vm.uiState.value.filter.categoryId)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun clearFilters_clearsCategoryAndCustomPeriodTogether() = runTest {
+        val handle = androidx.lifecycle.SavedStateHandle(
+            mapOf(
+                "categoryId" to "cat-1",
+                "startDate" to "2026-08-01",
+                "endDate" to "2026-08-31",
+            ),
+        )
+        val catRepo = FakeCategoryRepo()
+        val cat1 = Category(
+            id = EntityId("cat-1"),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            name = "Market",
+            type = TransactionType.EXPENSE,
+            color = CategoryColor("#10B981"),
+            icon = null,
+            isDefault = false,
+            createdAt = Instant.parse("2026-08-01T00:00:00Z"),
+        )
+        catRepo.activeCategoriesFlow.value = listOf(cat1)
+
+        val (vm, _, _) = createViewModel(catRepo = catRepo, savedStateHandle = handle)
+        val collector = launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        assertEquals(EntityId("cat-1"), vm.uiState.value.filter.categoryId)
+        assertNotNull(vm.uiState.value.filter.customPeriod)
+
+        vm.clearFilters()
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.filter.categoryId)
+        assertNull(vm.uiState.value.filter.customPeriod)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun onSortOrderChanged_updatesFilterSortOrder_andSortsItems() = runTest {
+        val trxSmall = Transaction(
+            id = EntityId("t-small"),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            amount = Money(1000L, Currency.TRY),
+            type = TransactionType.EXPENSE,
+            categoryId = EntityId("cat-1"),
+            description = "Küçük",
+            paymentMethod = PaymentMethod.CASH,
+            transactionDate = fixedToday,
+            receiptPath = null,
+            installment = null,
+            createdAt = Instant.parse("2026-08-21T10:00:00Z"),
+        )
+        val trxLarge = Transaction(
+            id = EntityId("t-large"),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            amount = Money(50000L, Currency.TRY),
+            type = TransactionType.EXPENSE,
+            categoryId = EntityId("cat-1"),
+            description = "Büyük",
+            paymentMethod = PaymentMethod.CASH,
+            transactionDate = fixedToday,
+            receiptPath = null,
+            installment = null,
+            createdAt = Instant.parse("2026-08-21T11:00:00Z"),
+        )
+        val trxRepo = FakeTransactionRepo()
+        trxRepo.transactionsFlow.value = listOf(trxSmall, trxLarge)
+
+        val (vm, _, _) = createViewModel(trxRepo = trxRepo)
+        val collector = launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        assertEquals(TransactionSortOrder.NEWEST, vm.uiState.value.filter.sortOrder)
+
+        // Tutar: Azalan sıralamasına geç
+        vm.onSortOrderChanged(TransactionSortOrder.AMOUNT_DESC)
+        advanceUntilIdle()
+
+        assertEquals(TransactionSortOrder.AMOUNT_DESC, vm.uiState.value.filter.sortOrder)
+        val firstItem = vm.uiState.value.groupedItems.first().items.first()
+        assertEquals(EntityId("t-large"), firstItem.id)
+
+        // Summary kontrolü: Net ve Daily Bars
+        val summary = vm.uiState.value.summary
+        assertEquals("-510,00 ₺", summary.netFormatted)
+        assertFalse(summary.isNetPositive)
+        assertEquals(1, summary.dailyBars.size)
+        assertEquals(51000L, summary.dailyBars.first().expenseMinor)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun routeCustomPeriod_isInitiallyPreservedInFilterAndDomainQuery() = runTest {
+        val savedStateHandle = androidx.lifecycle.SavedStateHandle(
+            mapOf(
+                "startDate" to "2026-08-01",
+                "endDate" to "2026-08-15",
+            )
+        )
+        val (vm, trxRepo, _) = createViewModel(savedStateHandle = savedStateHandle)
+        val collector = launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        val expectedPeriod = ReportPeriod(LocalDate(2026, 8, 1), LocalDate(2026, 8, 15))
+        assertEquals(expectedPeriod, vm.uiState.value.filter.customPeriod)
+        assertEquals(expectedPeriod, trxRepo.lastFilter?.period)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun onPeriodPresetChanged_whenSelectingThisMonth_clearsCustomPeriodAndUsesPresetInQuery() = runTest {
+        val savedStateHandle = androidx.lifecycle.SavedStateHandle(
+            mapOf(
+                "startDate" to "2026-08-01",
+                "endDate" to "2026-08-15",
+            )
+        )
+        val (vm, trxRepo, _) = createViewModel(savedStateHandle = savedStateHandle)
+        val collector = launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        assertEquals(ReportPeriod(LocalDate(2026, 8, 1), LocalDate(2026, 8, 15)), vm.uiState.value.filter.customPeriod)
+
+        // Kullanıcı Bu Ay seçer
+        vm.onPeriodPresetChanged(TransactionPeriodPreset.THIS_MONTH)
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.filter.customPeriod)
+        assertEquals(TransactionPeriodPreset.THIS_MONTH, vm.uiState.value.filter.periodPreset)
+
+        val expectedThisMonthPeriod = TransactionPeriodPresetMapper.toReportPeriod(TransactionPeriodPreset.THIS_MONTH, fixedToday)
+        assertEquals(expectedThisMonthPeriod, trxRepo.lastFilter?.period)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun clearFilters_clearsBothCustomPeriodAndPeriodPreset() = runTest {
+        val savedStateHandle = androidx.lifecycle.SavedStateHandle(
+            mapOf(
+                "startDate" to "2026-08-01",
+                "endDate" to "2026-08-15",
+            )
+        )
+        val (vm, trxRepo, _) = createViewModel(savedStateHandle = savedStateHandle)
+        val collector = launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        vm.clearFilters()
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.filter.customPeriod)
+        assertNull(vm.uiState.value.filter.periodPreset)
+        assertNull(trxRepo.lastFilter?.period)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun periodChipLabel_whenCustomPeriodIsActive_isNotMisleadingAllTime() = runTest {
+        val savedStateHandle = androidx.lifecycle.SavedStateHandle(
+            mapOf(
+                "startDate" to "2026-08-01",
+                "endDate" to "2026-08-15",
+            )
+        )
+        val (vm, _, _) = createViewModel(savedStateHandle = savedStateHandle)
+        val collector = launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        val label = vm.uiState.value.periodChipLabel
+        assertTrue(label != "Tüm zamanlar")
+        assertTrue(label == "1 – 15 Ağu" || label == "Özel Dönem")
+
+        // Preset seçildiğinde etiketin o presete dönüştüğünü doğrula
+        vm.onPeriodPresetChanged(TransactionPeriodPreset.THIS_MONTH)
+        advanceUntilIdle()
+        assertEquals("Bu ay", vm.uiState.value.periodChipLabel)
+
+        // Filtreler temizlendiğinde "Tüm zamanlar" olduğunu doğrula
+        vm.clearFilters()
+        advanceUntilIdle()
+        assertEquals("Tüm zamanlar", vm.uiState.value.periodChipLabel)
+
+        collector.cancel()
     }
 }

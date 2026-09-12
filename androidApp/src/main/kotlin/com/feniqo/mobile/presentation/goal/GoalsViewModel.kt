@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase
 import com.feniqo.mobile.domain.usecase.ObserveGoalsUseCase
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.common.CurrentDateProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -28,9 +29,11 @@ import javax.inject.Inject
 class GoalsViewModel @Inject constructor(
     private val observeGoalsUseCase: ObserveGoalsUseCase,
     private val observeActiveWorkspaceUseCase: ObserveActiveWorkspaceUseCase,
+    private val currentDateProvider: CurrentDateProvider,
 ) : ViewModel() {
 
     private val _retryTrigger = MutableStateFlow(0L)
+    private val selectedFilter = MutableStateFlow(GoalStatusFilter.ALL)
 
     private sealed interface ObservationResult {
         data object Loading : ObservationResult
@@ -43,7 +46,7 @@ class GoalsViewModel @Inject constructor(
         .flatMapLatest {
             observeGoalsUseCase()
                 .map { goals ->
-                    val items = GoalDisplayModelMapper.map(goals)
+                    val items = GoalDisplayModelMapper.map(goals, today = currentDateProvider.today())
                     ObservationResult.Success(items) as ObservationResult
                 }
                 .onStart {
@@ -60,27 +63,36 @@ class GoalsViewModel @Inject constructor(
     val uiState: StateFlow<GoalsUiState> = combine(
         observationResultFlow,
         observeActiveWorkspaceUseCase(),
-    ) { observationResult, activeWorkspace ->
+        selectedFilter,
+    ) { observationResult, activeWorkspace, selectedFilter ->
         val workspaceName = activeWorkspace?.name
         when (observationResult) {
             is ObservationResult.Loading -> GoalsUiState(
                 isLoading = true,
-                goals = emptyList(),
+                selectedFilter = selectedFilter,
                 activeWorkspaceName = workspaceName,
                 observationError = null,
             )
             is ObservationResult.Failure -> GoalsUiState(
                 isLoading = false,
-                goals = emptyList(),
+                selectedFilter = selectedFilter,
                 activeWorkspaceName = workspaceName,
                 observationError = observationResult.message,
             )
-            is ObservationResult.Success -> GoalsUiState(
-                isLoading = false,
-                goals = observationResult.goals,
-                activeWorkspaceName = workspaceName,
-                observationError = null,
-            )
+            is ObservationResult.Success -> {
+                val presentation = GoalsPresentationCalculator.calculate(observationResult.goals, selectedFilter)
+                GoalsUiState(
+                    isLoading = false,
+                    allGoals = observationResult.goals,
+                    visibleGoals = presentation.visibleGoals,
+                    summary = presentation.summary,
+                    isSummaryCalculationError = presentation.isSummaryCalculationError,
+                    insights = presentation.insights,
+                    selectedFilter = selectedFilter,
+                    activeWorkspaceName = workspaceName,
+                    observationError = null,
+                )
+            }
         }
     }
         .stateIn(
@@ -92,10 +104,12 @@ class GoalsViewModel @Inject constructor(
     fun onIntent(intent: GoalsIntent) {
         when (intent) {
             is GoalsIntent.Retry -> retryObservation()
+            is GoalsIntent.SelectFilter -> selectedFilter.value = intent.filter
         }
     }
 
     private fun retryObservation() {
         _retryTrigger.update { it + 1 }
     }
+
 }

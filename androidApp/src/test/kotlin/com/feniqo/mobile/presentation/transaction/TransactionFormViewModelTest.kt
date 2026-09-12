@@ -12,9 +12,15 @@ import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.PaymentMethod
 import com.feniqo.mobile.domain.model.ReceiptPath
+import com.feniqo.mobile.domain.model.ReceiptOcrDraft
+import com.feniqo.mobile.domain.model.OcrCandidate
+import com.feniqo.mobile.domain.model.OcrCandidateConfidence
 import com.feniqo.mobile.domain.model.Transaction
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.UserProfile
+import com.feniqo.mobile.domain.model.Workspace
+import com.feniqo.mobile.domain.model.WorkspaceMember
+import com.feniqo.mobile.domain.model.WorkspaceRole
 import com.feniqo.mobile.domain.repository.AuthRepository
 import com.feniqo.mobile.domain.repository.AuthSession
 import com.feniqo.mobile.domain.repository.CategoryRepository
@@ -174,9 +180,12 @@ class TransactionFormViewModelTest {
 
     private class FakeWorkspaceRepository : com.feniqo.mobile.domain.repository.WorkspaceRepository {
         val activeWorkspaceFlow = MutableStateFlow<com.feniqo.mobile.domain.model.Workspace?>(null)
+        val membersFlow = MutableStateFlow<Map<EntityId, List<com.feniqo.mobile.domain.model.WorkspaceMember>>>(emptyMap())
+
         override fun observeActiveWorkspace(): Flow<com.feniqo.mobile.domain.model.Workspace?> = activeWorkspaceFlow
         override fun observeWorkspaces(): Flow<List<com.feniqo.mobile.domain.model.Workspace>> = MutableStateFlow(emptyList())
-        override fun observeMembers(workspaceId: EntityId): Flow<List<com.feniqo.mobile.domain.model.WorkspaceMember>> = MutableStateFlow(emptyList())
+        override fun observeMembers(workspaceId: EntityId): Flow<List<com.feniqo.mobile.domain.model.WorkspaceMember>> =
+            membersFlow.map { it[workspaceId] ?: emptyList() }
         override suspend fun create(name: String): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("ws-1"))
         override suspend fun createWorkspace(command: com.feniqo.mobile.domain.model.CreateWorkspaceCommand): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("ws-1"))
         override suspend fun updateWorkspace(command: com.feniqo.mobile.domain.model.UpdateWorkspaceCommand): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
@@ -214,6 +223,25 @@ class TransactionFormViewModelTest {
         Dispatchers.resetMain()
     }
 
+    @Test
+    fun receiptOcrDraft_isAppliedOnlyAfterExplicitUserConfirmation() = runTest {
+        val viewModel = createViewModel(TransactionFormRoute())
+        advanceUntilIdle()
+        assertEquals("", viewModel.uiState.value.amountText)
+
+        viewModel.applyReceiptOcrDraft(
+            ReceiptOcrDraft(
+                merchantName = OcrCandidate("Feniqo Market", OcrCandidateConfidence.LOW),
+                total = OcrCandidate(Money(12_345L, Currency.TRY), OcrCandidateConfidence.HIGH),
+                transactionDate = OcrCandidate(LocalDate(2026, 9, 9), OcrCandidateConfidence.HIGH),
+            ),
+        )
+
+        assertEquals("123,45", viewModel.uiState.value.amountText)
+        assertEquals("Feniqo Market", viewModel.uiState.value.description)
+        assertEquals(LocalDate(2026, 9, 9), viewModel.uiState.value.transactionDate)
+    }
+
     private fun createViewModel(
         route: TransactionFormRoute,
         instantProvider: CurrentInstantProvider = countingInstantProvider,
@@ -230,6 +258,8 @@ class TransactionFormViewModelTest {
             observeCategoriesUseCase = ObserveCategoriesUseCase(catRepo),
             observeCategoriesForHistoryLookupUseCase = ObserveCategoriesForHistoryLookupUseCase(catRepo),
             observeActiveWorkspaceUseCase = com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase(workspaceRepo),
+            observeWorkspaceMembersUseCase = com.feniqo.mobile.domain.usecase.ObserveWorkspaceMembersUseCase(workspaceRepo),
+            observeAuthSessionUseCase = com.feniqo.mobile.domain.usecase.ObserveAuthSessionUseCase(authRepo),
             currentDateProvider = fakeDateProvider,
             currentInstantProvider = instantProvider,
             entityIdGenerator = idGenerator,
@@ -246,6 +276,8 @@ class TransactionFormViewModelTest {
             observeCategoriesUseCase = ObserveCategoriesUseCase(catRepo),
             observeCategoriesForHistoryLookupUseCase = ObserveCategoriesForHistoryLookupUseCase(catRepo),
             observeActiveWorkspaceUseCase = com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase(workspaceRepo),
+            observeWorkspaceMembersUseCase = com.feniqo.mobile.domain.usecase.ObserveWorkspaceMembersUseCase(workspaceRepo),
+            observeAuthSessionUseCase = com.feniqo.mobile.domain.usecase.ObserveAuthSessionUseCase(authRepo),
             currentDateProvider = fakeDateProvider,
             currentInstantProvider = countingInstantProvider,
             entityIdGenerator = idGenerator,
@@ -591,6 +623,7 @@ class TransactionFormViewModelTest {
 
         viewModel.onAmountChanged("250")
         viewModel.onCategoryChanged(EntityId("cat-market"))
+        viewModel.onTitleChanged("Market")
         viewModel.submit()
         advanceUntilIdle()
 
@@ -613,6 +646,7 @@ class TransactionFormViewModelTest {
 
         viewModel.onAmountChanged("3000")
         viewModel.onCategoryChanged(EntityId("cat-market"))
+        viewModel.onTitleChanged("Elektronik")
         viewModel.onPaymentMethodChanged(PaymentMethod.CREDIT_CARD)
         viewModel.onInstallmentToggle(true)
         viewModel.onInstallmentCountChanged("3")
@@ -780,7 +814,7 @@ class TransactionFormViewModelTest {
     }
 
     @Test
-    fun descriptionValidation_tooLong_setsDescriptionError_andClearingDescriptionResetsError() = runTest {
+    fun titleValidation_emptyAndBlank_setsTitleRequiredError() = runTest {
         catRepo.activeCategoriesFlow.value = listOf(sampleActiveExpenseCategory)
         val viewModel = createViewModel(TransactionFormRoute(null))
 
@@ -789,17 +823,109 @@ class TransactionFormViewModelTest {
 
         viewModel.onAmountChanged("100")
         viewModel.onCategoryChanged(EntityId("cat-market"))
-        viewModel.onDescriptionChanged("a".repeat(501))
+        viewModel.onTitleChanged("")
 
         viewModel.submit()
         advanceUntilIdle()
 
-        assertEquals(TransactionFormFieldError.DESCRIPTION_TOO_LONG, viewModel.uiState.value.descriptionError)
+        assertEquals(TransactionFormFieldError.TITLE_REQUIRED, viewModel.uiState.value.titleError)
         assertNull(trxRepo.lastCreatedTransaction)
 
-        // Typing shorter description clears error
-        viewModel.onDescriptionChanged("Kısa açıklama")
-        assertNull(viewModel.uiState.value.descriptionError)
+        // Blank with only spaces is also rejected
+        viewModel.onTitleChanged("   ")
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertEquals(TransactionFormFieldError.TITLE_REQUIRED, viewModel.uiState.value.titleError)
+        assertNull(trxRepo.lastCreatedTransaction)
+
+        // Typing valid title clears error
+        viewModel.onTitleChanged("Geçerli Başlık")
+        assertNull(viewModel.uiState.value.titleError)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun titleValidation_100CharsAccepted_101CharsSetsTitleTooLongError() = runTest {
+        catRepo.activeCategoriesFlow.value = listOf(sampleActiveExpenseCategory)
+        val viewModel = createViewModel(TransactionFormRoute(null))
+
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onAmountChanged("100")
+        viewModel.onCategoryChanged(EntityId("cat-market"))
+        viewModel.onTitleChanged("a".repeat(101))
+
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertEquals(TransactionFormFieldError.TITLE_TOO_LONG, viewModel.uiState.value.titleError)
+        assertNull(trxRepo.lastCreatedTransaction)
+
+        // Exactly 100 chars succeeds
+        viewModel.onTitleChanged("a".repeat(100))
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.titleError)
+        assertNotNull(trxRepo.lastCreatedTransaction)
+        assertEquals("a".repeat(100), trxRepo.lastCreatedTransaction?.description)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun noteValidation_500CharsAccepted_501CharsSetsNoteTooLongError() = runTest {
+        catRepo.activeCategoriesFlow.value = listOf(sampleActiveExpenseCategory)
+        val viewModel = createViewModel(TransactionFormRoute(null))
+
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onAmountChanged("100")
+        viewModel.onCategoryChanged(EntityId("cat-market"))
+        viewModel.onTitleChanged("Market")
+        viewModel.onNoteChanged("n".repeat(501))
+
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertEquals(TransactionFormFieldError.NOTE_TOO_LONG, viewModel.uiState.value.noteError)
+        assertNull(trxRepo.lastCreatedTransaction)
+
+        // Exactly 500 chars succeeds
+        viewModel.onNoteChanged("n".repeat(500))
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.noteError)
+        assertNotNull(trxRepo.lastCreatedTransaction)
+        assertEquals("n".repeat(500), trxRepo.lastCreatedTransaction?.note)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun titleAndNote_trimmedBeforeSaving_andBlankNoteBecomesNull() = runTest {
+        catRepo.activeCategoriesFlow.value = listOf(sampleActiveExpenseCategory)
+        val viewModel = createViewModel(TransactionFormRoute(null))
+
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onAmountChanged("100")
+        viewModel.onCategoryChanged(EntityId("cat-market"))
+        viewModel.onTitleChanged("  Market Alışverişi  ")
+        viewModel.onNoteChanged("  Önemli Not  ")
+
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertNotNull(trxRepo.lastCreatedTransaction)
+        assertEquals("Market Alışverişi", trxRepo.lastCreatedTransaction?.description)
+        assertEquals("Önemli Not", trxRepo.lastCreatedTransaction?.note)
 
         collectJob.cancel()
     }
@@ -815,7 +941,7 @@ class TransactionFormViewModelTest {
     }
 
     @Test
-    fun submit_singleTransaction_invokesAddTransactionUseCase_andEmitsNavigateBack() = runTest {
+    fun submit_singleTransaction_invokesAddTransactionUseCase_andEmitsTransactionCreated() = runTest {
         catRepo.activeCategoriesFlow.value = listOf(sampleActiveExpenseCategory)
         val viewModel = createViewModel(TransactionFormRoute(null))
 
@@ -826,7 +952,8 @@ class TransactionFormViewModelTest {
 
         viewModel.onAmountChanged("120,50")
         viewModel.onCategoryChanged(EntityId("cat-market"))
-        viewModel.onDescriptionChanged("Market alışverişi")
+        viewModel.onTitleChanged("Market alışverişi")
+        viewModel.onNoteChanged("Haftalık pazar")
         viewModel.submit()
         advanceUntilIdle()
 
@@ -834,15 +961,17 @@ class TransactionFormViewModelTest {
         assertEquals(12050L, trxRepo.lastCreatedTransaction?.amount?.amountMinor)
         assertEquals(EntityId("cat-market"), trxRepo.lastCreatedTransaction?.categoryId)
         assertEquals("Market alışverişi", trxRepo.lastCreatedTransaction?.description)
+        assertEquals("Haftalık pazar", trxRepo.lastCreatedTransaction?.note)
         assertEquals(1, events.size)
-        assertEquals(TransactionFormEvent.NavigateBack, events[0])
+        val event = events[0] as TransactionFormEvent.TransactionCreated
+        assertEquals(trxRepo.lastCreatedTransaction?.id, event.transactionId)
 
         collectJob.cancel()
         eventJob.cancel()
     }
 
     @Test
-    fun submit_installmentGroup_invokesAddInstallmentGroupUseCase_andEmitsNavigateBack() = runTest {
+    fun submit_installmentGroup_invokesAddInstallmentGroupUseCase_andEmitsTransactionCreated() = runTest {
         catRepo.activeCategoriesFlow.value = listOf(sampleActiveExpenseCategory)
         val viewModel = createViewModel(TransactionFormRoute(null))
 
@@ -853,6 +982,7 @@ class TransactionFormViewModelTest {
 
         viewModel.onAmountChanged("3000")
         viewModel.onCategoryChanged(EntityId("cat-market"))
+        viewModel.onTitleChanged("Mobilya")
         viewModel.onPaymentMethodChanged(PaymentMethod.CREDIT_CARD)
         viewModel.onInstallmentToggle(true)
         viewModel.onInstallmentCountChanged("3")
@@ -863,7 +993,7 @@ class TransactionFormViewModelTest {
         assertEquals(3, trxRepo.lastCreatedInstallments?.size)
         assertEquals(100000L, trxRepo.lastCreatedInstallments?.get(0)?.amount?.amountMinor)
         assertEquals(1, events.size)
-        assertEquals(TransactionFormEvent.NavigateBack, events[0])
+        assertTrue(events[0] is TransactionFormEvent.TransactionCreated)
 
         collectJob.cancel()
         eventJob.cancel()
@@ -948,6 +1078,7 @@ class TransactionFormViewModelTest {
 
         viewModel.onAmountChanged("100")
         viewModel.onCategoryChanged(EntityId("cat-market"))
+        viewModel.onTitleChanged("Market")
 
         viewModel.submit()
         viewModel.submit() // second rapid submit
@@ -968,6 +1099,7 @@ class TransactionFormViewModelTest {
 
         viewModel.onAmountChanged("100")
         viewModel.onCategoryChanged(EntityId("cat-market"))
+        viewModel.onTitleChanged("Market")
 
         trxRepo.shouldFailWith = null
         viewModel.submit()
@@ -1003,5 +1135,364 @@ class TransactionFormViewModelTest {
 
         collectJob.cancel()
         eventJob.cancel()
+    }
+
+    @Test
+    fun split_personalAndIncomeMode_doesNotRequireOrShowSplit() = runTest {
+        val wsId = EntityId("ws-1")
+        val sampleMember = WorkspaceMember(
+            workspaceId = wsId,
+            userId = EntityId("user-1"),
+            role = WorkspaceRole.OWNER,
+            joinedAt = Instant.parse("2026-08-01T00:00:00Z"),
+        )
+        workspaceRepo.membersFlow.value = mapOf(wsId to listOf(sampleMember))
+
+        // 1. Personal mode (activeWorkspaceId == null)
+        workspaceRepo.activeWorkspaceFlow.value = null
+        val personalVm = createViewModel(TransactionFormRoute(null))
+        val job1 = launch(UnconfinedTestDispatcher()) { personalVm.uiState.collect { } }
+        advanceUntilIdle()
+
+        assertFalse(personalVm.uiState.value.isSharedExpense)
+        assertTrue(personalVm.uiState.value.workspaceMembers.isEmpty())
+        assertNull(personalVm.uiState.value.selectedPaidByUserId)
+        assertTrue(personalVm.uiState.value.selectedParticipantUserIds.isEmpty())
+        job1.cancel()
+
+        // 2. Shared INCOME mode
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(
+            id = wsId,
+            name = "Ev Bütçesi",
+            ownerId = EntityId("user-1"),
+            createdAt = Instant.parse("2026-08-01T00:00:00Z"),
+        )
+        val incomeVm = createViewModel(TransactionFormRoute(null))
+        val job2 = launch(UnconfinedTestDispatcher()) { incomeVm.uiState.collect { } }
+        advanceUntilIdle()
+
+        incomeVm.onTypeChanged(TransactionType.INCOME)
+        advanceUntilIdle()
+
+        assertFalse(incomeVm.uiState.value.isSharedExpense)
+        assertTrue(incomeVm.uiState.value.workspaceMembers.isEmpty())
+        job2.cancel()
+    }
+
+    @Test
+    fun split_sharedExpenseMode_loadsMembersFromFlow() = runTest {
+        val wsId = EntityId("ws-1")
+        val member1 = WorkspaceMember(
+            workspaceId = wsId,
+            userId = EntityId("user-1"),
+            role = WorkspaceRole.OWNER,
+            joinedAt = Instant.parse("2026-08-01T00:00:00Z"),
+        )
+        val member2 = WorkspaceMember(
+            workspaceId = wsId,
+            userId = EntityId("user-2"),
+            role = WorkspaceRole.EDITOR,
+            joinedAt = Instant.parse("2026-08-02T00:00:00Z"),
+        )
+        workspaceRepo.membersFlow.value = mapOf(wsId to listOf(member1, member2))
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(
+            id = wsId,
+            name = "Ev Bütçesi",
+            ownerId = EntityId("user-1"),
+            createdAt = Instant.parse("2026-08-01T00:00:00Z"),
+        )
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.isSharedExpense)
+        assertEquals(2, state.workspaceMembers.size)
+        // Current user (user-1) comes first
+        assertEquals(EntityId("user-1"), state.workspaceMembers[0].userId)
+        assertTrue(state.workspaceMembers[0].isCurrentUser)
+        assertEquals(EntityId("user-2"), state.workspaceMembers[1].userId)
+        assertFalse(state.workspaceMembers[1].isCurrentUser)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun split_newSharedExpense_defaultsActiveUserAsPayerAndParticipant() = runTest {
+        val wsId = EntityId("ws-1")
+        val member1 = WorkspaceMember(
+            workspaceId = wsId,
+            userId = EntityId("user-1"),
+            role = WorkspaceRole.OWNER,
+            joinedAt = Instant.parse("2026-08-01T00:00:00Z"),
+        )
+        val member2 = WorkspaceMember(
+            workspaceId = wsId,
+            userId = EntityId("user-2"),
+            role = WorkspaceRole.EDITOR,
+            joinedAt = Instant.parse("2026-08-02T00:00:00Z"),
+        )
+        workspaceRepo.membersFlow.value = mapOf(wsId to listOf(member1, member2))
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(
+            id = wsId,
+            name = "Ev Bütçesi",
+            ownerId = EntityId("user-1"),
+            createdAt = Instant.parse("2026-08-01T00:00:00Z"),
+        )
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(EntityId("user-1"), state.selectedPaidByUserId)
+        assertEquals(setOf(EntityId("user-1")), state.selectedParticipantUserIds)
+        assertTrue(state.canSubmitSplit)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun split_selectingPayer_automaticallyAddsToParticipantList() = runTest {
+        val wsId = EntityId("ws-1")
+        val member1 = WorkspaceMember(workspaceId = wsId, userId = EntityId("user-1"), role = WorkspaceRole.OWNER, joinedAt = Instant.parse("2026-08-01T00:00:00Z"))
+        val member2 = WorkspaceMember(workspaceId = wsId, userId = EntityId("user-2"), role = WorkspaceRole.EDITOR, joinedAt = Instant.parse("2026-08-02T00:00:00Z"))
+        workspaceRepo.membersFlow.value = mapOf(wsId to listOf(member1, member2))
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(id = wsId, name = "Ev Bütçesi", ownerId = EntityId("user-1"), createdAt = Instant.parse("2026-08-01T00:00:00Z"))
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        // Select user-2 as payer
+        viewModel.onPaidByUserSelected(EntityId("user-2"))
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(EntityId("user-2"), state.selectedPaidByUserId)
+        assertTrue(state.selectedParticipantUserIds.contains(EntityId("user-2")))
+        assertTrue(state.canSubmitSplit)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun split_payerCannotBeRemovedFromParticipantList() = runTest {
+        val wsId = EntityId("ws-1")
+        val member1 = WorkspaceMember(workspaceId = wsId, userId = EntityId("user-1"), role = WorkspaceRole.OWNER, joinedAt = Instant.parse("2026-08-01T00:00:00Z"))
+        val member2 = WorkspaceMember(workspaceId = wsId, userId = EntityId("user-2"), role = WorkspaceRole.EDITOR, joinedAt = Instant.parse("2026-08-02T00:00:00Z"))
+        workspaceRepo.membersFlow.value = mapOf(wsId to listOf(member1, member2))
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(id = wsId, name = "Ev Bütçesi", ownerId = EntityId("user-1"), createdAt = Instant.parse("2026-08-01T00:00:00Z"))
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        // Payer is user-1, try untoggling user-1
+        viewModel.onParticipantToggled(EntityId("user-1"))
+        advanceUntilIdle()
+
+        // user-1 must still remain in participant list
+        assertTrue(viewModel.uiState.value.selectedParticipantUserIds.contains(EntityId("user-1")))
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun split_uncheckingNonPayerParticipant_updatesList_andEmptyParticipantsBlocksSubmit() = runTest {
+        val wsId = EntityId("ws-1")
+        val member1 = WorkspaceMember(workspaceId = wsId, userId = EntityId("user-1"), role = WorkspaceRole.OWNER, joinedAt = Instant.parse("2026-08-01T00:00:00Z"))
+        val member2 = WorkspaceMember(workspaceId = wsId, userId = EntityId("user-2"), role = WorkspaceRole.EDITOR, joinedAt = Instant.parse("2026-08-02T00:00:00Z"))
+        workspaceRepo.membersFlow.value = mapOf(wsId to listOf(member1, member2))
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(id = wsId, name = "Ev Bütçesi", ownerId = EntityId("user-1"), createdAt = Instant.parse("2026-08-01T00:00:00Z"))
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        // Add user-2
+        viewModel.onParticipantToggled(EntityId("user-2"))
+        advanceUntilIdle()
+        assertEquals(setOf(EntityId("user-1"), EntityId("user-2")), viewModel.uiState.value.selectedParticipantUserIds)
+
+        // Remove user-2
+        viewModel.onParticipantToggled(EntityId("user-2"))
+        advanceUntilIdle()
+        assertEquals(setOf(EntityId("user-1")), viewModel.uiState.value.selectedParticipantUserIds)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun split_editMode_loadsExistingSplitDataAccurately() = runTest {
+        val wsId = EntityId("ws-1")
+        val member1 = WorkspaceMember(workspaceId = wsId, userId = EntityId("user-1"), role = WorkspaceRole.OWNER, joinedAt = Instant.parse("2026-08-01T00:00:00Z"))
+        val member2 = WorkspaceMember(workspaceId = wsId, userId = EntityId("user-2"), role = WorkspaceRole.EDITOR, joinedAt = Instant.parse("2026-08-02T00:00:00Z"))
+        workspaceRepo.membersFlow.value = mapOf(wsId to listOf(member1, member2))
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(id = wsId, name = "Ev Bütçesi", ownerId = EntityId("user-1"), createdAt = Instant.parse("2026-08-01T00:00:00Z"))
+
+        val category = sampleActiveExpenseCategory.copy(workspaceId = wsId)
+        val existingTrx = Transaction(
+            id = EntityId("trx-split"),
+            ownerId = EntityId("user-1"),
+            workspaceId = wsId,
+            amount = Money(20000L, Currency.TRY),
+            type = TransactionType.EXPENSE,
+            categoryId = category.id,
+            description = "Ortak Yemek",
+            paymentMethod = PaymentMethod.CREDIT_CARD,
+            transactionDate = fixedToday,
+            receiptPath = null,
+            installment = null,
+            createdAt = fixedInstant,
+            paidByUserId = EntityId("user-2"),
+            participantUserIds = listOf(EntityId("user-1"), EntityId("user-2")),
+        )
+        trxRepo.transactionsFlow.value = listOf(existingTrx)
+        catRepo.activeCategoriesFlow.value = listOf(category)
+        catRepo.historyCategoriesFlow.value = listOf(category)
+
+        val viewModel = createViewModel(TransactionFormRoute("trx-split"))
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(EntityId("user-2"), state.selectedPaidByUserId)
+        assertEquals(setOf(EntityId("user-1"), EntityId("user-2")), state.selectedParticipantUserIds)
+        assertTrue(state.canSubmitSplit)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun split_memberFlowChange_reconcilesSelectedPayerAndParticipantsSafely() = runTest {
+        val wsId = EntityId("ws-1")
+        val member1 = WorkspaceMember(workspaceId = wsId, userId = EntityId("user-1"), role = WorkspaceRole.OWNER, joinedAt = Instant.parse("2026-08-01T00:00:00Z"))
+        val member2 = WorkspaceMember(workspaceId = wsId, userId = EntityId("user-2"), role = WorkspaceRole.EDITOR, joinedAt = Instant.parse("2026-08-02T00:00:00Z"))
+        workspaceRepo.membersFlow.value = mapOf(wsId to listOf(member1, member2))
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(id = wsId, name = "Ev Bütçesi", ownerId = EntityId("user-1"), createdAt = Instant.parse("2026-08-01T00:00:00Z"))
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        // Select user-2 as payer
+        viewModel.onPaidByUserSelected(EntityId("user-2"))
+        advanceUntilIdle()
+        assertEquals(EntityId("user-2"), viewModel.uiState.value.selectedPaidByUserId)
+
+        // Member 2 is removed from workspace
+        workspaceRepo.membersFlow.value = mapOf(wsId to listOf(member1))
+        advanceUntilIdle()
+
+        // Reconciler should fallback payer to user-1 safely
+        val state = viewModel.uiState.value
+        assertEquals(EntityId("user-1"), state.selectedPaidByUserId)
+        assertEquals(setOf(EntityId("user-1")), state.selectedParticipantUserIds)
+        assertFalse(state.selectedParticipantUserIds.contains(EntityId("user-2")))
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun split_invalidSplit_blocksSubmitWithoutCallingRepository() = runTest {
+        val wsId = EntityId("ws-1")
+        val member1 = WorkspaceMember(workspaceId = wsId, userId = EntityId("user-1"), role = WorkspaceRole.OWNER, joinedAt = Instant.parse("2026-08-01T00:00:00Z"))
+        workspaceRepo.membersFlow.value = mapOf(wsId to listOf(member1))
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(id = wsId, name = "Ev Bütçesi", ownerId = EntityId("user-1"), createdAt = Instant.parse("2026-08-01T00:00:00Z"))
+
+        val category = sampleActiveExpenseCategory.copy(workspaceId = wsId)
+        catRepo.activeCategoriesFlow.value = listOf(category)
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onAmountChanged("100")
+        viewModel.onCategoryChanged(category.id)
+
+        // All workspace members leave -> empty member list
+        workspaceRepo.membersFlow.value = mapOf(wsId to emptyList())
+        advanceUntilIdle()
+
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertNotNull(viewModel.uiState.value.splitError)
+        assertNull(trxRepo.lastCreatedTransaction)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun split_validSubmit_passesSplitFieldsToCommandAndRepository() = runTest {
+        val wsId = EntityId("ws-1")
+        val member1 = WorkspaceMember(workspaceId = wsId, userId = EntityId("user-1"), role = WorkspaceRole.OWNER, joinedAt = Instant.parse("2026-08-01T00:00:00Z"))
+        val member2 = WorkspaceMember(workspaceId = wsId, userId = EntityId("user-2"), role = WorkspaceRole.EDITOR, joinedAt = Instant.parse("2026-08-02T00:00:00Z"))
+        workspaceRepo.membersFlow.value = mapOf(wsId to listOf(member1, member2))
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(id = wsId, name = "Ev Bütçesi", ownerId = EntityId("user-1"), createdAt = Instant.parse("2026-08-01T00:00:00Z"))
+
+        val category = sampleActiveExpenseCategory.copy(workspaceId = wsId)
+        catRepo.activeCategoriesFlow.value = listOf(category)
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        val events = mutableListOf<TransactionFormEvent>()
+        val eventJob = launch(UnconfinedTestDispatcher()) { viewModel.events.collect { events.add(it) } }
+        advanceUntilIdle()
+
+        viewModel.onAmountChanged("500")
+        viewModel.onTitleChanged("Ortak Harcama")
+        viewModel.onCategoryChanged(category.id)
+        viewModel.onPaidByUserSelected(EntityId("user-2"))
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertNotNull(trxRepo.lastCreatedTransaction)
+        assertEquals(EntityId("user-2"), trxRepo.lastCreatedTransaction?.paidByUserId)
+        assertEquals(listOf(EntityId("user-1"), EntityId("user-2")), trxRepo.lastCreatedTransaction?.participantUserIds?.sortedBy { it.value })
+        assertEquals(1, events.size)
+        assertTrue(events[0] is TransactionFormEvent.TransactionCreated)
+
+        collectJob.cancel()
+        eventJob.cancel()
+    }
+
+    @Test
+    fun split_validInstallmentSubmit_passesSplitFieldsToAddInstallmentGroupCommand() = runTest {
+        val wsId = EntityId("ws-1")
+        val member1 = WorkspaceMember(workspaceId = wsId, userId = EntityId("user-1"), role = WorkspaceRole.OWNER, joinedAt = Instant.parse("2026-08-01T00:00:00Z"))
+        val member2 = WorkspaceMember(workspaceId = wsId, userId = EntityId("user-2"), role = WorkspaceRole.EDITOR, joinedAt = Instant.parse("2026-08-02T00:00:00Z"))
+        workspaceRepo.membersFlow.value = mapOf(wsId to listOf(member1, member2))
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(id = wsId, name = "Ev Bütçesi", ownerId = EntityId("user-1"), createdAt = Instant.parse("2026-08-01T00:00:00Z"))
+
+        val category = sampleActiveExpenseCategory.copy(workspaceId = wsId)
+        catRepo.activeCategoriesFlow.value = listOf(category)
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onAmountChanged("600")
+        viewModel.onTitleChanged("Taksitli Ortak Harcama")
+        viewModel.onCategoryChanged(category.id)
+        viewModel.onPaymentMethodChanged(PaymentMethod.CREDIT_CARD)
+        viewModel.onInstallmentToggle(true)
+        viewModel.onInstallmentCountChanged("3")
+        viewModel.onPaidByUserSelected(EntityId("user-1"))
+        viewModel.onParticipantToggled(EntityId("user-2"))
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertNotNull(trxRepo.lastCreatedInstallments)
+        val installments = trxRepo.lastCreatedInstallments!!
+        assertEquals(3, installments.size)
+        for (inst in installments) {
+            assertEquals(EntityId("user-1"), inst.paidByUserId)
+            assertEquals(listOf(EntityId("user-1"), EntityId("user-2")), inst.participantUserIds.sortedBy { it.value })
+        }
+
+        collectJob.cancel()
     }
 }

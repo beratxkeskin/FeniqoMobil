@@ -653,6 +653,8 @@ private class FakeBudgetOfflineWriteQueueHolder(
         override suspend fun upsertTransactionTagRows(entities: List<TransactionTagCrossRef>) {}
         override suspend fun upsertRecurringTransactionRow(entity: com.feniqo.mobile.data.local.entity.RecurringTransactionEntity) {}
         override suspend fun upsertSubscriptionRow(entity: com.feniqo.mobile.data.local.entity.SubscriptionEntity) {}
+        override suspend fun upsertAssetRow(entity: com.feniqo.mobile.data.local.entity.AssetEntity) {}
+        override suspend fun deleteAssetRow(id: String): Int = 0
         override suspend fun upsertRecurringOccurrenceRow(entity: com.feniqo.mobile.data.local.entity.RecurringTransactionOccurrenceEntity) {}
         override suspend fun getOccurrence(recurringTransactionId: String, dueDate: String): com.feniqo.mobile.data.local.entity.RecurringTransactionOccurrenceEntity? = null
         override suspend fun getRecurringTransactionById(id: String): com.feniqo.mobile.data.local.entity.RecurringTransactionEntity? = null
@@ -678,6 +680,8 @@ private class FakeBudgetOfflineWriteQueueHolder(
         override suspend fun rebaseBudgetVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseRecurringTransactionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseSubscriptionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun rebaseAssetVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun markAssetSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
         override suspend fun deleteRecurringTransactionRow(id: String): Int = 0
         override suspend fun deleteSubscriptionRow(id: String): Int = 0
         override suspend fun markCategorySyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0

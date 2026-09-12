@@ -147,6 +147,8 @@ class OfflineFirstSubscriptionRepositoryTest {
             if (throwCancellationOnMutate) throw CancellationException("Simulated cancellation")
             subscriptionDao.upsert(entity)
         }
+        override suspend fun upsertAssetRow(entity: com.feniqo.mobile.data.local.entity.AssetEntity) = Unit
+        override suspend fun deleteAssetRow(id: String): Int = 0
         override suspend fun upsertRecurringOccurrenceRow(entity: RecurringTransactionOccurrenceEntity) {}
         override suspend fun getOccurrence(recurringTransactionId: String, dueDate: String): RecurringTransactionOccurrenceEntity? = null
         override suspend fun getRecurringTransactionById(id: String): RecurringTransactionEntity? = null
@@ -186,6 +188,8 @@ class OfflineFirstSubscriptionRepositoryTest {
         override suspend fun rebaseBudgetVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseRecurringTransactionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseSubscriptionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun rebaseAssetVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun markAssetSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
         override suspend fun deleteRecurringTransactionRow(id: String): Int = 0
         override suspend fun deleteSubscriptionRow(id: String): Int {
             subscriptionDao.subscriptions.remove(id)
@@ -1277,4 +1281,3 @@ class OfflineFirstSubscriptionRepositoryTest {
         assertEquals(AppError.Validation("subscription_not_found"), deleteOtherWsResult.error)
     }
 }
-

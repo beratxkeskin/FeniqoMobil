@@ -32,6 +32,9 @@ class TransactionFormUiHelperTest {
         assertEquals("Açıklama 500 karakterden uzun olamaz.", TransactionFormFieldError.DESCRIPTION_TOO_LONG.toDisplayText())
         assertEquals("Taksit sayısı 2 ile 60 arasında olmalıdır.", TransactionFormFieldError.INSTALLMENT_COUNT_INVALID.toDisplayText())
         assertEquals("Toplam tutar seçilen taksit sayısı için çok küçük.", TransactionFormFieldError.INSTALLMENT_AMOUNT_TOO_SMALL.toDisplayText())
+        assertEquals("Lütfen harcamayı ödeyen kişiyi seçin.", TransactionFormFieldError.SPLIT_PAYER_REQUIRED.toDisplayText())
+        assertEquals("En az bir katılımcı seçilmelidir.", TransactionFormFieldError.SPLIT_PARTICIPANTS_REQUIRED.toDisplayText())
+        assertEquals("Ödeyen kişi katılımcılar arasında olmalıdır.", TransactionFormFieldError.SPLIT_PAYER_NOT_IN_PARTICIPANTS.toDisplayText())
     }
 
     @Test
@@ -67,5 +70,83 @@ class TransactionFormUiHelperTest {
             paymentMethod = PaymentMethod.CASH,
         )
         assertFalse(state4.isInstallmentOptionAvailable)
+    }
+
+    @Test
+    fun splitDerivedProperties_behaveCorrectly() {
+        val user1 = com.feniqo.mobile.domain.model.EntityId("user-1")
+        val user2 = com.feniqo.mobile.domain.model.EntityId("user-2")
+        val wsId = com.feniqo.mobile.domain.model.EntityId("ws-1")
+
+        val members = listOf(
+            com.feniqo.mobile.presentation.workspace.WorkspaceMemberUiModel(
+                userId = user1,
+                displayName = "Ahmet",
+                role = com.feniqo.mobile.domain.model.WorkspaceRole.OWNER,
+                isCurrentUser = true,
+            ),
+            com.feniqo.mobile.presentation.workspace.WorkspaceMemberUiModel(
+                userId = user2,
+                displayName = "Ayşe",
+                role = com.feniqo.mobile.domain.model.WorkspaceRole.EDITOR,
+                isCurrentUser = false,
+            ),
+        )
+
+        // 1. Personal mode -> isSharedExpense is false, canSubmitSplit is true
+        val personalState = TransactionFormUiState(
+            activeWorkspaceId = null,
+            type = TransactionType.EXPENSE,
+        )
+        assertFalse(personalState.isSharedExpense)
+        assertTrue(personalState.canSubmitSplit)
+
+        // 2. Shared INCOME -> isSharedExpense is false, canSubmitSplit is true
+        val sharedIncomeState = TransactionFormUiState(
+            activeWorkspaceId = wsId,
+            type = TransactionType.INCOME,
+        )
+        assertFalse(sharedIncomeState.isSharedExpense)
+        assertTrue(sharedIncomeState.canSubmitSplit)
+
+        // 3. Shared EXPENSE while loading members -> canSubmitSplit is false
+        val loadingState = TransactionFormUiState(
+            activeWorkspaceId = wsId,
+            type = TransactionType.EXPENSE,
+            isLoadingWorkspaceMembers = true,
+            workspaceMembers = members,
+            selectedPaidByUserId = user1,
+            selectedParticipantUserIds = setOf(user1),
+        )
+        assertTrue(loadingState.isSharedExpense)
+        assertFalse(loadingState.canSubmitSplit)
+
+        // 4. Shared EXPENSE with valid payer and participants -> canSubmitSplit is true
+        val validState = TransactionFormUiState(
+            activeWorkspaceId = wsId,
+            type = TransactionType.EXPENSE,
+            isLoadingWorkspaceMembers = false,
+            workspaceMembers = members,
+            selectedPaidByUserId = user1,
+            selectedParticipantUserIds = setOf(user1, user2),
+        )
+        assertTrue(validState.isSharedExpense)
+        assertTrue(validState.canSubmitSplit)
+        assertEquals(2, validState.eligibleSplitMembers.size)
+
+        // 5. Shared EXPENSE without payer -> canSubmitSplit is false
+        val noPayerState = validState.copy(selectedPaidByUserId = null)
+        assertFalse(noPayerState.canSubmitSplit)
+
+        // 6. Shared EXPENSE without participants -> canSubmitSplit is false
+        val noParticipantsState = validState.copy(selectedParticipantUserIds = emptySet())
+        assertFalse(noParticipantsState.canSubmitSplit)
+
+        // 7. Shared EXPENSE where payer is not in participants -> canSubmitSplit is false
+        val payerNotInParticipantsState = validState.copy(
+            selectedPaidByUserId = user1,
+            selectedParticipantUserIds = setOf(user2),
+        )
+        assertFalse(payerNotInParticipantsState.canSubmitSplit)
     }
 }

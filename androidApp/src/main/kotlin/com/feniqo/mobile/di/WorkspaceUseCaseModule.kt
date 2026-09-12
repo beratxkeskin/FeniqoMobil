@@ -101,4 +101,17 @@ object WorkspaceUseCaseModule {
     fun provideRemoveWorkspaceMemberUseCase(
         workspaceRepository: WorkspaceRepository,
     ): RemoveWorkspaceMemberUseCase = RemoveWorkspaceMemberUseCase(workspaceRepository)
+
+    @Provides
+    @Singleton
+    fun provideObserveWorkspaceSettlementUseCase(
+        workspaceRepository: com.feniqo.mobile.domain.repository.WorkspaceRepository,
+        transactionRepository: com.feniqo.mobile.domain.repository.TransactionRepository,
+        authRepository: com.feniqo.mobile.domain.repository.AuthRepository,
+    ): com.feniqo.mobile.domain.usecase.ObserveWorkspaceSettlementUseCase =
+        com.feniqo.mobile.domain.usecase.ObserveWorkspaceSettlementUseCase(
+            workspaceRepository = workspaceRepository,
+            transactionRepository = transactionRepository,
+            authRepository = authRepository,
+        )
 }

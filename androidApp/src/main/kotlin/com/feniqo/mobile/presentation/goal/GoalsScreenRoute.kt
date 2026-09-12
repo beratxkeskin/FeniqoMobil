@@ -31,6 +31,7 @@ fun GoalsScreenRoute(
             onRetry = { viewModel.onIntent(GoalsIntent.Retry) },
             onAddGoal = onAddGoal,
             onGoalClick = onGoalClick,
+            onFilterSelected = { filter -> viewModel.onIntent(GoalsIntent.SelectFilter(filter)) },
             modifier = Modifier.fillMaxSize(),
         )
     }

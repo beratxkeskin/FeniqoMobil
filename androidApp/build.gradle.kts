@@ -50,7 +50,12 @@ dependencies {
     implementation(project(":sharedUI"))
 
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.biometric)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.mlkit.text.recognition)
 
     implementation(libs.compose.runtime)
     implementation(libs.compose.foundation)
@@ -60,6 +65,7 @@ dependencies {
 
     implementation(libs.compose.uiToolingPreview)
     debugImplementation(libs.compose.uiTooling)
+    debugImplementation(libs.compose.ui.test.manifest)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
@@ -76,6 +82,7 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.work.testing)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.testExt.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

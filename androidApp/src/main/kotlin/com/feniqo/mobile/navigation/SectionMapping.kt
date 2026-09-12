@@ -8,13 +8,13 @@ import com.feniqo.mobile.presentation.shell.AppSection
 fun AppSection.toTopLevelDestination(): TopLevelDestination = when (this) {
     AppSection.DASHBOARD -> TopLevelDestination.DASHBOARD
     AppSection.TRANSACTIONS -> TopLevelDestination.TRANSACTIONS
-    AppSection.PLAN -> TopLevelDestination.PLAN
+    AppSection.BUDGET -> TopLevelDestination.BUDGET
     AppSection.MORE -> TopLevelDestination.MORE
 }
 
 fun TopLevelDestination.toAppSection(): AppSection = when (this) {
     TopLevelDestination.DASHBOARD -> AppSection.DASHBOARD
     TopLevelDestination.TRANSACTIONS -> AppSection.TRANSACTIONS
-    TopLevelDestination.PLAN -> AppSection.PLAN
+    TopLevelDestination.BUDGET -> AppSection.BUDGET
     TopLevelDestination.MORE -> AppSection.MORE
 }

@@ -5,6 +5,7 @@ import com.feniqo.mobile.data.local.dao.SyncOperationDao
 import com.feniqo.mobile.data.local.dao.TransactionKeepingTagsMutationUnit
 import com.feniqo.mobile.data.local.dao.TransactionMutationUnit
 import com.feniqo.mobile.data.local.entity.BudgetEntity
+import com.feniqo.mobile.data.local.entity.AssetEntity
 import com.feniqo.mobile.data.local.entity.CategoryEntity
 import com.feniqo.mobile.data.local.entity.DebtEntity
 
@@ -415,6 +416,25 @@ class OfflineWriteQueue(
         return result.operationId
     }
 
+    suspend fun enqueueAssetV2(
+        entity: AssetEntity,
+        type: OutboxOperationType,
+        payloadJson: String,
+    ): String {
+        validateMutation(entity.sync, type)
+        val result = mutationDao.mutateAssetV2(
+            entity = entity,
+            type = type,
+            payloadJson = payloadJson,
+            operationIdFactory = operationIdFactory,
+            nowEpochMillis = nowEpochMillisProvider(),
+        )
+        if (result.decision != com.feniqo.mobile.data.local.dao.V2EnqueueDecision.HARD_DELETED) {
+            syncScheduler?.scheduleOutboxSync()
+        }
+        return result.operationId
+    }
+
     suspend fun enqueueGoalV2(
         entity: GoalEntity,
         type: OutboxOperationType,
@@ -650,6 +670,30 @@ class OfflineWriteQueue(
 
         val operationIds = mutationDao.mutateTransactionCreatesV2(
             inputs = inputs,
+            operationIdFactory = operationIdFactory,
+            nowEpochMillis = nowEpochMillisProvider(),
+        )
+        syncScheduler?.scheduleOutboxSync()
+        return operationIds
+    }
+
+    suspend fun enqueuePersonalBackupV1(
+        categoryInputs: List<com.feniqo.mobile.data.local.dao.BackupCategoryCreateInputV1>,
+        transactionInputs: List<com.feniqo.mobile.data.local.dao.TransactionCreateInputV2>,
+    ): List<String> {
+        require(categoryInputs.isNotEmpty() || transactionInputs.isNotEmpty()) { "Yedek boş olamaz." }
+        categoryInputs.forEach {
+            validateMutation(it.entity.sync, OutboxOperationType.CREATE)
+            require(it.entity.ownerId != null && it.entity.workspaceId == null && !it.entity.isDefault)
+            require(it.payloadJson.isNotBlank())
+        }
+        transactionInputs.forEach {
+            validateMutation(it.entity.sync, OutboxOperationType.CREATE)
+            require(it.entity.workspaceId == null && it.payloadJson.isNotBlank())
+        }
+        val operationIds = mutationDao.importPersonalBackupV1(
+            categoryInputs = categoryInputs,
+            transactionInputs = transactionInputs,
             operationIdFactory = operationIdFactory,
             nowEpochMillis = nowEpochMillisProvider(),
         )

@@ -5,11 +5,17 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.feniqo.mobile.data.local.database.FeniqoDatabase
 import com.feniqo.mobile.data.local.database.FeniqoDatabaseConstructor
+import com.feniqo.mobile.data.local.database.DefaultCategorySeeder
 import com.feniqo.mobile.data.mapper.newSyncMetadata
 import com.feniqo.mobile.data.mapper.toEntity
 import com.feniqo.mobile.data.local.entity.CategoryEntity
+import com.feniqo.mobile.data.local.entity.AssetEntity
 import com.feniqo.mobile.data.local.outbox.OfflineWriteQueue
 import com.feniqo.mobile.data.local.outbox.OutboxOperationType
+import com.feniqo.mobile.data.remote.dto.TransactionDto
+import com.feniqo.mobile.data.sync.OutboxExecutionResult
+import com.feniqo.mobile.data.sync.OutboxProcessor
+import com.feniqo.mobile.data.sync.RoomOutboxQueue
 import com.feniqo.mobile.domain.model.Budget
 import com.feniqo.mobile.domain.model.Category
 import com.feniqo.mobile.domain.model.CategoryColor
@@ -32,6 +38,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Instant
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.junit.Rule
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -50,6 +58,314 @@ class RoomDaoTest {
         InstrumentationRegistry.getInstrumentation(),
         FeniqoDatabase::class.java,
     )
+
+    @Test
+    fun migration_1_to_15_preserves_legacy_transaction_and_keeps_sync_tables_empty() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val name = "migration_test_v1_to_v15.db"
+        val path = context.getDatabasePath(name).absolutePath
+        context.deleteDatabase(name)
+        val v1 = migrationHelper.createDatabase(path, 1)
+        try {
+            v1.execSQL(
+                """INSERT INTO categories (
+                    id,owner_id,workspace_id,scope_key,name,normalized_name,slug,type_code,color_hex,
+                    icon_key,is_default,created_at_epoch_ms,sync_status,updated_at_epoch_ms,
+                    local_updated_at_epoch_ms,deleted_at_epoch_ms,version,base_version,last_sync_error
+                ) VALUES ('legacy-cat','legacy-user',NULL,'legacy-user','Market','market','market',
+                    'EXPENSE','#123456',NULL,0,1000,'SYNCED',1100,1200,NULL,4,4,NULL)""".trimIndent(),
+            )
+            v1.execSQL(
+                """INSERT INTO transactions (
+                    id,owner_id,workspace_id,amount_minor,currency_code,type_code,category_id,
+                    description,search_text,payment_method_code,transaction_date,receipt_path,
+                    installment_number,total_installments,installment_group_id,created_at_epoch_ms,
+                    sync_status,updated_at_epoch_ms,local_updated_at_epoch_ms,deleted_at_epoch_ms,
+                    version,base_version,last_sync_error
+                ) VALUES ('legacy-tx','legacy-user',NULL,12550,'TRY','EXPENSE','legacy-cat',
+                    'market','market','DEBIT_CARD','2026-08-05',NULL,NULL,NULL,NULL,1000,
+                    'SYNCED',1100,1200,NULL,5,5,NULL)""".trimIndent(),
+            )
+        } finally {
+            v1.close()
+        }
+        val migrated = migrationHelper.runMigrationsAndValidate(
+            path, 15, true,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_1_2,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_2_3,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_3_4,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_4_5,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_5_6,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_6_7,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_7_8,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_8_9,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_9_10,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_10_11,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_11_12,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_12_13,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_13_14,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_14_15,
+        )
+        try {
+            migrated.query(
+                """SELECT amount_minor,currency_code,paid_by_user_id,participant_user_ids_json,
+                    sync_status,version,note FROM transactions WHERE id='legacy-tx'""".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals(12_550L, it.getLong(0))
+                assertEquals("TRY", it.getString(1))
+                assertEquals("legacy-user", it.getString(2))
+                assertEquals("[\"legacy-user\"]", it.getString(3))
+                assertEquals("SYNCED", it.getString(4))
+                assertEquals(5L, it.getLong(5))
+                assertNull(it.getString(6))
+            }
+            for (table in listOf("sync_operations", "sync_cursors", "sync_conflicts", "sync_user_states")) {
+                migrated.query("SELECT COUNT(*) FROM $table").use {
+                    assertTrue(it.moveToFirst())
+                    assertEquals(0L, it.getLong(0), table)
+                }
+            }
+        } finally {
+            migrated.close()
+            context.deleteDatabase(name)
+        }
+    }
+
+    @Test
+    fun migration_14_to_15_adds_note_column_and_preserves_transactions() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val name = "migration_test_v14_to_v15.db"
+        val path = context.getDatabasePath(name).absolutePath
+        context.deleteDatabase(name)
+        val v14 = migrationHelper.createDatabase(path, 14)
+        try {
+            v14.execSQL(
+                """INSERT INTO categories (
+                    id,owner_id,workspace_id,scope_key,name,normalized_name,slug,type_code,color_hex,
+                    icon_key,is_default,created_at_epoch_ms,sync_status,updated_at_epoch_ms,
+                    local_updated_at_epoch_ms,deleted_at_epoch_ms,version,base_version,last_sync_error
+                ) VALUES ('cat-14','user-14',NULL,'user-14','Market','market','market',
+                    'EXPENSE','#123456',NULL,0,1000,'SYNCED',1100,1200,NULL,1,1,NULL)""".trimIndent(),
+            )
+            v14.execSQL(
+                """INSERT INTO transactions (
+                    id,owner_id,workspace_id,amount_minor,currency_code,type_code,category_id,
+                    description,search_text,payment_method_code,transaction_date,receipt_path,
+                    installment_number,total_installments,installment_group_id,created_at_epoch_ms,
+                    sync_status,updated_at_epoch_ms,local_updated_at_epoch_ms,deleted_at_epoch_ms,
+                    version,base_version,last_sync_error
+                ) VALUES ('tx-14','user-14',NULL,15000,'TRY','EXPENSE','cat-14',
+                    'A market alışverişi','a market alisverisi','CREDIT_CARD','2026-09-10',NULL,NULL,NULL,NULL,1000,
+                    'SYNCED',1100,1200,NULL,1,1,NULL)""".trimIndent(),
+            )
+        } finally {
+            v14.close()
+        }
+
+        val migrated = migrationHelper.runMigrationsAndValidate(
+            path, 15, true,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_14_15,
+        )
+        try {
+            migrated.query(
+                "SELECT id, description, note FROM transactions WHERE id='tx-14'".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals("tx-14", it.getString(0))
+                assertEquals("A market alışverişi", it.getString(1))
+                assertNull(it.getString(2))
+            }
+
+            migrated.execSQL(
+                """INSERT INTO transactions (
+                    id,owner_id,workspace_id,amount_minor,currency_code,type_code,category_id,
+                    description,search_text,payment_method_code,transaction_date,receipt_path,
+                    installment_number,total_installments,installment_group_id,created_at_epoch_ms,
+                    note,sync_status,updated_at_epoch_ms,local_updated_at_epoch_ms,deleted_at_epoch_ms,
+                    version,base_version,last_sync_error
+                ) VALUES ('tx-15','user-14',NULL,20000,'TRY','EXPENSE','cat-14',
+                    'Kahve','kahve','CASH','2026-09-12',NULL,NULL,NULL,NULL,2000,
+                    'Özel çekirdek','SYNCED',2000,2000,NULL,1,1,NULL)""".trimIndent(),
+            )
+            migrated.query(
+                "SELECT note FROM transactions WHERE id='tx-15'".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals("Özel çekirdek", it.getString(0))
+            }
+        } finally {
+            migrated.close()
+            context.deleteDatabase(name)
+        }
+    }
+
+    @Test
+    fun offline_transaction_survives_failure_then_retry_acknowledges_and_syncs_room() = runTest {
+        val database = inMemoryDatabase()
+        try {
+            database.categoryDao().upsert(category().toEntity(SYNC))
+            var now = 1_000L
+            var sequence = 0
+            val queue = OfflineWriteQueue(
+                mutationDao = database.localMutationDao(),
+                operationDao = database.syncOperationDao(),
+                operationIdFactory = { (++sequence).toString().padStart(32, '0') },
+                nowEpochMillisProvider = { now },
+            )
+            val local = transaction().toEntity(newSyncMetadata(now))
+            val remote = TransactionDto(
+                id = local.id,
+                userId = local.ownerId,
+                paidByUserId = local.ownerId,
+                participantUserIds = listOf(local.ownerId),
+                amountMinor = local.amountMinor,
+                currency = local.currencyCode,
+                type = local.typeCode,
+                categoryId = local.categoryId,
+                description = local.description,
+                paymentMethod = local.paymentMethodCode,
+                transactionDate = local.transactionDate,
+                createdAt = "2026-08-05T00:00:00Z",
+                updatedAt = "2026-08-05T00:00:01Z",
+                version = 1L,
+            )
+            val operationId = queue.enqueueTransactionV2(
+                entity = local,
+                tags = emptyList(),
+                tagLinks = emptyList(),
+                type = OutboxOperationType.CREATE,
+                payloadJson = Json.encodeToString(remote.copy(updatedAt = null, version = null)),
+            )
+            var shouldFail = true
+            val processor = OutboxProcessor(RoomOutboxQueue(queue)) {
+                if (shouldFail) error("offline")
+                OutboxExecutionResult.TransactionApplied(remote)
+            }
+
+            val failed = processor.processReadyOperations()
+            assertEquals(operationId, failed.failedOperationId)
+            assertNotNull(database.transactionDao().observeWithTags(local.id).first())
+            assertNotNull(database.localMutationDao().getOutboxById(operationId))
+
+            shouldFail = false
+            now = 20_000L
+            val retried = processor.processReadyOperations()
+            assertEquals(1, retried.succeededCount)
+            assertNull(database.localMutationDao().getOutboxById(operationId))
+            val synced = database.transactionDao().observeWithTags(local.id).first()!!.transaction
+            assertEquals(SyncStatus.SYNCED.name, synced.sync.syncStatus)
+            assertEquals(1L, synced.sync.version)
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun defaultCategorySeeder_isOfflineIdempotentAndVisibleForEveryOwner() = runTest {
+        val database = inMemoryDatabase()
+        try {
+            val seeder = DefaultCategorySeeder(database.remoteSyncDao()) { 1234L }
+
+            seeder.seed()
+            seeder.seed()
+
+            val categories = database.categoryDao().observeAll(
+                ownerId = USER_ID.value,
+                workspaceId = null,
+                typeCode = null,
+            ).first()
+            assertEquals(27, categories.size)
+            assertTrue(categories.all { it.isDefault && it.ownerId == null && it.workspaceId == null })
+            assertTrue(categories.all { it.scopeKey == "system" })
+            assertEquals(9, categories.count { it.typeCode == TransactionType.INCOME.name })
+            assertEquals(18, categories.count { it.typeCode == TransactionType.EXPENSE.name })
+            assertEquals(27, categories.map { it.id }.distinct().size)
+            assertTrue(categories.all { it.iconKey?.contains('-') == false })
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun defaultCategorySeeder_reconcilesEquivalentIdsAndHidesAmbiguousLegacyRows() = runTest {
+        val database = inMemoryDatabase()
+        try {
+            val oldFoodId = "11111111-1111-4111-8111-111111111111"
+            val ambiguousId = "11111111-1111-4111-8111-111111111120"
+            val oldSystemRows = listOf(
+                CategoryEntity(
+                    id = oldFoodId,
+                    ownerId = null,
+                    workspaceId = null,
+                    scopeKey = "system",
+                    name = "Yemek",
+                    normalizedName = "yemek",
+                    slug = "yemek",
+                    typeCode = "EXPENSE",
+                    colorHex = "#FBBF24",
+                    iconKey = "utensils",
+                    isDefault = true,
+                    createdAtEpochMillis = 777L,
+                    sync = SYNC,
+                ),
+                CategoryEntity(
+                    id = ambiguousId,
+                    ownerId = null,
+                    workspaceId = null,
+                    scopeKey = "system",
+                    name = "Tasarruf & Yatırım",
+                    normalizedName = "tasarruf & yatırım",
+                    slug = "tasarruf-yatirim",
+                    typeCode = "EXPENSE",
+                    colorHex = "#10B981",
+                    iconKey = "trending-up",
+                    isDefault = true,
+                    createdAtEpochMillis = 888L,
+                    sync = SYNC,
+                ),
+            )
+            database.remoteSyncDao().upsertCategoryRows(oldSystemRows)
+
+            DefaultCategorySeeder(database.remoteSyncDao()) { 1_234L }.seed()
+
+            val reconciled = database.remoteSyncDao().getCategoryRow(oldFoodId)!!
+            assertEquals(oldFoodId, reconciled.id)
+            assertEquals("Yeme & İçme", reconciled.name)
+            assertEquals("food_dining", reconciled.iconKey)
+            assertEquals(777L, reconciled.createdAtEpochMillis)
+            assertEquals(SYNC.version, reconciled.sync.version)
+
+            val hidden = database.remoteSyncDao().getCategoryRow(ambiguousId)!!
+            assertEquals(1_234L, hidden.sync.deletedAtEpochMillis)
+            assertNull(database.categoryDao().observeById(ambiguousId).first())
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun assetDao_observes_only_active_assets_for_the_owner() = runTest {
+        val database = inMemoryDatabase()
+        try {
+            database.assetDao().upsert(assetEntity(id = "asset-active", ownerId = USER_ID.value))
+            database.assetDao().upsert(assetEntity(id = "asset-other", ownerId = "user-2"))
+            database.assetDao().upsert(
+                assetEntity(
+                    id = "asset-deleted",
+                    ownerId = USER_ID.value,
+                    sync = SYNC.copy(deletedAtEpochMillis = NOW.toEpochMilliseconds()),
+                ),
+            )
+
+            assertEquals(
+                listOf("asset-active"),
+                database.assetDao().observeAll(USER_ID.value).first().map { it.id },
+            )
+        } finally {
+            database.close()
+        }
+    }
 
     @Test
     fun transaction_with_tags_is_written_atomically_and_observed_from_room() = runTest {
@@ -82,6 +398,63 @@ class RoomDaoTest {
                 searchQuery = "market",
             ).first()
             assertEquals(listOf(TRANSACTION_ID.value), filtered.map { it.id })
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun personalBackupImport_writesCategoriesTransactionsAndOutboxAtomically() = runTest {
+        val database = inMemoryDatabase()
+        try {
+            val sync = newSyncMetadata(NOW.toEpochMilliseconds())
+            val categoryEntity = category().copy(id = EntityId("backup-cat")).toEntity(sync)
+            val transactionEntity = transaction().copy(
+                id = EntityId("backup-tx"),
+                categoryId = EntityId("backup-cat"),
+            ).toEntity(sync)
+            var sequence = 0
+
+            val operationIds = database.localMutationDao().importPersonalBackupV1(
+                categoryInputs = listOf(BackupCategoryCreateInputV1(categoryEntity, "{\"id\":\"backup-cat\"}")),
+                transactionInputs = listOf(TransactionCreateInputV2(transactionEntity, payloadJson = "{\"id\":\"backup-tx\"}")),
+                operationIdFactory = { (++sequence).toString(16).padStart(32, '0') },
+                nowEpochMillis = NOW.toEpochMilliseconds(),
+            )
+
+            assertEquals(2, operationIds.size)
+            assertNotNull(database.categoryDao().observeById("backup-cat").first())
+            assertNotNull(database.transactionDao().observeWithTags("backup-tx").first())
+            assertTrue(operationIds.all { database.localMutationDao().getOutboxById(it) != null })
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun personalBackupImport_rollsBackEveryRowWhenLaterOutboxInsertFails() = runTest {
+        val database = inMemoryDatabase()
+        try {
+            val sync = newSyncMetadata(NOW.toEpochMilliseconds())
+            val first = category().copy(id = EntityId("rollback-cat-1")).toEntity(sync)
+            val duplicateName = category().copy(id = EntityId("rollback-cat-2")).toEntity(sync)
+            val duplicateOperationId = "1".padStart(32, '0')
+
+            assertFailsWith<Exception> {
+                database.localMutationDao().importPersonalBackupV1(
+                    categoryInputs = listOf(
+                        BackupCategoryCreateInputV1(first, "{\"id\":\"rollback-cat-1\"}"),
+                        BackupCategoryCreateInputV1(duplicateName, "{\"id\":\"rollback-cat-2\"}"),
+                    ),
+                    transactionInputs = emptyList(),
+                    operationIdFactory = { duplicateOperationId },
+                    nowEpochMillis = NOW.toEpochMilliseconds(),
+                )
+            }
+
+            assertNull(database.categoryDao().observeById("rollback-cat-1").first())
+            assertNull(database.categoryDao().observeById("rollback-cat-2").first())
+            assertNull(database.localMutationDao().getOutboxById(duplicateOperationId))
         } finally {
             database.close()
         }
@@ -788,6 +1161,49 @@ class RoomDaoTest {
     }
 
     @Test
+    fun migration_12_to_13_creates_personal_assets_table() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val testDbName = "migration_test_v12_to_v13.db"
+        val testDbPath = context.getDatabasePath(testDbName).absolutePath
+        context.deleteDatabase(testDbName)
+
+        val v12Db = migrationHelper.createDatabase(testDbPath, 12)
+        v12Db.close()
+
+        val v13Db = migrationHelper.runMigrationsAndValidate(
+            testDbPath,
+            13,
+            true,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_12_13,
+        )
+        try {
+            v13Db.execSQL(
+                """
+                INSERT INTO assets (
+                    id, owner_id, name, type_code, current_value_minor, currency_code,
+                    quantity_unscaled, quantity_scale, purchase_unit_price_minor, tracking_symbol,
+                    auto_track, created_at_epoch_ms, sync_status, updated_at_epoch_ms,
+                    local_updated_at_epoch_ms, deleted_at_epoch_ms, version, base_version, last_sync_error
+                ) VALUES (
+                    'asset-v13-1', 'user-1', 'Nakit', 'CASH', 10000, 'TRY',
+                    NULL, NULL, NULL, NULL, 0, 1000, 'SYNCED', 1000,
+                    1000, NULL, 1, 1, NULL
+                )
+                """.trimIndent(),
+            )
+            val cursor = v13Db.query("SELECT owner_id, name, current_value_minor FROM assets WHERE id = 'asset-v13-1'")
+            assertTrue(cursor.moveToFirst())
+            assertEquals("user-1", cursor.getString(0))
+            assertEquals("Nakit", cursor.getString(1))
+            assertEquals(10_000L, cursor.getLong(2))
+            cursor.close()
+        } finally {
+            v13Db.close()
+            context.deleteDatabase(testDbName)
+        }
+    }
+
+    @Test
     fun transactionDao_observeByIdAndOwner_isolates_by_owner_and_deleted_status() = runTest {
         val database = inMemoryDatabase()
         try {
@@ -1398,6 +1814,26 @@ class RoomDaoTest {
         month = YearMonth(month),
         limit = Money(limitMinor, Currency.TRY),
         createdAt = NOW,
+    )
+
+    private fun assetEntity(
+        id: String,
+        ownerId: String,
+        sync: com.feniqo.mobile.data.local.entity.SyncMetadata = SYNC,
+    ) = AssetEntity(
+        id = id,
+        ownerId = ownerId,
+        name = "Nakit",
+        typeCode = "CASH",
+        currentValueMinor = 10_000L,
+        currencyCode = Currency.TRY.code,
+        quantityUnscaled = null,
+        quantityScale = null,
+        purchaseUnitPriceMinor = null,
+        trackingSymbol = null,
+        autoTrack = false,
+        createdAtEpochMillis = NOW.toEpochMilliseconds(),
+        sync = sync,
     )
 
     private companion object {

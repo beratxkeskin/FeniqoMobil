@@ -28,6 +28,9 @@ data class TransactionCommand(
     val paymentMethod: PaymentMethod,
     val transactionDate: LocalDate,
     val receiptPath: ReceiptPath?,
+    val paidByUserId: EntityId? = null,
+    val participantUserIds: List<EntityId> = emptyList(),
+    val note: String? = null,
 )
 
 class AddTransactionUseCase(
@@ -61,6 +64,9 @@ class AddTransactionUseCase(
                 receiptPath = command.receiptPath,
                 installment = null,
                 createdAt = createdAt,
+                paidByUserId = command.paidByUserId ?: session.userId,
+                participantUserIds = command.participantUserIds.ifEmpty { listOf(command.paidByUserId ?: session.userId) },
+                note = Transaction.normalizeNote(command.note),
             ),
         )
     }
@@ -91,6 +97,15 @@ class UpdateTransactionUseCase(
             return RepositoryResult.Failure(error)
         }
 
+        val targetPaidBy = command.paidByUserId ?: existing.paidByUserId
+        val targetParticipants = command.participantUserIds.ifEmpty {
+            if (command.paidByUserId != null && !existing.participantUserIds.contains(command.paidByUserId)) {
+                listOf(command.paidByUserId)
+            } else {
+                existing.participantUserIds
+            }
+        }
+
         return transactionRepository.update(
             existing.copy(
                 amount = command.amount,
@@ -100,6 +115,9 @@ class UpdateTransactionUseCase(
                 paymentMethod = command.paymentMethod,
                 transactionDate = command.transactionDate,
                 receiptPath = command.receiptPath,
+                paidByUserId = targetPaidBy,
+                participantUserIds = targetParticipants,
+                note = Transaction.normalizeNote(command.note),
             ),
         )
     }
@@ -192,9 +210,16 @@ private suspend fun validateTransaction(
     if (!com.feniqo.mobile.domain.model.TransactionDatePolicy.isAllowed(command.transactionDate, today)) {
         return AppError.Validation("transaction_date_cannot_be_future")
     }
+    if (command.description.isNullOrBlank()) {
+        return AppError.Validation("transaction_title_required")
+    }
     val description = Transaction.normalizeDescription(command.description)
-    if (description != null && description.length > Transaction.MAX_DESCRIPTION_LENGTH) {
-        return AppError.Validation("transaction_description_too_long")
+    if (description != null && description.length > Transaction.MAX_TITLE_LENGTH) {
+        return AppError.Validation("transaction_title_too_long")
+    }
+    val note = Transaction.normalizeNote(command.note)
+    if (note != null && note.length > Transaction.MAX_NOTE_LENGTH) {
+        return AppError.Validation("transaction_note_too_long")
     }
     val category = categoryRepository.observeCategory(command.categoryId).first()
     return validateCategoryAccess(category, command.type, targetWorkspaceId, userId)

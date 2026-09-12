@@ -20,6 +20,7 @@ fun DashboardScreenRoute(
     onAddTransaction: () -> Unit,
     onViewAllTransactions: () -> Unit,
     onTransactionClick: (EntityId) -> Unit,
+    onProfileClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
@@ -42,6 +43,7 @@ fun DashboardScreenRoute(
         onAddTransaction = onAddTransaction,
         onViewAllTransactions = onViewAllTransactions,
         onTransactionClick = onTransactionClick,
+        onProfileClick = onProfileClick,
         modifier = modifier,
     )
 }

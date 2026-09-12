@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -65,6 +66,7 @@ import com.feniqo.mobile.presentation.theme.FeniqoStatusColor
 import com.feniqo.mobile.presentation.transaction.InstallmentDisplayModel
 import com.feniqo.mobile.presentation.transaction.TransactionCategoryOptionUiModel
 import com.feniqo.mobile.presentation.util.ColorParser
+import com.feniqo.mobile.presentation.workspace.WorkspaceMemberUiModel
 
 /**
  * İşlem türü seçicisi bileşenidir (Gider / Gelir).
@@ -406,13 +408,11 @@ fun TransactionCategoryPicker(
                         },
                         enabled = enabled && category.isSelectable,
                         leadingIcon = {
-                            if (color != null) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(10.dp)
-                                        .background(color, CircleShape),
-                                )
-                            }
+                            CategoryTonalIcon(
+                                iconKey = category.iconKey,
+                                color = color ?: MaterialTheme.colorScheme.primary,
+                                containerSize = 28.dp,
+                            )
                         },
                         label = {
                             Text(
@@ -707,14 +707,15 @@ fun TransactionExistingInstallmentBadge(
 }
 
 /**
- * Açıklama giriş alanı bileşenidir.
+ * İşlem Adı (zorunlu) giriş alanı bileşenidir.
  */
 @Composable
-fun TransactionDescriptionField(
-    description: String,
-    onDescriptionChange: (String) -> Unit,
+fun TransactionTitleField(
+    title: String,
+    onTitleChange: (String) -> Unit,
     errorText: String?,
     enabled: Boolean,
+    isExpense: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -727,16 +728,16 @@ fun TransactionDescriptionField(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Açıklama (İsteğe Bağlı)",
+                text = "İşlem Adı *",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
 
             Text(
-                text = "${description.length}/500",
+                text = "${title.length}/100",
                 style = MaterialTheme.typography.labelSmall,
-                color = if (description.length > 500) {
+                color = if (title.length > 100) {
                     MaterialTheme.colorScheme.error
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
@@ -745,21 +746,23 @@ fun TransactionDescriptionField(
         }
 
         OutlinedTextField(
-            value = description,
-            onValueChange = onDescriptionChange,
+            value = title,
+            onValueChange = onTitleChange,
             enabled = enabled,
             isError = errorText != null,
-            placeholder = { Text("İşlem hakkında not ekleyin...") },
+            placeholder = {
+                Text(if (isExpense) "Örn: Market Alışverişi, Kahve" else "Örn: Maaş, Danışmanlık")
+            },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Text,
-                imeAction = ImeAction.Done,
+                imeAction = ImeAction.Next,
             ),
             shape = RoundedCornerShape(FeniqoRadius.Medium),
-            minLines = 2,
-            maxLines = 4,
+            singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
-                .semantics { contentDescription = "İşlem açıklaması" },
+                .defaultMinSize(minHeight = 48.dp)
+                .semantics { contentDescription = "İşlem Adı" },
         )
 
         if (errorText != null) {
@@ -774,23 +777,300 @@ fun TransactionDescriptionField(
 }
 
 /**
+ * Not / Ek Açıklama (isteğe bağlı) giriş alanı bileşenidir.
+ */
+@Composable
+fun TransactionNoteField(
+    note: String,
+    onNoteChange: (String) -> Unit,
+    errorText: String?,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Not / Açıklama (İsteğe Bağlı)",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+
+            Text(
+                text = "${note.length}/500",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (note.length > 500) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            )
+        }
+
+        OutlinedTextField(
+            value = note,
+            onValueChange = onNoteChange,
+            enabled = enabled,
+            isError = errorText != null,
+            placeholder = { Text("İşlem hakkında not ekleyin...") },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Done,
+            ),
+            shape = RoundedCornerShape(FeniqoRadius.Medium),
+            minLines = 2,
+            maxLines = 4,
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = "İşlem notu" },
+        )
+
+        if (errorText != null) {
+            Text(
+                text = errorText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(start = FeniqoSpacing.Small),
+            )
+        }
+    }
+}
+
+/**
+ * Açıklama giriş alanı bileşenidir.
+ */
+@Composable
+fun TransactionDescriptionField(
+    description: String,
+    onDescriptionChange: (String) -> Unit,
+    errorText: String?,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    TransactionNoteField(
+        note = description,
+        onNoteChange = onDescriptionChange,
+        errorText = errorText,
+        enabled = enabled,
+        modifier = modifier,
+    )
+}
+
+/**
  * Tarihi Türkçe gün ay yıl formatına dönüştürür.
  */
 fun formatDisplayDate(date: LocalDate): String {
-    val monthName = when (date.monthNumber) {
-        1 -> "Ocak"
-        2 -> "Şubat"
-        3 -> "Mart"
-        4 -> "Nisan"
-        5 -> "Mayıs"
-        6 -> "Haziran"
-        7 -> "Temmuz"
-        8 -> "Ağustos"
-        9 -> "Eylül"
-        10 -> "Ekim"
-        11 -> "Kasım"
-        12 -> "Aralık"
+    val monthName = when (date.month) {
+        kotlinx.datetime.Month.JANUARY -> "Ocak"
+        kotlinx.datetime.Month.FEBRUARY -> "Şubat"
+        kotlinx.datetime.Month.MARCH -> "Mart"
+        kotlinx.datetime.Month.APRIL -> "Nisan"
+        kotlinx.datetime.Month.MAY -> "Mayıs"
+        kotlinx.datetime.Month.JUNE -> "Haziran"
+        kotlinx.datetime.Month.JULY -> "Temmuz"
+        kotlinx.datetime.Month.AUGUST -> "Ağustos"
+        kotlinx.datetime.Month.SEPTEMBER -> "Eylül"
+        kotlinx.datetime.Month.OCTOBER -> "Ekim"
+        kotlinx.datetime.Month.NOVEMBER -> "Kasım"
+        kotlinx.datetime.Month.DECEMBER -> "Aralık"
         else -> ""
     }
     return "${date.dayOfMonth} $monthName ${date.year}"
+}
+
+/**
+ * Ortak gider paylaşımı (kim ödedi, kimler katılıyor) seçim bileşenidir.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun TransactionSplitSection(
+    members: List<WorkspaceMemberUiModel>,
+    isLoading: Boolean,
+    selectedPaidByUserId: EntityId?,
+    selectedParticipantUserIds: Set<EntityId>,
+    onPaidByUserSelected: (EntityId) -> Unit,
+    onParticipantToggled: (EntityId) -> Unit,
+    errorText: String?,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = "Gider Paylaşımı Bölümü" },
+        shape = RoundedCornerShape(FeniqoRadius.Medium),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(FeniqoSpacing.Large),
+            verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall)) {
+                Text(
+                    text = "Gider Paylaşımı",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = "Harcamayı kimin ödediğini ve paylaşıma kimlerin dahil olduğunu belirleyin.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            if (isLoading) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = FeniqoSpacing.Medium),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .semantics { contentDescription = "Üyeler yükleniyor" },
+                        strokeWidth = 2.dp,
+                    )
+                    Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
+                    Text(
+                        text = "Çalışma alanı üyeleri yükleniyor...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else if (members.isEmpty()) {
+                Text(
+                    text = "Çalışma alanında aktif üye bulunamadı.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            } else {
+                // 1. Ödeyen Kişi Seçimi
+                Column(verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small)) {
+                    Text(
+                        text = "Ödeyen Kişi",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                        verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                    ) {
+                        members.forEach { member ->
+                            val isSelected = member.userId == selectedPaidByUserId
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { onPaidByUserSelected(member.userId) },
+                                enabled = enabled,
+                                label = {
+                                    Text(
+                                        text = member.displayName,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    )
+                                },
+                                modifier = Modifier
+                                    .defaultMinSize(minHeight = 44.dp)
+                                    .semantics {
+                                        contentDescription = "${member.displayName} ödedi seçimi"
+                                    },
+                            )
+                        }
+                    }
+                }
+
+                // 2. Katılımcılar Seçimi
+                Column(verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small)) {
+                    Text(
+                        text = "Katılımcılar",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+
+                    members.forEach { member ->
+                        val isParticipant = member.userId in selectedParticipantUserIds
+                        val isPayer = member.userId == selectedPaidByUserId
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(FeniqoRadius.Small))
+                                .clickable(
+                                    enabled = enabled && !isPayer,
+                                    role = Role.Checkbox,
+                                    onClick = { onParticipantToggled(member.userId) },
+                                )
+                                .padding(vertical = FeniqoSpacing.Small, horizontal = FeniqoSpacing.ExtraSmall)
+                                .semantics {
+                                    contentDescription = "${member.displayName} katılımcı: ${if (isParticipant) "seçili" else "seçili değil"}"
+                                },
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Checkbox(
+                                    checked = isParticipant,
+                                    onCheckedChange = if (enabled && !isPayer) {
+                                        { onParticipantToggled(member.userId) }
+                                    } else null,
+                                    enabled = enabled && !isPayer,
+                                    modifier = Modifier.size(24.dp),
+                                )
+                                Text(
+                                    text = member.displayName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                                )
+                            }
+
+                            if (isPayer) {
+                                Surface(
+                                    shape = androidx.compose.foundation.shape.CircleShape,
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    modifier = Modifier.padding(start = FeniqoSpacing.Small),
+                                ) {
+                                    Text(
+                                        text = "Ödeyen (Zorunlu)",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        fontWeight = FontWeight.Medium,
+                                        modifier = Modifier.padding(horizontal = FeniqoSpacing.Small, vertical = 2.dp),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (errorText != null) {
+                Text(
+                    text = errorText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(start = FeniqoSpacing.Small),
+                )
+            }
+        }
+    }
 }

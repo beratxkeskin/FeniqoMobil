@@ -5,10 +5,12 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
 import com.feniqo.mobile.data.local.dao.BudgetDao
+import com.feniqo.mobile.data.local.dao.AssetDao
 import com.feniqo.mobile.data.local.dao.CategoryDao
 import com.feniqo.mobile.data.local.dao.DebtDao
 import com.feniqo.mobile.data.local.dao.GoalDao
 import com.feniqo.mobile.data.local.dao.LocalMutationDao
+import com.feniqo.mobile.data.local.dao.MarketPriceDao
 import com.feniqo.mobile.data.local.dao.ProfileDao
 import com.feniqo.mobile.data.local.dao.RecurringTransactionDao
 import com.feniqo.mobile.data.local.dao.RemoteSyncDao
@@ -20,11 +22,13 @@ import com.feniqo.mobile.data.local.dao.TagDao
 import com.feniqo.mobile.data.local.dao.TransactionDao
 import com.feniqo.mobile.data.local.dao.WorkspaceDao
 import com.feniqo.mobile.data.local.entity.BudgetEntity
+import com.feniqo.mobile.data.local.entity.AssetEntity
 import com.feniqo.mobile.data.local.entity.CategoryEntity
 import com.feniqo.mobile.data.local.entity.DebtEntity
 import com.feniqo.mobile.data.local.entity.DebtPaymentEntity
 import com.feniqo.mobile.data.local.entity.GoalContributionEntity
 import com.feniqo.mobile.data.local.entity.GoalEntity
+import com.feniqo.mobile.data.local.entity.MarketPriceEntity
 import com.feniqo.mobile.data.local.entity.RecurringTransactionEntity
 import com.feniqo.mobile.data.local.entity.RecurringTransactionOccurrenceEntity
 import com.feniqo.mobile.data.local.entity.SubscriptionEntity
@@ -43,6 +47,7 @@ import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
 
 @Database(
     entities = [
+        AssetEntity::class,
         UserProfileEntity::class,
         WorkspaceEntity::class,
         WorkspaceMemberEntity::class,
@@ -64,12 +69,15 @@ import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
         GoalContributionEntity::class,
         DebtEntity::class,
         DebtPaymentEntity::class,
+        MarketPriceEntity::class,
     ],
-    version = 12,
+    version = 15,
     exportSchema = true,
 )
 @ConstructedBy(FeniqoDatabaseConstructor::class)
 abstract class FeniqoDatabase : RoomDatabase() {
+    abstract fun assetDao(): AssetDao
+    abstract fun marketPriceDao(): MarketPriceDao
     abstract fun profileDao(): ProfileDao
     abstract fun workspaceDao(): WorkspaceDao
     abstract fun categoryDao(): CategoryDao

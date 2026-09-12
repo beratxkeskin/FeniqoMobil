@@ -20,6 +20,9 @@ enum class TransactionValidationError {
     CATEGORY_REQUIRED,
     DATE_FUTURE,
     DESCRIPTION_TOO_LONG,
+    TITLE_EMPTY,
+    TITLE_TOO_LONG,
+    NOTE_TOO_LONG,
     SPLIT_PARTICIPANTS_EMPTY,
     SPLIT_PARTICIPANTS_DUPLICATE,
     SPLIT_PAYER_NOT_IN_PARTICIPANTS,
@@ -61,6 +64,27 @@ object TransactionValidationRules {
         val normalized = Transaction.normalizeDescription(description)
         if (normalized != null && normalized.length > Transaction.MAX_DESCRIPTION_LENGTH) {
             return TransactionValidationResult.Invalid(TransactionValidationError.DESCRIPTION_TOO_LONG)
+        }
+        return TransactionValidationResult.Valid(normalized)
+    }
+
+    /** Yeni işlem adı doğrulaması: trim sonrası boş olamaz, en fazla 100 karakter olabilir. */
+    fun validateTitle(title: String?): TransactionValidationResult<String> {
+        val trimmed = title?.trim().orEmpty()
+        if (trimmed.isEmpty()) {
+            return TransactionValidationResult.Invalid(TransactionValidationError.TITLE_EMPTY)
+        }
+        if (trimmed.length > Transaction.MAX_TITLE_LENGTH) {
+            return TransactionValidationResult.Invalid(TransactionValidationError.TITLE_TOO_LONG)
+        }
+        return TransactionValidationResult.Valid(trimmed)
+    }
+
+    /** İsteğe bağlı işlem notu doğrulaması: boş bırakılabilir, doluysa en fazla 500 karakter olabilir. */
+    fun validateNote(note: String?): TransactionValidationResult<String?> {
+        val normalized = Transaction.normalizeNote(note)
+        if (normalized != null && normalized.length > Transaction.MAX_NOTE_LENGTH) {
+            return TransactionValidationResult.Invalid(TransactionValidationError.NOTE_TOO_LONG)
         }
         return TransactionValidationResult.Valid(normalized)
     }

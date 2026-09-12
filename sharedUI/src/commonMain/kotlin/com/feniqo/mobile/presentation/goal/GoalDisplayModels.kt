@@ -17,11 +17,25 @@ import com.feniqo.mobile.presentation.util.MoneyFormatter
  */
 data class GoalsUiState(
     val isLoading: Boolean = true,
-    val goals: List<GoalDisplayModel> = emptyList(),
+    /** Room akışından map edilmiş, filtre uygulanmamış hedefler. */
+    val allGoals: List<GoalDisplayModel> = emptyList(),
+    /** Seçili [selectedFilter] kapsamında listelenen hedefler. */
+    val visibleGoals: List<GoalDisplayModel> = emptyList(),
+    val selectedFilter: GoalStatusFilter = GoalStatusFilter.ALL,
+    val summary: GoalsSummaryUiModel? = null,
+    val isSummaryCalculationError: Boolean = false,
+    val insights: List<GoalInsightUiModel> = emptyList(),
     val activeWorkspaceName: String? = null,
     val observationError: FinanceUiMessage? = null,
 ) {
-    val isEmpty: Boolean get() = !isLoading && observationError == null && goals.isEmpty()
+    val isEmpty: Boolean get() = !isLoading && observationError == null && allGoals.isEmpty()
+    val isFilterEmpty: Boolean get() = !isEmpty && visibleGoals.isEmpty()
+}
+
+enum class GoalStatusFilter(val label: String) {
+    ALL("Tümü"),
+    ACTIVE("Aktif"),
+    ACHIEVED("Tamamlanan"),
 }
 
 
@@ -30,7 +44,30 @@ data class GoalsUiState(
  */
 sealed interface GoalsIntent {
     data object Retry : GoalsIntent
+    data class SelectFilter(val filter: GoalStatusFilter) : GoalsIntent
 }
+
+data class GoalCurrencySummaryUiModel(
+    val currency: Currency,
+    val savedAmount: Money,
+    val targetAmount: Money,
+    val formattedSavedAmount: String,
+    val formattedTargetAmount: String,
+)
+
+data class GoalsSummaryUiModel(
+    val scopedGoalCount: Int,
+    val activeGoalCount: Int,
+    val achievedGoalCount: Int,
+    val averageProgressBasisPoints: RateBasisPoints?,
+    val currencySummaries: List<GoalCurrencySummaryUiModel>,
+)
+
+data class GoalInsightUiModel(
+    val id: String,
+    val title: String,
+    val description: String,
+)
 
 /**
  * Birikim hedefi saf presentation modelidir.
@@ -53,6 +90,7 @@ data class GoalDisplayModel(
     val progressBasisPoints: RateBasisPoints,
     val progressFraction: Float,
     val isAchieved: Boolean,
+    val isTargetDatePast: Boolean = false,
 )
 
 /**
@@ -60,16 +98,17 @@ data class GoalDisplayModel(
  */
 object GoalDisplayModelMapper {
 
-    fun map(goals: List<Goal>): List<GoalDisplayModel> {
-        return goals.map { mapItem(it) }
+    fun map(goals: List<Goal>, today: LocalDate? = null): List<GoalDisplayModel> {
+        return goals.map { mapItem(it, today) }
             .sortedWith(
                 compareBy<GoalDisplayModel> { it.status != GoalStatus.IN_PROGRESS }
                     .thenBy { it.targetDate }
+                    .thenBy { it.name }
                     .thenBy { it.id.value }
             )
     }
 
-    fun mapItem(goal: Goal): GoalDisplayModel {
+    fun mapItem(goal: Goal, today: LocalDate? = null): GoalDisplayModel {
         val progress = GoalProgressCalculator.calculateProgress(goal)
         val progressFraction = progress.progressBasisPoints.value.coerceIn(0, 10_000).toFloat() / 10_000f
 
@@ -91,6 +130,7 @@ object GoalDisplayModelMapper {
             progressBasisPoints = progress.progressBasisPoints,
             progressFraction = progressFraction,
             isAchieved = progress.isAchieved,
+            isTargetDatePast = !progress.isAchieved && today?.let { goal.targetDate < it } == true,
         )
     }
 }

@@ -170,6 +170,95 @@ class TransactionsDisplayModelBuilderTest {
         assertNull(item2.installment)
     }
 
+    @Test
+    fun build_withSortOrderOldest_sortsDatesAscending() {
+        val trxPast = createTrx("t1", pastDate, Instant.parse("2026-08-15T10:00:00Z"))
+        val trxToday = createTrx("t2", today, Instant.parse("2026-08-21T10:00:00Z"))
+        val trxYesterday = createTrx("t3", yesterday, Instant.parse("2026-08-20T10:00:00Z"))
+
+        val result = TransactionsDisplayModelBuilder.build(
+            transactions = listOf(trxToday, trxPast, trxYesterday),
+            categoryHistory = listOf(cat1),
+            today = today,
+            sortOrder = TransactionSortOrder.OLDEST,
+        )
+
+        assertEquals(3, result.size)
+        assertEquals(pastDate, result[0].date)
+        assertEquals(yesterday, result[1].date)
+        assertEquals(today, result[2].date)
+    }
+
+    @Test
+    fun build_withSortOrderAmountDesc_sortsAmountsDescendingWithinDateGroups() {
+        val trxSmall = createTrx("tSmall", today, amount = Money(1000L, Currency.TRY))
+        val trxLarge = createTrx("tLarge", today, amount = Money(50000L, Currency.TRY))
+        val trxMedium = createTrx("tMedium", today, amount = Money(20000L, Currency.TRY))
+
+        val result = TransactionsDisplayModelBuilder.build(
+            transactions = listOf(trxSmall, trxLarge, trxMedium),
+            categoryHistory = listOf(cat1),
+            today = today,
+            sortOrder = TransactionSortOrder.AMOUNT_DESC,
+        )
+
+        assertEquals(1, result.size)
+        val items = result[0].items
+        assertEquals(EntityId("tLarge"), items[0].id)
+        assertEquals(EntityId("tMedium"), items[1].id)
+        assertEquals(EntityId("tSmall"), items[2].id)
+    }
+
+    @Test
+    fun build_withSortOrderAmountAsc_sortsAmountsAscendingWithinDateGroups() {
+        val trxSmall = createTrx("tSmall", today, amount = Money(1000L, Currency.TRY))
+        val trxLarge = createTrx("tLarge", today, amount = Money(50000L, Currency.TRY))
+        val trxMedium = createTrx("tMedium", today, amount = Money(20000L, Currency.TRY))
+
+        val result = TransactionsDisplayModelBuilder.build(
+            transactions = listOf(trxLarge, trxSmall, trxMedium),
+            categoryHistory = listOf(cat1),
+            today = today,
+            sortOrder = TransactionSortOrder.AMOUNT_ASC,
+        )
+
+        assertEquals(1, result.size)
+        val items = result[0].items
+        assertEquals(EntityId("tSmall"), items[0].id)
+        assertEquals(EntityId("tMedium"), items[1].id)
+        assertEquals(EntityId("tLarge"), items[2].id)
+    }
+
+    @Test
+    fun build_calculatesDailyNetCorrectly_andHandlesMultiCurrencyAsNull() {
+        // Gider: 100 TL, Gelir: 300 TL -> Net: +200 TL
+        val expense = createTrx("t1", today, type = TransactionType.EXPENSE, amount = Money(10000L, Currency.TRY))
+        val income = createTrx("t2", today, type = TransactionType.INCOME, amount = Money(30000L, Currency.TRY))
+
+        val result = TransactionsDisplayModelBuilder.build(
+            transactions = listOf(expense, income),
+            categoryHistory = listOf(cat1),
+            today = today,
+        )
+
+        assertEquals(1, result.size)
+        assertEquals("+200,00 ₺", result[0].dailyNetFormatted)
+        assertFalse(result[0].isDailyNetNegative)
+
+        // Farklı para birimi içeren grup -> fail-closed null
+        val usdTrx = createTrx("t3", yesterday, type = TransactionType.INCOME, amount = Money(5000L, Currency.USD))
+        val tryTrx = createTrx("t4", yesterday, type = TransactionType.EXPENSE, amount = Money(5000L, Currency.TRY))
+
+        val multiCurrencyResult = TransactionsDisplayModelBuilder.build(
+            transactions = listOf(usdTrx, tryTrx),
+            categoryHistory = listOf(cat1),
+            today = today,
+        )
+
+        assertEquals(1, multiCurrencyResult.size)
+        assertNull(multiCurrencyResult[0].dailyNetFormatted)
+    }
+
     private fun createTrx(
         id: String,
         date: LocalDate = today,

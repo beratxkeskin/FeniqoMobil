@@ -56,6 +56,7 @@ fun TransactionsScreenRoute(
             onCategoryFilterChanged = viewModel::onCategoryFilterChanged,
             onPaymentMethodFilterChanged = viewModel::onPaymentMethodFilterChanged,
             onPeriodPresetChanged = viewModel::onPeriodPresetChanged,
+            onSortOrderChanged = viewModel::onSortOrderChanged,
             onClearFilters = viewModel::clearFilters,
             onDeleteClicked = viewModel::onDeleteClicked,
             onDismissDeleteDialog = viewModel::dismissDeleteDialog,

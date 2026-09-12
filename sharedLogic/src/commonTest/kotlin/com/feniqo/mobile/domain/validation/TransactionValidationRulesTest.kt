@@ -74,4 +74,53 @@ class TransactionValidationRulesTest {
         val invalidDesc = TransactionValidationRules.validateDescription(overlength)
         assertEquals(TransactionValidationResult.Invalid(TransactionValidationError.DESCRIPTION_TOO_LONG), invalidDesc)
     }
+
+    @Test
+    fun validateTitle_withEmptyValidAndOverlengthTitles_returnsExpectedResults() {
+        val emptyTitle = TransactionValidationRules.validateTitle("")
+        assertEquals(TransactionValidationResult.Invalid(TransactionValidationError.TITLE_EMPTY), emptyTitle)
+
+        val blankTitle = TransactionValidationRules.validateTitle("   ")
+        assertEquals(TransactionValidationResult.Invalid(TransactionValidationError.TITLE_EMPTY), blankTitle)
+
+        val nullTitle = TransactionValidationRules.validateTitle(null)
+        assertEquals(TransactionValidationResult.Invalid(TransactionValidationError.TITLE_EMPTY), nullTitle)
+
+        val validTitle = TransactionValidationRules.validateTitle("  Öğle Yemeği  ")
+        assertTrue(validTitle is TransactionValidationResult.Valid)
+        assertEquals("Öğle Yemeği", validTitle.value)
+
+        val exactly100 = "a".repeat(100)
+        val valid100 = TransactionValidationRules.validateTitle(exactly100)
+        assertTrue(valid100 is TransactionValidationResult.Valid)
+        assertEquals(exactly100, valid100.value)
+
+        val overlengthTitle = "a".repeat(101)
+        val invalid101 = TransactionValidationRules.validateTitle(overlengthTitle)
+        assertEquals(TransactionValidationResult.Invalid(TransactionValidationError.TITLE_TOO_LONG), invalid101)
+    }
+
+    @Test
+    fun validateNote_withNullValidAndOverlengthNotes_returnsExpectedResults() {
+        val nullNote = TransactionValidationRules.validateNote(null)
+        assertTrue(nullNote is TransactionValidationResult.Valid)
+        assertEquals(null, nullNote.value)
+
+        val blankNote = TransactionValidationRules.validateNote("   ")
+        assertTrue(blankNote is TransactionValidationResult.Valid)
+        assertEquals(null, blankNote.value)
+
+        val validNote = TransactionValidationRules.validateNote("  Arkadaşlarla yenildi  ")
+        assertTrue(validNote is TransactionValidationResult.Valid)
+        assertEquals("Arkadaşlarla yenildi", validNote.value)
+
+        val exactly500 = "n".repeat(500)
+        val valid500 = TransactionValidationRules.validateNote(exactly500)
+        assertTrue(valid500 is TransactionValidationResult.Valid)
+        assertEquals(exactly500, valid500.value)
+
+        val overlength501 = "n".repeat(501)
+        val invalid501 = TransactionValidationRules.validateNote(overlength501)
+        assertEquals(TransactionValidationResult.Invalid(TransactionValidationError.NOTE_TOO_LONG), invalid501)
+    }
 }

@@ -3,6 +3,39 @@ package com.feniqo.mobile.data.remote.dto
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+/**
+ * Kişisel varlık senkronizasyon sözleşmesi. Bu DTO bilinçli olarak workspace_id içermez;
+ * paylaşılan varlıklar ayrı bir yetkilendirme sözleşmesi gerektirir.
+ */
+@Serializable
+data class AssetDto(
+    val id: String,
+    @SerialName("user_id")
+    val userId: String,
+    val name: String,
+    val type: String,
+    @SerialName("current_value_minor")
+    val currentValueMinor: Long,
+    val currency: String,
+    @SerialName("quantity_unscaled")
+    val quantityUnscaled: Long? = null,
+    @SerialName("quantity_scale")
+    val quantityScale: Int? = null,
+    @SerialName("purchase_unit_price_minor")
+    val purchaseUnitPriceMinor: Long? = null,
+    @SerialName("tracking_symbol")
+    val trackingSymbol: String? = null,
+    @SerialName("auto_track")
+    val autoTrack: Boolean = false,
+    @SerialName("created_at")
+    val createdAt: String,
+    @SerialName("updated_at")
+    val updatedAt: String? = null,
+    @SerialName("deleted_at")
+    val deletedAt: String? = null,
+    val version: Long? = null,
+)
+
 @Serializable
 data class CategoryDto(
     val id: String,
@@ -67,6 +100,8 @@ data class TransactionDto(
     @SerialName("deleted_at")
     val deletedAt: String? = null,
     val version: Long? = null,
+    @SerialName("note")
+    val note: String? = null,
 )
 
 @Serializable

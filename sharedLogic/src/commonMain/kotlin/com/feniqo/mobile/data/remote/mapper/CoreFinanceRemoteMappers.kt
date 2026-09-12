@@ -1,6 +1,7 @@
 package com.feniqo.mobile.data.remote.mapper
 
 import com.feniqo.mobile.data.remote.dto.CategoryDto
+import com.feniqo.mobile.data.remote.dto.AssetDto
 import com.feniqo.mobile.data.remote.dto.DebtDto
 import com.feniqo.mobile.data.remote.dto.DebtPaymentDto
 import com.feniqo.mobile.data.remote.dto.GoalContributionDto
@@ -9,6 +10,9 @@ import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
 import com.feniqo.mobile.data.remote.dto.SubscriptionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.domain.model.Category
+import com.feniqo.mobile.domain.model.Asset
+import com.feniqo.mobile.domain.model.AssetQuantity
+import com.feniqo.mobile.domain.model.AssetType
 import com.feniqo.mobile.domain.model.CategoryColor
 import com.feniqo.mobile.domain.model.CategoryIcon
 import com.feniqo.mobile.domain.model.Currency
@@ -32,6 +36,47 @@ import com.feniqo.mobile.domain.model.Subscription
 import com.feniqo.mobile.domain.model.Transaction
 import com.feniqo.mobile.domain.model.TransactionType
 import kotlin.time.Instant
+
+fun AssetDto.toDomain(): Asset {
+    require((quantityUnscaled == null) == (quantityScale == null)) {
+        "assets.quantity alanları birlikte dolu veya birlikte boş olmalıdır."
+    }
+    val parsedCurrency = currency.toCurrency("assets.currency")
+    val normalizedName = name.required("assets.name")
+    val normalizedSymbol = trackingSymbol?.trim()?.takeIf(String::isNotEmpty)
+    if (autoTrack && normalizedSymbol == null) {
+        throw RemoteMappingException("assets.auto_track için tracking_symbol zorunludur.")
+    }
+    return Asset(
+        id = EntityId(id.required("assets.id")),
+        ownerId = EntityId(userId.required("assets.user_id")),
+        workspaceId = null,
+        name = normalizedName,
+        type = AssetType.entries.firstOrNull { it.name.equals(type.trim(), ignoreCase = true) }
+            ?: throw RemoteMappingException("assets.type desteklenmiyor: $type"),
+        currentValue = Money(currentValueMinor, parsedCurrency),
+        quantity = quantityUnscaled?.let { AssetQuantity(it, requireNotNull(quantityScale)) },
+        purchaseUnitPrice = purchaseUnitPriceMinor?.let { Money(it, parsedCurrency) },
+        trackingSymbol = normalizedSymbol,
+        autoTrack = autoTrack,
+        createdAt = createdAt.toInstant("assets.created_at"),
+    )
+}
+
+fun Asset.toDto(): AssetDto = AssetDto(
+    id = id.value,
+    userId = ownerId.value,
+    name = name.trim(),
+    type = type.name,
+    currentValueMinor = currentValue.amountMinor,
+    currency = currentValue.currency.code,
+    quantityUnscaled = quantity?.unscaledValue,
+    quantityScale = quantity?.scale,
+    purchaseUnitPriceMinor = purchaseUnitPrice?.amountMinor,
+    trackingSymbol = trackingSymbol?.trim()?.takeIf(String::isNotEmpty),
+    autoTrack = autoTrack,
+    createdAt = createdAt.toString(),
+)
 
 
 
@@ -87,6 +132,7 @@ fun TransactionDto.toDomain(): Transaction {
         receiptPath = receiptPath?.trim()?.takeIf(String::isNotEmpty)?.let(::ReceiptPath),
         installment = toInstallmentInfo(),
         createdAt = createdAt.toInstant("transactions.created_at"),
+        note = Transaction.normalizeNote(note),
     )
 }
 
@@ -108,6 +154,7 @@ fun Transaction.toDto(): TransactionDto = TransactionDto(
     totalInstallments = installment?.total,
     installmentGroupId = installment?.groupId?.value,
     createdAt = createdAt.toString(),
+    note = Transaction.normalizeNote(note),
 )
 
 fun RecurringTransactionDto.toDomain(): RecurringTransaction {

@@ -11,7 +11,7 @@ class SectionMappingTest {
     fun appSection_mapsToExpectedTopLevelDestination() {
         assertSame(TopLevelDestination.DASHBOARD, AppSection.DASHBOARD.toTopLevelDestination())
         assertSame(TopLevelDestination.TRANSACTIONS, AppSection.TRANSACTIONS.toTopLevelDestination())
-        assertSame(TopLevelDestination.PLAN, AppSection.PLAN.toTopLevelDestination())
+        assertSame(TopLevelDestination.BUDGET, AppSection.BUDGET.toTopLevelDestination())
         assertSame(TopLevelDestination.MORE, AppSection.MORE.toTopLevelDestination())
     }
 
@@ -19,7 +19,7 @@ class SectionMappingTest {
     fun topLevelDestination_mapsToExpectedAppSection() {
         assertSame(AppSection.DASHBOARD, TopLevelDestination.DASHBOARD.toAppSection())
         assertSame(AppSection.TRANSACTIONS, TopLevelDestination.TRANSACTIONS.toAppSection())
-        assertSame(AppSection.PLAN, TopLevelDestination.PLAN.toAppSection())
+        assertSame(AppSection.BUDGET, TopLevelDestination.BUDGET.toAppSection())
         assertSame(AppSection.MORE, TopLevelDestination.MORE.toAppSection())
     }
 

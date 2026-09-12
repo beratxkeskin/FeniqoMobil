@@ -12,6 +12,7 @@ import com.feniqo.mobile.data.remote.core.ConditionalRemoteWriteResult
 import com.feniqo.mobile.data.remote.core.IdempotentConditionalRemoteWriter
 import com.feniqo.mobile.data.remote.core.RemoteWriteOperation
 import com.feniqo.mobile.data.remote.dto.BudgetDto
+import com.feniqo.mobile.data.remote.dto.AssetDto
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.ProfileDto
 import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
@@ -35,6 +36,29 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class V2OutboxOperationExecutorTest {
+
+    @Test
+    fun asset_v2_executor_maps_applied_conflict_and_missing_delete() = runTest {
+        val remote = assetDto(version = 4)
+        val writer = RecordingV2Writer(assetResult = ConditionalRemoteWriteResult.Applied(remote))
+        val executor = V2OutboxOperationExecutor(writer) { 1234L }
+        val payload = kotlinx.serialization.json.Json.encodeToString(AssetDto.serializer(), assetDto(version = 2))
+
+        val applied = executor.execute(operation(entityType = "ASSET", operationType = "UPDATE", baseVersion = 2, payloadJson = payload))
+        assertIs<OutboxExecutionResult.AssetApplied>(applied)
+        assertEquals(4, applied.record.version)
+        assertEquals(RemoteWriteOperation.UPDATE, writer.lastOperation)
+
+        writer.assetResult = ConditionalRemoteWriteResult.Conflict(assetDto(version = 5))
+        val conflict = executor.execute(operation(entityType = "ASSET", operationType = "UPDATE", baseVersion = 2, payloadJson = payload))
+        assertIs<OutboxExecutionResult.ConflictDetected>(conflict)
+        assertEquals("ASSET", conflict.conflict.entityTypeCode)
+        assertEquals(5, conflict.conflict.remoteVersion)
+
+        writer.assetResult = ConditionalRemoteWriteResult.NotFound
+        val missing = executor.execute(operation(entityType = "ASSET", operationType = "DELETE", baseVersion = 2, payloadJson = payload))
+        assertIs<OutboxExecutionResult.MissingDeleteAcknowledged>(missing)
+    }
 
     @Test
     fun v2_executor_uses_payload_json_snapshot_and_never_reads_room_entity() = runTest {
@@ -1148,6 +1172,7 @@ class V2OutboxOperationExecutorTest {
 
     private class RecordingV2Writer(
         var categoryResult: ConditionalRemoteWriteResult<CategoryDto> = ConditionalRemoteWriteResult.NotFound,
+        var assetResult: ConditionalRemoteWriteResult<AssetDto> = ConditionalRemoteWriteResult.NotFound,
         var workspaceResult: ConditionalRemoteWriteResult<WorkspaceDto> = ConditionalRemoteWriteResult.NotFound,
         var invitationResult: ConditionalRemoteWriteResult<WorkspaceInvitationDto> = ConditionalRemoteWriteResult.NotFound,
         var memberResult: ConditionalRemoteWriteResult<WorkspaceMemberDto> = ConditionalRemoteWriteResult.NotFound,
@@ -1171,6 +1196,18 @@ class V2OutboxOperationExecutorTest {
             lastBaseVersion = baseVersion
             lastCategoryDto = dto
             return categoryResult
+        }
+
+        override suspend fun writeAsset(
+            operationId: String,
+            operation: RemoteWriteOperation,
+            baseVersion: Long?,
+            dto: AssetDto,
+        ): ConditionalRemoteWriteResult<AssetDto> {
+            lastOperationId = operationId
+            lastOperation = operation
+            lastBaseVersion = baseVersion
+            return assetResult
         }
 
         override suspend fun writeWorkspace(
@@ -1359,13 +1396,14 @@ class V2OutboxOperationExecutorTest {
         )
 
         fun operation(
+            entityType: String = "CATEGORY",
             protocolVersion: Int = 2,
             operationType: String = "CREATE",
             baseVersion: Long? = null,
             payloadJson: String? = null,
         ) = SyncOperationEntity(
             operationId = OP_ID,
-            entityTypeCode = "CATEGORY",
+            entityTypeCode = entityType,
             entityId = ENTITY_ID,
             operationTypeCode = operationType,
             baseVersion = baseVersion,
@@ -1379,6 +1417,20 @@ class V2OutboxOperationExecutorTest {
             nextAttemptAtEpochMillis = 1000L,
             createdAtEpochMillis = 1000L,
             updatedAtEpochMillis = 1000L,
+        )
+
+        fun assetDto(version: Long) = AssetDto(
+            id = ENTITY_ID,
+            userId = USER_ID,
+            name = "Altın",
+            type = "PRECIOUS_METALS",
+            currentValueMinor = 100_000,
+            currency = "TRY",
+            trackingSymbol = "XAU",
+            autoTrack = true,
+            createdAt = CREATED_AT,
+            updatedAt = CREATED_AT,
+            version = version,
         )
     }
 }

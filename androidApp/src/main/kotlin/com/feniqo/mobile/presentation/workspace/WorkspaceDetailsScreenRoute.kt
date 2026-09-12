@@ -11,6 +11,7 @@ import com.feniqo.mobile.presentation.screen.WorkspaceDetailsScreen
 @Composable
 fun WorkspaceDetailsScreenRoute(
     onBack: () -> Unit,
+    onNavigateToSettlement: (workspaceId: String) -> Unit = {},
     viewModel: WorkspaceDetailsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -42,5 +43,8 @@ fun WorkspaceDetailsScreenRoute(
         onRequestRemoveMember = viewModel::requestMemberRemoval,
         onDismissMemberRemovalConfirmation = viewModel::dismissMemberRemovalConfirmation,
         onConfirmMemberRemoval = viewModel::confirmMemberRemoval,
+        onNavigateToSettlement = {
+            state.workspace?.id?.value?.let(onNavigateToSettlement)
+        },
     )
 }

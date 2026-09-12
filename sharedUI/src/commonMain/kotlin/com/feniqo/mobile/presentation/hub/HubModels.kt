@@ -82,35 +82,59 @@ object PlanHubRegistry {
  * Daha Fazla sekmesi altındaki modül kayıt defteri.
  */
 object MoreHubRegistry {
-    val CATEGORIES = HubMenuItem(
-        id = "categories",
-        title = "Kategoriler",
-        subtitle = "Gelir ve gider kategorilerini düzenle",
-        iconSymbol = "◇",
-        status = HubItemStatus.AVAILABLE,
-    )
-
-    val SETTINGS = HubMenuItem(
-        id = "settings",
-        title = "Ayarlar",
-        subtitle = "Görünüm, tema ve uygulama tercihleri",
-        iconSymbol = "⚙",
-        status = HubItemStatus.AVAILABLE,
-    )
-
     val ASSETS = HubMenuItem(
         id = "assets",
         title = "Varlıklar",
         subtitle = "Banka, nakit ve yatırım varlıkları",
-        iconSymbol = "◈",
-        status = HubItemStatus.COMING_SOON,
+        iconSymbol = "A",
+        status = HubItemStatus.AVAILABLE,
+    )
+
+    val GOALS = HubMenuItem(
+        id = "goals",
+        title = "Hedefler",
+        subtitle = "Birikim ve tasarruf hedefleri",
+        iconSymbol = "H",
+        status = HubItemStatus.AVAILABLE,
+    )
+
+    val DEBTS = HubMenuItem(
+        id = "debts",
+        title = "Borç ve Alacaklar",
+        subtitle = "Borç, alacak ve ödeme takibi",
+        iconSymbol = "B",
+        status = HubItemStatus.AVAILABLE,
+    )
+
+    val SUBSCRIPTIONS = HubMenuItem(
+        id = "subscriptions",
+        title = "Abonelikler",
+        subtitle = "Düzenli abonelik ödemeleri",
+        iconSymbol = "S",
+        status = HubItemStatus.AVAILABLE,
+    )
+
+    val RECURRING_TRANSACTIONS = HubMenuItem(
+        id = "recurring_transactions",
+        title = "Tekrarlayan İşlemler",
+        subtitle = "Planlı gelir ve gider kuralları",
+        iconSymbol = "T",
+        status = HubItemStatus.AVAILABLE,
+    )
+
+    val CATEGORIES = HubMenuItem(
+        id = "categories",
+        title = "Kategoriler",
+        subtitle = "Gelir ve gider kategorilerini düzenle",
+        iconSymbol = "K",
+        status = HubItemStatus.AVAILABLE,
     )
 
     val REPORTS = HubMenuItem(
         id = "reports",
         title = "Raporlar",
         subtitle = "Aylık ve yıllık detaylı finansal analizler",
-        iconSymbol = "⌁",
+        iconSymbol = "R",
         status = HubItemStatus.COMING_SOON,
     )
 
@@ -118,35 +142,26 @@ object MoreHubRegistry {
         id = "shared_spaces",
         title = "Ortak Alanlar",
         subtitle = "Aile ve ekip paylaşımlı bütçe takibi",
-        iconSymbol = "◉",
+        iconSymbol = "O",
         status = HubItemStatus.AVAILABLE,
     )
 
-    val BANKS = HubMenuItem(
-        id = "banks",
-        title = "Bankalar",
-        subtitle = "Otomatik banka ve kart entegrasyonları",
-        iconSymbol = "▤",
-        status = HubItemStatus.COMING_SOON,
+    val SETTINGS = HubMenuItem(
+        id = "settings",
+        title = "Uygulama Ayarları",
+        subtitle = "Görünüm, güvenlik ve veri araçları",
+        iconSymbol = "A",
+        status = HubItemStatus.AVAILABLE,
     )
 
-    val NOTIFICATIONS = HubMenuItem(
-        id = "notifications",
-        title = "Bildirimler",
-        subtitle = "Ödeme hatırlatıcıları ve bütçe uyarıları",
-        iconSymbol = "♢",
-        status = HubItemStatus.COMING_SOON,
-    )
+    val wealthItems = listOf(ASSETS, GOALS, DEBTS)
+    val moneyManagementItems = listOf(SUBSCRIPTIONS, RECURRING_TRANSACTIONS, CATEGORIES)
+    val collaborationItems = listOf(SHARED_SPACES)
+    val insightItems = listOf(REPORTS)
+    val settingsItems = listOf(SETTINGS)
 
-    val items: List<HubMenuItem> = listOf(
-        CATEGORIES,
-        SETTINGS,
-        ASSETS,
-        REPORTS,
-        SHARED_SPACES,
-        BANKS,
-        NOTIFICATIONS,
-    )
+    val items: List<HubMenuItem> =
+        wealthItems + moneyManagementItems + collaborationItems + insightItems + settingsItems
 
     val availableItems: List<HubMenuItem> get() = items.filter { it.isAvailable }
     val comingSoonItems: List<HubMenuItem> get() = items.filter { !it.isAvailable }

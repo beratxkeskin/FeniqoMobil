@@ -36,6 +36,31 @@ object DateFormatter {
         return "${getTurkishMonthName(month)} $year"
     }
 
+    fun formatShortMonth(month: Month): String = when (month) {
+        Month.JANUARY -> "Oca"
+        Month.FEBRUARY -> "Şub"
+        Month.MARCH -> "Mar"
+        Month.APRIL -> "Nis"
+        Month.MAY -> "May"
+        Month.JUNE -> "Haz"
+        Month.JULY -> "Tem"
+        Month.AUGUST -> "Ağu"
+        Month.SEPTEMBER -> "Eyl"
+        Month.OCTOBER -> "Eki"
+        Month.NOVEMBER -> "Kas"
+        Month.DECEMBER -> "Ara"
+    }
+
+    fun formatDateRange(startDate: LocalDate, endDate: LocalDate): String {
+        val startM = formatShortMonth(startDate.month)
+        val endM = formatShortMonth(endDate.month)
+        return if (startDate.month == endDate.month) {
+            "${startDate.day} – ${endDate.day} $startM"
+        } else {
+            "${startDate.day} $startM – ${endDate.day} $endM"
+        }
+    }
+
     private fun getTurkishMonthName(month: Month): String = when (month) {
         Month.JANUARY -> "Ocak"
         Month.FEBRUARY -> "Şubat"

@@ -8,6 +8,7 @@
 -- 6. 20260901000100_sync_write_v2_goals_and_debts.sql
 -- 7. 20260901000200_reconcile_goals_debts_sync_contract.sql
 -- 8. 20260906000100_sync_write_v2_workspaces.sql
+-- 9. 20260908000400_sync_write_v2_assets.sql
 -- migration'ları sonrasında sync_write_v2 sözleşmesini ve idempotency garantilerini doğrulamak için tasarlanmıştır.
 -- Bütün test verileri dinamik ve rastgeledir; test sonunda koşulsuz ROLLBACK ile temizlenir.
 
@@ -148,6 +149,7 @@ declare
 
     v_ws_db_version bigint;
     v_ws_db_name text;
+    v_ws_db_currency text;
     v_ws_db_normalized text;
     v_ws_db_deleted_at timestamptz;
     v_ws_member_count integer;
@@ -185,6 +187,7 @@ declare
     v_rec_count integer;
     v_sub_count integer;
     v_error_caught boolean;
+begin
     -- 0. STAGING KULLANICISI SEÇİMİ VE SESSION AYARLAMASI
     select id into v_test_user_id from auth.users order by created_at asc limit 1;
     if v_test_user_id is null then
@@ -475,7 +478,7 @@ declare
 
 
     -- =========================================================================
-    -- SENARYO 10: Transaction Minimal DELETE ve Replay
+    -- SENARYO 10: Transaction DELETE ve Replay
     -- =========================================================================
     v_res := public.sync_write_v2(
         p_operation_id := v_op_delete_tx,
@@ -483,7 +486,8 @@ declare
         p_operation := 'DELETE',
         p_base_version := 1,
         p_payload := jsonb_build_object(
-            'id', v_tx_id -- Minimal payload: yalnız id
+            'id', v_tx_id,
+            'category_id', v_default_expense_cat_id
         )
     );
 
@@ -498,7 +502,8 @@ declare
         p_operation := 'DELETE',
         p_base_version := 1,
         p_payload := jsonb_build_object(
-            'id', v_tx_id
+            'id', v_tx_id,
+            'category_id', v_default_expense_cat_id
         )
     );
 
@@ -1164,7 +1169,6 @@ declare
             'frequency', 'MONTHLY',
             'interval', 1,
             'start_date', '2026-08-01',
-            'next_renewal_date', '2026-09-01',
             'is_active', true
         )
     );
@@ -1207,7 +1211,6 @@ declare
             'frequency', 'MONTHLY',
             'interval', 1,
             'start_date', '2026-08-01',
-            'next_renewal_date', '2026-09-01',
             'is_active', true
         )
     );
@@ -1240,7 +1243,6 @@ declare
             'frequency', 'MONTHLY',
             'interval', 1,
             'start_date', '2026-08-01',
-            'next_renewal_date', '2026-09-01',
             'is_active', true
         )
     );
@@ -1274,8 +1276,7 @@ declare
                 'category_id', v_default_income_cat_id,
                 'frequency', 'MONTHLY',
                 'interval', 1,
-                'start_date', '2026-08-01',
-                'next_renewal_date', '2026-09-01'
+                'start_date', '2026-08-01'
             )
         );
     exception when others then
@@ -1315,8 +1316,7 @@ declare
                 'currency', 'TRY',
                 'category_id', v_default_expense_cat_id,
                 'frequency', 'MONTHLY',
-                'start_date', '2026-08-01',
-                'next_renewal_date', '2026-09-01'
+                'start_date', '2026-08-01'
             )
         );
     exception when others then
@@ -1343,8 +1343,7 @@ declare
                 'currency', 'TRY',
                 'category_id', v_default_expense_cat_id,
                 'frequency', 'MONTHLY',
-                'start_date', '2026-08-01',
-                'next_renewal_date', '2026-09-01'
+                'start_date', '2026-08-01'
             )
         );
     exception when others then
@@ -2293,7 +2292,7 @@ declare
                 'unknown_property', 'hacked'
             )
         );
-    rescue when others then
+    exception when others then
         v_error_caught := true;
     end;
 
@@ -2317,7 +2316,7 @@ declare
                 'owner_id', extensions.gen_random_uuid()
             )
         );
-    rescue when others then
+    exception when others then
         v_error_caught := true;
     end;
 
@@ -2341,7 +2340,7 @@ declare
                 'members', jsonb_build_array(jsonb_build_object('user_id', extensions.gen_random_uuid(), 'role_code', 'OWNER'))
             )
         );
-    rescue when others then
+    exception when others then
         v_error_caught := true;
     end;
 
@@ -2363,7 +2362,7 @@ declare
                 'currency_code', 'TRY'
             )
         );
-    rescue when others then
+    exception when others then
         v_error_caught := true;
     end;
 
@@ -2385,7 +2384,7 @@ declare
                 'type_code', 'personal'
             )
         );
-    rescue when others then
+    exception when others then
         v_error_caught := true;
     end;
 
@@ -2407,7 +2406,7 @@ declare
                 'currency_code', 'TRY'
             )
         );
-    rescue when others then
+    exception when others then
         v_error_caught := true;
     end;
 
@@ -2429,7 +2428,7 @@ declare
                 'type_code', 'personal'
             )
         );
-    rescue when others then
+    exception when others then
         v_error_caught := true;
     end;
 
@@ -2478,7 +2477,7 @@ declare
                 'currency_code', 'TRY'
             )
         );
-    rescue when insufficient_privilege then
+    exception when insufficient_privilege then
         v_error_caught := true;
     end;
 
@@ -2498,7 +2497,7 @@ declare
                 'id', v_ws_id
             )
         );
-    rescue when insufficient_privilege then
+    exception when insufficient_privilege then
         v_error_caught := true;
     end;
 
@@ -2555,10 +2554,10 @@ declare
         raise exception 'Senaryo 55 Başarısız: WORKSPACE UPDATE APPLIED veya version 2 / USD olmadı.';
     end if;
 
-    select version, currency_code, normalized_name into v_ws_db_version, v_debt_currency, v_ws_db_normalized
+    select version, currency_code, normalized_name into v_ws_db_version, v_ws_db_currency, v_ws_db_normalized
       from public.workspaces where id = v_ws_id;
 
-    if v_ws_db_version <> 2 or v_debt_currency <> 'USD' or v_ws_db_normalized <> 'yeni şirket adı' then
+    if v_ws_db_version <> 2 or v_ws_db_currency <> 'USD' or v_ws_db_normalized <> 'yeni şirket adı' then
         raise exception 'Senaryo 55 Başarısız: DB workspaces tablosunda versiyon 2 veya USD güncellenmedi.';
     end if;
 
@@ -3484,9 +3483,48 @@ declare
     end;
 
     -- =========================================================================
-    -- SENARYO 70: BİLGİLENDİRME VE GÜVENLİ TEMİZLİK
+    -- SENARYO 70: ASSET CREATE/UPDATE/DELETE, CONFLICT, OWNER VE VALIDATION
     -- =========================================================================
-    raise notice 'Tüm 69 sözleşme ve idempotency senaryosu (PROFILE, CATEGORY, TRANSACTION SPLIT, BUDGET, RECURRING_TRANSACTION, SUBSCRIPTION, GOAL, GOAL_CONTRIBUTION, DEBT, DEBT_PAYMENT, WORKSPACE, WORKSPACE_MEMBER, WORKSPACE_INVITATION, TRANSFER_OWNERSHIP, MEMBER_REMOVAL_RLS) başarıyla doğrulandı. İşlemler ROLLBACK ile geri alınıyor.';
+    declare
+        v_asset_id uuid := extensions.gen_random_uuid();
+        v_asset_res jsonb;
+        v_error_caught boolean := false;
+    begin
+        perform set_config('request.jwt.claim.sub', v_test_user_id::text, true);
+        v_asset_res := public.sync_write_v2(replace(extensions.gen_random_uuid()::text,'-',''),'ASSET','CREATE',null,
+            jsonb_build_object('id',v_asset_id,'user_id',v_test_user_id,'name','Altın','type','PRECIOUS_METALS','current_value_minor',100000,'currency','TRY','quantity_unscaled',10,'quantity_scale',1,'purchase_unit_price_minor',90000,'tracking_symbol','XAU','auto_track',true,'created_at',timezone('utc',now())));
+        if v_asset_res->>'status' <> 'APPLIED' or (v_asset_res->'record'->>'version')::bigint <> 1 then raise exception 'Senaryo 70.1 Başarısız: Asset CREATE.'; end if;
+
+        v_asset_res := public.sync_write_v2(replace(extensions.gen_random_uuid()::text,'-',''),'ASSET','UPDATE',1,
+            jsonb_build_object('id',v_asset_id,'user_id',v_test_user_id,'name','Altın Güncel','type','PRECIOUS_METALS','current_value_minor',110000,'currency','TRY','quantity_unscaled',10,'quantity_scale',1,'purchase_unit_price_minor',90000,'tracking_symbol','XAU','auto_track',true));
+        if v_asset_res->>'status' <> 'APPLIED' or (v_asset_res->'record'->>'version')::bigint <> 2 then raise exception 'Senaryo 70.2 Başarısız: Asset UPDATE.'; end if;
+
+        v_asset_res := public.sync_write_v2(replace(extensions.gen_random_uuid()::text,'-',''),'ASSET','UPDATE',1,
+            jsonb_build_object('id',v_asset_id,'user_id',v_test_user_id,'name','Eski','type','PRECIOUS_METALS','current_value_minor',1,'currency','TRY','auto_track',false));
+        if v_asset_res->>'status' <> 'CONFLICT' then raise exception 'Senaryo 70.3 Başarısız: stale Asset conflict.'; end if;
+
+        begin
+            perform public.sync_write_v2(replace(extensions.gen_random_uuid()::text,'-',''),'ASSET','CREATE',null,
+                jsonb_build_object('id',extensions.gen_random_uuid(),'user_id',v_other_user_id,'name','Yetkisiz','type','OTHER','current_value_minor',1,'currency','TRY','auto_track',false));
+        exception when insufficient_privilege then v_error_caught := true; end;
+        if not v_error_caught then raise exception 'Senaryo 70.4 Başarısız: Asset owner izolasyonu.'; end if;
+
+        v_error_caught := false;
+        begin
+            perform public.sync_write_v2(replace(extensions.gen_random_uuid()::text,'-',''),'ASSET','CREATE',null,
+                jsonb_build_object('id',extensions.gen_random_uuid(),'user_id',v_test_user_id,'name','Takip','type','STOCKS','current_value_minor',1,'currency','TRY','auto_track',true));
+        exception when check_violation then v_error_caught := true; end;
+        if not v_error_caught then raise exception 'Senaryo 70.5 Başarısız: auto_track sembol doğrulaması.'; end if;
+
+        v_asset_res := public.sync_write_v2(replace(extensions.gen_random_uuid()::text,'-',''),'ASSET','DELETE',2,
+            jsonb_build_object('id',v_asset_id));
+        if v_asset_res->>'status' <> 'APPLIED' or v_asset_res->'record'->>'deleted_at' is null then raise exception 'Senaryo 70.6 Başarısız: Asset DELETE.'; end if;
+    end;
+
+    -- =========================================================================
+    -- SENARYO 71: BİLGİLENDİRME VE GÜVENLİ TEMİZLİK
+    -- =========================================================================
+    raise notice 'Asset dahil tüm sync_write_v2 sözleşme senaryoları doğrulandı. İşlemler ROLLBACK ile geri alınıyor.';
 end
 $$;
 

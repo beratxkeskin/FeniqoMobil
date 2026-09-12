@@ -45,6 +45,8 @@ enum class FinanceUiMessage {
     GOAL_SAVED,
     GOAL_DELETED,
     GOAL_CONTRIBUTION_ADDED,
+    ASSET_SAVED,
+    ASSET_DELETED,
     DEBT_SAVED,
     DEBT_DELETED,
     DEBT_PAYMENT_ADDED,
@@ -89,6 +91,8 @@ enum class FinanceUiMessage {
             GOAL_SAVED,
             GOAL_DELETED,
             GOAL_CONTRIBUTION_ADDED,
+            ASSET_SAVED,
+            ASSET_DELETED,
             DEBT_SAVED,
             DEBT_DELETED,
             DEBT_PAYMENT_ADDED -> false
@@ -136,6 +140,8 @@ enum class FinanceUiMessage {
         GOAL_SAVED -> "Hedef başarıyla kaydedildi."
         GOAL_DELETED -> "Hedef başarıyla silindi."
         GOAL_CONTRIBUTION_ADDED -> "Hedef hareketi başarıyla kaydedildi."
+        ASSET_SAVED -> "Varlık başarıyla kaydedildi."
+        ASSET_DELETED -> "Varlık başarıyla silindi."
         DEBT_SAVED -> "Borç / alacak kaydı başarıyla kaydedildi."
         DEBT_DELETED -> "Borç / alacak kaydı başarıyla silindi."
         DEBT_PAYMENT_ADDED -> "Ödeme / tahsilat başarıyla kaydedildi."
@@ -237,4 +243,3 @@ fun AppError.toFinanceUiMessage(): FinanceUiMessage = when (this) {
     }
     is AppError.Unknown -> FinanceUiMessage.GENERIC_ERROR
 }
-

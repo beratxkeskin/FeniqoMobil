@@ -382,3 +382,63 @@ val ANDROID_MIGRATION_11_12 = Migration(11, 12) { database ->
             "WHERE participant_user_ids_json IS NULL",
     )
 }
+
+/** v13, kişisel varlıklar için Room SSOT tablosunu ekler. */
+val ANDROID_MIGRATION_12_13 = Migration(12, 13) { database ->
+    database.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS assets (
+            id TEXT NOT NULL,
+            owner_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            type_code TEXT NOT NULL,
+            current_value_minor INTEGER NOT NULL,
+            currency_code TEXT NOT NULL,
+            quantity_unscaled INTEGER,
+            quantity_scale INTEGER,
+            purchase_unit_price_minor INTEGER,
+            tracking_symbol TEXT,
+            auto_track INTEGER NOT NULL,
+            created_at_epoch_ms INTEGER NOT NULL,
+            sync_status TEXT NOT NULL,
+            updated_at_epoch_ms INTEGER NOT NULL,
+            local_updated_at_epoch_ms INTEGER NOT NULL,
+            deleted_at_epoch_ms INTEGER,
+            version INTEGER NOT NULL,
+            base_version INTEGER,
+            last_sync_error TEXT,
+            PRIMARY KEY(id)
+        )
+        """.trimIndent(),
+    )
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_assets_owner_id ON assets(owner_id)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_assets_type_code ON assets(type_code)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_assets_deleted_at_epoch_ms ON assets(deleted_at_epoch_ms)")
+}
+
+/** v14, sağlayıcıdan bağımsız piyasa fiyatı önbelleğini ekler. */
+val ANDROID_MIGRATION_13_14 = Migration(13, 14) { database ->
+    database.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS market_prices (
+            asset_type_code TEXT NOT NULL,
+            symbol TEXT NOT NULL,
+            quote_currency_code TEXT NOT NULL,
+            price_unscaled INTEGER NOT NULL,
+            price_scale INTEGER NOT NULL,
+            observed_at_epoch_ms INTEGER NOT NULL,
+            fetched_at_epoch_ms INTEGER NOT NULL,
+            expires_at_epoch_ms INTEGER NOT NULL,
+            source TEXT NOT NULL,
+            PRIMARY KEY(asset_type_code, symbol, quote_currency_code)
+        )
+        """.trimIndent(),
+    )
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_market_prices_expires_at_epoch_ms ON market_prices(expires_at_epoch_ms)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_market_prices_fetched_at_epoch_ms ON market_prices(fetched_at_epoch_ms)")
+}
+
+/** v15, transactions tablosuna isteğe bağlı note kolonunu ekler. */
+val ANDROID_MIGRATION_14_15 = Migration(14, 15) { database ->
+    database.execSQL("ALTER TABLE transactions ADD COLUMN note TEXT")
+}

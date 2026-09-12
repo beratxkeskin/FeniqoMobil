@@ -286,7 +286,7 @@ com.feniqo.mobile/
 
 - [ ] İşlem listesi: tarih gruplama, arama, filtreleme ve boş durum.
 - [ ] İşlem ekleme/düzenleme ekranı.
-- [ ] Kategori seçimi ve kategori yönetimi.
+- [ ] Kategori seçimi ve kategori yönetimi (Kategoriler analiz ve yönetim ekranı: test ve mimari doğrulama tamamlandı, emülatör/görsel smoke kabulü bekleniyor).
 - [ ] Taksitli işlem oluşturma ve silme davranışı.
 - [ ] Makbuz bağlama için UI hazırlığı.
 
@@ -335,16 +335,99 @@ com.feniqo.mobile/
 - [ ] Çalışma alanı oluşturma, katılma, ayrılma ve aktif alan seçimi.
 - [ ] Üye listesi ve rol tabanlı UI.
 - [ ] Ortak işlem ve bütçe görünürlüğü.
-- [ ] Kimin ne kadar ödediği ve borç dağılımı hesaplaması.
+- [x] Kimin ne kadar ödediği ve borç dağılımı hesaplaması.
 
-**İlerleme notu (Faz 8.4, E13–E14-A):** Aktif workspace seçimi, Transaction/Category/Budget/Recurring/Subscription/Goal/Debt repository okumaları ve mutasyonlarında Room SSOT kapsamını belirler; yanlış veya bayat bir alan kimliği fail-closed dışlanır. Finans ekranları ve ilgili formlar kullanıcının kişisel ya da ortak alan bağlamını açıkça gösterir. E13-D1 ile Room sorguları ortak alanda tüm üye işlem/bütçe/kategorilerini; kişisel alanda yalnız aktif kullanıcının satırlarını döndürür. E13-D2 ile ortak kategori ve işlem kayıtları workspace üyelik pull'undan sonra workspace kimliğine bağlı bağımsız cursor'larla Room'a alınır; kişisel cursor'lar ve kişisel pull davranışı korunur. Ortak gider ödeşmesi için saf `WorkspaceSettlementCalculator` eklendi: tutarlar `Long` küçük para biriminde eşit bölünür, bölünemeyen kuruşlar katılımcı kimliğine göre deterministik dağıtılır ve net bakiyelerden deterministik transfer önerileri üretilir. Kalıcı payer/katılımcı kaydı, outbox ve Supabase senkronizasyonu henüz sonraki dilimdedir; bu nedenle ana checkbox'lar işaretlenmemiştir.
+**İlerleme notu (Faz 8.4, E14-C & E14-D):** Ortak gider split yönetimi ve ödeşme ekranı uçtan uca tamamlandı. E14-C ile işlem ekleme/düzenleme formunda aktif shared workspace ve EXPENSE için dinamik "Kim Ödedi?" (tekil seçim) ve "Kimler Katılıyor?" (çoklu seçim) alanları eklendi. E14-D ile `ObserveWorkspaceSettlementUseCase`, `WorkspaceSettlementViewModel` ve `WorkspaceSettlementScreen` MVI ekranı geliştirildi: aktif shared workspace'deki EXPENSE işlemleri ve üyeler Room SSOT Flow'ları üzerinden dinlenerek her üyenin net bakiyesini ("Alacaklı", "Borçlu", "Dengede") ve deterministik transfer önerilerini ("A, B kişisine ₺X ödesin") gösterir. Workspace silinmişse veya mevcut kullanıcı aktif üye değilse fail-closed koruma uygulanır; geçersiz/üye dışı split harcamaları hesaplamadan dışlanır ve kullanıcıya bilgi başlığı sunulur. Workspace detay ekranına "Ödeşme ve Transferler" butonu ve type-safe route entegrasyonu sağlandı. Kapsamlı birim, viewmodel ve UI testleri başarıyla doğrulandı.
 
 ### 8.5 Varlıklar, net değer ve raporlar
 
-- [ ] Varlık CRUD: nakit, metal, kripto, hisse, gayrimenkul vb.
-- [ ] Net değer hesabı.
+- [x] Varlık CRUD: nakit, metal, kripto, hisse, gayrimenkul vb.
+- [x] Net değer hesabı.
 - [ ] Piyasa fiyat servisinin güvenli backend sözleşmesi.
 - [ ] Harcama analizi, trend, ısı haritası ve tahmin raporları.
+
+#### E15-A — Asset offline-first altyapısı
+
+- [x] Asset domain command, repository/use case sözleşmeleri ve doğrulama kurallarını oluştur.
+- [x] Room `assets` tablosu, DAO, mapper, v12→v13 migration ve şema testlerini tamamla.
+- [x] Asset DTO/remote mapper ve cursor tabanlı remote query sözleşmesini ekle.
+- [x] Asset CREATE/UPDATE/DELETE için atomik Room V2 outbox, coalesce ve ACK/rebase davranışını tamamla.
+- [x] `OfflineFirstAssetRepository` kişisel owner izolasyonu, doğrulama ve cancellation davranışını tamamla.
+- [x] Initial/incremental Asset pull, cursor ve pending yerel değişikliği ezmeyen conflict davranışını tamamla.
+- [x] Asset repository ve sync bağımlılıklarını Android Hilt DI'a bağla.
+- [x] Asset odaklı repository, pull/conflict ve V2 executor/ACK testlerini çalıştır; Android debug derlemesini doğrula.
+- [x] Asset liste/form ekranları için type-safe rota ve fail-closed kimlik ayrıştırma sözleşmesini oluştur.
+- [x] Asset form girdileri için `Double` kullanmayan para/miktar normalizasyonu ve alan bazlı doğrulamayı tamamla.
+- [x] Asset liste display model/UI state, deterministik mapper ve retry destekli Room Flow ViewModel'ini tamamla.
+- [x] Stateless Asset liste ekranını, Hilt route adaptörünü ve `Daha Fazla → Varlıklar` navigasyonunu etkinleştir.
+- [x] Asset form ViewModel create/update/delete, edit-load, double-submit ve fail-closed route state sözleşmesini tamamla.
+- [x] Asset Compose formu, onaylı silme diyaloğu ve liste↔form navigation akışını tamamla.
+- [x] Forward-only Asset Supabase migration ve rollback'li SQL sözleşme testini izole yerel PostgreSQL/Supabase ortamında çalıştır.
+- [x] Asset CRUD kullanıcı arayüzü ve Android manuel smoke kabulünü tamamla.
+
+**İlerleme notu (Faz 8.5, E15-A — 2026-09-09):** Kişisel kapsamlı Asset domain/validation, Room v13, DTO/mapper, atomik V2 outbox ve ACK/rebase, offline-first repository, initial/incremental pull ile pending-conflict koruması, Android DI ve Asset CRUD kullanıcı arayüzü tamamlandı. Asset odaklı Android host testleri ile `:androidApp:assembleDebug` doğrulandı; kullanıcı manuel Android smoke kabulünü de tamamladı. İleri yönlü `20260908000400_sync_write_v2_assets.sql` migration'ı tüm önceki migration'ların ardından izole yerel PostgreSQL veritabanına uygulandı; bağımsız rollback'li Asset SQL sözleşmesinde CREATE/UPDATE/DELETE, stale-version conflict, doğrulama retleri ve owner mutation/RLS izolasyonu geçti. Birleşik legacy contract, Asset senaryosuna ulaşmadan eski Subscription RPC'nin `billing_cycle` ile mevcut `frequency` şeması arasındaki uyumsuzlukta kalmaktadır. Staging/production'a dokunulmadı.
+
+#### E15-B — Offline-first net değer özeti
+
+- [x] Room SSOT Asset akışından para birimi bazlı net değer hesaplayan saf domain use case'i ekle.
+- [x] Farklı para birimlerini kur dönüşümü olmadan ayrı tut ve toplam taşmasında fail-closed davran.
+- [x] Asset liste ViewModel ve ekranına reaktif net değer kartını bağla.
+- [x] Net değer hesaplayıcı, display mapper ve ViewModel için hedefli testleri; Android debug derlemesini doğrula.
+- [x] Net değer kartının Android manuel smoke kabulünü tamamla.
+
+**İlerleme notu (Faz 8.5, E15-B — 2026-09-09):** Net değer özeti aktif kişisel Asset kayıtlarının `currentValue` alanlarını Room Flow üzerinden reaktif olarak para birimi bazında toplar. Güvenilir kur servisi bulunmadığından farklı para birimleri sessizce çevrilmez veya tek toplamda birleştirilmez; kartta ayrı gösterilir. Güvenli `Money` sınırını aşan toplam fail-closed hata durumuna dönüşür. Asset/NetWorth odaklı sharedLogic, sharedUI ve androidApp testleri ile `:androidApp:assembleDebug` geçti; kullanıcı Android manuel smoke kabulünü de başarıyla tamamladı.
+
+#### E15-C — Güvenli piyasa fiyat servisi
+
+- [x] Sağlayıcıdan bağımsız ölçekli fiyat, istek, kullanılabilirlik ve hata domain sözleşmelerini oluştur.
+- [x] Sembol allowlist normalizasyonunu ve `Double` kullanmayan miktar × fiyat HALF_UP/overflow hesaplamasını tamamla.
+- [x] Forward-only `market_prices` Supabase tablosu, salt-okunur RLS ve rollback'li SQL sözleşmesini oluştur.
+- [x] JWT doğrulamalı, secret tabanlı, sabit sağlayıcı endpoint'li Edge Function çekirdeğini ve izole sözleşme testlerini tamamla.
+- [x] Kullanıcı başına atomik piyasa fiyatı istek kotası ve doğrudan tablo erişimi kapalı SQL sözleşmesini tamamla.
+- [ ] Edge Function'ı gerçek Deno/Supabase runtime'ında test secret'ı ile başlatıp sağlayıcı smoke kabulünü tamamla.
+- [x] Sağlayıcıdan bağımsız Room market-price cache, DAO, v13→v14 migration ve şema doğrulamasını tamamla.
+- [x] Market-price repository yenileme/Flow zincirini ve mobil Edge Function istemcisini tamamla.
+- [x] Fresh/stale/unavailable durumlarını ve manuel değer fallback'ini Asset/net değer UI'ına bağla.
+- [x] Edge Function erişilemezken hata gösterimi, manuel değer/net değer koruması ve yeniden deneme Android manuel kabulünü tamamla.
+- [ ] E15-C hedefli testleri, Android debug derlemesini ve manuel smoke kabulünü tamamla.
+
+**İlerleme notu (Faz 8.5, E15-C — 2026-09-09):** Güvenli domain, uzak read-model ve Edge Function çekirdek dilimleri tamamlandı. `CRYPTO`, `STOCKS` ve `PRECIOUS_METALS` istekleri sağlayıcıdan bağımsız modellenir; semboller allowlist ile normalize edilir ve ölçekli hesap taşmada fail-closed davranır. `market_prices` cache'i authenticated için salt-okunur, anon için kapalı, service-role için kontrollü yazılabilirdir. Function gateway JWT'ye ek olarak Auth `/user` doğrulaması, 20 sembollük batch sınırı, 5 saniye timeout, sabit `https://api.twelvedata.com/quote` endpoint'i, fresh cache ve stale fallback uygular. `TWELVE_DATA_API_KEY` yalnız Edge secret'tır. Kullanıcı başına dakikada 10 istek atomik `claim_market_price_request` RPC'siyle sınırlandırılır; kota tablosuna istemci erişemez. Sekiz izole Function testi ile her iki rollback'li SQL contract geçti. Mobilde sembol+tür+kotasyon para birimi bileşik anahtarlı, stale fallback satırlarını koruyan sağlayıcıdan bağımsız Room cache'i eklendi; v13→v14 migration ve 14.json doğrulandı. Supabase Functions istemcisi, istek/yanıt DTO'ları ve offline-first repository zinciri eklendi; geçersiz batch remote'a çıkmaz, yalnız fiyatlı sonuçlar cache'e yazılır, unavailable/ağ hatası eski cache'i silmez ve cancellation yutulmaz. Fresh ve unavailable Function JSON yanıtlarının mobil DTO'ya kayıpsız dönüşümü ayrıca sözleşme testleriyle kapatıldı; toplam 16 MarketPrice testi geçti. Asset ekranında kullanıcı kontrollü fiyat yenileme, fresh/stale/manüel kaynak etiketi ve miktar × fiyat ile net değer güncellemesi eklendi; fiyat ya da güvenli hesap yoksa manuel değer korunur. Asset ViewModel hedefli testleri ile Android debug derlemesi geçti. Edge Function erişilemezken hata gösterimi ve manuel değer/net değer koruması Android'de kullanıcı tarafından doğrulandı. Bu makinede Deno/Supabase CLI bulunmadığı için gerçek fresh/stale Edge runtime/provider smoke kabulü açık bırakıldı; hiçbir uzak ortama deploy yapılmadı.
+
+### 8.6 Merchant/marka tanıma ve kategori ikonları
+
+- [x] Platformdan bağımsız merchant, alias, negatif alias, işlem sınıfı ve eşleşme kaynağı sözleşmelerini oluştur.
+- [x] Türkçe uyumlu deterministik açıklama normalleştiricisini ve 0–100 güven puanlı eşleştirme motorunu oluştur.
+- [x] Temsilî başlangıç kataloğu ile özel/genel alias önceliğini ve kişisel/sistem hareketi dışlamasını test et.
+- [x] Alias türü/kapsamı, kişisel→workspace→banka doğrulama sırası, onaylı güven matrisi ve 10 puanlık çakışma eşiğini uygula.
+- [x] 18 gider kategorisinin semantik anahtar, Türkçe/İngilizce ad, ikon anlamı, renk ve kapsam sözlüğünü tanımla.
+- [x] 9 gelir kategorisinin semantik anahtar, Türkçe/İngilizce ad, ikon anlamı, renk ve kapsam sözlüğünü tanımla.
+- [x] 7 sistem hareketinin semantik anahtar, Türkçe/İngilizce ad, ikon anlamı ve amaç sözlüğünü tanımla; merchant eşleştirmesinden çıkar.
+- [x] Eski 5 gelir/12 gider Room seed'ini referansları koruyarak kanonik 9 gelir/18 gider sözlüğüne taşı.
+- [x] Semantik kategori anahtarlarını kategori listesi ve işlem formunda gerçek Compose vektör ikonlarına ve %12 tonal renk kaplarına bağla.
+- [ ] Kullanıcı doğrulamalarını ve isteğe bağlı transaction merchant bağlantısını Room SSOT'a ekle.
+- [ ] UI logo fallback zincirini ve opsiyonel, gizlilik korumalı logo adaptörünü uygula.
+
+**İlerleme notu (Faz 8.6, ilk domain dilimi — 2026-09-11):** `sharedLogic/commonMain`
+içinde kategori modelinden ayrı merchant sözleşmeleri, ham açıklamayı koruyan Türkçe uyumlu
+normalleştirici, özel alias önceliği, negatif alias, işlem sınıfı filtresi ve 0–100 güven puanlı
+deterministik motor tamamlandı. Starbucks, Migros, Shell, Spotify, Netflix, Trendyol/Yemek,
+Getir/GetirYemek, Amazon/Prime, Uber, THY, Turkcell ve Apple Services başlangıç kataloğuna
+eklendi. 75 altındaki eşleşmeler logo için uygun değildir; kullanıcı doğrulaması tahminden önce
+gelir. Room, Supabase, DTO, outbox, sync, UI ve logo sağlayıcısı bu dilimin dışındadır.
+
+**İlerleme notu (Faz 8.6, güven sözleşmesi devamı — 2026-09-11):** Alias türleri ve
+kişisel/çalışma alanı/genel kapsamları modellendi. Kişisel doğrulama 100, çalışma alanı doğrulaması
+100, banka kimliği 98, tam alias 95, yasal ad 92, marka+hizmet 90, şube/POS 86, güçlü marka 80
+ve kısa alias 65 puan sözleşmesine bağlandı. Farklı merchant adayları arasındaki puan farkı
+10'dan azsa otomatik merchant ataması yapılmaması hedefli testlerle doğrulandı.
+
+**İlerleme notu (Faz 8.6, Room + görsel dilim — 2026-09-11):** Mevcut `categories`
+şeması semantik `icon_key` ve `color_hex` alanlarını zaten taşıdığı için gereksiz bir şema sürümü
+artışı yapılmadı. `DefaultCategorySeeder` 9 gelir ve 18 gider kaydını sabit UUID'lerle idempotent
+uzlaştıracak şekilde genişletildi; eşdeğer eski kategoriler kimlik ve sync metadata'sını korur.
+Anlamı belirsiz `Tasarruf & Yatırım` ile `Kredi Ödemeleri` başka kategoriye çevrilmeden tarihsel
+referansları korunarak aktif seçimden gizlenir. Tüm 27 semantik anahtar kategori listesi ve işlem
+formunda gerçek Compose vektörü, kategori rengi ve %12 tonal dairesel zeminle gösterilir.
 
 ---
 
@@ -352,24 +435,91 @@ com.feniqo.mobile/
 
 ### 9.1 Biyometrik uygulama kilidi
 
-- [ ] Kilit tercihini ve otomatik kilit süresini oluştur.
-- [ ] `BiometricPrompt` ile uygulama açılışında doğrulama uygula.
-- [ ] Biyometri kullanılamadığında güvenli cihaz kimlik doğrulama geri dönüşünü tasarla.
+- [x] Kilit tercihini ve otomatik kilit süresini oluştur.
+- [x] `BiometricPrompt` ile uygulama açılışında doğrulama uygula.
+- [x] Biyometri kullanılamadığında güvenli cihaz kimlik doğrulama geri dönüşünü tasarla.
+- [x] Biyometrik kilit, süre seçenekleri ve cihaz kimlik bilgisi geri dönüşü için Android manuel smoke kabulünü tamamla.
+
+**İlerleme notu (Faz 9.1 — 2026-09-09):** Biyometrik kilit tercihi ile anında, 30 saniye, 1 dakika ve 5 dakika otomatik kilit seçenekleri ortak domain sözleşmesine taşındı. Saat geri alınırsa kilit gerektiren fail-closed `AppLockPolicy` eklendi. Android tercihleri uygulamaya özel Preferences DataStore'da saklanır ve Hilt üzerinden `SecurityRepository` olarak sunulur. `MainActivity` kökündeki lifecycle kapısı doğrulama gerekirken finans navigation ağacını composition dışına çıkarır; kilidi etkinleştirme de tercih yazılmadan önce başarılı sistem doğrulaması ister. AndroidX `BiometricPrompt`, biyometriyle birlikte cihaz PIN/desen/parolasını güvenli geri dönüş olarak kabul eder ve sistem doğrulaması yoksa kilit etkinleştirilemez. Bu uygulama kilidi, arka plan senkronizasyonunun çalışabilmesi için kullanıcı doğrulamasına bağlanmayan mevcut SQLCipher/Keystore anahtarından bilinçli olarak ayrıdır. 5 politika, 2 repository ve 4 lifecycle/controller testi ile Android debug derlemesi geçti; biyometrik kilit, süre ve cihaz kimlik bilgisi geri dönüşü kullanıcı tarafından Android'de başarıyla doğrulandı. Faz 9.1 tamamlandı.
 
 ### 9.2 Makbuz OCR
 
-- [ ] CameraX kamera akışını kur.
-- [ ] ML Kit Text Recognition ile metni al.
-- [ ] Toplam tutar, tarih ve işyeri adı için güvenilir ayrıştırma kuralları oluştur.
-- [ ] OCR sonucunu doğrudan kaydetme; kullanıcı onaylı işlem formuna aktar.
-- [ ] Kamera ve görsel izin reddi senaryolarını ele al.
+- [x] CameraX kamera akışını kur.
+- [x] ML Kit Text Recognition ile metni al.
+- [x] Toplam tutar, tarih ve işyeri adı için güvenilir ayrıştırma kuralları oluştur.
+- [x] OCR sonucunu doğrudan kaydetme; kullanıcı onaylı işlem formuna aktar.
+- [x] Kamera ve görsel izin reddi senaryolarını ele al.
+- [ ] Kamera, galeri, izin reddi ve kullanıcı onaylı OCR form aktarımı için Android manuel smoke kabulünü tamamla.
+- [ ] Gerçek makbuz örnekleriyle toplam/fiyat satırı algılama doğruluğunu iyileştir ve regresyon fixture'ları ekle.
+
+**İlerleme notu (Faz 9.2, ilk dilim — 2026-09-09):** OCR çıktısını kalıcı finans
+kaydından ayıran `ReceiptOcrResult`/`ReceiptOcrDraft` aday sözleşmesi ve deterministik
+`ReceiptOcrParser` tamamlandı. Parser etiketli genel toplam/ödenecek/toplam satırlarını güven
+düzeyiyle değerlendirir, tutarı `Double` kullanmadan küçük para birimine çevirir, geçersiz veya
+taşan tutarı ve takvim dışı tarihi reddeder; para birimini makbuzdan tahmin etmek yerine aktif form
+bağlamından alır. İşyeri adını düşük güvenli aday olarak sunar. 50.000 karakter üzerindeki girdi
+fail-closed reddedilir; ham OCR metni modelde, Room'da veya outbox'ta tutulmaz. Altı hedefli parser
+testi geçti. CameraX, ML Kit ve kullanıcı onaylı form aktarımı sonraki dilimlerdir.
+
+**İlerleme notu (Faz 9.2, Android temel — 2026-09-09):** Resmî sürümlerle CameraX 1.6.1
+ve ağdan model indirmeyen bundled Latin ML Kit Text Recognition 16.0.1 yalnız Android modülüne
+eklendi. `MlKitReceiptOcrService` bir `content://`/dosya URI'sini cihaz içinde işler, ham metni
+yalnız geçici olarak parser'a verir ve yalnız `ReceiptOcrResult` döndürür. Hilt bağı kuruldu.
+Kamera donanımı opsiyonel ilan edildi; ilk istek, gerekçe, kalıcı ret/ayarlar ve izin verilmiş
+durumlarını fail-closed ayıran `CameraPermissionPolicy` dört testle doğrulandı. Parser testleri ve
+Android debug derlemesi geçti. Kamera önizleme/yakalama ekranı ile işlem formu entegrasyonu henüz
+açık olduğu için CameraX ve ML Kit üst seviye checkbox'ları işaretlenmedi.
+
+**İlerleme notu (Faz 9.2, kullanıcı akışı — 2026-09-09):** Yeni işlem formundaki
+“Makbuz Tara” akışı CameraX arka kamera önizleme/yakalama ve Android sistem galeri seçicisini
+sunar. Kamera çıktısı yalnız uygulama cache'inde geçici dosyadır ve OCR tamamlanınca silinir;
+galeri için geniş depolama izni istenmez. Kamera izninde ilk istek, gerekçe, tekrar isteme,
+kalıcı ret sonrası uygulama ayarları ve izin vermeden galeriye devam yolları bağlandı. ML Kit
+sonucu ayrı kontrol diyaloğunda gösterilir; “Kullanma” hiçbir form alanını değiştirmez, yalnız
+“Forma Aktar” tutar/tarih/işyeri adaylarını mevcut form state'ine uygular ve yine otomatik kayıt
+oluşturmaz. İki OCR ViewModel, dört izin ve bir açık form aktarımı testi ile Android debug APK
+derlemesi geçti. Android cihaz manuel smoke kabulü açık bırakıldı.
+
+**Manuel değerlendirme (2026-09-09):** Kamera/galeri ve güvenli kullanıcı onayı akışı çalışıyor;
+ancak gerçek makbuzlarda fiyat/toplam adayı her zaman okunamadığı için ürün kabulü tamamlanmadı.
+OCR doğruluk iyileştirmesi, anonimleştirilmiş farklı makbuz fixture'larıyla daha sonraki ayrı bir
+dilime ertelendi. Mevcut sonuçlar kullanıcı onayı olmadan kaydedilmediği için güvenli fail-closed
+davranış korunuyor.
 
 ### 9.3 İçe/dışa aktarma ve gizlilik
 
-- [ ] İşlemleri CSV olarak dışa aktar.
-- [ ] Yedek formatı ve sürümünü tanımla.
-- [ ] JSON yedek içe aktarmada doğrulama ve geri alınabilirlik uygula.
-- [ ] Hassas verilerin loglara yazılmadığını doğrula.
+- [x] İşlemleri CSV olarak dışa aktar.
+- [x] Yedek formatı ve sürümünü tanımla.
+- [x] JSON yedek içe aktarmada doğrulama ve geri alınabilirlik uygula.
+- [x] Hassas verilerin loglara yazılmadığını doğrula.
+
+**İlerleme notu (Faz 9.3, CSV dışa aktarma — 2026-09-10):** Aktif çalışma alanının Room
+SSOT üzerinden görünen işlemleri Android sistem dosya seçicisiyle UTF-8 CSV olarak dışa aktarılır.
+Şema yerelden bağımsız ve deterministiktir; para `amount_minor` olarak kalır. Owner kimliği ve
+private makbuz yolu dışarı verilmez, metin alanlarında CSV kaçışı ve elektronik tablo formül
+enjeksiyonu koruması uygulanır. Üç hedefli sözleşme testi ve Android debug APK derlemesi geçti;
+cihazda dosya seçme/açma manuel kabulü açıktır.
+
+**İlerleme notu (Faz 9.3, JSON yedek sözleşmesi — 2026-09-10):** Kişisel kategori ve
+işlemler için `format_version = 1` sürümlü, 10 MiB giriş sınırına sahip JSON sözleşmesi tanımlandı.
+Owner/oturum bilgisi, token, private makbuz yolu, OCR içeriği, Room sync metadata'sı,
+outbox ve conflict kayıtları format dışında tutulur. Bilinmeyen alan/sürüm, desteklenmeyen scope,
+bozuk tarih/tutar, tekrar kimlik, eksik kategori referansı ve kayıt sınırı Room'a yazmadan önce
+fail-closed reddedilir. Üç hedefli sözleşme testi geçti.
+
+**İlerleme notu (Faz 9.3, JSON yedek içe aktarma — 2026-09-10):** Doğrulanan kişisel
+kategori ve işlemler yeni yerel kimliklerle, kategori/taksit referansları korunarak tek Room
+transaction'ında entity + V2 outbox olarak içe aktarılır; herhangi bir satır veya outbox yazımı
+başarısız olursa tüm işlem geri alınır. Android sistem dosya seçicisi girdiyi 10 MiB ile sınırlar,
+kayıt sayılarını yazmadan önce gösterir ve açık kullanıcı onayı ister. Altı hedefli format,
+planlayıcı ve Room atomiklik testi ile Android debug APK derlemesi başarıyla tamamlandı.
+
+**İlerleme notu (Faz 9.3, gizlilik denetimi ve tamamlanma — 2026-09-10):** Android/KMP
+üretim kaynakları ve Edge Function kodu token, parola, davet kodu, OCR metni, finansal payload,
+doğrudan log çağrısı ve HTTP body logger açısından tarandı. Doğrudan uygulama loglaması bulunmadı.
+Ham exception mesajlarının repository `AppError` ve Room outbox `last_error` alanlarına taşındığı
+noktalar kararlı güvenli kodlarla değiştirildi. Hassas bearer/payload içeren hata fixture'ı dâhil
+20 hedefli test ve Android debug APK derlemesi geçti. Faz 9.3 tamamlandı.
 
 ---
 
@@ -412,14 +562,17 @@ com.feniqo.mobile/
 
 ## Başlangıç sırası
 
-Sonraki teknik adım: **6.2 — Senkronizasyon gözlemi**.
+Sonraki teknik adım: **9.2 — Makbuz OCR**.
 
-İlk dilim: Kullanıcıya son senkronizasyon zamanı, bekleyen outbox işlem sayısı, offline göstergesi ve manuel senkronizasyon tetikleyicisini sunacağız.
+Sıradaki dilim: CameraX kamera/galeri giriş sınırı, izin akışı ve ML Kit metin tanıma için
+cihazda kalan, finans kayıtlarına otomatik yazmayan güvenli OCR sözleşmesi.
 
 ## İlerleme notları
 
 | Tarih | Adım | Not |
 |---|---|---|
+| 2026-09-12 | Hızlı Ekle (+ / Ekle), İşlem Formu ve Başarı Ekranı Yeniden Tasarımı | Uygulandı, manuel kabul bekliyor: Alt navigasyon merkez "+" eyleminden modal sheet olarak açılan Hızlı Ekle ekranı (Gider, Gelir, Transfer [Yakında], Borç/Alacak, Tekrarlayan İşlem ve ipucu kartı); sıcak-lüks işlem formu (büyük tutar, zorunlu 100 kar. işlem adı, kategori, ödeme yöntemi, tarih ve isteğe bağlı not/taksit/makbuz/split akordiyonu); Room v14→v15 note kolonu ileri yönlü migration'ı (15.json ve veri koruma testi); Room SSOT'tan gözlemleyen başarı ekranı (özet kartı, yeni işlem ekle, işlemi görüntüle, geri dönüş back-stack); hedefli unit/host testleri ve debug APK derlemesi başarıyla doğrulandı; staging/production Supabase'e dokunulmadı. |
+| 2026-09-11 | 8.6 (ilk domain dilimi) | Merchant/marka modeli, semantik kategori ikon bağlantısı, Türkçe normalleştirici, alias/negatif alias ve işlem sınıfı sözleşmeleri, sistem hareketi filtresi, 0–100 güven motoru ve temsilî katalog saf KMP olarak tamamlandı; hedefli testler geçti. Kalıcılık, sync, UI ve logo sağlayıcısı sonraki dilimdir. |
 | 2026-08-03 | 0 / analiz | Web projesi incelendi; mobil mimari ve risk analizi hazırlandı. |
 | 2026-08-03 | 2.1 | KMP proje omurgası oluşturuldu. Android/iOS kimliği `com.feniqo.mobile`; API 26; Android debug derlemesi ve ortak modül host testleri başarılı; Git deposu başlatıldı. |
 | 2026-08-03 | 1.1 | Web ekranları, kullanıcı akışları, özellikler, V1 veri sözlüğü ve TypeScript/SQL riskleri `docs/WEB_REFERANS_ENVANTERI.md` içinde tamamlandı. |
@@ -452,6 +605,7 @@ Sonraki teknik adım: **6.2 — Senkronizasyon gözlemi**.
 | 2026-08-30 | 8.2 (Dilim 2A–2B) | Tekrar kuralı saf domain komutları (`CreateRecurringTransactionCommand`, `UpdateRecurringTransactionCommand`, `SetRecurringTransactionActiveCommand`), `RecurringTransactionValidationRules` ve `applyRecurringRuleUpdate` sözleşmesi tamamlandı. Supabase `RECURRING_TRANSACTION` V2 SQL migration'ı (`20260830000100_sync_write_v2_recurring_transactions.sql`), `public.recurring_transactions` fail-closed tablosu, RLS politikası, `sync_operations_receipts` constraint'i ve 28 senaryolu SQL sözleşme testi (`sync_write_v2_contract.sql`) `FeniqoMobil-Staging` (ref: `rxfaiynkhaxrksosxvxp`) üzerinde uygulandı ve doğrulandı (12/12 migration güncel). Koşulsuz ROLLBACK ile test verisi bırakılmadı; Production'a dokunulmadı. |
 | 2026-09-01 | 8.2 (tamamlandı) | Tekrarlayan işlemler ve abonelikler modülü (domain/validation, Room v6/v7/v8, V2 outbox/ACK/pull, Supabase 13/13 migration, `sync_write_v2` RPC, MVI Compose UI, hatırlatıcı planlayıcı, Room receipt claim, Android 13+ izin CTA'sı ve WorkManager teslimatı) tamamlandı. Staging 38 senaryolu SQL sözleşme testi ve Android emülatör manuel smoke kabulü başarıyla geçti. |
 | 2026-09-01 | Mobil Navigasyon Bilgi Mimarisi (tamamlandı) | 5’li kalıcı alt bar (Ana Sayfa, İşlemler, + hızlı işlem eylemi, Plan hub, Daha Fazla hub) ve type-safe route mimarisi tamamlandı. Plan altında Bütçeler, Tekrarlayanlar, Abonelikler (aktif) / Hedefler, Borç/Alacak (Yakında); Daha Fazla altında Kategoriler, Ayarlar (aktif) / Varlıklar, Raporlar, Ortak Alanlar, Bankalar, Bildirimler (Yakında) yapılandırıldı. Hub geçişleri, geri dönüşler ve + eylemi Android emülatör manuel smoke kabulüyle kullanıcı tarafından doğrulandı. |
+| 2026-09-10 | Mobil Financial Hub revizyonu | Alt bar Ana Sayfa / İşlemler / + / Bütçe / Daha Fazla olarak düzenlendi. Daha Fazla; Varlık Yönetimi, Para Yönetimi, Ortak Kullanım ve İçgörüler gruplarına ayrıldı; Profil/Hesap avatar üzerinden ayrı tutuldu. Transfer, Reports, Kişisel Bilgiler, Hesap, Bildirimler ve Tercihler gerçek domain/veri/UI akışları tamamlanana kadar pasif `Yakında` kalacak ve tamamlandıklarında aynı kayıtlar type-safe route'lara bağlanarak aktifleştirilecek. |
 | 2026-09-04 | 8.4-A (ilk dilim) | Workspace saf domain command (`CreateWorkspaceCommand`, `UpdateWorkspaceCommand`), `WorkspaceInvitation` güvenli metadata sözleşmesi, `WorkspacePermissionPolicy` rol matrisi (`OWNER`, `EDITOR`, `VIEWER`), üyelikten türetilen fail-closed ön kontrol kuralları (`WorkspaceValidationRules`: ad trim/blank, açıklama normalizasyonu, davet parametreleri, üye rol değişimi/OWNER transfer zorunluluğu, üye çıkarma, alandan ayrılma, sahiplik devri) ve hedefli KMP host birim testleri başarıyla tamamlandı. Room/DAO, outbox, remote sync, SQL/RLS ve UI kapsamı henüz uygulanmadı. |
 | 2026-09-05 | 8.4-B (Room şema & DAO) | Room şeması v9→v10 yükseltildi; `workspaces` tablosu `type_code` (default 'personal'), `currency_code` (default 'TRY') ve `description` alanlarıyla genişletildi; `workspace_invitations` güvenli metadata cache tablosu, indeksleri ve `WorkspaceEntity` CASCADE FK ilişkisi oluşturuldu (`ANDROID_MIGRATION_9_10`, `10.json`). `WorkspaceDao`ya salt-okunur `observeInvitations` ve remote pull hazırlığı `upsertInvitation` eklendi; Robolectric migration/backfill ve DAO testleri (`WorkspaceDaoTest`) başarıyla doğrulandı. V2 outbox, remote sync, SQL/RLS ve UI kapsamı henüz uygulanmadı. |
 | 2026-09-08 | 8.4 (E12-A2) | Davet kodunu atomik redeem ederek Workspace'e güvenli katılma (`redeem_workspace_invitation_v1` RPC) tamamlandı. JOIN generic V2 outbox olarak çalıştırılmadı; token/hash Room, outbox, DTO ve loglara sızdırılmadı; fail-closed doğrulamalar (boş kod, oturumsuzluk, workspace/user id eşleşmesi), `RemoteSyncDao.applyRedeemedWorkspaceMembershipSnapshot` atomik snapshot yazımı, yerel senkronize olmayan veriler için çakışma koruması, `WorkspaceJoinViewModel` hata/loading/success akışları ve kapsamlı testler başarıyla doğrulandı. |
@@ -464,3 +618,6 @@ Sonraki teknik adım: **6.2 — Senkronizasyon gözlemi**.
 | 2026-09-08 | 8.4 (E13-D1) | Transaction, Budget ve Category Room sorguları doğrulanmış ortak workspace kapsamındayken tüm üyelerin aktif satırlarını döndürecek şekilde ayrıştırıldı; kişisel kapsam yalnız aktif kullanıcının kayıtlarıyla sınırlı kalır. Repository/Room testleri hem ortak görünürlük hem kişisel veri izolasyonunu doğruladı. Uzak ortak finans kayıtlarının pull kapsamı sonraki E13-D2 dilimidir. |
 | 2026-09-08 | 8.4 (E13-D2) | Ortak workspace kategori ve işlem kayıtlarının uzak incremental pull'u eklendi. Her workspace için bağımsız `CATEGORY:WORKSPACE:<id>` ve `TRANSACTION:WORKSPACE:<id>` cursor'ları kullanılır; bu sayede eski kişisel cursor'lar paylaşılan kayıtları atlatmaz. Workspace üyelik sync'i tamamlandıktan sonra pull çalışır ve mevcut Room conflict/pull kurallarını kullanır. |
 | 2026-09-08 | 8.4 (E14-B2) | Ortak gider split alanlarının (`paid_by_user_id`, `participant_user_ids_json`) Room v12, V2 outbox, incremental pull, ACK, equivalent conflict ve fail-closed domain/server normalizasyonu tamamlandı. Kişisel ve gelir işlemleri owner/owner'a normalize edilir; ortak gider işlemlerinde payer ve tüm katılımcıların aktif workspace üyesi olması zorunludur. İleri yönlü Supabase migration'ı `20260908000300_sync_write_v2_transaction_split.sql` ve SQL sözleşme testleri (Senaryo 65-69) eklendi; UI/settlement ekranı kapsam dışı bırakıldı ve canlı Supabase ortamına dokunulmadı. |
+| 2026-09-08 | 8.4 (E14-C) | Ortak gider split formu UI entegrasyonu tamamlandı: Yalnız aktif shared workspace ve `EXPENSE` türünde dinamik "Kim Ödedi?" (tekil seçim) ve "Kimler Katılıyor?" (çoklu seçim) alanları gösterilir; kişisel modda veya gelir işlemlerinde gizlenir; üyeler Room SSOT Flow üzerinden reaktif izlenir; fail-closed domain ve repository validasyonu korunur. |
+| 2026-09-08 | 8.4 (E14-D) | Workspace Ödeşme Ekranı ve Transfer Önerileri tamamlandı: `ObserveWorkspaceSettlementUseCase` ile workspace varlığı, aktif üyelik ve geçerli harcama filtreleri fail-closed doğrulanır; `WorkspaceSettlementViewModel` ve `WorkspaceSettlementScreen` ile net üye bakiyeleri ("Alacaklı", "Borçlu", "Dengede") ve deterministik transfer önerileri hesaplanıp listelenir; geçersiz split harcamalar için uyarı gösterilir; `WorkspaceDetailsScreen` üzerinden type-safe navigasyon rotası bağlandı. |
+| 2026-09-12 | Kategoriler Ekranı Yeniden Tasarımı (tamamlandı) | Kategoriler ekranı sıcak-lüks (warm-luxury) tasarım diline kavuşturuldu: Serif display başlık token'ı, ay/yıl seçici (`CurrentDateProvider` bazlı, gelecek ay engelli dialog), dinamik kategori özet kartı (toplam/özel kategori sayıları, en yüksek gider kategorisi ve tutarı, tamsayı baz puanlı mini-bar grafik), Tümü/Gider/Gelir filtre çipleri, semantik ikonlu kategori satırları, önceki aya göre `CategoryTrend` rozeti, özel kategoriler için 3 noktalı taşma menüsü (Düzenle/Sil), Room SSOT üzerinden filtrelenmiş İşlemler ekranı navigasyonu (`TransactionsRoute(categoryId, startDate, endDate)`), Feniqo içgörü kartı ve yeni kategori oluşturma eylem kartı tamamlandı. Sıfır Float/Double finansal model, fail-closed taşma (`safeAdd`) ve çoklu para birimi güvenliği 52 hedefli test ile doğrulandı. |
