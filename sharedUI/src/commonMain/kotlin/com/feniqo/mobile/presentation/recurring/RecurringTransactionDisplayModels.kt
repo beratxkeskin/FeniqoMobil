@@ -89,7 +89,22 @@ data class RecurringTransactionDisplayModel(
     val isPaused: Boolean,
     val description: String?,
     val paymentMethod: PaymentMethod,
-)
+    val displayTitle: String = description?.trim()?.takeIf { it.isNotBlank() } ?: categoryName,
+) {
+    val displayFormattedAmount: String
+        get() {
+            val sign = if (type == TransactionType.EXPENSE) "−" else "+"
+            val sym = when (amount.currency) {
+                Currency.TRY -> "₺"
+                Currency.USD -> "$"
+                Currency.EUR -> "€"
+            }
+            val raw = MoneyFormatter.format(amount)
+            val numberPart = raw.replace("₺", "").replace("$", "").replace("€", "").trim()
+            return "$sign$sym$numberPart"
+        }
+}
+
 
 /**
  * Domain RecurringTransaction listesini deterministik sıralı presentation modellerine dönüştüren saf mapper.
@@ -174,4 +189,19 @@ object RecurringTransactionDisplayModelMapper {
         RecurrenceFrequency.MONTHLY -> if (interval == 1) "Her ay" else "Her $interval ayda bir"
         RecurrenceFrequency.YEARLY -> if (interval == 1) "Her yıl" else "Her $interval yılda bir"
     }
+}
+
+/**
+ * Onaylı tasarım diline göre tutarı işaret ve sembolle biçimlendirir (−₺499,00, +₺45.000,00).
+ */
+fun formatRecurringDisplayAmount(money: Money, type: TransactionType): String {
+    val sign = if (type == TransactionType.EXPENSE) "−" else "+"
+    val sym = when (money.currency) {
+        Currency.TRY -> "₺"
+        Currency.USD -> "$"
+        Currency.EUR -> "€"
+    }
+    val raw = MoneyFormatter.format(money)
+    val numberPart = raw.replace("₺", "").replace("$", "").replace("€", "").trim()
+    return "$sign$sym$numberPart"
 }

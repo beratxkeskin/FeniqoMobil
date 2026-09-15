@@ -53,6 +53,10 @@ data class SubscriptionFormDraft(
     val startDate: LocalDate,
     val endDate: LocalDate? = null,
     val nextRenewalDate: LocalDate = startDate,
+    val lifecycleStatus: com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus = com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.ACTIVE,
+    val reminderEnabled: Boolean = true,
+    val websiteUrl: String? = null,
+    val notes: String? = null,
 ) {
     val isEditMode: Boolean get() = subscriptionId != null
     val isCreateMode: Boolean get() = subscriptionId == null
@@ -76,6 +80,10 @@ data class SubscriptionFormDraft(
                 endDate = endDate,
             ),
             nextRenewalDate = nextRenewalDate,
+            lifecycleStatus = lifecycleStatus,
+            reminderEnabled = reminderEnabled,
+            websiteUrl = websiteUrl,
+            notes = notes,
         )
     }
 
@@ -98,6 +106,10 @@ data class SubscriptionFormDraft(
                 startDate = startDate,
                 endDate = endDate,
             ),
+            lifecycleStatus = lifecycleStatus,
+            reminderEnabled = reminderEnabled,
+            websiteUrl = websiteUrl,
+            notes = notes,
         )
     }
 
@@ -116,6 +128,10 @@ data class SubscriptionFormDraft(
                 startDate = subscription.renewalRule.startDate,
                 endDate = subscription.renewalRule.endDate,
                 nextRenewalDate = subscription.nextRenewalDate,
+                lifecycleStatus = subscription.lifecycleStatus,
+                reminderEnabled = subscription.reminderEnabled,
+                websiteUrl = subscription.websiteUrl,
+                notes = subscription.notes,
             )
     }
 }
@@ -152,3 +168,56 @@ data class SubscriptionFormUiState(
         }
     }
 }
+
+/**
+ * Hızlı seçim için popüler abonelik şablonu.
+ */
+data class PopularSubscriptionTemplate(
+    val name: String,
+    val defaultCategoryKeywords: List<String>,
+    val defaultWebsiteUrl: String,
+    val defaultFrequency: RecurrenceFrequency = RecurrenceFrequency.MONTHLY,
+)
+
+val POPULAR_SUBSCRIPTION_TEMPLATES = listOf(
+    PopularSubscriptionTemplate(
+        name = "Netflix",
+        defaultCategoryKeywords = listOf("eğlence", "entertainment", "medya", "yayın", "streaming"),
+        defaultWebsiteUrl = "https://www.netflix.com",
+    ),
+    PopularSubscriptionTemplate(
+        name = "Spotify",
+        defaultCategoryKeywords = listOf("müzik", "music", "eğlence", "entertainment"),
+        defaultWebsiteUrl = "https://www.spotify.com",
+    ),
+    PopularSubscriptionTemplate(
+        name = "YouTube Premium",
+        defaultCategoryKeywords = listOf("eğlence", "video", "medya", "entertainment"),
+        defaultWebsiteUrl = "https://www.youtube.com/premium",
+    ),
+    PopularSubscriptionTemplate(
+        name = "iCloud+",
+        defaultCategoryKeywords = listOf("bulut", "teknoloji", "yazılım", "cloud", "hizmet"),
+        defaultWebsiteUrl = "https://www.icloud.com",
+    ),
+    PopularSubscriptionTemplate(
+        name = "Notion",
+        defaultCategoryKeywords = listOf("üretkenlik", "productivity", "yazılım", "teknoloji"),
+        defaultWebsiteUrl = "https://www.notion.so",
+    ),
+    PopularSubscriptionTemplate(
+        name = "Amazon Prime",
+        defaultCategoryKeywords = listOf("alışveriş", "eğlence", "shopping", "entertainment"),
+        defaultWebsiteUrl = "https://www.amazon.com/prime",
+    ),
+    PopularSubscriptionTemplate(
+        name = "Google One",
+        defaultCategoryKeywords = listOf("bulut", "teknoloji", "cloud"),
+        defaultWebsiteUrl = "https://one.google.com",
+    ),
+    PopularSubscriptionTemplate(
+        name = "Disney+",
+        defaultCategoryKeywords = listOf("eğlence", "medya", "streaming"),
+        defaultWebsiteUrl = "https://www.disneyplus.com",
+    ),
+)

@@ -8,6 +8,8 @@ import com.feniqo.mobile.data.local.entity.DebtPaymentEntity
 import com.feniqo.mobile.data.local.entity.GoalContributionEntity
 import com.feniqo.mobile.data.local.entity.GoalEntity
 import com.feniqo.mobile.data.local.entity.SubscriptionEntity
+import com.feniqo.mobile.data.local.entity.SubscriptionPaymentEntity
+import com.feniqo.mobile.data.local.entity.SubscriptionPriceHistoryEntity
 import com.feniqo.mobile.data.local.entity.SyncMetadata
 import com.feniqo.mobile.data.local.entity.TagEntity
 import com.feniqo.mobile.data.local.entity.TransactionEntity
@@ -37,6 +39,10 @@ import com.feniqo.mobile.domain.model.RecurrenceFrequency
 import com.feniqo.mobile.domain.model.RecurrenceRule
 import com.feniqo.mobile.domain.model.RecurringTransaction
 import com.feniqo.mobile.domain.model.Subscription
+import com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus
+import com.feniqo.mobile.domain.model.SubscriptionPayment
+import com.feniqo.mobile.domain.model.SubscriptionPaymentSourceType
+import com.feniqo.mobile.domain.model.SubscriptionPriceHistory
 import com.feniqo.mobile.domain.model.Tag
 import com.feniqo.mobile.domain.model.Transaction
 import com.feniqo.mobile.domain.model.TransactionTag
@@ -134,6 +140,7 @@ fun Transaction.toEntity(sync: SyncMetadata): TransactionEntity = TransactionEnt
 )
 
 fun TransactionEntity.toDomain(): Transaction = Transaction(
+    syncStatus = com.feniqo.mobile.domain.model.SyncStatus.valueOf(sync.syncStatus),
     id = EntityId(id),
     ownerId = EntityId(ownerId),
     workspaceId = workspaceId?.let(::EntityId),
@@ -281,6 +288,13 @@ fun Subscription.toEntity(sync: SyncMetadata): SubscriptionEntity = Subscription
     endDate = renewalRule.endDate?.toString(),
     nextRenewalDate = nextRenewalDate.toString(),
     isActive = isActive,
+    lifecycleStatus = lifecycleStatus.name,
+    trialEndDate = trialEndDate?.toString(),
+    cancellationDate = cancellationDate?.toString(),
+    accessEndDate = accessEndDate?.toString(),
+    reminderEnabled = reminderEnabled,
+    websiteUrl = websiteUrl,
+    notes = notes,
     createdAtEpochMillis = createdAt.toEpochMilliseconds(),
     sync = sync,
 )
@@ -301,6 +315,55 @@ fun SubscriptionEntity.toDomain(): Subscription = Subscription(
     nextRenewalDate = LocalDate.parse(nextRenewalDate),
     isActive = isActive,
     createdAt = Instant.fromEpochMilliseconds(createdAtEpochMillis),
+    lifecycleStatus = runCatching { SubscriptionLifecycleStatus.valueOf(lifecycleStatus) }
+        .getOrDefault(if (isActive) SubscriptionLifecycleStatus.ACTIVE else SubscriptionLifecycleStatus.PAUSED),
+    trialEndDate = trialEndDate?.let(LocalDate::parse),
+    cancellationDate = cancellationDate?.let(LocalDate::parse),
+    accessEndDate = accessEndDate?.let(LocalDate::parse),
+    reminderEnabled = reminderEnabled,
+    websiteUrl = websiteUrl,
+    notes = notes,
+)
+
+fun SubscriptionPriceHistory.toEntity(sync: SyncMetadata): SubscriptionPriceHistoryEntity = SubscriptionPriceHistoryEntity(
+    id = id.value,
+    subscriptionId = subscriptionId.value,
+    oldAmountMinor = oldAmount.amountMinor,
+    newAmountMinor = newAmount.amountMinor,
+    currencyCode = oldAmount.currency.code,
+    changedAtEpochMs = changedAt.toEpochMilliseconds(),
+    sync = sync,
+)
+
+fun SubscriptionPriceHistoryEntity.toDomain(): SubscriptionPriceHistory = SubscriptionPriceHistory(
+    id = EntityId(id),
+    subscriptionId = EntityId(subscriptionId),
+    oldAmount = Money(oldAmountMinor, Currency.valueOf(currencyCode)),
+    newAmount = Money(newAmountMinor, Currency.valueOf(currencyCode)),
+    changedAt = Instant.fromEpochMilliseconds(changedAtEpochMs),
+)
+
+fun SubscriptionPayment.toEntity(sync: SyncMetadata): SubscriptionPaymentEntity = SubscriptionPaymentEntity(
+    id = id.value,
+    subscriptionId = subscriptionId.value,
+    amountMinor = amount.amountMinor,
+    currencyCode = amount.currency.code,
+    paymentDate = paymentDate.toString(),
+    renewalDueDate = renewalDueDate.toString(),
+    sourceType = sourceType.name,
+    createdAtEpochMs = createdAt.toEpochMilliseconds(),
+    sync = sync,
+)
+
+fun SubscriptionPaymentEntity.toDomain(): SubscriptionPayment = SubscriptionPayment(
+    id = EntityId(id),
+    subscriptionId = EntityId(subscriptionId),
+    amount = Money(amountMinor, Currency.valueOf(currencyCode)),
+    paymentDate = LocalDate.parse(paymentDate),
+    renewalDueDate = LocalDate.parse(renewalDueDate),
+    sourceType = runCatching { SubscriptionPaymentSourceType.valueOf(sourceType) }
+        .getOrDefault(SubscriptionPaymentSourceType.MANUAL),
+    createdAt = Instant.fromEpochMilliseconds(createdAtEpochMs),
 )
 
 fun Goal.toEntity(sync: SyncMetadata): GoalEntity = GoalEntity(

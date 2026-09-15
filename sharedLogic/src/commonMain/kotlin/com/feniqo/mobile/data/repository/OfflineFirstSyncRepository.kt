@@ -112,6 +112,11 @@ class OfflineFirstSyncRepository(
                 entityType = SyncEntityType.valueOf(conflict.entityTypeCode),
                 localVersion = conflict.localVersion,
                 remoteVersion = conflict.remoteVersion,
+                localTransaction = decodeTransactionConflictSnapshot(conflict.entityTypeCode, conflict.localPayloadJson),
+                remoteTransaction = decodeTransactionConflictSnapshot(conflict.entityTypeCode, conflict.remotePayloadJson),
+                remoteDeleted = if (conflict.entityTypeCode == SyncEntityType.TRANSACTION.name) {
+                    runCatching { snapshotJson.decodeFromString<TransactionDto>(conflict.remotePayloadJson).deletedAt != null }.getOrDefault(false)
+                } else false,
             )
         }
     }

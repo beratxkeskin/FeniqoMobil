@@ -95,6 +95,8 @@ data class TransactionSummaryUiModel(
     val dateRangeText: String = "",
     val periodTitle: String = "Bu Ay",
     val dailyBars: List<DailyTransactionBarUiModel> = emptyList(),
+    val excludedDifferentCurrencyCount: Int = 0,
+    val summaryCurrencyCode: String = "TRY",
 )
 
 /**
@@ -154,6 +156,7 @@ data class TransactionDisplayModel(
     val installment: InstallmentDisplayModel?,
     val hasReceipt: Boolean,
     val note: String? = null,
+    val syncStatus: com.feniqo.mobile.domain.model.SyncStatus? = null,
     val canEdit: Boolean = true,
     val canDelete: Boolean = true,
 )

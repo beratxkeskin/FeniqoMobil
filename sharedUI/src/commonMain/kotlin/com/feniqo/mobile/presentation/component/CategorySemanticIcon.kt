@@ -31,6 +31,13 @@ import androidx.compose.material.icons.outlined.School
 import androidx.compose.material.icons.outlined.ShoppingBag
 import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material.icons.outlined.Storefront
+import androidx.compose.material.icons.outlined.CreditCard
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.LocalOffer
+import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.material.icons.outlined.Payments
+import androidx.compose.material.icons.outlined.Savings
 import androidx.compose.material.icons.outlined.WorkOutline
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -45,32 +52,40 @@ import androidx.compose.ui.unit.dp
 /** Semantik kategori anahtarlarını platformdan bağımsız Compose vektörlerine çözümler. */
 object CategorySemanticIconResolver {
     fun resolve(key: String?): ImageVector = when (key?.trim()?.lowercase()) {
-        "food_dining" -> Icons.Outlined.Restaurant
-        "groceries" -> Icons.Outlined.ShoppingCart
-        "housing" -> Icons.Outlined.Home
+        "food_dining", "utensils", "coffee" -> Icons.Outlined.Restaurant
+        "groceries", "shopping-cart", "cart" -> Icons.Outlined.ShoppingCart
+        "housing", "home" -> Icons.Outlined.Home
         "utilities" -> Icons.AutoMirrored.Outlined.ReceiptLong
-        "transportation" -> Icons.Outlined.DirectionsCar
+        "transportation", "car" -> Icons.Outlined.DirectionsCar
         "fuel" -> Icons.Outlined.LocalGasStation
-        "healthcare" -> Icons.Outlined.Favorite
+        "healthcare", "heart-pulse", "health" -> Icons.Outlined.Favorite
         "personal_care" -> Icons.Outlined.FaceRetouchingNatural
-        "shopping" -> Icons.Outlined.ShoppingBag
+        "shopping", "shopping-bag" -> Icons.Outlined.ShoppingBag
         "entertainment" -> Icons.Outlined.ConfirmationNumber
         "subscriptions" -> Icons.Outlined.Autorenew
-        "education" -> Icons.AutoMirrored.Outlined.MenuBook
+        "education", "book-open", "book" -> Icons.AutoMirrored.Outlined.MenuBook
         "travel" -> Icons.Outlined.Flight
         "family_pets" -> Icons.Outlined.Pets
-        "financial_expenses" -> Icons.Outlined.Percent
+        "financial_expenses", "percent" -> Icons.Outlined.Percent
         "taxes_fees" -> Icons.Outlined.AccountBalance
-        "gifts_donations", "gift_income" -> Icons.Outlined.CardGiftcard
+        "gifts_donations", "gift_income", "gift" -> Icons.Outlined.CardGiftcard
         "other_expense" -> Icons.Outlined.MoreHoriz
         "salary" -> Icons.Outlined.WorkOutline
-        "freelance" -> Icons.Outlined.Laptop
+        "freelance", "laptop" -> Icons.Outlined.Laptop
         "business_income" -> Icons.Outlined.Storefront
-        "investment_income" -> Icons.AutoMirrored.Outlined.TrendingUp
+        "investment_income", "trending-up" -> Icons.AutoMirrored.Outlined.TrendingUp
         "rental_income" -> Icons.Outlined.Key
         "refund_reimbursement" -> Icons.AutoMirrored.Outlined.Undo
-        "scholarship_support" -> Icons.Outlined.School
-        "other_income" -> Icons.Outlined.Add
+        "scholarship_support", "graduation-cap" -> Icons.Outlined.School
+        "other_income", "add" -> Icons.Outlined.Add
+        "piggy-bank", "savings" -> Icons.Outlined.Savings
+        "help-circle", "other" -> Icons.Outlined.HelpOutline
+        "dollar-sign", "money" -> Icons.Outlined.Payments
+        "file-text" -> Icons.Outlined.Description
+        "music" -> Icons.Outlined.MusicNote
+        "credit-card" -> Icons.Outlined.CreditCard
+        "tag" -> Icons.Outlined.LocalOffer
+        "briefcase" -> Icons.Outlined.WorkOutline
         else -> Icons.Outlined.Category
     }
 }

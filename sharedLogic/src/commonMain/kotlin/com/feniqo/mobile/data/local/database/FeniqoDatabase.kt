@@ -15,7 +15,9 @@ import com.feniqo.mobile.data.local.dao.ProfileDao
 import com.feniqo.mobile.data.local.dao.RecurringTransactionDao
 import com.feniqo.mobile.data.local.dao.RemoteSyncDao
 import com.feniqo.mobile.data.local.dao.SubscriptionDao
+import com.feniqo.mobile.data.local.dao.SubscriptionPaymentDao
 import com.feniqo.mobile.data.local.dao.SubscriptionPaymentReminderReceiptDao
+import com.feniqo.mobile.data.local.dao.SubscriptionPriceHistoryDao
 import com.feniqo.mobile.data.local.dao.SyncOperationDao
 import com.feniqo.mobile.data.local.dao.SyncStateDao
 import com.feniqo.mobile.data.local.dao.TagDao
@@ -32,7 +34,9 @@ import com.feniqo.mobile.data.local.entity.MarketPriceEntity
 import com.feniqo.mobile.data.local.entity.RecurringTransactionEntity
 import com.feniqo.mobile.data.local.entity.RecurringTransactionOccurrenceEntity
 import com.feniqo.mobile.data.local.entity.SubscriptionEntity
+import com.feniqo.mobile.data.local.entity.SubscriptionPaymentEntity
 import com.feniqo.mobile.data.local.entity.SubscriptionPaymentReminderReceiptEntity
+import com.feniqo.mobile.data.local.entity.SubscriptionPriceHistoryEntity
 import com.feniqo.mobile.data.local.entity.SyncConflictEntity
 import com.feniqo.mobile.data.local.entity.SyncCursorEntity
 import com.feniqo.mobile.data.local.entity.SyncOperationEntity
@@ -65,13 +69,15 @@ import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
         RecurringTransactionOccurrenceEntity::class,
         SubscriptionEntity::class,
         SubscriptionPaymentReminderReceiptEntity::class,
+        SubscriptionPriceHistoryEntity::class,
+        SubscriptionPaymentEntity::class,
         GoalEntity::class,
         GoalContributionEntity::class,
         DebtEntity::class,
         DebtPaymentEntity::class,
         MarketPriceEntity::class,
     ],
-    version = 15,
+    version = 17,
     exportSchema = true,
 )
 @ConstructedBy(FeniqoDatabaseConstructor::class)
@@ -87,6 +93,8 @@ abstract class FeniqoDatabase : RoomDatabase() {
     abstract fun recurringTransactionDao(): RecurringTransactionDao
     abstract fun subscriptionDao(): SubscriptionDao
     abstract fun subscriptionPaymentReminderReceiptDao(): SubscriptionPaymentReminderReceiptDao
+    abstract fun subscriptionPriceHistoryDao(): SubscriptionPriceHistoryDao
+    abstract fun subscriptionPaymentDao(): SubscriptionPaymentDao
     abstract fun goalDao(): GoalDao
     abstract fun debtDao(): DebtDao
     abstract fun syncOperationDao(): SyncOperationDao

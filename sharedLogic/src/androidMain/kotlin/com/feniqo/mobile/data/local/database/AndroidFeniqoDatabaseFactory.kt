@@ -60,6 +60,8 @@ class AndroidFeniqoDatabaseFactory(
                 ANDROID_MIGRATION_12_13,
                 ANDROID_MIGRATION_13_14,
                 ANDROID_MIGRATION_14_15,
+                ANDROID_MIGRATION_15_16,
+                ANDROID_MIGRATION_16_17,
             )
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()

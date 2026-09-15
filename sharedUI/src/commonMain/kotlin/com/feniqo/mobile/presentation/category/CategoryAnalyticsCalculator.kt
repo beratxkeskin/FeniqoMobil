@@ -266,22 +266,15 @@ object CategoryAnalyticsCalculator {
         selectedTypeFilter: TransactionType?,
         currency: Currency = Currency.TRY,
     ): Pair<CategoriesSummaryUiModel, List<CategorySpendingDisplayModel>> {
-        // 1. Para birimi fail-closed doğrulaması
-        for (tx in currentTransactions) {
-            require(tx.amount.currency == currency) {
-                "İşlem para birimi ($currency) ile uyuşmuyor: ${tx.amount.currency} (İşlem ID: ${tx.id.value})"
-            }
-        }
-        for (tx in previousTransactions) {
-            require(tx.amount.currency == currency) {
-                "Önceki dönem işlem para birimi ($currency) ile uyuşmuyor: ${tx.amount.currency} (İşlem ID: ${tx.id.value})"
-            }
-        }
+        // Para birimleri dönüştürülmeden toplanamaz. Aktif alan para biriminden farklı
+        // hareketler bu özetten dışarıda kalır; tek bir yabancı para işlemi ekranı bozmaz.
+        val compatibleCurrentTransactions = currentTransactions.filter { it.amount.currency == currency }
+        val compatiblePreviousTransactions = previousTransactions.filter { it.amount.currency == currency }
 
         val categoryMap = categories.associateBy { it.id }
 
         // 2. Kategori / işlem türü tutarlılığı doğrulaması
-        for (tx in currentTransactions) {
+        for (tx in compatibleCurrentTransactions) {
             val matchingCategory = categoryMap[tx.categoryId]
             if (matchingCategory != null) {
                 require(tx.type == matchingCategory.type) {
@@ -289,7 +282,7 @@ object CategoryAnalyticsCalculator {
                 }
             }
         }
-        for (tx in previousTransactions) {
+        for (tx in compatiblePreviousTransactions) {
             val matchingCategory = categoryMap[tx.categoryId]
             if (matchingCategory != null) {
                 require(tx.type == matchingCategory.type) {
@@ -303,11 +296,11 @@ object CategoryAnalyticsCalculator {
         // gösterilmediği için, özet ve liste kapsamının birebir tutarlı olması amacıyla (özet toplamı ==
         // listelenen kategorilerin toplamı) kategori haritasında bulunmayan işlemler özet toplamına
         // sessizce dahil edilmez.
-        val validCurrentTransactions = currentTransactions.filter { tx ->
+        val validCurrentTransactions = compatibleCurrentTransactions.filter { tx ->
             tx.categoryId != null && categoryMap.containsKey(tx.categoryId)
         }
         val currentTxByCat = validCurrentTransactions.groupBy { it.categoryId }
-        val prevTxByCat = previousTransactions.filter { it.categoryId != null && categoryMap.containsKey(it.categoryId) }.groupBy { it.categoryId }
+        val prevTxByCat = compatiblePreviousTransactions.filter { it.categoryId != null && categoryMap.containsKey(it.categoryId) }.groupBy { it.categoryId }
 
         // Filtreye uygun kategorileri belirle
         val filteredCategories = categories.filter { cat ->

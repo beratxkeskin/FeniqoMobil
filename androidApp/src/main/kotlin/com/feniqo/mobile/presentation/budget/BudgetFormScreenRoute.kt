@@ -75,8 +75,20 @@ fun BudgetFormScreenRoute(
                 selectedMonth = seed.month,
                 limitInput = seed.limitInput,
                 currency = seed.currency,
+                currentSpentMinor = seed.spentMinor,
             )
             isEditSeedApplied = true
+        }
+    }
+
+    // Oluşturma modunda seçili kategori ve aya ait harcamayı canlı gözlemleme
+    val catId = draft.selectedCategoryId
+    val selMonth = draft.selectedMonth
+    LaunchedEffect(catId, selMonth, draft.isEditMode) {
+        if (!draft.isEditMode && catId != null && selMonth != null) {
+            viewModel.getSpentForCategoryAndMonth(catId, selMonth).collect { spent ->
+                draft = draft.copy(currentSpentMinor = spent)
+            }
         }
     }
 

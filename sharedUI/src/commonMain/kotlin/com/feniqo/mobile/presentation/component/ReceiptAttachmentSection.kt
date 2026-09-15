@@ -65,7 +65,7 @@ fun ReceiptAttachmentSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .defaultMinSize(minHeight = 48.dp)
-                    .semantics { contentDescription = "Makbuz ekle" },
+                    .semantics { contentDescription = "Makbuzdan bilgi oku" },
             ) {
                 if (isActionInProgress) {
                     CircularProgressIndicator(
@@ -80,7 +80,7 @@ fun ReceiptAttachmentSection(
                     )
                 } else {
                     Text(
-                        text = "Makbuz Ekle",
+                        text = "Makbuzdan bilgi oku",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Medium,
                     )

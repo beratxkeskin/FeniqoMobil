@@ -15,6 +15,7 @@ import com.feniqo.mobile.domain.repository.DebtRepository
 import com.feniqo.mobile.domain.repository.RepositoryResult
 import com.feniqo.mobile.domain.usecase.ObserveDebtPaymentsUseCase
 import com.feniqo.mobile.domain.usecase.ObserveDebtsUseCase
+import com.feniqo.mobile.presentation.common.CurrentDateProvider
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.sync.MainDispatcherRule
 import kotlinx.coroutines.CancellationException
@@ -87,12 +88,19 @@ class DebtsViewModelTest {
         createdAt = Instant.fromEpochMilliseconds(1000L),
     )
 
-    private fun createViewModel(repository: DebtRepository): DebtsViewModel {
+    private val fixedToday = LocalDate(2026, 9, 13)
+    private val testDateProvider = CurrentDateProvider { fixedToday }
+
+    private fun createViewModel(
+        repository: DebtRepository,
+        dateProvider: CurrentDateProvider = testDateProvider,
+    ): DebtsViewModel {
         val fakeWorkspaceRepo = com.feniqo.mobile.presentation.common.FakeWorkspaceRepository()
         return DebtsViewModel(
             observeDebtsUseCase = ObserveDebtsUseCase(repository),
             observeDebtPaymentsUseCase = ObserveDebtPaymentsUseCase(repository),
             observeActiveWorkspaceUseCase = com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase(fakeWorkspaceRepo),
+            currentDateProvider = dateProvider,
         )
     }
 
@@ -129,7 +137,39 @@ class DebtsViewModelTest {
         assertEquals("Borç", state.debts[0].typeLabel)
         assertEquals("d-2", state.debts[1].id.value)
         assertEquals("Alacak", state.debts[1].typeLabel)
+        assertEquals(1, state.activeDebts.size)
+        assertEquals(1, state.activeReceivables.size)
+        org.junit.Assert.assertNotNull(state.summary)
+        assertEquals(50_000L, state.summary?.totalDebt?.amountMinor)
+        assertEquals(30_000L, state.summary?.totalReceivable?.amountMinor)
+        assertEquals(-20_000L, state.summary?.netBalanceMinor)
         assertFalse(state.isEmpty)
+    }
+
+    @Test
+    fun upcomingItems_computedCorrectlyFromDueDate() = runTest {
+        val repo = FakeDebtRepository()
+        val viewModel = createViewModel(repo)
+
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+
+        // today = 2026-09-13
+        // d1: due 2026-09-15 (in 2 days -> upcoming)
+        // d2: due 2026-09-25 (in 12 days -> not in 7-day upcoming)
+        // d3: due 2026-09-10 (3 days overdue -> upcoming)
+        val d1 = sampleDebt("d-1", "Ahmet Yılmaz", 250_000L, DebtType.DEBT, LocalDate(2026, 9, 15))
+        val d2 = sampleDebt("d-2", "Emre Kaya", 300_000L, DebtType.DEBT, LocalDate(2026, 9, 25))
+        val d3 = sampleDebt("d-3", "Kredi Kartı", 550_000L, DebtType.DEBT, LocalDate(2026, 9, 10))
+        repo.debtsFlow.value = listOf(d1, d2, d3)
+
+        val state = viewModel.uiState.value
+        assertEquals(3, state.debts.size)
+        assertEquals(2, state.upcomingItems.size)
+        // Order in upcomingItems: d-3 (overdue, daysDiff=-3) then d-1 (daysDiff=2)
+        assertEquals("d-3", state.upcomingItems[0].id.value)
+        assertEquals("d-1", state.upcomingItems[1].id.value)
     }
 
     @Test

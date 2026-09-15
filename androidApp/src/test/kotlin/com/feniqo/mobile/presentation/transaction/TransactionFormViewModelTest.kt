@@ -238,6 +238,7 @@ class TransactionFormViewModelTest {
         )
 
         assertEquals("123,45", viewModel.uiState.value.amountText)
+        assertFalse(viewModel.uiState.value.hasReceipt)
         assertEquals("Feniqo Market", viewModel.uiState.value.description)
         assertEquals(LocalDate(2026, 9, 9), viewModel.uiState.value.transactionDate)
     }
@@ -1063,6 +1064,11 @@ class TransactionFormViewModelTest {
         assertEquals(wsCustom, trxRepo.lastUpdatedTransaction?.workspaceId)
         assertEquals(receipt, trxRepo.lastUpdatedTransaction?.receiptPath)
         assertEquals(1, events.size)
+        viewModel.onReceiptRemoved()
+        viewModel.submit()
+        advanceUntilIdle()
+        assertNull(trxRepo.lastUpdatedTransaction?.receiptPath)
+        assertEquals(2, events.size)
 
         collectJob.cancel()
         eventJob.cancel()
@@ -1492,6 +1498,168 @@ class TransactionFormViewModelTest {
             assertEquals(EntityId("user-1"), inst.paidByUserId)
             assertEquals(listOf(EntityId("user-1"), EntityId("user-2")), inst.participantUserIds.sortedBy { it.value })
         }
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun dirtyTracking_initialCreateMode_hasUnsavedChangesIsFalse() = runTest {
+        val wsId = EntityId("ws-1")
+        val member1 = WorkspaceMember(workspaceId = wsId, userId = EntityId("user-1"), role = WorkspaceRole.OWNER, joinedAt = Instant.parse("2026-08-01T00:00:00Z"))
+        workspaceRepo.membersFlow.value = mapOf(wsId to listOf(member1))
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(id = wsId, name = "Test", ownerId = EntityId("user-1"), createdAt = Instant.parse("2026-08-01T00:00:00Z"))
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+        collectJob.cancel()
+    }
+
+    @Test
+    fun dirtyTracking_whenFieldsModified_becomesTrue_andRevertingBecomesFalse() = runTest {
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+
+        // Amount modification
+        viewModel.onAmountChanged("150")
+        assertTrue(viewModel.uiState.value.hasUnsavedChanges)
+        viewModel.onAmountChanged("")
+        assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+
+        // Title modification
+        viewModel.onTitleChanged("Market")
+        assertTrue(viewModel.uiState.value.hasUnsavedChanges)
+        viewModel.onTitleChanged("")
+        assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+
+        // Note modification
+        viewModel.onNoteChanged("Fiş eklendi")
+        assertTrue(viewModel.uiState.value.hasUnsavedChanges)
+        viewModel.onNoteChanged("")
+        assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+
+        // Payment method modification
+        viewModel.onPaymentMethodChanged(PaymentMethod.CREDIT_CARD)
+        assertTrue(viewModel.uiState.value.hasUnsavedChanges)
+        viewModel.onPaymentMethodChanged(PaymentMethod.CASH)
+        assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+
+        // Receipt modification
+        viewModel.onReceiptAttached()
+        assertTrue(viewModel.uiState.value.hasUnsavedChanges)
+        viewModel.onReceiptRemoved()
+        assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun dirtyTracking_editMode_initialFalse_modifiedTrue_revertFalse() = runTest {
+        val txId = EntityId("tx-existing-1")
+        val category = sampleActiveExpenseCategory
+        catRepo.activeCategoriesFlow.value = listOf(category)
+        catRepo.historyCategoriesFlow.value = listOf(category)
+        trxRepo.transactionsFlow.value = listOf(
+            Transaction(
+                id = txId,
+                ownerId = EntityId("user-1"),
+                workspaceId = EntityId("ws-1"),
+                amount = Money(25000L, Currency.TRY),
+                type = TransactionType.EXPENSE,
+                categoryId = category.id,
+                description = "Eski Başlık",
+                paymentMethod = PaymentMethod.CREDIT_CARD,
+                transactionDate = fixedToday,
+                receiptPath = null,
+                paidByUserId = EntityId("user-1"),
+                participantUserIds = listOf(EntityId("user-1")),
+                createdAt = fixedInstant,
+                installment = null,
+                note = "Eski not",
+            ),
+        )
+
+        val viewModel = createViewModel(TransactionFormRoute(txId.value))
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+
+        viewModel.onTitleChanged("Yeni Başlık")
+        assertTrue(viewModel.uiState.value.hasUnsavedChanges)
+
+        viewModel.onTitleChanged("Eski Başlık")
+        assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun dirtyTracking_submitValidationOrRepoError_doesNotClearHasUnsavedChanges() = runTest {
+        val category = sampleActiveExpenseCategory
+        catRepo.activeCategoriesFlow.value = listOf(category)
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onAmountChanged("500")
+        assertTrue(viewModel.uiState.value.hasUnsavedChanges)
+
+        // Validation failure (title and category missing)
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertNotNull(viewModel.uiState.value.titleError)
+        assertTrue(viewModel.uiState.value.hasUnsavedChanges)
+
+        // Now fill required fields but repo fails
+        viewModel.onTitleChanged("Harcama")
+        viewModel.onCategoryChanged(category.id)
+        trxRepo.shouldFailWith = AppError.Network("Ağ hatası")
+
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertEquals(FinanceUiMessage.NETWORK_ERROR, viewModel.uiState.value.generalMessage)
+        assertTrue(viewModel.uiState.value.hasUnsavedChanges)
+
+        // Now repo succeeds
+        trxRepo.shouldFailWith = null
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun dirtyTracking_participantSetOrder_doesNotTriggerDirty() = runTest {
+        val wsId = EntityId("ws-1")
+        val member1 = WorkspaceMember(workspaceId = wsId, userId = EntityId("user-1"), role = WorkspaceRole.OWNER, joinedAt = Instant.parse("2026-08-01T00:00:00Z"))
+        val member2 = WorkspaceMember(workspaceId = wsId, userId = EntityId("user-2"), role = WorkspaceRole.EDITOR, joinedAt = Instant.parse("2026-08-02T00:00:00Z"))
+        workspaceRepo.membersFlow.value = mapOf(wsId to listOf(member1, member2))
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(id = wsId, name = "Ev", ownerId = EntityId("user-1"), createdAt = Instant.parse("2026-08-01T00:00:00Z"))
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+
+        // Toggle user-2
+        viewModel.onParticipantToggled(EntityId("user-2"))
+        assertTrue(viewModel.uiState.value.hasUnsavedChanges)
+
+        // Toggle user-2 back off
+        viewModel.onParticipantToggled(EntityId("user-2"))
+        assertFalse(viewModel.uiState.value.hasUnsavedChanges)
 
         collectJob.cancel()
     }

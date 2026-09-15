@@ -636,7 +636,6 @@ class SubscriptionsViewModelTest {
     }
 
     private fun createViewModel(
-
         subscriptionRepo: FakeSubscriptionRepository,
         categoryRepo: FakeCategoryRepository,
     ): SubscriptionsViewModel {
@@ -645,9 +644,12 @@ class SubscriptionsViewModelTest {
             observeSubscriptionsUseCase = ObserveSubscriptionsUseCase(subscriptionRepo),
             observeSubscriptionUseCase = ObserveSubscriptionUseCase(subscriptionRepo),
             observeCategoriesUseCase = ObserveCategoriesUseCase(categoryRepo),
+            observeSubscriptionPriceHistoriesUseCase = com.feniqo.mobile.domain.usecase.ObserveSubscriptionPriceHistoriesUseCase(subscriptionRepo),
+            observeSubscriptionPaymentsUseCase = com.feniqo.mobile.domain.usecase.ObserveSubscriptionPaymentsUseCase(subscriptionRepo),
             createSubscriptionUseCase = CreateSubscriptionUseCase(subscriptionRepo),
             updateSubscriptionUseCase = UpdateSubscriptionUseCase(subscriptionRepo),
             setSubscriptionActiveUseCase = SetSubscriptionActiveUseCase(subscriptionRepo),
+            setSubscriptionLifecycleUseCase = com.feniqo.mobile.domain.usecase.SetSubscriptionLifecycleUseCase(subscriptionRepo),
             advanceSubscriptionRenewalUseCase = AdvanceSubscriptionRenewalUseCase(subscriptionRepo),
             deleteSubscriptionUseCase = DeleteSubscriptionUseCase(subscriptionRepo),
             currentDateProvider = dateProvider,
@@ -670,16 +672,16 @@ class SubscriptionsViewModelTest {
     private fun sampleSubscription(
         id: String,
         name: String = "Spotify",
-        categoryId: String? = "cat-1",
         amountMinor: Long = 5999L,
         currency: Currency = Currency.TRY,
+        categoryId: String? = "cat-1",
         frequency: RecurrenceFrequency = RecurrenceFrequency.MONTHLY,
         interval: Int = 1,
         startDate: LocalDate = LocalDate(2026, 8, 1),
         endDate: LocalDate? = null,
         nextRenewalDate: LocalDate = LocalDate(2026, 9, 1),
         isActive: Boolean = true,
-    ): Subscription = Subscription(
+    ) = Subscription(
         id = EntityId(id),
         ownerId = EntityId("user-1"),
         workspaceId = null,
@@ -700,6 +702,8 @@ class SubscriptionsViewModelTest {
     private class FakeSubscriptionRepository : SubscriptionRepository {
         val subscriptionsFlow = MutableStateFlow<List<Subscription>>(emptyList())
         val singleSubscriptionFlow = MutableStateFlow<Subscription?>(null)
+        val priceHistoriesFlow = MutableStateFlow<List<com.feniqo.mobile.domain.model.SubscriptionPriceHistory>>(emptyList())
+        val paymentsFlow = MutableStateFlow<List<com.feniqo.mobile.domain.model.SubscriptionPayment>>(emptyList())
         var singleSubscriptionCustomFlow: ((EntityId) -> Flow<Subscription?>)? = null
         var shouldThrowOnObserve: Throwable? = null
         var shouldThrowOnObserveSingle: Throwable? = null
@@ -737,6 +741,10 @@ class SubscriptionsViewModelTest {
             }
         }
 
+        override fun observePriceHistories(subscriptionId: EntityId?): Flow<List<com.feniqo.mobile.domain.model.SubscriptionPriceHistory>> = priceHistoriesFlow
+
+        override fun observePayments(subscriptionId: EntityId?): Flow<List<com.feniqo.mobile.domain.model.SubscriptionPayment>> = paymentsFlow
+
         override suspend fun create(command: CreateSubscriptionCommand): RepositoryResult<EntityId> {
             return RepositoryResult.Success(EntityId("sub-created-1"))
         }
@@ -746,6 +754,10 @@ class SubscriptionsViewModelTest {
         }
 
         override suspend fun setActive(command: SetSubscriptionActiveCommand): RepositoryResult<Unit> {
+            return RepositoryResult.Success(Unit)
+        }
+
+        override suspend fun setLifecycle(command: com.feniqo.mobile.domain.model.SetSubscriptionLifecycleCommand): RepositoryResult<Unit> {
             return RepositoryResult.Success(Unit)
         }
 
@@ -759,7 +771,6 @@ class SubscriptionsViewModelTest {
         }
 
         override suspend fun softDelete(id: EntityId): RepositoryResult<Unit> {
-
             return RepositoryResult.Success(Unit)
         }
     }

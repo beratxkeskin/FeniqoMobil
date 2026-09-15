@@ -1,5 +1,6 @@
 package com.feniqo.mobile.presentation.screen
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -7,12 +8,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,10 +38,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +55,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.Currency
@@ -70,6 +80,7 @@ import com.feniqo.mobile.presentation.component.TransactionTypeSelector
 import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTheme
+import com.feniqo.mobile.presentation.theme.FeniqoTypographyTokens
 import com.feniqo.mobile.presentation.transaction.InstallmentDisplayModel
 import com.feniqo.mobile.presentation.transaction.TransactionCategoryOptionUiModel
 import com.feniqo.mobile.presentation.transaction.TransactionFormFieldError
@@ -104,12 +115,10 @@ fun TransactionFormScreen(
     onPaidByUserSelected: (EntityId) -> Unit = {},
     onParticipantToggled: (EntityId) -> Unit = {},
 ) {
-    Surface(
+    Scaffold(
         modifier = modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Üst Başlık ve Geri Dön Butonu
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
             TransactionFormHeader(
                 isEditMode = uiState.isEditMode,
                 type = uiState.type,
@@ -117,49 +126,66 @@ fun TransactionFormScreen(
                 onBack = onBack,
                 isBackEnabled = !uiState.isSubmitting,
             )
+        },
+        bottomBar = {
+            if (!uiState.isLoadingTransaction && uiState.loadError == null) {
+                TransactionFormBottomBar(
+                    isEditMode = uiState.isEditMode,
+                    type = uiState.type,
+                    isSubmitting = uiState.isSubmitting,
+                    onSubmit = onSubmit,
+                    onCancel = onBack,
+                )
+            }
+        },
+    ) { paddingValues ->
+        when {
+            // 1. İşlem verisi yükleniyor durumu (kullanıcı etkileşimi kapalıdır)
+            uiState.isLoadingTransaction -> {
+                TransactionLoadingView(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                )
+            }
 
-            when {
-                // 1. İşlem verisi yükleniyor durumu
-                uiState.isLoadingTransaction -> {
-                    TransactionLoadingView(modifier = Modifier.weight(1f))
-                }
+            // 2. Kalıcı işlem yükleme hatası
+            uiState.loadError != null -> {
+                TransactionErrorView(
+                    errorMessage = uiState.loadError.toDisplayText(),
+                    onBack = onBack,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                )
+            }
 
-                // 2. Kalıcı işlem yükleme hatası
-                uiState.loadError != null -> {
-                    TransactionErrorView(
-                        errorMessage = uiState.loadError.toDisplayText(),
-                        onBack = onBack,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-
-                // 3. Form İçeriği
-                else -> {
-                    TransactionFormContent(
-                        uiState = uiState,
-                        onAmountChange = onAmountChange,
-                        onCurrencyChange = onCurrencyChange,
-                        onTypeChange = onTypeChange,
-                        onCategoryChange = onCategoryChange,
-                        onDateClick = onDateClick,
-                        onTitleChange = onTitleChange,
-                        onNoteChange = onNoteChange,
-                        onDescriptionChange = onDescriptionChange,
-                        onPaymentMethodChange = onPaymentMethodChange,
-                        onInstallmentToggle = onInstallmentToggle,
-                        onInstallmentCountChange = onInstallmentCountChange,
-                        onRetryCategories = onRetryCategories,
-                        onSubmit = onSubmit,
-                        onBack = onBack,
-                        onDismissMessage = onDismissMessage,
-                        onAddCategory = onAddCategory,
-                        onAttachReceipt = onAttachReceipt,
-                        onRemoveReceipt = onRemoveReceipt,
-                        onPaidByUserSelected = onPaidByUserSelected,
-                        onParticipantToggled = onParticipantToggled,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+            // 3. Form İçeriği
+            else -> {
+                TransactionFormContent(
+                    uiState = uiState,
+                    onAmountChange = onAmountChange,
+                    onCurrencyChange = onCurrencyChange,
+                    onTypeChange = onTypeChange,
+                    onCategoryChange = onCategoryChange,
+                    onDateClick = onDateClick,
+                    onTitleChange = onTitleChange,
+                    onNoteChange = onNoteChange,
+                    onDescriptionChange = onDescriptionChange,
+                    onPaymentMethodChange = onPaymentMethodChange,
+                    onInstallmentToggle = onInstallmentToggle,
+                    onInstallmentCountChange = onInstallmentCountChange,
+                    onRetryCategories = onRetryCategories,
+                    onDismissMessage = onDismissMessage,
+                    onAddCategory = onAddCategory,
+                    onAttachReceipt = onAttachReceipt,
+                    onRemoveReceipt = onRemoveReceipt,
+                    onPaidByUserSelected = onPaidByUserSelected,
+                    onParticipantToggled = onParticipantToggled,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                )
             }
         }
     }
@@ -178,9 +204,15 @@ private fun TransactionFormHeader(
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.statusBars),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 1.dp,
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+        ),
     ) {
         Row(
             modifier = Modifier
@@ -191,7 +223,8 @@ private fun TransactionFormHeader(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
+                modifier = Modifier.weight(1f, fill = false),
             ) {
                 IconButton(
                     onClick = onBack,
@@ -208,18 +241,19 @@ private fun TransactionFormHeader(
                 }
 
                 val titleText = when {
-                    isEditMode -> "İşlemi Düzenle"
-                    type == TransactionType.EXPENSE -> "Gider Ekle"
-                    else -> "Gelir Ekle"
+                    isEditMode -> "İşlemi düzenle"
+                    type == TransactionType.EXPENSE -> "Gider ekle"
+                    else -> "Gelir ekle"
                 }
 
                 Text(
                     text = titleText,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontSize = 22.sp,
                     ),
                     color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
 
@@ -249,8 +283,6 @@ private fun TransactionFormContent(
     onInstallmentToggle: (Boolean) -> Unit,
     onInstallmentCountChange: (String) -> Unit,
     onRetryCategories: () -> Unit,
-    onSubmit: () -> Unit,
-    onBack: () -> Unit,
     onDismissMessage: () -> Unit,
     onAddCategory: (TransactionType) -> Unit,
     onAttachReceipt: () -> Unit,
@@ -264,7 +296,6 @@ private fun TransactionFormContent(
 
     Column(
         modifier = modifier
-            .fillMaxSize()
             .verticalScroll(scrollState)
             .padding(horizontal = FeniqoSpacing.Large, vertical = FeniqoSpacing.Large),
         verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Large),
@@ -336,7 +367,7 @@ private fun TransactionFormContent(
             enabled = isFormEnabled,
         )
 
-        // 3. İşlem Adı (Zorunlu)
+        // 3. İşlem Adı
         TransactionTitleField(
             title = uiState.title.ifEmpty { uiState.description },
             onTitleChange = onTitleChange,
@@ -373,17 +404,13 @@ private fun TransactionFormContent(
         )
 
         // 7. Daha Fazla Ayrıntı (Akordeon)
-        var isMoreDetailsExpanded by remember {
-            mutableStateOf(
-                uiState.note.isNotBlank() ||
-                uiState.hasReceipt ||
-                uiState.isInstallmentEnabled ||
-                uiState.existingInstallment != null ||
-                uiState.selectedPaidByUserId != null ||
-                uiState.noteError != null ||
-                uiState.splitError != null ||
-                uiState.installmentCountError != null
-            )
+        var isMoreDetailsExpanded by remember { mutableStateOf(false) }
+
+        // Yalnız ayrıntı alanlarında doğrulama hatası oluştuğunda akordeonu otomatik aç
+        LaunchedEffect(uiState.noteError, uiState.installmentCountError, uiState.splitError) {
+            if (uiState.noteError != null || uiState.installmentCountError != null || uiState.splitError != null) {
+                isMoreDetailsExpanded = true
+            }
         }
 
         Surface(
@@ -412,20 +439,27 @@ private fun TransactionFormContent(
                         modifier = Modifier.size(18.dp),
                     )
                     Text(
-                        text = "Daha Fazla Ayrıntı",
+                        text = "Ayrıntılar",
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
-                    val hasExtraData = uiState.note.isNotBlank() || uiState.hasReceipt || uiState.isInstallmentEnabled || (uiState.isSharedExpense && uiState.selectedPaidByUserId != null)
-                    if (hasExtraData) {
+                    val hasDetailData = uiState.note.isNotBlank() ||
+                        uiState.hasReceipt ||
+                        uiState.isInstallmentEnabled ||
+                        uiState.existingInstallment != null ||
+                        (uiState.isSharedExpense && uiState.selectedParticipantUserIds.size > 1)
+                    if (hasDetailData && !isMoreDetailsExpanded) {
                         Surface(
                             shape = CircleShape,
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
                         ) {
                             Text(
                                 text = "Dolu",
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                ),
                                 color = MaterialTheme.colorScheme.primary,
                             )
                         }
@@ -440,99 +474,149 @@ private fun TransactionFormContent(
         }
 
         if (isMoreDetailsExpanded) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Large),
+            var draft by remember { mutableStateOf(com.feniqo.mobile.presentation.transaction.TransactionDetailsDraft.from(uiState)) }
+            androidx.compose.ui.window.Dialog(
+                onDismissRequest = { isMoreDetailsExpanded = false },
+                properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
             ) {
-                // Not Alanı
-                TransactionNoteField(
-                    note = uiState.note,
-                    onNoteChange = onNoteChange,
-                    errorText = uiState.noteError?.toDisplayText(),
-                    enabled = isFormEnabled,
-                )
-
-                // Makbuz Bağlama (Yalnız özellik açıkken gösterilir)
-                if (uiState.isReceiptFeatureAvailable) {
-                    ReceiptAttachmentSection(
-                        hasReceipt = uiState.hasReceipt,
-                        isActionInProgress = uiState.isReceiptActionInProgress,
-                        onAttachReceipt = onAttachReceipt,
-                        onRemoveReceipt = onRemoveReceipt,
-                        enabled = isFormEnabled,
-                    )
-                }
-
-                // Taksit Alanı (Yalnız uygun koşullarda gösterilir)
-                if (uiState.isInstallmentOptionAvailable) {
-                    TransactionInstallmentSection(
-                        isInstallmentEnabled = uiState.isInstallmentEnabled,
-                        onToggle = onInstallmentToggle,
-                        installmentCountText = uiState.installmentCountText,
-                        onCountChange = onInstallmentCountChange,
-                        errorText = uiState.installmentCountError?.toDisplayText(),
-                        enabled = isFormEnabled,
-                    )
-                } else if (uiState.isEditMode && uiState.existingInstallment != null) {
-                    TransactionExistingInstallmentBadge(installment = uiState.existingInstallment)
-                }
-
-                // Gider Paylaşımı (Yalnız shared workspace + EXPENSE durumunda gösterilir)
-                if (uiState.isSharedExpense) {
-                    TransactionSplitSection(
-                        members = uiState.workspaceMembers,
-                        isLoading = uiState.isLoadingWorkspaceMembers,
-                        selectedPaidByUserId = uiState.selectedPaidByUserId,
-                        selectedParticipantUserIds = uiState.selectedParticipantUserIds,
-                        onPaidByUserSelected = onPaidByUserSelected,
-                        onParticipantToggled = onParticipantToggled,
-                        errorText = uiState.splitError?.toDisplayText(),
-                        enabled = isFormEnabled,
-                    )
+                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.ime)
+                        .verticalScroll(rememberScrollState()).padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { isMoreDetailsExpanded = false }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Vazgeç")
+                            }
+                            Text("Ayrıntılar", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        }
+                        TransactionNoteField(note = draft.note, onNoteChange = { draft = draft.copy(note = it) },
+                            errorText = uiState.noteError?.toDisplayText(), enabled = isFormEnabled)
+                        if (uiState.isInstallmentOptionAvailable) {
+                            TransactionInstallmentSection(isInstallmentEnabled = draft.installmentEnabled,
+                                onToggle = { draft = draft.copy(installmentEnabled = it) },
+                                installmentCountText = draft.installmentCount,
+                                onCountChange = { draft = draft.copy(installmentCount = it) },
+                                errorText = uiState.installmentCountError?.toDisplayText(), enabled = isFormEnabled)
+                        } else if (uiState.existingInstallment != null) {
+                            TransactionExistingInstallmentBadge(uiState.existingInstallment)
+                        }
+                        if (uiState.isReceiptFeatureAvailable) {
+                            Text("Makbuz", style = MaterialTheme.typography.titleMedium)
+                            Text("Tarama, bilgileri forma aktarır. Dosyayı kalıcı makbuz eki olarak saklamaz.",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            ReceiptAttachmentSection(hasReceipt = draft.hasReceipt,
+                                isActionInProgress = uiState.isReceiptActionInProgress,
+                                onAttachReceipt = onAttachReceipt,
+                                onRemoveReceipt = { draft = draft.copy(hasReceipt = false) }, enabled = isFormEnabled)
+                        }
+                        if (uiState.isSharedExpense) {
+                            TransactionSplitSection(members = uiState.workspaceMembers,
+                                isLoading = uiState.isLoadingWorkspaceMembers,
+                                selectedPaidByUserId = draft.payer,
+                                selectedParticipantUserIds = draft.participants,
+                                onPaidByUserSelected = { draft = draft.selectPayer(it) },
+                                onParticipantToggled = { draft = draft.toggleParticipant(it) },
+                                errorText = uiState.splitError?.toDisplayText(), enabled = isFormEnabled && uiState.canManageSplit)
+                            Text("Harcamalar seçilen katılımcılar arasında eşit paylaşılır.",
+                                style = MaterialTheme.typography.bodySmall)
+                        } else {
+                            Text("Ortak harcama yalnız uygun ortak çalışma alanında kullanılabilir.",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Button(onClick = {
+                            onNoteChange(draft.note)
+                            if (uiState.hasReceipt && !draft.hasReceipt) onRemoveReceipt()
+                            if (uiState.isInstallmentOptionAvailable) {
+                                onInstallmentToggle(draft.installmentEnabled)
+                                onInstallmentCountChange(draft.installmentCount)
+                            }
+                            if (uiState.canManageSplit) {
+                                draft.payer?.let(onPaidByUserSelected)
+                                (draft.participants union uiState.selectedParticipantUserIds).filter {
+                                    (it in draft.participants) != (it in uiState.selectedParticipantUserIds) && it != draft.payer
+                                }.forEach(onParticipantToggled)
+                            }
+                            isMoreDetailsExpanded = false
+                        }, modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp)) { Text("Ayrıntıları uygula") }
+                        TextButton(onClick = { isMoreDetailsExpanded = false }, modifier = Modifier.fillMaxWidth()) { Text("Vazgeç") }
+                    }
                 }
             }
         }
+        Spacer(modifier = Modifier.height(FeniqoSpacing.Large))
+    }
+}
 
-        Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
-
-        // 8. Kaydet / Güncelle Butonu
-        val submitButtonText = when {
-            uiState.isEditMode -> "İşlemi Güncelle"
-            uiState.type == TransactionType.EXPENSE -> "Gideri Kaydet"
-            else -> "Geliri Kaydet"
-        }
-
-        Button(
-            onClick = onSubmit,
-            enabled = isFormEnabled,
-            shape = RoundedCornerShape(FeniqoRadius.Medium),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-            ),
+/**
+ * Ekranın alt kısmında sabit duran tek birincil işlem butonu.
+ */
+@Composable
+private fun TransactionFormBottomBar(
+    isEditMode: Boolean,
+    type: TransactionType,
+    isSubmitting: Boolean,
+    onSubmit: () -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime)),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 3.dp,
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+        ),
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .defaultMinSize(minHeight = 52.dp)
-                .semantics {
-                    contentDescription = submitButtonText
-                },
+                .padding(horizontal = FeniqoSpacing.Large, vertical = FeniqoSpacing.Medium),
         ) {
-            if (uiState.isSubmitting) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    strokeWidth = 2.5.dp,
-                )
-            } else {
-                Text(
-                    text = submitButtonText,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
+            val submitButtonText = when {
+                isEditMode -> "Değişiklikleri kaydet"
+                type == TransactionType.EXPENSE -> "Gideri kaydet"
+                else -> "Geliri kaydet"
+            }
+
+            if (isEditMode) {
+                TextButton(onClick = onCancel, enabled = !isSubmitting, modifier = Modifier.fillMaxWidth()) {
+                    Text("Vazgeç")
+                }
+            }
+
+            Button(
+                onClick = onSubmit,
+                enabled = !isSubmitting,
+                shape = RoundedCornerShape(FeniqoRadius.Medium),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .semantics {
+                        contentDescription = submitButtonText
+                    },
+            ) {
+                if (isSubmitting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.5.dp,
+                    )
+                } else {
+                    Text(
+                        text = submitButtonText,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
             }
         }
-
-        Spacer(modifier = Modifier.height(FeniqoSpacing.Large))
     }
 }
 
@@ -642,8 +726,8 @@ fun TransactionFormScreenPreview_AddExpense_Light() {
                 id = EntityId("cat-1"),
                 name = "Market",
                 type = TransactionType.EXPENSE,
-                colorHex = "#10B981",
-                iconKey = "shopping_cart",
+                colorHex = "#EF4444",
+                iconKey = "groceries",
                 isSelectable = true,
                 isHistorical = false,
             ),
@@ -744,7 +828,7 @@ fun TransactionFormScreenPreview_EditWithHistoricalCategory() {
                 id = EntityId("cat-1"),
                 name = "Market",
                 type = TransactionType.EXPENSE,
-                colorHex = "#10B981",
+                colorHex = "#EF4444",
                 iconKey = null,
                 isSelectable = true,
                 isHistorical = false,

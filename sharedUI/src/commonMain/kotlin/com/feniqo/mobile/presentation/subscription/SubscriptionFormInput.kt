@@ -29,6 +29,8 @@ enum class SubscriptionFormFieldError {
     START_DATE_AFTER_NEXT_RENEWAL,
     END_DATE_BEFORE_START_DATE,
     END_DATE_BEFORE_NEXT_RENEWAL,
+    WEBSITE_URL_TOO_LONG,
+    NOTES_TOO_LONG,
 }
 
 /**
@@ -41,6 +43,8 @@ data class SubscriptionFormInputErrors(
     val intervalError: SubscriptionFormFieldError? = null,
     val startDateError: SubscriptionFormFieldError? = null,
     val endDateError: SubscriptionFormFieldError? = null,
+    val websiteUrlError: SubscriptionFormFieldError? = null,
+    val notesError: SubscriptionFormFieldError? = null,
 ) {
     val hasErrors: Boolean
         get() = nameError != null ||
@@ -48,7 +52,9 @@ data class SubscriptionFormInputErrors(
                 categoryError != null ||
                 intervalError != null ||
                 startDateError != null ||
-                endDateError != null
+                endDateError != null ||
+                websiteUrlError != null ||
+                notesError != null
 }
 
 /**
@@ -73,6 +79,10 @@ data class SubscriptionFormInput(
     val startDate: LocalDate? = null,
     val endDate: LocalDate? = null,
     val nextRenewalDate: LocalDate? = null,
+    val autoRenew: Boolean = true,
+    val reminderEnabled: Boolean = true,
+    val websiteUrlInput: String = "",
+    val notesInput: String = "",
 ) {
     val isEditMode: Boolean get() = subscriptionId != null
     val isCreateMode: Boolean get() = subscriptionId == null
@@ -156,6 +166,17 @@ data class SubscriptionFormInput(
             else -> null
         }
 
+        // 7. Website URL validation
+        val trimmedWebsite = websiteUrlInput.trim().ifEmpty { null }
+        val websiteUrlError = if (trimmedWebsite != null && trimmedWebsite.length > Subscription.MAX_WEBSITE_URL_LENGTH) {
+            SubscriptionFormFieldError.WEBSITE_URL_TOO_LONG
+        } else null
+
+        // 8. Notes validation
+        val trimmedNotes = notesInput.trim().ifEmpty { null }
+        val notesError = if (trimmedNotes != null && trimmedNotes.length > Subscription.MAX_NOTES_LENGTH) {
+            SubscriptionFormFieldError.NOTES_TOO_LONG
+        } else null
 
         val errors = SubscriptionFormInputErrors(
             nameError = nameError,
@@ -164,6 +185,8 @@ data class SubscriptionFormInput(
             intervalError = intervalError,
             startDateError = startDateError,
             endDateError = endDateError,
+            websiteUrlError = websiteUrlError,
+            notesError = notesError,
         )
 
         if (errors.hasErrors || amountMinor == null || interval == null || startDate == null) {
@@ -171,6 +194,11 @@ data class SubscriptionFormInput(
         }
 
         val resolvedNextRenewalDate = nextRenewalDate ?: startDate
+        val lifecycle = if (autoRenew) {
+            com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.ACTIVE
+        } else {
+            com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.PAUSED
+        }
 
         val draft = SubscriptionFormDraft(
             subscriptionId = subscriptionId,
@@ -182,6 +210,10 @@ data class SubscriptionFormInput(
             startDate = startDate,
             endDate = endDate,
             nextRenewalDate = resolvedNextRenewalDate,
+            lifecycleStatus = lifecycle,
+            reminderEnabled = reminderEnabled,
+            websiteUrl = trimmedWebsite,
+            notes = trimmedNotes,
         )
 
         return SubscriptionFormNormalizationResult.Valid(draft)
@@ -203,6 +235,11 @@ data class SubscriptionFormInput(
                 startDate = draft.startDate,
                 endDate = draft.endDate,
                 nextRenewalDate = draft.nextRenewalDate,
+                autoRenew = draft.lifecycleStatus != com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.PAUSED &&
+                    draft.lifecycleStatus != com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.CANCELLED,
+                reminderEnabled = draft.reminderEnabled,
+                websiteUrlInput = draft.websiteUrl ?: "",
+                notesInput = draft.notes ?: "",
             )
     }
 }

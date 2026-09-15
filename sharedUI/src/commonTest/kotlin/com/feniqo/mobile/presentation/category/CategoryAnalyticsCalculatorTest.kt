@@ -164,22 +164,24 @@ class CategoryAnalyticsCalculatorTest {
     }
 
     @Test
-    fun calculate_failsClosed_whenTransactionHasDifferentCurrency() {
+    fun calculate_excludesTransactionsWithDifferentCurrency() {
         val categories = listOf(catFood)
         val currentTxs = listOf(
             buildTx("tx-1", catFood.id, 100L, TransactionType.EXPENSE, currency = Currency.TRY),
             buildTx("tx-2", catFood.id, 50L, TransactionType.EXPENSE, currency = Currency.USD),
         )
 
-        assertFailsWith<IllegalArgumentException> {
-            CategoryAnalyticsCalculator.calculate(
-                categories = categories,
-                currentTransactions = currentTxs,
-                previousTransactions = emptyList(),
-                selectedTypeFilter = null,
-                currency = Currency.TRY,
-            )
-        }
+        val (summary, items) = CategoryAnalyticsCalculator.calculate(
+            categories = categories,
+            currentTransactions = currentTxs,
+            previousTransactions = emptyList(),
+            selectedTypeFilter = null,
+            currency = Currency.TRY,
+        )
+
+        assertEquals(1, items.single().transactionCount)
+        assertEquals(100L, items.single().currentPeriodAmount.amountMinor)
+        assertEquals("Yeme & İçme", summary.topCategoryName)
     }
 
     @Test

@@ -2,6 +2,8 @@ package com.feniqo.mobile.data.repository
 
 import com.feniqo.mobile.data.local.dao.CategoryDao
 import com.feniqo.mobile.data.local.dao.SubscriptionDao
+import com.feniqo.mobile.data.local.dao.SubscriptionPaymentDao
+import com.feniqo.mobile.data.local.dao.SubscriptionPriceHistoryDao
 import com.feniqo.mobile.data.local.outbox.OfflineWriteQueue
 import com.feniqo.mobile.data.local.outbox.OutboxOperationType
 import com.feniqo.mobile.data.mapper.newSyncMetadata
@@ -15,7 +17,12 @@ import com.feniqo.mobile.domain.model.CreateSubscriptionCommand
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.EntityIdGenerator
 import com.feniqo.mobile.domain.model.SetSubscriptionActiveCommand
+import com.feniqo.mobile.domain.model.SetSubscriptionLifecycleCommand
 import com.feniqo.mobile.domain.model.Subscription
+import com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus
+import com.feniqo.mobile.domain.model.SubscriptionPayment
+import com.feniqo.mobile.domain.model.SubscriptionPaymentSourceType
+import com.feniqo.mobile.domain.model.SubscriptionPriceHistory
 import com.feniqo.mobile.domain.model.UpdateSubscriptionCommand
 import com.feniqo.mobile.domain.repository.AuthRepository
 import com.feniqo.mobile.domain.repository.RepositoryResult
@@ -40,6 +47,8 @@ class OfflineFirstSubscriptionRepository(
     private val subscriptionDao: SubscriptionDao,
     private val offlineWriteQueue: OfflineWriteQueue,
     private val entityIdGenerator: EntityIdGenerator,
+    private val subscriptionPriceHistoryDao: SubscriptionPriceHistoryDao? = null,
+    private val subscriptionPaymentDao: SubscriptionPaymentDao? = null,
     private val json: Json = Json {
         encodeDefaults = true
         explicitNulls = true
@@ -74,6 +83,24 @@ class OfflineFirstSubscriptionRepository(
             }
         }
 
+    override fun observePriceHistories(subscriptionId: EntityId?): Flow<List<SubscriptionPriceHistory>> {
+        val dao = subscriptionPriceHistoryDao ?: return flowOf(emptyList())
+        return if (subscriptionId != null) {
+            dao.observeBySubscriptionId(subscriptionId.value).map { entities -> entities.map { it.toDomain() } }
+        } else {
+            dao.observeAll().map { entities -> entities.map { it.toDomain() } }
+        }
+    }
+
+    override fun observePayments(subscriptionId: EntityId?): Flow<List<SubscriptionPayment>> {
+        val dao = subscriptionPaymentDao ?: return flowOf(emptyList())
+        return if (subscriptionId != null) {
+            dao.observeBySubscriptionId(subscriptionId.value).map { entities -> entities.map { it.toDomain() } }
+        } else {
+            dao.observeAll().map { entities -> entities.map { it.toDomain() } }
+        }
+    }
+
     override suspend fun create(command: CreateSubscriptionCommand): RepositoryResult<EntityId> {
         try {
             val session = authRepository.observeSession().first()
@@ -95,8 +122,13 @@ class OfflineFirstSubscriptionRepository(
                 categoryId = validCommand.categoryId,
                 renewalRule = validCommand.renewalRule,
                 nextRenewalDate = validCommand.nextRenewalDate,
-                isActive = true,
+                isActive = validCommand.lifecycleStatus == SubscriptionLifecycleStatus.ACTIVE || validCommand.lifecycleStatus == SubscriptionLifecycleStatus.TRIAL,
                 createdAt = Instant.fromEpochMilliseconds(now),
+                lifecycleStatus = validCommand.lifecycleStatus,
+                trialEndDate = validCommand.trialEndDate,
+                reminderEnabled = validCommand.reminderEnabled,
+                websiteUrl = validCommand.websiteUrl,
+                notes = validCommand.notes,
             )
             offlineWriteQueue.enqueueSubscriptionV2(
                 entity = subscription.toEntity(newSyncMetadata(now)),
@@ -118,18 +150,38 @@ class OfflineFirstSubscriptionRepository(
             val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
             val existing = scopedExisting(command.id, session.userId.value, activeWorkspaceId?.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("subscription_not_found"))
-            val updated = when (val result = SubscriptionValidationRules.applySubscriptionUpdate(existing.toDomain(), command)) {
+            val oldDomain = existing.toDomain()
+            val updated = when (val result = SubscriptionValidationRules.applySubscriptionUpdate(oldDomain, command)) {
                 is SubscriptionValidationResult.Valid -> result.value
                 is SubscriptionValidationResult.Invalid -> return validationFailure(result)
             }
             validateExpenseCategoryForScope(updated.categoryId, session.userId.value, activeWorkspaceId?.value)?.let { return it }
 
             val now = nowEpochMillisProvider()
-            offlineWriteQueue.enqueueSubscriptionV2(
-                entity = updated.toEntity(existing.sync.toPendingUpdate(now)),
-                type = OutboxOperationType.UPDATE,
-                payloadJson = json.encodeToString(updated.toDto()),
-            )
+            val isAmountChanged = oldDomain.amount.amountMinor != updated.amount.amountMinor ||
+                oldDomain.amount.currency != updated.amount.currency
+
+            if (isAmountChanged) {
+                val priceHistory = SubscriptionPriceHistory(
+                    id = entityIdGenerator.nextId(),
+                    subscriptionId = updated.id,
+                    oldAmount = oldDomain.amount,
+                    newAmount = updated.amount,
+                    changedAt = Instant.fromEpochMilliseconds(now),
+                )
+                offlineWriteQueue.enqueueSubscriptionWithPriceHistoryV2(
+                    entity = updated.toEntity(existing.sync.toPendingUpdate(now)),
+                    priceHistory = priceHistory.toEntity(newSyncMetadata(now)),
+                    type = OutboxOperationType.UPDATE,
+                    payloadJson = json.encodeToString(updated.toDto()),
+                )
+            } else {
+                offlineWriteQueue.enqueueSubscriptionV2(
+                    entity = updated.toEntity(existing.sync.toPendingUpdate(now)),
+                    type = OutboxOperationType.UPDATE,
+                    payloadJson = json.encodeToString(updated.toDto()),
+                )
+            }
             return RepositoryResult.Success(Unit)
         } catch (e: CancellationException) {
             throw e
@@ -146,7 +198,50 @@ class OfflineFirstSubscriptionRepository(
             val existing = scopedExisting(command.id, session.userId.value, activeWorkspaceId?.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("subscription_not_found"))
             val now = nowEpochMillisProvider()
-            val updated = existing.toDomain().copy(isActive = command.isActive)
+            val newStatus = if (command.isActive) SubscriptionLifecycleStatus.ACTIVE else SubscriptionLifecycleStatus.PAUSED
+            val updated = existing.toDomain().copy(
+                isActive = command.isActive,
+                lifecycleStatus = newStatus,
+            )
+            offlineWriteQueue.enqueueSubscriptionV2(
+                entity = updated.toEntity(existing.sync.toPendingUpdate(now)),
+                type = OutboxOperationType.UPDATE,
+                payloadJson = json.encodeToString(updated.toDto()),
+            )
+            return RepositoryResult.Success(Unit)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            return RepositoryResult.Failure(e.toRepositoryAppError())
+        }
+    }
+
+    override suspend fun setLifecycle(command: SetSubscriptionLifecycleCommand): RepositoryResult<Unit> {
+        try {
+            val session = authRepository.observeSession().first()
+                ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
+            val activeWorkspaceId = activeWorkspaceScope.current(session.userId)
+            val existing = scopedExisting(command.id, session.userId.value, activeWorkspaceId?.value)
+                ?: return RepositoryResult.Failure(AppError.Validation("subscription_not_found"))
+            val domain = existing.toDomain()
+            val lifecycleRes = SubscriptionValidationRules.validateLifecycle(
+                lifecycleStatus = command.status,
+                trialEndDate = domain.trialEndDate,
+                cancellationDate = command.cancellationDate ?: domain.cancellationDate,
+                accessEndDate = command.accessEndDate ?: domain.accessEndDate,
+                startDate = domain.renewalRule.startDate,
+            )
+            if (lifecycleRes is SubscriptionValidationResult.Invalid) return validationFailure(lifecycleRes)
+
+            val now = nowEpochMillisProvider()
+            val isEffectivelyActive = command.status == SubscriptionLifecycleStatus.ACTIVE ||
+                command.status == SubscriptionLifecycleStatus.TRIAL
+            val updated = domain.copy(
+                lifecycleStatus = command.status,
+                cancellationDate = command.cancellationDate ?: domain.cancellationDate,
+                accessEndDate = command.accessEndDate ?: domain.accessEndDate,
+                isActive = isEffectivelyActive,
+            )
             offlineWriteQueue.enqueueSubscriptionV2(
                 entity = updated.toEntity(existing.sync.toPendingUpdate(now)),
                 type = OutboxOperationType.UPDATE,
@@ -175,7 +270,7 @@ class OfflineFirstSubscriptionRepository(
                     domainSubscription.copy(nextRenewalDate = progressionResult.nextRenewalDate)
                 }
                 is SubscriptionRenewalProgressionResult.Completed -> {
-                    domainSubscription.copy(isActive = false)
+                    domainSubscription.copy(isActive = false, lifecycleStatus = SubscriptionLifecycleStatus.EXPIRED)
                 }
                 is SubscriptionRenewalProgressionResult.InactiveSubscription -> {
                     return RepositoryResult.Failure(AppError.Validation("subscription_inactive"))
@@ -183,11 +278,32 @@ class OfflineFirstSubscriptionRepository(
             }
 
             val now = nowEpochMillisProvider()
-            offlineWriteQueue.enqueueSubscriptionV2(
-                entity = updated.toEntity(existing.sync.toPendingUpdate(now)),
-                type = OutboxOperationType.UPDATE,
-                payloadJson = json.encodeToString(updated.toDto()),
-            )
+            val dueDateStr = domainSubscription.nextRenewalDate.toString()
+            val alreadyPaid = subscriptionPaymentDao?.findBySubscriptionAndRenewalDue(domainSubscription.id.value, dueDateStr)
+
+            if (alreadyPaid == null && subscriptionPaymentDao != null) {
+                val payment = SubscriptionPayment(
+                    id = entityIdGenerator.nextId(),
+                    subscriptionId = domainSubscription.id,
+                    amount = domainSubscription.amount,
+                    paymentDate = domainSubscription.nextRenewalDate,
+                    renewalDueDate = domainSubscription.nextRenewalDate,
+                    sourceType = SubscriptionPaymentSourceType.MANUAL,
+                    createdAt = Instant.fromEpochMilliseconds(now),
+                )
+                offlineWriteQueue.enqueueSubscriptionWithPaymentV2(
+                    entity = updated.toEntity(existing.sync.toPendingUpdate(now)),
+                    payment = payment.toEntity(newSyncMetadata(now)),
+                    type = OutboxOperationType.UPDATE,
+                    payloadJson = json.encodeToString(updated.toDto()),
+                )
+            } else {
+                offlineWriteQueue.enqueueSubscriptionV2(
+                    entity = updated.toEntity(existing.sync.toPendingUpdate(now)),
+                    type = OutboxOperationType.UPDATE,
+                    payloadJson = json.encodeToString(updated.toDto()),
+                )
+            }
             return RepositoryResult.Success(progressionResult)
         } catch (e: CancellationException) {
             throw e

@@ -60,6 +60,8 @@ class AndroidSubscriptionPaymentReminderNotifier @Inject constructor(
                 "${candidate.subscriptionName} aboneliğiniz 7 gün sonra yenilenecek."
             SubscriptionReminderKind.DUE_TODAY ->
                 "${candidate.subscriptionName} aboneliğiniz bugün yenileniyor."
+            SubscriptionReminderKind.TRIAL_ENDING_SOON ->
+                "${candidate.subscriptionName} deneme süreniz 3 gün sonra sona erecek."
         }
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)

@@ -19,6 +19,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,6 +66,10 @@ fun SubscriptionsScreenRoute(
         isPermissionGranted = isPermissionGranted,
     )
 
+    LaunchedEffect(isPermissionGranted) {
+        viewModel.onIntent(SubscriptionsIntent.SetNotificationPermissionGranted(isPermissionGranted))
+    }
+
     Box(
         modifier = modifier.fillMaxSize(),
     ) {
@@ -73,6 +78,7 @@ fun SubscriptionsScreenRoute(
             onRetry = { viewModel.onIntent(SubscriptionsIntent.Retry) },
             onAddSubscription = onAddSubscription,
             onSubscriptionClick = onSubscriptionClick,
+            onFilterSelected = { viewModel.onIntent(SubscriptionsIntent.SelectFilter(it)) },
             modifier = Modifier.fillMaxSize(),
             bannerContent = if (showPermissionBanner) {
                 {

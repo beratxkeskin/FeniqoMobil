@@ -14,6 +14,8 @@ import com.feniqo.mobile.data.local.entity.GoalContributionEntity
 import com.feniqo.mobile.data.local.entity.GoalEntity
 import com.feniqo.mobile.data.local.entity.RecurringTransactionEntity
 import com.feniqo.mobile.data.local.entity.SubscriptionEntity
+import com.feniqo.mobile.data.local.entity.SubscriptionPaymentEntity
+import com.feniqo.mobile.data.local.entity.SubscriptionPriceHistoryEntity
 import com.feniqo.mobile.data.local.entity.SyncMetadata
 
 
@@ -405,6 +407,48 @@ class OfflineWriteQueue(
         validateMutation(entity.sync, type)
         val result = mutationDao.mutateSubscriptionV2(
             entity = entity,
+            type = type,
+            payloadJson = payloadJson,
+            operationIdFactory = operationIdFactory,
+            nowEpochMillis = nowEpochMillisProvider(),
+        )
+        if (result.decision != com.feniqo.mobile.data.local.dao.V2EnqueueDecision.HARD_DELETED) {
+            syncScheduler?.scheduleOutboxSync()
+        }
+        return result.operationId
+    }
+
+    suspend fun enqueueSubscriptionWithPriceHistoryV2(
+        entity: SubscriptionEntity,
+        priceHistory: SubscriptionPriceHistoryEntity,
+        type: OutboxOperationType,
+        payloadJson: String,
+    ): String {
+        validateMutation(entity.sync, type)
+        val result = mutationDao.mutateSubscriptionWithPriceHistoryV2(
+            entity = entity,
+            priceHistory = priceHistory,
+            type = type,
+            payloadJson = payloadJson,
+            operationIdFactory = operationIdFactory,
+            nowEpochMillis = nowEpochMillisProvider(),
+        )
+        if (result.decision != com.feniqo.mobile.data.local.dao.V2EnqueueDecision.HARD_DELETED) {
+            syncScheduler?.scheduleOutboxSync()
+        }
+        return result.operationId
+    }
+
+    suspend fun enqueueSubscriptionWithPaymentV2(
+        entity: SubscriptionEntity,
+        payment: SubscriptionPaymentEntity,
+        type: OutboxOperationType,
+        payloadJson: String,
+    ): String {
+        validateMutation(entity.sync, type)
+        val result = mutationDao.mutateSubscriptionWithPaymentV2(
+            entity = entity,
+            payment = payment,
             type = type,
             payloadJson = payloadJson,
             operationIdFactory = operationIdFactory,

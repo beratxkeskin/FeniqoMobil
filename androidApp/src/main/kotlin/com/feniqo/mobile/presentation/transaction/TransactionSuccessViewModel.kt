@@ -80,6 +80,7 @@ class TransactionSuccessViewModel @Inject constructor(
                     },
                     hasReceipt = transaction.receiptPath != null,
                     note = transaction.note,
+                    syncStatus = transaction.syncStatus,
                     canEdit = true,
                     canDelete = true,
                 )

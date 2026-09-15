@@ -71,12 +71,13 @@ class DashboardViewModel @Inject constructor(
     private val observationResultFlow: Flow<ObservationResult> = combine(
         _selectedMonth,
         _retryTrigger,
-    ) { selected, retryCount ->
-        (selected ?: initialMonth) to retryCount
-    }.flatMapLatest { (month, _) ->
+        observeActiveWorkspaceUseCase(),
+    ) { selected, retryCount, activeWorkspace ->
+        Triple(selected ?: initialMonth, retryCount, activeWorkspace?.currency ?: Currency.TRY)
+    }.flatMapLatest { (month, _, summaryCurrency) ->
         combine(
             combine(
-                observeDashboardSummaryUseCase(month = month, currency = Currency.TRY),
+                observeDashboardSummaryUseCase(month = month, currency = summaryCurrency),
                 observeTransactionsUseCase(),
                 observeCategoriesForHistoryLookupUseCase(),
                 observeBudgetsWithProgressUseCase(month = month),
@@ -92,14 +93,19 @@ class DashboardViewModel @Inject constructor(
             },
         ) { (summary, primaryTriple), (subscriptions, goals, profile) ->
             val (transactions, categories, budgets) = primaryTriple
-            val monthlyTransactions = transactions.filter { it.transactionDate.toString().startsWith(month.value) }
+            val monthlyTransactions = transactions.filter {
+                it.transactionDate.toString().startsWith(month.value) && it.amount.currency == summaryCurrency
+            }
+            val excludedDifferentCurrencyCount = transactions.count {
+                it.transactionDate.toString().startsWith(month.value) && it.amount.currency != summaryCurrency
+            }
             val moneyScoreInput = MoneyScoreInput(
                 income = summary.income,
                 expense = summary.expense,
-                budgets = budgets.map { it.progress.budget },
+                budgets = budgets.map { it.progress.budget }.filter { it.limit.currency == summaryCurrency },
                 transactions = monthlyTransactions,
                 debts = emptyList(),
-                goals = goals,
+                goals = goals.filter { it.targetAmount.currency == summaryCurrency && it.currentAmount.currency == summaryCurrency },
                 today = currentDateProvider.today(),
             )
             val calculatedScore = calculateMoneyScoreUseCase(moneyScoreInput)
@@ -117,6 +123,8 @@ class DashboardViewModel @Inject constructor(
                 moneyScoreIsProvisional = true,
                 moneyScoreExplanationText = PROVISIONAL_MONEY_SCORE_EXPLANATION,
                 userName = userName,
+                excludedDifferentCurrencyCount = excludedDifferentCurrencyCount,
+                summaryCurrencyCode = summaryCurrency.name,
             )
             ObservationResult.Success(displayModel) as ObservationResult
         }.catch { throwable ->

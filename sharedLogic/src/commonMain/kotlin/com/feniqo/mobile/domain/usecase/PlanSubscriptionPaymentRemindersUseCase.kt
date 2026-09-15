@@ -32,6 +32,36 @@ class PlanSubscriptionPaymentRemindersUseCase {
         val seenKeys = mutableSetOf<SubscriptionPaymentReminderKey>()
 
         for (subscription in subscriptions) {
+            if (!subscription.reminderEnabled) continue
+            if (subscription.lifecycleStatus != com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.ACTIVE &&
+                subscription.lifecycleStatus != com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.TRIAL) {
+                continue
+            }
+
+            // Deneme bitiş hatırlatıcısı: Deneme bitimine 3 gün kala
+            if (subscription.lifecycleStatus == com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.TRIAL &&
+                subscription.trialEndDate != null) {
+                val daysUntilTrialEnd = subscription.trialEndDate.toEpochDays() - today.toEpochDays()
+                if (daysUntilTrialEnd == DEFAULT_TRIAL_WINDOW_DAYS.toLong()) {
+                    val trialKey = SubscriptionPaymentReminderKey(
+                        subscriptionId = subscription.id,
+                        nextRenewalDate = subscription.trialEndDate,
+                        reminderKind = SubscriptionReminderKind.TRIAL_ENDING_SOON,
+                    )
+                    if (seenKeys.add(trialKey)) {
+                        candidates.add(
+                            SubscriptionPaymentReminderCandidate(
+                                subscriptionId = subscription.id,
+                                subscriptionName = subscription.name,
+                                nextRenewalDate = subscription.trialEndDate,
+                                reminderKind = SubscriptionReminderKind.TRIAL_ENDING_SOON,
+                                key = trialKey,
+                            )
+                        )
+                    }
+                }
+            }
+
             val status = SubscriptionRenewalStatusCalculator.calculate(
                 subscription = subscription,
                 today = today,
@@ -83,5 +113,6 @@ class PlanSubscriptionPaymentRemindersUseCase {
 
     companion object {
         const val DEFAULT_UPCOMING_WINDOW_DAYS = 7
+        const val DEFAULT_TRIAL_WINDOW_DAYS = 3
     }
 }

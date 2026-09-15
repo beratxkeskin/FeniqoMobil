@@ -1,14 +1,19 @@
 package com.feniqo.mobile.presentation.shell
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.NavigationBar
@@ -31,6 +36,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.feniqo.mobile.presentation.component.SyncStatusIndicator
 import com.feniqo.mobile.presentation.sync.SyncStatusUiState
@@ -74,12 +80,21 @@ fun FeniqoAppShell(
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     tonalElevation = 0.dp,
                 ) {
+                    val itemColors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                        indicatorColor = Color.Transparent,
+                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
                     // 1. Ana Sayfa
                     NavigationBarItem(
                         selected = selectedSection == AppSection.DASHBOARD,
                         onClick = { onSectionSelect(AppSection.DASHBOARD) },
                         icon = { FeniqoBottomBarIcon(AppSection.DASHBOARD) },
-                        label = { Text(AppSection.DASHBOARD.label) },
+                        label = { FeniqoBottomBarLabel(AppSection.DASHBOARD.label, selectedSection == AppSection.DASHBOARD) },
+                        colors = itemColors,
                     )
 
                     // 2. İşlemler
@@ -87,7 +102,8 @@ fun FeniqoAppShell(
                         selected = selectedSection == AppSection.TRANSACTIONS,
                         onClick = { onSectionSelect(AppSection.TRANSACTIONS) },
                         icon = { FeniqoBottomBarIcon(AppSection.TRANSACTIONS) },
-                        label = { Text(AppSection.TRANSACTIONS.label) },
+                        label = { FeniqoBottomBarLabel(AppSection.TRANSACTIONS.label, selectedSection == AppSection.TRANSACTIONS) },
+                        colors = itemColors,
                     )
 
                     // 3. Birincil Hızlı Eylem (+)
@@ -125,7 +141,8 @@ fun FeniqoAppShell(
                         selected = selectedSection == AppSection.BUDGET,
                         onClick = { onSectionSelect(AppSection.BUDGET) },
                         icon = { FeniqoBottomBarIcon(AppSection.BUDGET) },
-                        label = { Text(AppSection.BUDGET.label) },
+                        label = { FeniqoBottomBarLabel(AppSection.BUDGET.label, selectedSection == AppSection.BUDGET) },
+                        colors = itemColors,
                     )
 
                     // 5. Daha Fazla
@@ -133,7 +150,8 @@ fun FeniqoAppShell(
                         selected = selectedSection == AppSection.MORE,
                         onClick = { onSectionSelect(AppSection.MORE) },
                         icon = { FeniqoBottomBarIcon(AppSection.MORE) },
-                        label = { Text(AppSection.MORE.label) },
+                        label = { FeniqoBottomBarLabel(AppSection.MORE.label, selectedSection == AppSection.MORE) },
+                        colors = itemColors,
                     )
                 }
             }
@@ -169,6 +187,29 @@ fun FeniqoAppShell(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FeniqoBottomBarLabel(label: String, selected: Boolean) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = label,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            style = MaterialTheme.typography.labelSmall,
+        )
+        if (selected) {
+            Spacer(modifier = Modifier.height(2.dp))
+            Box(
+                modifier = Modifier
+                    .width(18.dp)
+                    .height(2.5.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(1.dp),
+                    ),
+            )
         }
     }
 }
@@ -229,17 +270,19 @@ private fun FeniqoBottomBarIcon(
             }
 
             AppSection.BUDGET -> {
-                // Bar Chart / Bütçe Sütun Grafiği İkonu (Mockup uyumlu)
-                drawLine(color, Offset(w * 0.28f, h * 0.76f), Offset(w * 0.28f, h * 0.52f), strokeWidth * 1.5f, StrokeCap.Round)
-                drawLine(color, Offset(w * 0.50f, h * 0.76f), Offset(w * 0.50f, h * 0.30f), strokeWidth * 1.5f, StrokeCap.Round)
-                drawLine(color, Offset(w * 0.72f, h * 0.76f), Offset(w * 0.72f, h * 0.42f), strokeWidth * 1.5f, StrokeCap.Round)
-            }
-
-            AppSection.MORE -> {
-                // Analytics / Pasta-Daire Grafik İkonu (Mockup uyumlu)
+                // Pasta grafik ikonu (Mockup uyumlu)
                 drawCircle(color, radius = w * 0.32f, center = Offset(w * 0.5f, h * 0.5f), style = stroke)
                 drawLine(color, Offset(w * 0.5f, h * 0.5f), Offset(w * 0.5f, h * 0.22f), strokeWidth, StrokeCap.Round)
                 drawLine(color, Offset(w * 0.5f, h * 0.5f), Offset(w * 0.72f, h * 0.62f), strokeWidth, StrokeCap.Round)
+            }
+
+            AppSection.MORE -> {
+                // Üç yatay nokta (...) ikonu (Mockup uyumlu)
+                val dotRadius = w * 0.065f
+                val centerY = h * 0.5f
+                drawCircle(color, radius = dotRadius, center = Offset(w * 0.28f, centerY))
+                drawCircle(color, radius = dotRadius, center = Offset(w * 0.50f, centerY))
+                drawCircle(color, radius = dotRadius, center = Offset(w * 0.72f, centerY))
             }
         }
     }

@@ -54,3 +54,21 @@ class DeleteSubscriptionUseCase(
     suspend operator fun invoke(id: EntityId) = repository.softDelete(id)
 }
 
+class ObserveSubscriptionPriceHistoriesUseCase(
+    private val repository: SubscriptionRepository,
+) {
+    operator fun invoke(): Flow<List<com.feniqo.mobile.domain.model.SubscriptionPriceHistory>> = repository.observePriceHistories()
+}
+
+class ObserveSubscriptionPaymentsUseCase(
+    private val repository: SubscriptionRepository,
+) {
+    operator fun invoke(): Flow<List<com.feniqo.mobile.domain.model.SubscriptionPayment>> = repository.observePayments()
+}
+
+class SetSubscriptionLifecycleUseCase(
+    private val repository: SubscriptionRepository,
+) {
+    suspend operator fun invoke(command: com.feniqo.mobile.domain.model.SetSubscriptionLifecycleCommand): RepositoryResult<Unit> = repository.setLifecycle(command)
+}
+

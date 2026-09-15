@@ -87,6 +87,7 @@ class CategoriesViewModel @Inject constructor(
     private data class ObservationQuery(
         val month: YearMonth,
         val typeFilter: TransactionType?,
+        val currency: Currency,
         val retryCount: Long,
     )
 
@@ -106,10 +107,12 @@ class CategoriesViewModel @Inject constructor(
         _selectedYearMonth,
         _selectedTypeFilter,
         _retryTrigger,
-    ) { selectedMonth, typeFilter, retryCount ->
+        observeActiveWorkspaceUseCase(),
+    ) { selectedMonth, typeFilter, retryCount, activeWorkspace ->
         ObservationQuery(
             month = selectedMonth ?: initialMonth,
             typeFilter = typeFilter,
+            currency = activeWorkspace?.currency ?: Currency.TRY,
             retryCount = retryCount,
         )
     }.flatMapLatest { query ->
@@ -126,7 +129,7 @@ class CategoriesViewModel @Inject constructor(
                     currentTransactions = currentTxs,
                     previousTransactions = prevTxs,
                     selectedTypeFilter = query.typeFilter,
-                    currency = Currency.TRY,
+                    currency = query.currency,
                 )
                 val (systemList, customList) = categories.partition { it.isDefault }
                 ObservationResult.Success(

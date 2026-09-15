@@ -442,3 +442,74 @@ val ANDROID_MIGRATION_13_14 = Migration(13, 14) { database ->
 val ANDROID_MIGRATION_14_15 = Migration(14, 15) { database ->
     database.execSQL("ALTER TABLE transactions ADD COLUMN note TEXT")
 }
+
+/** v16, abonelik yaşam döngüsü alanlarını, fiyat geçmişi ve ödeme olayları tablolarını ekler. */
+val ANDROID_MIGRATION_15_16 = Migration(15, 16) { database ->
+    database.execSQL("ALTER TABLE subscriptions ADD COLUMN lifecycle_status TEXT NOT NULL DEFAULT 'ACTIVE'")
+    database.execSQL("ALTER TABLE subscriptions ADD COLUMN trial_end_date TEXT")
+    database.execSQL("ALTER TABLE subscriptions ADD COLUMN cancellation_date TEXT")
+    database.execSQL("ALTER TABLE subscriptions ADD COLUMN access_end_date TEXT")
+    database.execSQL("ALTER TABLE subscriptions ADD COLUMN reminder_enabled INTEGER NOT NULL DEFAULT 1")
+
+    database.execSQL("UPDATE subscriptions SET lifecycle_status = 'PAUSED' WHERE is_active = 0")
+    database.execSQL("UPDATE subscriptions SET lifecycle_status = 'ACTIVE' WHERE is_active = 1")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_subscriptions_lifecycle_status ON subscriptions(lifecycle_status)")
+
+    database.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS subscription_price_histories (
+            id TEXT NOT NULL,
+            subscription_id TEXT NOT NULL,
+            old_amount_minor INTEGER NOT NULL,
+            new_amount_minor INTEGER NOT NULL,
+            currency_code TEXT NOT NULL,
+            changed_at_epoch_ms INTEGER NOT NULL,
+            sync_status TEXT NOT NULL,
+            updated_at_epoch_ms INTEGER NOT NULL,
+            local_updated_at_epoch_ms INTEGER NOT NULL,
+            deleted_at_epoch_ms INTEGER,
+            version INTEGER NOT NULL,
+            base_version INTEGER,
+            last_sync_error TEXT,
+            PRIMARY KEY(id),
+            FOREIGN KEY(subscription_id) REFERENCES subscriptions(id) ON UPDATE NO ACTION ON DELETE CASCADE
+        )
+        """.trimIndent(),
+    )
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_subscription_price_histories_subscription_id ON subscription_price_histories(subscription_id)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_subscription_price_histories_deleted_at_epoch_ms ON subscription_price_histories(deleted_at_epoch_ms)")
+
+    database.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS subscription_payments (
+            id TEXT NOT NULL,
+            subscription_id TEXT NOT NULL,
+            amount_minor INTEGER NOT NULL,
+            currency_code TEXT NOT NULL,
+            payment_date TEXT NOT NULL,
+            renewal_due_date TEXT NOT NULL,
+            source_type TEXT NOT NULL,
+            created_at_epoch_ms INTEGER NOT NULL,
+            sync_status TEXT NOT NULL,
+            updated_at_epoch_ms INTEGER NOT NULL,
+            local_updated_at_epoch_ms INTEGER NOT NULL,
+            deleted_at_epoch_ms INTEGER,
+            version INTEGER NOT NULL,
+            base_version INTEGER,
+            last_sync_error TEXT,
+            PRIMARY KEY(id),
+            FOREIGN KEY(subscription_id) REFERENCES subscriptions(id) ON UPDATE NO ACTION ON DELETE CASCADE
+        )
+        """.trimIndent(),
+    )
+    database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_subscription_payments_subscription_id_renewal_due_date ON subscription_payments(subscription_id, renewal_due_date)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_subscription_payments_subscription_id ON subscription_payments(subscription_id)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_subscription_payments_payment_date ON subscription_payments(payment_date)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_subscription_payments_deleted_at_epoch_ms ON subscription_payments(deleted_at_epoch_ms)")
+}
+
+/** v17, subscriptions tablosuna isteğe bağlı website_url ve notes kolonlarını ekler. */
+val ANDROID_MIGRATION_16_17 = Migration(16, 17) { database ->
+    database.execSQL("ALTER TABLE subscriptions ADD COLUMN website_url TEXT")
+    database.execSQL("ALTER TABLE subscriptions ADD COLUMN notes TEXT")
+}

@@ -58,6 +58,12 @@ data class BudgetFormRoute(
     val budgetId: String? = null,
 ) : FeniqoRoute
 
+@Serializable
+data class BudgetDetailRoute(
+    val budgetId: String,
+    val month: String,
+) : FeniqoRoute
+
 /**
  * Rota veya harici kaynaktan gelen bütçe kimliğini ayrıştırır.
  * null ise Create modu (null), dolu ve geçerli ise EntityId, boşluk/geçersiz ise hata göstergesi olarak ele alınır.
@@ -120,6 +126,11 @@ data class SubscriptionFormRoute(
     val subscriptionId: String? = null,
 ) : FeniqoRoute
 
+@Serializable
+data class SubscriptionDetailRoute(
+    val subscriptionId: String,
+) : FeniqoRoute
+
 /**
  * Rota veya harici kaynaktan gelen abonelik kimliğini ayrıştırır.
  * null ise Create modu (null), dolu ve geçerli ise EntityId, boşluk/geçersiz ise hata göstergesi olarak ele alınır.
@@ -141,6 +152,9 @@ fun parseSubscriptionRouteId(rawId: String?): SubscriptionRouteIdResult {
 data object GoalsRoute : FeniqoRoute
 
 @Serializable
+data class GoalDetailRoute(val goalId: String) : FeniqoRoute
+
+@Serializable
 data class GoalFormRoute(val goalId: String? = null) : FeniqoRoute
 
 sealed interface GoalRouteIdResult {
@@ -157,7 +171,7 @@ fun parseGoalRouteId(rawId: String?): GoalRouteIdResult {
 }
 
 @Serializable
-data class GoalContributionFormRoute(val goalId: String) : FeniqoRoute
+data class GoalContributionFormRoute(val goalId: String, val initialDirectionCode: String? = null) : FeniqoRoute
 
 sealed interface ChildRouteIdResult {
     data class ValidId(val id: com.feniqo.mobile.domain.model.EntityId) : ChildRouteIdResult

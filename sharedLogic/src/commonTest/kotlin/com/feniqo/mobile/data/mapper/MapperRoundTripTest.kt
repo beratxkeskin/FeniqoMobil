@@ -43,6 +43,14 @@ import kotlin.test.assertNull
 class MapperRoundTripTest {
 
     @Test
+    fun transaction_sync_status_comes_from_room_metadata() {
+        com.feniqo.mobile.domain.model.SyncStatus.entries.forEach { status ->
+            val row = transaction().toEntity(SYNC.copy(syncStatus = status.name))
+            assertEquals(status, row.toDomain().syncStatus)
+        }
+    }
+
+    @Test
     fun identity_models_survive_entity_round_trip() {
         val profile = UserProfile(
             id = USER_ID,
@@ -79,7 +87,7 @@ class MapperRoundTripTest {
         val relation = TransactionTag(transaction.id, tag.id)
 
         assertEquals(category, category.toEntity(SYNC).toDomain())
-        assertEquals(transaction, transaction.toEntity(SYNC).toDomain())
+        assertEquals(transaction.copy(syncStatus = com.feniqo.mobile.domain.model.SyncStatus.valueOf(SYNC.syncStatus)), transaction.toEntity(SYNC).toDomain())
         assertEquals(budget, budget.toEntity(SYNC).toDomain())
         assertEquals(tag, tag.toEntity(SYNC).toDomain())
         assertEquals(relation, relation.toEntity(NOW.toEpochMilliseconds(), SYNC).toDomain())

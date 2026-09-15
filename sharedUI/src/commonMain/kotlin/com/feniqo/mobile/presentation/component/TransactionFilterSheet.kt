@@ -31,6 +31,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import kotlinx.datetime.toLocalDateTime
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
@@ -231,198 +234,118 @@ fun TransactionFilterSheet(
     onClearFilters: () -> Unit,
     onFilterDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    onSortOrderChanged: (com.feniqo.mobile.presentation.transaction.TransactionSortOrder) -> Unit = {},
+    onCustomPeriodChanged: (com.feniqo.mobile.domain.model.ReportPeriod?) -> Unit = {},
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onFilterDismiss,
-        modifier = modifier,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = FeniqoSpacing.Large)
-                .padding(bottom = FeniqoSpacing.ExtraLarge)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
-        ) {
-            Text(
-                text = "Filtrele",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-            )
-
-            // 1. İşlem Türü
-            Text(
-                text = "İşlem Türü",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
-            ) {
-                FilterChip(
-                    selected = filter.type == null,
-                    onClick = { onTypeFilterChanged(null) },
-                    label = { Text("Tümü") },
-                    modifier = Modifier.defaultMinSize(minHeight = 48.dp),
-                )
-                FilterChip(
-                    selected = filter.type == TransactionType.EXPENSE,
-                    onClick = {
-                        onTypeFilterChanged(
-                            if (filter.type == TransactionType.EXPENSE) null else TransactionType.EXPENSE,
-                        )
-                    },
-                    label = { Text("Gider") },
-                    modifier = Modifier.defaultMinSize(minHeight = 48.dp),
-                )
-                FilterChip(
-                    selected = filter.type == TransactionType.INCOME,
-                    onClick = {
-                        onTypeFilterChanged(
-                            if (filter.type == TransactionType.INCOME) null else TransactionType.INCOME,
-                        )
-                    },
-                    label = { Text("Gelir") },
-                    modifier = Modifier.defaultMinSize(minHeight = 48.dp),
-                )
+    var draft by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(filter) }
+    var showCalendar by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var start by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(filter.customPeriod?.startDate?.toString().orEmpty()) }
+    var end by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(filter.customPeriod?.endDate?.toString().orEmpty()) }
+    val custom = if (start.isBlank() && end.isBlank()) null else runCatching {
+        com.feniqo.mobile.domain.model.ReportPeriod(
+            com.feniqo.mobile.domain.model.LocalDate.parse(start), com.feniqo.mobile.domain.model.LocalDate.parse(end))
+    }.getOrNull()
+    val invalidRange = (start.isNotBlank() || end.isNotBlank()) && custom == null
+    ModalBottomSheet(onDismissRequest = onFilterDismiss, modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.background) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+            .padding(horizontal = FeniqoSpacing.Large).padding(bottom = FeniqoSpacing.ExtraLarge),
+            verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically) {
+                Text("Filtreler", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                TextButton(onClick = { draft = TransactionFilterUiModel(workspaceId = filter.workspaceId); start = ""; end = "" }) { Text("Temizle") }
             }
-
-            // 2. Kategori
-            Text(
-                text = "Kategori",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            if (availableCategories.isEmpty()) {
-                Text(
-                    text = "Kullanılabilir kategori bulunamadı.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                    verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
-                ) {
-                    FilterChip(
-                        selected = filter.categoryId == null,
-                        onClick = { onCategoryFilterChanged(null) },
-                        label = { Text("Tümü") },
-                        modifier = Modifier.defaultMinSize(minHeight = 48.dp),
-                    )
-                    availableCategories.forEach { category ->
-                        val isSelected = filter.categoryId == category.id
-                        val color = ColorParser.parseHexColorOrNull(category.colorHex)
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = {
-                                onCategoryFilterChanged(if (isSelected) null else category.id)
-                            },
-                            label = { Text(category.name) },
-                            modifier = Modifier.defaultMinSize(minHeight = 48.dp),
-                            leadingIcon = if (color != null) {
-                                {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(8.dp)
-                                            .background(color, CircleShape),
-                                    )
-                                }
-                            } else {
-                                null
-                            },
-                        )
+            FilterSection("Tarih aralığı") {
+                OutlinedButton(onClick = { showCalendar = true }, modifier = Modifier.fillMaxWidth()) { Text("Takvimden seç") }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = draft.periodPreset == null && custom == null,
+                        onClick = { draft = draft.copy(periodPreset = null, customPeriod = null); start = ""; end = "" }, label = { Text("Tüm zamanlar") })
+                    TransactionPeriodPreset.entries.forEach { preset ->
+                        FilterChip(selected = draft.periodPreset == preset, onClick = {
+                            draft = draft.copy(periodPreset = preset, customPeriod = null); start = ""; end = ""
+                        }, label = { Text(preset.toDisplayText()) })
+                    }
+                }
+                OutlinedTextField(value = start, onValueChange = { start = it; draft = draft.copy(periodPreset = null) },
+                    label = { Text("Başlangıç (YYYY-AA-GG)") }, singleLine = true, isError = invalidRange, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = end, onValueChange = { end = it; draft = draft.copy(periodPreset = null) },
+                    label = { Text("Bitiş (YYYY-AA-GG)") }, singleLine = true, isError = invalidRange, modifier = Modifier.fillMaxWidth())
+                if (invalidRange) Text("Geçerli ve sıralı bir tarih aralığı girin.", color = MaterialTheme.colorScheme.error)
+            }
+            FilterSection("İşlem türü") {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(null, TransactionType.EXPENSE, TransactionType.INCOME).forEach { type ->
+                        FilterChip(selected = draft.type == type, onClick = { draft = draft.copy(type = type, categoryId = null) },
+                            label = { Text(type?.toDisplayText() ?: "Tümü") })
                     }
                 }
             }
-
-            // 3. Ödeme Yöntemi
-            Text(
-                text = "Ödeme Yöntemi",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
-            ) {
-                FilterChip(
-                    selected = filter.paymentMethod == null,
-                    onClick = { onPaymentMethodFilterChanged(null) },
-                    label = { Text("Tümü") },
-                    modifier = Modifier.defaultMinSize(minHeight = 48.dp),
-                )
-                PaymentMethod.entries.forEach { method ->
-                    val isSelected = filter.paymentMethod == method
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = {
-                            onPaymentMethodFilterChanged(if (isSelected) null else method)
-                        },
-                        label = { Text(method.toDisplayText()) },
-                        modifier = Modifier.defaultMinSize(minHeight = 48.dp),
-                    )
+            FilterSection("Kategori") {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = draft.categoryId == null, onClick = { draft = draft.copy(categoryId = null) }, label = { Text("Tüm kategoriler") })
+                    availableCategories.filter { draft.type == null || it.type == draft.type }.forEach { category ->
+                        FilterChip(selected = draft.categoryId == category.id, onClick = { draft = draft.copy(categoryId = category.id) }, label = { Text(category.name) })
+                    }
                 }
             }
-
-            // 4. Dönem
-            Text(
-                text = "Dönem",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
-            ) {
-                FilterChip(
-                    selected = filter.periodPreset == null,
-                    onClick = { onPeriodPresetChanged(null) },
-                    label = { Text("Tümü") },
-                    modifier = Modifier.defaultMinSize(minHeight = 48.dp),
-                )
-                TransactionPeriodPreset.entries.forEach { preset ->
-                    val isSelected = filter.periodPreset == preset
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = {
-                            onPeriodPresetChanged(if (isSelected) null else preset)
-                        },
-                        label = { Text(preset.toDisplayText()) },
-                        modifier = Modifier.defaultMinSize(minHeight = 48.dp),
-                    )
+            FilterSection("Ödeme yöntemi") {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    (listOf<PaymentMethod?>(null) + PaymentMethod.entries).forEach { method ->
+                        FilterChip(selected = draft.paymentMethod == method, onClick = { draft = draft.copy(paymentMethod = method) }, label = { Text(method?.toDisplayText() ?: "Tüm yöntemler") })
+                    }
                 }
             }
-
-            Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
-
-            // Aksiyon Butonları
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
-            ) {
-                OutlinedButton(
-                    onClick = onClearFilters,
-                    modifier = Modifier
-                        .weight(1f)
-                        .defaultMinSize(minHeight = 48.dp),
-                ) {
-                    Text("Filtreleri Temizle")
-                }
-                Button(
-                    onClick = onFilterDismiss,
-                    modifier = Modifier
-                        .weight(1f)
-                        .defaultMinSize(minHeight = 48.dp),
-                ) {
-                    Text("Kapat")
+            FilterSection("Sıralama") {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    com.feniqo.mobile.presentation.transaction.TransactionSortOrder.entries.forEach { order ->
+                        FilterChip(selected = draft.sortOrder == order, onClick = { draft = draft.copy(sortOrder = order) }, label = { Text(order.toDisplayText()) })
+                    }
                 }
             }
+            Button(onClick = {
+                onTypeFilterChanged(draft.type)
+                onCategoryFilterChanged(draft.categoryId)
+                onPaymentMethodFilterChanged(draft.paymentMethod)
+                onPeriodPresetChanged(draft.periodPreset)
+                if (custom != null) onCustomPeriodChanged(custom)
+                onSortOrderChanged(draft.sortOrder)
+                onFilterDismiss()
+            }, enabled = !invalidRange, modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp)) { Text("Filtreleri uygula") }
+        }
+    }
+    if (showCalendar) {
+        val calendar = androidx.compose.material3.rememberDateRangePickerState()
+        androidx.compose.material3.DatePickerDialog(
+            onDismissRequest = { showCalendar = false },
+            confirmButton = {
+                TextButton(enabled = calendar.selectedStartDateMillis != null && calendar.selectedEndDateMillis != null,
+                    onClick = {
+                        fun date(millis: Long) = kotlinx.datetime.Instant.fromEpochMilliseconds(millis)
+                            .toLocalDateTime(kotlinx.datetime.TimeZone.UTC).date.toString()
+                        start = date(requireNotNull(calendar.selectedStartDateMillis))
+                        end = date(requireNotNull(calendar.selectedEndDateMillis))
+                        draft = draft.copy(periodPreset = null)
+                        showCalendar = false
+                    }) { Text("Tarihleri seç") }
+            },
+            dismissButton = { TextButton(onClick = { showCalendar = false }) { Text("Vazgeç") } },
+        ) {
+            androidx.compose.material3.DateRangePicker(state = calendar, modifier = Modifier.height(480.dp),
+                title = { Text("Tarih aralığı", Modifier.padding(16.dp)) })
         }
     }
 }
 
+@Composable
+private fun FilterSection(title: String, content: @Composable () -> Unit) {
+    androidx.compose.material3.Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            content()
+        }
+    }
+}
 /**
  * TransactionPeriodPreset enum değerlerinin kullanıcı dostu Türkçe karşılıkları.
  */

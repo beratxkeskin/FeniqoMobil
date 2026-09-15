@@ -119,170 +119,69 @@ fun TransactionsScreen(
     onRetryObservation: () -> Unit,
     onAddTransactionClick: () -> Unit = {},
     onTransactionClick: (TransactionDisplayModel) -> Unit = {},
+    onCustomPeriodChanged: (com.feniqo.mobile.domain.model.ReportPeriod?) -> Unit = {},
 ) {
     val visibleFilterCount = state.filter.visibleFilterCount()
-    var isSearchExpanded by remember { mutableStateOf(state.searchQuery.isNotBlank()) }
+
 
     Surface(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-        ) {
+        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+            item(key = "controls") {
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 1. Üst Başlık (Serif Başlık, Slogan, Dairesel Arama ve Filtre Butonları)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                 verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Text(
-                            text = "İşlemler",
-                            style = TextStyle(
-                                fontFamily = FontFamily.Serif,
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 30.sp,
-                                letterSpacing = (-0.5).sp,
-                            ),
-                            color = MaterialTheme.colorScheme.onBackground,
-                        )
-                        ActiveWorkspaceIndicator(
-                            workspaceName = state.activeWorkspaceName,
-                            isCompact = true,
-                        )
-                    }
-                    Text(
-                        text = "Paranızı takip edin, geleceğinizi şekillendirin.",
-                        style = TextStyle(
-                            fontSize = 12.5.sp,
-                            fontWeight = FontWeight.Normal,
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                horizontalArrangement = Arrangement.SpaceBetween) {
+                Column {
+                    Text("feniqo", color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("İşlemler", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
                 }
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    // Dairesel Arama Butonu
-                    Surface(
-                        onClick = {
-                            if (isSearchExpanded && state.searchQuery.isNotBlank()) {
-                                onSearchQueryChanged("")
-                            }
-                            isSearchExpanded = !isSearchExpanded
-                        },
-                        shape = CircleShape,
-                        color = if (isSearchExpanded || state.searchQuery.isNotBlank()) {
-                            MaterialTheme.colorScheme.primaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.surfaceVariant
-                        },
-                        modifier = Modifier.size(42.dp),
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = if (isSearchExpanded) "Aramayı kapat" else "İşlemlerde ara",
-                                tint = if (isSearchExpanded || state.searchQuery.isNotBlank()) {
-                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface
-                                },
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                    }
-
-                    // Dairesel Filtre Butonu
-                    Box {
-                        Surface(
-                            onClick = onFilterClick,
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier.size(42.dp),
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.Tune,
-                                    contentDescription = "Detaylı filtreleri aç",
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                            }
-                        }
-                        if (visibleFilterCount > 0) {
-                            Box(
-                                modifier = Modifier
-                                    .size(10.dp)
-                                    .align(Alignment.TopEnd)
-                                    .background(MaterialTheme.colorScheme.primary, CircleShape),
-                            )
-                        }
+                ActiveWorkspaceIndicator(workspaceName = state.activeWorkspaceName, isCompact = true)
+            }
+            Spacer(Modifier.height(12.dp))
+            ZenQuickFiltersRow(
+                periodPreset = state.filter.periodPreset, periodLabel = state.periodChipLabel,
+                categoryId = state.filter.categoryId, availableCategories = state.availableCategories,
+                sortOrder = state.filter.sortOrder, onPeriodPresetChanged = onPeriodPresetChanged,
+                onCategoryFilterChanged = onCategoryFilterChanged, onSortOrderChanged = onSortOrderChanged)
+            Spacer(Modifier.height(12.dp))
+            ZenPeriodSummaryCard(summary = state.summary, selectedType = state.filter.type)
+            ZenTransactionTypeTabs(selectedType = state.filter.type, onTypeFilterChanged = onTypeFilterChanged)
+            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                ZenSearchField(query = state.searchQuery, onQueryChange = onSearchQueryChanged,
+                    onCloseSearch = { onSearchQueryChanged("") }, modifier = Modifier.weight(1f))
+                Surface(onClick = onFilterClick, shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.primary, modifier = Modifier.size(52.dp)) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Tune, "Filtreler ($visibleFilterCount)", tint = MaterialTheme.colorScheme.onPrimary)
                     }
                 }
             }
-
-            // 2. Açılır Arama Çubuğu (Yalnızca arama açıkken veya sorgu doluyken görünür)
-            if (isSearchExpanded || state.searchQuery.isNotBlank()) {
-                Spacer(modifier = Modifier.height(10.dp))
-                ZenSearchField(
-                    query = state.searchQuery,
-                    onQueryChange = onSearchQueryChanged,
-                    onCloseSearch = {
-                        onSearchQueryChanged("")
-                        isSearchExpanded = false
-                    },
+            if (state.summary.excludedDifferentCurrencyCount > 0) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                )
+                        .padding(horizontal = 20.dp)
+                        .semantics {
+                            contentDescription = "${state.summary.excludedDifferentCurrencyCount} işlem ${state.summary.summaryCurrencyCode} dışındaki para biriminde olduğu için özete dahil edilmedi"
+                        },
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                ) {
+                    Text(
+                        text = "${state.summary.excludedDifferentCurrencyCount} farklı para birimli işlem seçili dönemde mevcut; ${state.summary.summaryCurrencyCode} özetine dahil edilmedi.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    )
+                }
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // 3. İşlem Türü Segmentleri (Tümü, Gider, Gelir - Transferler kaldırıldı)
-            ZenTransactionTypeTabs(
-                selectedType = state.filter.type,
-                onTypeFilterChanged = onTypeFilterChanged,
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // 4. Hızlı Filtre Satırı (Dönem, Kategori, Sıralama - Tek dönem kontrolü)
-            ZenQuickFiltersRow(
-                periodPreset = state.filter.periodPreset,
-                periodLabel = state.periodChipLabel,
-                categoryId = state.filter.categoryId,
-                availableCategories = state.availableCategories,
-                sortOrder = state.filter.sortOrder,
-                onPeriodPresetChanged = onPeriodPresetChanged,
-                onCategoryFilterChanged = onCategoryFilterChanged,
-                onSortOrderChanged = onSortOrderChanged,
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // 5. Dönem Özet Kartı ve Gerçek Veriden Üretilen Mini Günlük Grafik
-            ZenPeriodSummaryCard(
-                summary = state.summary,
-                selectedType = state.filter.type,
-            )
 
             // 6. Aktif Filtre Çipleri
             if (visibleFilterCount > 0) {
@@ -301,80 +200,33 @@ fun TransactionsScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 7. Gruplanmış İşlem Listesi
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-            ) {
-                when {
-                    state.isLoading -> {
-                        TransactionsLoadingContent(
-                            modifier = Modifier.align(Alignment.Center),
-                        )
+            }
+            when {
+                state.isLoading -> item { TransactionsLoadingContent(Modifier.fillMaxWidth().padding(24.dp)) }
+                state.observationError != null -> item {
+                    TransactionsErrorContent(state.observationError.toDisplayText(), onRetryObservation,
+                        Modifier.fillMaxWidth().padding(24.dp))
+                }
+                state.groupedItems.isEmpty() && state.searchQuery.isBlank() && visibleFilterCount == 0 -> item {
+                    TransactionsEmptyContent(canAddTransaction, onAddTransactionClick, Modifier.fillMaxWidth().padding(24.dp))
+                }
+                state.groupedItems.isEmpty() -> item {
+                    TransactionsSearchEmptyContent(onClearFilters, Modifier.fillMaxWidth().padding(24.dp))
+                }
+                else -> state.groupedItems.forEach { group ->
+                    item(key = "header_${group.date}") {
+                        TransactionDateGroupHeader(formattedDate = group.formattedDate,
+                            dailyNetFormatted = group.dailyNetFormatted, isDailyNetNegative = group.isDailyNetNegative,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
                     }
-
-                    state.observationError != null -> {
-                        TransactionsErrorContent(
-                            message = state.observationError.toDisplayText(),
-                            onRetry = onRetryObservation,
-                            modifier = Modifier.align(Alignment.Center),
-                        )
-                    }
-
-                    state.groupedItems.isEmpty() && state.searchQuery.isBlank() && visibleFilterCount == 0 -> {
-                        TransactionsEmptyContent(
-                            canAddTransaction = canAddTransaction,
-                            onAddTransactionClick = onAddTransactionClick,
-                            modifier = Modifier.align(Alignment.Center),
-                        )
-                    }
-
-                    state.groupedItems.isEmpty() -> {
-                        TransactionsSearchEmptyContent(
-                            onClearFilters = onClearFilters,
-                            modifier = Modifier.align(Alignment.Center),
-                        )
-                    }
-
-                    else -> {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            contentPadding = PaddingValues(bottom = 80.dp),
-                        ) {
-                            state.groupedItems.forEach { group ->
-                                item(key = "header_${group.date}") {
-                                    val secondaryDateText = "${group.date.day} ${group.date.month.name.lowercase().take(3).replaceFirstChar { it.uppercase() }} ${group.date.year}"
-                                    TransactionDateGroupHeader(
-                                        formattedDate = group.formattedDate,
-                                        secondaryDateText = secondaryDateText,
-                                        dailyNetFormatted = group.dailyNetFormatted,
-                                        isDailyNetNegative = group.isDailyNetNegative,
-                                    )
-                                }
-
-                                items(
-                                    items = group.items,
-                                    key = { "item_${it.id.value}" },
-                                ) { item ->
-                                    TransactionListItem(
-                                        item = item,
-                                        canEditTransaction = canEditTransaction,
-                                        isDeleteInProgress = state.isDeleteInProgress,
-                                        onTransactionClick = onTransactionClick,
-                                        onDeleteClicked = onDeleteClicked,
-                                    )
-                                }
-                            }
-                        }
+                    items(group.items, key = { "item_${it.id.value}" }) { item ->
+                        TransactionListItem(item, canEditTransaction, state.isDeleteInProgress,
+                            onTransactionClick, onDeleteClicked, Modifier.padding(horizontal = 20.dp, vertical = 2.dp))
                     }
                 }
             }
         }
     }
-
     // Filtre Alt Sayfası
     if (state.isFilterExpanded) {
         TransactionFilterSheet(
@@ -386,6 +238,8 @@ fun TransactionsScreen(
             onPeriodPresetChanged = onPeriodPresetChanged,
             onClearFilters = onClearFilters,
             onFilterDismiss = onFilterDismiss,
+            onSortOrderChanged = onSortOrderChanged,
+            onCustomPeriodChanged = onCustomPeriodChanged,
         )
     }
 
@@ -421,129 +275,39 @@ private fun ZenPeriodSummaryCard(
     selectedType: TransactionType?,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Sol Taraf: Rakamlar
-            Column(
-                modifier = Modifier.weight(1.15f),
-                verticalArrangement = Arrangement.spacedBy(3.dp),
-            ) {
-                Text(
-                    text = summary.periodTitle,
-                    style = TextStyle(
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-
-                when (selectedType) {
-                    TransactionType.EXPENSE -> {
-                        Text(
-                            text = summary.totalSpendingFormatted,
-                            style = TextStyle(
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = (-0.5).sp,
-                            ),
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            text = "Toplam Gider",
-                            style = TextStyle(
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                            ),
-                            color = FeniqoStatusColor.Error,
-                        )
-                    }
-                    TransactionType.INCOME -> {
-                        Text(
-                            text = summary.totalIncomeFormatted,
-                            style = TextStyle(
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = (-0.5).sp,
-                            ),
-                            color = FeniqoStatusColor.Success,
-                        )
-                        Text(
-                            text = "Toplam Gelir",
-                            style = TextStyle(
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                            ),
-                            color = FeniqoStatusColor.Success,
-                        )
-                    }
-                    null -> {
-                        Text(
-                            text = summary.netFormatted,
-                            style = TextStyle(
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = (-0.5).sp,
-                            ),
-                            color = if (summary.isNetPositive) FeniqoStatusColor.Success else MaterialTheme.colorScheme.onSurface,
-                        )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = "Gider: ${summary.totalSpendingFormatted}",
-                                style = TextStyle(
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium,
-                                ),
-                                color = FeniqoStatusColor.Error,
-                            )
-                            Text(
-                                text = "•",
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.outlineVariant,
-                            )
-                            Text(
-                                text = "Gelir: ${summary.totalIncomeFormatted}",
-                                style = TextStyle(
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium,
-                                ),
-                                color = FeniqoStatusColor.Success,
-                            )
-                        }
-                    }
+    var expanded by remember { mutableStateOf(false) }
+    Card(modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min).padding(vertical = 16.dp)) {
+            listOf("Gelir" to summary.totalIncomeFormatted, "Gider" to summary.totalSpendingFormatted,
+                "İşlem" to summary.transactionCount.toString()).forEachIndexed { index, (label, value) ->
+                if (index > 0) Box(Modifier.width(1.dp).fillMaxHeight().background(MaterialTheme.colorScheme.outlineVariant))
+                Column(Modifier.weight(1f).padding(horizontal = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(label, style = MaterialTheme.typography.bodyMedium)
+                    Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
             }
-
-            Spacer(modifier = Modifier.width(10.dp))
-
-            // Sağ Taraf: Mini Günlük Sütun Grafik
-            DailyMiniBarChart(
-                bars = summary.dailyBars,
-                periodTitle = summary.periodTitle,
-                modifier = Modifier
-                    .weight(0.85f)
-                    .height(56.dp),
-            )
+        }
+        androidx.compose.material3.HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+        Row(Modifier.fillMaxWidth().clickable { expanded = !expanded }.padding(16.dp),
+            horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+            Text("Dönem neti", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.width(8.dp))
+            Text(summary.netFormatted, fontWeight = FontWeight.Bold,
+                color = if (summary.isNetPositive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+            Icon(Icons.Default.KeyboardArrowDown, "Dönem ayrıntıları")
+        }
+        if (expanded) {
+            Text("Seçili dönemdeki gelir ve gider farkıdır; hesap bakiyesi değildir.",
+                style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(16.dp))
+            DailyMiniBarChart(summary.dailyBars, summary.periodTitle,
+                Modifier.fillMaxWidth().height(72.dp).padding(16.dp))
         }
     }
 }
-
 /**
  * Gerçek veriden üretilen mini günlük sütun grafik bileşeni.
  * Float yalnızca Compose çizim anında ölçeklendirme için kullanılır.
@@ -658,10 +422,10 @@ private fun ZenTransactionTypeTabs(
             Surface(
                 onClick = { onTypeFilterChanged(type) },
                 shape = RoundedCornerShape(20.dp),
-                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                color = MaterialTheme.colorScheme.background,
                 modifier = Modifier
                     .weight(1f)
-                    .height(36.dp),
+                    .defaultMinSize(minHeight = 48.dp),
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
@@ -670,7 +434,7 @@ private fun ZenTransactionTypeTabs(
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                             fontSize = 13.sp,
                         ),
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -714,7 +478,7 @@ private fun ZenQuickFiltersRow(
                 shape = RoundedCornerShape(16.dp),
                 color = MaterialTheme.colorScheme.surface,
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                modifier = Modifier.height(32.dp),
+                modifier = Modifier.defaultMinSize(minHeight = 48.dp),
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp),
@@ -792,7 +556,7 @@ private fun ZenQuickFiltersRow(
                 shape = RoundedCornerShape(16.dp),
                 color = MaterialTheme.colorScheme.surface,
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                modifier = Modifier.height(32.dp),
+                modifier = Modifier.defaultMinSize(minHeight = 48.dp),
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp),
@@ -843,7 +607,7 @@ private fun ZenQuickFiltersRow(
                 shape = RoundedCornerShape(16.dp),
                 color = MaterialTheme.colorScheme.surface,
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                modifier = Modifier.height(32.dp),
+                modifier = Modifier.defaultMinSize(minHeight = 48.dp),
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp),
@@ -893,9 +657,9 @@ private fun ZenSearchField(
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier.height(44.dp),
-        shape = RoundedCornerShape(22.dp),
-        color = MaterialTheme.colorScheme.surface,
+        modifier = modifier.defaultMinSize(minHeight = 52.dp),
+        shape = RoundedCornerShape(14.dp),
+        color = com.feniqo.mobile.presentation.theme.FeniqoTextPrimary,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Row(
@@ -908,15 +672,15 @@ private fun ZenSearchField(
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = Color.White,
                 modifier = Modifier.size(18.dp),
             )
 
             Box(modifier = Modifier.weight(1f)) {
                 if (query.isEmpty()) {
                     Text(
-                        text = "İşlem veya kategori ara...",
-                        style = TextStyle(fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)),
+                        text = "İşlem ara",
+                        style = TextStyle(fontSize = 13.sp, color = Color.White.copy(alpha = 0.8f)),
                     )
                 }
                 BasicTextField(
@@ -925,10 +689,10 @@ private fun ZenSearchField(
                     singleLine = true,
                     textStyle = TextStyle(
                         fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = Color.White,
                         fontWeight = FontWeight.Medium,
                     ),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    cursorBrush = SolidColor(Color.White),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -941,7 +705,7 @@ private fun ZenSearchField(
                     Icon(
                         imageVector = Icons.Default.Clear,
                         contentDescription = "Temizle",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = Color.White,
                         modifier = Modifier.size(16.dp),
                     )
                 }
@@ -954,7 +718,7 @@ private fun ZenSearchField(
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Aramayı kapat",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = Color.White,
                     modifier = Modifier.size(16.dp),
                 )
             }
@@ -1316,8 +1080,8 @@ private fun createSampleGroupedItems(): List<DateGroupedTransactionsDisplayModel
                     type = TransactionType.EXPENSE,
                     categoryId = EntityId("c1"),
                     categoryName = "Market",
-                    categoryColorHex = "#10B981",
-                    categoryIconKey = null,
+                    categoryColorHex = "#EF4444",
+                    categoryIconKey = "groceries",
                     description = "Haftalık mutfak alışverişi",
                     paymentMethod = PaymentMethod.CREDIT_CARD,
                     transactionDate = LocalDate(2026, 8, 23),
@@ -1339,8 +1103,8 @@ private fun createSampleGroupedItems(): List<DateGroupedTransactionsDisplayModel
                     type = TransactionType.INCOME,
                     categoryId = EntityId("c2"),
                     categoryName = "Maaş",
-                    categoryColorHex = "#059669",
-                    categoryIconKey = null,
+                    categoryColorHex = "#16A34A",
+                    categoryIconKey = "salary",
                     description = "Ağustos Ek Ödeme",
                     paymentMethod = PaymentMethod.BANK_TRANSFER,
                     transactionDate = LocalDate(2026, 8, 22),

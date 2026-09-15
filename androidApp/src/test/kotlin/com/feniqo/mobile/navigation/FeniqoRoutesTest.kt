@@ -485,4 +485,14 @@ class FeniqoRoutesTest {
         val topLevelRoutes = TopLevelDestination.entries.map { it.route }
         assertTrue("TransactionSuccessRoute top-level hedef olmamalıdır", route !in topLevelRoutes)
     }
+
+    @Test
+    fun budgetDetailRoute_implementsFeniqoRoute_andPreservesParameters_andIsNotTopLevel() {
+        val route = BudgetDetailRoute(budgetId = "b-123", month = "2026-09")
+        assertTrue(route is FeniqoRoute)
+        assertEquals("b-123", route.budgetId)
+        assertEquals("2026-09", route.month)
+        val topLevelRoutes = TopLevelDestination.entries.map { it.route }
+        assertTrue("BudgetDetailRoute top-level hedef olmamalıdır", route !in topLevelRoutes)
+    }
 }

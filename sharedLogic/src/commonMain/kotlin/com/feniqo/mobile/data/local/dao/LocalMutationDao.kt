@@ -16,6 +16,8 @@ import com.feniqo.mobile.data.local.entity.GoalEntity
 import com.feniqo.mobile.data.local.entity.RecurringTransactionEntity
 import com.feniqo.mobile.data.local.entity.RecurringTransactionOccurrenceEntity
 import com.feniqo.mobile.data.local.entity.SubscriptionEntity
+import com.feniqo.mobile.data.local.entity.SubscriptionPaymentEntity
+import com.feniqo.mobile.data.local.entity.SubscriptionPriceHistoryEntity
 import com.feniqo.mobile.data.local.entity.SyncConflictEntity
 import com.feniqo.mobile.data.local.entity.SyncOperationEntity
 import com.feniqo.mobile.data.local.entity.TagEntity
@@ -85,6 +87,8 @@ interface LocalMutationDao {
     @Upsert suspend fun upsertRecurringTransactionRow(entity: RecurringTransactionEntity)
     @Upsert suspend fun upsertRecurringOccurrenceRow(entity: RecurringTransactionOccurrenceEntity)
     @Upsert suspend fun upsertSubscriptionRow(entity: SubscriptionEntity)
+    @Upsert suspend fun upsertSubscriptionPriceHistoryRow(entity: SubscriptionPriceHistoryEntity)
+    @Upsert suspend fun upsertSubscriptionPaymentRow(entity: SubscriptionPaymentEntity)
     @Upsert suspend fun upsertGoalRow(entity: GoalEntity)
     @Upsert suspend fun upsertGoalContributionRow(entity: GoalContributionEntity)
     @Upsert suspend fun upsertDebtRow(entity: DebtEntity)
@@ -2513,6 +2517,44 @@ interface LocalMutationDao {
         )
         insertOutboxRow(op)
         return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+    }
+
+    @Transaction
+    suspend fun mutateSubscriptionWithPriceHistoryV2(
+        entity: SubscriptionEntity,
+        priceHistory: SubscriptionPriceHistoryEntity,
+        type: OutboxOperationType,
+        payloadJson: String,
+        operationIdFactory: () -> String,
+        nowEpochMillis: Long,
+    ): V2EnqueueResult {
+        upsertSubscriptionPriceHistoryRow(priceHistory)
+        return mutateSubscriptionV2(
+            entity = entity,
+            type = type,
+            payloadJson = payloadJson,
+            operationIdFactory = operationIdFactory,
+            nowEpochMillis = nowEpochMillis,
+        )
+    }
+
+    @Transaction
+    suspend fun mutateSubscriptionWithPaymentV2(
+        entity: SubscriptionEntity,
+        payment: SubscriptionPaymentEntity,
+        type: OutboxOperationType,
+        payloadJson: String,
+        operationIdFactory: () -> String,
+        nowEpochMillis: Long,
+    ): V2EnqueueResult {
+        upsertSubscriptionPaymentRow(payment)
+        return mutateSubscriptionV2(
+            entity = entity,
+            type = type,
+            payloadJson = payloadJson,
+            operationIdFactory = operationIdFactory,
+            nowEpochMillis = nowEpochMillis,
+        )
     }
 
     /** Kişisel varlığı ve immutable V2 payload snapshot'ını tek Room transaction'ında yazar. */

@@ -286,6 +286,55 @@ class DashboardViewModelTest {
     }
 
     @Test
+    fun mixedCurrencyTransaction_doesNotBreakDashboard_andIsReportedAsExcluded() = runTest {
+        val fakeTxRepo = FakeTransactionRepo()
+        val fakeCatRepo = FakeCategoryRepo()
+        fakeTxRepo.transactionsFlow.value = listOf(
+            Transaction(
+                id = EntityId("tx-try"),
+                ownerId = EntityId("user-1"),
+                workspaceId = null,
+                amount = Money(10_000L, Currency.TRY),
+                type = TransactionType.EXPENSE,
+                categoryId = EntityId("cat-1"),
+                description = null,
+                paymentMethod = PaymentMethod.CASH,
+                transactionDate = fixedToday,
+                receiptPath = null,
+                installment = null,
+                createdAt = Instant.parse("2026-08-20T10:00:00Z"),
+            ),
+            Transaction(
+                id = EntityId("tx-usd"),
+                ownerId = EntityId("user-1"),
+                workspaceId = null,
+                amount = Money(5_000L, Currency.USD),
+                type = TransactionType.EXPENSE,
+                categoryId = EntityId("cat-1"),
+                description = null,
+                paymentMethod = PaymentMethod.CASH,
+                transactionDate = fixedToday,
+                receiptPath = null,
+                installment = null,
+                createdAt = Instant.parse("2026-08-20T11:00:00Z"),
+            ),
+        )
+
+        val viewModel = createViewModel(fakeTxRepo, fakeCatRepo)
+        val collectJob = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull(state.observationError)
+        assertEquals("-100,00 ₺", state.dashboard?.monthlySummary?.formattedExpense)
+        assertEquals(1, state.dashboard?.excludedDifferentCurrencyCount)
+        assertEquals("TRY", state.dashboard?.summaryCurrencyCode)
+        collectJob.cancel()
+    }
+
+    @Test
     fun moneyScore_matchesCalculateMoneyScoreUseCase_andExcludesOtherMonthTransactions() = runTest {
         val fakeTxRepo = FakeTransactionRepo()
         val fakeCatRepo = FakeCategoryRepo()

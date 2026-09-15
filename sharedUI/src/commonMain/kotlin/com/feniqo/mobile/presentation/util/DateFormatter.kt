@@ -28,6 +28,11 @@ object DateFormatter {
         return "${date.day} $monthName ${date.year}"
     }
 
+    fun formatShortReadableDate(date: LocalDate): String {
+        val shortMonth = formatShortMonth(date.month)
+        return "${date.day} $shortMonth ${date.year}"
+    }
+
     fun formatYearMonth(yearMonth: YearMonth): String {
         val parts = yearMonth.value.split("-")
         val year = parts.getOrNull(0) ?: return yearMonth.value

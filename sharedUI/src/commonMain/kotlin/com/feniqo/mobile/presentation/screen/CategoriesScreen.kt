@@ -40,6 +40,7 @@ import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.component.ActiveWorkspaceIndicator
 import com.feniqo.mobile.presentation.component.CategoryAnalyticsListItem
 import com.feniqo.mobile.presentation.component.CategoryDeleteDialog
+import com.feniqo.mobile.presentation.component.CategoryEmptyFilterCard
 import com.feniqo.mobile.presentation.component.CategoryFilterChips
 import com.feniqo.mobile.presentation.component.CategoryInsightCard
 import com.feniqo.mobile.presentation.component.CategoryMessageBanner
@@ -187,25 +188,11 @@ fun CategoriesScreen(
                 }
             } else if (state.items.isEmpty()) {
                 item(key = "empty_state") {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.medium,
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(FeniqoSpacing.Large),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                        ) {
-                            Text(
-                                text = "Bu filtreye uygun kategori bulunamadı.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
+                    CategoryEmptyFilterCard(
+                        onCreateClick = {
+                            onAddCategory(state.selectedTypeFilter ?: TransactionType.EXPENSE)
+                        },
+                    )
                 }
             } else {
                 items(

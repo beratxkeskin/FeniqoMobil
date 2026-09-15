@@ -1516,6 +1516,8 @@ class OfflineFirstSyncRepositoryTest {
         override suspend fun rebaseWorkspaceMemberVersion(workspaceId: String, userId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseWorkspaceInvitationVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun markWorkspaceMemberSyncedIfDeleted(workspaceId: String, userId: String, nowEpochMillis: Long): Int = 0
+        override suspend fun upsertSubscriptionPriceHistoryRow(entity: com.feniqo.mobile.data.local.entity.SubscriptionPriceHistoryEntity) = Unit
+        override suspend fun upsertSubscriptionPaymentRow(entity: com.feniqo.mobile.data.local.entity.SubscriptionPaymentEntity) = Unit
         override suspend fun upsertGoalRow(entity: com.feniqo.mobile.data.local.entity.GoalEntity) = Unit
         override suspend fun upsertGoalContributionRow(entity: com.feniqo.mobile.data.local.entity.GoalContributionEntity) = Unit
         override suspend fun upsertDebtRow(entity: com.feniqo.mobile.data.local.entity.DebtEntity) = Unit

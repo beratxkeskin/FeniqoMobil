@@ -29,7 +29,7 @@ data class InstallmentInfo(
     }
 }
 
-/** Gelir veya gider hareketinin saf domain temsili. Senkronizasyon alanları Room entity'sinde tutulur. */
+/** Gelir/gider ve kullanıcıya gösterilen sync durumu; teknik sürüm metadata'sı Room entity'sinde kalır. */
 data class Transaction(
     val id: EntityId,
     val ownerId: EntityId,
@@ -49,6 +49,7 @@ data class Transaction(
     val participantUserIds: List<EntityId> = listOf(ownerId),
     /** İsteğe bağlı işlem notu / açıklaması. */
     val note: String? = null,
+    val syncStatus: SyncStatus? = null,
 ) {
     init {
         require(amount.amountMinor > 0) { "İşlem tutarı sıfırdan büyük olmalıdır." }

@@ -162,6 +162,20 @@ data class SubscriptionDto(
     val nextRenewalDate: String,
     @SerialName("is_active")
     val isActive: Boolean = true,
+    @SerialName("lifecycle_status")
+    val lifecycleStatus: String = "ACTIVE",
+    @SerialName("trial_end_date")
+    val trialEndDate: String? = null,
+    @SerialName("cancellation_date")
+    val cancellationDate: String? = null,
+    @SerialName("access_end_date")
+    val accessEndDate: String? = null,
+    @SerialName("reminder_enabled")
+    val reminderEnabled: Boolean = true,
+    @SerialName("website_url")
+    val websiteUrl: String? = null,
+    @SerialName("notes")
+    val notes: String? = null,
     @SerialName("created_at")
     val createdAt: String,
     @SerialName("updated_at")

@@ -90,6 +90,7 @@ data class TransactionFormUiState(
     val isSubmitting: Boolean = false,
     val activeWorkspaceId: EntityId? = null,
     val activeWorkspaceName: String? = null,
+    val activeWorkspaceType: com.feniqo.mobile.domain.model.WorkspaceType = com.feniqo.mobile.domain.model.WorkspaceType.SHARED,
     val workspaceMembers: List<WorkspaceMemberUiModel> = emptyList(),
     val isLoadingWorkspaceMembers: Boolean = false,
     val selectedPaidByUserId: EntityId? = null,
@@ -105,12 +106,20 @@ data class TransactionFormUiState(
     val descriptionError: TransactionFormFieldError? = titleError,
     val installmentCountError: TransactionFormFieldError? = null,
     val generalMessage: FinanceUiMessage? = null,
+    val hasUnsavedChanges: Boolean = false,
 ) {
     val isInstallmentOptionAvailable: Boolean
         get() = !isEditMode && type == TransactionType.EXPENSE && paymentMethod == PaymentMethod.CREDIT_CARD
 
     val isSharedExpense: Boolean
-        get() = activeWorkspaceId != null && type == TransactionType.EXPENSE
+        get() = activeWorkspaceId != null &&
+            activeWorkspaceType == com.feniqo.mobile.domain.model.WorkspaceType.SHARED &&
+            type == TransactionType.EXPENSE
+
+    val canManageSplit: Boolean
+        get() = isSharedExpense && workspaceMembers.any {
+            it.isCurrentUser && it.role != com.feniqo.mobile.domain.model.WorkspaceRole.VIEWER
+        }
 
     val eligibleSplitMembers: List<WorkspaceMemberUiModel>
         get() = workspaceMembers

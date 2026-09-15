@@ -348,6 +348,14 @@ fun RecurringTransactionFormScreenRoute(
                 onEndDateClick = {
                     activeDatePicker = RecurringDatePickerTarget.END_DATE
                 },
+                onStartDateChange = { newStartDate ->
+                    input = RecurringTransactionFormRouteHelper.computeInputOnStartDateChange(input, newStartDate)
+                    errors = errors.copy(startDateError = null, endDateError = null)
+                },
+                onEndDateChange = { newEndDate ->
+                    input = RecurringTransactionFormRouteHelper.computeInputOnEndDateChange(input, newEndDate)
+                    errors = errors.copy(endDateError = null)
+                },
                 onClearEndDate = {
                     input = input.copy(endDate = null)
                     errors = errors.copy(endDateError = null)

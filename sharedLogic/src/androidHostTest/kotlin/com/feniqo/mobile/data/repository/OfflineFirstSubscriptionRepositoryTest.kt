@@ -251,6 +251,33 @@ class OfflineFirstSubscriptionRepositoryTest {
         override suspend fun setTransactionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setBudgetSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
 
+        override suspend fun upsertSubscriptionPriceHistoryRow(entity: com.feniqo.mobile.data.local.entity.SubscriptionPriceHistoryEntity) = Unit
+        override suspend fun upsertSubscriptionPaymentRow(entity: com.feniqo.mobile.data.local.entity.SubscriptionPaymentEntity) = Unit
+
+        override suspend fun mutateSubscriptionWithPriceHistoryV2(
+            entity: SubscriptionEntity,
+            priceHistory: com.feniqo.mobile.data.local.entity.SubscriptionPriceHistoryEntity,
+            type: com.feniqo.mobile.data.local.outbox.OutboxOperationType,
+            payloadJson: String,
+            operationIdFactory: () -> String,
+            nowEpochMillis: Long,
+        ): com.feniqo.mobile.data.local.dao.V2EnqueueResult {
+            upsertSubscriptionPriceHistoryRow(priceHistory)
+            return mutateSubscriptionV2(entity, type, payloadJson, operationIdFactory, nowEpochMillis)
+        }
+
+        override suspend fun mutateSubscriptionWithPaymentV2(
+            entity: SubscriptionEntity,
+            payment: com.feniqo.mobile.data.local.entity.SubscriptionPaymentEntity,
+            type: com.feniqo.mobile.data.local.outbox.OutboxOperationType,
+            payloadJson: String,
+            operationIdFactory: () -> String,
+            nowEpochMillis: Long,
+        ): com.feniqo.mobile.data.local.dao.V2EnqueueResult {
+            upsertSubscriptionPaymentRow(payment)
+            return mutateSubscriptionV2(entity, type, payloadJson, operationIdFactory, nowEpochMillis)
+        }
+
         override suspend fun upsertTransactionKeepingTagsAndEnqueue(entity: TransactionEntity, operation: SyncOperationEntity) {}
         override suspend fun upsertTransactionsAndEnqueue(units: List<com.feniqo.mobile.data.local.dao.TransactionMutationUnit>) {}
         override suspend fun upsertTransactionsKeepingTagsAndEnqueue(units: List<com.feniqo.mobile.data.local.dao.TransactionKeepingTagsMutationUnit>) {}

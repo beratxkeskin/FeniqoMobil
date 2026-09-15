@@ -63,7 +63,10 @@ class MoreHubViewModel @Inject constructor(
         if (activeCount == 0) {
             MoreHubOverviewCardState.Empty("Henüz aktif hedef yok.")
         } else {
-            MoreHubOverviewCardState.Content("$activeCount aktif hedef")
+            MoreHubOverviewCardState.Content(
+                primaryText = "$activeCount",
+                secondaryText = "aktif hedef",
+            )
         }
     }
 
@@ -74,8 +77,9 @@ class MoreHubViewModel @Inject constructor(
         } else {
             val nearest = active.minByOrNull { it.nextRenewalDate }?.nextRenewalDate
             MoreHubOverviewCardState.Content(
-                primaryText = "${active.size} aktif abonelik",
-                secondaryText = nearest?.let { "En yakın: ${DateFormatter.formatReadableDate(it)}" },
+                primaryText = "${active.size}",
+                secondaryText = nearest?.let { "aktif abonelik\nEn yakın: ${DateFormatter.formatReadableDate(it)}" }
+                    ?: "aktif abonelik",
             )
         }
     }
@@ -94,8 +98,8 @@ class MoreHubViewModel @Inject constructor(
             MoreHubOverviewCardState.Empty("Önümüzdeki 30 günde planlı kural yok.")
         } else {
             MoreHubOverviewCardState.Content(
-                primaryText = "$upcomingRuleCount planlı kural",
-                secondaryText = "Önümüzdeki 30 gün",
+                primaryText = "$upcomingRuleCount",
+                secondaryText = "planlı kural\nÖnümüzdeki 30 gün",
             )
         }
     }

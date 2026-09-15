@@ -227,11 +227,81 @@ class PlanSubscriptionPaymentRemindersUseCaseTest {
         }
     }
 
+    @Test
+    fun reminderDisabled_producesNoCandidate() {
+        val subscription = createSubscription(
+            id = "sub-disabled",
+            name = "Disabled Reminder",
+            nextRenewalDate = LocalDate(2026, 9, 8),
+            reminderEnabled = false,
+        )
+
+        val candidates = useCase(
+            subscriptions = listOf(subscription),
+            today = today,
+        )
+
+        assertTrue(candidates.isEmpty())
+    }
+
+    @Test
+    fun pausedOrCancelled_producesNoCandidate() {
+        val paused = createSubscription(
+            id = "sub-paused",
+            name = "Paused Sub",
+            nextRenewalDate = LocalDate(2026, 9, 8),
+            lifecycleStatus = com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.PAUSED,
+            isActive = false,
+        )
+        val cancelled = createSubscription(
+            id = "sub-cancelled",
+            name = "Cancelled Sub",
+            nextRenewalDate = LocalDate(2026, 9, 8),
+            lifecycleStatus = com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.CANCELLED,
+            cancellationDate = LocalDate(2026, 8, 20),
+            isActive = false,
+        )
+
+        val candidates = useCase(
+            subscriptions = listOf(paused, cancelled),
+            today = today,
+        )
+
+        assertTrue(candidates.isEmpty())
+    }
+
+    @Test
+    fun trialEndingInThreeDays_producesTrialEndingSoonCandidate() {
+        val trialSub = createSubscription(
+            id = "sub-trial",
+            name = "Figma Trial",
+            nextRenewalDate = LocalDate(2026, 9, 20),
+            lifecycleStatus = com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.TRIAL,
+            trialEndDate = LocalDate(2026, 9, 4), // 3 days after today (2026-09-01)
+        )
+
+        val candidates = useCase(
+            subscriptions = listOf(trialSub),
+            today = today,
+        )
+
+        assertEquals(1, candidates.size)
+        val candidate = candidates[0]
+        assertEquals(EntityId("sub-trial"), candidate.subscriptionId)
+        assertEquals(SubscriptionReminderKind.TRIAL_ENDING_SOON, candidate.reminderKind)
+        assertEquals(LocalDate(2026, 9, 4), candidate.nextRenewalDate)
+        assertEquals("sub-trial_2026-09-04_TRIAL_ENDING_SOON", candidate.stableKey)
+    }
+
     private fun createSubscription(
         id: String,
         name: String = "Test Subscription",
         nextRenewalDate: LocalDate,
         isActive: Boolean = true,
+        lifecycleStatus: com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus = if (isActive) com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.ACTIVE else com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.PAUSED,
+        trialEndDate: LocalDate? = null,
+        cancellationDate: LocalDate? = null,
+        reminderEnabled: Boolean = true,
     ): Subscription {
         return Subscription(
             id = EntityId(id),
@@ -248,6 +318,10 @@ class PlanSubscriptionPaymentRemindersUseCaseTest {
             ),
             nextRenewalDate = nextRenewalDate,
             isActive = isActive,
+            lifecycleStatus = lifecycleStatus,
+            trialEndDate = trialEndDate,
+            cancellationDate = cancellationDate,
+            reminderEnabled = reminderEnabled,
             createdAt = Instant.fromEpochMilliseconds(1000L),
         )
     }

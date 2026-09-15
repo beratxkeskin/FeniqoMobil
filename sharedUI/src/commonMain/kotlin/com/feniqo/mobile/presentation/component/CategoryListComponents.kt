@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -25,7 +26,15 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Layers
+import androidx.compose.material.icons.outlined.LocalOffer
+import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.ShoppingCart
+import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -56,6 +65,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
@@ -80,6 +90,12 @@ import com.feniqo.mobile.presentation.util.ColorParser
 private val SageGreen = Color(0xFF2D5A43)
 private val SageGreenLight = Color(0xFFEAF2EC)
 private val WarmIvory = Color(0xFFFAF8F5)
+private val SoftPurple = Color(0xFFF3E8FF)
+private val PurpleText = Color(0xFF7E22CE)
+private val SoftExpenseRed = Color(0xFFFEE2E2)
+private val ExpenseRedText = Color(0xFFDC2626)
+private val SoftIncomeGreen = Color(0xFFDCFCE7)
+private val IncomeGreenText = Color(0xFF16A34A)
 
 /**
  * Türkçe ay ve yıl formatlayıcısı.
@@ -239,93 +255,116 @@ fun MonthYearPickerDialog(
 ) {
     val selectedParts = selectedYearMonth.value.split("-")
     var currentYear by remember { mutableStateOf(selectedParts.getOrNull(0)?.toIntOrNull() ?: 2026) }
+    var tempSelectedMonth by remember { mutableStateOf(selectedParts.getOrNull(1)?.toIntOrNull() ?: 9) }
+
     val maxParts = maxYearMonth.value.split("-")
     val maxYear = maxParts.getOrNull(0)?.toIntOrNull() ?: 2026
     val maxMonth = maxParts.getOrNull(1)?.toIntOrNull() ?: 12
 
     val months = listOf(
-        1 to "Ocak", 2 to "Şubat", 3 to "Mart", 4 to "Nisan",
-        5 to "Mayıs", 6 to "Haziran", 7 to "Temmuz", 8 to "Ağustos",
-        9 to "Eylül", 10 to "Ekim", 11 to "Kasım", 12 to "Aralık"
+        1 to "Oca", 2 to "Şub", 3 to "Mar", 4 to "Nis",
+        5 to "May", 6 to "Haz", 7 to "Tem", 8 to "Ağu",
+        9 to "Eyl", 10 to "Eki", 11 to "Kas", 12 to "Ara"
     )
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(
-                    onClick = { currentYear-- },
-                    modifier = Modifier.size(48.dp),
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Önceki yıl")
-                }
-                Text(
-                    text = "$currentYear",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                )
-                IconButton(
-                    onClick = { if (currentYear < maxYear) currentYear++ },
-                    enabled = currentYear < maxYear,
-                    modifier = Modifier.size(48.dp),
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "Sonraki yıl",
-                        tint = if (currentYear < maxYear) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Dönem seçimini kapat")
+                    }
+                    Text(
+                        text = "Dönem seç",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
                     )
+                    Spacer(modifier = Modifier.size(40.dp))
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Yıl seçici < 2026 >
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(
+                        onClick = { currentYear-- },
+                        modifier = Modifier.size(44.dp),
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Önceki yıl")
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        text = "$currentYear",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    IconButton(
+                        onClick = { if (currentYear < maxYear) currentYear++ },
+                        enabled = currentYear < maxYear,
+                        modifier = Modifier.size(44.dp),
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Sonraki yıl",
+                            tint = if (currentYear < maxYear) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                        )
+                    }
                 }
             }
         },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                for (row in months.chunked(3)) {
+                for (row in months.chunked(4)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         for ((mNum, mName) in row) {
                             val isFuture = currentYear > maxYear || (currentYear == maxYear && mNum > maxMonth)
-                            val isSelected = selectedParts.getOrNull(0)?.toIntOrNull() == currentYear &&
-                                    selectedParts.getOrNull(1)?.toIntOrNull() == mNum
-
-                            val targetYM = YearMonth("$currentYear-${mNum.toString().padStart(2, '0')}")
+                            val isSelected = tempSelectedMonth == mNum
 
                             Surface(
-                                shape = RoundedCornerShape(FeniqoRadius.Small),
+                                shape = RoundedCornerShape(12.dp),
                                 color = when {
                                     isSelected -> SageGreen
-                                    isFuture -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                                    else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                                    isFuture -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                                    else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
                                 },
                                 modifier = Modifier
                                     .weight(1f)
-                                    .defaultMinSize(minHeight = 44.dp)
+                                    .height(44.dp)
                                     .clickable(
                                         enabled = !isFuture,
                                         onClick = {
-                                            onYearMonthSelected(targetYM)
+                                            tempSelectedMonth = mNum
                                         },
                                     ),
                             ) {
                                 Box(
                                     contentAlignment = Alignment.Center,
-                                    modifier = Modifier.padding(vertical = 10.dp),
+                                    modifier = Modifier.fillMaxSize(),
                                 ) {
                                     Text(
                                         text = mName,
                                         style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                         color = when {
                                             isSelected -> Color.White
-                                            isFuture -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                                            isFuture -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
                                             else -> MaterialTheme.colorScheme.onSurface
                                         },
                                     )
@@ -337,13 +376,27 @@ fun MonthYearPickerDialog(
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.defaultMinSize(minHeight = 48.dp),
+            Button(
+                onClick = {
+                    val targetYM = YearMonth("$currentYear-${tempSelectedMonth.toString().padStart(2, '0')}")
+                    onYearMonthSelected(targetYM)
+                    onDismiss()
+                },
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = SageGreen),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
             ) {
-                Text(text = "Kapat")
+                Text(
+                    text = "Uygula",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                )
             }
         },
+        dismissButton = null,
     )
 }
 
@@ -452,47 +505,81 @@ private fun SummaryStatsRow(
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
+        // Toplam kategori kutusu
+        Row(
             modifier = Modifier.weight(1f),
-            horizontalAlignment = Alignment.Start,
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = "$totalCount",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF1F2937),
-            )
-            Text(
-                text = "Toplam kategori",
-                style = MaterialTheme.typography.labelSmall,
-                color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF6B7280),
-                maxLines = 2,
-                softWrap = true,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(if (isDark) SageGreen.copy(alpha = 0.3f) else SageGreenLight, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Layers,
+                    contentDescription = null,
+                    tint = SageGreen,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Column {
+                Text(
+                    text = "$totalCount kategori",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF1F2937),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = "Toplam kategori",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF6B7280),
+                    maxLines = 1,
+                )
+            }
         }
 
-        Column(
+        // Özel kategori kutusu
+        Row(
             modifier = Modifier.weight(1f),
-            horizontalAlignment = Alignment.Start,
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = "$customCount",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF1F2937),
-            )
-            Text(
-                text = "Özel kategori",
-                style = MaterialTheme.typography.labelSmall,
-                color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF6B7280),
-                maxLines = 2,
-                softWrap = true,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(if (isDark) SageGreen.copy(alpha = 0.3f) else SageGreenLight, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.StarOutline,
+                    contentDescription = null,
+                    tint = SageGreen,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Column {
+                Text(
+                    text = "$customCount özel kategori",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF1F2937),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = "Senin oluşturdukların",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF6B7280),
+                    maxLines = 1,
+                )
+            }
         }
     }
 }
@@ -503,79 +590,67 @@ private fun SummaryTopCategorySection(
     isDark: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Column(
+    val isExpense = summary.topCategoryType == TransactionType.EXPENSE
+    val iconColor = if (isExpense) ExpenseRedText else IncomeGreenText
+    val iconBgColor = if (isExpense) SoftExpenseRed else SoftIncomeGreen
+
+    Row(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        val labelPrefix = if (summary.topCategoryType == TransactionType.INCOME) {
-            "Bu ay en yüksek gelir"
-        } else {
-            "Bu ay en yüksek gider"
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .background(if (isDark) iconColor.copy(alpha = 0.25f) else iconBgColor, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = if (isExpense) Icons.Outlined.ShoppingCart else Icons.AutoMirrored.Outlined.TrendingUp,
+                contentDescription = null,
+                tint = iconColor,
+                modifier = Modifier.size(20.dp),
+            )
         }
 
-        Text(
-            text = labelPrefix,
-            style = MaterialTheme.typography.labelSmall,
-            color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF6B7280),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(1.dp),
+        ) {
+            val labelPrefix = if (isExpense) "En yüksek gider" else "En yüksek gelir"
+            Text(
+                text = labelPrefix,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF6B7280),
+                maxLines = 1,
+            )
 
-        if (summary.topCategoryName != null && summary.formattedTopCategoryAmount != null) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
+            if (summary.topCategoryName != null && summary.formattedTopCategoryAmount != null) {
                 Text(
                     text = summary.topCategoryName,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF1F2937),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
                 )
+                val prefix = if (isExpense) "−" else "+"
                 Text(
-                    text = summary.formattedTopCategoryAmount,
+                    text = "$prefix${summary.formattedTopCategoryAmount}",
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF374151),
+                    fontWeight = FontWeight.Bold,
+                    color = if (isExpense) ExpenseRedText else IncomeGreenText,
+                    maxLines = 1,
+                )
+            } else {
+                Text(
+                    text = if (isExpense) "Harcama Yok" else "Gelir Yok",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF1F2937),
                     maxLines = 1,
                 )
             }
-        } else {
-            val emptyTitle = if (summary.topCategoryType == TransactionType.INCOME) "Gelir Yok" else "Harcama Yok"
-            Text(
-                text = emptyTitle,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF1F2937),
-                maxLines = 1,
-            )
-            Text(
-                text = if (summary.topCategoryType == TransactionType.INCOME) {
-                    "Bu dönemde gelir kaydı bulunmuyor"
-                } else {
-                    "Bu dönemde gider kaydı bulunmuyor"
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF6B7280),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-
-        if (summary.balanceMessage.isNotBlank()) {
-            Text(
-                text = summary.balanceMessage,
-                style = MaterialTheme.typography.labelSmall,
-                color = if (isDark) MaterialTheme.colorScheme.primary else SageGreen,
-                fontWeight = FontWeight.Medium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 2.dp),
-            )
         }
     }
 }
@@ -922,16 +997,39 @@ fun CategoryAnalyticsListItem(
 
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(1.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                Text(
-                    text = item.category.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(
+                        text = item.category.name,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+
+                    // Özel kategori rozeti (Görsel 01 & 07)
+                    if (!item.category.isDefault) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = if (isDark) PurpleText.copy(alpha = 0.25f) else SoftPurple,
+                        ) {
+                            Text(
+                                text = "Özel",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isDark) Color(0xFFD8B4FE) else PurpleText,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
+                            )
+                        }
+                    }
+                }
+
                 Text(
                     text = "${item.transactionCount} işlem",
                     style = MaterialTheme.typography.labelSmall,
@@ -943,15 +1041,28 @@ fun CategoryAnalyticsListItem(
             Spacer(modifier = Modifier.width(8.dp))
 
             // Tutar ve Trend rozeti
+            val isZero = item.currentPeriodAmount.amountMinor == 0L
+            val isExpense = item.category.type == TransactionType.EXPENSE
+            val amountColor = when {
+                isZero -> MaterialTheme.colorScheme.onSurfaceVariant
+                isExpense -> ExpenseRedText
+                else -> IncomeGreenText
+            }
+            val amountPrefix = when {
+                isZero -> ""
+                isExpense -> "−"
+                else -> "+"
+            }
+
             Column(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(
-                    text = item.formattedCurrentAmount,
+                    text = "$amountPrefix${item.formattedCurrentAmount}",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = amountColor,
                     maxLines = 1,
                 )
 
@@ -999,7 +1110,7 @@ fun CategoryAnalyticsListItem(
 
             Spacer(modifier = Modifier.width(4.dp))
 
-            // Sağ aksiyon: Özel kategoriler için taşma menüsü, sistem kategorileri için ok ikonu
+            // Sağ aksiyon: Özel kategoriler için üç nokta menüsü, sistem kategorileri için chevron ok
             if (item.category.isDefault) {
                 Box(
                     modifier = Modifier.size(width = 24.dp, height = 48.dp),
@@ -1026,19 +1137,33 @@ fun CategoryAnalyticsListItem(
                             },
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.MoreVert,
+                            imageVector = Icons.Outlined.MoreHoriz,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(20.dp),
                         )
                     }
 
+                    // 07 Özel Kategori Menüsü
                     DropdownMenu(
                         expanded = isMenuExpanded,
                         onDismissRequest = { isMenuExpanded = false },
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Düzenle") },
+                            text = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Edit,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                    Text("Düzenle")
+                                }
+                            },
                             onClick = {
                                 isMenuExpanded = false
                                 onEditClick(item.category.id)
@@ -1046,10 +1171,22 @@ fun CategoryAnalyticsListItem(
                         )
                         DropdownMenuItem(
                             text = {
-                                Text(
-                                    text = "Sil",
-                                    color = MaterialTheme.colorScheme.error,
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Delete,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                    Text(
+                                        text = "Sil",
+                                        color = MaterialTheme.colorScheme.error,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                }
                             },
                             onClick = {
                                 isMenuExpanded = false
@@ -1269,7 +1406,7 @@ fun CategoryMessageBanner(
 }
 
 /**
- * Kategori silme onay diyaloğudur.
+ * 8. Silme Onayı Diyaloğu (Görsel 08).
  */
 @Composable
 fun CategoryDeleteDialog(
@@ -1289,50 +1426,171 @@ fun CategoryDeleteDialog(
         },
         modifier = modifier,
         title = {
-            Text(
-                text = "Kategoriyi Sil",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-            )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                // Kırmızı çöp kutusu ikonu (Görsel 08)
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .background(SoftExpenseRed, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Delete,
+                        contentDescription = null,
+                        tint = ExpenseRedText,
+                        modifier = Modifier.size(28.dp),
+                    )
+                }
+
+                Text(
+                    text = "Kategori silinsin mi?",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                )
+            }
         },
         text = {
             Text(
-                text = "“${targetCategory.name}” kategorisini silmek istediğinize emin misiniz? Geçmiş işlemlerde kategori adı korunur.",
+                text = "${targetCategory.name} kategorisini silmek istiyor musun? Geçmiş işlemlerde kategori adı korunur.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
             )
         },
         confirmButton = {
-            Button(
-                onClick = onConfirm,
-                enabled = !isDeleteInProgress && !targetCategory.isDefault,
-                modifier = Modifier.defaultMinSize(minHeight = 48.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError,
-                ),
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                if (isDeleteInProgress) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        color = MaterialTheme.colorScheme.onError,
-                        strokeWidth = 2.dp,
+                Button(
+                    onClick = onConfirm,
+                    enabled = !isDeleteInProgress && !targetCategory.isDefault,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ExpenseRedText,
+                        contentColor = Color.White,
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                ) {
+                    if (isDeleteInProgress) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp,
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = "Siliniyor...", fontWeight = FontWeight.Bold)
+                    } else {
+                        Text(text = "Kategoriyi sil", fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = onDismiss,
+                    enabled = !isDeleteInProgress,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                ) {
+                    Text(
+                        text = "Vazgeç",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
-                    Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
-                    Text(text = "Siliniyor...")
-                } else {
-                    Text(text = "Sil")
                 }
             }
         },
-        dismissButton = {
-            OutlinedButton(
-                onClick = onDismiss,
-                enabled = !isDeleteInProgress,
-                modifier = Modifier.defaultMinSize(minHeight = 48.dp),
-            ) {
-                Text(text = "İptal")
-            }
-        },
+        dismissButton = null,
     )
+}
+
+/**
+ * 10. Boş Filtre Durumu Kartı (Görsel 10).
+ * Seçili filtreye uygun kategori bulunamadığında kullanıcıyı yönlendirir.
+ */
+@Composable
+fun CategoryEmptyFilterCard(
+    onCreateClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f) else Color(0xFFF9F8F6),
+        border = BorderStroke(1.dp, if (isDark) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f) else Color(0xFFE8E5DD)),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 32.dp, horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .background(
+                        color = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFEAF2EC),
+                        shape = CircleShape,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.LocalOffer,
+                    contentDescription = null,
+                    tint = SageGreen,
+                    modifier = Modifier.size(28.dp),
+                )
+            }
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = "Bu filtreye uygun kategori bulunamadı.",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    text = "Farklı bir dönem seçebilir veya yeni kategori oluşturabilirsin.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Button(
+                onClick = onCreateClick,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = SageGreen),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+            ) {
+                Text(
+                    text = "Yeni kategori oluştur",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                )
+            }
+        }
+    }
 }

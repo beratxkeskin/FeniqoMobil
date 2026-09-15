@@ -313,4 +313,49 @@ class DashboardDisplayModelBuilderTest {
         assertTrue(explicitMs?.isProvisional == true)
         assertEquals("Test açıklaması", explicitMs?.explanationText)
     }
+
+    @Test
+    fun build_upcomingBillsAndBudgets_mapsBadgeDatesAndProgressCorrectly() {
+        val summary = DashboardSummary(
+            month = YearMonth("2026-09"),
+            income = Money(amountMinor = 4825000L, currency = Currency.TRY),
+            expense = Money(amountMinor = 1284000L, currency = Currency.TRY),
+            balance = MoneyDelta(amountMinor = 3541000L, currency = Currency.TRY),
+            savingsRate = RateBasisPoints(7339),
+            topExpenseCategory = null,
+            recentTransactionIds = emptyList(),
+            moneyScore = null,
+        )
+
+        val sub = com.feniqo.mobile.domain.model.Subscription(
+            id = EntityId("sub-1"),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            name = "İnternet",
+            amount = Money(49900L, Currency.TRY),
+            categoryId = null,
+            renewalRule = com.feniqo.mobile.domain.model.RecurrenceRule(
+                frequency = com.feniqo.mobile.domain.model.RecurrenceFrequency.MONTHLY,
+                interval = 1,
+                startDate = LocalDate(2026, 1, 18),
+                endDate = null,
+            ),
+            nextRenewalDate = LocalDate(2026, 9, 18),
+            isActive = true,
+            createdAt = Instant.parse("2026-01-01T00:00:00Z"),
+        )
+
+        val result = DashboardDisplayModelBuilder.build(
+            summary = summary,
+            transactions = emptyList(),
+            categories = emptyList(),
+            subscriptions = listOf(sub),
+        )
+
+        assertEquals(1, result.upcomingBills.size)
+        val bill = result.upcomingBills[0]
+        assertEquals("İnternet", bill.title)
+        assertEquals("18", bill.dayNumber)
+        assertEquals("EYL", bill.monthShort)
+    }
 }

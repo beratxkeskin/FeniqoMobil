@@ -12,6 +12,27 @@ import kotlin.test.assertTrue
 class TransactionFormUiHelperTest {
 
     @Test
+    fun splitEditingRequiresSharedWorkspaceAndWriteRole() {
+        val member = com.feniqo.mobile.presentation.workspace.WorkspaceMemberUiModel(
+            com.feniqo.mobile.domain.model.EntityId("member"), "Ben",
+            com.feniqo.mobile.domain.model.WorkspaceRole.EDITOR, true,
+        )
+        val shared = TransactionFormUiState(
+            activeWorkspaceId = com.feniqo.mobile.domain.model.EntityId("workspace"),
+            workspaceMembers = listOf(member),
+        )
+        assertTrue(shared.canManageSplit)
+        assertFalse(shared.copy(workspaceMembers = emptyList()).canManageSplit)
+        assertFalse(shared.copy(workspaceMembers = listOf(member.copy(
+            role = com.feniqo.mobile.domain.model.WorkspaceRole.VIEWER,
+        ))).canManageSplit)
+        val personal = shared.copy(activeWorkspaceType = com.feniqo.mobile.domain.model.WorkspaceType.PERSONAL)
+        assertFalse(personal.isSharedExpense)
+        assertFalse(personal.canManageSplit)
+        assertFalse(shared.copy(type = TransactionType.INCOME).canManageSplit)
+    }
+
+    @Test
     fun formatDisplayDate_formatsTurkishMonthsCorrectly() {
         assertEquals("1 Ocak 2026", formatDisplayDate(LocalDate(2026, 1, 1)))
         assertEquals("15 Şubat 2026", formatDisplayDate(LocalDate(2026, 2, 15)))
@@ -29,7 +50,7 @@ class TransactionFormUiHelperTest {
         assertEquals("Bu kategori artık kullanılamıyor. Lütfen başka bir kategori seçin.", TransactionFormFieldError.CATEGORY_UNAVAILABLE.toDisplayText())
         assertEquals("Lütfen bir tarih seçin.", TransactionFormFieldError.DATE_REQUIRED.toDisplayText())
         assertEquals("İşlem tarihi bugünden ileri olamaz.", TransactionFormFieldError.DATE_IN_FUTURE.toDisplayText())
-        assertEquals("Açıklama 500 karakterden uzun olamaz.", TransactionFormFieldError.DESCRIPTION_TOO_LONG.toDisplayText())
+        assertEquals("Açıklama 100 karakterden uzun olamaz.", TransactionFormFieldError.DESCRIPTION_TOO_LONG.toDisplayText())
         assertEquals("Taksit sayısı 2 ile 60 arasında olmalıdır.", TransactionFormFieldError.INSTALLMENT_COUNT_INVALID.toDisplayText())
         assertEquals("Toplam tutar seçilen taksit sayısı için çok küçük.", TransactionFormFieldError.INSTALLMENT_AMOUNT_TOO_SMALL.toDisplayText())
         assertEquals("Lütfen harcamayı ödeyen kişiyi seçin.", TransactionFormFieldError.SPLIT_PAYER_REQUIRED.toDisplayText())

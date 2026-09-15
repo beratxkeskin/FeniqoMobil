@@ -1,6 +1,7 @@
 package com.feniqo.mobile.presentation.budget
 
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.YearMonth
 import com.feniqo.mobile.domain.usecase.BudgetHealth
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
@@ -321,5 +322,32 @@ class BudgetsUiStateTest {
 
         val loadedState = BudgetsUiState(isLoading = false, observationError = null, selectedMonth = YearMonth("2026-08"))
         assertTrue(!loadedState.isLoading && loadedState.observationError == null)
+    }
+
+    @Test
+    fun overview_groupsCurrencies_andUsesEightyAndHundredPercentBoundaries() {
+        val warning = safeBudget.copy(
+            currency = Currency.TRY,
+            limitMinor = 100_000L,
+            spentMinor = 80_000L,
+            remainingMinor = 20_000L,
+        )
+        val exceededUsd = exceededBudgetWithExcludedTx.copy(
+            currency = Currency.USD,
+            limitMinor = 100_000L,
+            spentMinor = 100_000L,
+            remainingMinor = 0L,
+        )
+        val overview = BudgetOverviewCalculator.calculate(listOf(warning, exceededUsd)) as BudgetOverview.Ready
+        assertEquals(2, overview.summaries.size)
+        assertEquals(BudgetHealth.WARNING, overview.summaries.first { it.currency == Currency.TRY }.health)
+        assertEquals(BudgetHealth.EXCEEDED, overview.summaries.first { it.currency == Currency.USD }.health)
+    }
+
+    @Test
+    fun overview_failsClosed_whenLongTotalOverflows() {
+        val first = safeBudget.copy(limitMinor = Long.MAX_VALUE, spentMinor = 0L)
+        val second = safeBudget.copy(id = EntityId("b-overflow"), limitMinor = 1L, spentMinor = 0L)
+        assertEquals(BudgetOverview.UnsafeTotal, BudgetOverviewCalculator.calculate(listOf(first, second)))
     }
 }

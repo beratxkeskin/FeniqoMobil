@@ -27,8 +27,8 @@ enum class QuickAddAction(
     val subtitle: String,
     val available: Boolean,
 ) {
-    EXPENSE("Gider", "Para çıkışı, harcama kaydı", true),
-    INCOME("Gelir", "Maaş, ek gelir, tahsilat", true),
+    EXPENSE("Gider ekle", "Harcama kaydet", true),
+    INCOME("Gelir ekle", "Gelir kaydet", true),
     TRANSFER("Transfer", "Hesaplar arası aktarım", false),
     DEBT_RECEIVABLE("Borç / Alacak", "Kişi bazlı borç veya alacak takibi", true),
     RECURRING_TRANSACTION("Tekrarlayan İşlem", "Aylık fatura, kira, abonelik", true),
@@ -81,17 +81,17 @@ fun QuickAddSheet(
             }
 
             // Seçenek Kartları
-            QuickAddAction.entries.forEach { action ->
+            QuickAddAction.entries.filter { it.available }.forEach { action ->
                 val (icon, iconColor, containerBg) = when (action) {
                     QuickAddAction.EXPENSE -> Triple(
-                        Icons.AutoMirrored.Outlined.TrendingDown,
+                        Icons.Outlined.ShoppingCart,
                         FeniqoExpense,
                         FeniqoExpense.copy(alpha = 0.12f),
                     )
                     QuickAddAction.INCOME -> Triple(
-                        Icons.AutoMirrored.Outlined.TrendingUp,
-                        FeniqoEmerald,
-                        FeniqoEmerald.copy(alpha = 0.12f),
+                        Icons.Outlined.Add,
+                        MaterialTheme.colorScheme.primary,
+                        MaterialTheme.colorScheme.primaryContainer,
                     )
                     QuickAddAction.TRANSFER -> Triple(
                         Icons.Outlined.SwapHoriz,
@@ -99,7 +99,7 @@ fun QuickAddSheet(
                         MaterialTheme.colorScheme.surfaceVariant,
                     )
                     QuickAddAction.DEBT_RECEIVABLE -> Triple(
-                        Icons.Outlined.AccountBalance,
+                        Icons.Outlined.SwapHoriz,
                         FeniqoInfo,
                         FeniqoInfo.copy(alpha = 0.12f),
                     )
@@ -124,7 +124,7 @@ fun QuickAddSheet(
                         .fillMaxWidth()
                         .then(rowModifier),
                     shape = RoundedCornerShape(FeniqoRadius.Medium),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    color = MaterialTheme.colorScheme.surface,
                     tonalElevation = 1.dp,
                 ) {
                     Row(
@@ -139,7 +139,7 @@ fun QuickAddSheet(
                         Box(
                             modifier = Modifier
                                 .size(42.dp)
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(CircleShape)
                                 .background(containerBg),
                             contentAlignment = Alignment.Center,
                         ) {

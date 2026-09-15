@@ -33,6 +33,7 @@ import com.feniqo.mobile.domain.model.RecurrenceFrequency
 import com.feniqo.mobile.domain.model.RecurrenceRule
 import com.feniqo.mobile.domain.model.RecurringTransaction
 import com.feniqo.mobile.domain.model.Subscription
+import com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus
 import com.feniqo.mobile.domain.model.Transaction
 import com.feniqo.mobile.domain.model.TransactionType
 import kotlin.time.Instant
@@ -272,6 +273,12 @@ fun SubscriptionDto.toDomain(): Subscription {
         endDate = parsedEndDate,
     )
 
+    val parsedStatus = try {
+        SubscriptionLifecycleStatus.valueOf(lifecycleStatus.trim().uppercase())
+    } catch (_: IllegalArgumentException) {
+        SubscriptionLifecycleStatus.ACTIVE
+    }
+
     return Subscription(
         id = EntityId(id.required("subscriptions.id")),
         ownerId = EntityId(userId.required("subscriptions.user_id")),
@@ -282,6 +289,13 @@ fun SubscriptionDto.toDomain(): Subscription {
         renewalRule = parsedRule,
         nextRenewalDate = parsedNextRenewalDate,
         isActive = isActive,
+        lifecycleStatus = parsedStatus,
+        trialEndDate = trialEndDate?.toLocalDate("subscriptions.trial_end_date"),
+        cancellationDate = cancellationDate?.toLocalDate("subscriptions.cancellation_date"),
+        accessEndDate = accessEndDate?.toLocalDate("subscriptions.access_end_date"),
+        reminderEnabled = reminderEnabled,
+        websiteUrl = websiteUrl,
+        notes = notes,
         createdAt = createdAt.toInstant("subscriptions.created_at"),
     )
 }
@@ -301,6 +315,13 @@ fun Subscription.toDto(): SubscriptionDto = SubscriptionDto(
     endDate = renewalRule.endDate?.toString(),
     nextRenewalDate = nextRenewalDate.toString(),
     isActive = isActive,
+    lifecycleStatus = lifecycleStatus.name,
+    trialEndDate = trialEndDate?.toString(),
+    cancellationDate = cancellationDate?.toString(),
+    accessEndDate = accessEndDate?.toString(),
+    reminderEnabled = reminderEnabled,
+    websiteUrl = websiteUrl,
+    notes = notes,
     createdAt = createdAt.toString(),
 )
 

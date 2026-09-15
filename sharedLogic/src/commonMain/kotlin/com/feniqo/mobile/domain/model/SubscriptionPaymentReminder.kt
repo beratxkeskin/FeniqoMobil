@@ -8,6 +8,8 @@ enum class SubscriptionReminderKind {
     UPCOMING,
     /** Vade günü gönderilen hatırlatıcı. */
     DUE_TODAY,
+    /** Deneme süresinin bitimine 3 gün kala gönderilen hatırlatıcı. */
+    TRIAL_ENDING_SOON,
 }
 
 /**

@@ -7,7 +7,10 @@ import com.feniqo.mobile.domain.model.CreateSubscriptionCommand
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.SetSubscriptionActiveCommand
+import com.feniqo.mobile.domain.model.SetSubscriptionLifecycleCommand
 import com.feniqo.mobile.domain.model.Subscription
+import com.feniqo.mobile.domain.model.SubscriptionPayment
+import com.feniqo.mobile.domain.model.SubscriptionPriceHistory
 import com.feniqo.mobile.domain.model.UpdateSubscriptionCommand
 import com.feniqo.mobile.domain.repository.RepositoryResult
 import com.feniqo.mobile.domain.usecase.AdvanceSubscriptionRenewalUseCase
@@ -15,14 +18,18 @@ import com.feniqo.mobile.domain.usecase.CreateSubscriptionUseCase
 import com.feniqo.mobile.domain.usecase.DeleteSubscriptionUseCase
 import com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase
 import com.feniqo.mobile.domain.usecase.ObserveCategoriesUseCase
+import com.feniqo.mobile.domain.usecase.ObserveSubscriptionPaymentsUseCase
+import com.feniqo.mobile.domain.usecase.ObserveSubscriptionPriceHistoriesUseCase
 import com.feniqo.mobile.domain.usecase.ObserveSubscriptionUseCase
 import com.feniqo.mobile.domain.usecase.ObserveSubscriptionsUseCase
 import com.feniqo.mobile.domain.usecase.SetSubscriptionActiveUseCase
+import com.feniqo.mobile.domain.usecase.SetSubscriptionLifecycleUseCase
 import com.feniqo.mobile.domain.usecase.UpdateSubscriptionUseCase
+import com.feniqo.mobile.domain.validation.SubscriptionAnalyticsCalculator
+import com.feniqo.mobile.domain.validation.SubscriptionFilter
 import com.feniqo.mobile.domain.validation.SubscriptionRenewalProgressionResult
 import com.feniqo.mobile.presentation.common.CurrentDateProvider
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
-
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -51,9 +58,12 @@ class SubscriptionsViewModel @Inject constructor(
     private val observeSubscriptionsUseCase: ObserveSubscriptionsUseCase,
     private val observeSubscriptionUseCase: ObserveSubscriptionUseCase,
     private val observeCategoriesUseCase: ObserveCategoriesUseCase,
+    private val observeSubscriptionPriceHistoriesUseCase: ObserveSubscriptionPriceHistoriesUseCase,
+    private val observeSubscriptionPaymentsUseCase: ObserveSubscriptionPaymentsUseCase,
     private val createSubscriptionUseCase: CreateSubscriptionUseCase,
     private val updateSubscriptionUseCase: UpdateSubscriptionUseCase,
     private val setSubscriptionActiveUseCase: SetSubscriptionActiveUseCase,
+    private val setSubscriptionLifecycleUseCase: SetSubscriptionLifecycleUseCase,
     private val advanceSubscriptionRenewalUseCase: AdvanceSubscriptionRenewalUseCase,
     private val deleteSubscriptionUseCase: DeleteSubscriptionUseCase,
     private val observeActiveWorkspaceUseCase: ObserveActiveWorkspaceUseCase,
@@ -61,6 +71,8 @@ class SubscriptionsViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _retryTrigger = MutableStateFlow(0L)
+    private val _selectedFilter = MutableStateFlow(SubscriptionFilter.ALL)
+    private val _isNotificationPermissionGranted = MutableStateFlow(true)
     private val _mutationState = MutableStateFlow(SubscriptionMutationState())
 
     private val _editLoadState = MutableStateFlow<SubscriptionEditLoadState>(SubscriptionEditLoadState.Idle)
@@ -90,35 +102,130 @@ class SubscriptionsViewModel @Inject constructor(
         }
     }
 
+    private data class ObservationData(
+        val items: List<SubscriptionDisplayModel>,
+        val filteredItems: List<SubscriptionDisplayModel>,
+        val selectedFilter: SubscriptionFilter,
+        val estimatedSummaries: List<SubscriptionEstimatedCostSummaryUiModel>,
+        val actualSpendings: List<SubscriptionActualSpendingUiModel>,
+        val upcomingPayments: List<SubscriptionDisplayModel>,
+        val overduePayments: List<SubscriptionDisplayModel>,
+        val insights: List<SubscriptionInsightUiModel>,
+        val isNotificationPermissionGranted: Boolean,
+    )
+
     private sealed interface ObservationResult {
         data object Loading : ObservationResult
-        data class Success(val items: List<SubscriptionDisplayModel>) : ObservationResult
+        data class Success(val data: ObservationData) : ObservationResult
         data class Failure(val message: FinanceUiMessage) : ObservationResult
     }
+
+    private data class RawSubscriptionData(
+        val subscriptions: List<Subscription>,
+        val categories: List<Category>,
+        val priceHistories: List<SubscriptionPriceHistory>,
+        val payments: List<SubscriptionPayment>,
+    )
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val observationResultFlow: Flow<ObservationResult> = _retryTrigger
         .flatMapLatest {
-            combine<List<Subscription>, List<Category>, ObservationResult>(
+            val rawDataFlow = combine(
                 observeSubscriptionsUseCase(),
                 observeCategoriesUseCase(),
-            ) { subscriptionList, categories ->
-                val items = SubscriptionDisplayModelMapper.map(
-                    subscriptions = subscriptionList,
+                observeSubscriptionPriceHistoriesUseCase(),
+                observeSubscriptionPaymentsUseCase(),
+            ) { subscriptions, categories, priceHistories, payments ->
+                RawSubscriptionData(subscriptions, categories, priceHistories, payments)
+            }
+
+            combine(
+                rawDataFlow,
+                _selectedFilter,
+                _isNotificationPermissionGranted,
+            ) { raw, filter, isNotifGranted ->
+                val subscriptions = raw.subscriptions
+                val categories = raw.categories
+                val priceHistories = raw.priceHistories
+                val payments = raw.payments
+
+                val today = currentDateProvider.today()
+                val currentYearMonth = "${today.year}-${today.monthNumber.toString().padStart(2, '0')}"
+                val prevMonth = if (today.monthNumber == 1) 12 else today.monthNumber - 1
+                val prevYear = if (today.monthNumber == 1) today.year - 1 else today.year
+                val previousYearMonth = "$prevYear-${prevMonth.toString().padStart(2, '0')}"
+
+                val allItems = SubscriptionDisplayModelMapper.map(
+                    subscriptions = subscriptions,
                     categories = categories,
-                    today = currentDateProvider.today(),
+                    priceHistories = priceHistories,
+                    today = today,
                 )
-                ObservationResult.Success(items)
+
+                val filteredSubs = SubscriptionAnalyticsCalculator.applyFilter(subscriptions, filter, today)
+                val filteredItems = SubscriptionDisplayModelMapper.map(
+                    subscriptions = filteredSubs,
+                    categories = categories,
+                    priceHistories = priceHistories,
+                    today = today,
+                )
+
+                val upcomingSubs = SubscriptionAnalyticsCalculator.filterUpcoming(subscriptions, today)
+                val upcomingPayments = SubscriptionDisplayModelMapper.map(
+                    subscriptions = upcomingSubs,
+                    categories = categories,
+                    priceHistories = priceHistories,
+                    today = today,
+                )
+
+                val overdueSubs = SubscriptionAnalyticsCalculator.filterOverdue(subscriptions, today)
+                val overduePayments = SubscriptionDisplayModelMapper.map(
+                    subscriptions = overdueSubs,
+                    categories = categories,
+                    priceHistories = priceHistories,
+                    today = today,
+                )
+
+                val estimatedMap = SubscriptionAnalyticsCalculator.calculateEstimatedCosts(subscriptions)
+                val estimatedSummaries = SubscriptionDisplayModelMapper.mapEstimatedSummaries(estimatedMap)
+
+                val trendMap = SubscriptionAnalyticsCalculator.calculateMonthlyTrend(
+                    payments = payments,
+                    currentYearMonth = currentYearMonth,
+                    previousYearMonth = previousYearMonth,
+                )
+                val actualSpendings = SubscriptionDisplayModelMapper.mapActualSpendings(trendMap)
+
+                val domainInsights = SubscriptionAnalyticsCalculator.generateInsights(
+                    subscriptions = subscriptions,
+                    priceHistories = priceHistories,
+                    today = today,
+                )
+                val insights = SubscriptionDisplayModelMapper.mapInsights(domainInsights)
+
+                ObservationResult.Success(
+                    ObservationData(
+                        items = allItems,
+                        filteredItems = filteredItems,
+                        selectedFilter = filter,
+                        estimatedSummaries = estimatedSummaries,
+                        actualSpendings = actualSpendings,
+                        upcomingPayments = upcomingPayments,
+                        overduePayments = overduePayments,
+                        insights = insights,
+                        isNotificationPermissionGranted = isNotifGranted,
+                    ),
+                ) as ObservationResult
             }
-            .onStart {
-                emit(ObservationResult.Loading)
-            }
-            .catch { throwable ->
-                if (throwable is CancellationException) {
-                    throw throwable
+                .onStart {
+                    emit(ObservationResult.Loading)
                 }
-                emit(ObservationResult.Failure(FinanceUiMessage.GENERIC_ERROR))
-            }
+                .catch { throwable ->
+                    if (throwable is CancellationException) {
+                        throw throwable
+                    }
+                    emit(ObservationResult.Failure(FinanceUiMessage.GENERIC_ERROR))
+                }
         }
 
     val uiState: StateFlow<SubscriptionsUiState> = combine(
@@ -131,6 +238,7 @@ class SubscriptionsViewModel @Inject constructor(
             is ObservationResult.Loading -> SubscriptionsUiState(
                 isLoading = true,
                 items = emptyList(),
+                filteredItems = emptyList(),
                 observationError = null,
                 mutationState = mutationState,
                 activeWorkspaceName = workspaceName,
@@ -138,17 +246,29 @@ class SubscriptionsViewModel @Inject constructor(
             is ObservationResult.Failure -> SubscriptionsUiState(
                 isLoading = false,
                 items = emptyList(),
+                filteredItems = emptyList(),
                 observationError = observationResult.message,
                 mutationState = mutationState,
                 activeWorkspaceName = workspaceName,
             )
-            is ObservationResult.Success -> SubscriptionsUiState(
-                isLoading = false,
-                items = observationResult.items,
-                observationError = null,
-                mutationState = mutationState,
-                activeWorkspaceName = workspaceName,
-            )
+            is ObservationResult.Success -> {
+                val data = observationResult.data
+                SubscriptionsUiState(
+                    isLoading = false,
+                    items = data.items,
+                    filteredItems = data.filteredItems,
+                    selectedFilter = data.selectedFilter,
+                    estimatedSummaries = data.estimatedSummaries,
+                    actualSpendings = data.actualSpendings,
+                    upcomingPayments = data.upcomingPayments,
+                    overduePayments = data.overduePayments,
+                    insights = data.insights,
+                    observationError = null,
+                    mutationState = mutationState,
+                    activeWorkspaceName = workspaceName,
+                    isNotificationPermissionGranted = data.isNotificationPermissionGranted,
+                )
+            }
         }
     }.stateIn(
         scope = viewModelScope,
@@ -162,6 +282,14 @@ class SubscriptionsViewModel @Inject constructor(
             is SubscriptionsIntent.Create -> handleCreate(intent.command)
             is SubscriptionsIntent.Update -> handleUpdate(intent.command)
             is SubscriptionsIntent.SetActive -> handleSetActive(intent.command)
+            is SubscriptionsIntent.SetLifecycle -> handleSetLifecycle(intent.command)
+            is SubscriptionsIntent.SelectFilter -> _selectedFilter.value = intent.filter
+            is SubscriptionsIntent.SetNotificationPermissionGranted -> _isNotificationPermissionGranted.value = intent.isGranted
+            is SubscriptionsIntent.RequestNotificationPermission -> {
+                viewModelScope.launch {
+                    _events.send(SubscriptionUiEvent.RequestNotificationPermission)
+                }
+            }
             is SubscriptionsIntent.RequestDelete -> handleRequestDelete(intent.id)
             is SubscriptionsIntent.ConfirmDelete -> handleConfirmDelete()
             is SubscriptionsIntent.DismissDelete -> handleDismissDelete()
@@ -170,7 +298,6 @@ class SubscriptionsViewModel @Inject constructor(
             is SubscriptionsIntent.DismissAdvanceRenewal -> handleDismissAdvanceRenewal()
         }
     }
-
 
     fun retryObservation() {
         _retryTrigger.update { it + 1 }
@@ -283,6 +410,30 @@ class SubscriptionsViewModel @Inject constructor(
         }
     }
 
+    private fun handleSetLifecycle(command: SetSubscriptionLifecycleCommand) {
+        if (_mutationState.value.isSubmitting || activeMutationJob != null) return
+        _mutationState.update { it.copy(isSubmitting = true) }
+        activeMutationJob = viewModelScope.launch {
+            try {
+                when (setSubscriptionLifecycleUseCase(command)) {
+                    is RepositoryResult.Success -> {
+                        _events.send(SubscriptionUiEvent.MutationSuccess(FinanceUiMessage.SUBSCRIPTION_SAVED))
+                    }
+                    is RepositoryResult.Failure -> {
+                        _events.send(SubscriptionUiEvent.ShowMessage(FinanceUiMessage.GENERIC_ERROR))
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _events.send(SubscriptionUiEvent.ShowMessage(FinanceUiMessage.GENERIC_ERROR))
+            } finally {
+                _mutationState.update { it.copy(isSubmitting = false) }
+                activeMutationJob = null
+            }
+        }
+    }
+
     private fun handleRequestDelete(id: EntityId) {
         _mutationState.update { it.copy(pendingDeleteId = id) }
     }
@@ -306,7 +457,6 @@ class SubscriptionsViewModel @Inject constructor(
                         _events.send(SubscriptionUiEvent.ShowMessage(FinanceUiMessage.GENERIC_ERROR))
                     }
                 }
-
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
@@ -343,7 +493,6 @@ class SubscriptionsViewModel @Inject constructor(
                         _events.send(SubscriptionUiEvent.MutationSuccess(successMessage))
                     }
                     is RepositoryResult.Failure -> {
-
                         _events.send(SubscriptionUiEvent.ShowMessage(FinanceUiMessage.GENERIC_ERROR))
                     }
                 }
@@ -357,6 +506,4 @@ class SubscriptionsViewModel @Inject constructor(
             }
         }
     }
-
 }
-

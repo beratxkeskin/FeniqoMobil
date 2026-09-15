@@ -244,6 +244,7 @@ fun SubscriptionFormScreenRoute(
             when (event) {
                 is SubscriptionUiEvent.MutationSuccess -> onNavigateBack()
                 is SubscriptionUiEvent.ShowMessage -> onMessage(event.message)
+                is SubscriptionUiEvent.RequestNotificationPermission -> Unit
             }
         }
     }
@@ -354,6 +355,38 @@ fun SubscriptionFormScreenRoute(
                 onClearEndDate = {
                     input = input.copy(endDate = null)
                     errors = errors.copy(endDateError = null)
+                },
+                onAutoRenewChange = {
+                    input = input.copy(autoRenew = it)
+                },
+                onReminderEnabledChange = {
+                    input = input.copy(reminderEnabled = it)
+                },
+                onWebsiteUrlChange = {
+                    input = input.copy(websiteUrlInput = it)
+                    errors = errors.copy(websiteUrlError = null)
+                },
+                onNotesChange = {
+                    input = input.copy(notesInput = it)
+                    errors = errors.copy(notesError = null)
+                },
+                onTemplateSelect = { template ->
+                    val matchedCategory = expenseCategories.firstOrNull { cat ->
+                        template.defaultCategoryKeywords.any { keyword ->
+                            cat.name.contains(keyword, ignoreCase = true)
+                        }
+                    }
+                    input = input.copy(
+                        nameInput = template.name,
+                        frequency = template.defaultFrequency,
+                        websiteUrlInput = template.defaultWebsiteUrl,
+                        categoryId = matchedCategory?.id ?: input.categoryId,
+                    )
+                    errors = errors.copy(
+                        nameError = null,
+                        categoryError = null,
+                        websiteUrlError = null,
+                    )
                 },
                 onSubmit = {
                     when (val submitResult = SubscriptionFormRouteHelper.computeSubmitResult(input, expenseCategories)) {

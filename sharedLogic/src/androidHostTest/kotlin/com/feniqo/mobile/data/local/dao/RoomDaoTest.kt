@@ -90,7 +90,7 @@ class RoomDaoTest {
             v1.close()
         }
         val migrated = migrationHelper.runMigrationsAndValidate(
-            path, 15, true,
+            path, 17, true,
             com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_1_2,
             com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_2_3,
             com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_3_4,
@@ -105,6 +105,8 @@ class RoomDaoTest {
             com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_12_13,
             com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_13_14,
             com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_14_15,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_15_16,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_16_17,
         )
         try {
             migrated.query(
@@ -193,6 +195,135 @@ class RoomDaoTest {
             ).use {
                 assertTrue(it.moveToFirst())
                 assertEquals("Özel çekirdek", it.getString(0))
+            }
+        } finally {
+            migrated.close()
+            context.deleteDatabase(name)
+        }
+    }
+
+    @Test
+    fun migration_15_to_16_adds_subscription_lifecycle_price_history_and_payments() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val name = "migration_test_v15_to_v16.db"
+        val path = context.getDatabasePath(name).absolutePath
+        context.deleteDatabase(name)
+        val v15 = migrationHelper.createDatabase(path, 15)
+        try {
+            v15.execSQL(
+                """INSERT INTO subscriptions (
+                    id,owner_id,workspace_id,name,amount_minor,currency_code,category_id,
+                    frequency_code,`interval`,start_date,end_date,next_renewal_date,is_active,
+                    created_at_epoch_ms,sync_status,updated_at_epoch_ms,local_updated_at_epoch_ms,
+                    deleted_at_epoch_ms,version,base_version,last_sync_error
+                ) VALUES ('sub-v15-active','user-15',NULL,'Netflix',22900,'TRY',NULL,
+                    'MONTHLY',1,'2026-01-01',NULL,'2026-09-15',1,
+                    1000,'SYNCED',1000,1000,NULL,1,1,NULL)""".trimIndent(),
+            )
+            v15.execSQL(
+                """INSERT INTO subscriptions (
+                    id,owner_id,workspace_id,name,amount_minor,currency_code,category_id,
+                    frequency_code,`interval`,start_date,end_date,next_renewal_date,is_active,
+                    created_at_epoch_ms,sync_status,updated_at_epoch_ms,local_updated_at_epoch_ms,
+                    deleted_at_epoch_ms,version,base_version,last_sync_error
+                ) VALUES ('sub-v15-paused','user-15',NULL,'Spotify',10900,'TRY',NULL,
+                    'MONTHLY',1,'2026-01-01',NULL,'2026-09-18',0,
+                    1000,'SYNCED',1000,1000,NULL,1,1,NULL)""".trimIndent(),
+            )
+        } finally {
+            v15.close()
+        }
+
+        val migrated = migrationHelper.runMigrationsAndValidate(
+            path, 16, true,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_15_16,
+        )
+        try {
+            migrated.query(
+                "SELECT id, lifecycle_status, reminder_enabled FROM subscriptions WHERE id='sub-v15-active'".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals("sub-v15-active", it.getString(0))
+                assertEquals("ACTIVE", it.getString(1))
+                assertEquals(1, it.getInt(2))
+            }
+            migrated.query(
+                "SELECT id, lifecycle_status FROM subscriptions WHERE id='sub-v15-paused'".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals("sub-v15-paused", it.getString(0))
+                assertEquals("PAUSED", it.getString(1))
+            }
+
+            // subscription_price_histories tablosuna kayıt yazılabilmeli
+            migrated.execSQL(
+                """INSERT INTO subscription_price_histories (
+                    id,subscription_id,old_amount_minor,new_amount_minor,currency_code,
+                    changed_at_epoch_ms,sync_status,updated_at_epoch_ms,local_updated_at_epoch_ms,
+                    deleted_at_epoch_ms,version,base_version,last_sync_error
+                ) VALUES ('ph-1','sub-v15-active',19900,22900,'TRY',2000,'SYNCED',2000,2000,NULL,1,1,NULL)""".trimIndent(),
+            )
+
+            // subscription_payments tablosuna kayıt yazılabilmeli
+            migrated.execSQL(
+                """INSERT INTO subscription_payments (
+                    id,subscription_id,amount_minor,currency_code,payment_date,renewal_due_date,
+                    source_type,created_at_epoch_ms,sync_status,updated_at_epoch_ms,
+                    local_updated_at_epoch_ms,deleted_at_epoch_ms,version,base_version,last_sync_error
+                ) VALUES ('pay-1','sub-v15-active',22900,'TRY','2026-09-15','2026-09-15',
+                    'MANUAL',3000,'SYNCED',3000,3000,NULL,1,1,NULL)""".trimIndent(),
+            )
+        } finally {
+            migrated.close()
+            context.deleteDatabase(name)
+        }
+    }
+
+    @Test
+    fun migration_16_to_17_adds_website_url_and_notes_to_subscriptions() {
+        val name = "migration-test-16-17.db"
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        context.deleteDatabase(name)
+        val path = context.getDatabasePath(name).absolutePath
+
+        val v16 = migrationHelper.createDatabase(path, 16)
+        try {
+            v16.execSQL(
+                """INSERT INTO subscriptions (
+                    id,owner_id,workspace_id,name,amount_minor,currency_code,category_id,
+                    frequency_code,interval,start_date,end_date,next_renewal_date,is_active,
+                    lifecycle_status,trial_end_date,cancellation_date,access_end_date,reminder_enabled,
+                    created_at_epoch_ms,sync_status,updated_at_epoch_ms,local_updated_at_epoch_ms,
+                    deleted_at_epoch_ms,version,base_version,last_sync_error
+                ) VALUES ('sub-v16','user-1',NULL,'Netflix',22900,'TRY',NULL,
+                    'MONTHLY',1,'2026-09-01',NULL,'2026-10-01',1,
+                    'ACTIVE',NULL,NULL,NULL,1,
+                    1000,'SYNCED',1000,1000,NULL,1,1,NULL)""".trimIndent(),
+            )
+        } finally {
+            v16.close()
+        }
+
+        val migrated = migrationHelper.runMigrationsAndValidate(
+            path, 17, true,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_16_17,
+        )
+        try {
+            migrated.query(
+                "SELECT id, website_url, notes FROM subscriptions WHERE id='sub-v16'".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals("sub-v16", it.getString(0))
+                assertNull(it.getString(1))
+                assertNull(it.getString(2))
+            }
+            migrated.execSQL("UPDATE subscriptions SET website_url='https://netflix.com', notes='4K Plan' WHERE id='sub-v16'")
+            migrated.query(
+                "SELECT website_url, notes FROM subscriptions WHERE id='sub-v16'".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals("https://netflix.com", it.getString(0))
+                assertEquals("4K Plan", it.getString(1))
             }
         } finally {
             migrated.close()

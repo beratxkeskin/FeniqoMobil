@@ -84,6 +84,7 @@ object TransactionsDisplayModelBuilder {
                 },
                 hasReceipt = trx.receiptPath != null,
                 note = trx.note,
+                syncStatus = trx.syncStatus,
                 canEdit = true,
                 canDelete = true,
             )

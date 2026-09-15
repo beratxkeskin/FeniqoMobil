@@ -1,6 +1,7 @@
 package com.feniqo.mobile.navigation
 
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -35,6 +36,7 @@ import com.feniqo.mobile.presentation.debt.DebtPaymentFormScreenRoute
 import com.feniqo.mobile.presentation.debt.DebtPaymentFormViewModel
 import com.feniqo.mobile.presentation.debt.DebtsScreenRoute
 import com.feniqo.mobile.presentation.goal.GoalContributionFormScreenRoute
+import com.feniqo.mobile.presentation.goal.GoalDetailScreenRoute
 import com.feniqo.mobile.presentation.goal.GoalContributionFormViewModel
 import com.feniqo.mobile.presentation.goal.GoalFormScreenRoute
 import com.feniqo.mobile.presentation.goal.GoalFormViewModel
@@ -43,6 +45,7 @@ import com.feniqo.mobile.presentation.auth.LoginViewModel
 import com.feniqo.mobile.presentation.auth.RegisterViewModel
 import com.feniqo.mobile.presentation.asset.AssetsScreenRoute
 import com.feniqo.mobile.presentation.asset.AssetFormScreenRoute
+import com.feniqo.mobile.presentation.budget.BudgetDetailScreenRoute
 import com.feniqo.mobile.presentation.budget.BudgetFormScreenRoute
 import com.feniqo.mobile.presentation.budget.BudgetScreenRoute
 import com.feniqo.mobile.presentation.budget.BudgetViewModel
@@ -57,6 +60,10 @@ import com.feniqo.mobile.presentation.screen.ProfileScreen
 import com.feniqo.mobile.presentation.screen.RegisterScreen
 import com.feniqo.mobile.presentation.screen.SplashLoadingScreen
 import com.feniqo.mobile.presentation.settings.SettingsScreenRoute
+import com.feniqo.mobile.presentation.profile.ProfileViewModel
+import com.feniqo.mobile.BuildConfig
+import com.feniqo.mobile.presentation.subscription.SubscriptionDetailScreenRoute
+import com.feniqo.mobile.presentation.subscription.SubscriptionDetailViewModel
 import com.feniqo.mobile.presentation.subscription.SubscriptionFormScreenRoute
 import com.feniqo.mobile.presentation.subscription.SubscriptionsScreenRoute
 import com.feniqo.mobile.presentation.subscription.SubscriptionsViewModel
@@ -206,9 +213,12 @@ fun MainNavHost(
     val isTransactionSuccess = destination?.hasRoute<TransactionSuccessRoute>() == true
     val isCategoryForm = destination?.hasRoute<CategoryFormRoute>() == true
     val isBudgetForm = destination?.hasRoute<BudgetFormRoute>() == true
+    val isBudgetDetail = destination?.hasRoute<BudgetDetailRoute>() == true
     val isRecurringForm = destination?.hasRoute<RecurringTransactionFormRoute>() == true
     val isSubscriptionForm = destination?.hasRoute<SubscriptionFormRoute>() == true
+    val isSubscriptionDetail = destination?.hasRoute<SubscriptionDetailRoute>() == true
     val isGoalForm = destination?.hasRoute<GoalFormRoute>() == true
+    val isGoalDetail = destination?.hasRoute<GoalDetailRoute>() == true
     val isGoalContributionForm = destination?.hasRoute<GoalContributionFormRoute>() == true
     val isDebtForm = destination?.hasRoute<DebtFormRoute>() == true
     val isDebtPaymentForm = destination?.hasRoute<DebtPaymentFormRoute>() == true
@@ -220,13 +230,13 @@ fun MainNavHost(
     val isAssetForm = destination?.hasRoute<AssetFormRoute>() == true
     val isProfile = destination?.hasRoute<ProfileRoute>() == true
     val isSettings = destination?.hasRoute<SettingsRoute>() == true
-    val isDetailForm = isTransactionForm || isTransactionSuccess || isCategoryForm || isBudgetForm || isRecurringForm || isSubscriptionForm || isGoalForm || isGoalContributionForm || isDebtForm || isDebtPaymentForm || isWorkspacePicker || isWorkspaceCreate || isWorkspaceJoin || isWorkspaceDetails || isWorkspaceSettlement || isAssetForm || isProfile || isSettings
+    val isDetailForm = isTransactionForm || isTransactionSuccess || isCategoryForm || isBudgetForm || isBudgetDetail || isRecurringForm || isSubscriptionForm || isSubscriptionDetail || isGoalDetail || isGoalForm || isGoalContributionForm || isDebtForm || isDebtPaymentForm || isWorkspacePicker || isWorkspaceCreate || isWorkspaceJoin || isWorkspaceDetails || isWorkspaceSettlement || isAssetForm || isProfile || isSettings
     var showQuickAdd by remember { mutableStateOf(false) }
 
     val currentSection = when {
         destination?.hasRoute<TransactionsRoute>() == true || isTransactionForm -> AppSection.TRANSACTIONS
-        destination?.hasRoute<BudgetsRoute>() == true || isBudgetForm -> AppSection.BUDGET
-        destination?.hasRoute<MoreRoute>() == true || destination?.hasRoute<AssetsRoute>() == true || isAssetForm || destination?.hasRoute<CategoriesRoute>() == true || isCategoryForm || destination?.hasRoute<RecurringTransactionsRoute>() == true || isRecurringForm || destination?.hasRoute<SubscriptionsRoute>() == true || isSubscriptionForm || destination?.hasRoute<GoalsRoute>() == true || isGoalForm || isGoalContributionForm || destination?.hasRoute<DebtsRoute>() == true || isDebtForm || isDebtPaymentForm || isWorkspacePicker || isWorkspaceCreate || isWorkspaceJoin || isWorkspaceDetails || isWorkspaceSettlement -> AppSection.MORE
+        destination?.hasRoute<BudgetsRoute>() == true || isBudgetForm || isBudgetDetail -> AppSection.BUDGET
+        destination?.hasRoute<MoreRoute>() == true || destination?.hasRoute<AssetsRoute>() == true || isAssetForm || destination?.hasRoute<CategoriesRoute>() == true || isCategoryForm || destination?.hasRoute<RecurringTransactionsRoute>() == true || isRecurringForm || destination?.hasRoute<SubscriptionsRoute>() == true || isSubscriptionForm || isSubscriptionDetail || destination?.hasRoute<GoalsRoute>() == true || isGoalDetail || isGoalForm || isGoalContributionForm || destination?.hasRoute<DebtsRoute>() == true || isDebtForm || isDebtPaymentForm || isWorkspacePicker || isWorkspaceCreate || isWorkspaceJoin || isWorkspaceDetails || isWorkspaceSettlement -> AppSection.MORE
         else -> AppSection.DASHBOARD
     }
 
@@ -282,6 +292,15 @@ fun MainNavHost(
                     },
                     onProfileClick = {
                         navController.navigate(ProfileRoute) { launchSingleTop = true }
+                    },
+                    onBudgetsClick = {
+                        navController.navigate(BudgetsRoute) { launchSingleTop = true }
+                    },
+                    onSubscriptionsClick = {
+                        navController.navigate(SubscriptionsRoute) { launchSingleTop = true }
+                    },
+                    onGoalClick = {
+                        navController.navigate(GoalsRoute) { launchSingleTop = true }
                     },
                 )
             }
@@ -370,6 +389,16 @@ fun MainNavHost(
                             launchSingleTop = true
                         }
                     },
+                    onBudgetClick = { budgetId, month ->
+                        navController.navigate(
+                            BudgetDetailRoute(
+                                budgetId = budgetId.value,
+                                month = month.value,
+                            ),
+                        ) {
+                            launchSingleTop = true
+                        }
+                    },
                 )
             }
             composable<BudgetFormRoute> { backStackEntry ->
@@ -433,6 +462,31 @@ fun MainNavHost(
                     )
                 }
             }
+            composable<BudgetDetailRoute> { backStackEntry ->
+                val route = backStackEntry.toRoute<BudgetDetailRoute>()
+                val budgetId = EntityId(route.budgetId)
+                val month = YearMonth(route.month)
+                BudgetDetailScreenRoute(
+                    budgetId = budgetId,
+                    month = month,
+                    onBack = { navController.popBackStack() },
+                    onEditBudget = { bId, m ->
+                        navController.navigate(
+                            BudgetFormRoute(
+                                initialMonth = m.value,
+                                budgetId = bId.value,
+                            ),
+                        ) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onViewAllTransactions = { categoryId, _ ->
+                        navController.navigate(TransactionsRoute(categoryId = categoryId.value)) {
+                            launchSingleTop = true
+                        }
+                    },
+                )
+            }
             composable<MoreRoute> {
                 MoreHubScreenRoute(
                     onNavigateToAssets = { navController.navigate(AssetsRoute) { launchSingleTop = true } },
@@ -463,9 +517,28 @@ fun MainNavHost(
                 )
             }
             composable<ProfileRoute> {
+                val profileViewModel = hiltViewModel<ProfileViewModel>()
+                val profileState by profileViewModel.uiState.collectAsStateWithLifecycle()
                 ProfileScreen(
+                    displayName = profileState.displayName,
+                    email = profileState.email,
+                    workspaceName = profileState.workspaceName,
+                    currencyCode = profileState.currencyCode,
+                    isProfileLoading = profileState.isLoading,
+                    signOutError = profileState.signOutError,
+                    themeLabel = when (themeMode) {
+                        ThemeMode.SYSTEM -> "Sistem teması"
+                        ThemeMode.LIGHT -> "Açık tema"
+                        ThemeMode.DARK -> "Koyu tema"
+                    },
+                    biometricLockEnabled = biometricLockEnabled,
+                    autoLockLabel = autoLockTimeout.profileLabel(),
+                    syncStatus = syncStatus,
+                    appVersion = "Sürüm ${BuildConfig.VERSION_NAME}",
                     onBack = { navController.popBackStack() },
                     onOpenSettings = { navController.navigate(SettingsRoute) { launchSingleTop = true } },
+                    onOpenSharedSpaces = { navController.navigate(WorkspacePickerRoute) { launchSingleTop = true } },
+                    onSignOut = profileViewModel::signOut,
                 )
             }
             composable<AssetsRoute> {
@@ -594,7 +667,7 @@ fun MainNavHost(
                         }
                     },
                     onSubscriptionClick = { subscriptionId ->
-                        navController.navigate(SubscriptionFormRoute(subscriptionId = subscriptionId.value)) {
+                        navController.navigate(SubscriptionDetailRoute(subscriptionId = subscriptionId.value)) {
                             launchSingleTop = true
                         }
                     },
@@ -612,6 +685,7 @@ fun MainNavHost(
                             launchSingleTop = true
                         }
                     },
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable<RecurringTransactionFormRoute> { backStackEntry ->
@@ -696,6 +770,40 @@ fun MainNavHost(
                     )
                 }
             }
+            composable<SubscriptionDetailRoute> { backStackEntry ->
+                val detailViewModel = hiltViewModel<SubscriptionDetailViewModel>()
+                val snackbarHostState = remember { SnackbarHostState() }
+                val scope = rememberCoroutineScope()
+
+                Scaffold(
+                    snackbarHost = { SnackbarHost(snackbarHostState) },
+                ) { padding ->
+                    SubscriptionDetailScreenRoute(
+                        viewModel = detailViewModel,
+                        onNavigateBack = {
+                            if (!navController.popBackStack()) {
+                                navController.navigate(SubscriptionsRoute) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                }
+                            }
+                        },
+                        onNavigateToEdit = { editId ->
+                            navController.navigate(SubscriptionFormRoute(subscriptionId = editId)) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onMessage = { message ->
+                            scope.launch {
+                                snackbarHostState.showSnackbar(message.toDisplayText())
+                            }
+                        },
+                        modifier = Modifier.padding(padding),
+                    )
+                }
+            }
             composable<GoalsRoute> {
                 GoalsScreenRoute(
                     onAddGoal = {
@@ -704,11 +812,28 @@ fun MainNavHost(
                         }
                     },
                     onGoalClick = { goalId ->
-                        navController.navigate(GoalFormRoute(goalId.value)) {
+                        navController.navigate(GoalDetailRoute(goalId.value)) {
                             launchSingleTop = true
                         }
                     },
                 )
+            }
+            composable<GoalDetailRoute> { backStackEntry ->
+                val route = backStackEntry.toRoute<GoalDetailRoute>()
+                val snackbarHostState = remember { SnackbarHostState() }
+                val scope = rememberCoroutineScope()
+                Box {
+                    GoalDetailScreenRoute(
+                        onBack = { if (!navController.popBackStack()) navController.navigate(GoalsRoute) },
+                        onEdit = { navController.navigate(GoalFormRoute(route.goalId)) },
+                        onAdd = { navController.navigate(GoalContributionFormRoute(route.goalId, "ADD")) },
+                        onRemove = { navController.navigate(GoalContributionFormRoute(route.goalId, "REMOVE")) },
+                        onDeleted = { navController.navigate(GoalsRoute) { popUpTo<GoalsRoute> { inclusive = false }; launchSingleTop = true } },
+                        onMessage = { message -> scope.launch { snackbarHostState.showSnackbar(message.toDisplayText()) } },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    SnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter).navigationBarsPadding())
+                }
             }
             composable<GoalFormRoute> { backStackEntry ->
                 val route = backStackEntry.toRoute<GoalFormRoute>()
@@ -780,6 +905,7 @@ fun MainNavHost(
                         },
                         parentGoalId = (childRouteIdResult as? ChildRouteIdResult.ValidId)?.id,
                         hasInvalidRouteId = childRouteIdResult is ChildRouteIdResult.InvalidId,
+                        initialDirectionCode = route.initialDirectionCode,
                         viewModel = contributionViewModel,
                         modifier = Modifier.padding(padding),
                     )
@@ -927,4 +1053,11 @@ fun MainNavHost(
             },
         )
     }
+}
+
+private fun AutoLockTimeout.profileLabel(): String = when (this) {
+    AutoLockTimeout.IMMEDIATELY -> "Anında"
+    AutoLockTimeout.AFTER_30_SECONDS -> "30 saniye"
+    AutoLockTimeout.AFTER_1_MINUTE -> "1 dakika"
+    AutoLockTimeout.AFTER_5_MINUTES -> "5 dakika"
 }

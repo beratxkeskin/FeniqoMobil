@@ -59,6 +59,8 @@ object DatabaseModule {
     @Provides fun provideSubscriptionPaymentReminderReceiptDao(database: FeniqoDatabase): com.feniqo.mobile.data.local.dao.SubscriptionPaymentReminderReceiptDao = database.subscriptionPaymentReminderReceiptDao()
     @Provides fun provideGoalDao(database: FeniqoDatabase): com.feniqo.mobile.data.local.dao.GoalDao = database.goalDao()
     @Provides fun provideDebtDao(database: FeniqoDatabase): com.feniqo.mobile.data.local.dao.DebtDao = database.debtDao()
+    @Provides fun provideSubscriptionPriceHistoryDao(database: FeniqoDatabase): com.feniqo.mobile.data.local.dao.SubscriptionPriceHistoryDao = database.subscriptionPriceHistoryDao()
+    @Provides fun provideSubscriptionPaymentDao(database: FeniqoDatabase): com.feniqo.mobile.data.local.dao.SubscriptionPaymentDao = database.subscriptionPaymentDao()
 
     @Provides
     @Singleton

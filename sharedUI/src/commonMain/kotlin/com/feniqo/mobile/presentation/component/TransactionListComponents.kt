@@ -77,6 +77,7 @@ fun TransactionDateGroupHeader(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.weight(1f, fill = false),
         ) {
+            Box(Modifier.size(width = 4.dp, height = 20.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp)))
             Text(
                 text = formattedDate,
                 style = MaterialTheme.typography.titleSmall.copy(
@@ -179,13 +180,13 @@ fun TransactionListItem(
     onDeleteClicked: (TransactionDisplayModel) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val isClickable = canEditTransaction && item.canEdit
+    val isClickable = true
     val cardModifier = if (isClickable) {
         modifier
             .fillMaxWidth()
             .clickable(
                 role = Role.Button,
-                onClickLabel = "${item.categoryName} işlemini düzenle",
+                onClickLabel = "${item.categoryName} işlem detayını aç",
             ) {
                 onTransactionClick(item)
             }

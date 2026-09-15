@@ -124,8 +124,15 @@ data class Subscription(
     val categoryId: EntityId?,
     val renewalRule: RecurrenceRule,
     val nextRenewalDate: LocalDate,
-    val isActive: Boolean,
+    val isActive: Boolean = true,
     val createdAt: Instant,
+    val lifecycleStatus: SubscriptionLifecycleStatus = if (isActive) SubscriptionLifecycleStatus.ACTIVE else SubscriptionLifecycleStatus.PAUSED,
+    val trialEndDate: LocalDate? = null,
+    val cancellationDate: LocalDate? = null,
+    val accessEndDate: LocalDate? = null,
+    val reminderEnabled: Boolean = true,
+    val websiteUrl: String? = null,
+    val notes: String? = null,
 ) {
     init {
         require(name.isNotBlank()) { "Abonelik adı boş olamaz." }
@@ -136,9 +143,33 @@ data class Subscription(
         require(nextRenewalDate >= renewalRule.startDate) {
             "Sonraki yenileme tarihi abonelik başlangıcından önce olamaz."
         }
+        if (lifecycleStatus == SubscriptionLifecycleStatus.TRIAL) {
+            requireNotNull(trialEndDate) { "Deneme süresi (TRIAL) durumunda deneme bitiş tarihi zorunludur." }
+        }
+        if (trialEndDate != null) {
+            require(trialEndDate >= renewalRule.startDate) {
+                "Deneme bitiş tarihi abonelik başlangıç tarihinden önce olamaz."
+            }
+        }
+        if (lifecycleStatus == SubscriptionLifecycleStatus.CANCELLED) {
+            requireNotNull(cancellationDate) { "İptal (CANCELLED) durumunda iptal tarihi zorunludur." }
+        }
+        if (accessEndDate != null && cancellationDate != null) {
+            require(accessEndDate >= cancellationDate) {
+                "Erişim bitiş tarihi iptal tarihinden önce olamaz."
+            }
+        }
+        require(websiteUrl == null || websiteUrl.trim().length <= MAX_WEBSITE_URL_LENGTH) {
+            "Web sitesi URL'si en fazla $MAX_WEBSITE_URL_LENGTH karakter olabilir."
+        }
+        require(notes == null || notes.trim().length <= MAX_NOTES_LENGTH) {
+            "Notlar en fazla $MAX_NOTES_LENGTH karakter olabilir."
+        }
     }
 
     companion object {
         const val MAX_NAME_LENGTH: Int = 500
+        const val MAX_WEBSITE_URL_LENGTH: Int = 500
+        const val MAX_NOTES_LENGTH: Int = 1000
     }
 }

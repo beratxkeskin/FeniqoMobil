@@ -892,7 +892,7 @@ class CategoriesViewModelTest {
     }
 
     @Test
-    fun multiCurrencyTransactions_failClosedWithGenericError() = runTest {
+    fun multiCurrencyTransactions_areExcludedWithoutFailingScreen() = runTest {
         val expenseCat = Category(
             id = EntityId("sys-market"),
             ownerId = null,
@@ -927,9 +927,9 @@ class CategoriesViewModelTest {
             viewModel.uiState.collect()
         }
 
-        // Fail-closed hata mesajı dönmeli ve boş liste kalmalı
-        assertEquals(FinanceUiMessage.GENERIC_ERROR, viewModel.uiState.value.generalMessage)
-        assertTrue(viewModel.uiState.value.items.isEmpty())
+        assertNull(viewModel.uiState.value.generalMessage)
+        assertEquals(1, viewModel.uiState.value.items.size)
+        assertEquals(0L, viewModel.uiState.value.items.single().currentPeriodAmount.amountMinor)
 
         collector.cancel()
     }

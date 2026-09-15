@@ -82,9 +82,19 @@ fun TransactionFormScreenRoute(
         }
     }
 
-    // 1. Gönderim sırasında sistem geri hareketini engelleme
-    BackHandler(enabled = state.isSubmitting) {
-        // Form submit edilirken yanlışlıkla geri çıkılmasını önler
+    var showExitConfirmDialog by remember { mutableStateOf(false) }
+
+    val handleBackPress: () -> Unit = {
+        if (state.hasUnsavedChanges && !state.isSubmitting) {
+            showExitConfirmDialog = true
+        } else if (!state.isSubmitting) {
+            onNavigateBack()
+        }
+    }
+
+    // 1. Geri hareketini yakalama (Kaydedilmemiş değişiklik varsa onay ister)
+    BackHandler(enabled = !state.isSubmitting) {
+        handleBackPress()
     }
 
     // 2. ViewModel tek seferlik olaylarını toplama
@@ -113,11 +123,11 @@ fun TransactionFormScreenRoute(
         onInstallmentCountChange = viewModel::onInstallmentCountChanged,
         onRetryCategories = viewModel::retryCategories,
         onSubmit = viewModel::submit,
-        onBack = onNavigateBack,
+        onBack = handleBackPress,
         onDismissMessage = viewModel::consumeMessage,
         onAddCategory = onAddCategory,
         onAttachReceipt = { showSourceDialog = true },
-        onRemoveReceipt = {},
+        onRemoveReceipt = viewModel::onReceiptRemoved,
         onPaidByUserSelected = viewModel::onPaidByUserSelected,
         onParticipantToggled = viewModel::onParticipantToggled,
         modifier = modifier,
@@ -252,10 +262,40 @@ fun TransactionFormScreenRoute(
         )
     }
 
+    if (showExitConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitConfirmDialog = false },
+            title = { Text("Değişiklikler Kaydedilmedi") },
+            text = { Text("Yaptığınız değişiklikler kaydedilmedi. Ayrılmak istediğinizden emin misiniz?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showExitConfirmDialog = false
+                        onNavigateBack()
+                    },
+                ) {
+                    Text("Değişikliklerden Vazgeç")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitConfirmDialog = false }) {
+                    Text("Düzenlemeye Devam Et")
+                }
+            },
+        )
+    }
+
     // 4. Android Material 3 Tarih Seçici Dialogu
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
             initialSelectedDateMillis = initialDatePickerSelection(state.transactionDate),
+            selectableDates = object : androidx.compose.material3.SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                    val date = utcEpochMillisToLocalDate(utcTimeMillis)
+                    val today = java.time.LocalDate.now()
+                    return date <= LocalDate(today.year, today.monthValue, today.dayOfMonth)
+                }
+            },
         )
 
         DatePickerDialog(

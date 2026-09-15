@@ -18,6 +18,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Instant
 import kotlin.test.Test
@@ -188,9 +189,13 @@ class SubscriptionCrudUseCasesTest {
             return advanceResult
         }
 
+        override fun observePriceHistories(subscriptionId: EntityId?): Flow<List<com.feniqo.mobile.domain.model.SubscriptionPriceHistory>> = flowOf(emptyList())
+
+        override fun observePayments(subscriptionId: EntityId?): Flow<List<com.feniqo.mobile.domain.model.SubscriptionPayment>> = flowOf(emptyList())
+
+        override suspend fun setLifecycle(command: com.feniqo.mobile.domain.model.SetSubscriptionLifecycleCommand): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+
         override suspend fun softDelete(id: EntityId): RepositoryResult<Unit> {
-
-
             lastDeletedId = id
             return deleteResult
         }

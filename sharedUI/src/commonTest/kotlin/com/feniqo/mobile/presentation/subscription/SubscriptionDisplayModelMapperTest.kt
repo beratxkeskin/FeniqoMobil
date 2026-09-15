@@ -129,14 +129,14 @@ class SubscriptionDisplayModelMapperTest {
             interval = 2,
         )
 
-        val mappedD1 = SubscriptionDisplayModelMapper.mapItem(dailySingle, category, today)
-        val mappedD3 = SubscriptionDisplayModelMapper.mapItem(dailyMultiple, category, today)
-        val mappedW1 = SubscriptionDisplayModelMapper.mapItem(weeklySingle, category, today)
-        val mappedW2 = SubscriptionDisplayModelMapper.mapItem(weeklyMultiple, category, today)
-        val mappedM1 = SubscriptionDisplayModelMapper.mapItem(monthlySingle, category, today)
-        val mappedM6 = SubscriptionDisplayModelMapper.mapItem(monthlyMultiple, category, today)
-        val mappedY1 = SubscriptionDisplayModelMapper.mapItem(yearlySingle, category, today)
-        val mappedY2 = SubscriptionDisplayModelMapper.mapItem(yearlyMultiple, category, today)
+        val mappedD1 = SubscriptionDisplayModelMapper.mapItem(dailySingle, category, today = today)
+        val mappedD3 = SubscriptionDisplayModelMapper.mapItem(dailyMultiple, category, today = today)
+        val mappedW1 = SubscriptionDisplayModelMapper.mapItem(weeklySingle, category, today = today)
+        val mappedW2 = SubscriptionDisplayModelMapper.mapItem(weeklyMultiple, category, today = today)
+        val mappedM1 = SubscriptionDisplayModelMapper.mapItem(monthlySingle, category, today = today)
+        val mappedM6 = SubscriptionDisplayModelMapper.mapItem(monthlyMultiple, category, today = today)
+        val mappedY1 = SubscriptionDisplayModelMapper.mapItem(yearlySingle, category, today = today)
+        val mappedY2 = SubscriptionDisplayModelMapper.mapItem(yearlyMultiple, category, today = today)
 
         assertEquals("Her gün", mappedD1.formattedFrequency)
         assertEquals("Her 3 günde bir", mappedD3.formattedFrequency)
@@ -178,11 +178,11 @@ class SubscriptionDisplayModelMapperTest {
             isActive = true,
         )
 
-        val mappedInactive = SubscriptionDisplayModelMapper.mapItem(inactive, category, today)
-        val mappedOverdue = SubscriptionDisplayModelMapper.mapItem(overdue, category, today)
-        val mappedToday = SubscriptionDisplayModelMapper.mapItem(dueToday, category, today)
-        val mappedUpcoming = SubscriptionDisplayModelMapper.mapItem(upcoming, category, today)
-        val mappedScheduled = SubscriptionDisplayModelMapper.mapItem(scheduled, category, today)
+        val mappedInactive = SubscriptionDisplayModelMapper.mapItem(inactive, category, today = today)
+        val mappedOverdue = SubscriptionDisplayModelMapper.mapItem(overdue, category, today = today)
+        val mappedToday = SubscriptionDisplayModelMapper.mapItem(dueToday, category, today = today)
+        val mappedUpcoming = SubscriptionDisplayModelMapper.mapItem(upcoming, category, today = today)
+        val mappedScheduled = SubscriptionDisplayModelMapper.mapItem(scheduled, category, today = today)
 
         assertEquals(SubscriptionRenewalStatus.Inactive, mappedInactive.renewalStatus)
         assertEquals(SubscriptionRenewalStatus.Overdue(daysOverdue = 2), mappedOverdue.renewalStatus)
@@ -208,9 +208,9 @@ class SubscriptionDisplayModelMapperTest {
             categoryId = "cat-1",
         )
 
-        val mappedNull = SubscriptionDisplayModelMapper.mapItem(withNullCategory, null, today)
-        val mappedMissing = SubscriptionDisplayModelMapper.mapItem(withMissingCategory, null, today)
-        val mappedPresent = SubscriptionDisplayModelMapper.mapItem(withPresentCategory, category, today)
+        val mappedNull = SubscriptionDisplayModelMapper.mapItem(withNullCategory, null, today = today)
+        val mappedMissing = SubscriptionDisplayModelMapper.mapItem(withMissingCategory, null, today = today)
+        val mappedPresent = SubscriptionDisplayModelMapper.mapItem(withPresentCategory, category, today = today)
 
         // Null category case
         assertEquals("Kategorisiz", mappedNull.categoryName)
@@ -251,8 +251,8 @@ class SubscriptionDisplayModelMapperTest {
             nextRenewalDate = LocalDate(2026, 9, 1),
         )
 
-        val mappedWithEnd = SubscriptionDisplayModelMapper.mapItem(withEndDate, category, today)
-        val mappedWithoutEnd = SubscriptionDisplayModelMapper.mapItem(withoutEndDate, category, today)
+        val mappedWithEnd = SubscriptionDisplayModelMapper.mapItem(withEndDate, category, today = today)
+        val mappedWithoutEnd = SubscriptionDisplayModelMapper.mapItem(withoutEndDate, category, today = today)
 
         assertEquals(LocalDate(2026, 1, 1), mappedWithEnd.startDate)
         assertEquals("1 Ocak 2026", mappedWithEnd.formattedStartDate)
@@ -286,9 +286,9 @@ class SubscriptionDisplayModelMapperTest {
             currency = Currency.EUR,
         )
 
-        val mappedTry = SubscriptionDisplayModelMapper.mapItem(trySub, category, today)
-        val mappedUsd = SubscriptionDisplayModelMapper.mapItem(usdSub, category, today)
-        val mappedEur = SubscriptionDisplayModelMapper.mapItem(eurSub, category, today)
+        val mappedTry = SubscriptionDisplayModelMapper.mapItem(trySub, category, today = today)
+        val mappedUsd = SubscriptionDisplayModelMapper.mapItem(usdSub, category, today = today)
+        val mappedEur = SubscriptionDisplayModelMapper.mapItem(eurSub, category, today = today)
 
         assertEquals(Currency.TRY, mappedTry.currency)
         assertEquals("59,99 ₺", mappedTry.formattedAmount)

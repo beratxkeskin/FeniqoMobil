@@ -23,9 +23,8 @@ class CalculateDashboardSummaryUseCase {
         transactions: List<Transaction>,
         moneyScore: MoneyScore? = null,
     ): DashboardSummary {
-        val monthly = transactions.filter { it.transactionDate.toString().startsWith(month.value) }
-        require(monthly.all { it.amount.currency == currency }) {
-            "Dashboard işlemleri seçilen para biriminde olmalıdır."
+        val monthly = transactions.filter {
+            it.transactionDate.toString().startsWith(month.value) && it.amount.currency == currency
         }
         val income = sum(monthly.filter { it.type == TransactionType.INCOME }, currency)
         val expenses = monthly.filter { it.type == TransactionType.EXPENSE }

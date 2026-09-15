@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -64,6 +65,7 @@ class TransactionsViewModelTest {
         var throwOnDelete: CancellationException? = null
         var softDeleteCallCount = 0
         var observeSubscriptionCount = 0
+        var applyFilters = false
 
         override fun observeTransactions(filter: TransactionFilter): Flow<List<Transaction>> {
             observeSubscriptionCount++
@@ -72,7 +74,13 @@ class TransactionsViewModelTest {
             return if (exception != null) {
                 flow { throw exception }
             } else {
-                transactionsFlow
+                transactionsFlow.map { rows ->
+                    if (!applyFilters) rows else rows.filter { row ->
+                        (filter.type == null || row.type == filter.type) &&
+                            (filter.period?.let { row.transactionDate in it.startDate..it.endDate } != false) &&
+                            (filter.query?.let { row.description.orEmpty().contains(it, ignoreCase = true) } != false)
+                    }
+                }
             }
         }
 
@@ -200,6 +208,34 @@ class TransactionsViewModelTest {
         assertTrue(viewModel.uiState.value.availableCategories.isEmpty())
 
         collectJob.cancel()
+    }
+
+    @Test
+    fun periodSummary_isIndependentOfSearchAndType_andCustomRangeChangesTotals() = runTest {
+        val (viewModel, repo) = createViewModel()
+        repo.applyFilters = true
+        val expense = Transaction(
+            id = EntityId("expense"), ownerId = EntityId("user-1"), workspaceId = null,
+            amount = Money(1000, Currency.TRY), type = TransactionType.EXPENSE,
+            categoryId = EntityId("category"), description = "Market", paymentMethod = PaymentMethod.CASH,
+            transactionDate = fixedToday, receiptPath = null, installment = null,
+            createdAt = Instant.parse("2026-08-21T10:00:00Z"),
+        )
+        repo.transactionsFlow.value = listOf(expense, expense.copy(id = EntityId("income"),
+            type = TransactionType.INCOME, amount = Money(5000, Currency.TRY), description = "Maaş"))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect() }
+        advanceUntilIdle()
+        val summary = viewModel.uiState.value.summary
+        viewModel.onTypeFilterChanged(TransactionType.EXPENSE)
+        viewModel.onSearchQueryChanged("Market")
+        advanceUntilIdle()
+        assertEquals(summary, viewModel.uiState.value.summary)
+        assertEquals(1, viewModel.uiState.value.groupedItems.flatMap { it.items }.size)
+        viewModel.onCustomPeriodChanged(ReportPeriod(LocalDate(2026, 8, 1), LocalDate(2026, 8, 2)))
+        advanceUntilIdle()
+        assertEquals(0, viewModel.uiState.value.summary.transactionCount)
+        assertNull(viewModel.uiState.value.filter.periodPreset)
+        job.cancel()
     }
 
     @Test
@@ -1051,7 +1087,7 @@ class TransactionsViewModelTest {
     }
 
     @Test
-    fun summary_failsClosed_onMixedCurrency() = runTest {
+    fun summary_excludesOtherCurrencies_withoutHidingTransactionList() = runTest {
         val (vm, trxRepo, _) = createViewModel()
         val tryTx = Transaction(
             id = EntityId("tx-try"),
@@ -1087,9 +1123,12 @@ class TransactionsViewModelTest {
             vm.uiState.collect()
         }
 
-        // Fail-closed hata üretilmeli, kısmi özet veya liste gösterilmemeli
-        assertEquals(FinanceUiMessage.GENERIC_ERROR, vm.uiState.value.observationError)
-        assertTrue(vm.uiState.value.groupedItems.isEmpty())
+        val state = vm.uiState.value
+        assertNull(state.observationError)
+        assertEquals(2, state.groupedItems.sumOf { it.items.size })
+        assertEquals("100,00 ₺", state.summary.totalSpendingFormatted)
+        assertEquals(1, state.summary.excludedDifferentCurrencyCount)
+        assertEquals("TRY", state.summary.summaryCurrencyCode)
 
         collector.cancel()
     }

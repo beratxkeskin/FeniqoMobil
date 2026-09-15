@@ -35,6 +35,8 @@ object DashboardDisplayModelBuilder {
         moneyScoreIsProvisional: Boolean = false,
         moneyScoreExplanationText: String = "",
         userName: String = "Kullanıcı",
+        excludedDifferentCurrencyCount: Int = 0,
+        summaryCurrencyCode: String = "TRY",
     ): DashboardDisplayModel {
         val categoryMap = categories.associateBy { it.id }
         val transactionMap = transactions.associateBy { it.id }
@@ -145,6 +147,8 @@ object DashboardDisplayModelBuilder {
                     formattedDueDate = DateFormatter.formatReadableDate(sub.nextRenewalDate),
                     formattedAmount = MoneyFormatter.format(sub.amount),
                     iconKey = "subscriptions",
+                    dayNumber = sub.nextRenewalDate.day.toString(),
+                    monthShort = DateFormatter.formatShortMonth(sub.nextRenewalDate.month).uppercase(),
                 )
             }
 
@@ -211,6 +215,8 @@ object DashboardDisplayModelBuilder {
             moneyScore = moneyScore,
             budgetAlert = null,
             userName = userName,
+            excludedDifferentCurrencyCount = excludedDifferentCurrencyCount,
+            summaryCurrencyCode = summaryCurrencyCode,
             budgetProgressItems = budgetProgressItems,
             upcomingBills = upcomingBills,
             savingsGoal = savingsGoal,

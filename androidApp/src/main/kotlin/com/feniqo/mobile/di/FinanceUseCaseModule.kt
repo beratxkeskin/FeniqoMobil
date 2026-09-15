@@ -402,6 +402,33 @@ object FinanceUseCaseModule {
 
     @Provides
     @Singleton
+    fun provideObserveSubscriptionPriceHistoriesUseCase(
+        subscriptionRepository: com.feniqo.mobile.domain.repository.SubscriptionRepository,
+    ): com.feniqo.mobile.domain.usecase.ObserveSubscriptionPriceHistoriesUseCase =
+        com.feniqo.mobile.domain.usecase.ObserveSubscriptionPriceHistoriesUseCase(
+            repository = subscriptionRepository,
+        )
+
+    @Provides
+    @Singleton
+    fun provideObserveSubscriptionPaymentsUseCase(
+        subscriptionRepository: com.feniqo.mobile.domain.repository.SubscriptionRepository,
+    ): com.feniqo.mobile.domain.usecase.ObserveSubscriptionPaymentsUseCase =
+        com.feniqo.mobile.domain.usecase.ObserveSubscriptionPaymentsUseCase(
+            repository = subscriptionRepository,
+        )
+
+    @Provides
+    @Singleton
+    fun provideSetSubscriptionLifecycleUseCase(
+        subscriptionRepository: com.feniqo.mobile.domain.repository.SubscriptionRepository,
+    ): com.feniqo.mobile.domain.usecase.SetSubscriptionLifecycleUseCase =
+        com.feniqo.mobile.domain.usecase.SetSubscriptionLifecycleUseCase(
+            repository = subscriptionRepository,
+        )
+
+    @Provides
+    @Singleton
     fun providePlanSubscriptionPaymentRemindersUseCase(): com.feniqo.mobile.domain.usecase.PlanSubscriptionPaymentRemindersUseCase =
         com.feniqo.mobile.domain.usecase.PlanSubscriptionPaymentRemindersUseCase()
 

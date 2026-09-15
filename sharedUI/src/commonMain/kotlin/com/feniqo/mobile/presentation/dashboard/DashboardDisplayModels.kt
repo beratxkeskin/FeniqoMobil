@@ -85,6 +85,8 @@ data class DashboardUpcomingBillItem(
     val formattedDueDate: String,
     val formattedAmount: String,
     val iconKey: String? = null,
+    val dayNumber: String = "",
+    val monthShort: String = "",
 )
 
 /**
@@ -117,12 +119,9 @@ data class DashboardDisplayModel(
     val recentTransactions: List<TransactionDisplayModel>,
     val moneyScore: MoneyScoreDisplayModel?,
     val budgetAlert: BudgetAlertDisplayModel? = null,
-    val userName: String = "Sarah",
-    val balanceTrendPercentage: String = "+%12",
-    val balanceTrendDifference: String = "+₺460 geçen aydan bu yana",
-    val incomeTrendPercentage: String = "+%8",
-    val expenseTrendPercentage: String = "-%14",
-    val savedTrendPercentage: String = "+%22",
+    val userName: String = "Kullanıcı",
+    val excludedDifferentCurrencyCount: Int = 0,
+    val summaryCurrencyCode: String = "TRY",
     val budgetProgressItems: List<DashboardBudgetProgressItem> = emptyList(),
     val upcomingBills: List<DashboardUpcomingBillItem> = emptyList(),
     val savingsGoal: DashboardSavingsGoalItem? = null,

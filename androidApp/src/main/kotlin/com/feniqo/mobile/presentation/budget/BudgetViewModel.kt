@@ -17,12 +17,18 @@ import com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase
 import com.feniqo.mobile.domain.usecase.ObserveBudgetUseCase
 import com.feniqo.mobile.domain.usecase.ObserveBudgetsWithProgressUseCase
 import com.feniqo.mobile.domain.usecase.UpdateBudgetUseCase
+import com.feniqo.mobile.domain.model.TransactionType
+import com.feniqo.mobile.domain.repository.TransactionFilter
+import com.feniqo.mobile.domain.usecase.ObserveTransactionsUseCase
 import com.feniqo.mobile.domain.validation.BudgetValidationError
 import com.feniqo.mobile.domain.validation.BudgetValidationResult
 import com.feniqo.mobile.domain.validation.BudgetValidationRules
+import com.feniqo.mobile.presentation.category.CategoryAnalyticsCalculator
 import com.feniqo.mobile.presentation.common.CurrentDateProvider
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.common.toFinanceUiMessage
+import com.feniqo.mobile.presentation.util.DateFormatter
+import com.feniqo.mobile.presentation.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,7 +41,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -65,6 +73,7 @@ class BudgetViewModel @Inject constructor(
     private val copyBudgetsUseCase: CopyBudgetsUseCase,
     private val observeActiveWorkspaceUseCase: ObserveActiveWorkspaceUseCase,
     private val currentDateProvider: CurrentDateProvider,
+    private val observeTransactionsUseCase: ObserveTransactionsUseCase? = null,
 ) : ViewModel() {
 
     val initialSelectedMonth: YearMonth by lazy {
@@ -172,6 +181,7 @@ class BudgetViewModel @Inject constructor(
                 activeWorkspaceName = workspaceName,
                 deleteConfirmation = deleteConfirmation,
                 copyConfirmation = copyConfirmation,
+                overview = BudgetOverviewCalculator.calculate(obsResult.budgets),
             )
             is ObservationResult.Failure -> BudgetsUiState(
                 isLoading = false,
@@ -234,6 +244,82 @@ class BudgetViewModel @Inject constructor(
         }
     }
 
+    private val _detailBudgetId = MutableStateFlow<EntityId?>(null)
+    private val _detailBudgetMonth = MutableStateFlow<YearMonth?>(null)
+
+    fun loadBudgetDetail(budgetId: EntityId, month: YearMonth) {
+        _detailBudgetId.value = budgetId
+        _detailBudgetMonth.value = month
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val budgetDetailUiState: StateFlow<BudgetDetailUiState> = combine(
+        _detailBudgetId,
+        _detailBudgetMonth,
+    ) { id, month ->
+        id to month
+    }.flatMapLatest { (id, month) ->
+        if (id == null || month == null) {
+            flowOf(BudgetDetailUiState(isLoading = false))
+        } else {
+            val transactionsFlow = if (observeTransactionsUseCase != null) {
+                val (currentPeriod, _) = CategoryAnalyticsCalculator.calculateReportPeriods(month)
+                observeTransactionsUseCase(TransactionFilter(period = currentPeriod))
+            } else {
+                flowOf(emptyList())
+            }
+
+            combine(
+                observeBudgetsWithProgressUseCase(month = month),
+                transactionsFlow,
+            ) { budgetItems, transactions ->
+                val matchingItem = budgetItems.firstOrNull { it.progress.budget.id == id }
+                if (matchingItem == null) {
+                    BudgetDetailUiState(
+                        isLoading = false,
+                        observationError = FinanceUiMessage.GENERIC_ERROR,
+                    )
+                } else {
+                    val displayModel = BudgetDisplayModelMapper.toDisplayModel(matchingItem)
+                    val categoryTransactions = transactions
+                        .filter { it.categoryId == matchingItem.progress.budget.categoryId && it.type == TransactionType.EXPENSE }
+                        .sortedByDescending { it.transactionDate.toString() }
+                        .take(5)
+                        .map { tx ->
+                            BudgetDetailTransactionItem(
+                                id = tx.id,
+                                description = tx.description ?: matchingItem.category?.name ?: "Harcama",
+                                formattedDate = DateFormatter.formatReadableDate(tx.transactionDate),
+                                formattedAmount = "-${MoneyFormatter.formatPrefix(tx.amount.amountMinor, tx.amount.currency, dropZeroDecimals = false)}",
+                                categoryIconKey = matchingItem.category?.icon?.key,
+                                categoryColorHex = matchingItem.category?.color?.hex,
+                            )
+                        }
+
+                    BudgetDetailUiState(
+                        isLoading = false,
+                        budget = displayModel,
+                        recentTransactions = categoryTransactions,
+                        observationError = null,
+                    )
+                }
+            }.catch { throwable ->
+                if (throwable is CancellationException) throw throwable
+                emit(BudgetDetailUiState(isLoading = false, observationError = FinanceUiMessage.GENERIC_ERROR))
+            }
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = BudgetDetailUiState(isLoading = true),
+    )
+
+    fun getSpentForCategoryAndMonth(categoryId: EntityId, month: YearMonth): Flow<Long> {
+        return observeBudgetsWithProgressUseCase(month).map { list ->
+            list.firstOrNull { it.progress.budget.categoryId == categoryId }?.progress?.spent?.amountMinor ?: 0L
+        }
+    }
+
     fun loadBudgetForEdit(id: EntityId) {
         editLoadJob?.cancel()
         _editLoadState.value = BudgetEditLoadState.Loading
@@ -252,6 +338,8 @@ class BudgetViewModel @Inject constructor(
                                 budget.limit.amountMinor,
                                 budget.limit.currency,
                             )
+                            val progressItems = observeBudgetsWithProgressUseCase(budget.month).firstOrNull() ?: emptyList()
+                            val spent = progressItems.firstOrNull { it.progress.budget.id == id }?.progress?.spent?.amountMinor ?: 0L
                             _editLoadState.value = BudgetEditLoadState.Ready(
                                 BudgetFormSeed(
                                     budgetId = budget.id,
@@ -259,6 +347,7 @@ class BudgetViewModel @Inject constructor(
                                     month = budget.month,
                                     limitInput = limitInputText,
                                     currency = budget.limit.currency,
+                                    spentMinor = spent,
                                 ),
                             )
                         }

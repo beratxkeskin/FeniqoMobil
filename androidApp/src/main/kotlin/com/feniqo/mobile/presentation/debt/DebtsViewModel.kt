@@ -2,9 +2,14 @@ package com.feniqo.mobile.presentation.debt
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.feniqo.mobile.domain.model.Currency
+import com.feniqo.mobile.domain.model.Debt
+import com.feniqo.mobile.domain.model.DebtPayment
+import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase
 import com.feniqo.mobile.domain.usecase.ObserveDebtPaymentsUseCase
 import com.feniqo.mobile.domain.usecase.ObserveDebtsUseCase
+import com.feniqo.mobile.presentation.common.CurrentDateProvider
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -25,19 +30,24 @@ import javax.inject.Inject
 
 /**
  * Borç ve alacakların gözlemini ve yeniden deneme (retry) niyetini yöneten ViewModel'dir.
+ * Çoklu para birimi güvenliği ve güncel tarih desteğiyle özet ve içgörü modellerini sunar.
  */
 @HiltViewModel
 class DebtsViewModel @Inject constructor(
     private val observeDebtsUseCase: ObserveDebtsUseCase,
     private val observeDebtPaymentsUseCase: ObserveDebtPaymentsUseCase,
     private val observeActiveWorkspaceUseCase: ObserveActiveWorkspaceUseCase,
+    private val currentDateProvider: CurrentDateProvider,
 ) : ViewModel() {
 
     private val _retryTrigger = MutableStateFlow(0L)
 
     private sealed interface ObservationResult {
         data object Loading : ObservationResult
-        data class Success(val debts: List<DebtDisplayModel>) : ObservationResult
+        data class Success(
+            val rawDebts: List<Debt>,
+            val paymentsByDebtId: Map<EntityId, List<DebtPayment>>,
+        ) : ObservationResult
         data class Failure(val message: FinanceUiMessage) : ObservationResult
     }
 
@@ -47,15 +57,16 @@ class DebtsViewModel @Inject constructor(
             observeDebtsUseCase()
                 .flatMapLatest { debts ->
                     if (debts.isEmpty()) {
-                        flowOf(ObservationResult.Success(emptyList()) as ObservationResult)
+                        flowOf(ObservationResult.Success(emptyList(), emptyMap()) as ObservationResult)
                     } else {
                         val paymentFlows = debts.map { debt ->
                             observeDebtPaymentsUseCase(debt.id).map { payments -> debt.id to payments }
                         }
                         combine(paymentFlows) { pairs ->
                             val paymentsByDebtId = pairs.toMap()
-                            val items = DebtDisplayModelMapper.map(debts, paymentsByDebtId)
-                            ObservationResult.Success(items) as ObservationResult
+                            // Fail-closed doğrulama: bozuk ödeme verisi durumunda hata fırlatılır
+                            DebtDisplayModelMapper.map(debts, paymentsByDebtId, today = null)
+                            ObservationResult.Success(debts, paymentsByDebtId) as ObservationResult
                         }
                     }
                 }
@@ -75,6 +86,9 @@ class DebtsViewModel @Inject constructor(
         observeActiveWorkspaceUseCase(),
     ) { observationResult, activeWorkspace ->
         val workspaceName = activeWorkspace?.name
+        val baseCurrency = activeWorkspace?.currency ?: Currency.TRY
+        val today = currentDateProvider.today()
+
         when (observationResult) {
             is ObservationResult.Loading -> DebtsUiState(
                 isLoading = true,
@@ -88,12 +102,28 @@ class DebtsViewModel @Inject constructor(
                 activeWorkspaceName = workspaceName,
                 observationError = observationResult.message,
             )
-            is ObservationResult.Success -> DebtsUiState(
-                isLoading = false,
-                debts = observationResult.debts,
-                activeWorkspaceName = workspaceName,
-                observationError = null,
-            )
+            is ObservationResult.Success -> {
+                try {
+                    val mappedItems = DebtDisplayModelMapper.map(
+                        debts = observationResult.rawDebts,
+                        paymentsByDebtId = observationResult.paymentsByDebtId,
+                        today = today,
+                    )
+                    DebtDisplayModelMapper.buildUiState(
+                        debts = mappedItems,
+                        baseCurrency = baseCurrency,
+                        workspaceName = workspaceName,
+                    )
+                } catch (e: Throwable) {
+                    if (e is CancellationException) throw e
+                    DebtsUiState(
+                        isLoading = false,
+                        debts = emptyList(),
+                        activeWorkspaceName = workspaceName,
+                        observationError = FinanceUiMessage.GENERIC_ERROR,
+                    )
+                }
+            }
         }
     }
         .stateIn(

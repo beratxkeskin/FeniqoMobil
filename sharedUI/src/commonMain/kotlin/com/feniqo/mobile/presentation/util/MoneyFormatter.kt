@@ -123,7 +123,7 @@ object MoneyFormatter {
         return sb.toString()
     }
 
-    private fun getCurrencySymbol(currency: Currency): String = when (currency) {
+    internal fun getCurrencySymbol(currency: Currency): String = when (currency) {
         Currency.TRY -> "₺"
         Currency.USD -> "$"
         Currency.EUR -> "€"
@@ -149,5 +149,38 @@ object MoneyFormatter {
             val remStr = rem.toString().padStart(digits, '0').trimEnd('0')
             "$main,$remStr"
         }
+    }
+
+    /**
+     * Para birimi sembolünü başa alarak formatlar (örn: ₺15.000 veya -₺486,50).
+     */
+    fun formatPrefix(
+        amountMinor: Long,
+        currency: Currency,
+        dropZeroDecimals: Boolean = false,
+        includeSign: Boolean = false,
+    ): String {
+        val digits = currency.minorUnitDigits
+        val divisor = calculateDivisor(digits)
+        val isNegative = amountMinor < 0
+        val absMinor = kotlin.math.abs(amountMinor)
+        val major = absMinor / divisor
+        val minor = absMinor % divisor
+
+        val formattedMajor = formatThousands(major)
+        val amountPart = if (digits > 0) {
+            if (dropZeroDecimals && minor == 0L) {
+                formattedMajor
+            } else {
+                val formattedMinor = minor.toString().padStart(digits, '0')
+                "$formattedMajor,$formattedMinor"
+            }
+        } else {
+            formattedMajor
+        }
+
+        val symbol = getCurrencySymbol(currency)
+        val prefix = if (isNegative) "-" else if (includeSign && amountMinor > 0) "+" else ""
+        return "$prefix$symbol$amountPart"
     }
 }

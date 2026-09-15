@@ -177,9 +177,11 @@ class TransactionsViewModel @Inject constructor(
         )
 
         combine(
+            observeTransactionsUseCase(domainFilter.copy(type = null, categoryId = null, paymentMethod = null, query = null)),
             observeTransactionsUseCase(domainFilter),
             categorySnapshotFlow,
-        ) { transactions, categorySnapshot ->
+            observeActiveWorkspaceUseCase(),
+        ) { periodTransactions, transactions, categorySnapshot, activeWorkspace ->
             when (categorySnapshot) {
                 is CategorySnapshot.Loading -> {
                     ObservationResult.Loading
@@ -211,18 +213,18 @@ class TransactionsViewModel @Inject constructor(
                         }
                     }
 
+                    val summaryCurrency = activeWorkspace?.currency ?: Currency.TRY
+                    val summaryTransactions = periodTransactions.filter { it.amount.currency == summaryCurrency }
+                    val excludedDifferentCurrencyCount = periodTransactions.size - summaryTransactions.size
                     var spendingMinor = 0L
                     var incomeMinor = 0L
-                    for (trx in transactions) {
-                        if (trx.amount.currency != Currency.TRY) {
-                            throw IllegalArgumentException("Transactions summary only supports TRY currency in V1")
-                        }
+                    for (trx in summaryTransactions) {
                         when (trx.type) {
                             TransactionType.EXPENSE -> spendingMinor = safeAdd(spendingMinor, trx.amount.amountMinor)
                             TransactionType.INCOME -> incomeMinor = safeAdd(incomeMinor, trx.amount.amountMinor)
                         }
                     }
-                    val defaultCurrency = Currency.TRY
+                    val defaultCurrency = summaryCurrency
                     val spendingMoney = Money(spendingMinor, defaultCurrency)
                     val incomeMoney = Money(incomeMinor, defaultCurrency)
 
@@ -255,7 +257,7 @@ class TransactionsViewModel @Inject constructor(
                     }
 
                     // Günlük mini bar grafiği hesaplaması (filtre kapsamındaki işlemlerden)
-                    val dailyMap = transactions.groupBy { it.transactionDate }
+                    val dailyMap = summaryTransactions.groupBy { it.transactionDate }
                     val sortedDates = dailyMap.keys.sorted()
                     var maxDailyActivityMinor = 0L
                     for ((_, dayTrxs) in dailyMap) {
@@ -298,10 +300,12 @@ class TransactionsViewModel @Inject constructor(
                         totalIncomeFormatted = com.feniqo.mobile.presentation.util.MoneyFormatter.format(incomeMoney, includeSign = false),
                         netFormatted = netFormatted,
                         isNetPositive = isNetPositive,
-                        transactionCount = transactions.size,
+                        transactionCount = periodTransactions.size,
                         dateRangeText = dateRangeText,
                         periodTitle = periodTitle,
                         dailyBars = dailyBars,
+                        excludedDifferentCurrencyCount = excludedDifferentCurrencyCount,
+                        summaryCurrencyCode = summaryCurrency.name,
                     )
 
                     val items = TransactionsDisplayModelBuilder.build(
@@ -424,6 +428,10 @@ class TransactionsViewModel @Inject constructor(
 
     fun onPeriodPresetChanged(preset: TransactionPeriodPreset?) {
         _filter.update { it.copy(periodPreset = preset, customPeriod = null) }
+    }
+
+    fun onCustomPeriodChanged(period: ReportPeriod?) {
+        _filter.update { it.copy(periodPreset = null, customPeriod = period) }
     }
 
     fun onSortOrderChanged(sortOrder: TransactionSortOrder) {

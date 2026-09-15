@@ -11,6 +11,11 @@ data class CreateSubscriptionCommand(
     val categoryId: EntityId?,
     val renewalRule: RecurrenceRule,
     val nextRenewalDate: LocalDate,
+    val lifecycleStatus: SubscriptionLifecycleStatus = SubscriptionLifecycleStatus.ACTIVE,
+    val trialEndDate: LocalDate? = null,
+    val reminderEnabled: Boolean = true,
+    val websiteUrl: String? = null,
+    val notes: String? = null,
 )
 
 /**
@@ -23,6 +28,13 @@ data class UpdateSubscriptionCommand(
     val amount: Money,
     val categoryId: EntityId?,
     val renewalRule: RecurrenceRule,
+    val lifecycleStatus: SubscriptionLifecycleStatus = SubscriptionLifecycleStatus.ACTIVE,
+    val trialEndDate: LocalDate? = null,
+    val cancellationDate: LocalDate? = null,
+    val accessEndDate: LocalDate? = null,
+    val reminderEnabled: Boolean = true,
+    val websiteUrl: String? = null,
+    val notes: String? = null,
 )
 
 /**
@@ -31,4 +43,14 @@ data class UpdateSubscriptionCommand(
 data class SetSubscriptionActiveCommand(
     val id: EntityId,
     val isActive: Boolean,
+)
+
+/**
+ * Abonelik yaşam döngüsü durumunu doğrudan değiştirme komutu.
+ */
+data class SetSubscriptionLifecycleCommand(
+    val id: EntityId,
+    val status: SubscriptionLifecycleStatus,
+    val cancellationDate: LocalDate? = null,
+    val accessEndDate: LocalDate? = null,
 )

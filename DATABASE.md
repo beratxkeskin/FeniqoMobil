@@ -16,7 +16,7 @@
 
 ## 2. Room şeması
 
-Güncel Room şema sürümü **14**'tür. Export edilen şemalar
+Güncel Room şema sürümü **16**'dır. Export edilen şemalar
 `sharedLogic/schemas/com.feniqo.mobile.data.local.database.FeniqoDatabase/` altında commit edilir.
 
 ### İş verisi tabloları
@@ -38,6 +38,9 @@ değişmediği için yeni Room sürümü gerektirmez.
 | `budgets` | Aylık kategori limiti | category, month, scope |
 | `tags` | Kullanıcı etiketleri | owner/workspace |
 | `transaction_tags` | İşlem-etiket çoktan çoğa ilişkisi | transaction + tag |
+| `subscriptions` | Abonelikler ve yaşam döngüsü (`ACTIVE`, `PAUSED`, `CANCELLED`, `TRIAL`, `EXPIRED`, hatırlatıcı tercihi) | category, owner/workspace |
+| `subscription_price_histories` | Abonelik fiyat değişim geçmişi | subscription_id, owner/workspace |
+| `subscription_payments` | Gerçekleşen abonelik ödeme olayları | subscription_id, renewal_due_date, owner/workspace |
 
 ### Senkronizasyon tabloları
 
@@ -187,8 +190,12 @@ Mevcut sıralı dosyalar:
 5. `20260814000400_functions_conditional_sync.sql`
 6. `20260814000500_rls_v1_personal.sql`
 7. `20260815000100_realtime_v1_publication.sql`
+...
+- `20260913000100_subscription_lifecycle_and_history.sql` (Hazırlandı: subscription lifecycle sütunları, `subscription_price_histories`, `subscription_payments` ve RLS politikaları. Henüz staging veya production'a uygulanmamıştır).
+- `20260913000200_subscription_website_and_notes.sql` (Hazırlandı: `subscriptions` tablosuna `website_url` ve `notes` sütunları eklendi. Room v17 ile eşleşir. Henüz staging veya production'a uygulanmamıştır).
 
 Bu seri `FeniqoMobil-Staging` üzerinde kabul testinden geçmiştir. Production'a uygulanmamıştır.
+Yerel Room şeması v17'ye yükseltilmiş; `website_url` ve `notes` alanları eklenmiş, migration testleri (`RoomDaoTest`) doğrulanmıştır.
 
 ## 13. Ortam güvenlik kapısı
 

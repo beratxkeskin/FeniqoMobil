@@ -12,9 +12,11 @@ interface SubscriptionDao {
     @Query(
         """
         SELECT * FROM subscriptions
-        WHERE owner_id = :ownerId
-          AND deleted_at_epoch_ms IS NULL
-          AND ((:workspaceId IS NULL AND workspace_id IS NULL) OR workspace_id = :workspaceId)
+        WHERE deleted_at_epoch_ms IS NULL
+          AND (
+            (:workspaceId IS NULL AND owner_id = :ownerId AND workspace_id IS NULL) OR
+            (:workspaceId IS NOT NULL AND workspace_id = :workspaceId)
+          )
         ORDER BY next_renewal_date ASC, id ASC
         """,
     )

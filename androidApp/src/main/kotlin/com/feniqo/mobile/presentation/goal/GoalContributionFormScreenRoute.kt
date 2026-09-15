@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.domain.model.GoalContributionDirection
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
@@ -33,6 +34,7 @@ fun GoalContributionFormScreenRoute(
     modifier: Modifier = Modifier,
     parentGoalId: EntityId? = null,
     hasInvalidRouteId: Boolean = false,
+    initialDirectionCode: String? = null,
     viewModel: GoalContributionFormViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -40,7 +42,9 @@ fun GoalContributionFormScreenRoute(
 
     var showDatePicker by remember { mutableStateOf(false) }
 
-    LaunchedEffect(parentGoalId, hasInvalidRouteId) {
+    LaunchedEffect(parentGoalId, hasInvalidRouteId, initialDirectionCode) {
+        val direction = runCatching { initialDirectionCode?.let(GoalContributionDirection::valueOf) }.getOrNull()
+        if (direction != null) viewModel.updateInput { it.copy(direction = direction) }
         if (hasInvalidRouteId) {
             viewModel.setParentLoadInvalidId()
         } else if (parentGoalId != null) {

@@ -82,6 +82,7 @@ fun TransactionSuccessScreen(
                         transaction = uiState.transaction,
                         onAddNewTransaction = onAddNewTransaction,
                         onViewTransaction = onViewTransaction,
+                        onClose = onClose,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -131,6 +132,7 @@ private fun TransactionSuccessContent(
     transaction: TransactionDisplayModel,
     onAddNewTransaction: (TransactionType) -> Unit,
     onViewTransaction: (EntityId) -> Unit,
+    onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
@@ -150,14 +152,14 @@ private fun TransactionSuccessContent(
             modifier = Modifier
                 .size(80.dp)
                 .clip(CircleShape)
-                .background(FeniqoEmerald.copy(alpha = 0.12f)),
+                .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center,
         ) {
             Box(
                 modifier = Modifier
                     .size(56.dp)
                     .clip(CircleShape)
-                    .background(FeniqoEmerald),
+                    .background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -185,7 +187,7 @@ private fun TransactionSuccessContent(
         Spacer(Modifier.height(6.dp))
 
         Text(
-            text = "İşlemin başarıyla kaydedildi ve hesaplarına yansıtıldı.",
+            text = "Bu cihazda kaydedildi. ${transaction.syncStatus.transactionStatusText()}.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -199,43 +201,8 @@ private fun TransactionSuccessContent(
 
         Spacer(Modifier.height(16.dp))
 
-        // Motivasyon / İpucu Kartı
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(FeniqoRadius.Medium),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(PhoenixGold.copy(alpha = 0.16f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Lightbulb,
-                        contentDescription = null,
-                        tint = PhoenixGold,
-                        modifier = Modifier.size(16.dp),
-                    )
-                }
-                Text(
-                    text = "Düzenli harcama ve gelir kayıtların bütçeni kontrol altında tutmana yardımcı olur.",
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        Spacer(Modifier.height(24.dp))
-
+        Button(onClick = onClose, modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp)) { Text("İşlemlere dön") }
+        Spacer(Modifier.height(10.dp))
         // Aksiyon Butonları
         Button(
             onClick = { onAddNewTransaction(transaction.type) },
@@ -264,10 +231,10 @@ private fun TransactionSuccessContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = 52.dp)
-                .semantics { contentDescription = "İşlemi görüntüle" },
+                .semantics { contentDescription = "İşlemi düzenle" },
         ) {
             Text(
-                text = "İşlemi Görüntüle",
+                text = "İşlemi düzenle",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,

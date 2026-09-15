@@ -19,6 +19,12 @@ enum class SubscriptionValidationError {
     END_DATE_BEFORE_START_DATE,
     NEXT_RENEWAL_BEFORE_START_DATE,
     NEXT_RENEWAL_AFTER_END_DATE,
+    TRIAL_END_DATE_MISSING,
+    TRIAL_END_DATE_BEFORE_START_DATE,
+    CANCELLATION_DATE_MISSING,
+    ACCESS_END_DATE_BEFORE_CANCELLATION_DATE,
+    WEBSITE_URL_TOO_LONG,
+    NOTES_TOO_LONG,
 }
 
 /**
@@ -118,12 +124,27 @@ object SubscriptionValidationRules {
         val dateRes = validateNextRenewalDate(command.nextRenewalDate, command.renewalRule)
         if (dateRes is SubscriptionValidationResult.Invalid) return dateRes
 
+        val lifecycleRes = validateLifecycle(
+            lifecycleStatus = command.lifecycleStatus,
+            trialEndDate = command.trialEndDate,
+            cancellationDate = null,
+            accessEndDate = null,
+            startDate = command.renewalRule.startDate,
+        )
+        if (lifecycleRes is SubscriptionValidationResult.Invalid) return lifecycleRes
+
+        val websiteRes = validateWebsiteUrl(command.websiteUrl)
+        if (websiteRes is SubscriptionValidationResult.Invalid) return websiteRes
+
+        val notesRes = validateNotes(command.notes)
+        if (notesRes is SubscriptionValidationResult.Invalid) return notesRes
+
         val normalizedName = (nameRes as SubscriptionValidationResult.Valid).value
-        val normalizedCommand = if (normalizedName != command.name) {
-            command.copy(name = normalizedName)
-        } else {
-            command
-        }
+        val normalizedCommand = command.copy(
+            name = normalizedName,
+            websiteUrl = (websiteRes as SubscriptionValidationResult.Valid).value,
+            notes = (notesRes as SubscriptionValidationResult.Valid).value,
+        )
 
         return SubscriptionValidationResult.Valid(normalizedCommand)
     }
@@ -144,20 +165,77 @@ object SubscriptionValidationRules {
         val dateRes = validateNextRenewalDate(existingNextRenewalDate, command.renewalRule)
         if (dateRes is SubscriptionValidationResult.Invalid) return dateRes
 
+        val lifecycleRes = validateLifecycle(
+            lifecycleStatus = command.lifecycleStatus,
+            trialEndDate = command.trialEndDate,
+            cancellationDate = command.cancellationDate,
+            accessEndDate = command.accessEndDate,
+            startDate = command.renewalRule.startDate,
+        )
+        if (lifecycleRes is SubscriptionValidationResult.Invalid) return lifecycleRes
+
+        val websiteRes = validateWebsiteUrl(command.websiteUrl)
+        if (websiteRes is SubscriptionValidationResult.Invalid) return websiteRes
+
+        val notesRes = validateNotes(command.notes)
+        if (notesRes is SubscriptionValidationResult.Invalid) return notesRes
+
         val normalizedName = (nameRes as SubscriptionValidationResult.Valid).value
-        val normalizedCommand = if (normalizedName != command.name) {
-            command.copy(name = normalizedName)
-        } else {
-            command
-        }
+        val normalizedCommand = command.copy(
+            name = normalizedName,
+            websiteUrl = (websiteRes as SubscriptionValidationResult.Valid).value,
+            notes = (notesRes as SubscriptionValidationResult.Valid).value,
+        )
 
         return SubscriptionValidationResult.Valid(normalizedCommand)
+    }
+
+    fun validateWebsiteUrl(url: String?): SubscriptionValidationResult<String?> {
+        if (url == null) return SubscriptionValidationResult.Valid(null)
+        val trimmed = url.trim()
+        if (trimmed.isEmpty()) return SubscriptionValidationResult.Valid(null)
+        if (trimmed.length > Subscription.MAX_WEBSITE_URL_LENGTH) {
+            return SubscriptionValidationResult.Invalid(SubscriptionValidationError.WEBSITE_URL_TOO_LONG)
+        }
+        return SubscriptionValidationResult.Valid(trimmed)
+    }
+
+    fun validateNotes(notes: String?): SubscriptionValidationResult<String?> {
+        if (notes == null) return SubscriptionValidationResult.Valid(null)
+        val trimmed = notes.trim()
+        if (trimmed.isEmpty()) return SubscriptionValidationResult.Valid(null)
+        if (trimmed.length > Subscription.MAX_NOTES_LENGTH) {
+            return SubscriptionValidationResult.Invalid(SubscriptionValidationError.NOTES_TOO_LONG)
+        }
+        return SubscriptionValidationResult.Valid(trimmed)
+    }
+
+    fun validateLifecycle(
+        lifecycleStatus: com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus,
+        trialEndDate: LocalDate?,
+        cancellationDate: LocalDate?,
+        accessEndDate: LocalDate?,
+        startDate: LocalDate,
+    ): SubscriptionValidationResult<Unit> {
+        if (lifecycleStatus == com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.TRIAL && trialEndDate == null) {
+            return SubscriptionValidationResult.Invalid(SubscriptionValidationError.TRIAL_END_DATE_MISSING)
+        }
+        if (trialEndDate != null && trialEndDate < startDate) {
+            return SubscriptionValidationResult.Invalid(SubscriptionValidationError.TRIAL_END_DATE_BEFORE_START_DATE)
+        }
+        if (lifecycleStatus == com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.CANCELLED && cancellationDate == null) {
+            return SubscriptionValidationResult.Invalid(SubscriptionValidationError.CANCELLATION_DATE_MISSING)
+        }
+        if (accessEndDate != null && cancellationDate != null && accessEndDate < cancellationDate) {
+            return SubscriptionValidationResult.Invalid(SubscriptionValidationError.ACCESS_END_DATE_BEFORE_CANCELLATION_DATE)
+        }
+        return SubscriptionValidationResult.Valid(Unit)
     }
 
     /**
      * Mevcut bir [Subscription] nesnesine [UpdateSubscriptionCommand] uygular.
      * Komut doğrulamadan geçirilir; geçersizse hata döndürülür ve entity üretilmez.
-     * [ownerId], [workspaceId], [createdAt], [nextRenewalDate] ve [isActive] aynen korunur.
+     * [ownerId], [workspaceId], [createdAt] ve [nextRenewalDate] aynen korunur.
      */
     fun applySubscriptionUpdate(
         existing: Subscription,
@@ -171,12 +249,22 @@ object SubscriptionValidationRules {
             is SubscriptionValidationResult.Invalid -> validationResult
             is SubscriptionValidationResult.Valid -> {
                 val validCommand = validationResult.value
+                val isEffectivelyActive = validCommand.lifecycleStatus == com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.ACTIVE ||
+                    validCommand.lifecycleStatus == com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.TRIAL
                 SubscriptionValidationResult.Valid(
                     existing.copy(
                         name = validCommand.name,
                         amount = validCommand.amount,
                         categoryId = validCommand.categoryId,
                         renewalRule = validCommand.renewalRule,
+                        lifecycleStatus = validCommand.lifecycleStatus,
+                        trialEndDate = validCommand.trialEndDate,
+                        cancellationDate = validCommand.cancellationDate,
+                        accessEndDate = validCommand.accessEndDate,
+                        reminderEnabled = validCommand.reminderEnabled,
+                        isActive = isEffectivelyActive,
+                        websiteUrl = validCommand.websiteUrl,
+                        notes = validCommand.notes,
                     )
                 )
             }

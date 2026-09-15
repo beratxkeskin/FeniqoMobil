@@ -18,6 +18,7 @@ import com.feniqo.mobile.presentation.screen.RecurringTransactionsScreen
 fun RecurringTransactionsScreenRoute(
     onAddRecurringTransaction: () -> Unit,
     onEditRecurringTransaction: (EntityId) -> Unit,
+    onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: RecurringTransactionsViewModel = hiltViewModel(),
 ) {
@@ -31,6 +32,7 @@ fun RecurringTransactionsScreenRoute(
             onRetry = { viewModel.onIntent(RecurringTransactionsIntent.Retry) },
             onAddRecurringTransaction = onAddRecurringTransaction,
             onRecurringTransactionClick = onEditRecurringTransaction,
+            onBack = onBack,
             modifier = Modifier.fillMaxSize(),
         )
     }

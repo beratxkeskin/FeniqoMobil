@@ -102,9 +102,12 @@ class SubscriptionPaymentReminderWorkerTest {
     ) : SubscriptionRepository {
         override fun observeSubscriptions(): Flow<List<Subscription>> = subscriptionsFlow
         override fun observeSubscription(id: EntityId): Flow<Subscription?> = error("Test kapsamı dışı")
+        override fun observePriceHistories(subscriptionId: EntityId?): Flow<List<com.feniqo.mobile.domain.model.SubscriptionPriceHistory>> = flowOf(emptyList())
+        override fun observePayments(subscriptionId: EntityId?): Flow<List<com.feniqo.mobile.domain.model.SubscriptionPayment>> = flowOf(emptyList())
         override suspend fun create(command: CreateSubscriptionCommand) = error("Test kapsamı dışı")
         override suspend fun update(command: UpdateSubscriptionCommand) = error("Test kapsamı dışı")
         override suspend fun setActive(command: SetSubscriptionActiveCommand) = error("Test kapsamı dışı")
+        override suspend fun setLifecycle(command: com.feniqo.mobile.domain.model.SetSubscriptionLifecycleCommand) = error("Test kapsamı dışı")
         override suspend fun advanceRenewal(id: EntityId) = error("Test kapsamı dışı")
         override suspend fun softDelete(id: EntityId) = error("Test kapsamı dışı")
     }

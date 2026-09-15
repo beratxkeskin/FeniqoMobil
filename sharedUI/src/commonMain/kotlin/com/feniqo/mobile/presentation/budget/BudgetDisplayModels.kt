@@ -1,6 +1,7 @@
 package com.feniqo.mobile.presentation.budget
 
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.YearMonth
 import com.feniqo.mobile.domain.usecase.BudgetHealth
 import com.feniqo.mobile.domain.usecase.BudgetProgressItem
@@ -30,8 +31,108 @@ data class BudgetProgressDisplayModel(
     val usageProgressFraction: Float,
     val health: BudgetHealth,
     val excludedDifferentCurrencyTransactionCount: Int,
+    val currency: Currency = Currency.TRY,
 ) {
     val hasExcludedTransactions: Boolean get() = excludedDifferentCurrencyTransactionCount > 0
+    val prefixLimit: String get() = MoneyFormatter.formatPrefix(limitMinor, currency, dropZeroDecimals = true)
+    val prefixSpent: String get() = MoneyFormatter.formatPrefix(spentMinor, currency, dropZeroDecimals = true)
+    val prefixRemaining: String get() = MoneyFormatter.formatPrefix(kotlin.math.abs(remainingMinor), currency, dropZeroDecimals = true)
+    val statusSummaryText: String get() = if (isRemainingNegative) "$prefixRemaining aşıldı" else "$prefixRemaining kaldı"
+    val compactUsageRate: String get() = "%${usageRateBasisPoints / 100}"
+}
+
+/** A single-currency, fail-closed monthly total used by the budget overview. */
+data class BudgetMonthlySummaryDisplayModel(
+    val currency: Currency,
+    val formattedLimit: String,
+    val formattedSpent: String,
+    val formattedRemaining: String,
+    val usageRateBasisPoints: Int,
+    val formattedUsageRate: String,
+    val usageProgressFraction: Float,
+    val health: BudgetHealth,
+    val excludedTransactionCount: Int,
+    val limitMinor: Long = 0L,
+    val spentMinor: Long = 0L,
+    val remainingMinor: Long = 0L,
+) {
+    val prefixLimit: String get() = MoneyFormatter.formatPrefix(limitMinor, currency, dropZeroDecimals = true)
+    val prefixSpent: String get() = MoneyFormatter.formatPrefix(spentMinor, currency, dropZeroDecimals = true)
+    val prefixRemaining: String get() = MoneyFormatter.formatPrefix(kotlin.math.abs(remainingMinor), currency, dropZeroDecimals = true)
+    val compactUsageRate: String get() = "%${usageRateBasisPoints / 100}"
+}
+
+sealed interface BudgetOverview {
+    data object None : BudgetOverview
+    data class Ready(val summaries: List<BudgetMonthlySummaryDisplayModel>, val insight: String) : BudgetOverview
+    data object UnsafeTotal : BudgetOverview
+}
+
+/**
+ * Keeps all arithmetic out of Compose. Amounts are only aggregated within a currency and every
+ * addition is checked; an invalid aggregate is deliberately withheld instead of being guessed.
+ */
+object BudgetOverviewCalculator {
+    fun calculate(budgets: List<BudgetProgressDisplayModel>): BudgetOverview {
+        if (budgets.isEmpty()) return BudgetOverview.None
+        val summaries = budgets.groupBy { it.currency }.map { (currency, group) ->
+            val limit = safeSum(group.map { it.limitMinor }) ?: return BudgetOverview.UnsafeTotal
+            val spent = safeSum(group.map { it.spentMinor }) ?: return BudgetOverview.UnsafeTotal
+            val excluded = safeIntSum(group.map { it.excludedDifferentCurrencyTransactionCount })
+                ?: return BudgetOverview.UnsafeTotal
+            val remaining = safeSubtract(limit, spent) ?: return BudgetOverview.UnsafeTotal
+            val usage = rateBasisPoints(spent, limit).coerceAtLeast(0)
+            val health = when {
+                usage >= 10_000 -> BudgetHealth.EXCEEDED
+                usage >= 8_000 -> BudgetHealth.WARNING
+                else -> BudgetHealth.SAFE
+            }
+            BudgetMonthlySummaryDisplayModel(
+                currency = currency,
+                formattedLimit = MoneyFormatter.format(com.feniqo.mobile.domain.model.Money(limit, currency)),
+                formattedSpent = MoneyFormatter.format(com.feniqo.mobile.domain.model.Money(spent, currency)),
+                formattedRemaining = MoneyFormatter.formatDelta(com.feniqo.mobile.domain.model.MoneyDelta(remaining, currency), includeSign = false),
+                usageRateBasisPoints = usage,
+                formattedUsageRate = MoneyFormatter.formatBasisPoints(com.feniqo.mobile.domain.model.RateBasisPoints(usage)),
+                usageProgressFraction = (usage.toFloat() / 10_000f).coerceIn(0f, 1f),
+                health = health,
+                excludedTransactionCount = excluded,
+                limitMinor = limit,
+                spentMinor = spent,
+                remainingMinor = remaining,
+            )
+        }.sortedBy { it.currency.name }
+        val primary = summaries.first()
+        val fastest = budgets.maxWithOrNull(compareBy<BudgetProgressDisplayModel> { it.usageRateBasisPoints }.thenBy { it.categoryName })
+        val alertCount = budgets.count { it.health != BudgetHealth.SAFE }
+        val insight = when {
+            fastest != null && fastest.usageRateBasisPoints >= 8_000 ->
+                "${fastest.categoryName} bütçenin ${fastest.formattedUsageRate}'ini kullandın."
+            alertCount > 0 -> "${budgets.size} bütçenden $alertCount'i uyarı seviyesinde."
+            else -> "Bu ay toplam bütçenin ${MoneyFormatter.formatBasisPoints(com.feniqo.mobile.domain.model.RateBasisPoints((10_000 - primary.usageRateBasisPoints).coerceAtLeast(0)))}'i kaldı."
+        }
+        return BudgetOverview.Ready(summaries, insight)
+    }
+
+    private fun safeSum(values: List<Long>): Long? = values.fold(0L) { total, value ->
+        if ((value > 0 && total > Long.MAX_VALUE - value) || (value < 0 && total < Long.MIN_VALUE - value)) return null
+        total + value
+    }
+    private fun safeSubtract(left: Long, right: Long): Long? =
+        if ((right > 0 && left < Long.MIN_VALUE + right) || (right < 0 && left > Long.MAX_VALUE + right)) null else left - right
+    private fun safeIntSum(values: List<Int>): Int? = values.fold(0) { total, value ->
+        if (total > Int.MAX_VALUE - value) return null
+        total + value
+    }
+    private fun rateBasisPoints(numerator: Long, denominator: Long): Int {
+        if (denominator <= 0L || numerator <= 0L) return 0
+        val whole = numerator / denominator
+        val remainder = numerator % denominator
+        return when {
+            whole >= Int.MAX_VALUE / 10_000L -> Int.MAX_VALUE
+            else -> (whole * 10_000L + (remainder * 10_000L) / denominator).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        }
+    }
 }
 
 /**
@@ -73,6 +174,47 @@ data class BudgetMutationState(
 )
 
 /**
+ * Bütçe düzenleme ekranındaki canlı önizleme modelidir.
+ */
+data class BudgetEditPreview(
+    val formattedSpent: String,
+    val formattedNewRemaining: String,
+    val newRemainingMinor: Long,
+    val isRemainingNegative: Boolean,
+    val formattedUsageRate: String,
+    val usageProgressFraction: Float,
+    val health: BudgetHealth,
+)
+
+object BudgetEditPreviewCalculator {
+    fun calculate(spentMinor: Long, newLimitMinor: Long, currency: Currency): BudgetEditPreview {
+        val remaining = newLimitMinor - spentMinor
+        val isNegative = remaining < 0
+        val absRemaining = if (remaining < 0) -remaining else remaining
+        val usageRate = if (newLimitMinor > 0) {
+            ((spentMinor.toDouble() / newLimitMinor.toDouble()) * 10_000).toInt()
+        } else {
+            if (spentMinor > 0) 10_000 else 0
+        }
+        val health = when {
+            usageRate >= 10_000 -> BudgetHealth.EXCEEDED
+            usageRate >= 8_000 -> BudgetHealth.WARNING
+            else -> BudgetHealth.SAFE
+        }
+        val compactRate = "%${usageRate / 100}"
+        return BudgetEditPreview(
+            formattedSpent = MoneyFormatter.formatPrefix(spentMinor, currency, dropZeroDecimals = false),
+            formattedNewRemaining = MoneyFormatter.formatPrefix(absRemaining, currency, dropZeroDecimals = false),
+            newRemainingMinor = remaining,
+            isRemainingNegative = isNegative,
+            formattedUsageRate = compactRate,
+            usageProgressFraction = (usageRate.toFloat() / 10_000f).coerceIn(0f, 1f),
+            health = health,
+        )
+    }
+}
+
+/**
  * Bütçe oluşturma ve düzenleme formu UI durum modelidir.
  */
 data class BudgetFormUiState(
@@ -86,6 +228,10 @@ data class BudgetFormUiState(
     val limitInput: String = "",
     val currency: com.feniqo.mobile.domain.model.Currency = com.feniqo.mobile.domain.model.Currency.TRY,
     val mutationState: BudgetMutationState = BudgetMutationState(),
+    val currentSpentMinor: Long? = null,
+    val editPreview: BudgetEditPreview? = null,
+    val showCategoryPicker: Boolean = false,
+    val showPeriodPicker: Boolean = false,
 ) {
     val isEditMode: Boolean get() = budgetId != null
     val isSubmitting: Boolean get() = mutationState.isSubmitting
@@ -96,6 +242,9 @@ data class BudgetFormUiState(
         (isEditMode || selectedCategoryId != null) &&
         (isEditMode || selectedMonth != null) &&
         limitInput.isNotBlank()
+    val formattedCurrentSpent: String? get() = currentSpentMinor?.let {
+        MoneyFormatter.formatPrefix(it, currency, dropZeroDecimals = true)
+    }
 }
 
 /**
@@ -111,6 +260,9 @@ data class BudgetFormDraft(
     val selectedMonth: YearMonth? = null,
     val limitInput: String = "",
     val currency: com.feniqo.mobile.domain.model.Currency = com.feniqo.mobile.domain.model.Currency.TRY,
+    val currentSpentMinor: Long? = null,
+    val showCategoryPicker: Boolean = false,
+    val showPeriodPicker: Boolean = false,
 ) {
     val isEditMode: Boolean get() = budgetId != null
 
@@ -126,6 +278,13 @@ data class BudgetFormDraft(
             categories.find { it.id == selectedCategoryId }
         } else null
 
+        val preview = if (isEditMode && currentSpentMinor != null) {
+            val amountResult = com.feniqo.mobile.domain.validation.BudgetValidationRules.validateAmount(limitInput, currency)
+            if (amountResult is com.feniqo.mobile.domain.validation.BudgetValidationResult.Valid) {
+                BudgetEditPreviewCalculator.calculate(currentSpentMinor, amountResult.value.amountMinor, currency)
+            } else null
+        } else null
+
         return BudgetFormUiState(
             budgetId = budgetId,
             selectedCategoryId = selectedCategoryId,
@@ -137,6 +296,10 @@ data class BudgetFormDraft(
             limitInput = limitInput,
             currency = currency,
             mutationState = mutationState,
+            currentSpentMinor = currentSpentMinor,
+            editPreview = preview,
+            showCategoryPicker = showCategoryPicker,
+            showPeriodPicker = showPeriodPicker,
         )
     }
 
@@ -175,6 +338,7 @@ data class BudgetFormSeed(
     val month: YearMonth,
     val limitInput: String,
     val currency: com.feniqo.mobile.domain.model.Currency,
+    val spentMinor: Long = 0L,
 )
 
 /**
@@ -243,8 +407,36 @@ data class BudgetsUiState(
     val activeWorkspaceName: String? = null,
     val deleteConfirmation: BudgetDeleteConfirmationState? = null,
     val copyConfirmation: BudgetCopyConfirmationState? = null,
+    val overview: BudgetOverview = BudgetOverview.None,
 ) {
     val isEmpty: Boolean get() = !isLoading && observationError == null && budgets.isEmpty()
+    val exceededBudgetsCount: Int get() = budgets.count { it.health == BudgetHealth.EXCEEDED }
+    val firstExceededBudget: BudgetProgressDisplayModel? get() = budgets.firstOrNull { it.health == BudgetHealth.EXCEEDED }
+}
+
+/**
+ * Bütçe detay ekranındaki son harcama kaydı gösterim modelidir.
+ */
+data class BudgetDetailTransactionItem(
+    val id: EntityId,
+    val description: String,
+    val formattedDate: String,
+    val formattedAmount: String,
+    val categoryIconKey: String? = null,
+    val categoryColorHex: String? = null,
+)
+
+/**
+ * Bütçe detay ekranı UI durum modelidir.
+ */
+data class BudgetDetailUiState(
+    val isLoading: Boolean = true,
+    val budget: BudgetProgressDisplayModel? = null,
+    val recentTransactions: List<BudgetDetailTransactionItem> = emptyList(),
+    val observationError: FinanceUiMessage? = null,
+    val isDeleting: Boolean = false,
+) {
+    val isExceeded: Boolean get() = budget?.health == BudgetHealth.EXCEEDED
 }
 
 /**
@@ -333,6 +525,7 @@ object BudgetDisplayModelMapper {
             usageProgressFraction = (usageRateValue.toFloat() / 10000f).coerceIn(0f, 1f),
             health = progress.health,
             excludedDifferentCurrencyTransactionCount = item.excludedDifferentCurrencyTransactionCount,
+            currency = budget.limit.currency,
         )
     }
 
@@ -399,4 +592,3 @@ object CategoryIconResolver {
         else -> null
     }
 }
-

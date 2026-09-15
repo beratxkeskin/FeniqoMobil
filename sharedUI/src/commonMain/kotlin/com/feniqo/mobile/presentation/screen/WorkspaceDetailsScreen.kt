@@ -1,13 +1,13 @@
 package com.feniqo.mobile.presentation.screen
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,34 +18,70 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.CompareArrows
+import androidx.compose.material.icons.automirrored.outlined.ExitToApp
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.PersonRemove
+import androidx.compose.material.icons.outlined.SwapHoriz
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.WorkspaceRole
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
-import com.feniqo.mobile.presentation.theme.FeniqoRadius
-import com.feniqo.mobile.presentation.theme.FeniqoSpacing
+import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
+import com.feniqo.mobile.presentation.theme.FeniqoSageGreenContainer
 import com.feniqo.mobile.presentation.workspace.WorkspaceDetailsUiState
 import com.feniqo.mobile.presentation.workspace.WorkspaceMemberUiModel
 
+/**
+ * Çalışma Alanı Detay Ekranı.
+ * Onaylı Görsel 02 (Sahip & İzleyici Görünümleri) ve Görsel 03 (Diyaloglar) tasarımına sadık kalınarak hazırlanmıştır.
+ */
 @Composable
 fun WorkspaceDetailsScreen(
     state: WorkspaceDetailsUiState,
@@ -69,6 +105,8 @@ fun WorkspaceDetailsScreen(
     onNavigateToSettlement: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    var showOwnershipTransferSheet by remember { mutableStateOf(false) }
+
     Surface(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
@@ -76,862 +114,1489 @@ fun WorkspaceDetailsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(FeniqoSpacing.Large),
+                .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
-            // Başlık ve Geri Butonu
+            // Üst Bar: Geri Dönüş ve Başlık
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = FeniqoSpacing.Small),
+                    .padding(bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(
+                IconButton(
                     onClick = onBack,
-                    enabled = !state.isLeaving,
+                    enabled = !state.isLeaving && !state.isTransferringOwnership && !state.isRemovingMember,
                     modifier = Modifier
-                        .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-                        .semantics {
-                            contentDescription = "Geri dön"
-                        },
+                        .size(44.dp)
+                        .semantics { contentDescription = "Geri dön" },
                 ) {
-                    Text(
-                        text = "‹ Geri",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onBackground,
                     )
                 }
-
-                Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
-
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "Çalışma Alanı Detayları",
+                    text = "Alan detayı",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.weight(1f),
                 )
             }
 
             // Hata Mesajı Bannerı
             if (state.errorMessage != null) {
-                WorkspaceDetailsErrorBanner(
+                DetailsErrorBanner(
                     message = state.errorMessage,
                     onDismiss = onDismissError,
                     enabled = !state.isLeaving,
-                    modifier = Modifier.padding(bottom = FeniqoSpacing.Medium),
+                    modifier = Modifier.padding(bottom = 12.dp),
                 )
             }
 
             when {
                 state.isLoading -> {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
                         contentAlignment = Alignment.Center,
                     ) {
-                        CircularProgressIndicator(
-                            color = MaterialTheme.colorScheme.primary,
-                        )
+                        CircularProgressIndicator(color = FeniqoSageGreen)
                     }
                 }
                 state.workspace == null -> {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .padding(24.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(
-                            text = "Çalışma alanı bulunamadı.",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Surface(
+                                modifier = Modifier.size(64.dp),
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Info,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(32.dp),
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "Alan bulunamadı",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                text = "Bu alan artık mevcut olmayabilir veya erişimin olmayabilir.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Button(
+                                onClick = onBack,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = FeniqoSageGreen),
+                            ) {
+                                Text("Geri dön", fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                 }
                 else -> {
                     val workspace = state.workspace
                     LazyColumn(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp),
                     ) {
-                        // 1. Workspace Bilgi Kartı
-                        item(key = "workspace_info") {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(FeniqoRadius.Medium),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                ),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(FeniqoSpacing.Large),
-                                    verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                                ) {
-                                    Text(
-                                        text = workspace.name,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                    )
-
-                                    Row(horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium)) {
-                                        Text(
-                                            text = "Tür: ${workspace.type.name}",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                        Text(
-                                            text = "Para Birimi: ${workspace.currency.code}",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-
-                                    if (!workspace.description.isNullOrBlank()) {
-                                        Text(
-                                            text = workspace.description,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                            }
+                        // 1. Grafit Koyu Hero Kartı (Görsel 02)
+                        item(key = "hero_workspace_card") {
+                            WorkspaceHeroCard(
+                                name = workspace.name,
+                                typeName = if (workspace.type.name == "SHARED") "Ortak alan" else "Kişisel alan",
+                                currencyCode = workspace.currency.code,
+                                description = workspace.description,
+                                userRole = state.currentUserRole ?: WorkspaceRole.VIEWER,
+                            )
                         }
 
-                        // 1.1 Davet Kodu Oluştur Butonu (yalnız OWNER için)
+                        // 2. Sahip Eylemi: Davet Kodu Oluştur
                         if (state.isOwner) {
-                            item(key = "owner_invite_action") {
+                            item(key = "create_invite_action") {
                                 Button(
                                     onClick = onCreateInvite,
                                     enabled = state.canCreateInvite,
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = FeniqoSageGreen,
+                                        contentColor = Color.White,
+                                    ),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .semantics {
-                                            contentDescription = "Davet kodu oluştur"
-                                        },
+                                        .height(52.dp)
+                                        .semantics { contentDescription = "Davet kodu oluştur" },
                                 ) {
                                     if (state.isCreatingInvite) {
                                         CircularProgressIndicator(
                                             modifier = Modifier.size(20.dp),
                                             strokeWidth = 2.dp,
-                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            color = Color.White,
                                         )
                                     } else {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Link,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = "Davet Kodu Oluştur",
-                                            style = MaterialTheme.typography.labelLarge,
-                                            fontWeight = FontWeight.Bold,
+                                            text = "Davet kodu oluştur",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.SemiBold,
                                         )
                                     }
                                 }
                             }
                         }
 
-                        // 1.2 Ödeşme Butonu (çalışma alanı üyeleri için)
-                        if (state.currentUserRole != null || state.members.any { it.isCurrentUser }) {
-                            item(key = "workspace_settlement_action") {
-                                Button(
-                                    onClick = onNavigateToSettlement,
-                                    enabled = !state.isLeaving,
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.secondary,
-                                        contentColor = MaterialTheme.colorScheme.onSecondary,
-                                    ),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .semantics {
-                                            contentDescription = "Ödeşme ve transfer önerileri"
-                                        },
-                                ) {
-                                    Text(
-                                        text = "Ödeşme ve Transferler",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.Bold,
-                                    )
-                                }
-                            }
+                        // 3. Ödeşme ve Transfer Önerileri Kartı
+                        item(key = "settlement_action_card") {
+                            SettlementActionCard(onClick = onNavigateToSettlement)
                         }
 
-                        // 2. Üyeler Başlığı
+                        // 4. Üyeler Başlığı
                         item(key = "members_header") {
                             Text(
-                                text = "Üyeler (${state.members.size})",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = FeniqoSpacing.Small),
+                                text = "Üyeler · ${state.members.size}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.padding(top = 4.dp),
                             )
                         }
 
-                        // 3. Üye Listesi
+                        // 5. Üye Kartları
                         items(
                             items = state.members,
                             key = { it.userId.value },
                         ) { member ->
-                            WorkspaceMemberItemCard(
+                            MemberCardItem(
                                 member = member,
-                                canChangeRole = state.canManageRoles && !member.isCurrentUser && member.role != WorkspaceRole.OWNER,
-                                onRequestChangeRole = {
-                                    val targetRole = if (member.role == WorkspaceRole.EDITOR) WorkspaceRole.VIEWER else WorkspaceRole.EDITOR
-                                    onRequestChangeMemberRole(member, targetRole)
+                                isOwner = state.isOwner,
+                                onRoleChangeClick = {
+                                    val nextRole = if (member.role == WorkspaceRole.EDITOR) WorkspaceRole.VIEWER else WorkspaceRole.EDITOR
+                                    onRequestChangeMemberRole(member, nextRole)
                                 },
-                                canRemoveMember = state.canRemoveMembers && !member.isCurrentUser && member.role in setOf(WorkspaceRole.EDITOR, WorkspaceRole.VIEWER),
-                                onRequestRemoveMember = { onRequestRemoveMember(member) },
+                                onRemoveClick = {
+                                    onRequestRemoveMember(member)
+                                },
                             )
                         }
 
-                        // 3.1 Sahipliği Devret Bölümü (yalnız OWNER için)
-                        if (state.isOwner) {
-                            item(key = "owner_transfer_section") {
-                                Card(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(FeniqoRadius.Medium),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surface,
-                                    ),
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                ) {
-                                    Column(
+                        // 6. Sahipliği Devret (Sahip İçin) / Ayrılma ve Yetki Notu (Diğerleri İçin)
+                        item(key = "bottom_management_section") {
+                            if (state.isOwner) {
+                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    OutlinedButton(
+                                        onClick = { showOwnershipTransferSheet = true },
+                                        enabled = state.canTransferOwnership,
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.surface,
+                                            contentColor = MaterialTheme.colorScheme.onSurface,
+                                        ),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(FeniqoSpacing.Large),
-                                        verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                                            .height(52.dp)
+                                            .semantics { contentDescription = "Sahipliği devret" },
                                     ) {
-                                        Text(
-                                            text = "Sahipliği Devret",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface,
+                                        Icon(
+                                            imageVector = Icons.Outlined.SwapHoriz,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.size(20.dp),
                                         )
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Text(
+                                            text = "Sahipliği devret",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                    }
 
-                                        if (state.eligibleOwnershipTransferTargets.isEmpty()) {
-                                            Button(
-                                                onClick = {},
-                                                enabled = false,
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .semantics {
-                                                        contentDescription = "Sahipliği devret (uygun hedef üye yok)"
-                                                    },
-                                            ) {
-                                                Text(
-                                                    text = "Sahipliği Devret",
-                                                    style = MaterialTheme.typography.labelLarge,
-                                                    fontWeight = FontWeight.Bold,
-                                                )
-                                            }
+                                    // Bilgilendirme Kutusu
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Info,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(18.dp),
+                                            )
+                                            Spacer(modifier = Modifier.width(10.dp))
                                             Text(
-                                                text = "Sahipliği devretmek için en az bir aktif EDITOR veya VIEWER üye gerekir.",
-                                                style = MaterialTheme.typography.bodySmall,
+                                                text = "Ayrılmak için önce sahipliği devretmelisin.",
+                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
-                                        } else {
+                                        }
+                                    }
+                                }
+                            } else {
+                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    // Yetki Bilgi Kutusu
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Info,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(18.dp),
+                                            )
+                                            Spacer(modifier = Modifier.width(10.dp))
                                             Text(
-                                                text = "Sahipliği devretmek istediğiniz üyeyi seçin:",
-                                                style = MaterialTheme.typography.bodySmall,
+                                                text = if (state.currentUserRole == WorkspaceRole.VIEWER) {
+                                                    "Bu alanda görüntüleme yetkin var."
+                                                } else {
+                                                    "Bu alanda kayıt düzenleme yetkin var."
+                                                },
+                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
-                                            Column(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                                            ) {
-                                                state.eligibleOwnershipTransferTargets.forEach { eligibleMember ->
-                                                    Row(
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .padding(vertical = FeniqoSpacing.ExtraSmall),
-                                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                    ) {
-                                                        Column(modifier = Modifier.weight(1f)) {
-                                                            Text(
-                                                                text = eligibleMember.displayName,
-                                                                style = MaterialTheme.typography.bodyMedium,
-                                                                fontWeight = FontWeight.SemiBold,
-                                                                color = MaterialTheme.colorScheme.onSurface,
-                                                            )
-                                                            Text(
-                                                                text = "Rol: ${eligibleMember.role.name}",
-                                                                style = MaterialTheme.typography.bodySmall,
-                                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                            )
-                                                        }
-                                                        Button(
-                                                            onClick = { onRequestOwnershipTransfer(eligibleMember) },
-                                                            enabled = !state.isTransferringOwnership && !state.isLoading,
-                                                            modifier = Modifier.semantics {
-                                                                contentDescription = "${eligibleMember.displayName} üyesine sahipliği devret"
-                                                            },
-                                                        ) {
-                                                            Text(
-                                                                text = "Devret",
-                                                                style = MaterialTheme.typography.labelSmall,
-                                                                fontWeight = FontWeight.Bold,
-                                                            )
-                                                        }
-                                                    }
-                                                }
-                                            }
+                                        }
+                                    }
+
+                                    // Alandan Ayrıl Butonu
+                                    if (state.canLeave) {
+                                        OutlinedButton(
+                                            onClick = onRequestLeave,
+                                            enabled = !state.isLeaving,
+                                            shape = RoundedCornerShape(14.dp),
+                                            colors = ButtonDefaults.outlinedButtonColors(
+                                                containerColor = MaterialTheme.colorScheme.surface,
+                                                contentColor = Color(0xFFDC2626),
+                                            ),
+                                            border = BorderStroke(1.dp, Color(0xFFFCA5A5)),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(52.dp)
+                                                .semantics { contentDescription = "Alandan ayrıl" },
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
+                                                contentDescription = null,
+                                                tint = Color(0xFFDC2626),
+                                                modifier = Modifier.size(20.dp),
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = "Alandan ayrıl",
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = Color(0xFFDC2626),
+                                            )
                                         }
                                     }
                                 }
                             }
                         }
-
-                        // 4. Alandan Ayrılma Bölümü
-                        item(key = "leave_section") {
-                            Spacer(modifier = Modifier.height(FeniqoSpacing.Medium))
-                            if (state.isOwner) {
-                                Surface(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(FeniqoRadius.Small),
-                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                ) {
-                                    Text(
-                                        text = "Çalışma alanı sahibi olarak alandan ayrılamazsınız. Ayrılmak için önce sahipliği devretmeniz gerekir.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        textAlign = TextAlign.Center,
-                                        modifier = Modifier.padding(FeniqoSpacing.Medium),
-                                    )
-                                }
-                            } else if (state.canLeave) {
-                                Button(
-                                    onClick = onRequestLeave,
-                                    enabled = !state.isLeaving,
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.error,
-                                        contentColor = MaterialTheme.colorScheme.onError,
-                                    ),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .semantics {
-                                            contentDescription = "Alandan ayrıl"
-                                        },
-                                ) {
-                                    if (state.isLeaving) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(20.dp),
-                                            strokeWidth = 2.dp,
-                                            color = MaterialTheme.colorScheme.onError,
-                                        )
-                                    } else {
-                                        Text(
-                                            text = "Alandan Ayrıl",
-                                            style = MaterialTheme.typography.labelLarge,
-                                            fontWeight = FontWeight.Bold,
-                                        )
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
             }
         }
+    }
 
-        // Alandan Ayrılma Onay Diyaloğu
-        if (state.showLeaveConfirmation) {
-            AlertDialog(
-                onDismissRequest = {
-                    if (!state.isLeaving) onDismissLeaveConfirmation()
-                },
-                title = {
+    // -------------------------------------------------------------
+    // DİYALOGLAR (Görsel 03)
+    // -------------------------------------------------------------
+
+    // 07 Davet Kodu Diyaloğu
+    if (state.generatedInviteCode != null) {
+        WorkspaceInviteCodeDialog(
+            inviteCode = state.generatedInviteCode,
+            onDismiss = onDismissInviteCodeDialog,
+        )
+    }
+
+    // 08 Rol Değişikliği Diyaloğu
+    if (state.pendingRoleChange != null) {
+        val pending = state.pendingRoleChange
+        WorkspaceRoleChangeDialog(
+            member = pending.member,
+            selectedRole = pending.newRole,
+            onSelectRole = onSelectPendingRole,
+            isSubmitting = state.isChangingMemberRole,
+            onConfirm = onConfirmRoleChange,
+            onDismiss = onDismissRoleChangeConfirmation,
+        )
+    }
+
+    // 09 Üye Çıkarma Diyaloğu
+    if (state.pendingMemberRemoval != null) {
+        WorkspaceMemberRemovalDialog(
+            member = state.pendingMemberRemoval,
+            workspaceName = state.workspace?.name ?: "bu",
+            isSubmitting = state.isRemovingMember,
+            onConfirm = onConfirmMemberRemoval,
+            onDismiss = onDismissMemberRemovalConfirmation,
+        )
+    }
+
+    // 10 Sahiplik Devri Seçim / Onay Diyaloğu
+    if (showOwnershipTransferSheet || state.pendingOwnershipTransferTarget != null) {
+        WorkspaceOwnershipTransferDialog(
+            eligibleMembers = state.eligibleOwnershipTransferTargets,
+            pendingTarget = state.pendingOwnershipTransferTarget,
+            onRequestTransfer = { targetMember ->
+                onRequestOwnershipTransfer(targetMember)
+            },
+            onConfirmTransfer = onConfirmOwnershipTransfer,
+            isSubmitting = state.isTransferringOwnership,
+            onDismiss = {
+                showOwnershipTransferSheet = false
+                onDismissOwnershipTransferConfirmation()
+            },
+        )
+    }
+
+    // 11 Alandan Ayrılma Onay Diyaloğu
+    if (state.showLeaveConfirmation) {
+        WorkspaceLeaveDialog(
+            workspaceName = state.workspace?.name ?: "bu",
+            isSubmitting = state.isLeaving,
+            onConfirm = onConfirmLeave,
+            onDismiss = onDismissLeaveConfirmation,
+        )
+    }
+}
+
+/**
+ * Koyu Grafit Hero Alan Kartı (Görsel 02).
+ */
+@Composable
+private fun WorkspaceHeroCard(
+    name: String,
+    typeName: String,
+    currencyCode: String,
+    description: String?,
+    userRole: WorkspaceRole,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF1E2822),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                // Sol İkon
+                Surface(
+                    modifier = Modifier.size(54.dp),
+                    shape = CircleShape,
+                    color = Color.White.copy(alpha = 0.12f),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Outlined.Home,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp),
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                // Orta Alan Başlığı ve Türü
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Alandan Ayrıl",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                    )
-                },
-                text = {
-                    Text(
-                        text = "Bu çalışma alanından ayrılmak istediğinizden emin misiniz? Alana ait kayıtlara erişiminizi kaybedeceksiniz.",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = onConfirmLeave,
-                        enabled = !state.isLeaving,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError,
+                        text = name,
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp,
                         ),
-                        modifier = Modifier.semantics {
-                            contentDescription = "Ayrılmayı onayla"
-                        },
-                    ) {
-                        if (state.isLeaving) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onError,
-                            )
-                        } else {
-                            Text("Ayrıl")
-                        }
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = onDismissLeaveConfirmation,
-                        enabled = !state.isLeaving,
-                        modifier = Modifier.semantics {
-                            contentDescription = "Ayrılmaktan vazgeç"
-                        },
-                    ) {
-                        Text("Vazgeç")
-                    }
-                },
-            )
-        }
-
-        // Davet Kodu Başarı Diyaloğu
-        if (state.generatedInviteCode != null) {
-            val clipboardManager = LocalClipboardManager.current
-            AlertDialog(
-                onDismissRequest = onDismissInviteCodeDialog,
-                title = {
-                    Text(
-                        text = "Davet Kodu Oluşturuldu",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
-                },
-                text = {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
-                    ) {
-                        Text(
-                            text = "Bu davet kodunu alana katılmasını istediğiniz kişiyle paylaşabilirsiniz.",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(FeniqoRadius.Small),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                        ) {
-                            Text(
-                                text = state.generatedInviteCode,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(FeniqoSpacing.Medium)
-                                    .semantics {
-                                        contentDescription = "Oluşturulan davet kodu: ${state.generatedInviteCode}"
-                                    },
-                            )
-                        }
-                        Text(
-                            text = "Bu kodu yalnız güvendiğiniz kişilerle paylaşın.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            fontWeight = FontWeight.Medium,
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            clipboardManager.setText(AnnotatedString(state.generatedInviteCode))
-                        },
-                        modifier = Modifier.semantics {
-                            contentDescription = "Kodu panoya kopyala"
-                        },
-                    ) {
-                        Text("Kopyala")
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = onDismissInviteCodeDialog,
-                        modifier = Modifier.semantics {
-                            contentDescription = "Davet kodu diyaloğunu kapat"
-                        },
-                    ) {
-                        Text("Kapat")
-                    }
-                },
-            )
-        }
-
-        // Üye Rolü Değiştirme Onay Diyaloğu
-        if (state.pendingRoleChange != null) {
-            val pending = state.pendingRoleChange
-            AlertDialog(
-                onDismissRequest = {
-                    if (!state.isChangingMemberRole) onDismissRoleChangeConfirmation()
-                },
-                title = {
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Üye Rolünü Değiştir",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
+                        text = "$typeName · $currencyCode",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFB8C8BF),
                     )
-                },
-                text = {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                    ) {
-                        Text(
-                            text = "${pending.member.displayName} adlı üyenin rolünü değiştirmek üzeresiniz.",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Text(
-                            text = "Mevcut Rol: ${pending.member.role.name}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = "Yeni Rol Seçin:",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(top = FeniqoSpacing.Small),
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                        ) {
-                            val allowedRoles = listOf(WorkspaceRole.EDITOR, WorkspaceRole.VIEWER)
-                            allowedRoles.forEach { roleOption ->
-                                val isSelected = pending.newRole == roleOption
-                                val isCurrent = pending.member.role == roleOption
-                                Button(
-                                    onClick = { onSelectPendingRole(roleOption) },
-                                    enabled = !state.isChangingMemberRole && !isCurrent,
-                                    colors = if (isSelected) {
-                                        ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.primary,
-                                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                                        )
-                                    } else {
-                                        ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .semantics {
-                                            contentDescription = "Rol ${roleOption.name} seç"
-                                        },
-                                ) {
-                                    Text(
-                                        text = roleOption.name,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = onConfirmRoleChange,
-                        enabled = !state.isChangingMemberRole && pending.newRole != pending.member.role,
-                        modifier = Modifier.semantics {
-                            contentDescription = "Rol değişimini onayla"
-                        },
-                    ) {
-                        if (state.isChangingMemberRole) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onPrimary,
-                            )
-                        } else {
-                            Text("Onayla")
-                        }
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = onDismissRoleChangeConfirmation,
-                        enabled = !state.isChangingMemberRole,
-                        modifier = Modifier.semantics {
-                            contentDescription = "Rol değişiminden vazgeç"
-                        },
-                    ) {
-                        Text("Vazgeç")
-                    }
-                },
-            )
-        }
+                }
 
-        // Sahiplik Devri Onay Diyaloğu
-        if (state.pendingOwnershipTransferTarget != null) {
-            val target = state.pendingOwnershipTransferTarget
-            AlertDialog(
-                onDismissRequest = {
-                    if (!state.isTransferringOwnership) onDismissOwnershipTransferConfirmation()
-                },
-                title = {
-                    Text(
-                        text = "Sahipliği Devret",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                    )
-                },
-                text = {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                    ) {
-                        Text(
-                            text = "${target.displayName} adlı kullanıcıya sahiplik devredilecek.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Text(
-                            text = "Bu kullanıcı çalışma alanının sahibi olacak. Siz EDITOR rolüne geçeceksiniz.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = onConfirmOwnershipTransfer,
-                        enabled = !state.isTransferringOwnership,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError,
-                        ),
-                        modifier = Modifier.semantics {
-                            contentDescription = "Sahiplik devrini onayla"
-                        },
-                    ) {
-                        if (state.isTransferringOwnership) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onError,
-                            )
-                        } else {
-                            Text("Devret")
-                        }
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = onDismissOwnershipTransferConfirmation,
-                        enabled = !state.isTransferringOwnership,
-                        modifier = Modifier.semantics {
-                            contentDescription = "Sahiplik devrinden vazgeç"
-                        },
-                    ) {
-                        Text("Vazgeç")
-                    }
-                },
-            )
-        }
+                // Sağ Rol Rozeti
+                HeroRoleBadge(role = userRole)
+            }
 
-        // Üye Çıkarma Onay Diyaloğu
-        val removalTarget = state.pendingMemberRemoval
-        if (removalTarget != null) {
-            AlertDialog(
-                onDismissRequest = {
-                    if (!state.isRemovingMember) onDismissMemberRemovalConfirmation()
-                },
-                title = {
+            if (!description.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(14.dp))
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color.White.copy(alpha = 0.08f),
+                ) {
                     Text(
-                        text = "Üyeyi Çıkar",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
+                        text = description,
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
+                        color = Color(0xFFDCE6E0),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                     )
-                },
-                text = {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                    ) {
-                        Text(
-                            text = "${removalTarget.displayName} adlı üye çalışma alanından çıkarılacak.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Text(
-                            text = "Bu üye çalışma alanına erişimini kaybedecek.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = onConfirmMemberRemoval,
-                        enabled = !state.isRemovingMember,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError,
-                        ),
-                        modifier = Modifier.semantics {
-                            contentDescription = "Üyeyi çıkarmayı onayla"
-                        },
-                    ) {
-                        if (state.isRemovingMember) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onError,
-                            )
-                        } else {
-                            Text("Çıkar")
-                        }
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = onDismissMemberRemovalConfirmation,
-                        enabled = !state.isRemovingMember,
-                        modifier = Modifier.semantics {
-                            contentDescription = "Üyeyi çıkarmaktan vazgeç"
-                        },
-                    ) {
-                        Text("Vazgeç")
-                    }
-                },
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Hero Kartındaki Rol Rozeti (👑 Sahip / 👁 İzleyici / ✎ Düzenleyici).
+ */
+@Composable
+private fun HeroRoleBadge(
+    role: WorkspaceRole,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.semantics {
+            contentDescription = "Mevcut rolünüz: ${role.toTurkishDisplayName()}"
+        },
+        shape = RoundedCornerShape(12.dp),
+        color = Color.White.copy(alpha = 0.18f),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val (icon, label) = when (role) {
+                WorkspaceRole.OWNER -> Icons.Outlined.WorkspacePremium to "Sahip"
+                WorkspaceRole.EDITOR -> Icons.Outlined.Edit to "Düzenleyici"
+                WorkspaceRole.VIEWER -> Icons.Outlined.Visibility to "İzleyici"
+            }
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(14.dp),
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                color = Color.White,
             )
         }
     }
 }
 
+/**
+ * Ödeşme ve Transfer Önerileri Buton Kartı (Görsel 02).
+ */
 @Composable
-private fun WorkspaceMemberItemCard(
-    member: WorkspaceMemberUiModel,
-    canChangeRole: Boolean = false,
-    onRequestChangeRole: () -> Unit = {},
-    canRemoveMember: Boolean = false,
-    onRequestRemoveMember: () -> Unit = {},
+private fun SettlementActionCard(
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(FeniqoRadius.Medium)),
-        shape = RoundedCornerShape(FeniqoRadius.Medium),
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .semantics { contentDescription = "Ödeşme ve transfer önerileri" },
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(FeniqoSpacing.Medium),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Surface(
-                modifier = Modifier.size(36.dp),
+                modifier = Modifier.size(44.dp),
                 shape = CircleShape,
-                color = if (member.isCurrentUser) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant
-                },
+                color = FeniqoSageGreenContainer.copy(alpha = 0.55f),
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = if (member.isCurrentUser) "👤" else "👥",
-                        style = MaterialTheme.typography.bodyMedium,
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.CompareArrows,
+                        contentDescription = null,
+                        tint = FeniqoSageGreen,
+                        modifier = Modifier.size(24.dp),
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(FeniqoSpacing.Medium))
+            Spacer(modifier = Modifier.width(14.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = member.displayName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    text = "Ödeşme ve transfer önerileri",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Üye bakiyelerini gör ve önerileri incele",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
-            if (canChangeRole) {
-                TextButton(
-                    onClick = onRequestChangeRole,
-                    modifier = Modifier
-                        .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-                        .semantics {
-                            contentDescription = "${member.displayName} için rolü değiştir"
-                        },
-                ) {
-                    Text(
-                        text = "Rolü Değiştir",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-                Spacer(modifier = Modifier.width(FeniqoSpacing.ExtraSmall))
-            }
-
-            if (canRemoveMember) {
-                TextButton(
-                    onClick = onRequestRemoveMember,
-                    modifier = Modifier
-                        .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-                        .semantics {
-                            contentDescription = "${member.displayName} üyesini çıkar"
-                        },
-                ) {
-                    Text(
-                        text = "Üyeyi Çıkar",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-                Spacer(modifier = Modifier.width(FeniqoSpacing.ExtraSmall))
-            } else if (!canChangeRole) {
-                Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
-            }
-
-            // Rol Rozeti
-            WorkspaceRoleBadge(role = member.role)
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
         }
     }
 }
 
+/**
+ * Üye Liste Kartı (Görsel 02).
+ */
 @Composable
-private fun WorkspaceRoleBadge(
-    role: WorkspaceRole,
+private fun MemberCardItem(
+    member: WorkspaceMemberUiModel,
+    isOwner: Boolean,
+    onRoleChangeClick: () -> Unit,
+    onRemoveClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val (containerColor, textColor) = when (role) {
-        WorkspaceRole.OWNER -> MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.onPrimary
-        WorkspaceRole.EDITOR -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
-        WorkspaceRole.VIEWER -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
-    }
+    var menuExpanded by remember { mutableStateOf(false) }
 
-    Surface(
-        modifier = modifier.semantics {
-            contentDescription = "Rol: ${role.name}"
-        },
-        shape = CircleShape,
-        color = containerColor,
+    val initialLetter = member.displayName.firstOrNull()?.uppercase() ?: "Ü"
+    val showMenuButton = isOwner && !member.isCurrentUser && member.role != WorkspaceRole.OWNER
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
     ) {
-        Text(
-            text = role.name,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = textColor,
-            modifier = Modifier.padding(horizontal = FeniqoSpacing.Medium, vertical = 2.dp),
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Baş Harf Avatarları
+            Surface(
+                modifier = Modifier.size(42.dp),
+                shape = CircleShape,
+                color = if (member.isCurrentUser) FeniqoSageGreenContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = initialLetter,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (member.isCurrentUser) FeniqoSageGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Üye Adı ve Rolü
+            Column(modifier = Modifier.weight(1f)) {
+                val displayNameWithSelf = if (member.isCurrentUser && !member.displayName.contains("sen", ignoreCase = true)) {
+                    "${member.displayName} (sen)"
+                } else {
+                    member.displayName
+                }
+                Text(
+                    text = displayNameWithSelf,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = member.role.toTurkishDisplayName(),
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                    fontWeight = if (member.role == WorkspaceRole.OWNER) FontWeight.Bold else FontWeight.Normal,
+                    color = if (member.role == WorkspaceRole.OWNER) Color(0xFF16A34A) else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            // Sahip için 3 nokta menü butonu
+            if (showMenuButton) {
+                Box {
+                    IconButton(
+                        onClick = { menuExpanded = true },
+                        modifier = Modifier
+                            .size(36.dp)
+                            .semantics { contentDescription = "${member.displayName} yönetim menüsü" },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.MoreHoriz,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Rolü Değiştir") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Edit,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                onRoleChangeClick()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Üyeyi Çıkar", color = Color(0xFFDC2626)) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.PersonRemove,
+                                    contentDescription = null,
+                                    tint = Color(0xFFDC2626),
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                onRemoveClick()
+                            },
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
+// -------------------------------------------------------------
+// DİYALOG UYGULAMALARI (Görsel 03)
+// -------------------------------------------------------------
+
+/**
+ * 07. Davet Kodu Diyaloğu (Görsel 07).
+ */
 @Composable
-private fun WorkspaceDetailsErrorBanner(
+private fun WorkspaceInviteCodeDialog(
+    inviteCode: String,
+    onDismiss: () -> Unit,
+) {
+    val clipboardManager = LocalClipboardManager.current
+    var isCopied by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = null,
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Surface(
+                    modifier = Modifier.size(60.dp),
+                    shape = CircleShape,
+                    color = FeniqoSageGreenContainer.copy(alpha = 0.7f),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Outlined.Link,
+                            contentDescription = null,
+                            tint = FeniqoSageGreen,
+                            modifier = Modifier.size(30.dp),
+                        )
+                    }
+                }
+
+                Text(
+                    text = "Davet kodu oluşturuldu",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
+
+                Text(
+                    text = "Bu kod ile başkalarını alanına davet edebilirsin.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+
+                // Kod Kutusu
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = inviteCode,
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Monospace,
+                                letterSpacing = 2.sp,
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f),
+                        )
+
+                        IconButton(
+                            onClick = {
+                                clipboardManager.setText(AnnotatedString(inviteCode))
+                                isCopied = true
+                            },
+                            modifier = Modifier.size(36.dp),
+                        ) {
+                            Icon(
+                                imageVector = if (isCopied) Icons.Outlined.Check else Icons.Outlined.ContentCopy,
+                                contentDescription = "Kodu kopyala",
+                                tint = if (isCopied) Color(0xFF16A34A) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
+                }
+
+                Text(
+                    text = if (isCopied) "Kod panoya kopyalandı!" else "Yalnızca güvendiğin kişilerle paylaş.",
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                    color = if (isCopied) Color(0xFF16A34A) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        },
+        confirmButton = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(
+                    onClick = {
+                        clipboardManager.setText(AnnotatedString(inviteCode))
+                        isCopied = true
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = FeniqoSageGreen),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = if (isCopied) "Kopyalandı" else "Kodu kopyala",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = "Kapat",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+        },
+        dismissButton = null,
+    )
+}
+
+/**
+ * 08. Rol Değişikliği Diyaloğu (Görsel 08).
+ */
+@Composable
+private fun WorkspaceRoleChangeDialog(
+    member: WorkspaceMemberUiModel,
+    selectedRole: WorkspaceRole,
+    onSelectRole: (WorkspaceRole) -> Unit,
+    isSubmitting: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val initialLetter = member.displayName.firstOrNull()?.uppercase() ?: "Ü"
+
+    AlertDialog(
+        onDismissRequest = { if (!isSubmitting) onDismiss() },
+        title = {
+            Text(
+                text = "Üye rolünü değiştir",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                // Hedef üye kartı
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Surface(
+                            modifier = Modifier.size(36.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = initialLetter,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = member.displayName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                text = "Mevcut rol: ${member.role.toTurkishDisplayName()}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+
+                // Düzenleyici Seçeneği
+                RoleRadioItem(
+                    title = "Düzenleyici",
+                    subtext = "Kayıtları düzenleyebilir.",
+                    icon = Icons.Outlined.Edit,
+                    isSelected = selectedRole == WorkspaceRole.EDITOR,
+                    onClick = { onSelectRole(WorkspaceRole.EDITOR) },
+                )
+
+                // İzleyici Seçeneği
+                RoleRadioItem(
+                    title = "İzleyici",
+                    subtext = "Kayıtları görüntüleyebilir.",
+                    icon = Icons.Outlined.Visibility,
+                    isSelected = selectedRole == WorkspaceRole.VIEWER,
+                    onClick = { onSelectRole(WorkspaceRole.VIEWER) },
+                )
+            }
+        },
+        confirmButton = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(
+                    onClick = onConfirm,
+                    enabled = !isSubmitting,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = FeniqoSageGreen),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    if (isSubmitting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.White,
+                        )
+                    } else {
+                        Text(
+                            text = "Değişikliği onayla",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = onDismiss,
+                    enabled = !isSubmitting,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = "Vazgeç",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+        },
+        dismissButton = null,
+    )
+}
+
+@Composable
+private fun RoleRadioItem(
+    title: String,
+    subtext: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) FeniqoSageGreenContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.surface,
+        ),
+        border = BorderStroke(
+            if (isSelected) 1.5.dp else 1.dp,
+            if (isSelected) FeniqoSageGreen else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            DialogRadioCircle(isSelected = isSelected)
+            Spacer(modifier = Modifier.width(12.dp))
+            Surface(
+                modifier = Modifier.size(34.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = subtext,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 09. Üye Çıkarma Diyaloğu (Görsel 09).
+ */
+@Composable
+private fun WorkspaceMemberRemovalDialog(
+    member: WorkspaceMemberUiModel,
+    workspaceName: String,
+    isSubmitting: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val initialLetter = member.displayName.firstOrNull()?.uppercase() ?: "Ü"
+
+    AlertDialog(
+        onDismissRequest = { if (!isSubmitting) onDismiss() },
+        title = null,
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Surface(
+                    modifier = Modifier.size(60.dp),
+                    shape = CircleShape,
+                    color = Color(0xFFFEE2E2),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Outlined.PersonRemove,
+                            contentDescription = null,
+                            tint = Color(0xFFDC2626),
+                            modifier = Modifier.size(30.dp),
+                        )
+                    }
+                }
+
+                Text(
+                    text = "Üye çıkarılsın mı?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
+
+                // Hedef üye kutusu
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Surface(
+                            modifier = Modifier.size(36.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = initialLetter,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = member.displayName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+
+                Text(
+                    text = "Bu üye $workspaceName alanına erişimini kaybedecek.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        },
+        confirmButton = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(
+                    onClick = onConfirm,
+                    enabled = !isSubmitting,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    if (isSubmitting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.White,
+                        )
+                    } else {
+                        Text(
+                            text = "Üyeyi çıkar",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = onDismiss,
+                    enabled = !isSubmitting,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = "Vazgeç",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+        },
+        dismissButton = null,
+    )
+}
+
+/**
+ * 10. Sahiplik Devri Diyaloğu (Görsel 10).
+ */
+@Composable
+private fun WorkspaceOwnershipTransferDialog(
+    eligibleMembers: List<WorkspaceMemberUiModel>,
+    pendingTarget: WorkspaceMemberUiModel?,
+    onRequestTransfer: (WorkspaceMemberUiModel) -> Unit,
+    onConfirmTransfer: () -> Unit,
+    isSubmitting: Boolean,
+    onDismiss: () -> Unit,
+) {
+    var selectedMember by remember { mutableStateOf(pendingTarget ?: eligibleMembers.firstOrNull()) }
+
+    AlertDialog(
+        onDismissRequest = { if (!isSubmitting) onDismiss() },
+        title = {
+            Text(
+                text = "Sahipliği kime devretmek istiyorsun?",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (eligibleMembers.isEmpty()) {
+                    Text(
+                        text = "Sahipliği devretmek için alanda en az bir aktif üye bulunmalıdır.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    eligibleMembers.forEach { member ->
+                        val isChecked = member.userId == selectedMember?.userId
+                        val initialLetter = member.displayName.firstOrNull()?.uppercase() ?: "Ü"
+
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { selectedMember = member },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isChecked) FeniqoSageGreenContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.surface,
+                            ),
+                            border = BorderStroke(
+                                if (isChecked) 1.5.dp else 1.dp,
+                                if (isChecked) FeniqoSageGreen else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                            ),
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                DialogRadioCircle(isSelected = isChecked)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Surface(
+                                    modifier = Modifier.size(34.dp),
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = initialLetter,
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = member.displayName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+                        }
+                    }
+
+                    selectedMember?.let { target ->
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            color = FeniqoSageGreenContainer.copy(alpha = 0.35f),
+                            border = BorderStroke(1.dp, FeniqoSageGreen.copy(alpha = 0.4f)),
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Text(
+                                    text = "Sahiplik ${target.displayName}'a devredilsin mi?",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    text = "${target.displayName} alan sahibi olacak. Sen düzenleyici olacaksın.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (eligibleMembers.isNotEmpty() && selectedMember != null) {
+                    Button(
+                        onClick = {
+                            val target = selectedMember
+                            if (target != null) {
+                                if (pendingTarget == null || pendingTarget.userId != target.userId) {
+                                    onRequestTransfer(target)
+                                } else {
+                                    onConfirmTransfer()
+                                }
+                            }
+                        },
+                        enabled = !isSubmitting,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = FeniqoSageGreen),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        if (isSubmitting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.White,
+                            )
+                        } else {
+                            Text(
+                                text = "Sahipliği devret",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = onDismiss,
+                    enabled = !isSubmitting,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = "Vazgeç",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+        },
+        dismissButton = null,
+    )
+}
+
+/**
+ * 11. Alandan Ayrılma Diyaloğu (Görsel 11).
+ */
+@Composable
+private fun WorkspaceLeaveDialog(
+    workspaceName: String,
+    isSubmitting: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = { if (!isSubmitting) onDismiss() },
+        title = null,
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Surface(
+                    modifier = Modifier.size(60.dp),
+                    shape = CircleShape,
+                    color = Color(0xFFFEE2E2),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
+                            contentDescription = null,
+                            tint = Color(0xFFDC2626),
+                            modifier = Modifier.size(30.dp),
+                        )
+                    }
+                }
+
+                Text(
+                    text = "Alandan ayrılmak istiyor musun?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
+
+                Text(
+                    text = workspaceName,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = FeniqoSageGreen,
+                    textAlign = TextAlign.Center,
+                )
+
+                Text(
+                    text = "Bu alandaki kayıtlara erişimini kaybedeceksin.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        },
+        confirmButton = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(
+                    onClick = onConfirm,
+                    enabled = !isSubmitting,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    if (isSubmitting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.White,
+                        )
+                    } else {
+                        Text(
+                            text = "Alandan ayrıl",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = onDismiss,
+                    enabled = !isSubmitting,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = "Vazgeç",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+        },
+        dismissButton = null,
+    )
+}
+
+/**
+ * Hata Bannerı.
+ */
+@Composable
+private fun DetailsErrorBanner(
     message: FinanceUiMessage,
     onDismiss: () -> Unit,
     enabled: Boolean,
@@ -939,39 +1604,70 @@ private fun WorkspaceDetailsErrorBanner(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(FeniqoRadius.Small),
-        color = MaterialTheme.colorScheme.errorContainer,
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFFFEE2E2),
+        border = BorderStroke(1.dp, Color(0xFFFECACA)),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = FeniqoSpacing.Medium, vertical = FeniqoSpacing.Small),
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
+            Icon(
+                imageVector = Icons.Outlined.Info,
+                contentDescription = null,
+                tint = Color(0xFFDC2626),
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = message.toDisplayText(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF991B1B),
                 modifier = Modifier.weight(1f),
             )
-
-            TextButton(
+            IconButton(
                 onClick = onDismiss,
                 enabled = enabled,
-                modifier = Modifier.semantics {
-                    contentDescription = "Hata mesajını kapat"
-                },
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                ),
+                modifier = Modifier.size(28.dp),
             ) {
-                Text(
-                    text = "Kapat",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
+                Icon(
+                    imageVector = Icons.Outlined.Close,
+                    contentDescription = "Hata mesajını kapat",
+                    tint = Color(0xFF991B1B),
+                    modifier = Modifier.size(16.dp),
                 )
             }
         }
     }
+}
+
+@Composable
+private fun DialogRadioCircle(isSelected: Boolean) {
+    Surface(
+        modifier = Modifier.size(20.dp),
+        shape = CircleShape,
+        color = Color.Transparent,
+        border = BorderStroke(
+            if (isSelected) 2.dp else 1.5.dp,
+            if (isSelected) FeniqoSageGreen else MaterialTheme.colorScheme.outlineVariant,
+        ),
+    ) {
+        if (isSelected) {
+            Box(contentAlignment = Alignment.Center) {
+                Surface(
+                    modifier = Modifier.size(10.dp),
+                    shape = CircleShape,
+                    color = FeniqoSageGreen,
+                ) {}
+            }
+        }
+    }
+}
+
+private fun WorkspaceRole.toTurkishDisplayName(): String = when (this) {
+    WorkspaceRole.OWNER -> "Sahip"
+    WorkspaceRole.EDITOR -> "Düzenleyici"
+    WorkspaceRole.VIEWER -> "İzleyici"
 }

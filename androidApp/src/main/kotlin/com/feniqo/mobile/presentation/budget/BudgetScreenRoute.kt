@@ -26,6 +26,7 @@ import com.feniqo.mobile.presentation.screen.BudgetsScreen
 fun BudgetScreenRoute(
     onAddBudget: (YearMonth) -> Unit,
     onEditBudget: (EntityId, YearMonth) -> Unit,
+    onBudgetClick: (EntityId, YearMonth) -> Unit = onEditBudget,
     modifier: Modifier = Modifier,
     viewModel: BudgetViewModel = hiltViewModel(),
     onMonthSelected: (YearMonth) -> Unit = { viewModel.processIntent(BudgetIntent.SelectMonth(it)) },
@@ -61,6 +62,7 @@ fun BudgetScreenRoute(
                 state.selectedMonth?.let { onAddBudget(it) }
             },
             onEditBudget = onEditBudget,
+            onBudgetClick = onBudgetClick,
             onRequestDelete = { budget ->
                 viewModel.processIntent(BudgetIntent.RequestDelete(budget))
             },

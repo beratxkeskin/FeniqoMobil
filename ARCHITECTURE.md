@@ -205,3 +205,7 @@ Yeni araç veya geliştirici:
 3. Değişiklik bu sözleşmeyi etkiliyorsa önce kısa bir mimari karar önerir.
 4. Onaylanan karar bu belgede ve gerekirse `docs/adr/` altında güncellenir.
 5. Kod, test ve ilgili belgeler aynı değişiklik setinde tutulur.
+
+### İşlem durumunun sunumu (2026-09-14)
+
+İşlem domain modeli, Room mapper üzerinden kullanıcıya gösterilecek nullable SyncStatus taşır; version/baseVersion ve outbox teknik alanları UI'a taşınmaz. Çakışma snapshot JSON'u repository katmanında Transaction modeline çevrilir; UI yalnız bu domain karşılaştırmasını tüketir. Bilinmeyen veya okunamayan durum senkronize kabul edilmez.

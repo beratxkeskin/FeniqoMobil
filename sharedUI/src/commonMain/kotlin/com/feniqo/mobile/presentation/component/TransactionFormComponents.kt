@@ -1,5 +1,9 @@
 package com.feniqo.mobile.presentation.component
 
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,14 +22,24 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountBalance
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.CreditCard
+import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
@@ -44,6 +58,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -54,6 +69,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.LocalDate
@@ -61,15 +77,18 @@ import com.feniqo.mobile.domain.model.PaymentMethod
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.theme.FeniqoRadius
+import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoStatusColor
 import com.feniqo.mobile.presentation.transaction.InstallmentDisplayModel
 import com.feniqo.mobile.presentation.transaction.TransactionCategoryOptionUiModel
 import com.feniqo.mobile.presentation.util.ColorParser
+import com.feniqo.mobile.presentation.util.MoneyFormatter
 import com.feniqo.mobile.presentation.workspace.WorkspaceMemberUiModel
 
 /**
  * İşlem türü seçicisi bileşenidir (Gider / Gelir).
+ * Sıcak-lüks segment tasarımıyla aktif türü ve açıklayıcı alt metinleri gösterir.
  */
 @Composable
 fun TransactionTypeSelector(
@@ -89,75 +108,79 @@ fun TransactionTypeSelector(
         val isExpense = selectedType == TransactionType.EXPENSE
         val isIncome = selectedType == TransactionType.INCOME
 
-        // Gider Seçeneği
+        // Gider Segmenti
         Surface(
             selected = isExpense,
             onClick = { onTypeChange(TransactionType.EXPENSE) },
             enabled = enabled,
             shape = RoundedCornerShape(FeniqoRadius.Small),
             color = if (isExpense) {
-                MaterialTheme.colorScheme.errorContainer
+                MaterialTheme.colorScheme.primary
             } else {
                 Color.Transparent
             },
             modifier = Modifier
                 .weight(1f)
-                .defaultMinSize(minHeight = 48.dp)
+                .defaultMinSize(minHeight = 52.dp)
                 .semantics {
-                    role = Role.RadioButton
-                    contentDescription = "Gider türü seçimi"
+                    role = Role.Tab
+                    contentDescription = "Gider seçimi, Harcamalar ve gider takibi"
                 },
         ) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.padding(vertical = FeniqoSpacing.Small),
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(vertical = FeniqoSpacing.Small, horizontal = FeniqoSpacing.ExtraSmall),
             ) {
                 Text(
                     text = "Gider",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = if (isExpense) FontWeight.Bold else FontWeight.Medium,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = if (isExpense) FontWeight.Bold else FontWeight.SemiBold,
                     color = if (isExpense) {
-                        MaterialTheme.colorScheme.onErrorContainer
+                        MaterialTheme.colorScheme.onPrimary
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     },
                 )
+
             }
         }
 
-        // Gelir Seçeneği
+        // Gelir Segmenti
         Surface(
             selected = isIncome,
             onClick = { onTypeChange(TransactionType.INCOME) },
             enabled = enabled,
             shape = RoundedCornerShape(FeniqoRadius.Small),
             color = if (isIncome) {
-                MaterialTheme.colorScheme.primaryContainer
+                MaterialTheme.colorScheme.primary
             } else {
                 Color.Transparent
             },
             modifier = Modifier
                 .weight(1f)
-                .defaultMinSize(minHeight = 48.dp)
+                .defaultMinSize(minHeight = 52.dp)
                 .semantics {
-                    role = Role.RadioButton
-                    contentDescription = "Gelir türü seçimi"
+                    role = Role.Tab
+                    contentDescription = "Gelir seçimi, Maaş, serbest gelir ve ek kazanç"
                 },
         ) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.padding(vertical = FeniqoSpacing.Small),
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(vertical = FeniqoSpacing.Small, horizontal = FeniqoSpacing.ExtraSmall),
             ) {
                 Text(
                     text = "Gelir",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = if (isIncome) FontWeight.Bold else FontWeight.Medium,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = if (isIncome) FontWeight.Bold else FontWeight.SemiBold,
                     color = if (isIncome) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
+                        MaterialTheme.colorScheme.onPrimary
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     },
                 )
+
             }
         }
     }
@@ -165,6 +188,7 @@ fun TransactionTypeSelector(
 
 /**
  * Tutar ve para birimi giriş alanı bileşenidir.
+ * Büyük ve belirgin serif/tabular gösterim sunar; yazım esnasında agresif yeniden biçimlendirme yapmaz.
  */
 @Composable
 fun TransactionAmountField(
@@ -176,59 +200,58 @@ fun TransactionAmountField(
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    var currencyExpanded by remember { mutableStateOf(false) }
     Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
+        modifier = modifier.fillMaxWidth().padding(vertical = FeniqoSpacing.Large),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
     ) {
-        Text(
-            text = "Tutar",
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
+        val amountStyle = MaterialTheme.typography.headlineLarge.copy(
+            fontSize = 40.sp, fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface, fontFeatureSettings = "tnum",
         )
-
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            OutlinedTextField(
+            Text(MoneyFormatter.getCurrencySymbol(currency), style = amountStyle)
+            BasicTextField(
                 value = amountText,
-                onValueChange = onAmountChange,
+                onValueChange = { input -> onAmountChange(input.filter { it.isDigit() || it == ',' || it == '.' }) },
                 enabled = enabled,
-                isError = errorText != null,
-                placeholder = { Text("0,00") },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Decimal,
-                    imeAction = ImeAction.Next,
-                ),
-                shape = RoundedCornerShape(FeniqoRadius.Medium),
                 singleLine = true,
-                modifier = Modifier
-                    .weight(1f)
-                    .defaultMinSize(minHeight = 48.dp)
-                    .semantics { contentDescription = "İşlem tutarı" },
-            )
-
-            // Para Birimi Seçicisi
-            CurrencySelector(
-                selectedCurrency = currency,
-                onCurrencyChange = onCurrencyChange,
-                enabled = enabled,
-            )
-        }
-
-        if (errorText != null) {
-            Text(
-                text = errorText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(start = FeniqoSpacing.Small),
+                textStyle = amountStyle,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                modifier = Modifier.width(androidx.compose.foundation.layout.IntrinsicSize.Min)
+                    .defaultMinSize(minWidth = 100.dp, minHeight = 56.dp)
+                    .semantics { contentDescription = "İşlem tutarı girişi" },
+                decorationBox = { field ->
+                    Box {
+                        if (amountText.isEmpty()) Text("0,00", style = amountStyle.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant))
+                        field()
+                    }
+                },
             )
         }
+        TextButton(onClick = { currencyExpanded = !currencyExpanded }, enabled = enabled) {
+            Text(when (currency) {
+                Currency.TRY -> "Türk Lirası (TRY)"
+                Currency.USD -> "Amerikan Doları (USD)"
+                Currency.EUR -> "Euro (EUR)"
+            }, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = null)
+        }
+        if (currencyExpanded) CurrencySelector(currency, {
+            onCurrencyChange(it)
+            currencyExpanded = false
+        }, enabled)
+        errorText?.let { Text(it, color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall) }
     }
 }
-
 /**
  * Para birimi seçim çipleri bileşenidir.
  */
@@ -259,7 +282,7 @@ fun CurrencySelector(
                     Color.Transparent
                 },
                 modifier = Modifier
-                    .defaultMinSize(minWidth = 40.dp, minHeight = 44.dp)
+                    .defaultMinSize(minWidth = 40.dp, minHeight = 40.dp)
                     .semantics {
                         role = Role.RadioButton
                         contentDescription = "Para birimi ${curr.code}"
@@ -301,10 +324,31 @@ fun TransactionCategoryPicker(
     modifier: Modifier = Modifier,
     onAddCategoryClick: () -> Unit = {},
 ) {
+    var open by remember { mutableStateOf(false) }
+    var categoryQuery by remember { mutableStateOf("") }
+    val selected = availableCategories.find { it.id == selectedCategoryId }
+    Surface(onClick = { open = true }, enabled = enabled, modifier = modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp)) {
+        Row(Modifier.defaultMinSize(minHeight = 80.dp).padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            CategoryTonalIcon(selected?.iconKey, ColorParser.parseHexColorOrNull(selected?.colorHex) ?: MaterialTheme.colorScheme.primary, containerSize = 48.dp)
+            Column(Modifier.weight(1f)) {
+                Text("Kategori", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(selected?.name ?: "Kategori seç", style = MaterialTheme.typography.titleMedium)
+            }
+            Icon(Icons.Outlined.KeyboardArrowDown, null)
+        }
+    }
+    if (errorText != null) Text(errorText, color = MaterialTheme.colorScheme.error)
+    if (open) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { open = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+            Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
     ) {
+        TextButton(onClick = { open = false }) { Text("Geri") }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -334,7 +378,7 @@ fun TransactionCategoryPicker(
                 }
 
                 TextButton(
-                    onClick = onAddCategoryClick,
+                    onClick = { open = false; onAddCategoryClick() },
                     enabled = enabled,
                     modifier = Modifier
                         .defaultMinSize(minHeight = 48.dp)
@@ -391,11 +435,19 @@ fun TransactionCategoryPicker(
                 modifier = Modifier.padding(vertical = FeniqoSpacing.Small),
             )
         } else {
+            OutlinedTextField(
+                value = categoryQuery,
+                onValueChange = { categoryQuery = it },
+                placeholder = { Text("Kategori ara") },
+                singleLine = true,
+                enabled = enabled,
+                modifier = Modifier.fillMaxWidth(),
+            )
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
                 verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
             ) {
-                availableCategories.forEach { category ->
+                availableCategories.filter { it.name.contains(categoryQuery, ignoreCase = true) }.forEach { category ->
                     val isSelected = selectedCategoryId == category.id
                     val color = ColorParser.parseHexColorOrNull(category.colorHex)
 
@@ -403,7 +455,7 @@ fun TransactionCategoryPicker(
                         selected = isSelected,
                         onClick = {
                             if (category.isSelectable) {
-                                onCategoryChange(if (isSelected) null else category.id)
+                                onCategoryChange(category.id); open = false
                             }
                         },
                         enabled = enabled && category.isSelectable,
@@ -411,7 +463,7 @@ fun TransactionCategoryPicker(
                             CategoryTonalIcon(
                                 iconKey = category.iconKey,
                                 color = color ?: MaterialTheme.colorScheme.primary,
-                                containerSize = 28.dp,
+                                containerSize = 48.dp,
                             )
                         },
                         label = {
@@ -444,6 +496,9 @@ fun TransactionCategoryPicker(
             )
         }
     }
+            }
+        }
+    }
 }
 
 /**
@@ -457,74 +512,29 @@ fun TransactionDatePickerField(
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
-    ) {
-        Text(
-            text = "İşlem Tarihi",
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-
-        val displayText = if (date != null) {
-            formatDisplayDate(date)
-        } else {
-            "Tarih seçin"
-        }
-
-        Surface(
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Surface(onClick = onDateClick, enabled = enabled,
             shape = RoundedCornerShape(FeniqoRadius.Medium),
-            border = androidx.compose.foundation.BorderStroke(
-                width = 1.dp,
-                color = if (errorText != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
-            ),
-            color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier
-                .fillMaxWidth()
-                .defaultMinSize(minHeight = 48.dp)
-                .clickable(enabled = enabled, onClick = onDateClick)
-                .semantics {
-                    role = Role.Button
-                    contentDescription = "İşlem tarihi: $displayText"
-                },
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = FeniqoSpacing.Large, vertical = FeniqoSpacing.Medium),
-                horizontalArrangement = Arrangement.SpaceBetween,
+            color = MaterialTheme.colorScheme.surface) {
+            Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 80.dp).padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = displayText,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = if (date != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-
-                Text(
-                    text = "Tarih Seç",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Icon(Icons.Outlined.CalendarMonth, null, modifier = Modifier.size(32.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Tarih", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(date?.let(::formatDisplayDate) ?: "Tarih seçin",
+                        style = MaterialTheme.typography.titleMedium)
+                }
+                Icon(Icons.Outlined.KeyboardArrowDown, null)
             }
         }
-
-        if (errorText != null) {
-            Text(
-                text = errorText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(start = FeniqoSpacing.Small),
-            )
-        }
+        errorText?.let { Text(it, color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall) }
     }
 }
-
 /**
  * Ödeme yöntemi seçici bileşenidir.
+ * Tüm 5 ödeme yöntemini (Nakit, Kredi Kartı, Banka Kartı, Havale/EFT, Diğer) semantik ikonlarıyla sunar.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -534,39 +544,50 @@ fun TransactionPaymentMethodSelector(
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
-    ) {
-        Text(
-            text = "Ödeme Yöntemi",
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-            verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
-        ) {
-            PaymentMethod.entries.forEach { method ->
-                val isSelected = method == selectedMethod
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { onMethodChange(method) },
-                    enabled = enabled,
-                    label = { Text(method.toDisplayText()) },
-                    modifier = Modifier
-                        .defaultMinSize(minHeight = 48.dp)
-                        .semantics {
-                            contentDescription = "Ödeme yöntemi ${method.toDisplayText()}"
-                        },
-                )
+    var open by remember { mutableStateOf(false) }
+    var draft by remember(selectedMethod) { mutableStateOf(selectedMethod) }
+    Surface(onClick = { draft = selectedMethod; open = true }, enabled = enabled,
+        modifier = modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp)) {
+        Row(Modifier.defaultMinSize(minHeight = 80.dp).padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Icon(Icons.Outlined.CreditCard, null, modifier = Modifier.size(32.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Ödeme yöntemi", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(selectedMethod.toDisplayText(), style = MaterialTheme.typography.titleMedium)
+            }
+            Icon(Icons.Outlined.KeyboardArrowDown, null)
+        }
+    }
+    if (open) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { open = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+            Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    TextButton(onClick = { open = false }) { Text("Geri") }
+                    Text("Ödeme yöntemi", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+                    PaymentMethod.entries.forEach { method ->
+                        Surface(onClick = { draft = method }, shape = RoundedCornerShape(16.dp),
+                            color = if (draft == method) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface) {
+                            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(when (method) {
+                                    PaymentMethod.CASH -> Icons.Outlined.Payments
+                                    PaymentMethod.BANK_TRANSFER -> Icons.Outlined.AccountBalance
+                                    PaymentMethod.OTHER -> Icons.Outlined.MoreHoriz
+                                    else -> Icons.Outlined.CreditCard
+                                }, null)
+                                Text(method.toDisplayText(), Modifier.weight(1f).padding(horizontal = 16.dp))
+                                androidx.compose.material3.RadioButton(selected = draft == method, onClick = null)
+                            }
+                        }
+                    }
+                    androidx.compose.material3.Button(onClick = { onMethodChange(draft); open = false },
+                        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp)) { Text("Seçimi uygula") }
+                }
             }
         }
     }
 }
-
 /**
  * Taksit seçeneği ve taksit sayısı giriş alanı bileşenidir.
  */
@@ -718,64 +739,31 @@ fun TransactionTitleField(
     isExpense: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "İşlem Adı *",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-
-            Text(
-                text = "${title.length}/100",
-                style = MaterialTheme.typography.labelSmall,
-                color = if (title.length > 100) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-            )
-        }
-
-        OutlinedTextField(
-            value = title,
-            onValueChange = onTitleChange,
-            enabled = enabled,
-            isError = errorText != null,
-            placeholder = {
-                Text(if (isExpense) "Örn: Market Alışverişi, Kahve" else "Örn: Maaş, Danışmanlık")
-            },
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Text,
-                imeAction = ImeAction.Next,
-            ),
-            shape = RoundedCornerShape(FeniqoRadius.Medium),
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .defaultMinSize(minHeight = 48.dp)
-                .semantics { contentDescription = "İşlem Adı" },
-        )
-
-        if (errorText != null) {
-            Text(
-                text = errorText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(start = FeniqoSpacing.Small),
-            )
+    Surface(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(FeniqoRadius.Medium),
+        color = MaterialTheme.colorScheme.surface) {
+        Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.Description, null, modifier = Modifier.size(32.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("İşlem adı", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedTextField(
+                    value = title, onValueChange = onTitleChange, enabled = enabled,
+                    isError = errorText != null, singleLine = true,
+                    placeholder = { Text(if (isExpense) "Örn: Market alışverişi" else "Örn: Maaş") },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    shape = RoundedCornerShape(FeniqoRadius.Small),
+                    modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
+                        .semantics { contentDescription = "İşlem Adı" },
+                )
+                if (errorText != null) Text(errorText, color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall)
+                if (title.length >= 90) Text("${title.length}/100",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall)
+            }
         }
     }
 }
-
 /**
  * Not / Ek Açıklama (isteğe bağlı) giriş alanı bileşenidir.
  */

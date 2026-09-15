@@ -157,6 +157,66 @@ class TransactionFormViewModel @Inject constructor(
 
     private var existingReceiptPath: ReceiptPath? = null
 
+    private data class FormSnapshot(
+        val amountText: String = "",
+        val currency: Currency = Currency.TRY,
+        val type: TransactionType = TransactionType.EXPENSE,
+        val categoryId: EntityId? = null,
+        val transactionDate: LocalDate? = null,
+        val title: String = "",
+        val note: String = "",
+        val paymentMethod: PaymentMethod = PaymentMethod.CASH,
+        val isInstallmentEnabled: Boolean = false,
+        val installmentCountText: String = "3",
+        val hasReceipt: Boolean = false,
+        val paidByUserId: EntityId? = null,
+        val participantUserIds: Set<EntityId> = emptySet(),
+    )
+
+    private var initialSnapshot: FormSnapshot? = if (!isEditMode) {
+        FormSnapshot(
+            amountText = "",
+            currency = Currency.TRY,
+            type = initialTransactionType,
+            categoryId = null,
+            transactionDate = currentDateProvider.today(),
+            title = "",
+            note = "",
+            paymentMethod = PaymentMethod.CASH,
+            isInstallmentEnabled = false,
+            installmentCountText = "3",
+            hasReceipt = false,
+            paidByUserId = null,
+            participantUserIds = emptySet(),
+        )
+    } else {
+        null
+    }
+
+    private fun calculateHasUnsavedChanges(state: TransactionFormUiState): Boolean {
+        val snapshot = initialSnapshot ?: return false
+        return state.amountText != snapshot.amountText ||
+            state.currency != snapshot.currency ||
+            state.type != snapshot.type ||
+            state.selectedCategoryId != snapshot.categoryId ||
+            state.transactionDate != snapshot.transactionDate ||
+            state.title != snapshot.title ||
+            state.note != snapshot.note ||
+            state.paymentMethod != snapshot.paymentMethod ||
+            state.isInstallmentEnabled != snapshot.isInstallmentEnabled ||
+            (state.isInstallmentEnabled && state.installmentCountText != snapshot.installmentCountText) ||
+            state.hasReceipt != snapshot.hasReceipt ||
+            (state.isSharedExpense && (state.selectedPaidByUserId != snapshot.paidByUserId || state.selectedParticipantUserIds != snapshot.participantUserIds))
+    }
+
+    private fun updateStateWithDirtyCheck(transform: (TransactionFormUiState) -> TransactionFormUiState) {
+        _uiState.update { current ->
+            val updated = transform(current)
+            val dirty = calculateHasUnsavedChanges(updated)
+            updated.copy(hasUnsavedChanges = dirty)
+        }
+    }
+
     private val _uiState = MutableStateFlow(
         TransactionFormUiState(
             transactionDate = currentDateProvider.today(),
@@ -165,6 +225,7 @@ class TransactionFormViewModel @Inject constructor(
             isLoadingTransaction = isEditMode && initialLoadError == null,
             loadError = initialLoadError,
             isReceiptFeatureAvailable = !isEditMode,
+            hasUnsavedChanges = false,
         ),
     )
     val uiState: StateFlow<TransactionFormUiState> = _uiState.asStateFlow()
@@ -188,6 +249,7 @@ class TransactionFormViewModel @Inject constructor(
                     it.copy(
                         activeWorkspaceId = currentWorkspaceId,
                         activeWorkspaceName = workspaceName,
+                        activeWorkspaceType = activeWorkspace?.type ?: com.feniqo.mobile.domain.model.WorkspaceType.PERSONAL,
                     )
                 }
 
@@ -320,12 +382,20 @@ class TransactionFormViewModel @Inject constructor(
                                     selectedParticipants = setOf(selectedPayer)
                                 }
 
-                                state.copy(
+                                if (!isEditMode && initialSnapshot != null && initialSnapshot?.paidByUserId == null && selectedPayer != null) {
+                                    initialSnapshot = initialSnapshot?.copy(
+                                        paidByUserId = selectedPayer,
+                                        participantUserIds = selectedParticipants,
+                                    )
+                                }
+
+                                val updated = state.copy(
                                     workspaceMembers = uiMembers,
                                     isLoadingWorkspaceMembers = false,
                                     selectedPaidByUserId = selectedPayer,
                                     selectedParticipantUserIds = selectedParticipants,
                                 )
+                                updated.copy(hasUnsavedChanges = calculateHasUnsavedChanges(updated))
                             }
                         }
                         .catch { e ->
@@ -334,14 +404,15 @@ class TransactionFormViewModel @Inject constructor(
                             _uiState.update { it.copy(isLoadingWorkspaceMembers = false) }
                         }
                 } else {
-                    _uiState.update {
-                        it.copy(
+                    _uiState.update { state ->
+                        val updated = state.copy(
                             workspaceMembers = emptyList(),
                             isLoadingWorkspaceMembers = false,
                             selectedPaidByUserId = null,
                             selectedParticipantUserIds = emptySet(),
                             splitError = null,
                         )
+                        updated.copy(hasUnsavedChanges = calculateHasUnsavedChanges(updated))
                     }
                     kotlinx.coroutines.flow.emptyFlow()
                 }
@@ -387,6 +458,22 @@ class TransactionFormViewModel @Inject constructor(
 
                 val amountText = formatMinorUnitsToInputText(transaction.amount.amountMinor, transaction.amount.currency)
 
+                initialSnapshot = FormSnapshot(
+                    amountText = amountText,
+                    currency = transaction.amount.currency,
+                    type = transaction.type,
+                    categoryId = transaction.categoryId,
+                    transactionDate = transaction.transactionDate,
+                    title = transaction.description ?: "",
+                    note = transaction.note ?: "",
+                    paymentMethod = transaction.paymentMethod,
+                    isInstallmentEnabled = false,
+                    installmentCountText = "3",
+                    hasReceipt = transaction.receiptPath != null,
+                    paidByUserId = transaction.paidByUserId,
+                    participantUserIds = transaction.participantUserIds.toSet(),
+                )
+
                 _uiState.update {
                     it.copy(
                         amountText = amountText,
@@ -406,9 +493,11 @@ class TransactionFormViewModel @Inject constructor(
                                 badgeText = "${inst.number}/${inst.total}",
                             )
                         },
+                        hasReceipt = transaction.receiptPath != null,
                         selectedPaidByUserId = transaction.paidByUserId,
                         selectedParticipantUserIds = transaction.participantUserIds.toSet(),
                         isLoadingTransaction = false,
+                        hasUnsavedChanges = false,
                     )
                 }
             } catch (e: CancellationException) {
@@ -425,7 +514,7 @@ class TransactionFormViewModel @Inject constructor(
     }
 
     fun onAmountChanged(amountText: String) {
-        _uiState.update {
+        updateStateWithDirtyCheck {
             it.copy(
                 amountText = amountText,
                 amountError = null,
@@ -436,7 +525,7 @@ class TransactionFormViewModel @Inject constructor(
     }
 
     fun onCurrencyChanged(currency: Currency) {
-        _uiState.update {
+        updateStateWithDirtyCheck {
             it.copy(
                 currency = currency,
                 amountError = null,
@@ -450,7 +539,7 @@ class TransactionFormViewModel @Inject constructor(
         if (_typeState.value == type) return
 
         _typeState.value = type
-        _uiState.update {
+        updateStateWithDirtyCheck {
             val isInstallmentAvailable = !it.isEditMode && type == TransactionType.EXPENSE && it.paymentMethod == PaymentMethod.CREDIT_CARD
             it.copy(
                 type = type,
@@ -465,7 +554,7 @@ class TransactionFormViewModel @Inject constructor(
 
     fun onCategoryChanged(categoryId: EntityId?) {
         if (categoryId == null) {
-            _uiState.update {
+            updateStateWithDirtyCheck {
                 it.copy(
                     selectedCategoryId = null,
                     categoryError = null,
@@ -477,7 +566,7 @@ class TransactionFormViewModel @Inject constructor(
 
         val option = _uiState.value.availableCategories.find { it.id == categoryId }
         if (option != null && option.isSelectable) {
-            _uiState.update {
+            updateStateWithDirtyCheck {
                 it.copy(
                     selectedCategoryId = categoryId,
                     categoryError = null,
@@ -485,7 +574,7 @@ class TransactionFormViewModel @Inject constructor(
                 )
             }
         } else {
-            _uiState.update {
+            updateStateWithDirtyCheck {
                 it.copy(
                     categoryError = TransactionFormFieldError.CATEGORY_UNAVAILABLE,
                     generalMessage = null,
@@ -495,7 +584,7 @@ class TransactionFormViewModel @Inject constructor(
     }
 
     fun onDateChanged(date: LocalDate) {
-        _uiState.update {
+        updateStateWithDirtyCheck {
             it.copy(
                 transactionDate = date,
                 dateError = null,
@@ -505,7 +594,7 @@ class TransactionFormViewModel @Inject constructor(
     }
 
     fun onTitleChanged(title: String) {
-        _uiState.update {
+        updateStateWithDirtyCheck {
             it.copy(
                 title = title,
                 description = title,
@@ -517,7 +606,7 @@ class TransactionFormViewModel @Inject constructor(
     }
 
     fun onNoteChanged(note: String) {
-        _uiState.update {
+        updateStateWithDirtyCheck {
             it.copy(
                 note = note,
                 noteError = null,
@@ -532,7 +621,7 @@ class TransactionFormViewModel @Inject constructor(
 
     /** OCR adayları yalnız kullanıcı onayından sonra form alanlarına uygulanır; kayıt oluşturmaz. */
     fun applyReceiptOcrDraft(draft: ReceiptOcrDraft) {
-        _uiState.update { state ->
+        updateStateWithDirtyCheck { state ->
             val merchantName = draft.merchantName?.value
             val newTitle = merchantName ?: state.title.ifEmpty { state.description }
             state.copy(
@@ -551,8 +640,16 @@ class TransactionFormViewModel @Inject constructor(
         }
     }
 
+    fun onReceiptAttached() {
+        updateStateWithDirtyCheck { it.copy(hasReceipt = true) }
+    }
+
+    fun onReceiptRemoved() {
+        updateStateWithDirtyCheck { it.copy(hasReceipt = false) }
+    }
+
     fun onPaymentMethodChanged(paymentMethod: PaymentMethod) {
-        _uiState.update {
+        updateStateWithDirtyCheck {
             val isInstallmentAvailable = !it.isEditMode && it.type == TransactionType.EXPENSE && paymentMethod == PaymentMethod.CREDIT_CARD
             it.copy(
                 paymentMethod = paymentMethod,
@@ -564,7 +661,7 @@ class TransactionFormViewModel @Inject constructor(
     }
 
     fun onInstallmentToggle(enabled: Boolean) {
-        _uiState.update {
+        updateStateWithDirtyCheck {
             it.copy(
                 isInstallmentEnabled = enabled,
                 installmentCountError = null,
@@ -574,7 +671,7 @@ class TransactionFormViewModel @Inject constructor(
     }
 
     fun onInstallmentCountChanged(countText: String) {
-        _uiState.update {
+        updateStateWithDirtyCheck {
             it.copy(
                 installmentCountText = countText,
                 installmentCountError = null,
@@ -588,7 +685,7 @@ class TransactionFormViewModel @Inject constructor(
         val isMember = currentState.workspaceMembers.any { it.userId == userId }
         if (!isMember) return
 
-        _uiState.update { state ->
+        updateStateWithDirtyCheck { state ->
             val updatedParticipants = if (!state.selectedParticipantUserIds.contains(userId)) {
                 state.selectedParticipantUserIds + userId
             } else {
@@ -608,9 +705,9 @@ class TransactionFormViewModel @Inject constructor(
         val isMember = currentState.workspaceMembers.any { it.userId == userId }
         if (!isMember) return
 
-        _uiState.update { state ->
+        updateStateWithDirtyCheck { state ->
             if (state.selectedPaidByUserId == userId && state.selectedParticipantUserIds.contains(userId)) {
-                return@update state
+                return@updateStateWithDirtyCheck state
             }
 
             val updatedParticipants = if (state.selectedParticipantUserIds.contains(userId)) {
@@ -791,13 +888,15 @@ class TransactionFormViewModel @Inject constructor(
                         description = effectiveTitleTrimmed,
                         paymentMethod = currentState.paymentMethod,
                         transactionDate = date,
-                        receiptPath = existingReceiptPath,
+                        receiptPath = existingReceiptPath.takeIf { currentState.hasReceipt },
                         paidByUserId = paidByUserId,
                         participantUserIds = participantUserIds,
                         note = normalizedNote,
                     )
                     when (val result = updateTransactionUseCase(command, today)) {
                         is RepositoryResult.Success -> {
+                            initialSnapshot = null
+                            _uiState.update { it.copy(hasUnsavedChanges = false) }
                             _events.send(TransactionFormEvent.NavigateBack)
                         }
                         is RepositoryResult.Failure -> {
@@ -824,6 +923,8 @@ class TransactionFormViewModel @Inject constructor(
                     )
                     when (val result = addInstallmentGroupUseCase(command, today, now)) {
                         is RepositoryResult.Success -> {
+                            initialSnapshot = null
+                            _uiState.update { it.copy(hasUnsavedChanges = false) }
                             _events.send(TransactionFormEvent.TransactionCreated(result.value))
                         }
                         is RepositoryResult.Failure -> {
@@ -851,6 +952,8 @@ class TransactionFormViewModel @Inject constructor(
                     )
                     when (val result = addTransactionUseCase(command, today, now)) {
                         is RepositoryResult.Success -> {
+                            initialSnapshot = null
+                            _uiState.update { it.copy(hasUnsavedChanges = false) }
                             _events.send(TransactionFormEvent.TransactionCreated(newId))
                         }
                         is RepositoryResult.Failure -> {

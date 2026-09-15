@@ -96,6 +96,9 @@ data class SyncConflict(
     val entityType: SyncEntityType,
     val localVersion: Long,
     val remoteVersion: Long,
+    val localTransaction: com.feniqo.mobile.domain.model.Transaction? = null,
+    val remoteTransaction: com.feniqo.mobile.domain.model.Transaction? = null,
+    val remoteDeleted: Boolean = false,
 ) {
     init {
         require(localVersion >= 0 && remoteVersion >= 0) { "Senkronizasyon sürümü negatif olamaz." }
