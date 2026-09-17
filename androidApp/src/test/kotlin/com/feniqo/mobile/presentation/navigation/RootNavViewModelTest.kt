@@ -2,6 +2,7 @@ package com.feniqo.mobile.presentation.navigation
 
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.UserProfile
+import com.feniqo.mobile.domain.repository.AuthRecoveryState
 import com.feniqo.mobile.domain.repository.AuthRepository
 import com.feniqo.mobile.domain.repository.AuthSession
 import com.feniqo.mobile.domain.repository.RepositoryResult
@@ -31,9 +32,14 @@ class RootNavViewModelTest {
 
     private class FakeAuthRepository : AuthRepository {
         val sessionFlow = MutableSharedFlow<AuthSession?>(replay = 1)
+        val recoveryStateFlow = MutableStateFlow<AuthRecoveryState>(AuthRecoveryState.Idle)
 
         override fun observeSession(): Flow<AuthSession?> = sessionFlow
         override fun observeCurrentProfile(): Flow<UserProfile?> = MutableStateFlow(null)
+        override fun observeRecoveryState(): Flow<AuthRecoveryState> = recoveryStateFlow
+        override fun clearRecoveryState() {
+            recoveryStateFlow.value = AuthRecoveryState.Idle
+        }
         override suspend fun signIn(email: String, password: String): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
         override suspend fun signUp(email: String, password: String, fullName: String?): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("user-1"))
         override suspend fun refreshSession(): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
@@ -46,10 +52,17 @@ class RootNavViewModelTest {
         expiresAt = Instant.fromEpochMilliseconds(100_000L),
     )
 
+    private fun createViewModel(repository: AuthRepository): RootNavViewModel {
+        return RootNavViewModel(
+            observeAuthSessionUseCase = ObserveAuthSessionUseCase(repository),
+            observeRecoveryStateUseCase = com.feniqo.mobile.domain.usecase.ObserveRecoveryStateUseCase(repository),
+        )
+    }
+
     @Test
     fun initialAuthState_isChecking() {
         val repository = FakeAuthRepository()
-        val viewModel = RootNavViewModel(ObserveAuthSessionUseCase(repository))
+        val viewModel = createViewModel(repository)
 
         assertSame(AppAuthState.Checking, viewModel.authState.value)
     }
@@ -57,7 +70,7 @@ class RootNavViewModelTest {
     @Test
     fun nullSession_emitsUnauthenticated() = runTest {
         val repository = FakeAuthRepository()
-        val viewModel = RootNavViewModel(ObserveAuthSessionUseCase(repository))
+        val viewModel = createViewModel(repository)
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.authState.collect {}
@@ -70,7 +83,7 @@ class RootNavViewModelTest {
     @Test
     fun validSession_emitsAuthenticated() = runTest {
         val repository = FakeAuthRepository()
-        val viewModel = RootNavViewModel(ObserveAuthSessionUseCase(repository))
+        val viewModel = createViewModel(repository)
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.authState.collect {}
@@ -83,7 +96,7 @@ class RootNavViewModelTest {
     @Test
     fun sessionTransitions_updatesStateSequentially() = runTest {
         val repository = FakeAuthRepository()
-        val viewModel = RootNavViewModel(ObserveAuthSessionUseCase(repository))
+        val viewModel = createViewModel(repository)
 
         val observedStates = mutableListOf<AppAuthState>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -115,7 +128,7 @@ class RootNavViewModelTest {
     @Test
     fun duplicateConsecutiveSessions_suppressesRedundantStateEmissions() = runTest {
         val repository = FakeAuthRepository()
-        val viewModel = RootNavViewModel(ObserveAuthSessionUseCase(repository))
+        val viewModel = createViewModel(repository)
 
         val observedStates = mutableListOf<AppAuthState>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -127,6 +140,45 @@ class RootNavViewModelTest {
 
         // Her iki oturum da Authenticated olduğundan distinctUntilChanged tekrar yayınlamaz
         assertEquals(listOf(AppAuthState.Checking, AppAuthState.Authenticated), observedStates)
+    }
+
+    @Test
+    fun recoveryState_overridesAuthenticatedSessionToPasswordRecovery() = runTest {
+        val repository = FakeAuthRepository()
+        val viewModel = createViewModel(repository)
+
+        val observedStates = mutableListOf<AppAuthState>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.authState.collect { observedStates.add(it) }
+        }
+
+        // Kullanıcı önceden oturum açmış durumda
+        repository.sessionFlow.emit(fakeSession)
+        assertEquals(listOf(AppAuthState.Checking, AppAuthState.Authenticated), observedStates)
+
+        // Recovery linki geldiğinde ve doğrulandığında, oturum açık olsa bile Dashboard'a yönlendirilmez
+        repository.recoveryStateFlow.value = AuthRecoveryState.Verified("user@feniqo.com")
+        assertEquals(
+            listOf(
+                AppAuthState.Checking,
+                AppAuthState.Authenticated,
+                AppAuthState.PasswordRecovery(AuthRecoveryState.Verified("user@feniqo.com")),
+            ),
+            observedStates,
+        )
+
+        // Şifre güncellendikten sonra recovery state temizlendiğinde ve oturum kapatıldığında Unauthenticated olur
+        repository.sessionFlow.emit(null)
+        repository.recoveryStateFlow.value = AuthRecoveryState.Idle
+        assertEquals(
+            listOf(
+                AppAuthState.Checking,
+                AppAuthState.Authenticated,
+                AppAuthState.PasswordRecovery(AuthRecoveryState.Verified("user@feniqo.com")),
+                AppAuthState.Unauthenticated,
+            ),
+            observedStates,
+        )
     }
 
     @Test
@@ -142,7 +194,7 @@ class RootNavViewModelTest {
             override suspend fun signOut(): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
         }
 
-        val viewModel = RootNavViewModel(ObserveAuthSessionUseCase(errorRepository))
+        val viewModel = createViewModel(errorRepository)
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.authState.collect {}
@@ -164,7 +216,7 @@ class RootNavViewModelTest {
             override suspend fun signOut(): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
         }
 
-        val viewModel = RootNavViewModel(ObserveAuthSessionUseCase(cancellingRepository))
+        val viewModel = createViewModel(cancellingRepository)
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.authState.collect {}

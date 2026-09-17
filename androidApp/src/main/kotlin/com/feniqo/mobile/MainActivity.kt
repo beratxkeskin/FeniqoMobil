@@ -39,6 +39,9 @@ class MainActivity : FragmentActivity() {
     @Inject
     lateinit var defaultCategorySeeder: DefaultCategorySeeder
 
+    @Inject
+    lateinit var handleAuthDeepLinkUseCase: com.feniqo.mobile.domain.usecase.HandleAuthDeepLinkUseCase
+
     private val rootNavViewModel: RootNavViewModel by viewModels()
     private val syncStatusViewModel: SyncStatusViewModel by viewModels()
     private val appLockViewModel: AppLockViewModel by viewModels()
@@ -57,6 +60,8 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+
+        handleDeepLink(intent?.dataString)
 
         lifecycleScope.launch {
             defaultCategorySeeder.seed()
@@ -125,6 +130,20 @@ class MainActivity : FragmentActivity() {
             appLockViewModel.onBackgrounded(System.currentTimeMillis())
         }
         super.onStop()
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleDeepLink(intent.dataString)
+    }
+
+    private fun handleDeepLink(uriString: String?) {
+        if (!uriString.isNullOrBlank()) {
+            lifecycleScope.launch {
+                handleAuthDeepLinkUseCase(uriString)
+            }
+        }
     }
 
     private fun authenticate(action: AppLockAuthenticationAction) {

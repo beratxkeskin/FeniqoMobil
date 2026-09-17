@@ -9,4 +9,7 @@ sealed interface AppAuthState {
     data object Checking : AppAuthState
     data object Authenticated : AppAuthState
     data object Unauthenticated : AppAuthState
+    data class PasswordRecovery(
+        val recoveryState: com.feniqo.mobile.domain.repository.AuthRecoveryState,
+    ) : AppAuthState
 }

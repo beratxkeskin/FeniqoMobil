@@ -15,6 +15,7 @@ val FeniqoSageGreenLight = Color(0xFF3E7558)
 val FeniqoSageGreenContainer = Color(0xFFE8F1EC)
 val FeniqoTrendGreen = Color(0xFF16A34A)
 val FeniqoTrendGreenBg = Color(0xFFDCFCE7)
+val FeniqoGraphite = Color(0xFF303536)
 
 // Kategori & bütçe renkleri (Mockup uyumlu)
 val FeniqoCategoryFood = Color(0xFF4CAF50)

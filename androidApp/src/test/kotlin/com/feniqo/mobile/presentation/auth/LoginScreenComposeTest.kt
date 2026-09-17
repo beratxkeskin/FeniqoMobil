@@ -15,6 +15,8 @@ import org.junit.Assert.assertEquals
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
+import androidx.compose.ui.test.performScrollTo
+
 @RunWith(RobolectricTestRunner::class)
 class LoginScreenComposeTest {
     @get:Rule
@@ -37,8 +39,8 @@ class LoginScreenComposeTest {
             }
         }
 
-        composeRule.onNodeWithText("Giriş Yap").assertIsDisplayed().assertIsEnabled().performClick()
-        composeRule.onNodeWithText("Hesap Oluştur (Kayıt Ol)").assertIsDisplayed().assertIsEnabled().performClick()
+        composeRule.onNodeWithText("Giriş yap").performScrollTo().assertIsDisplayed().assertIsEnabled().performClick()
+        composeRule.onNodeWithText("Hesap oluştur").performScrollTo().assertIsDisplayed().assertIsEnabled().performClick()
 
         assertEquals(1, submitCount)
         assertEquals(1, registerCount)
@@ -59,7 +61,7 @@ class LoginScreenComposeTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("Giriş yapılıyor").assertIsDisplayed()
-        composeRule.onNodeWithText("Hesap Oluştur (Kayıt Ol)").assertIsNotEnabled()
+        composeRule.onNodeWithContentDescription("Giriş yapılıyor...").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Hesap oluştur").performScrollTo().assertIsNotEnabled()
     }
 }

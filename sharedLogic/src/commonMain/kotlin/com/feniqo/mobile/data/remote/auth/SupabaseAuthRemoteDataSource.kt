@@ -1,6 +1,7 @@
 package com.feniqo.mobile.data.remote.auth
 
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
@@ -80,5 +81,48 @@ class SupabaseAuthRemoteDataSource(
 
     override suspend fun signOut() {
         client.auth.signOut()
+    }
+
+    override suspend fun changePassword(
+        email: String,
+        currentPassword: String,
+        newPassword: String,
+    ) {
+        client.auth.signInWith(Email) {
+            this.email = email
+            this.password = currentPassword
+        }
+        client.auth.updateUser {
+            this.password = newPassword
+            this.currentPassword = currentPassword
+        }
+    }
+
+    override suspend fun sendPasswordResetEmail(email: String, redirectUrl: String) {
+        client.auth.resetPasswordForEmail(
+            email = email,
+            redirectUrl = redirectUrl,
+        )
+    }
+
+    override suspend fun resendEmailConfirmation(email: String) {
+        client.auth.resendEmail(
+            type = OtpType.Email.SIGNUP,
+            email = email,
+        )
+    }
+
+    override suspend fun updatePassword(newPassword: String) {
+        client.auth.updateUser {
+            this.password = newPassword
+        }
+    }
+
+    override suspend fun exchangeCodeForSession(code: String) {
+        client.auth.exchangeCodeForSession(code = code)
+    }
+
+    override suspend fun importAuthToken(accessToken: String, refreshToken: String) {
+        client.auth.importAuthToken(accessToken = accessToken, refreshToken = refreshToken)
     }
 }

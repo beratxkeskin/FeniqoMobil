@@ -11,10 +11,33 @@ sealed interface FeniqoRoute
  * Kimlik doğrulama akışı rotaları.
  */
 @Serializable
+data object WelcomeRoute : FeniqoRoute
+
+@Serializable
 data object LoginRoute : FeniqoRoute
 
 @Serializable
 data object RegisterRoute : FeniqoRoute
+
+@Serializable
+data class AuthEmailVerificationRoute(
+    val email: String,
+    val isRequiredOnLogin: Boolean = false,
+) : FeniqoRoute
+
+@Serializable
+data object ForgotPasswordRoute : FeniqoRoute
+
+@Serializable
+data class PasswordResetSentRoute(
+    val email: String,
+) : FeniqoRoute
+
+@Serializable
+data object ResetPasswordRoute : FeniqoRoute
+
+@Serializable
+data object PasswordResetSuccessRoute : FeniqoRoute
 
 /**
  * Ana uygulama (Main) akışı altındaki sekmelerin rotaları.
@@ -28,6 +51,26 @@ data class TransactionsRoute(
     val startDate: String? = null,
     val endDate: String? = null,
 ) : FeniqoRoute
+
+/**
+ * Bütçe detayından seçili kategori ve bütçe ayının başlangıç/bitiş tarihleriyle
+ * filtrelenmiş [TransactionsRoute] oluşturan üretim fonksiyonu.
+ */
+fun createBudgetTransactionsRoute(categoryId: String, month: String): TransactionsRoute {
+    val yearMonth = com.feniqo.mobile.domain.model.YearMonth(month)
+    val (currentPeriod, _) = com.feniqo.mobile.presentation.category.CategoryAnalyticsCalculator.calculateReportPeriods(yearMonth)
+    return TransactionsRoute(
+        categoryId = categoryId,
+        startDate = currentPeriod.startDate.toString(),
+        endDate = currentPeriod.endDate.toString(),
+    )
+}
+
+fun createBudgetTransactionsRoute(
+    categoryId: com.feniqo.mobile.domain.model.EntityId,
+    month: com.feniqo.mobile.domain.model.YearMonth,
+): TransactionsRoute = createBudgetTransactionsRoute(categoryId.value, month.value)
+
 
 @Serializable
 data class TransactionFormRoute(
@@ -232,6 +275,16 @@ data object ProfileRoute : FeniqoRoute
 data object AssetsRoute : FeniqoRoute
 
 @Serializable
+data class AssetDetailRoute(
+    val assetId: String,
+) : FeniqoRoute
+
+@Serializable
+data class AssetDistributionRoute(
+    val initialCurrencyCode: String? = null,
+) : FeniqoRoute
+
+@Serializable
 data class AssetFormRoute(
     val assetId: String? = null,
 ) : FeniqoRoute
@@ -252,6 +305,48 @@ fun parseAssetRouteId(rawId: String?): AssetRouteIdResult {
 
 @Serializable
 data object SettingsRoute : FeniqoRoute
+
+@Serializable
+data object AccountRoute : FeniqoRoute
+
+@Serializable
+data object PersonalInfoRoute : FeniqoRoute
+
+@Serializable
+data object AppearanceRoute : FeniqoRoute
+
+@Serializable
+data object LanguageRegionRoute : FeniqoRoute
+
+@Serializable
+data object NotificationsSettingsRoute : FeniqoRoute
+
+@Serializable
+data object SecurityPrivacyRoute : FeniqoRoute
+
+@Serializable
+data object DataManagementRoute : FeniqoRoute
+
+@Serializable
+data object SyncStatusRoute : FeniqoRoute
+
+@Serializable
+data object HelpAboutRoute : FeniqoRoute
+
+@Serializable
+data object ChangeEmailRoute : FeniqoRoute
+
+@Serializable
+data class EmailVerificationRoute(val newEmail: String) : FeniqoRoute
+
+@Serializable
+data object ChangePasswordRoute : FeniqoRoute
+
+@Serializable
+data object DeleteAccountRoute : FeniqoRoute
+
+@Serializable
+data object FeedbackRoute : FeniqoRoute
 
 @Serializable
 data object WorkspacePickerRoute : FeniqoRoute

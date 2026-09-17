@@ -44,6 +44,8 @@ import com.feniqo.mobile.presentation.goal.GoalsScreenRoute
 import com.feniqo.mobile.presentation.auth.LoginViewModel
 import com.feniqo.mobile.presentation.auth.RegisterViewModel
 import com.feniqo.mobile.presentation.asset.AssetsScreenRoute
+import com.feniqo.mobile.presentation.asset.AssetDetailScreenRoute
+import com.feniqo.mobile.presentation.asset.AssetDistributionScreenRoute
 import com.feniqo.mobile.presentation.asset.AssetFormScreenRoute
 import com.feniqo.mobile.presentation.budget.BudgetDetailScreenRoute
 import com.feniqo.mobile.presentation.budget.BudgetFormScreenRoute
@@ -55,11 +57,35 @@ import com.feniqo.mobile.presentation.recurring.RecurringTransactionsScreenRoute
 import com.feniqo.mobile.presentation.recurring.RecurringTransactionsViewModel
 import com.feniqo.mobile.presentation.recurring.toDomainCategory
 import com.feniqo.mobile.presentation.screen.LoginScreen
+import com.feniqo.mobile.presentation.screen.RegisterScreen
+import com.feniqo.mobile.presentation.screen.WelcomeScreen
+import com.feniqo.mobile.presentation.screen.AuthEmailVerificationScreen
+import com.feniqo.mobile.presentation.screen.ForgotPasswordScreen
+import com.feniqo.mobile.presentation.screen.PasswordResetSentScreen
+import com.feniqo.mobile.presentation.screen.ResetPasswordScreen
+import com.feniqo.mobile.presentation.screen.PasswordResetSuccessScreen
+import com.feniqo.mobile.presentation.auth.EmailVerificationViewModel
+import com.feniqo.mobile.presentation.auth.ForgotPasswordViewModel
+import com.feniqo.mobile.presentation.auth.ResetPasswordViewModel
+import com.feniqo.mobile.presentation.auth.toDisplayText
 import com.feniqo.mobile.presentation.hub.MoreHubScreenRoute
 import com.feniqo.mobile.presentation.screen.ProfileScreen
-import com.feniqo.mobile.presentation.screen.RegisterScreen
 import com.feniqo.mobile.presentation.screen.SplashLoadingScreen
+import com.feniqo.mobile.presentation.settings.AccountScreenRoute
+import com.feniqo.mobile.presentation.settings.AppearanceScreenRoute
+import com.feniqo.mobile.presentation.settings.ChangeEmailScreenRoute
+import com.feniqo.mobile.presentation.settings.ChangePasswordScreenRoute
+import com.feniqo.mobile.presentation.settings.DataManagementScreenRoute
+import com.feniqo.mobile.presentation.settings.DeleteAccountScreenRoute
+import com.feniqo.mobile.presentation.settings.EmailVerificationScreenRoute
+import com.feniqo.mobile.presentation.settings.FeedbackScreenRoute
+import com.feniqo.mobile.presentation.settings.HelpAboutScreenRoute
+import com.feniqo.mobile.presentation.settings.LanguageRegionScreenRoute
+import com.feniqo.mobile.presentation.settings.NotificationsScreenRoute
+import com.feniqo.mobile.presentation.settings.PersonalInfoScreenRoute
+import com.feniqo.mobile.presentation.settings.SecurityPrivacyScreenRoute
 import com.feniqo.mobile.presentation.settings.SettingsScreenRoute
+import com.feniqo.mobile.presentation.settings.SyncStatusScreenRoute
 import com.feniqo.mobile.presentation.profile.ProfileViewModel
 import com.feniqo.mobile.BuildConfig
 import com.feniqo.mobile.presentation.subscription.SubscriptionDetailScreenRoute
@@ -112,7 +138,16 @@ fun FeniqoNavigation(
             SplashLoadingScreen(modifier = modifier)
         }
         AppAuthState.Unauthenticated -> {
-            AuthNavHost(modifier = modifier)
+            AuthNavHost(
+                startDestination = WelcomeRoute,
+                modifier = modifier,
+            )
+        }
+        is AppAuthState.PasswordRecovery -> {
+            AuthNavHost(
+                startDestination = ResetPasswordRoute,
+                modifier = modifier,
+            )
         }
         AppAuthState.Authenticated -> {
             MainNavHost(
@@ -138,13 +173,24 @@ fun FeniqoNavigation(
 @Composable
 fun AuthNavHost(
     modifier: Modifier = Modifier,
+    startDestination: FeniqoRoute = WelcomeRoute,
     navController: NavHostController = rememberNavController(),
 ) {
     NavHost(
         navController = navController,
-        startDestination = LoginRoute,
+        startDestination = startDestination,
         modifier = modifier,
     ) {
+        composable<WelcomeRoute> {
+            WelcomeScreen(
+                onNavigateToLogin = {
+                    navController.navigate(LoginRoute)
+                },
+                onNavigateToRegister = {
+                    navController.navigate(RegisterRoute)
+                },
+            )
+        }
         composable<LoginRoute> {
             val viewModel = hiltViewModel<LoginViewModel>()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -161,11 +207,40 @@ fun AuthNavHost(
                         launchSingleTop = true
                     }
                 },
+                onNavigateToForgotPassword = {
+                    viewModel.onPasswordChanged("")
+                    navController.navigate(ForgotPasswordRoute)
+                },
+                onNavigateToEmailVerification = { email ->
+                    navController.navigate(
+                        AuthEmailVerificationRoute(email = email, isRequiredOnLogin = true)
+                    )
+                },
+                onBack = {
+                    if (!navController.popBackStack()) {
+                        navController.navigate(WelcomeRoute) {
+                            popUpTo(WelcomeRoute) { inclusive = true }
+                        }
+                    }
+                },
             )
         }
         composable<RegisterRoute> {
             val viewModel = hiltViewModel<RegisterViewModel>()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+            LaunchedEffect(state.isEmailConfirmationPending) {
+                if (state.isEmailConfirmationPending) {
+                    val email = state.email
+                    viewModel.onPasswordChanged("")
+                    viewModel.onConfirmPasswordChanged("")
+                    navController.navigate(
+                        AuthEmailVerificationRoute(email = email, isRequiredOnLogin = false)
+                    ) {
+                        popUpTo(RegisterRoute) { inclusive = true }
+                    }
+                }
+            }
 
             RegisterScreen(
                 state = state,
@@ -180,6 +255,129 @@ fun AuthNavHost(
                     viewModel.onPasswordChanged("")
                     viewModel.onConfirmPasswordChanged("")
                     navController.navigate(LoginRoute) {
+                        launchSingleTop = true
+                    }
+                },
+                onBack = {
+                    if (!navController.popBackStack()) {
+                        navController.navigate(WelcomeRoute) {
+                            popUpTo(WelcomeRoute) { inclusive = true }
+                        }
+                    }
+                },
+            )
+        }
+        composable<AuthEmailVerificationRoute> { backStackEntry ->
+            val route = backStackEntry.toRoute<AuthEmailVerificationRoute>()
+            val viewModel = hiltViewModel<EmailVerificationViewModel>()
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+            AuthEmailVerificationScreen(
+                email = route.email,
+                isRequiredOnLogin = route.isRequiredOnLogin,
+                isResending = state.isResending,
+                resendSuccess = state.resendSuccess,
+                errorMessage = state.generalMessage,
+                onResend = { viewModel.resend(route.email) },
+                onNavigateToLogin = {
+                    navController.navigate(LoginRoute) {
+                        popUpTo(LoginRoute) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
+        composable<ForgotPasswordRoute> {
+            val viewModel = hiltViewModel<ForgotPasswordViewModel>()
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+            ForgotPasswordScreen(
+                email = state.email,
+                onEmailChange = viewModel::onEmailChanged,
+                onSubmit = {
+                    viewModel.submit { email ->
+                        navController.navigate(PasswordResetSentRoute(email = email))
+                    }
+                },
+                onNavigateToLogin = {
+                    viewModel.clearState()
+                    navController.popBackStack()
+                },
+                isSubmitting = state.isSubmitting,
+                errorMessage = state.generalMessage,
+                emailError = state.emailError?.toDisplayText(),
+                onBack = {
+                    viewModel.clearState()
+                    navController.popBackStack()
+                },
+            )
+        }
+        composable<PasswordResetSentRoute> { backStackEntry ->
+            val route = backStackEntry.toRoute<PasswordResetSentRoute>()
+            val forgotViewModel = hiltViewModel<ForgotPasswordViewModel>()
+
+            PasswordResetSentScreen(
+                email = route.email,
+                onNavigateToLogin = {
+                    forgotViewModel.clearState()
+                    navController.navigate(LoginRoute) {
+                        popUpTo(LoginRoute) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                onEditEmail = {
+                    navController.popBackStack()
+                },
+                onResend = {
+                    forgotViewModel.submit { }
+                },
+            )
+        }
+        composable<ResetPasswordRoute> {
+            val viewModel = hiltViewModel<ResetPasswordViewModel>()
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+            ResetPasswordScreen(
+                password = state.password,
+                confirmPassword = state.confirmPassword,
+                onPasswordChange = viewModel::onPasswordChanged,
+                onConfirmPasswordChange = viewModel::onConfirmPasswordChanged,
+                onPasswordVisibilityToggle = viewModel::togglePasswordVisibility,
+                onConfirmPasswordVisibilityToggle = viewModel::toggleConfirmPasswordVisibility,
+                isPasswordVisible = state.isPasswordVisible,
+                isConfirmPasswordVisible = state.isConfirmPasswordVisible,
+                isSubmitting = state.isSubmitting,
+                isInvalidOrExpiredLink = state.isRecoveryLinkInvalid,
+                errorMessage = state.generalMessage,
+                passwordError = state.passwordError?.toDisplayText(),
+                confirmPasswordError = state.confirmPasswordError?.toDisplayText(),
+                onSubmit = {
+                    viewModel.submit {
+                        navController.navigate(PasswordResetSuccessRoute) {
+                            popUpTo(ResetPasswordRoute) { inclusive = true }
+                        }
+                    }
+                },
+                onRequestNewLink = {
+                    viewModel.abandonRecovery()
+                    navController.navigate(ForgotPasswordRoute) {
+                        popUpTo(LoginRoute) { inclusive = false }
+                    }
+                },
+                onNavigateToLogin = {
+                    viewModel.abandonRecovery()
+                    navController.navigate(LoginRoute) {
+                        popUpTo(LoginRoute) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
+        composable<PasswordResetSuccessRoute> {
+            PasswordResetSuccessScreen(
+                onNavigateToLogin = {
+                    navController.navigate(LoginRoute) {
+                        popUpTo(LoginRoute) { inclusive = true }
                         launchSingleTop = true
                     }
                 },
@@ -206,6 +404,7 @@ fun MainNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
 ) {
+    val scope = rememberCoroutineScope()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val destination = navBackStackEntry?.destination
 
@@ -228,15 +427,31 @@ fun MainNavHost(
     val isWorkspaceDetails = destination?.hasRoute<WorkspaceDetailsRoute>() == true
     val isWorkspaceSettlement = destination?.hasRoute<WorkspaceSettlementRoute>() == true
     val isAssetForm = destination?.hasRoute<AssetFormRoute>() == true
+    val isAssetDetail = destination?.hasRoute<AssetDetailRoute>() == true
+    val isAssetDistribution = destination?.hasRoute<AssetDistributionRoute>() == true
     val isProfile = destination?.hasRoute<ProfileRoute>() == true
     val isSettings = destination?.hasRoute<SettingsRoute>() == true
-    val isDetailForm = isTransactionForm || isTransactionSuccess || isCategoryForm || isBudgetForm || isBudgetDetail || isRecurringForm || isSubscriptionForm || isSubscriptionDetail || isGoalDetail || isGoalForm || isGoalContributionForm || isDebtForm || isDebtPaymentForm || isWorkspacePicker || isWorkspaceCreate || isWorkspaceJoin || isWorkspaceDetails || isWorkspaceSettlement || isAssetForm || isProfile || isSettings
+    val isSettingsSubRoute = destination?.hasRoute<AccountRoute>() == true ||
+        destination?.hasRoute<PersonalInfoRoute>() == true ||
+        destination?.hasRoute<AppearanceRoute>() == true ||
+        destination?.hasRoute<LanguageRegionRoute>() == true ||
+        destination?.hasRoute<NotificationsSettingsRoute>() == true ||
+        destination?.hasRoute<SecurityPrivacyRoute>() == true ||
+        destination?.hasRoute<DataManagementRoute>() == true ||
+        destination?.hasRoute<SyncStatusRoute>() == true ||
+        destination?.hasRoute<HelpAboutRoute>() == true ||
+        destination?.hasRoute<ChangeEmailRoute>() == true ||
+        destination?.hasRoute<EmailVerificationRoute>() == true ||
+        destination?.hasRoute<ChangePasswordRoute>() == true ||
+        destination?.hasRoute<DeleteAccountRoute>() == true ||
+        destination?.hasRoute<FeedbackRoute>() == true
+    val isDetailForm = isTransactionForm || isTransactionSuccess || isCategoryForm || isBudgetForm || isBudgetDetail || isRecurringForm || isSubscriptionForm || isSubscriptionDetail || isGoalDetail || isGoalForm || isGoalContributionForm || isDebtForm || isDebtPaymentForm || isWorkspacePicker || isWorkspaceCreate || isWorkspaceJoin || isWorkspaceDetails || isWorkspaceSettlement || isAssetForm || isAssetDetail || isAssetDistribution || isProfile || isSettings || isSettingsSubRoute
     var showQuickAdd by remember { mutableStateOf(false) }
 
     val currentSection = when {
         destination?.hasRoute<TransactionsRoute>() == true || isTransactionForm -> AppSection.TRANSACTIONS
         destination?.hasRoute<BudgetsRoute>() == true || isBudgetForm || isBudgetDetail -> AppSection.BUDGET
-        destination?.hasRoute<MoreRoute>() == true || destination?.hasRoute<AssetsRoute>() == true || isAssetForm || destination?.hasRoute<CategoriesRoute>() == true || isCategoryForm || destination?.hasRoute<RecurringTransactionsRoute>() == true || isRecurringForm || destination?.hasRoute<SubscriptionsRoute>() == true || isSubscriptionForm || isSubscriptionDetail || destination?.hasRoute<GoalsRoute>() == true || isGoalDetail || isGoalForm || isGoalContributionForm || destination?.hasRoute<DebtsRoute>() == true || isDebtForm || isDebtPaymentForm || isWorkspacePicker || isWorkspaceCreate || isWorkspaceJoin || isWorkspaceDetails || isWorkspaceSettlement -> AppSection.MORE
+        destination?.hasRoute<MoreRoute>() == true || destination?.hasRoute<AssetsRoute>() == true || isAssetForm || isAssetDetail || isAssetDistribution || destination?.hasRoute<CategoriesRoute>() == true || isCategoryForm || destination?.hasRoute<RecurringTransactionsRoute>() == true || isRecurringForm || destination?.hasRoute<SubscriptionsRoute>() == true || isSubscriptionForm || isSubscriptionDetail || destination?.hasRoute<GoalsRoute>() == true || isGoalDetail || isGoalForm || isGoalContributionForm || destination?.hasRoute<DebtsRoute>() == true || isDebtForm || isDebtPaymentForm || isWorkspacePicker || isWorkspaceCreate || isWorkspaceJoin || isWorkspaceDetails || isWorkspaceSettlement -> AppSection.MORE
         else -> AppSection.DASHBOARD
     }
 
@@ -480,8 +695,8 @@ fun MainNavHost(
                             launchSingleTop = true
                         }
                     },
-                    onViewAllTransactions = { categoryId, _ ->
-                        navController.navigate(TransactionsRoute(categoryId = categoryId.value)) {
+                    onViewAllTransactions = { categoryId, month ->
+                        navController.navigate(createBudgetTransactionsRoute(categoryId, month)) {
                             launchSingleTop = true
                         }
                     },
@@ -543,8 +758,34 @@ fun MainNavHost(
             }
             composable<AssetsRoute> {
                 AssetsScreenRoute(
+                    onBack = { navController.popBackStack() },
                     onAddAsset = { navController.navigate(AssetFormRoute()) },
-                    onAssetClick = { navController.navigate(AssetFormRoute(it.value)) },
+                    onAssetClick = { assetId -> navController.navigate(AssetDetailRoute(assetId.value)) },
+                    onDistributionClick = { navController.navigate(AssetDistributionRoute()) },
+                )
+            }
+            composable<AssetDetailRoute> { backStackEntry ->
+                val route = backStackEntry.toRoute<AssetDetailRoute>()
+                val snackbarHostState = remember { SnackbarHostState() }
+                val scope = rememberCoroutineScope()
+                Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
+                    AssetDetailScreenRoute(
+                        assetId = EntityId(route.assetId),
+                        onBack = { if (!navController.popBackStack()) navController.navigate(AssetsRoute) },
+                        onEdit = { id -> navController.navigate(AssetFormRoute(id.value)) },
+                        onAssetDeleted = {
+                            if (!navController.popBackStack()) navController.navigate(AssetsRoute)
+                        },
+                        onMessage = { message -> scope.launch { snackbarHostState.showSnackbar(message.toDisplayText()) } },
+                        modifier = Modifier.padding(padding),
+                    )
+                }
+            }
+            composable<AssetDistributionRoute> { backStackEntry ->
+                val route = backStackEntry.toRoute<AssetDistributionRoute>()
+                AssetDistributionScreenRoute(
+                    initialCurrencyCode = route.initialCurrencyCode,
+                    onBack = { if (!navController.popBackStack()) navController.navigate(AssetsRoute) },
                 )
             }
             composable<AssetFormRoute> { backStackEntry ->
@@ -650,13 +891,123 @@ fun MainNavHost(
             }
             composable<SettingsRoute> {
                 SettingsScreenRoute(
-                    themeMode = themeMode,
-                    onThemeModeChange = onThemeModeChange,
-                    biometricLockEnabled = biometricLockEnabled,
-                    biometricLockAvailable = biometricLockAvailable,
-                    autoLockTimeout = autoLockTimeout,
-                    onBiometricLockChange = onBiometricLockChange,
-                    onAutoLockTimeoutChange = onAutoLockTimeoutChange,
+                    onNavigateToAccount = { navController.navigate(AccountRoute) { launchSingleTop = true } },
+                    onNavigateToAppearance = { navController.navigate(AppearanceRoute) { launchSingleTop = true } },
+                    onNavigateToLanguageRegion = { navController.navigate(LanguageRegionRoute) { launchSingleTop = true } },
+                    onNavigateToNotifications = { navController.navigate(NotificationsSettingsRoute) { launchSingleTop = true } },
+                    onNavigateToSecurity = { navController.navigate(SecurityPrivacyRoute) { launchSingleTop = true } },
+                    onNavigateToDataManagement = { navController.navigate(DataManagementRoute) { launchSingleTop = true } },
+                    onNavigateToHelpAbout = { navController.navigate(HelpAboutRoute) { launchSingleTop = true } },
+                    onSignOutSuccess = {
+                        navController.navigate(LoginRoute) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                inclusive = true
+                            }
+                            launchSingleTop = true
+                        }
+                    },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<AccountRoute> {
+                AccountScreenRoute(
+                    onNavigateToPersonalInfo = { navController.navigate(PersonalInfoRoute) { launchSingleTop = true } },
+                    onNavigateToChangeEmail = { navController.navigate(ChangeEmailRoute) { launchSingleTop = true } },
+                    onNavigateToChangePassword = { navController.navigate(ChangePasswordRoute) { launchSingleTop = true } },
+                    onNavigateToDeleteAccount = { navController.navigate(DeleteAccountRoute) { launchSingleTop = true } },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<PersonalInfoRoute> {
+                PersonalInfoScreenRoute(
+                    onNavigateToChangeEmail = { navController.navigate(ChangeEmailRoute) { launchSingleTop = true } },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<AppearanceRoute> {
+                AppearanceScreenRoute(
+                    currentTheme = themeMode,
+                    onThemeChange = { mode ->
+                        scope.launch { onThemeModeChange(mode) }
+                    },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<LanguageRegionRoute> {
+                LanguageRegionScreenRoute(
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<NotificationsSettingsRoute> {
+                NotificationsScreenRoute(
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<SecurityPrivacyRoute> {
+                SecurityPrivacyScreenRoute(
+                    appLockEnabled = biometricLockEnabled,
+                    biometricAvailable = biometricLockAvailable,
+                    currentTimeout = autoLockTimeout,
+                    onAppLockChange = onBiometricLockChange,
+                    onTimeoutChange = onAutoLockTimeoutChange,
+                    onNavigateToChangePassword = { navController.navigate(ChangePasswordRoute) { launchSingleTop = true } },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<DataManagementRoute> {
+                DataManagementScreenRoute(
+                    onNavigateToSyncStatus = { navController.navigate(SyncStatusRoute) { launchSingleTop = true } },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<SyncStatusRoute> {
+                SyncStatusScreenRoute(
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<HelpAboutRoute> {
+                HelpAboutScreenRoute(
+                    onNavigateToFeedback = { type ->
+                        navController.navigate(FeedbackRoute) { launchSingleTop = true }
+                    },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<ChangeEmailRoute> {
+                ChangeEmailScreenRoute(
+                    onVerificationSent = { newEmail ->
+                        navController.navigate(EmailVerificationRoute(newEmail)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<EmailVerificationRoute> { backStackEntry ->
+                val route = backStackEntry.toRoute<EmailVerificationRoute>()
+                EmailVerificationScreenRoute(
+                    newEmail = route.newEmail,
+                    onBackToSettings = {
+                        navController.popBackStack(SettingsRoute, inclusive = false)
+                    },
+                )
+            }
+            composable<ChangePasswordRoute> {
+                ChangePasswordScreenRoute(
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<DeleteAccountRoute> {
+                DeleteAccountScreenRoute(
+                    onExportData = { navController.navigate(DataManagementRoute) { launchSingleTop = true } },
+                    onCheckWorkspaces = { navController.navigate(WorkspacePickerRoute) { launchSingleTop = true } },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<FeedbackRoute> {
+                FeedbackScreenRoute(
+                    initialIsBug = false,
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable<SubscriptionsRoute> {
@@ -927,6 +1278,9 @@ fun MainNavHost(
                         navController.navigate(DebtSnowballPlanRoute) {
                             launchSingleTop = true
                         }
+                    },
+                    onNavigateBack = {
+                        navController.popBackStack()
                     },
                 )
             }

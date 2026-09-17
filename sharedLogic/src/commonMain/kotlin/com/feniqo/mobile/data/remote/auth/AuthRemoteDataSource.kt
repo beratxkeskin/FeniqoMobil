@@ -30,4 +30,20 @@ interface AuthRemoteDataSource {
     suspend fun refreshSession()
 
     suspend fun signOut()
+
+    suspend fun changePassword(
+        email: String,
+        currentPassword: String,
+        newPassword: String,
+    )
+
+    suspend fun sendPasswordResetEmail(email: String, redirectUrl: String)
+
+    suspend fun resendEmailConfirmation(email: String)
+
+    suspend fun updatePassword(newPassword: String)
+
+    suspend fun exchangeCodeForSession(code: String)
+
+    suspend fun importAuthToken(accessToken: String, refreshToken: String)
 }

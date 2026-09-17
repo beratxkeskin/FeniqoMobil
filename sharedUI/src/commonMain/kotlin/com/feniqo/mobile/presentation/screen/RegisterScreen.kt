@@ -1,24 +1,24 @@
 package com.feniqo.mobile.presentation.screen
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.MailOutline
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,22 +26,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.feniqo.mobile.presentation.auth.AuthErrorBanner
+import com.feniqo.mobile.presentation.auth.AuthPrimaryButton
+import com.feniqo.mobile.presentation.auth.AuthTopBar
 import com.feniqo.mobile.presentation.auth.AuthUiMessage
 import com.feniqo.mobile.presentation.auth.RegisterUiState
 import com.feniqo.mobile.presentation.auth.toDisplayText
 import com.feniqo.mobile.presentation.component.AuthTextField
+import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTheme
 
 /**
- * Kayıt ekranının saf ve durumsuz (stateless) Compose sunumudur.
- * Normal form veya e-posta doğrulama bekleme durumunu render eder.
+ * Pano A - 03 Hesap Oluştur Ekranı ve Pano C-10 form doğrulama durumları.
  */
 @Composable
 fun RegisterScreen(
@@ -54,6 +59,9 @@ fun RegisterScreen(
     onConfirmPasswordVisibilityToggle: () -> Unit,
     onSubmit: () -> Unit,
     onNavigateToLogin: () -> Unit,
+    onTermsClick: () -> Unit = {},
+    onPrivacyClick: () -> Unit = {},
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val focusManager = LocalFocusManager.current
@@ -62,113 +70,85 @@ fun RegisterScreen(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .imePadding()
-                .verticalScroll(rememberScrollState()),
-            contentAlignment = Alignment.Center,
+                .imePadding(),
         ) {
-            Column(
+            AuthTopBar(
+                title = "Feniqo",
+                onBack = onBack,
+            )
+
+            Box(
                 modifier = Modifier
-                    .widthIn(max = 480.dp)
-                    .fillMaxWidth()
-                    .padding(FeniqoSpacing.Screen),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+                contentAlignment = Alignment.Center,
             ) {
-                if (state.isEmailConfirmationPending) {
-                    Text(
-                        text = "Kaydınız Oluşturuldu",
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
+                Column(
+                    modifier = Modifier
+                        .widthIn(max = 480.dp)
+                        .fillMaxWidth()
+                        .padding(horizontal = FeniqoSpacing.Screen, vertical = FeniqoSpacing.Medium),
+                    horizontalAlignment = Alignment.Start,
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    // Başlıklar
+                    Text(
+                        text = "Yeni bir başlangıç.",
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 28.sp,
                         ),
-                    ) {
-                        Text(
-                            text = state.generalMessage?.toDisplayText()
-                                ?: AuthUiMessage.EMAIL_CONFIRMATION_SENT.toDisplayText(),
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(FeniqoSpacing.Large),
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(FeniqoSpacing.Medium))
-
-                    Button(
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = onNavigateToLogin,
-                    ) {
-                        Text("Giriş Ekranına Dön")
-                    }
-                } else {
-                    Text(
-                        text = "Hesap Oluştur",
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onBackground,
                     )
                     Text(
-                        text = "Feniqo ile gelir ve giderlerinizi takip edin.",
+                        text = "Feniqo ile finansal hedeflerine bir adım daha yaklaş.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
 
-                    Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
+                    Spacer(modifier = Modifier.height(2.dp))
 
-                    if (state.generalMessage != null) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer,
-                                contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                            ),
-                        ) {
-                            Text(
-                                text = state.generalMessage.toDisplayText(),
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.padding(FeniqoSpacing.Medium),
-                            )
-                        }
-                    }
-
+                    // 1. Görünen ad (isteğe bağlı)
                     AuthTextField(
                         value = state.fullName,
                         onValueChange = onFullNameChange,
-                        label = "Ad Soyad (İsteğe bağlı)",
+                        label = "Görünen ad (isteğe bağlı)",
+                        placeholder = "Ayşe Yılmaz",
+                        leadingIcon = Icons.Outlined.Person,
                         enabled = !state.isSubmitting,
                         isError = state.fullNameError != null,
                         supportingText = state.fullNameError?.toDisplayText(),
+                        keyboardType = KeyboardType.Text,
                         imeAction = ImeAction.Next,
-                        onImeAction = {
-                            focusManager.moveFocus(FocusDirection.Down)
-                        },
+                        onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
                     )
 
+                    // 2. E-posta
                     AuthTextField(
                         value = state.email,
                         onValueChange = onEmailChange,
                         label = "E-posta",
+                        placeholder = "eposta@ornek.com",
+                        leadingIcon = Icons.Outlined.MailOutline,
                         enabled = !state.isSubmitting,
                         isError = state.emailError != null,
                         supportingText = state.emailError?.toDisplayText(),
                         keyboardType = KeyboardType.Email,
                         imeAction = ImeAction.Next,
-                        onImeAction = {
-                            focusManager.moveFocus(FocusDirection.Down)
-                        },
+                        onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
                     )
 
+                    // 3. Parola
                     AuthTextField(
                         value = state.password,
                         onValueChange = onPasswordChange,
-                        label = "Yeni Parola",
+                        label = "Parola",
+                        leadingIcon = Icons.Outlined.Lock,
                         enabled = !state.isSubmitting,
                         isError = state.passwordError != null,
                         supportingText = state.passwordError?.toDisplayText(),
@@ -177,15 +157,15 @@ fun RegisterScreen(
                         onPasswordVisibilityToggle = onPasswordVisibilityToggle,
                         keyboardType = KeyboardType.Password,
                         imeAction = ImeAction.Next,
-                        onImeAction = {
-                            focusManager.moveFocus(FocusDirection.Down)
-                        },
+                        onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
                     )
 
+                    // 4. Parola tekrar
                     AuthTextField(
                         value = state.confirmPassword,
                         onValueChange = onConfirmPasswordChange,
-                        label = "Parola Tekrar",
+                        label = "Parola tekrar",
+                        leadingIcon = Icons.Outlined.Lock,
                         enabled = !state.isSubmitting,
                         isError = state.confirmPasswordError != null,
                         supportingText = state.confirmPasswordError?.toDisplayText(),
@@ -200,35 +180,84 @@ fun RegisterScreen(
                         },
                     )
 
-                    Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
+                    // Genel hata mesajı banner'ı
+                    if (state.generalMessage != null && state.generalMessage != AuthUiMessage.EMAIL_CONFIRMATION_SENT) {
+                        AuthErrorBanner(
+                            message = state.generalMessage.toDisplayText(),
+                            isNetworkError = state.generalMessage == AuthUiMessage.NETWORK_UNAVAILABLE,
+                        )
+                    }
 
-                    Button(
-                        modifier = Modifier.fillMaxWidth(),
+                    // Hukuki bağlantılar
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Kullanım koşulları",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                textDecoration = TextDecoration.Underline,
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.clickable(role = Role.Button, onClick = onTermsClick),
+                        )
+                        Text(
+                            text = "  •  ",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = "Gizlilik politikası",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                textDecoration = TextDecoration.Underline,
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.clickable(role = Role.Button, onClick = onPrivacyClick),
+                        )
+                    }
+
+                    // Birincil Buton
+                    AuthPrimaryButton(
+                        text = "Hesap oluştur",
                         onClick = {
                             focusManager.clearFocus()
                             if (!state.isSubmitting) onSubmit()
                         },
+                        isLoading = state.isSubmitting,
+                        loadingText = "Hesap oluşturuluyor...",
                         enabled = !state.isSubmitting,
-                    ) {
-                        if (state.isSubmitting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .semantics { contentDescription = "Hesap oluşturuluyor" },
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onPrimary,
-                            )
-                        } else {
-                            Text("Hesap Oluştur")
-                        }
-                    }
+                    )
 
-                    OutlinedButton(
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = onNavigateToLogin,
-                        enabled = !state.isSubmitting,
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Alt yönlendirme: "Zaten hesabın var mı? Giriş yap"
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("Zaten hesabım var (Giriş Yap)")
+                        Text(
+                            text = "Zaten hesabın var mı? ",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = "Giriş yap",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                            ),
+                            color = FeniqoSageGreen,
+                            modifier = Modifier.clickable(
+                                role = Role.Button,
+                                enabled = !state.isSubmitting,
+                                onClick = onNavigateToLogin,
+                            ),
+                        )
                     }
                 }
             }
@@ -241,32 +270,7 @@ fun RegisterScreen(
 private fun RegisterScreenNormalPreview() {
     FeniqoTheme {
         RegisterScreen(
-            state = RegisterUiState(
-                fullName = "Ahmet Yılmaz",
-                email = "ahmet@feniqo.com",
-            ),
-            onFullNameChange = {},
-            onEmailChange = {},
-            onPasswordChange = {},
-            onConfirmPasswordChange = {},
-            onPasswordVisibilityToggle = {},
-            onConfirmPasswordVisibilityToggle = {},
-            onSubmit = {},
-            onNavigateToLogin = {},
-        )
-    }
-}
-
-@Preview
-@Composable
-private fun RegisterScreenConfirmationPendingPreview() {
-    FeniqoTheme(darkTheme = true) {
-        RegisterScreen(
-            state = RegisterUiState(
-                email = "ahmet@feniqo.com",
-                isEmailConfirmationPending = true,
-                generalMessage = AuthUiMessage.EMAIL_CONFIRMATION_SENT,
-            ),
+            state = RegisterUiState.Initial,
             onFullNameChange = {},
             onEmailChange = {},
             onPasswordChange = {},

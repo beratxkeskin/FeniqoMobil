@@ -9,7 +9,9 @@ import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.repository.RepositoryResult
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -82,6 +84,203 @@ class OfflineFirstAuthRepositoryTest {
         repository.signOut()
         assertEquals(1, scheduler.cancelSyncCalls)
     }
+
+    @Test
+    fun changePassword_without_active_session_returns_session_expired_without_remote_call() = runTest {
+        val remote = FakeAuthRemoteDataSource()
+        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+        val result = repository.changePassword("oldPass", "newPass")
+
+        val failure = assertIs<RepositoryResult.Failure>(result)
+        assertEquals(AppError.Authentication("auth_session_expired"), failure.error)
+        assertEquals(0, remote.changePasswordCallCount)
+    }
+
+    @Test
+    fun changePassword_with_active_session_passes_email_and_passwords_to_remote() = runTest {
+        val remote = FakeAuthRemoteDataSource().apply {
+            session.value = RemoteAuthSession(
+                userId = "user-1",
+                email = "user@example.com",
+                expiresAtEpochSeconds = 1_800_000_000,
+            )
+        }
+        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+        val result = repository.changePassword("currentSecret", "newSecret")
+
+        assertIs<RepositoryResult.Success<Unit>>(result)
+        assertEquals(1, remote.changePasswordCallCount)
+        assertEquals("user@example.com", remote.lastChangePasswordEmail)
+        assertEquals("currentSecret", remote.lastChangePasswordCurrentPassword)
+        assertEquals("newSecret", remote.lastChangePasswordNewPassword)
+    }
+
+    @Test
+    fun changePassword_remote_failure_maps_to_safe_domain_error() = runTest {
+        val remote = FakeAuthRemoteDataSource().apply {
+            session.value = RemoteAuthSession(
+                userId = "user-1",
+                email = "user@example.com",
+                expiresAtEpochSeconds = 1_800_000_000,
+            )
+            nextError = IllegalStateException("SDK internal message")
+        }
+        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+        val result = repository.changePassword("oldPass", "newPass")
+
+        val failure = assertIs<RepositoryResult.Failure>(result)
+        assertEquals(AppError.Unknown("auth_unknown"), failure.error)
+    }
+
+    @Test
+    fun changePassword_rethrows_cancellation_exception() = runTest {
+        val remote = FakeAuthRemoteDataSource().apply {
+            session.value = RemoteAuthSession(
+                userId = "user-1",
+                email = "user@example.com",
+                expiresAtEpochSeconds = 1_800_000_000,
+            )
+            nextError = CancellationException("Job cancelled")
+        }
+        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+        assertFailsWith<CancellationException> {
+            repository.changePassword("oldPass", "newPass")
+        }
+    }
+
+    @Test
+    fun handleAuthDeepLink_validRecoveryToken_importsTokenAndSetsVerifiedRecoveryState() = runTest {
+        val remote = FakeAuthRemoteDataSource().apply {
+            session.value = RemoteAuthSession(
+                userId = "user-1",
+                email = "recovered@feniqo.com",
+                expiresAtEpochSeconds = 1_800_000_000,
+            )
+        }
+        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+        val deepLink = "feniqo://auth/callback#access_token=acc123&refresh_token=ref456&type=recovery"
+        val result = repository.handleAuthDeepLink(deepLink)
+
+        val success = assertIs<RepositoryResult.Success<com.feniqo.mobile.domain.repository.AuthDeepLinkType>>(result)
+        assertEquals(com.feniqo.mobile.domain.repository.AuthDeepLinkType.RECOVERY, success.value)
+        assertEquals(1, remote.importTokenCallCount)
+        assertEquals("acc123", remote.lastImportAccessToken)
+        assertEquals("ref456", remote.lastImportRefreshToken)
+
+        val recoveryState = repository.observeRecoveryState().first()
+        val verified = assertIs<com.feniqo.mobile.domain.repository.AuthRecoveryState.Verified>(recoveryState)
+        assertEquals("recovered@feniqo.com", verified.email)
+    }
+
+    @Test
+    fun handleAuthDeepLink_validSignupConfirmation_importsTokenAndReturnsConfirmationType() = runTest {
+        val remote = FakeAuthRemoteDataSource()
+        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+        val deepLink = "feniqo://auth/callback#access_token=acc123&refresh_token=ref456&type=signup"
+        val result = repository.handleAuthDeepLink(deepLink)
+
+        val success = assertIs<RepositoryResult.Success<com.feniqo.mobile.domain.repository.AuthDeepLinkType>>(result)
+        assertEquals(com.feniqo.mobile.domain.repository.AuthDeepLinkType.EMAIL_CONFIRMATION, success.value)
+        assertEquals(1, remote.importTokenCallCount)
+
+        // Email confirmation recovery durumunu verified yapmamalıdır
+        val recoveryState = repository.observeRecoveryState().first()
+        assertEquals(com.feniqo.mobile.domain.repository.AuthRecoveryState.Idle, recoveryState)
+    }
+
+    @Test
+    fun handleAuthDeepLink_pkceCode_exchangesCodeAndSetsVerifiedRecoveryState() = runTest {
+        val remote = FakeAuthRemoteDataSource().apply {
+            session.value = RemoteAuthSession(
+                userId = "user-1",
+                email = "pkce@feniqo.com",
+                expiresAtEpochSeconds = 1_800_000_000,
+            )
+        }
+        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+        val deepLink = "feniqo://auth/callback?code=pkce-auth-code-123"
+        val result = repository.handleAuthDeepLink(deepLink)
+
+        val success = assertIs<RepositoryResult.Success<com.feniqo.mobile.domain.repository.AuthDeepLinkType>>(result)
+        assertEquals(com.feniqo.mobile.domain.repository.AuthDeepLinkType.RECOVERY, success.value)
+        assertEquals(1, remote.exchangeCodeCallCount)
+        assertEquals("pkce-auth-code-123", remote.lastExchangeCode)
+
+        val recoveryState = repository.observeRecoveryState().first()
+        val verified = assertIs<com.feniqo.mobile.domain.repository.AuthRecoveryState.Verified>(recoveryState)
+        assertEquals("pkce@feniqo.com", verified.email)
+    }
+
+    @Test
+    fun handleAuthDeepLink_expiredOrBrokenLink_setsInvalidOrExpiredRecoveryState() = runTest {
+        val remote = FakeAuthRemoteDataSource()
+        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+        // Supabase error fragment'ı
+        val deepLink = "feniqo://auth/callback#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired"
+        val result = repository.handleAuthDeepLink(deepLink)
+
+        val failure = assertIs<RepositoryResult.Failure>(result)
+        val recoveryState = repository.observeRecoveryState().first()
+        assertEquals(com.feniqo.mobile.domain.repository.AuthRecoveryState.InvalidOrExpired, recoveryState)
+    }
+
+    @Test
+    fun handleAuthDeepLink_unsupportedUrl_returnsUnsupportedWithoutAlteringRecoveryState() = runTest {
+        val remote = FakeAuthRemoteDataSource()
+        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+        val deepLink = "feniqo://other/path"
+        val result = repository.handleAuthDeepLink(deepLink)
+
+        val success = assertIs<RepositoryResult.Success<com.feniqo.mobile.domain.repository.AuthDeepLinkType>>(result)
+        assertEquals(com.feniqo.mobile.domain.repository.AuthDeepLinkType.UNSUPPORTED, success.value)
+        assertEquals(com.feniqo.mobile.domain.repository.AuthRecoveryState.Idle, repository.observeRecoveryState().first())
+    }
+
+    @Test
+    fun resetPassword_whenRecoveryVerified_updatesPasswordClearsRecoveryAndSignsOut() = runTest {
+        val remote = FakeAuthRemoteDataSource().apply {
+            session.value = RemoteAuthSession(
+                userId = "user-1",
+                email = "user@feniqo.com",
+                expiresAtEpochSeconds = 1_800_000_000,
+            )
+        }
+        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+        // Önce linki verify et
+        repository.handleAuthDeepLink("feniqo://auth/callback#access_token=token&refresh_token=ref&type=recovery")
+        assertEquals(1, remote.importTokenCallCount)
+
+        // Şimdi şifreyi sıfırla
+        val resetResult = repository.resetPassword("NewSuperSecret123")
+        assertIs<RepositoryResult.Success<Unit>>(resetResult)
+
+        assertEquals(1, remote.updatePasswordCallCount)
+        assertEquals("NewSuperSecret123", remote.lastUpdatePasswordValue)
+
+        // Şifre sıfırlama sonrası recovery Idle olmalı
+        assertEquals(com.feniqo.mobile.domain.repository.AuthRecoveryState.Idle, repository.observeRecoveryState().first())
+    }
+
+    @Test
+    fun resetPassword_whenNotVerified_failsWithoutCallingRemote() = runTest {
+        val remote = FakeAuthRemoteDataSource()
+        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+        val result = repository.resetPassword("NewSuperSecret123")
+        val failure = assertIs<RepositoryResult.Failure>(result)
+        assertEquals(AppError.Authentication("auth_recovery_not_authorized"), failure.error)
+        assertEquals(0, remote.updatePasswordCallCount)
+    }
 }
 
 private class FakeBackgroundSyncScheduler : com.feniqo.mobile.domain.sync.BackgroundSyncScheduler {
@@ -123,6 +322,72 @@ private class FakeAuthRemoteDataSource : AuthRemoteDataSource {
     override suspend fun refreshSession() = throwNextErrorIfPresent()
 
     override suspend fun signOut() = throwNextErrorIfPresent()
+
+    var changePasswordCallCount = 0
+    var lastChangePasswordEmail: String? = null
+    var lastChangePasswordCurrentPassword: String? = null
+    var lastChangePasswordNewPassword: String? = null
+
+    var sendResetEmailCallCount = 0
+    var lastSendResetEmail: String? = null
+    var lastSendResetRedirectUrl: String? = null
+
+    var resendEmailCallCount = 0
+    var lastResendEmail: String? = null
+
+    var updatePasswordCallCount = 0
+    var lastUpdatePasswordValue: String? = null
+
+    var importTokenCallCount = 0
+    var lastImportAccessToken: String? = null
+    var lastImportRefreshToken: String? = null
+
+    var exchangeCodeCallCount = 0
+    var lastExchangeCode: String? = null
+
+    override suspend fun changePassword(
+        email: String,
+        currentPassword: String,
+        newPassword: String,
+    ) {
+        throwNextErrorIfPresent()
+        changePasswordCallCount++
+        lastChangePasswordEmail = email
+        lastChangePasswordCurrentPassword = currentPassword
+        lastChangePasswordNewPassword = newPassword
+    }
+
+    override suspend fun sendPasswordResetEmail(email: String, redirectUrl: String) {
+        throwNextErrorIfPresent()
+        sendResetEmailCallCount++
+        lastSendResetEmail = email
+        lastSendResetRedirectUrl = redirectUrl
+    }
+
+    override suspend fun resendEmailConfirmation(email: String) {
+        throwNextErrorIfPresent()
+        resendEmailCallCount++
+        lastResendEmail = email
+    }
+
+    override suspend fun updatePassword(newPassword: String) {
+        throwNextErrorIfPresent()
+        updatePasswordCallCount++
+        lastUpdatePasswordValue = newPassword
+    }
+
+    override suspend fun importAuthToken(accessToken: String, refreshToken: String) {
+        throwNextErrorIfPresent()
+        importTokenCallCount++
+        lastImportAccessToken = accessToken
+        lastImportRefreshToken = refreshToken
+    }
+
+    override suspend fun exchangeCodeForSession(code: String) {
+        throwNextErrorIfPresent()
+        exchangeCodeCallCount++
+        lastExchangeCode = code
+    }
 
     private fun throwNextErrorIfPresent() {
         nextError?.let { throw it }

@@ -34,4 +34,46 @@ object AuthUseCaseModule {
     fun provideSignUpUseCase(
         authRepository: AuthRepository,
     ): SignUpUseCase = SignUpUseCase(authRepository)
+
+    @Provides
+    @Singleton
+    fun provideSendPasswordResetEmailUseCase(
+        authRepository: AuthRepository,
+    ): com.feniqo.mobile.domain.usecase.SendPasswordResetEmailUseCase =
+        com.feniqo.mobile.domain.usecase.SendPasswordResetEmailUseCase(authRepository)
+
+    @Provides
+    @Singleton
+    fun provideResendEmailConfirmationUseCase(
+        authRepository: AuthRepository,
+    ): com.feniqo.mobile.domain.usecase.ResendEmailConfirmationUseCase =
+        com.feniqo.mobile.domain.usecase.ResendEmailConfirmationUseCase(authRepository)
+
+    @Provides
+    @Singleton
+    fun provideResetPasswordUseCase(
+        authRepository: AuthRepository,
+    ): com.feniqo.mobile.domain.usecase.ResetPasswordUseCase =
+        com.feniqo.mobile.domain.usecase.ResetPasswordUseCase(authRepository)
+
+    @Provides
+    @Singleton
+    fun provideObserveRecoveryStateUseCase(
+        authRepository: AuthRepository,
+    ): com.feniqo.mobile.domain.usecase.ObserveRecoveryStateUseCase =
+        com.feniqo.mobile.domain.usecase.ObserveRecoveryStateUseCase(authRepository)
+
+    @Provides
+    @Singleton
+    fun provideHandleAuthDeepLinkUseCase(
+        authRepository: AuthRepository,
+    ): com.feniqo.mobile.domain.usecase.HandleAuthDeepLinkUseCase =
+        com.feniqo.mobile.domain.usecase.HandleAuthDeepLinkUseCase(authRepository)
+
+    @Provides
+    @Singleton
+    fun provideClearRecoveryStateUseCase(
+        authRepository: AuthRepository,
+    ): com.feniqo.mobile.domain.usecase.ClearRecoveryStateUseCase =
+        com.feniqo.mobile.domain.usecase.ClearRecoveryStateUseCase(authRepository)
 }

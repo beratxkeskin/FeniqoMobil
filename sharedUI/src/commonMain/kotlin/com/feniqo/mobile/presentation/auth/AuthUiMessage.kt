@@ -18,6 +18,10 @@ enum class AuthUiMessage {
     SESSION_EXPIRED,
     GENERIC_ERROR,
     EMAIL_CONFIRMATION_SENT,
+    PASSWORD_RESET_SENT,
+    RECOVERY_LINK_INVALID,
+    RECOVERY_NOT_AUTHORIZED,
+    PASSWORD_UPDATED,
 }
 
 /**
@@ -31,6 +35,8 @@ fun AppError.toAuthUiMessage(): AuthUiMessage = when (this) {
         "auth_session_expired" -> AuthUiMessage.SESSION_EXPIRED
         "auth_email_not_confirmed" -> AuthUiMessage.EMAIL_NOT_CONFIRMED
         "auth_provider_unavailable" -> AuthUiMessage.AUTH_PROVIDER_UNAVAILABLE
+        "auth_recovery_link_invalid" -> AuthUiMessage.RECOVERY_LINK_INVALID
+        "auth_recovery_not_authorized" -> AuthUiMessage.RECOVERY_NOT_AUTHORIZED
         else -> AuthUiMessage.GENERIC_ERROR
     }
     is AppError.Conflict -> when (code) {
@@ -54,9 +60,9 @@ fun AppError.toAuthUiMessage(): AuthUiMessage = when (this) {
  * AuthUiMessage için güvenli Türkçe kullanıcı metnini çözer.
  */
 fun AuthUiMessage.toDisplayText(): String = when (this) {
-    AuthUiMessage.INVALID_CREDENTIALS -> "E-posta veya parola hatalı."
+    AuthUiMessage.INVALID_CREDENTIALS -> "E-posta veya parola hatalı.\nBilgilerini kontrol edip tekrar dene."
     AuthUiMessage.EMAIL_ALREADY_REGISTERED -> "Bu e-posta adresiyle kayıtlı bir hesap zaten var."
-    AuthUiMessage.NETWORK_UNAVAILABLE -> "İnternet bağlantınızı kontrol edip tekrar deneyin."
+    AuthUiMessage.NETWORK_UNAVAILABLE -> "Bağlantı kurulamadı.\nİnternet bağlantını kontrol edip yeniden dene."
     AuthUiMessage.RATE_LIMITED -> "Çok fazla deneme yaptınız. Lütfen bir süre bekleyip tekrar deneyin."
     AuthUiMessage.EMAIL_NOT_CONFIRMED -> "Giriş yapmadan önce e-posta adresinizi doğrulayın."
     AuthUiMessage.AUTH_PROVIDER_UNAVAILABLE -> "Giriş ve kayıt işlemleri şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin."
@@ -64,6 +70,10 @@ fun AuthUiMessage.toDisplayText(): String = when (this) {
     AuthUiMessage.SESSION_EXPIRED -> "Oturum süreniz doldu, lütfen tekrar giriş yapın."
     AuthUiMessage.GENERIC_ERROR -> "Bir hata oluştu. Lütfen tekrar deneyin."
     AuthUiMessage.EMAIL_CONFIRMATION_SENT -> "Kaydınız oluşturuldu. Lütfen e-posta adresinize gönderilen doğrulama bağlantısını onaylayın."
+    AuthUiMessage.PASSWORD_RESET_SENT -> "Bu adresle bir hesap varsa parola sıfırlama bağlantısı gönderilecek."
+    AuthUiMessage.RECOVERY_LINK_INVALID -> "Bağlantı geçersiz veya süresi dolmuş.\nParolanı yenilemek için yeni bir bağlantı iste."
+    AuthUiMessage.RECOVERY_NOT_AUTHORIZED -> "Kurtarma bağlantısı doğrulanmadı. Lütfen e-postandaki bağlantıyı tekrar açın."
+    AuthUiMessage.PASSWORD_UPDATED -> "Parolan güncellendi.\nYeni parolanla hesabına giriş yapabilirsin."
 }
 
 /**
@@ -71,9 +81,9 @@ fun AuthUiMessage.toDisplayText(): String = when (this) {
  */
 fun AuthValidationError.toDisplayText(): String = when (this) {
     AuthValidationError.EMAIL_REQUIRED -> "E-posta adresi gereklidir."
-    AuthValidationError.EMAIL_INVALID -> "Geçerli bir e-posta adresi girin."
+    AuthValidationError.EMAIL_INVALID -> "Geçerli bir e-posta adresi gir."
     AuthValidationError.PASSWORD_REQUIRED -> "Parola gereklidir."
     AuthValidationError.NEW_PASSWORD_TOO_SHORT -> "Parola en az 6 karakter olmalıdır."
-    AuthValidationError.PASSWORDS_DO_NOT_MATCH -> "Parolalar birbiriyle eşleşmiyor."
+    AuthValidationError.PASSWORDS_DO_NOT_MATCH -> "Parolalar eşleşmiyor."
     AuthValidationError.FULL_NAME_TOO_SHORT -> "Ad soyad en az 2 karakter olmalıdır."
 }
