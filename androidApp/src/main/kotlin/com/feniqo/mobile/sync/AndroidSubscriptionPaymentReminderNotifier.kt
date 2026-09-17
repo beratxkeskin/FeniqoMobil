@@ -47,7 +47,10 @@ class AndroidSubscriptionPaymentReminderNotifier @Inject constructor(
         return true
     }
 
-    override suspend fun notifyReminder(candidate: SubscriptionPaymentReminderCandidate) {
+    override suspend fun notifyReminder(
+        candidate: SubscriptionPaymentReminderCandidate,
+        hideAmounts: Boolean,
+    ) {
         val manager = notificationManager ?: return
         if (!canPostNotifications()) {
             return

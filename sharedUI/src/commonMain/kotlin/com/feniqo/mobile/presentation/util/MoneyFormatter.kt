@@ -12,6 +12,32 @@ import com.feniqo.mobile.domain.model.TransactionType
  */
 object MoneyFormatter {
 
+    const val MASKED_TEXT = "••••"
+    const val MASKED_ACCESSIBLE_DESCRIPTION = "Bakiye gizlendi"
+
+    /**
+     * Tutar gizleme tercihi açık olduğunda '••••' döner, kapalıysa formatı korur.
+     */
+    fun formatMasked(
+        money: Money,
+        mask: Boolean,
+        includeSign: Boolean = false,
+        type: TransactionType? = null,
+    ): String {
+        return if (mask) MASKED_TEXT else format(money, includeSign, type)
+    }
+
+    /**
+     * Erişilebilirlik (TalkBack vb.) ekran okuyucusu için tutarın gizli olup olmadığını dikkate alır.
+     * Maskeleme açıkken ham tutarı asla seslendirmez; 'Bakiye gizlendi' döner.
+     */
+    fun getAccessibleDescription(
+        rawDescription: String,
+        isMasked: Boolean,
+    ): String {
+        return if (isMasked) MASKED_ACCESSIBLE_DESCRIPTION else rawDescription
+    }
+
     fun format(
         money: Money,
         includeSign: Boolean = false,

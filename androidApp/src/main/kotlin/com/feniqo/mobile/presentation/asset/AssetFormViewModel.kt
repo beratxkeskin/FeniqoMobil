@@ -38,7 +38,11 @@ class AssetFormViewModel @Inject constructor(
                 observeAsset(id).collect { asset ->
                     if (asset == null) mutableLoadState.value = AssetEditLoadState.NotFound
                     else {
-                        mutableState.value = AssetFormUiState(input = AssetFormInput.fromDomain(asset))
+                        val input = AssetFormInput.fromDomain(asset)
+                        mutableState.value = AssetFormUiState(
+                            input = input,
+                            calculatedCostPreview = input.computeCostPreview(),
+                        )
                         mutableLoadState.value = AssetEditLoadState.Ready
                     }
                 }
@@ -59,10 +63,8 @@ class AssetFormViewModel @Inject constructor(
         mutableState.update { state ->
             val changed = transform(state.input)
             state.copy(
-                input = changed.copy(
-                    assetId = state.input.assetId,
-                    currency = if (state.input.assetId == null) changed.currency else state.input.currency,
-                ),
+                input = changed.copy(assetId = state.input.assetId),
+                calculatedCostPreview = changed.computeCostPreview(),
                 errors = AssetFormErrors(),
             )
         }

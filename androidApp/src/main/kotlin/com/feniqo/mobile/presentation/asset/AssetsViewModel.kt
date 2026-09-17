@@ -54,6 +54,7 @@ class AssetsViewModel @Inject constructor(
             val assets: List<AssetDisplayModel>,
             val netWorth: com.feniqo.mobile.presentation.asset.NetWorthDisplayModel?,
             val netWorthError: Boolean,
+            val distributionSummary: com.feniqo.mobile.presentation.asset.AssetDistributionDisplayModel?,
         ) : ObservationResult
         data object Failure : ObservationResult
     }
@@ -65,10 +66,18 @@ class AssetsViewModel @Inject constructor(
             .flatMapLatest(::observeMarketAdjustedAssets)
             .map { resolved ->
                 val calculation = calculateNetWorthUseCase(resolved.assets)
+                val primaryCurrency = (calculation as? NetWorthCalculationResult.Success)?.totals?.firstOrNull()?.currency
+                    ?: resolved.assets.firstOrNull()?.currentValue?.currency
+                    ?: com.feniqo.mobile.domain.model.Currency.TRY
+                val distribution = if (resolved.assets.isNotEmpty()) {
+                    AssetDisplayModelMapper.mapDistribution(resolved.assets, primaryCurrency)
+                } else null
+
                 ObservationResult.Success(
                     assets = AssetDisplayModelMapper.map(resolved.assets, resolved.valueSources),
-                    netWorth = NetWorthDisplayModelMapper.map(calculation),
+                    netWorth = NetWorthDisplayModelMapper.map(calculation, resolved.assets, resolved.valueSources),
                     netWorthError = calculation !is NetWorthCalculationResult.Success,
+                    distributionSummary = distribution,
                 ) as ObservationResult
             }
             .onStart { emit(ObservationResult.Loading) }
@@ -90,6 +99,7 @@ class AssetsViewModel @Inject constructor(
                     assets = result.assets,
                     netWorth = result.netWorth,
                     netWorthError = result.netWorthError,
+                    distributionSummary = result.distributionSummary,
                     isRefreshingPrices = refresh.isRefreshing,
                     priceRefreshError = refresh.hasError,
                 )

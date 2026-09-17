@@ -8,10 +8,12 @@ import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.UpdateAssetCommand
+import com.feniqo.mobile.domain.validation.AssetFinancialCalculator
 import com.feniqo.mobile.domain.validation.AssetValidationRules
+import com.feniqo.mobile.domain.validation.CostCalculationResult
 import com.feniqo.mobile.domain.validation.MoneyAmountParser
-import com.feniqo.mobile.presentation.util.MoneyFormatter
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.util.MoneyFormatter
 
 enum class AssetFormFieldError {
     NAME_REQUIRED,
@@ -93,6 +95,7 @@ sealed interface AssetFormNormalizationResult {
 data class AssetFormUiState(
     val input: AssetFormInput = AssetFormInput(),
     val errors: AssetFormErrors = AssetFormErrors(),
+    val calculatedCostPreview: String? = null,
     val isSubmitting: Boolean = false,
     val pendingDeleteConfirmation: Boolean = false,
 )
@@ -162,6 +165,18 @@ data class AssetFormInput(
                 autoTrack = autoTrack,
             ),
         )
+    }
+
+    /** Miktar ve alış birim fiyatı geçerli girilmişse anlık maliyet önizlemesi üretir. */
+    fun computeCostPreview(): String? {
+        val quantityResult = parseQuantity(quantityInput)
+        val purchaseResult = parseMoneyAllowingZero(purchaseUnitPriceInput, currency, required = false)
+        val quantity = quantityResult.quantity ?: return null
+        val purchasePrice = purchaseResult.money ?: return null
+        val costResult = AssetFinancialCalculator.calculateCost(quantity, purchasePrice)
+        return if (costResult is CostCalculationResult.Success) {
+            MoneyFormatter.format(costResult.cost)
+        } else null
     }
 
     companion object {
@@ -248,5 +263,6 @@ private fun parseQuantity(input: String): QuantityFieldResult {
 private fun AssetQuantity.toInputText(): String {
     if (scale == 0) return unscaledValue.toString()
     val digits = unscaledValue.toString().padStart(scale + 1, '0')
-    return "${digits.dropLast(scale)},${digits.takeLast(scale)}"
+    val fractional = digits.takeLast(scale).trimEnd('0')
+    return if (fractional.isEmpty()) digits.dropLast(scale) else "${digits.dropLast(scale)},$fractional"
 }

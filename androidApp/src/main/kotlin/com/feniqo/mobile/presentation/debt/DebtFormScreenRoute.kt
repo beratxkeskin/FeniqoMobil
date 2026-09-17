@@ -131,43 +131,23 @@ fun DebtFormScreenRoute(
     }
 
 
-    // Material DatePicker Dialog
+    // Panel 09: Vade Tarihi Bottom Sheet Seçici
     if (showDatePicker) {
-        val initialMillis = com.feniqo.mobile.presentation.goal.GoalDebtFormRouteHelper.computeInitialDatePickerSelection(
-            targetDate = uiState.input.dueDate,
-        )
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = initialMillis,
-        )
-
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            val localDate = com.feniqo.mobile.presentation.goal.GoalDebtFormRouteHelper.utcEpochMillisToLocalDate(millis)
-                            viewModel.updateInput { it.copy(dueDate = localDate) }
-                        }
-                        showDatePicker = false
-                    },
-                ) {
-                    Text("Tamam")
-                }
+        com.feniqo.mobile.presentation.component.DebtDatePickerSheet(
+            selectedDate = uiState.input.dueDate,
+            onDismiss = { showDatePicker = false },
+            onDateSelected = { date ->
+                viewModel.updateInput { it.copy(dueDate = date) }
+                showDatePicker = false
             },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text("Vazgeç")
-                }
-            },
-        ) {
-            DatePicker(state = datePickerState)
-        }
+            title = "Vade Tarihi Seç",
+        )
     }
 
-    // Onaylı Silme Diyaloğu
+    // Panel 11: Onaylı Silme Diyaloğu (Borç adı ile)
     if (uiState.pendingDeleteConfirmation) {
         DebtDeleteDialog(
+            debtTitle = uiState.input.titleInput.ifBlank { "bu kaydı" },
             isSubmitting = uiState.isSubmitting,
             onConfirm = { viewModel.confirmDelete() },
             onDismiss = { viewModel.dismissDelete() },

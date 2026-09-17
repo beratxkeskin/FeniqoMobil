@@ -2,6 +2,7 @@ package com.feniqo.mobile.domain.usecase
 
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.Money
+import com.feniqo.mobile.domain.model.TransactionSplitMode
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.Workspace
 import com.feniqo.mobile.domain.model.WorkspaceMember
@@ -9,8 +10,11 @@ import com.feniqo.mobile.domain.repository.AuthRepository
 import com.feniqo.mobile.domain.repository.TransactionFilter
 import com.feniqo.mobile.domain.repository.TransactionRepository
 import com.feniqo.mobile.domain.repository.WorkspaceRepository
+import com.feniqo.mobile.domain.validation.TransactionValidationResult
+import com.feniqo.mobile.domain.validation.TransactionValidationRules
 import com.feniqo.mobile.domain.validation.WorkspaceSettlement
 import com.feniqo.mobile.domain.validation.WorkspaceSettlementCalculator
+import com.feniqo.mobile.domain.validation.WorkspaceSettlementException
 import com.feniqo.mobile.domain.validation.WorkspaceSharedExpense
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -75,36 +79,58 @@ class ObserveWorkspaceSettlementUseCase(
             for (transaction in transactions) {
                 if (transaction.workspaceId != workspaceId) continue
                 if (transaction.type != TransactionType.EXPENSE) continue
+                if (transaction.amount.amountMinor <= 0L || transaction.amount.currency != targetCurrency) {
+                    hasExcludedExpenses = true
+                    continue
+                }
 
-                val isValidAmount = transaction.amount.amountMinor > 0 && transaction.amount.currency == targetCurrency
-                val isPayerActive = transaction.paidByUserId in activeMemberIds
-                val areParticipantsValid = transaction.participantUserIds.isNotEmpty() &&
-                    transaction.participantUserIds.distinct().size == transaction.participantUserIds.size &&
-                    transaction.paidByUserId in transaction.participantUserIds &&
-                    transaction.participantUserIds.all { it in activeMemberIds }
+                val splitResult = TransactionValidationRules.validateSplit(
+                    workspaceId = transaction.workspaceId,
+                    type = transaction.type,
+                    amountMinor = transaction.amount.amountMinor,
+                    paidByUserId = transaction.paidByUserId,
+                    participantUserIds = transaction.participantUserIds,
+                    splitMode = transaction.splitMode,
+                    participantShares = transaction.participantShares,
+                    activeMemberUserIds = activeMemberIds,
+                )
 
-                if (isValidAmount && isPayerActive && areParticipantsValid) {
-                    try {
-                        val sharedExpense = WorkspaceSharedExpense(
-                            id = transaction.id,
-                            paidByUserId = transaction.paidByUserId,
-                            amount = transaction.amount,
-                            participantUserIds = transaction.participantUserIds,
-                        )
-                        validExpenses.add(sharedExpense)
-                        totalExpenseMinor += transaction.amount.amountMinor
-                    } catch (_: Throwable) {
+                when (splitResult) {
+                    is TransactionValidationResult.Invalid -> {
                         hasExcludedExpenses = true
                     }
-                } else {
-                    hasExcludedExpenses = true
+                    is TransactionValidationResult.Valid -> {
+                        try {
+                            val nextTotal = totalExpenseMinor + transaction.amount.amountMinor
+                            if ((totalExpenseMinor xor nextTotal) and (transaction.amount.amountMinor xor nextTotal) < 0 || nextTotal > Money.MAX_AMOUNT_MINOR) {
+                                throw WorkspaceSettlementException.BalanceOverflow(EntityId("workspace_total"))
+                            }
+                            val sharedExpense = WorkspaceSharedExpense(
+                                id = transaction.id,
+                                paidByUserId = splitResult.value.paidByUserId,
+                                amount = transaction.amount,
+                                participantUserIds = splitResult.value.participantUserIds,
+                                splitMode = splitResult.value.splitMode,
+                                participantShares = splitResult.value.participantShares,
+                            )
+                            validExpenses.add(sharedExpense)
+                            totalExpenseMinor = nextTotal
+                        } catch (e: WorkspaceSettlementException) {
+                            hasExcludedExpenses = true
+                        } catch (e: ArithmeticException) {
+                            hasExcludedExpenses = true
+                        }
+                    }
                 }
             }
 
             val settlement = if (validExpenses.isNotEmpty()) {
                 try {
                     WorkspaceSettlementCalculator.calculate(validExpenses)
-                } catch (_: Throwable) {
+                } catch (e: WorkspaceSettlementException) {
+                    hasExcludedExpenses = true
+                    null
+                } catch (e: ArithmeticException) {
                     hasExcludedExpenses = true
                     null
                 }

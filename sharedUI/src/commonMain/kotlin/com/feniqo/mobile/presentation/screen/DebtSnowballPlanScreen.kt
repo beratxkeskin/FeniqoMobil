@@ -1,6 +1,8 @@
 package com.feniqo.mobile.presentation.screen
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,36 +19,47 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.presentation.component.EmptyState
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
+import com.feniqo.mobile.presentation.component.symbol
 import com.feniqo.mobile.presentation.debt.DebtSnowballPlanUiState
-import com.feniqo.mobile.presentation.theme.FeniqoRadius
+import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
+import com.feniqo.mobile.presentation.theme.FeniqoTextPrimary
+import com.feniqo.mobile.presentation.theme.FeniqoTextSecondary
+import com.feniqo.mobile.presentation.theme.FeniqoWarmStoneBackground
 
 /**
- * Borç snowball ödeme planı simülasyonunun durumsuz (stateless) Compose ekranıdır.
+ * Borç Snowball Ödeme Planı Simülasyon Ekranı (Panel 07 & 08).
+ * Bütçe girişi, uygun borç sayısı, grafit simülasyon özeti (#303536),
+ * borç kapanış sırası ve aylık dağılım listesini sunar.
  */
 @Composable
 fun DebtSnowballPlanScreen(
@@ -58,40 +71,51 @@ fun DebtSnowballPlanScreen(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-
-    Surface(
+    Scaffold(
         modifier = modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
-    ) {
+        containerColor = FeniqoWarmStoneBackground,
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(innerPadding)
                 .padding(horizontal = FeniqoSpacing.Large),
         ) {
             Spacer(modifier = Modifier.height(FeniqoSpacing.Medium))
 
-            // Üst Başlık & Geri Dön
+            // Üst Başlık & Geri Butonu
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(
                     onClick = onBack,
-                    modifier = Modifier.semantics { contentDescription = "Geri dön" },
+                    modifier = Modifier.size(40.dp),
                 ) {
-                    Text(
-                        text = "←",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Geri",
+                        tint = FeniqoTextPrimary,
                     )
                 }
-                Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
-                Text(
-                    text = "Borç Snowball Planı",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Column {
+                    Text(
+                        text = "Borç kapatma planı",
+                        style = TextStyle(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp,
+                            letterSpacing = (-0.3).sp,
+                        ),
+                        color = FeniqoTextPrimary,
+                    )
+                    Text(
+                        text = "Küçük borçlardan başlayarak borçlarını kapat.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = FeniqoTextSecondary,
+                        fontSize = 12.sp,
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(FeniqoSpacing.Medium))
@@ -100,75 +124,119 @@ fun DebtSnowballPlanScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                // Giriş Kartı (Para birimi + Aylık bütçe + Hesapla CTA)
+                // 1. Simülasyon Girdi Kartı (Panel 07)
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(FeniqoRadius.Medium),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
                 ) {
                     Column(
-                        modifier = Modifier.padding(FeniqoSpacing.Medium),
-                        verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Text(
-                            text = "Simülasyon Para Birimi",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onBackground,
+                            text = "Simülasyon para birimi",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = FeniqoTextSecondary,
+                            fontSize = 12.sp,
                         )
 
+                        // Para Birimi Seçim Sekmeleri
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0xFFF3F4F6))
+                                .padding(3.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
                             state.availableCurrencies.forEach { currency ->
                                 val isSelected = currency == state.selectedCurrency
-                                FilterChip(
-                                    selected = isSelected,
-                                    onClick = { onCurrencySelect(currency) },
-                                    label = { Text(currency.name) },
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                    ),
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isSelected) FeniqoSageGreen else Color.Transparent)
+                                        .clickable(
+                                            role = Role.Tab,
+                                            onClick = { onCurrencySelect(currency) },
+                                        )
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = currency.name,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 13.sp,
+                                        color = if (isSelected) Color.White else Color(0xFF4B5563),
+                                    )
+                                }
                             }
                         }
 
+                        // Aylık Bütçe Girdisi
                         OutlinedTextField(
                             value = state.budgetInput,
                             onValueChange = onBudgetChange,
-                            label = { Text("Aylık Ödeme Bütçesi (${state.selectedCurrency.name})") },
-                            placeholder = { Text("Örn: 2500") },
+                            label = { Text("Aylık ayırabileceğin bütçe *") },
+                            placeholder = { Text("0,00") },
+                            trailingIcon = {
+                                Text(
+                                    text = state.selectedCurrency.symbol(),
+                                    fontWeight = FontWeight.Bold,
+                                    color = FeniqoTextSecondary,
+                                    modifier = Modifier.padding(end = 12.dp),
+                                )
+                            },
                             isError = state.budgetError != null,
                             supportingText = {
                                 state.budgetError?.let {
-                                    Text(text = it, color = MaterialTheme.colorScheme.error)
+                                    Text(text = it, color = Color(0xFFDC2626))
                                 }
                             },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White,
+                                focusedBorderColor = FeniqoSageGreen,
+                                unfocusedBorderColor = Color(0xFFE5E7EB),
+                            ),
                         )
 
+                        // Uygun Borç Bilgisi
+                        Text(
+                            text = "${state.eligibleDebtsCount} uygun borç bulundu.",
+                            fontSize = 12.sp,
+                            color = FeniqoTextSecondary,
+                        )
+
+                        // Planı Hesapla Butonu
                         Button(
                             onClick = onCalculate,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(FeniqoRadius.Medium),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = FeniqoSageGreen),
+                            shape = RoundedCornerShape(12.dp),
                         ) {
                             Text(
-                                text = "Planı Hesapla",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
+                                text = "+ Planı hesapla",
+                                style = TextStyle(
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White,
+                                ),
                             )
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(FeniqoSpacing.Large))
 
                 if (state.isLoadingDebts) {
                     LoadingContent(modifier = Modifier.fillMaxWidth().height(150.dp))
@@ -186,174 +254,256 @@ fun DebtSnowballPlanScreen(
                         modifier = Modifier.fillMaxWidth().padding(vertical = FeniqoSpacing.Large),
                     )
                 } else if (state.plan != null) {
-
-
                     val plan = state.plan
 
-                    // Sonuç Özeti Kartı
+                    // 2. Grafit Simülasyon Sonuç Kartı (#303536, Panel 07)
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(FeniqoRadius.Medium),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        ),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF303536)),
                     ) {
                         Column(
-                            modifier = Modifier.padding(FeniqoSpacing.Medium),
-                            verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             Text(
-                                text = "Simülasyon Özeti",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                text = "Simülasyon sonucu",
+                                fontSize = 12.sp,
+                                color = Color(0xFF9CA3AF),
                             )
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text("Toplam Borç:", style = MaterialTheme.typography.bodyMedium)
-                                Text(plan.totalDebtFormatted, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                                Column {
+                                    Text(
+                                        text = "Toplam borç",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF9CA3AF),
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = plan.totalDebtFormatted,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                    )
+                                }
+
+                                Column {
+                                    Text(
+                                        text = "Aylık bütçe",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF9CA3AF),
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = plan.monthlyBudgetFormatted,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                    )
+                                }
+
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        text = "Yaklaşık",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF9CA3AF),
+                                    )
+                                    Text(
+                                        text = "${plan.totalMonths} ay",
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF22C55E),
+                                    )
+                                    Text(
+                                        text = "içinde kapanır",
+                                        fontSize = 10.sp,
+                                        color = Color(0xFF9CA3AF),
+                                    )
+                                }
                             }
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
+
+                            // Simülasyon Bilgi Kutusu
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFF262A2B))
+                                    .padding(10.dp),
                             ) {
-                                Text("Aylık Bütçe:", style = MaterialTheme.typography.bodyMedium)
-                                Text(plan.monthlyBudgetFormatted, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                            }
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                Text("Tahmini Borçsuzluk:", style = MaterialTheme.typography.bodyMedium)
-                                Text("${plan.totalMonths} Ay", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                Row(verticalAlignment = Alignment.Top) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Info,
+                                        contentDescription = null,
+                                        tint = Color(0xFF9CA3AF),
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Faiz ve yeni borçlar hesaba katılmaz. Bu plan otomatik ödeme yapmaz, yol gösterici simülasyondur.",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFFD1D5DB),
+                                        lineHeight = 15.sp,
+                                    )
+                                }
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(FeniqoSpacing.Large))
-
-                    // Kapanış Sırası
+                    // 3. Borç Kapanış Sırası Bölümü (Panel 07)
                     Text(
-                        text = "Borç Kapanış Sırası (Snowball)",
+                        text = "Kapanma sırası",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
+                        color = FeniqoTextPrimary,
+                        fontSize = 15.sp,
                     )
-                    Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
 
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                    ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         plan.debtItems.forEach { item ->
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(FeniqoRadius.Medium),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color.White),
+                                border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(FeniqoSpacing.Medium),
+                                        .padding(12.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Box(
                                         modifier = Modifier
                                             .size(28.dp)
                                             .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.primary),
+                                            .background(FeniqoSageGreen),
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         Text(
                                             text = item.orderIndex.toString(),
-                                            style = MaterialTheme.typography.labelMedium,
+                                            style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            color = Color.White,
                                         )
                                     }
-                                    Spacer(modifier = Modifier.width(FeniqoSpacing.Medium))
+
+                                    Spacer(modifier = Modifier.width(12.dp))
+
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = item.debtTitle,
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onBackground,
+                                            color = FeniqoTextPrimary,
                                         )
                                         Text(
-                                            text = "Kalan: ${item.initialRemainingFormatted}",
+                                            text = item.initialRemainingFormatted,
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            color = FeniqoTextSecondary,
+                                            fontSize = 12.sp,
                                         )
                                     }
+
                                     Text(
-                                        text = "${item.settledInMonth}. Ayda Kapanır",
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        text = "${item.settledInMonth}. ayda kapanır",
+                                        style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.primary,
+                                        color = FeniqoSageGreen,
                                     )
                                 }
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(FeniqoSpacing.Large))
-
-                    // Aylık Ödeme Dağılımı Detayı
+                    // 4. Aylık Dağılım Bölümü (Panel 08)
                     Text(
-                        text = "Aylık Ödeme Dağılımı",
+                        text = "Aylık dağılım",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
+                        color = FeniqoTextPrimary,
+                        fontSize = 15.sp,
                     )
-                    Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
 
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
-                    ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         plan.monthlyAllocations.forEach { alloc ->
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(FeniqoRadius.Small),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
-                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color.White),
+                                border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = FeniqoSpacing.Medium, vertical = FeniqoSpacing.Small),
+                                        .padding(12.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Column {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFFF3F4F6)),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Text(
+                                                text = alloc.month.toString(),
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF4B5563),
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(12.dp))
+
+                                        Column {
+                                            Text(
+                                                text = "${alloc.month}. ay • ${alloc.debtTitle}",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = FeniqoTextPrimary,
+                                                fontSize = 13.sp,
+                                            )
+                                            Text(
+                                                text = "Kalan: ${alloc.remainingBalanceFormatted}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = FeniqoTextSecondary,
+                                                fontSize = 11.sp,
+                                            )
+                                        }
+                                    }
+
+                                    Column(horizontalAlignment = Alignment.End) {
                                         Text(
-                                            text = "${alloc.month}. Ay • ${alloc.debtTitle}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface,
+                                            text = "Ödeme",
+                                            fontSize = 10.sp,
+                                            color = FeniqoTextSecondary,
                                         )
                                         Text(
-                                            text = "Kalan: ${alloc.remainingBalanceFormatted}",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            text = alloc.allocatedFormatted,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF16A34A),
                                         )
                                     }
-                                    Text(
-                                        text = alloc.allocatedFormatted,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
                                 }
                             }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(FeniqoSpacing.ExtraLarge))
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }

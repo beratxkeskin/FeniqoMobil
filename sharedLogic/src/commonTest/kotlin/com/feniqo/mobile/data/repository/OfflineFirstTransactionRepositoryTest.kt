@@ -28,6 +28,8 @@ import com.feniqo.mobile.domain.model.PaymentMethod
 import com.feniqo.mobile.domain.model.ReportPeriod
 import com.feniqo.mobile.domain.model.SyncStatus
 import com.feniqo.mobile.domain.model.Transaction
+import com.feniqo.mobile.domain.model.TransactionParticipantShare
+import com.feniqo.mobile.domain.model.TransactionSplitMode
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.UserProfile
 import com.feniqo.mobile.domain.repository.AuthRepository
@@ -49,6 +51,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -361,6 +364,57 @@ class OfflineFirstTransactionRepositoryTest {
     }
 
     @Test
+    fun create_customSplitExpense_preservesCustomSplitFieldsOnLocalEntity() = runTest {
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val dao = FakeTransactionDao()
+        val queue = FakeOfflineWriteQueueHolder()
+        val wsDao = FakeWorkspaceDao(
+            activeMemberUserIdsByWorkspace = mapOf("ws-1" to listOf("user-1", "user-2")),
+        )
+        val repository = createRepository(
+            authRepo,
+            dao,
+            queue.queue,
+            workspaceDao = wsDao,
+            activeWorkspaceScope = TestActiveWorkspaceScope(EntityId("ws-1")),
+            nowEpochMillisProvider = { 10_000L },
+        )
+
+        val trx = Transaction(
+            id = EntityId("t-custom"),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            amount = Money(10_000L, Currency.TRY),
+            type = TransactionType.EXPENSE,
+            categoryId = EntityId("cat-1"),
+            description = "Özel bölüşüm",
+            paymentMethod = PaymentMethod.CREDIT_CARD,
+            transactionDate = LocalDate(2026, 8, 21),
+            receiptPath = null,
+            installment = null,
+            createdAt = NOW,
+            paidByUserId = EntityId("user-1"),
+            participantUserIds = listOf(EntityId("user-1"), EntityId("user-2")),
+            splitMode = TransactionSplitMode.CUSTOM,
+            participantShares = listOf(
+                TransactionParticipantShare(EntityId("user-2"), 4_000L),
+                TransactionParticipantShare(EntityId("user-1"), 6_000L),
+            ),
+        )
+
+        val result = repository.create(trx)
+        assertIs<RepositoryResult.Success<EntityId>>(result)
+
+        val enqueued = queue.lastEnqueuedTransaction
+        assertNotNull(enqueued)
+        assertEquals("CUSTOM", enqueued.splitMode)
+        assertEquals(
+            """[{"userId":"user-1","amountMinor":6000},{"userId":"user-2","amountMinor":4000}]""",
+            enqueued.participantSharesJson,
+        )
+    }
+
+    @Test
     fun create_personalExpense_normalizesSplitToOwner() = runTest {
         val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
         val dao = FakeTransactionDao()
@@ -574,6 +628,67 @@ class OfflineFirstTransactionRepositoryTest {
         val payloadJson = queue.lastInsertedOperation?.payloadJson
         assertTrue(payloadJson != null && payloadJson.contains(""""paid_by_user_id":"user-2""""))
         assertTrue(payloadJson != null && payloadJson.contains(""""participant_user_ids":["user-1","user-2"]"""))
+    }
+
+    @Test
+    fun update_customSplitExpense_preservesCustomSplitFieldsOnLocalEntity() = runTest {
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val existingSync = SyncMetadata(
+            syncStatus = SyncStatus.SYNCED.name,
+            updatedAtEpochMillis = 5_000L,
+            localUpdatedAtEpochMillis = 5_000L,
+            deletedAtEpochMillis = null,
+            version = 2L,
+            baseVersion = 2L,
+            lastSyncError = null,
+        )
+        val existingEntity = sampleTransactionEntity(id = "t-cust-up", ownerId = "user-1", sync = existingSync, workspaceId = "ws-1")
+        val dao = FakeTransactionDao(listOf(existingEntity))
+        val queue = FakeOfflineWriteQueueHolder()
+        val wsDao = FakeWorkspaceDao(
+            activeMemberUserIdsByWorkspace = mapOf("ws-1" to listOf("user-1", "user-2")),
+        )
+        val repository = createRepository(
+            authRepo,
+            dao,
+            queue.queue,
+            workspaceDao = wsDao,
+            activeWorkspaceScope = TestActiveWorkspaceScope(EntityId("ws-1")),
+            nowEpochMillisProvider = { 15_000L },
+        )
+
+        val updatedTrx = Transaction(
+            id = EntityId("t-cust-up"),
+            ownerId = EntityId("user-1"),
+            workspaceId = EntityId("ws-1"),
+            amount = Money(8000L, Currency.TRY),
+            type = TransactionType.EXPENSE,
+            categoryId = EntityId("cat-1"),
+            description = "Özel Güncelleme",
+            paymentMethod = PaymentMethod.CREDIT_CARD,
+            transactionDate = LocalDate(2026, 8, 21),
+            receiptPath = null,
+            installment = null,
+            createdAt = NOW,
+            paidByUserId = EntityId("user-1"),
+            participantUserIds = listOf(EntityId("user-1"), EntityId("user-2")),
+            splitMode = TransactionSplitMode.CUSTOM,
+            participantShares = listOf(
+                TransactionParticipantShare(EntityId("user-2"), 3_000L),
+                TransactionParticipantShare(EntityId("user-1"), 5_000L),
+            ),
+        )
+
+        val result = repository.update(updatedTrx)
+        assertIs<RepositoryResult.Success<Unit>>(result)
+
+        val enqueued = queue.lastEnqueuedTransaction
+        assertNotNull(enqueued)
+        assertEquals("CUSTOM", enqueued.splitMode)
+        assertEquals(
+            """[{"userId":"user-1","amountMinor":5000},{"userId":"user-2","amountMinor":3000}]""",
+            enqueued.participantSharesJson,
+        )
     }
 
     @Test

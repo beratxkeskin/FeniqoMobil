@@ -4,12 +4,15 @@ import com.feniqo.mobile.domain.model.LocalDate
 import kotlinx.datetime.Instant
 import java.time.LocalDate as JavaLocalDate
 
+import java.time.LocalTime as JavaLocalTime
+
 /**
  * Android sync katmanı için test edilebilir zaman ve yerel tarih sağlayıcı sözleşmesi.
  */
 interface RecurringTransactionTimeProvider {
     fun currentLocalDate(): LocalDate
     fun currentInstant(): Instant
+    fun currentLocalTime(): Pair<Int, Int>
 }
 
 class SystemRecurringTransactionTimeProvider : RecurringTransactionTimeProvider {
@@ -20,5 +23,10 @@ class SystemRecurringTransactionTimeProvider : RecurringTransactionTimeProvider 
 
     override fun currentInstant(): Instant {
         return Instant.fromEpochMilliseconds(System.currentTimeMillis())
+    }
+
+    override fun currentLocalTime(): Pair<Int, Int> {
+        val now = JavaLocalTime.now()
+        return Pair(now.hour, now.minute)
     }
 }

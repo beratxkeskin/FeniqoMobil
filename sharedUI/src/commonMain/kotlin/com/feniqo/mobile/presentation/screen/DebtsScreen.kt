@@ -13,15 +13,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,21 +36,18 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.EntityId
-import com.feniqo.mobile.presentation.component.ActiveWorkspaceIndicator
+import com.feniqo.mobile.presentation.component.DebtEmptyState
 import com.feniqo.mobile.presentation.component.DebtGroupedSectionCard
-import com.feniqo.mobile.presentation.component.DebtInsightCard
-import com.feniqo.mobile.presentation.component.DebtSummaryCardsRow
-import com.feniqo.mobile.presentation.component.EmptyState
+import com.feniqo.mobile.presentation.component.DebtSnowballEntryCard
+import com.feniqo.mobile.presentation.component.DebtsGraphiteSummaryCard
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
 import com.feniqo.mobile.presentation.component.UpcomingPaymentsSection
 import com.feniqo.mobile.presentation.debt.DebtsUiState
-import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTextPrimary
@@ -55,9 +55,9 @@ import com.feniqo.mobile.presentation.theme.FeniqoTextSecondary
 import com.feniqo.mobile.presentation.theme.FeniqoWarmStoneBackground
 
 /**
- * Borç ve alacaklar liste ekranının warm-luxury Jetpack Compose sunumudur.
- * Referans görseldeki görsel hiyerarşi, ferah kart düzeni, üçlü finans özeti,
- * yaklaşan vadeler, borç/alacak ayrımı ve Feniqo içgörü kartı ile sunulur.
+ * Borç ve Alacaklar ana genel bakış ekranı (Panel 01).
+ * Grafit özet kartı (#303536), yaklaşan vadeler, borç/alacak grupları,
+ * borç kapatma planı yönlendirmesi ve boş durum (Panel 12) ile sunulur.
  */
 @Composable
 fun DebtsScreen(
@@ -65,6 +65,7 @@ fun DebtsScreen(
     onRetry: () -> Unit,
     onAddDebt: () -> Unit,
     onDebtClick: (EntityId) -> Unit,
+    onNavigateBack: (() -> Unit)? = null,
     onNavigateToSnowballPlan: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -80,96 +81,69 @@ fun DebtsScreen(
         ) {
             Spacer(modifier = Modifier.height(FeniqoSpacing.Medium))
 
-            // Üst Başlık & Eylem Bölümü (Referans görseldeki görsel hiyerarşi)
+            // Üst Başlık & Eylem Bölümü (Panel 01)
             Column(modifier = Modifier.fillMaxWidth()) {
-                // 1. Satır: Marka ve Çalışma Alanı
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = "Feniqo",
-                        style = TextStyle(
-                            fontFamily = FontFamily.Serif,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp,
-                        ),
-                        color = FeniqoTextPrimary,
-                    )
-                    ActiveWorkspaceIndicator(
-                        workspaceName = state.activeWorkspaceName,
-                        isCompact = true,
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        if (onNavigateBack != null) {
+                            IconButton(
+                                onClick = onNavigateBack,
+                                modifier = Modifier.size(40.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Geri",
+                                    tint = FeniqoTextPrimary,
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                        }
+
+                        Text(
+                            text = "Borç ve Alacaklar",
+                            style = TextStyle(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 22.sp,
+                                letterSpacing = (-0.3).sp,
+                            ),
+                            color = FeniqoTextPrimary,
+                        )
+                    }
+
+                    // Panel 01: Sağ üst yeşil '+' dairesel buton (38dp)
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(FeniqoSageGreen)
+                            .clickable(
+                                role = Role.Button,
+                                onClick = onAddDebt,
+                            )
+                            .semantics {
+                                contentDescription = "Yeni kayıt oluştur"
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // 2. Satır: Başlık ("Borçlar ve Alacaklar") & Sağ Üst Yeşil '+' Dairesel Buton
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "Borçlar ve Alacaklar",
-                        style = TextStyle(
-                            fontFamily = FontFamily.Serif,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 26.sp,
-                            letterSpacing = (-0.5).sp,
-                        ),
-                        color = FeniqoTextPrimary,
-                        modifier = Modifier.weight(1f),
-                    )
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        if (onNavigateToSnowballPlan != null && !state.isLoading && state.observationError == null) {
-                            OutlinedButton(
-                                onClick = onNavigateToSnowballPlan,
-                                shape = RoundedCornerShape(12.dp),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                modifier = Modifier.height(36.dp),
-                            ) {
-                                Text(
-                                    text = "Plan",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                            }
-                        }
-
-                        // Referans görseldeki dairesel yeşil '+' butonu
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(CircleShape)
-                                .background(FeniqoSageGreen)
-                                .clickable(
-                                    role = Role.Button,
-                                    onClick = onAddDebt,
-                                )
-                                .semantics {
-                                    contentDescription = "Yeni borç veya alacak ekle"
-                                },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp),
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                // 3. Satır: Rehber Alt Açıklama
+                // Rehber Alt Açıklama
                 Text(
                     text = "Kime ne kadar borcunuz olduğunu ve kimden alacağınız olduğunu takip edin.",
                     style = MaterialTheme.typography.bodyMedium,
@@ -204,22 +178,11 @@ fun DebtsScreen(
                     }
 
                     state.isEmpty -> {
-                        Column(
+                        // Panel 12: Boş Durum
+                        DebtEmptyState(
+                            onAddDebt = onAddDebt,
                             modifier = Modifier.align(Alignment.Center),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
-                        ) {
-                            EmptyState(
-                                title = "Kayıtlı borç veya alacak yok.",
-                                description = "Kişi ve kurumlara olan borçlarınızı ve alacaklarınızı ekleyerek net durumunuzu kolayca yönetin.",
-                            )
-                            Button(
-                                onClick = onAddDebt,
-                                shape = RoundedCornerShape(FeniqoRadius.Medium),
-                            ) {
-                                Text("Borç / Alacak Ekle")
-                            }
-                        }
+                        )
                     }
 
                     else -> {
@@ -228,14 +191,14 @@ fun DebtsScreen(
                             verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Large),
                             contentPadding = PaddingValues(bottom = 32.dp),
                         ) {
-                            // 1. Üçlü Finans Özeti (Borcunuz, Alacağınız, Net durum)
+                            // 1. Grafit Özet Kartı (#303536, Panel 01)
                             state.summary?.let { summary ->
-                                item(key = "summary_cards") {
-                                    DebtSummaryCardsRow(summary = summary)
+                                item(key = "graphite_summary_card") {
+                                    DebtsGraphiteSummaryCard(summary = summary)
                                 }
                             }
 
-                            // 2. Yaklaşan Vadeler Kartı (Upcoming Payments)
+                            // 2. Yaklaşan Vadeler Bölümü (Panel 01)
                             if (state.upcomingItems.isNotEmpty()) {
                                 item(key = "upcoming_section") {
                                     UpcomingPaymentsSection(
@@ -245,7 +208,7 @@ fun DebtsScreen(
                                 }
                             }
 
-                            // 3. Borçlarım Grup Kartı (Your Debts)
+                            // 3. Borçlarım Grup Kartı (Panel 01)
                             if (state.activeDebts.isNotEmpty()) {
                                 item(key = "debts_group_card") {
                                     DebtGroupedSectionCard(
@@ -258,7 +221,7 @@ fun DebtsScreen(
                                 }
                             }
 
-                            // 4. Alacaklarım Grup Kartı (Receivables)
+                            // 4. Alacaklarım Grup Kartı (Panel 01)
                             if (state.activeReceivables.isNotEmpty()) {
                                 item(key = "receivables_group_card") {
                                     DebtGroupedSectionCard(
@@ -271,7 +234,7 @@ fun DebtsScreen(
                                 }
                             }
 
-                            // 5. Tamamlanan / Kapanan Kayıtlar (varsa)
+                            // 5. Tamamlananlar / Kapanan Kayıtlar (varsa)
                             if (state.settledItems.isNotEmpty()) {
                                 item(key = "settled_group_card") {
                                     DebtGroupedSectionCard(
@@ -284,12 +247,28 @@ fun DebtsScreen(
                                 }
                             }
 
-                            // 6. Feniqo İçgörü Kartı (Insight Card)
-                            state.insight?.let { insight ->
-                                item(key = "insight_card") {
-                                    DebtInsightCard(
-                                        insight = insight,
-                                        onClick = onNavigateToSnowballPlan,
+                            // 6. Borç Kapatma Planı Giriş Kartı (Panel 01)
+                            if (onNavigateToSnowballPlan != null) {
+                                item(key = "snowball_entry_card") {
+                                    DebtSnowballEntryCard(onClick = onNavigateToSnowballPlan)
+                                }
+                            }
+
+                            // 7. Panel 01: Alt '+ Yeni kayıt' birincil butonu (56dp)
+                            item(key = "add_debt_button") {
+                                Button(
+                                    onClick = onAddDebt,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(56.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = FeniqoSageGreen),
+                                    shape = RoundedCornerShape(14.dp),
+                                ) {
+                                    Text(
+                                        text = "+ Yeni kayıt",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color.White,
                                     )
                                 }
                             }

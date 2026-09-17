@@ -37,9 +37,12 @@ class TransactionSuccessViewModelTest {
 
     private class FakeTransactionRepository : TransactionRepository {
         val transactionsFlow = MutableStateFlow<List<Transaction>>(emptyList())
+        var observeTransactionCallCount = 0
 
-        override fun observeTransaction(id: EntityId): Flow<Transaction?> =
-            transactionsFlow.map { list -> list.find { it.id == id } }
+        override fun observeTransaction(id: EntityId): Flow<Transaction?> {
+            observeTransactionCallCount++
+            return transactionsFlow.map { list -> list.find { it.id == id } }
+        }
 
         override fun observeTransactions(filter: TransactionFilter): Flow<List<Transaction>> = transactionsFlow
         override fun observeInstallmentGroup(groupId: EntityId): Flow<List<Transaction>> =
@@ -157,7 +160,83 @@ class TransactionSuccessViewModelTest {
         assertFalse(state.isLoading)
         assertNull(state.transaction)
         assertEquals("İşlem bulunamadı.", state.errorMessage)
+        assertEquals(1, trxRepo.observeTransactionCallCount)
 
+        collectJob.cancel()
+    }
+
+    @Test
+    fun transactionSuccess_whenRouteMissing_emitsInvalidParameterError() = runTest {
+        val viewModel = createViewModel(null)
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading)
+        assertNull(state.transaction)
+        assertEquals("Geçersiz işlem parametresi.", state.errorMessage)
+        assertEquals(0, trxRepo.observeTransactionCallCount)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun transactionSuccess_whenTransactionIdEmpty_doesNotCrash_andDoesNotCallUseCase() = runTest {
+        val viewModel = createViewModel(TransactionSuccessRoute(""))
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading)
+        assertNull(state.transaction)
+        assertEquals("Geçersiz işlem parametresi.", state.errorMessage)
+        assertEquals(0, trxRepo.observeTransactionCallCount)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun transactionSuccess_whenTransactionIdWhitespaceOnly_doesNotCrash_andDoesNotCallUseCase() = runTest {
+        val viewModel = createViewModel(TransactionSuccessRoute("   "))
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading)
+        assertNull(state.transaction)
+        assertEquals("Geçersiz işlem parametresi.", state.errorMessage)
+        assertEquals(0, trxRepo.observeTransactionCallCount)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun transactionSuccess_whenRouteParameterWrongType_emitsInvalidParameterError_andDoesNotCallUseCase() = runTest {
+        val savedStateHandle = SavedStateHandle(mapOf("transactionId" to 12345))
+        val viewModel = TransactionSuccessViewModel(
+            observeTransactionUseCase = ObserveTransactionUseCase(trxRepo),
+            observeCategoriesForHistoryLookupUseCase = ObserveCategoriesForHistoryLookupUseCase(catRepo),
+            savedStateHandle = savedStateHandle,
+        )
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading)
+        assertNull(state.transaction)
+        assertEquals("Geçersiz işlem parametresi.", state.errorMessage)
+        assertEquals(0, trxRepo.observeTransactionCallCount)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun transactionSuccess_preservesIdWithoutTrimming() = runTest {
+        val viewModel = createViewModel(TransactionSuccessRoute("  tx-spaced  "))
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        assertEquals(1, trxRepo.observeTransactionCallCount)
         collectJob.cancel()
     }
 

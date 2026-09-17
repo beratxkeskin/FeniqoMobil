@@ -4,67 +4,52 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.Currency
-import com.feniqo.mobile.domain.model.LocalDate
+import com.feniqo.mobile.domain.model.GoalContributionDirection
+import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.presentation.component.ActiveWorkspaceIndicator
+import com.feniqo.mobile.presentation.component.CurrencyPickerSheet
+import com.feniqo.mobile.presentation.component.FeniqoGoalCardBorder
+import com.feniqo.mobile.presentation.component.FeniqoGoalSageGreen
+import com.feniqo.mobile.presentation.component.FeniqoGoalSageGreenLight
 import com.feniqo.mobile.presentation.goal.GOAL_PRESET_COLORS
+import com.feniqo.mobile.presentation.goal.GoalContributionHistoryItemUiModel
 import com.feniqo.mobile.presentation.goal.GoalFormFieldError
 import com.feniqo.mobile.presentation.goal.GoalFormInput
 import com.feniqo.mobile.presentation.goal.GoalFormInputErrors
-import com.feniqo.mobile.presentation.theme.FeniqoRadius
-import com.feniqo.mobile.presentation.theme.FeniqoSpacing
+import com.feniqo.mobile.presentation.theme.*
 import com.feniqo.mobile.presentation.util.ColorParser
 import com.feniqo.mobile.presentation.util.DateFormatter
+import com.feniqo.mobile.presentation.util.MoneyFormatter
 
 /**
- * Birikim hedefi oluşturma ve düzenleme için durumsuz (stateless) form ekranıdır.
+ * Birikim hedefi oluşturma ve düzenleme ekranı.
+ * 04 Yeni hedef ve 05 Hedefi düzenle panellerine tam uyumludur.
  */
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GoalFormScreen(
     input: GoalFormInput,
@@ -81,272 +66,490 @@ fun GoalFormScreen(
     onRequestDelete: () -> Unit,
     onSubmit: () -> Unit,
     onAddContribution: (() -> Unit)? = null,
-    contributionsHistory: List<com.feniqo.mobile.presentation.goal.GoalContributionHistoryItemUiModel> = emptyList(),
+    contributionsHistory: List<GoalContributionHistoryItemUiModel> = emptyList(),
+    currentAmount: Money? = null,
     activeWorkspaceName: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val isEnabled = !isSubmitting
+    var showCurrencySheet by remember { mutableStateOf(false) }
 
-
-    Surface(
+    Scaffold(
         modifier = modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = FeniqoSpacing.Large),
-        ) {
-            Spacer(modifier = Modifier.height(FeniqoSpacing.Medium))
-
-            // Üst Başlık ve Geri Dön / Sil Butonları
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                ) {
-                    TextButton(
-                        onClick = onBack,
-                        enabled = isEnabled,
-                    ) {
-                        Text("← Geri")
-                    }
+        containerColor = FeniqoWarmStoneBackground,
+        topBar = {
+            TopAppBar(
+                title = {
                     Text(
-                        text = if (isEditMode) "Hedefi Düzenle" else "Yeni Hedef",
+                        text = if (isEditMode) "Hedefi düzenle" else "Yeni hedef",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
+                        color = FeniqoTextPrimary,
                     )
-                }
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                ) {
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack, enabled = isEnabled) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Geri",
+                            tint = FeniqoTextPrimary,
+                        )
+                    }
+                },
+                actions = {
                     ActiveWorkspaceIndicator(
                         workspaceName = activeWorkspaceName,
                         isCompact = true,
                     )
-
-                    if (isEditMode) {
-                        OutlinedButton(
-                            onClick = onRequestDelete,
-                            enabled = isEnabled,
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error,
-                            ),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
-                        ) {
-                            Text("Sil")
-                        }
-                    }
-                }
-            }
-
-            if (isEditMode && onAddContribution != null) {
-                Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
-                OutlinedButton(
-                    onClick = onAddContribution,
-                    enabled = isEnabled,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(FeniqoRadius.Medium),
-                ) {
-                    Text("± Para Ekle / Çıkar")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(FeniqoSpacing.Medium))
-
-            // Form Gövdesi
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Large),
-            ) {
-
-                // Hedef Adı
-                OutlinedTextField(
-                    value = input.nameInput,
-                    onValueChange = onNameChange,
-                    label = { Text("Hedef Adı *") },
-                    placeholder = { Text("Örn: Tatil Fonu, Ev Peşinatı") },
-                    isError = errors.nameError != null,
-                    supportingText = {
-                        errors.nameError?.let {
-                            Text(
-                                text = when (it) {
-                                    GoalFormFieldError.NAME_REQUIRED -> "Hedef adı zorunludur."
-                                    GoalFormFieldError.NAME_TOO_LONG -> "Hedef adı en fazla 500 karakter olabilir."
-                                    else -> "Geçersiz hedef adı."
-                                },
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                        }
-                    },
-                    singleLine = true,
-                    enabled = isEnabled,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                // Hedef Tutar
-                OutlinedTextField(
-                    value = input.targetAmountInput,
-                    onValueChange = onTargetAmountChange,
-                    label = { Text("Hedef Tutar *") },
-                    placeholder = { Text("0,00") },
-                    isError = errors.targetAmountError != null,
-                    supportingText = {
-                        errors.targetAmountError?.let {
-                            Text(
-                                text = when (it) {
-                                    GoalFormFieldError.TARGET_AMOUNT_REQUIRED -> "Hedef tutar zorunludur."
-                                    GoalFormFieldError.TARGET_AMOUNT_NON_POSITIVE -> "Hedef tutar sıfırdan büyük olmalıdır."
-                                    GoalFormFieldError.TARGET_AMOUNT_INVALID -> "Geçerli bir tutar girin."
-                                    else -> "Geçersiz tutar."
-                                },
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                        }
-                    },
-                    singleLine = true,
-                    enabled = isEnabled,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Decimal,
-                        imeAction = ImeAction.Next,
-                    ),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                // Para Birimi Seçimi (Editte kilitli)
-                Column {
-                    Text(
-                        text = if (isEditMode) "Para Birimi (Düzenlemede Değiştirilemez)" else "Para Birimi",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                    Spacer(Modifier.width(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 12.dp)
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(FeniqoGoalSageGreenLight),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Currency.entries.forEach { currencyOption ->
-                            FilterChip(
-                                selected = input.currency == currencyOption,
-                                onClick = {
-                                    if (!isEditMode) {
-                                        onCurrencyChange(currencyOption)
-                                    }
-                                },
-                                enabled = isEnabled && !isEditMode,
-                                label = { Text(currencyOption.code) },
+                        Icon(
+                            imageVector = Icons.Outlined.TrackChanges,
+                            contentDescription = null,
+                            tint = FeniqoGoalSageGreen,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = FeniqoWarmStoneBackground,
+                ),
+            )
+        },
+        bottomBar = {
+            Surface(
+                color = FeniqoWarmStoneBackground,
+                shadowElevation = 4.dp,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                        .navigationBarsPadding(),
+                ) {
+                    Button(
+                        onClick = onSubmit,
+                        enabled = isEnabled,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = FeniqoGoalSageGreen,
+                            contentColor = Color.White,
+                            disabledContainerColor = Color(0xFFC7D0CD),
+                            disabledContentColor = Color.White,
+                        ),
+                    ) {
+                        if (isSubmitting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(22.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            Text(
+                                text = if (isEditMode) "Değişiklikleri kaydet" else "Hedef oluştur",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
                             )
                         }
                     }
                 }
+            }
+        },
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
+        ) {
+            // Başlık & Açıklama
+            item("header-titles") {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = if (isEditMode) "Hedefini güncelle" else "Yeni bir hedef oluştur",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = FeniqoTextPrimary,
+                    )
+                    Text(
+                        text = if (isEditMode) "Hedef detaylarını düzenleyebilirsin." else "Hayallerin için plan yap, adım adım ilerle.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = FeniqoTextSecondary,
+                    )
+                }
+            }
 
-                // Başlangıç Tutarı (Yalnızca oluşturma modunda)
-                if (!isEditMode) {
+            // 1. Hedef Adı Alanı
+            item("name-field") {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Hedef adı",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = FeniqoTextPrimary,
+                    )
                     OutlinedTextField(
-                        value = input.initialAmountInput,
-                        onValueChange = onInitialAmountChange,
-                        label = { Text("Başlangıç Birikim Tutarı (Opsiyonel)") },
-                        placeholder = { Text("0,00") },
-                        isError = errors.initialAmountError != null,
+                        value = input.nameInput,
+                        onValueChange = onNameChange,
+                        placeholder = { Text("Seyahat, Yeni bilgisayar...") },
+                        isError = errors.nameError != null,
                         supportingText = {
-                            if (errors.initialAmountError != null) {
+                            errors.nameError?.let {
                                 Text(
-                                    text = when (errors.initialAmountError) {
-                                        GoalFormFieldError.INITIAL_AMOUNT_NEGATIVE -> "Başlangıç tutarı negatif olamaz."
-                                        GoalFormFieldError.INITIAL_AMOUNT_INVALID -> "Geçerli bir tutar girin."
-                                        else -> "Geçersiz başlangıç tutarı."
+                                    text = when (it) {
+                                        GoalFormFieldError.NAME_REQUIRED -> "Hedef adı zorunludur."
+                                        GoalFormFieldError.NAME_TOO_LONG -> "Hedef adı en fazla 500 karakter olabilir."
+                                        else -> "Geçersiz hedef adı."
                                     },
                                     color = MaterialTheme.colorScheme.error,
                                 )
-                            } else {
-                                Text("Şu ana kadar birikmiş olan tutar varsa girebilirsiniz.")
                             }
                         },
                         singleLine = true,
                         enabled = isEnabled,
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Decimal,
-                            imeAction = ImeAction.Next,
-                        ),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                         modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            focusedBorderColor = FeniqoGoalSageGreen,
+                            unfocusedBorderColor = FeniqoGoalCardBorder,
+                        ),
                     )
                 }
+            }
 
-                // Hedef Tarihi Seçici
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(FeniqoRadius.Medium))
-                        .clickable(
-                            role = Role.Button,
-                            enabled = isEnabled,
-                            onClick = onTargetDateClick,
-                        ),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    ),
+            // 2. Hedef Tutarı ve Para Birimi (Yan yana)
+            item("amount-and-currency") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.Top,
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(FeniqoSpacing.Large),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
+                    // Hedef Tutar
+                    Column(
+                        modifier = Modifier.weight(1.8f),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        Column {
+                        Text(
+                            text = "Hedef tutar",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = FeniqoTextPrimary,
+                        )
+                        OutlinedTextField(
+                            value = input.targetAmountInput,
+                            onValueChange = onTargetAmountChange,
+                            placeholder = { Text("₺30.000") },
+                            isError = errors.targetAmountError != null,
+                            supportingText = {
+                                errors.targetAmountError?.let {
+                                    Text(
+                                        text = when (it) {
+                                            GoalFormFieldError.TARGET_AMOUNT_REQUIRED -> "Hedef tutar zorunludur."
+                                            GoalFormFieldError.TARGET_AMOUNT_NON_POSITIVE -> "Hedef tutar sıfırdan büyük olmalıdır."
+                                            GoalFormFieldError.TARGET_AMOUNT_INVALID -> "Geçerli bir tutar girin."
+                                            else -> "Geçersiz tutar."
+                                        },
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                }
+                            },
+                            singleLine = true,
+                            enabled = isEnabled,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal,
+                                imeAction = ImeAction.Next,
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White,
+                                focusedBorderColor = FeniqoGoalSageGreen,
+                                unfocusedBorderColor = FeniqoGoalCardBorder,
+                            ),
+                        )
+                    }
+
+                    // Para Birimi Seçimi (Edit modunda kilitli ve açıklamalı)
+                    Column(
+                        modifier = Modifier.weight(1.2f),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(
+                            text = "Para birimi",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = FeniqoTextPrimary,
+                        )
+
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .clickable(
+                                    enabled = isEnabled && !isEditMode,
+                                    role = Role.Button,
+                                    onClick = { showCurrencySheet = true },
+                                ),
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isEditMode) Color(0xFFF1F5F9) else Color.White,
+                            border = BorderStroke(1.dp, if (isEditMode) Color(0xFFE2E8F0) else FeniqoGoalCardBorder),
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = input.currency.code,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isEditMode) FeniqoTextSecondary else FeniqoTextPrimary,
+                                )
+                                Icon(
+                                    imageVector = Icons.Outlined.KeyboardArrowDown,
+                                    contentDescription = "Para birimi seç",
+                                    tint = if (isEditMode) Color(0xFF94A3B8) else FeniqoTextSecondary,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        }
+
+                        if (isEditMode) {
                             Text(
-                                text = "Hedef Tarihi *",
+                                text = "ⓘ Para birimi değiştirilemez.",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = if (input.targetDate != null) {
-                                    DateFormatter.formatReadableDate(input.targetDate)
-                                } else {
-                                    "Tarih Seçin"
-                                },
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium,
-                                color = if (input.targetDate != null) {
-                                    MaterialTheme.colorScheme.onSurface
-                                } else {
-                                    MaterialTheme.colorScheme.error
-                                },
+                                color = FeniqoTextSecondary,
+                                modifier = Modifier.padding(top = 2.dp),
                             )
                         }
-                        Text(text = "📅", fontSize = 20.sp)
                     }
                 }
-                if (errors.targetDateError != null) {
-                    Text(
-                        text = "Hedef tarihi seçilmelidir.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(start = FeniqoSpacing.Small),
-                    )
-                }
+            }
 
-                // Renk Seçimi
-                Column {
+            // 3. Başlangıç Birikimi (Yalnızca oluşturma modunda - Panel 04)
+            if (!isEditMode) {
+                item("initial-amount-field") {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = "Başlangıç birikimi (isteğe bağlı)",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = FeniqoTextPrimary,
+                        )
+                        OutlinedTextField(
+                            value = input.initialAmountInput,
+                            onValueChange = onInitialAmountChange,
+                            placeholder = { Text("₺5.000") },
+                            isError = errors.initialAmountError != null,
+                            supportingText = {
+                                if (errors.initialAmountError != null) {
+                                    Text(
+                                        text = when (errors.initialAmountError) {
+                                            GoalFormFieldError.INITIAL_AMOUNT_NEGATIVE -> "Başlangıç tutarı negatif olamaz."
+                                            GoalFormFieldError.INITIAL_AMOUNT_INVALID -> "Geçerli bir tutar girin."
+                                            else -> "Geçersiz başlangıç tutarı."
+                                        },
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                }
+                            },
+                            singleLine = true,
+                            enabled = isEnabled,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal,
+                                imeAction = ImeAction.Next,
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White,
+                                focusedBorderColor = FeniqoGoalSageGreen,
+                                unfocusedBorderColor = FeniqoGoalCardBorder,
+                            ),
+                        )
+                    }
+                }
+            }
+
+            // 4. Mevcut Birikim Kartı (Yalnızca düzenleme modunda - Panel 05)
+            if (isEditMode) {
+                item("current-savings-card") {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        border = BorderStroke(1.dp, FeniqoGoalCardBorder),
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(FeniqoGoalSageGreenLight),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Savings,
+                                        contentDescription = null,
+                                        tint = FeniqoGoalSageGreen,
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                }
+
+                                Column {
+                                    Text(
+                                        text = "Mevcut birikim",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = FeniqoTextSecondary,
+                                    )
+                                    Text(
+                                        text = currentAmount?.let { MoneyFormatter.format(it) } ?: "₺0",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = FeniqoTextPrimary,
+                                    )
+                                }
+                            }
+
+                            if (onAddContribution != null) {
+                                TextButton(
+                                    onClick = onAddContribution,
+                                    enabled = isEnabled,
+                                    contentPadding = PaddingValues(horizontal = 8.dp),
+                                ) {
+                                    Text(
+                                        text = "Hareket ekle >",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = FeniqoGoalSageGreen,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 5. Hedef Tarihi Seçici Kartı
+            item("target-date-card") {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "Hedef Rengi",
+                        text = "Hedef tarihi",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.SemiBold,
+                        color = FeniqoTextPrimary,
                     )
-                    Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                        verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .clickable(
+                                role = Role.Button,
+                                enabled = isEnabled,
+                                onClick = onTargetDateClick,
+                            ),
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color.White,
+                        border = BorderStroke(
+                            1.dp,
+                            if (errors.targetDateError != null) MaterialTheme.colorScheme.error else FeniqoGoalCardBorder
+                        ),
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.CalendarToday,
+                                    contentDescription = null,
+                                    tint = FeniqoTextSecondary,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Text(
+                                    text = if (input.targetDate != null) {
+                                        DateFormatter.formatReadableDate(input.targetDate)
+                                    } else {
+                                        "Tarih seçin"
+                                    },
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Medium,
+                                    color = if (input.targetDate != null) FeniqoTextPrimary else FeniqoTextSecondary,
+                                )
+                            }
+
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "Tarih seç",
+                                tint = FeniqoTextSecondary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
+
+                    if (errors.targetDateError != null) {
+                        Text(
+                            text = "Hedef tarihi seçilmelidir.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(start = 4.dp),
+                        )
+                    }
+                }
+            }
+
+            // 6. Hedef Rengi Seçici
+            item("color-picker") {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Hedef rengi",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = FeniqoTextPrimary,
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         GOAL_PRESET_COLORS.forEach { colorHex ->
                             val color = ColorParser.parseHexColorOrNull(colorHex) ?: Color.Gray
@@ -354,12 +557,12 @@ fun GoalFormScreen(
 
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(40.dp)
                                     .clip(CircleShape)
                                     .background(color)
                                     .border(
                                         width = if (isSelected) 3.dp else 1.dp,
-                                        color = if (isSelected) MaterialTheme.colorScheme.onBackground else Color.Transparent,
+                                        color = if (isSelected) FeniqoGoalSageGreen else Color.Transparent,
                                         shape = CircleShape,
                                     )
                                     .clickable(
@@ -370,115 +573,97 @@ fun GoalFormScreen(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 if (isSelected) {
-                                    Text("✓", color = Color.White, fontWeight = FontWeight.Bold)
+                                    Icon(
+                                        imageVector = Icons.Outlined.Check,
+                                        contentDescription = "Seçili renk",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp),
+                                    )
                                 }
                             }
                         }
                     }
                 }
+            }
 
-                if (isEditMode) {
-                    Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
+            // 7. Hareket Geçmişi (Yalnızca düzenleme modunda)
+            if (isEditMode && contributionsHistory.isNotEmpty()) {
+                item("history-header") {
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         text = "Hareket Geçmişi",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
+                        color = FeniqoTextPrimary,
                     )
+                }
 
-                    if (contributionsHistory.isEmpty()) {
-                        Text(
-                            text = "Henüz bir hareket kaydı bulunmuyor.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    } else {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                items(contributionsHistory, key = { it.id.value }) { item ->
+                    val isAdd = item.direction == GoalContributionDirection.ADD
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        border = BorderStroke(1.dp, FeniqoGoalCardBorder),
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            contributionsHistory.forEach { item ->
-                                val isAdd = item.direction == com.feniqo.mobile.domain.model.GoalContributionDirection.ADD
-                                Card(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(FeniqoRadius.Medium),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                    ),
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(FeniqoSpacing.Medium),
-                                        verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            Text(
-                                                text = if (isAdd) "+ Para Ekleme" else "- Para Çıkarma",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = if (isAdd) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                                            )
-                                            Text(
-                                                text = item.formattedAmount,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (isAdd) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                                            )
-                                        }
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            Text(
-                                                text = item.formattedDate,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                            if (!item.note.isNullOrBlank()) {
-                                                Text(
-                                                    text = item.note,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isAdd) FeniqoGoalSageGreenLight else Color(0xFFFEE2E2)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = if (isAdd) Icons.Outlined.Add else Icons.Outlined.ArrowUpward,
+                                    contentDescription = null,
+                                    tint = if (isAdd) FeniqoGoalSageGreen else Color(0xFFC0392B),
+                                    modifier = Modifier.size(18.dp),
+                                )
                             }
+
+                            Spacer(Modifier.width(12.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = item.formattedDate,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = FeniqoTextSecondary,
+                                )
+                                Text(
+                                    text = item.note?.takeIf { it.isNotBlank() } ?: if (isAdd) "Birikim eklendi" else "Para çıkarıldı",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = FeniqoTextPrimary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+
+                            Text(
+                                text = item.formattedAmount,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isAdd) FeniqoTrendGreen else Color(0xFFC0392B),
+                            )
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(FeniqoSpacing.Large))
-            }
-
-
-            // Kaydet Butonu
-            Button(
-                onClick = onSubmit,
-                enabled = isEnabled,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = FeniqoSpacing.Medium),
-                shape = RoundedCornerShape(FeniqoRadius.Medium),
-            ) {
-                if (isSubmitting) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp,
-                    )
-                } else {
-                    Text(
-                        text = if (isEditMode) "Değişiklikleri Kaydet" else "Hedefi Kaydet",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
             }
         }
+    }
+
+    // Para Birimi Seçim BottomSheet'i (Panel 09)
+    if (showCurrencySheet) {
+        CurrencyPickerSheet(
+            selectedCurrency = input.currency,
+            onCurrencySelected = onCurrencyChange,
+            onDismiss = { showCurrencySheet = false },
+        )
     }
 }

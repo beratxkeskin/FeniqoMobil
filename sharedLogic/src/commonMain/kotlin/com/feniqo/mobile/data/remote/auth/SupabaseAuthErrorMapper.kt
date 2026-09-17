@@ -19,6 +19,9 @@ internal fun AuthErrorCode.toAppError(): AppError = when (this) {
     AuthErrorCode.ValidationFailed,
     -> AppError.Validation(code = "auth_invalid_input")
 
+    AuthErrorCode.SamePassword,
+    -> AppError.Validation(code = "auth_password_unchanged")
+
     AuthErrorCode.EmailExists,
     AuthErrorCode.UserAlreadyExists,
     AuthErrorCode.Conflict,
@@ -26,7 +29,12 @@ internal fun AuthErrorCode.toAppError(): AppError = when (this) {
 
     AuthErrorCode.InvalidCredentials,
     AuthErrorCode.UserNotFound,
+    AuthErrorCode.ReauthenticationNotValid,
     -> AppError.Authentication(code = "auth_invalid_credentials")
+
+    AuthErrorCode.ReauthenticationNeeded,
+    AuthErrorCode.ReauthNonceMissing,
+    -> AppError.Authentication(code = "auth_reauthentication_required")
 
     AuthErrorCode.EmailNotConfirmed,
     AuthErrorCode.ProviderEmailNeedsVerification,

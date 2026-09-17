@@ -18,6 +18,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.datetime.Instant
 
+import com.feniqo.mobile.domain.model.TransactionParticipantShare
+import com.feniqo.mobile.domain.model.TransactionSplitMode
+
+import com.feniqo.mobile.domain.repository.WorkspaceRepository
+import com.feniqo.mobile.domain.validation.TransactionValidationResult
+import com.feniqo.mobile.domain.validation.TransactionValidationRules
+
 data class TransactionCommand(
     val id: EntityId,
     val workspaceId: EntityId?,
@@ -31,12 +38,15 @@ data class TransactionCommand(
     val paidByUserId: EntityId? = null,
     val participantUserIds: List<EntityId> = emptyList(),
     val note: String? = null,
+    val splitMode: TransactionSplitMode = TransactionSplitMode.EQUAL,
+    val participantShares: List<TransactionParticipantShare> = emptyList(),
 )
 
 class AddTransactionUseCase(
     private val authRepository: AuthRepository,
     private val categoryRepository: CategoryRepository,
     private val transactionRepository: TransactionRepository,
+    private val workspaceRepository: WorkspaceRepository,
 ) {
     suspend operator fun invoke(
         command: TransactionCommand,
@@ -48,6 +58,35 @@ class AddTransactionUseCase(
 
         validateTransaction(command, today, session.userId, command.workspaceId, categoryRepository)?.let { error ->
             return RepositoryResult.Failure(error)
+        }
+
+        val isPersonalOrIncome = command.workspaceId == null || command.type != TransactionType.EXPENSE
+        val effectivePaidBy = if (isPersonalOrIncome) session.userId else (command.paidByUserId ?: session.userId)
+        val effectiveParticipants = if (isPersonalOrIncome) listOf(session.userId) else command.participantUserIds.ifEmpty { listOf(effectivePaidBy) }
+
+        val activeMembers = if (isPersonalOrIncome) {
+            emptySet()
+        } else {
+            val wsId = checkNotNull(command.workspaceId)
+            workspaceRepository.observeMembers(wsId).first().map { it.userId }.toSet()
+        }
+
+        val splitValidation = TransactionValidationRules.validateSplit(
+            workspaceId = command.workspaceId,
+            type = command.type,
+            amountMinor = command.amount.amountMinor,
+            paidByUserId = effectivePaidBy,
+            participantUserIds = effectiveParticipants,
+            splitMode = command.splitMode,
+            participantShares = command.participantShares,
+            activeMemberUserIds = activeMembers,
+        )
+
+        val splitPlan = when (splitValidation) {
+            is TransactionValidationResult.Valid -> splitValidation.value
+            is TransactionValidationResult.Invalid -> {
+                return RepositoryResult.Failure(AppError.Validation(splitValidation.error.name.lowercase()))
+            }
         }
 
         return transactionRepository.create(
@@ -64,9 +103,11 @@ class AddTransactionUseCase(
                 receiptPath = command.receiptPath,
                 installment = null,
                 createdAt = createdAt,
-                paidByUserId = command.paidByUserId ?: session.userId,
-                participantUserIds = command.participantUserIds.ifEmpty { listOf(command.paidByUserId ?: session.userId) },
+                paidByUserId = splitPlan.paidByUserId,
+                participantUserIds = splitPlan.participantUserIds,
                 note = Transaction.normalizeNote(command.note),
+                splitMode = splitPlan.splitMode,
+                participantShares = splitPlan.participantShares,
             ),
         )
     }
@@ -76,6 +117,7 @@ class UpdateTransactionUseCase(
     private val authRepository: AuthRepository,
     private val categoryRepository: CategoryRepository,
     private val transactionRepository: TransactionRepository,
+    private val workspaceRepository: WorkspaceRepository,
 ) {
     suspend operator fun invoke(
         command: TransactionCommand,
@@ -97,12 +139,38 @@ class UpdateTransactionUseCase(
             return RepositoryResult.Failure(error)
         }
 
-        val targetPaidBy = command.paidByUserId ?: existing.paidByUserId
-        val targetParticipants = command.participantUserIds.ifEmpty {
+        val isPersonalOrIncome = existing.workspaceId == null || command.type != TransactionType.EXPENSE
+        val targetPaidBy = if (isPersonalOrIncome) session.userId else (command.paidByUserId ?: existing.paidByUserId)
+        val targetParticipants = if (isPersonalOrIncome) listOf(session.userId) else command.participantUserIds.ifEmpty {
             if (command.paidByUserId != null && !existing.participantUserIds.contains(command.paidByUserId)) {
                 listOf(command.paidByUserId)
             } else {
                 existing.participantUserIds
+            }
+        }
+
+        val activeMembers = if (isPersonalOrIncome) {
+            emptySet()
+        } else {
+            val wsId = checkNotNull(existing.workspaceId)
+            workspaceRepository.observeMembers(wsId).first().map { it.userId }.toSet()
+        }
+
+        val splitValidation = TransactionValidationRules.validateSplit(
+            workspaceId = existing.workspaceId,
+            type = command.type,
+            amountMinor = command.amount.amountMinor,
+            paidByUserId = targetPaidBy,
+            participantUserIds = targetParticipants,
+            splitMode = command.splitMode,
+            participantShares = command.participantShares,
+            activeMemberUserIds = activeMembers,
+        )
+
+        val splitPlan = when (splitValidation) {
+            is TransactionValidationResult.Valid -> splitValidation.value
+            is TransactionValidationResult.Invalid -> {
+                return RepositoryResult.Failure(AppError.Validation(splitValidation.error.name.lowercase()))
             }
         }
 
@@ -115,9 +183,11 @@ class UpdateTransactionUseCase(
                 paymentMethod = command.paymentMethod,
                 transactionDate = command.transactionDate,
                 receiptPath = command.receiptPath,
-                paidByUserId = targetPaidBy,
-                participantUserIds = targetParticipants,
+                paidByUserId = splitPlan.paidByUserId,
+                participantUserIds = splitPlan.participantUserIds,
                 note = Transaction.normalizeNote(command.note),
+                splitMode = splitPlan.splitMode,
+                participantShares = splitPlan.participantShares,
             ),
         )
     }

@@ -84,6 +84,9 @@ class DebtFormViewModel @Inject constructor(
                             } else {
                                 if (debt.type == com.feniqo.mobile.domain.model.DebtType.DEBT) "Ödeme Devam Ediyor" else "Tahsilat Devam Ediyor"
                             }
+                            val progressRatio = if (balance.principalAmount.amountMinor > 0L) {
+                                (balance.totalPaid.amountMinor.toFloat() / balance.principalAmount.amountMinor.toFloat()).coerceIn(0f, 1f)
+                            } else 0f
                             val summary = DebtBalanceSummaryUiModel(
                                 formattedPrincipalAmount = MoneyFormatter.format(balance.principalAmount),
                                 formattedTotalPaid = MoneyFormatter.format(balance.totalPaid),
@@ -91,6 +94,7 @@ class DebtFormViewModel @Inject constructor(
                                 isSettled = balance.isSettled,
                                 statusText = statusText,
                                 type = debt.type,
+                                progressRatio = progressRatio,
                             )
                             _editLoadState.value = DebtEditLoadState.Ready(
                                 draft = draft,

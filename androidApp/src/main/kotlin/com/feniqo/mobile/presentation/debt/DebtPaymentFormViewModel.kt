@@ -77,6 +77,7 @@ class DebtPaymentFormViewModel @Inject constructor(
                                 debt = debt,
                                 remainingAmount = balance.remainingAmount,
                                 isSettled = balance.status == DebtStatus.SETTLED || balance.remainingAmount.amountMinor <= 0L,
+                                totalPaid = balance.totalPaid,
                             )
                             if (_uiState.value.input.paidOn == null) {
                                 _uiState.update { current ->

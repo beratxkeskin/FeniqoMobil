@@ -49,9 +49,12 @@ class SubscriptionPaymentReminderWorkerTest {
     private class FakeRecurringTimeProvider(
         var localToday: LocalDate,
         var currentInstant: Instant,
+        var currentHour: Int = 12,
+        var currentMinute: Int = 0,
     ) : RecurringTransactionTimeProvider {
         override fun currentLocalDate(): LocalDate = localToday
         override fun currentInstant(): Instant = currentInstant
+        override fun currentLocalTime(): Pair<Int, Int> = Pair(currentHour, currentMinute)
     }
 
     private class FakeReceiptDao : SubscriptionPaymentReminderReceiptDao {
@@ -59,12 +62,7 @@ class SubscriptionPaymentReminderWorkerTest {
         var claimCallCount = 0
 
         override suspend fun insertIgnore(entity: SubscriptionPaymentReminderReceiptEntity): Long {
-            return if (claimedReceipts.containsKey(entity.stableKey)) {
-                -1L
-            } else {
-                claimedReceipts[entity.stableKey] = entity
-                1L
-            }
+            return if (claimedReceipts.putIfAbsent(entity.stableKey, entity) == null) 1L else -1L
         }
 
         override suspend fun claim(entity: SubscriptionPaymentReminderReceiptEntity): Boolean {
@@ -86,15 +84,34 @@ class SubscriptionPaymentReminderWorkerTest {
         var shouldThrowOnNotify: Boolean = false,
     ) : SubscriptionPaymentReminderNotifier {
         val notifiedCandidates = mutableListOf<SubscriptionPaymentReminderCandidate>()
+        var lastHideAmounts: Boolean = false
 
         override fun canPostNotifications(): Boolean = hasPermission
 
-        override suspend fun notifyReminder(candidate: SubscriptionPaymentReminderCandidate) {
+        override suspend fun notifyReminder(
+            candidate: SubscriptionPaymentReminderCandidate,
+            hideAmounts: Boolean,
+        ) {
             if (shouldThrowOnNotify) {
                 throw RuntimeException("Bildirim servisi hatası")
             }
+            lastHideAmounts = hideAmounts
             notifiedCandidates.add(candidate)
         }
+    }
+
+    private class FakeUserSettingsRepository : com.feniqo.mobile.domain.repository.UserSettingsRepository {
+        val settings = kotlinx.coroutines.flow.MutableStateFlow(com.feniqo.mobile.domain.model.UserSettings())
+        override fun observeSettings(): Flow<com.feniqo.mobile.domain.model.UserSettings> = settings
+        override suspend fun updateTheme(theme: com.feniqo.mobile.domain.model.ThemePreference) = com.feniqo.mobile.domain.repository.RepositoryResult.Success(Unit)
+        override suspend fun updateCurrency(currency: Currency) = com.feniqo.mobile.domain.repository.RepositoryResult.Success(Unit)
+        override suspend fun updateLanguage(language: com.feniqo.mobile.domain.model.AppLanguage) = com.feniqo.mobile.domain.repository.RepositoryResult.Success(Unit)
+        override suspend fun updateRegion(region: String) = com.feniqo.mobile.domain.repository.RepositoryResult.Success(Unit)
+        override suspend fun updateDateFormat(format: com.feniqo.mobile.domain.model.DateFormatPreference) = com.feniqo.mobile.domain.repository.RepositoryResult.Success(Unit)
+        override suspend fun updateNumberFormat(format: com.feniqo.mobile.domain.model.NumberFormatPreference) = com.feniqo.mobile.domain.repository.RepositoryResult.Success(Unit)
+        override suspend fun updateFirstDayOfWeek(firstDay: com.feniqo.mobile.domain.model.FirstDayOfWeekPreference) = com.feniqo.mobile.domain.repository.RepositoryResult.Success(Unit)
+        override suspend fun updateMaskAmounts(mask: Boolean) = com.feniqo.mobile.domain.repository.RepositoryResult.Success(Unit)
+        override suspend fun updateNotificationPreferences(preferences: com.feniqo.mobile.domain.model.NotificationPreferences) = com.feniqo.mobile.domain.repository.RepositoryResult.Success(Unit)
     }
 
     private class FakeSubscriptionRepository(
@@ -148,6 +165,7 @@ class SubscriptionPaymentReminderWorkerTest {
         receiptDao: SubscriptionPaymentReminderReceiptDao,
         notifier: SubscriptionPaymentReminderNotifier,
         timeProvider: RecurringTransactionTimeProvider,
+        userSettingsRepository: com.feniqo.mobile.domain.repository.UserSettingsRepository = FakeUserSettingsRepository(),
     ): SubscriptionPaymentReminderWorker {
         return TestListenableWorkerBuilder<SubscriptionPaymentReminderWorker>(context)
             .setWorkerFactory(object : WorkerFactory() {
@@ -161,6 +179,7 @@ class SubscriptionPaymentReminderWorkerTest {
                         params = workerParameters,
                         observeSubscriptionsUseCase = observeSubscriptionsUseCase,
                         planSubscriptionPaymentRemindersUseCase = planSubscriptionPaymentRemindersUseCase,
+                        userSettingsRepository = userSettingsRepository,
                         receiptDao = receiptDao,
                         notifier = notifier,
                         timeProvider = timeProvider,

@@ -54,6 +54,27 @@ class AssetFormViewModelTest {
         )
     }
 
+    @Test
+    fun updateInput_recalculatesCostPreviewAndAllowsCurrencyChange() = runTest {
+        val repository = FakeAssetRepository()
+        val viewModel = viewModel(repository)
+
+        viewModel.updateInput {
+            it.copy(
+                nameInput = "Gram altın",
+                currentValueInput = "150000",
+                quantityInput = "30",
+                purchaseUnitPriceInput = "4000",
+                currency = Currency.TRY,
+            )
+        }
+
+        assertEquals("120.000,00 ₺", viewModel.uiState.value.calculatedCostPreview)
+
+        viewModel.updateInput { it.copy(currency = Currency.USD) }
+        assertEquals(Currency.USD, viewModel.uiState.value.input.currency)
+    }
+
     private fun viewModel(repository: FakeAssetRepository) = AssetFormViewModel(
         ObserveAssetUseCase(repository), CreateAssetUseCase(repository),
         UpdateAssetUseCase(repository), DeleteAssetUseCase(repository),

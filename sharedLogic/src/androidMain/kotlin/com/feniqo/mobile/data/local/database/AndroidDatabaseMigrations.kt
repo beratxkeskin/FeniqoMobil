@@ -513,3 +513,55 @@ val ANDROID_MIGRATION_16_17 = Migration(16, 17) { database ->
     database.execSQL("ALTER TABLE subscriptions ADD COLUMN website_url TEXT")
     database.execSQL("ALTER TABLE subscriptions ADD COLUMN notes TEXT")
 }
+
+/** v18, makbuz dosyaları (receipt_files) ve işlem-makbuz bağlantıları (receipt_linkages) tablolarını ekler. */
+val ANDROID_MIGRATION_17_18 = Migration(17, 18) { database ->
+    database.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS receipt_files (
+            attachment_id TEXT NOT NULL,
+            owner_id TEXT NOT NULL,
+            content_sha256 TEXT NOT NULL,
+            file_size_bytes INTEGER NOT NULL,
+            mime_type TEXT NOT NULL,
+            remote_path TEXT NOT NULL,
+            upload_status TEXT NOT NULL,
+            verified_remote_exists INTEGER NOT NULL,
+            created_at_epoch_ms INTEGER NOT NULL,
+            PRIMARY KEY(attachment_id)
+        )
+        """.trimIndent(),
+    )
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_receipt_files_owner_id ON receipt_files(owner_id)")
+    database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_receipt_files_attachment_id_owner_id ON receipt_files(attachment_id, owner_id)")
+    database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_receipt_files_remote_path ON receipt_files(remote_path)")
+
+    database.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS receipt_linkages (
+            transaction_id TEXT NOT NULL,
+            owner_id TEXT NOT NULL,
+            active_attachment_id TEXT,
+            generation INTEGER NOT NULL,
+            session_epoch INTEGER NOT NULL,
+            workspace_id TEXT,
+            updated_at_epoch_ms INTEGER NOT NULL,
+            PRIMARY KEY(transaction_id),
+            FOREIGN KEY(transaction_id) REFERENCES transactions(id) ON UPDATE NO ACTION ON DELETE CASCADE,
+            FOREIGN KEY(active_attachment_id, owner_id) REFERENCES receipt_files(attachment_id, owner_id) ON UPDATE NO ACTION ON DELETE RESTRICT
+        )
+        """.trimIndent(),
+    )
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_receipt_linkages_owner_id ON receipt_linkages(owner_id)")
+    database.execSQL("CREATE INDEX IF NOT EXISTS index_receipt_linkages_active_attachment_id_owner_id ON receipt_linkages(active_attachment_id, owner_id)")
+}
+
+/** v19, transactions tablosuna split_mode ve participant_shares_json kolonlarını ekler. */
+val ANDROID_MIGRATION_18_19 = Migration(18, 19) { database ->
+    database.execSQL(
+        "ALTER TABLE transactions ADD COLUMN split_mode TEXT NOT NULL DEFAULT 'EQUAL'",
+    )
+    database.execSQL(
+        "ALTER TABLE transactions ADD COLUMN participant_shares_json TEXT NOT NULL DEFAULT '[]'",
+    )
+}

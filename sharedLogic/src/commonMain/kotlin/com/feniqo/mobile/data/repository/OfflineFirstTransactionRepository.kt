@@ -114,7 +114,7 @@ class OfflineFirstTransactionRepository(
             val activeMemberIds = if (activeWorkspaceId != null) {
                 workspaceDao.getActiveMemberUserIds(activeWorkspaceId.value).map(::EntityId).toSet()
             } else {
-                null
+                emptySet()
             }
             val scopedTransaction = transaction.copy(workspaceId = activeWorkspaceId)
             val splitValidation = TransactionValidationRules.normalizeAndValidateSplit(scopedTransaction, activeMemberIds)
@@ -160,7 +160,7 @@ class OfflineFirstTransactionRepository(
             val activeMemberIds = if (activeWorkspaceId != null) {
                 workspaceDao.getActiveMemberUserIds(activeWorkspaceId.value).map(::EntityId).toSet()
             } else {
-                null
+                emptySet()
             }
 
             if (transactions.map { it.id.value }.distinct().size != transactions.size) {
@@ -262,7 +262,7 @@ class OfflineFirstTransactionRepository(
             val activeMemberIds = if (activeWorkspaceId != null) {
                 workspaceDao.getActiveMemberUserIds(activeWorkspaceId.value).map(::EntityId).toSet()
             } else {
-                null
+                emptySet()
             }
             val scopedTransaction = transaction.copy(workspaceId = activeWorkspaceId)
             val splitValidation = TransactionValidationRules.normalizeAndValidateSplit(scopedTransaction, activeMemberIds)

@@ -146,6 +146,7 @@ sealed interface DebtPaymentParentLoadState {
         val debt: Debt,
         val remainingAmount: Money,
         val isSettled: Boolean,
+        val totalPaid: Money = Money(0L, debt.amount.currency),
     ) : DebtPaymentParentLoadState
     data object NotFound : DebtPaymentParentLoadState
     data class Error(val message: FinanceUiMessage) : DebtPaymentParentLoadState

@@ -42,7 +42,13 @@ fun TransactionsScreenRoute(
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     val selectedItem = state.groupedItems.flatMap { it.items }.find { it.id.value == selectedId }
-    BackHandler(enabled = selectedItem != null) { selectedId = null }
+    BackHandler(enabled = selectedItem != null) {
+        selectedId = null
+        showConflict = false
+    }
+    LaunchedEffect(selectedId) {
+        showConflict = false
+    }
 
     val userMessage = state.userMessage
     LaunchedEffect(userMessage) {

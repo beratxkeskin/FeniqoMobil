@@ -65,16 +65,36 @@ sealed interface BackupImportResult {
     data class Failure(val reason: String) : BackupImportResult
 }
 
-class PersonalBackupImporter(
+interface PersonalBackupImporter {
+    suspend fun import(raw: String): BackupImportResult
+
+    companion object {
+        operator fun invoke(
+            authRepository: AuthRepository,
+            activeWorkspaceScope: ActiveWorkspaceScope,
+            writeQueue: OfflineWriteQueue,
+            planner: BackupImportPlanner,
+            nowEpochMillis: () -> Long = { kotlin.time.Clock.System.now().toEpochMilliseconds() },
+        ): PersonalBackupImporter = DefaultPersonalBackupImporter(
+            authRepository = authRepository,
+            activeWorkspaceScope = activeWorkspaceScope,
+            writeQueue = writeQueue,
+            planner = planner,
+            nowEpochMillis = nowEpochMillis,
+        )
+    }
+}
+
+class DefaultPersonalBackupImporter(
     private val authRepository: AuthRepository,
     private val activeWorkspaceScope: ActiveWorkspaceScope,
     private val writeQueue: OfflineWriteQueue,
     private val planner: BackupImportPlanner,
     private val nowEpochMillis: () -> Long = { kotlin.time.Clock.System.now().toEpochMilliseconds() },
-) {
+) : PersonalBackupImporter {
     private val json = Json { encodeDefaults = true; explicitNulls = true }
 
-    suspend fun import(raw: String): BackupImportResult {
+    override suspend fun import(raw: String): BackupImportResult {
         val backup = when (val decoded = FeniqoBackupCodec.decode(raw)) {
             is BackupDecodeResult.Invalid -> return BackupImportResult.Failure(decoded.reason)
             is BackupDecodeResult.Valid -> decoded.backup

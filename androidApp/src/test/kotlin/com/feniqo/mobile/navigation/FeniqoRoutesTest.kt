@@ -148,11 +148,17 @@ class FeniqoRoutesTest {
         assertTrue("SubscriptionsRoute top-level hedef olmamalıdır", topLevelRoutes.none { it == SubscriptionsRoute })
         assertTrue("AssetsRoute top-level hedef olmamalıdır", topLevelRoutes.none { it == AssetsRoute })
         assertTrue("AssetFormRoute top-level hedef olmamalıdır", topLevelRoutes.none { it is AssetFormRoute })
+        assertTrue("AssetDetailRoute top-level hedef olmamalıdır", topLevelRoutes.none { it is AssetDetailRoute })
+        assertTrue("AssetDistributionRoute top-level hedef olmamalıdır", topLevelRoutes.none { it is AssetDistributionRoute })
     }
 
     @Test
     fun assetRoutes_createEditAndFailClosedParsing_areDeterministic() {
         assertTrue(AssetsRoute is FeniqoRoute)
+        assertTrue(AssetDetailRoute("asset-1") is FeniqoRoute)
+        assertTrue(AssetDistributionRoute() is FeniqoRoute)
+        assertEquals("asset-1", AssetDetailRoute("asset-1").assetId)
+        assertEquals("USD", AssetDistributionRoute("USD").initialCurrencyCode)
         assertNull(AssetFormRoute().assetId)
         assertEquals("asset-123", AssetFormRoute("asset-123").assetId)
         assertEquals(AssetRouteIdResult.CreateMode, parseAssetRouteId(null))
@@ -183,6 +189,38 @@ class FeniqoRoutesTest {
         assertEquals("cat-food", filteredRoute.categoryId)
         assertEquals("2026-09-01", filteredRoute.startDate)
         assertEquals("2026-09-30", filteredRoute.endDate)
+    }
+
+    @Test
+    fun budgetDetail_viewAllTransactionsRoute_buildsAccurateTransactionsRouteForDifferentMonths() {
+        // Doğrudan üretim kodu olan createBudgetTransactionsRoute fonksiyonu sınanır.
+        // 1. Normal 31 günlük ay (Ağustos 2026)
+        val routeAug = createBudgetTransactionsRoute(com.feniqo.mobile.domain.model.EntityId("cat-market"), YearMonth("2026-08"))
+        assertEquals("cat-market", routeAug.categoryId)
+        assertEquals("2026-08-01", routeAug.startDate)
+        assertEquals("2026-08-31", routeAug.endDate)
+
+        // 2. Normal 30 günlük ay (Eylül 2026)
+        val routeSep = createBudgetTransactionsRoute(com.feniqo.mobile.domain.model.EntityId("cat-market"), YearMonth("2026-09"))
+        assertEquals("2026-09-01", routeSep.startDate)
+        assertEquals("2026-09-30", routeSep.endDate)
+
+        // 3. Normal Şubat ayı (28 gün - 2026)
+        val routeFeb2026 = createBudgetTransactionsRoute(com.feniqo.mobile.domain.model.EntityId("cat-bills"), YearMonth("2026-02"))
+        assertEquals("cat-bills", routeFeb2026.categoryId)
+        assertEquals("2026-02-01", routeFeb2026.startDate)
+        assertEquals("2026-02-28", routeFeb2026.endDate)
+
+        // 4. Artık yıl Şubat ayı (29 gün - 2028)
+        val routeFeb2028 = createBudgetTransactionsRoute(com.feniqo.mobile.domain.model.EntityId("cat-bills"), YearMonth("2028-02"))
+        assertEquals("2028-02-01", routeFeb2028.startDate)
+        assertEquals("2028-02-29", routeFeb2028.endDate)
+
+        // 5. Yıl sonu / Aralık ayı (31 gün - 2026-12)
+        val routeDec = createBudgetTransactionsRoute(com.feniqo.mobile.domain.model.EntityId("cat-shopping"), YearMonth("2026-12"))
+        assertEquals("cat-shopping", routeDec.categoryId)
+        assertEquals("2026-12-01", routeDec.startDate)
+        assertEquals("2026-12-31", routeDec.endDate)
     }
 
     @Test

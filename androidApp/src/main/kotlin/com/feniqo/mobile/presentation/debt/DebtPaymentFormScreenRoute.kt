@@ -105,6 +105,7 @@ fun DebtPaymentFormScreenRoute(
                     parentDebt = effectiveLoadState.debt,
                     remainingAmount = effectiveLoadState.remainingAmount,
                     isSettled = effectiveLoadState.isSettled,
+                    totalPaid = effectiveLoadState.totalPaid,
                     input = uiState.input,
                     errors = uiState.errors,
                     isSubmitting = uiState.isSubmitting,
@@ -121,37 +122,22 @@ fun DebtPaymentFormScreenRoute(
         }
     }
 
-    // Material DatePicker Dialog
+    // Panel 09: Tarih Seçim Bottom Sheet Modal
     if (showDatePicker) {
-        val initialMillis = GoalDebtFormRouteHelper.computeInitialDatePickerSelection(
-            targetDate = uiState.input.paidOn,
-        )
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = initialMillis,
-        )
-
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            val localDate = GoalDebtFormRouteHelper.utcEpochMillisToLocalDate(millis)
-                            viewModel.updateInput { it.copy(paidOn = localDate) }
-                        }
-                        showDatePicker = false
-                    },
-                ) {
-                    Text("Tamam")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text("Vazgeç")
-                }
-            },
-        ) {
-            DatePicker(state = datePickerState)
+        val sheetTitle = if (effectiveLoadState is DebtPaymentParentLoadState.Ready &&
+            effectiveLoadState.debt.type == com.feniqo.mobile.domain.model.DebtType.RECEIVABLE) {
+            "Tahsilat Tarihi Seç"
+        } else {
+            "Ödeme Tarihi Seç"
         }
+        com.feniqo.mobile.presentation.component.DebtDatePickerSheet(
+            selectedDate = uiState.input.paidOn,
+            onDismiss = { showDatePicker = false },
+            onDateSelected = { date ->
+                viewModel.updateInput { it.copy(paidOn = date) }
+                showDatePicker = false
+            },
+            title = sheetTitle,
+        )
     }
 }

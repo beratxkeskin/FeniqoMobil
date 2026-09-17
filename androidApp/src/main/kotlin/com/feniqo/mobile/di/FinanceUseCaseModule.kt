@@ -89,10 +89,12 @@ object FinanceUseCaseModule {
         authRepository: AuthRepository,
         categoryRepository: CategoryRepository,
         transactionRepository: TransactionRepository,
+        workspaceRepository: com.feniqo.mobile.domain.repository.WorkspaceRepository,
     ): AddTransactionUseCase = AddTransactionUseCase(
         authRepository = authRepository,
         categoryRepository = categoryRepository,
         transactionRepository = transactionRepository,
+        workspaceRepository = workspaceRepository,
     )
 
     @Provides
@@ -101,10 +103,12 @@ object FinanceUseCaseModule {
         authRepository: AuthRepository,
         categoryRepository: CategoryRepository,
         transactionRepository: TransactionRepository,
+        workspaceRepository: com.feniqo.mobile.domain.repository.WorkspaceRepository,
     ): UpdateTransactionUseCase = UpdateTransactionUseCase(
         authRepository = authRepository,
         categoryRepository = categoryRepository,
         transactionRepository = transactionRepository,
+        workspaceRepository = workspaceRepository,
     )
 
     @Provides

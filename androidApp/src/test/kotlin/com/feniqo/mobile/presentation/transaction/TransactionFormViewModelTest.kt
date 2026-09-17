@@ -185,7 +185,16 @@ class TransactionFormViewModelTest {
         override fun observeActiveWorkspace(): Flow<com.feniqo.mobile.domain.model.Workspace?> = activeWorkspaceFlow
         override fun observeWorkspaces(): Flow<List<com.feniqo.mobile.domain.model.Workspace>> = MutableStateFlow(emptyList())
         override fun observeMembers(workspaceId: EntityId): Flow<List<com.feniqo.mobile.domain.model.WorkspaceMember>> =
-            membersFlow.map { it[workspaceId] ?: emptyList() }
+            membersFlow.map {
+                it[workspaceId] ?: listOf(
+                    com.feniqo.mobile.domain.model.WorkspaceMember(
+                        workspaceId = workspaceId,
+                        userId = EntityId("user-1"),
+                        role = com.feniqo.mobile.domain.model.WorkspaceRole.OWNER,
+                        joinedAt = Instant.fromEpochMilliseconds(0),
+                    ),
+                )
+            }
         override suspend fun create(name: String): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("ws-1"))
         override suspend fun createWorkspace(command: com.feniqo.mobile.domain.model.CreateWorkspaceCommand): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("ws-1"))
         override suspend fun updateWorkspace(command: com.feniqo.mobile.domain.model.UpdateWorkspaceCommand): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
@@ -252,9 +261,9 @@ class TransactionFormViewModelTest {
         )
 
         return TransactionFormViewModel(
-            addTransactionUseCase = AddTransactionUseCase(authRepo, catRepo, trxRepo),
+            addTransactionUseCase = AddTransactionUseCase(authRepo, catRepo, trxRepo, workspaceRepo),
             addInstallmentGroupUseCase = AddInstallmentGroupUseCase(authRepo, catRepo, trxRepo, idGenerator),
-            updateTransactionUseCase = UpdateTransactionUseCase(authRepo, catRepo, trxRepo),
+            updateTransactionUseCase = UpdateTransactionUseCase(authRepo, catRepo, trxRepo, workspaceRepo),
             observeTransactionUseCase = ObserveTransactionUseCase(trxRepo),
             observeCategoriesUseCase = ObserveCategoriesUseCase(catRepo),
             observeCategoriesForHistoryLookupUseCase = ObserveCategoriesForHistoryLookupUseCase(catRepo),
@@ -270,9 +279,9 @@ class TransactionFormViewModelTest {
 
     private fun createViewModelWithHandle(savedStateHandle: SavedStateHandle): TransactionFormViewModel {
         return TransactionFormViewModel(
-            addTransactionUseCase = AddTransactionUseCase(authRepo, catRepo, trxRepo),
+            addTransactionUseCase = AddTransactionUseCase(authRepo, catRepo, trxRepo, workspaceRepo),
             addInstallmentGroupUseCase = AddInstallmentGroupUseCase(authRepo, catRepo, trxRepo, idGenerator),
-            updateTransactionUseCase = UpdateTransactionUseCase(authRepo, catRepo, trxRepo),
+            updateTransactionUseCase = UpdateTransactionUseCase(authRepo, catRepo, trxRepo, workspaceRepo),
             observeTransactionUseCase = ObserveTransactionUseCase(trxRepo),
             observeCategoriesUseCase = ObserveCategoriesUseCase(catRepo),
             observeCategoriesForHistoryLookupUseCase = ObserveCategoriesForHistoryLookupUseCase(catRepo),

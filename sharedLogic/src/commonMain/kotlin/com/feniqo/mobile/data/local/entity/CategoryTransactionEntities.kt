@@ -6,6 +6,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.feniqo.mobile.domain.model.TransactionSplitMode
 
 @Entity(
     tableName = "categories",
@@ -131,4 +132,8 @@ data class TransactionEntity(
     val note: String? = null,
     @Embedded
     val sync: SyncMetadata,
+    @ColumnInfo(name = "split_mode", defaultValue = "'EQUAL'")
+    val splitMode: String = TransactionSplitMode.EQUAL.name,
+    @ColumnInfo(name = "participant_shares_json", defaultValue = "'[]'")
+    val participantSharesJson: String = "[]",
 )

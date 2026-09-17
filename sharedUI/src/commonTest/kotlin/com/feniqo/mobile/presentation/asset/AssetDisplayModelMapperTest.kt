@@ -1,16 +1,9 @@
 package com.feniqo.mobile.presentation.asset
 
-import com.feniqo.mobile.domain.model.Asset
-import com.feniqo.mobile.domain.model.AssetQuantity
-import com.feniqo.mobile.domain.model.AssetType
-import com.feniqo.mobile.domain.model.Currency
-import com.feniqo.mobile.domain.model.EntityId
-import com.feniqo.mobile.domain.model.Money
-import kotlinx.datetime.Instant
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import com.feniqo.mobile.domain.model.*
 import com.feniqo.mobile.domain.usecase.NetWorthCalculationResult
+import kotlinx.datetime.Instant
+import kotlin.test.*
 
 class AssetDisplayModelMapperTest {
     @Test
@@ -39,6 +32,72 @@ class AssetDisplayModelMapperTest {
         assertEquals(listOf("300,00 ₺", "25,00 $"), result?.totalsFormatted)
         assertEquals(3, result?.assetCount)
         assertTrue(result?.hasMultipleCurrencies == true)
+        assertEquals(2, result?.currencyTotals?.size)
+    }
+
+    @Test
+    fun mapDetail_calculatesCostAndDifference_whenFieldsPresent() {
+        // 30 birim @ 4.000 TRY = 120.000 TRY maliyet. Güncel: 150.000 TRY -> Fark: +30.000 TRY (+%25)
+        val item = Asset(
+            id = EntityId("a-1"),
+            ownerId = EntityId("owner"),
+            workspaceId = null,
+            name = "Gram altın",
+            type = AssetType.PRECIOUS_METALS,
+            currentValue = Money(15_000_000L, Currency.TRY),
+            quantity = AssetQuantity(30L, 0),
+            purchaseUnitPrice = Money(400_000L, Currency.TRY),
+            trackingSymbol = null,
+            autoTrack = false,
+            createdAt = Instant.fromEpochMilliseconds(1L),
+        )
+
+        val detail = AssetDisplayModelMapper.mapDetail(item)
+        assertTrue(detail.hasCalculatedCost)
+        assertEquals("120.000,00 ₺", detail.calculatedCostFormatted)
+        assertEquals("+ 30.000,00 ₺", detail.differenceFormatted)
+        assertEquals("(+%25)", detail.differencePercentageText)
+        assertEquals(true, detail.isDifferencePositive)
+        assertFalse(detail.isPriceVerificationFailed)
+    }
+
+    @Test
+    fun mapDetail_handlesMissingOptionalFieldsGracefully() {
+        val item = Asset(
+            id = EntityId("a-2"),
+            ownerId = EntityId("owner"),
+            workspaceId = null,
+            name = "Nakit",
+            type = AssetType.CASH,
+            currentValue = Money(500_000L, Currency.TRY),
+            quantity = null,
+            purchaseUnitPrice = null,
+            trackingSymbol = null,
+            autoTrack = false,
+            createdAt = Instant.fromEpochMilliseconds(1L),
+        )
+
+        val detail = AssetDisplayModelMapper.mapDetail(item)
+        assertFalse(detail.hasCalculatedCost)
+        assertNull(detail.calculatedCostFormatted)
+        assertNull(detail.differenceFormatted)
+        assertNull(detail.differencePercentageText)
+    }
+
+    @Test
+    fun mapDistribution_producesCorrectBreakdownAndPercentages() {
+        val assets = listOf(
+            asset("1", "Gram Altın", AssetType.PRECIOUS_METALS, 15_000_000L),
+            asset("2", "Hisse", AssetType.STOCKS, 7_500_000L),
+            asset("3", "Nakit", AssetType.CASH, 2_500_000L),
+        )
+
+        val dist = AssetDisplayModelMapper.mapDistribution(assets, Currency.TRY)
+        assertEquals("250.000,00 ₺", dist.overallTotalFormatted)
+        assertEquals(3, dist.items.size)
+        assertEquals("%60", dist.items[0].percentageText)
+        assertEquals("%30", dist.items[1].percentageText)
+        assertEquals("%10", dist.items[2].percentageText)
     }
 
     private fun asset(

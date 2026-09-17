@@ -29,8 +29,3 @@ class TransactionExportViewModel @Inject constructor(
 
     suspend fun importBackup(raw: String): BackupImportResult = backupImporter.import(raw)
 }
-
-sealed interface BackupPreviewResult {
-    data class Valid(val categoryCount: Int, val transactionCount: Int) : BackupPreviewResult
-    data class Invalid(val reason: String) : BackupPreviewResult
-}

@@ -37,6 +37,8 @@ class AssetsViewModelTest {
         assertEquals("asset-1", state.assets.single().id.value)
         assertEquals(listOf("100,00 ₺"), state.netWorth?.totalsFormatted)
         assertEquals(1, state.netWorth?.assetCount)
+        assertNotNull(state.distributionSummary)
+        assertEquals("100,00 ₺", state.distributionSummary?.overallTotalFormatted)
         assertNull(state.observationError)
     }
 

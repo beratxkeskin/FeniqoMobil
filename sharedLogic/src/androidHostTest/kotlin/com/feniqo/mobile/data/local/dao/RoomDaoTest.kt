@@ -31,6 +31,14 @@ import com.feniqo.mobile.domain.model.TransactionTag
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.Workspace
 import com.feniqo.mobile.domain.model.YearMonth
+import com.feniqo.mobile.domain.model.TransactionParticipantShare
+import com.feniqo.mobile.domain.model.TransactionSplitMode
+import com.feniqo.mobile.domain.validation.TransactionValidationError
+import com.feniqo.mobile.domain.validation.TransactionValidationResult
+import com.feniqo.mobile.domain.validation.TransactionValidationRules
+import com.feniqo.mobile.domain.validation.WorkspaceSettlementCalculator
+import com.feniqo.mobile.domain.validation.WorkspaceSharedExpense
+import com.feniqo.mobile.data.mapper.toDomain
 import androidx.room.testing.MigrationTestHelper
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
@@ -328,6 +336,512 @@ class RoomDaoTest {
         } finally {
             migrated.close()
             context.deleteDatabase(name)
+        }
+    }
+
+    @Test
+    fun migration_17_to_18_adds_receipt_tables_and_preserves_legacy_data() {
+        val name = "migration-test-17-18.db"
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        context.deleteDatabase(name)
+        val path = context.getDatabasePath(name).absolutePath
+
+        val v17 = migrationHelper.createDatabase(path, 17)
+        try {
+            // 1. Kategori
+            v17.execSQL(
+                """INSERT INTO categories (
+                    id,owner_id,workspace_id,scope_key,name,normalized_name,slug,type_code,color_hex,
+                    icon_key,is_default,created_at_epoch_ms,sync_status,updated_at_epoch_ms,
+                    local_updated_at_epoch_ms,deleted_at_epoch_ms,version,base_version,last_sync_error
+                ) VALUES ('cat-17','user-17',NULL,'user-17','Gıda','gida','gida',
+                    'EXPENSE','#AABBCC',NULL,0,1000,'SYNCED',1000,1000,NULL,1,1,NULL)""".trimIndent(),
+            )
+            // 2. İşlem - receiptPath dolu ve note mevcut
+            v17.execSQL(
+                """INSERT INTO transactions (
+                    id,owner_id,workspace_id,amount_minor,currency_code,type_code,category_id,
+                    description,search_text,payment_method_code,transaction_date,receipt_path,
+                    installment_number,total_installments,installment_group_id,created_at_epoch_ms,
+                    note,sync_status,updated_at_epoch_ms,local_updated_at_epoch_ms,deleted_at_epoch_ms,
+                    version,base_version,last_sync_error
+                ) VALUES ('tx-legacy-receipt','user-17',NULL,45000,'TRY','EXPENSE','cat-17',
+                    'Market fişi','market fisi','CREDIT_CARD','2026-09-16','receipts/legacy-user/tx-17.jpg',
+                    NULL,NULL,NULL,2000,'Eski makbuzlu işlem','SYNCED',2000,2000,NULL,1,1,NULL)""".trimIndent(),
+            )
+            // 3. Etiket ve işlem-etiket ilişkisi
+            v17.execSQL(
+                """INSERT INTO tags (
+                    id,owner_id,workspace_id,scope_key,name,normalized_name,created_at_epoch_ms,
+                    sync_status,updated_at_epoch_ms,local_updated_at_epoch_ms,deleted_at_epoch_ms,
+                    version,base_version,last_sync_error
+                ) VALUES ('tag-17','user-17',NULL,'user-17','Acil','acil',1000,'SYNCED',1000,1000,NULL,1,1,NULL)""".trimIndent(),
+            )
+            v17.execSQL(
+                """INSERT INTO transaction_tags (
+                    transaction_id, tag_id, created_at_epoch_ms, sync_status, updated_at_epoch_ms,
+                    local_updated_at_epoch_ms, deleted_at_epoch_ms, version, base_version, last_sync_error
+                ) VALUES ('tx-legacy-receipt', 'tag-17', 1000, 'SYNCED', 1000, 1000, NULL, 1, 1, NULL)""".trimIndent(),
+            )
+            // 4. Outbox operasyonu
+            v17.execSQL(
+                """INSERT INTO sync_operations (
+                    operation_id, entity_type_code, entity_id, operation_type_code, base_version,
+                    payload_json, predecessor_operation_id, is_blocked, protocol_version, status_code,
+                    attempt_count, last_error, next_attempt_at_epoch_ms, created_at_epoch_ms, updated_at_epoch_ms
+                ) VALUES ('op-17','TRANSACTION','tx-legacy-receipt','CREATE',NULL,
+                    '{"id":"tx-legacy-receipt"}',NULL,0,1,'PENDING',0,NULL,3000,3000,3000)""".trimIndent(),
+            )
+            // 5. Conflict kaydı
+            v17.execSQL(
+                """INSERT INTO sync_conflicts (
+                    entity_type_code, entity_id, operation_id, local_version, remote_version,
+                    local_payload_json, remote_payload_json, detected_at_epoch_ms
+                ) VALUES ('TRANSACTION','tx-legacy-receipt','op-17',1,2,
+                    '{"amount":45000}','{"amount":50000}',4000)""".trimIndent(),
+            )
+        } finally {
+            v17.close()
+        }
+
+        val migrated = migrationHelper.runMigrationsAndValidate(
+            path, 18, true,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_17_18,
+        )
+        try {
+            // İşlem ve receipt_path korunmuş olmalı
+            migrated.query(
+                "SELECT id, amount_minor, receipt_path, note, sync_status FROM transactions WHERE id='tx-legacy-receipt'".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals("tx-legacy-receipt", it.getString(0))
+                assertEquals(45_000L, it.getLong(1))
+                assertEquals("receipts/legacy-user/tx-17.jpg", it.getString(2))
+                assertEquals("Eski makbuzlu işlem", it.getString(3))
+                assertEquals("SYNCED", it.getString(4))
+            }
+            // Etiket ilişkisi korunmuş olmalı
+            migrated.query(
+                "SELECT transaction_id, tag_id FROM transaction_tags WHERE transaction_id='tx-legacy-receipt'".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals("tx-legacy-receipt", it.getString(0))
+                assertEquals("tag-17", it.getString(1))
+            }
+            // Outbox operasyonu korunmuş olmalı
+            migrated.query(
+                "SELECT operation_id, status_code FROM sync_operations WHERE operation_id='op-17'".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals("op-17", it.getString(0))
+                assertEquals("PENDING", it.getString(1))
+            }
+            // Conflict kaydı korunmuş olmalı
+            migrated.query(
+                "SELECT entity_id, operation_id FROM sync_conflicts WHERE entity_id='tx-legacy-receipt'".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals("tx-legacy-receipt", it.getString(0))
+                assertEquals("op-17", it.getString(1))
+            }
+            // Yeni makbuz tabloları migration sonunda tamamen boş olmalı
+            for (table in listOf("receipt_files", "receipt_linkages")) {
+                migrated.query("SELECT COUNT(*) FROM $table").use {
+                    assertTrue(it.moveToFirst())
+                    assertEquals(0L, it.getLong(0), "$table migration sonunda boş olmalıdır.")
+                }
+            }
+        } finally {
+            migrated.close()
+            context.deleteDatabase(name)
+        }
+    }
+
+    @Test
+    fun migration_18_to_19_adds_split_columns_and_preserves_data() {
+        val name = "migration-test-18-19.db"
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        context.deleteDatabase(name)
+        val path = context.getDatabasePath(name).absolutePath
+
+        val v18 = migrationHelper.createDatabase(path, 18)
+        try {
+            // 1. Kategori
+            v18.execSQL(
+                """INSERT INTO categories (
+                    id,owner_id,workspace_id,scope_key,name,normalized_name,slug,type_code,color_hex,
+                    icon_key,is_default,created_at_epoch_ms,sync_status,updated_at_epoch_ms,
+                    local_updated_at_epoch_ms,deleted_at_epoch_ms,version,base_version,last_sync_error
+                ) VALUES ('cat-18','user-18',NULL,'user-18','Gıda','gida','gida',
+                    'EXPENSE','#AABBCC',NULL,0,1000,'SYNCED',1000,1000,NULL,1,1,NULL)""".trimIndent(),
+            )
+            // 2. İşlem
+            v18.execSQL(
+                """INSERT INTO transactions (
+                    id,owner_id,workspace_id,amount_minor,currency_code,type_code,category_id,
+                    description,search_text,payment_method_code,transaction_date,receipt_path,
+                    installment_number,total_installments,installment_group_id,created_at_epoch_ms,
+                    note,sync_status,updated_at_epoch_ms,local_updated_at_epoch_ms,deleted_at_epoch_ms,
+                    version,base_version,last_sync_error
+                ) VALUES ('tx-18','user-18',NULL,35000,'TRY','EXPENSE','cat-18',
+                    'Market fişi','market fisi','CREDIT_CARD','2026-09-16','receipts/legacy/tx-18.jpg',
+                    NULL,NULL,NULL,2000,'V18 notlu işlem','SYNCED',2000,2000,NULL,1,1,NULL)""".trimIndent(),
+            )
+            // 3. Etiket ve ilişki
+            v18.execSQL(
+                """INSERT INTO tags (
+                    id,owner_id,workspace_id,scope_key,name,normalized_name,created_at_epoch_ms,
+                    sync_status,updated_at_epoch_ms,local_updated_at_epoch_ms,deleted_at_epoch_ms,
+                    version,base_version,last_sync_error
+                ) VALUES ('tag-18','user-18',NULL,'user-18','Ortak','ortak',1000,'SYNCED',1000,1000,NULL,1,1,NULL)""".trimIndent(),
+            )
+            v18.execSQL(
+                """INSERT INTO transaction_tags (
+                    transaction_id, tag_id, created_at_epoch_ms, sync_status, updated_at_epoch_ms,
+                    local_updated_at_epoch_ms, deleted_at_epoch_ms, version, base_version, last_sync_error
+                ) VALUES ('tx-18', 'tag-18', 1000, 'SYNCED', 1000, 1000, NULL, 1, 1, NULL)""".trimIndent(),
+            )
+            // 4. Outbox operasyonu
+            v18.execSQL(
+                """INSERT INTO sync_operations (
+                    operation_id, entity_type_code, entity_id, operation_type_code, base_version,
+                    payload_json, predecessor_operation_id, is_blocked, protocol_version, status_code,
+                    attempt_count, last_error, next_attempt_at_epoch_ms, created_at_epoch_ms, updated_at_epoch_ms
+                ) VALUES ('op-18','TRANSACTION','tx-18','CREATE',NULL,
+                    '{"id":"tx-18"}',NULL,0,1,'PENDING',0,NULL,3000,3000,3000)""".trimIndent(),
+            )
+            // 5. Conflict kaydı
+            v18.execSQL(
+                """INSERT INTO sync_conflicts (
+                    entity_type_code, entity_id, operation_id, local_version, remote_version,
+                    local_payload_json, remote_payload_json, detected_at_epoch_ms
+                ) VALUES ('TRANSACTION','tx-18','op-18',1,2,
+                    '{"amount":35000}','{"amount":40000}',4000)""".trimIndent(),
+            )
+            // 6. Makbuz dosyası ve linkage
+            v18.execSQL(
+                """INSERT INTO receipt_files (
+                    attachment_id, owner_id, content_sha256, file_size_bytes, mime_type,
+                    remote_path, upload_status, verified_remote_exists, created_at_epoch_ms
+                ) VALUES ('rf-18','user-18','dummyhash18',1024,'image/jpeg',
+                    'receipts/user-18/rf-18.jpg','COMPLETED',1,2000)""".trimIndent(),
+            )
+            v18.execSQL(
+                """INSERT INTO receipt_linkages (
+                    transaction_id, owner_id, active_attachment_id, generation, session_epoch,
+                    workspace_id, updated_at_epoch_ms
+                ) VALUES ('tx-18','user-18','rf-18',1,1,NULL,2000)""".trimIndent(),
+            )
+        } finally {
+            v18.close()
+        }
+
+        val migrated = migrationHelper.runMigrationsAndValidate(
+            path, 19, true,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_18_19,
+        )
+        try {
+            // Transaction alanları ve yeni split kolonları doğrulanır
+            migrated.query(
+                "SELECT id, amount_minor, receipt_path, note, sync_status, split_mode, participant_shares_json FROM transactions WHERE id='tx-18'".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals("tx-18", it.getString(0))
+                assertEquals(35_000L, it.getLong(1))
+                assertEquals("receipts/legacy/tx-18.jpg", it.getString(2))
+                assertEquals("V18 notlu işlem", it.getString(3))
+                assertEquals("SYNCED", it.getString(4))
+                assertEquals("EQUAL", it.getString(5))
+                assertEquals("[]", it.getString(6))
+            }
+            // Etiket ilişkisi korunmuş olmalı
+            migrated.query(
+                "SELECT transaction_id, tag_id FROM transaction_tags WHERE transaction_id='tx-18'".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals("tx-18", it.getString(0))
+                assertEquals("tag-18", it.getString(1))
+            }
+            // Outbox operasyonu korunmuş olmalı
+            migrated.query(
+                "SELECT operation_id, status_code FROM sync_operations WHERE operation_id='op-18'".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals("op-18", it.getString(0))
+                assertEquals("PENDING", it.getString(1))
+            }
+            // Conflict kaydı korunmuş olmalı
+            migrated.query(
+                "SELECT entity_id, operation_id FROM sync_conflicts WHERE entity_id='tx-18'".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals("tx-18", it.getString(0))
+                assertEquals("op-18", it.getString(1))
+            }
+            // Makbuz kayıtları korunmuş olmalı
+            migrated.query(
+                "SELECT attachment_id, upload_status FROM receipt_files WHERE attachment_id='rf-18'".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals("rf-18", it.getString(0))
+                assertEquals("COMPLETED", it.getString(1))
+            }
+            migrated.query(
+                "SELECT transaction_id, active_attachment_id FROM receipt_linkages WHERE transaction_id='tx-18'".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals("tx-18", it.getString(0))
+                assertEquals("rf-18", it.getString(1))
+            }
+        } finally {
+            migrated.close()
+            context.deleteDatabase(name)
+        }
+    }
+
+    @Test
+    fun migration_17_to_19_chain_preserves_all_data() {
+        val name = "migration-test-17-19.db"
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        context.deleteDatabase(name)
+        val path = context.getDatabasePath(name).absolutePath
+
+        val v17 = migrationHelper.createDatabase(path, 17)
+        try {
+            v17.execSQL(
+                """INSERT INTO categories (
+                    id,owner_id,workspace_id,scope_key,name,normalized_name,slug,type_code,color_hex,
+                    icon_key,is_default,created_at_epoch_ms,sync_status,updated_at_epoch_ms,
+                    local_updated_at_epoch_ms,deleted_at_epoch_ms,version,base_version,last_sync_error
+                ) VALUES ('cat-17','user-17',NULL,'user-17','Gıda','gida','gida',
+                    'EXPENSE','#AABBCC',NULL,0,1000,'SYNCED',1000,1000,NULL,1,1,NULL)""".trimIndent(),
+            )
+            v17.execSQL(
+                """INSERT INTO transactions (
+                    id,owner_id,workspace_id,amount_minor,currency_code,type_code,category_id,
+                    description,search_text,payment_method_code,transaction_date,receipt_path,
+                    installment_number,total_installments,installment_group_id,created_at_epoch_ms,
+                    note,sync_status,updated_at_epoch_ms,local_updated_at_epoch_ms,deleted_at_epoch_ms,
+                    version,base_version,last_sync_error
+                ) VALUES ('tx-17','user-17',NULL,45000,'TRY','EXPENSE','cat-17',
+                    'Zincir test','zincir test','CREDIT_CARD','2026-09-16','receipts/legacy/tx-17.jpg',
+                    NULL,NULL,NULL,2000,'Eski v17 not','SYNCED',2000,2000,NULL,1,1,NULL)""".trimIndent(),
+            )
+            v17.execSQL(
+                """INSERT INTO tags (
+                    id,owner_id,workspace_id,scope_key,name,normalized_name,created_at_epoch_ms,
+                    sync_status,updated_at_epoch_ms,local_updated_at_epoch_ms,deleted_at_epoch_ms,
+                    version,base_version,last_sync_error
+                ) VALUES ('tag-17','user-17',NULL,'user-17','Ortak','ortak',1000,'SYNCED',1000,1000,NULL,1,1,NULL)""".trimIndent(),
+            )
+            v17.execSQL(
+                """INSERT INTO transaction_tags (
+                    transaction_id, tag_id, created_at_epoch_ms, sync_status, updated_at_epoch_ms,
+                    local_updated_at_epoch_ms, deleted_at_epoch_ms, version, base_version, last_sync_error
+                ) VALUES ('tx-17', 'tag-17', 1000, 'SYNCED', 1000, 1000, NULL, 1, 1, NULL)""".trimIndent(),
+            )
+            v17.execSQL(
+                """INSERT INTO sync_operations (
+                    operation_id, entity_type_code, entity_id, operation_type_code, base_version,
+                    payload_json, predecessor_operation_id, is_blocked, protocol_version, status_code,
+                    attempt_count, last_error, next_attempt_at_epoch_ms, created_at_epoch_ms, updated_at_epoch_ms
+                ) VALUES ('op-17','TRANSACTION','tx-17','CREATE',NULL,
+                    '{"id":"tx-17"}',NULL,0,1,'PENDING',0,NULL,3000,3000,3000)""".trimIndent(),
+            )
+            v17.execSQL(
+                """INSERT INTO sync_conflicts (
+                    entity_type_code, entity_id, operation_id, local_version, remote_version,
+                    local_payload_json, remote_payload_json, detected_at_epoch_ms
+                ) VALUES ('TRANSACTION','tx-17','op-17',1,2,
+                    '{"amount":45000}','{"amount":50000}',4000)""".trimIndent(),
+            )
+        } finally {
+            v17.close()
+        }
+
+        val migrated = migrationHelper.runMigrationsAndValidate(
+            path, 19, true,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_17_18,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_18_19,
+        )
+        try {
+            migrated.query(
+                "SELECT id, amount_minor, receipt_path, note, sync_status, split_mode, participant_shares_json FROM transactions WHERE id='tx-17'".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals("tx-17", it.getString(0))
+                assertEquals(45_000L, it.getLong(1))
+                assertEquals("receipts/legacy/tx-17.jpg", it.getString(2))
+                assertEquals("Eski v17 not", it.getString(3))
+                assertEquals("SYNCED", it.getString(4))
+                assertEquals("EQUAL", it.getString(5))
+                assertEquals("[]", it.getString(6))
+            }
+            for (table in listOf("receipt_files", "receipt_linkages")) {
+                migrated.query("SELECT COUNT(*) FROM $table").use {
+                    assertTrue(it.moveToFirst())
+                    assertEquals(0L, it.getLong(0), "$table migration sonunda boş olmalıdır.")
+                }
+            }
+            migrated.query(
+                "SELECT operation_id, status_code FROM sync_operations WHERE operation_id='op-17'".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals("op-17", it.getString(0))
+                assertEquals("PENDING", it.getString(1))
+            }
+            migrated.query(
+                "SELECT entity_id, operation_id FROM sync_conflicts WHERE entity_id='tx-17'".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals("tx-17", it.getString(0))
+                assertEquals("op-17", it.getString(1))
+            }
+        } finally {
+            migrated.close()
+            context.deleteDatabase(name)
+        }
+    }
+
+    @Test
+    fun custom_split_persistence_roundtrip_reopen_and_corrupt_json_resilience() = runTest {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val dbName = "test-custom-split-reopen.db"
+        context.deleteDatabase(dbName)
+
+        val txId = EntityId("tx-custom-split")
+        val ownerId = EntityId("user-alice")
+        val bobId = EntityId("user-bob")
+        val customShares = listOf(
+            TransactionParticipantShare(bobId, 4_000L),
+            TransactionParticipantShare(ownerId, 6_000L),
+        )
+        val customTx = Transaction(
+            id = txId,
+            ownerId = ownerId,
+            workspaceId = EntityId("ws-team"),
+            amount = Money(10_000L, Currency.TRY),
+            type = TransactionType.EXPENSE,
+            categoryId = CATEGORY_ID,
+            description = "Akşam yemeği",
+            paymentMethod = PaymentMethod.CREDIT_CARD,
+            transactionDate = LocalDate(2026, 9, 16),
+            receiptPath = null,
+            installment = null,
+            createdAt = NOW,
+            splitMode = TransactionSplitMode.CUSTOM,
+            participantShares = customShares,
+        )
+
+        // 1. CUSTOM işlem Room'a yazılır.
+        var db = persistentDatabase(context, dbName)
+        try {
+            db.categoryDao().upsert(category().toEntity(SYNC))
+            db.workspaceDao().upsertWorkspace(
+                Workspace(
+                    id = EntityId("ws-team"),
+                    name = "Ekip",
+                    ownerId = ownerId,
+                    createdAt = NOW,
+                ).toEntity(SYNC),
+            )
+            db.transactionDao().upsert(customTx.toEntity(SYNC))
+
+            // 2. DB kapatılır
+        } finally {
+            db.close()
+        }
+
+        // 3. DB yeniden açılır
+        db = persistentDatabase(context, dbName)
+        try {
+            val entity = db.transactionDao().getByIdAndOwner(txId.value, ownerId.value)
+            assertNotNull(entity)
+            assertEquals("CUSTOM", entity.splitMode)
+            // Kanonik sıralama (user-alice, user-bob)
+            assertEquals(
+                """[{"userId":"user-alice","amountMinor":6000},{"userId":"user-bob","amountMinor":4000}]""",
+                entity.participantSharesJson,
+            )
+
+            val domain = entity.toDomain()
+            assertEquals(TransactionSplitMode.CUSTOM, domain.splitMode)
+            assertEquals(2, domain.participantShares.size)
+            assertEquals(EntityId("user-alice"), domain.participantShares[0].userId)
+            assertEquals(6_000L, domain.participantShares[0].amountMinor)
+            assertEquals(EntityId("user-bob"), domain.participantShares[1].userId)
+            assertEquals(4_000L, domain.participantShares[1].amountMinor)
+
+            // 4. Update ile CUSTOM -> EQUAL geçişi
+            val equalTx = domain.copy(
+                splitMode = TransactionSplitMode.EQUAL,
+                participantShares = emptyList(),
+            )
+            db.transactionDao().upsert(equalTx.toEntity(SYNC.copy(version = 2, baseVersion = 1)))
+
+            val equalEntity = db.transactionDao().getByIdAndOwner(txId.value, ownerId.value)
+            assertNotNull(equalEntity)
+            assertEquals("EQUAL", equalEntity.splitMode)
+            assertEquals("[]", equalEntity.participantSharesJson)
+
+            // 5. Update ile EQUAL -> CUSTOM geçişi
+            val backToCustom = equalTx.copy(
+                splitMode = TransactionSplitMode.CUSTOM,
+                participantShares = customShares,
+            )
+            db.transactionDao().upsert(backToCustom.toEntity(SYNC.copy(version = 3, baseVersion = 2)))
+            val customAgain = db.transactionDao().getByIdAndOwner(txId.value, ownerId.value)
+            assertNotNull(customAgain)
+            assertEquals("CUSTOM", customAgain.splitMode)
+            assertEquals(
+                """[{"userId":"user-alice","amountMinor":6000},{"userId":"user-bob","amountMinor":4000}]""",
+                customAgain.participantSharesJson,
+            )
+
+            // 6. Bozuk CUSTOM JSON içeren satır normal sorgu akışını çökertmez
+            // Veritabanına doğrudan bozuk JSON yazıyoruz
+            db.openHelper.writableDatabase.execSQL(
+                "UPDATE transactions SET participant_shares_json = '{\"bad\": json' WHERE id = '${txId.value}'",
+            )
+
+            // Flow ve tekil sorgu exception fırlatmaz
+            val corruptEntity = db.transactionDao().getByIdAndOwner(txId.value, ownerId.value)
+            assertNotNull(corruptEntity)
+            val corruptDomain = corruptEntity.toDomain()
+
+            // Fail-closed sentinel: splitMode = CUSTOM, participantShares = emptyList()
+            assertEquals(TransactionSplitMode.CUSTOM, corruptDomain.splitMode)
+            assertTrue(corruptDomain.participantShares.isEmpty())
+
+            // 7. Bozuk kayıt settlement doğrulamasında dışlanabilir durumda kalır
+            val validation = TransactionValidationRules.normalizeAndValidateSplit(
+                corruptDomain,
+                activeMemberUserIds = setOf(ownerId, bobId),
+            )
+            assertTrue(validation is TransactionValidationResult.Invalid)
+            assertEquals(TransactionValidationError.CUSTOM_SPLIT_SHARES_REQUIRED, validation.error)
+
+            // WorkspaceSharedExpense fail-closed davranışı: boş pay listesi olan CUSTOM kayıt reddedilir
+            assertFailsWith<IllegalArgumentException> {
+                WorkspaceSharedExpense(
+                    id = corruptDomain.id,
+                    paidByUserId = corruptDomain.paidByUserId,
+                    amount = corruptDomain.amount,
+                    participantUserIds = corruptDomain.participantUserIds,
+                    splitMode = corruptDomain.splitMode,
+                    participantShares = corruptDomain.participantShares,
+                )
+            }
+
+            // Observe flow'u da çökmeden yayar
+            val flowTx = db.transactionDao().observeById(txId.value).first()
+            assertNotNull(flowTx)
+            val flowDomain = flowTx.toDomain()
+            assertEquals(TransactionSplitMode.CUSTOM, flowDomain.splitMode)
+            assertTrue(flowDomain.participantShares.isEmpty())
+        } finally {
+            db.close()
+            context.deleteDatabase(dbName)
         }
     }
 

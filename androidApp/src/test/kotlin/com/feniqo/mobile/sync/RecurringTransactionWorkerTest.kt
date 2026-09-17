@@ -38,9 +38,12 @@ class RecurringTransactionWorkerTest {
     private class FakeRecurringTimeProvider(
         var localToday: LocalDate,
         var currentInstant: Instant,
+        var currentHour: Int = 12,
+        var currentMinute: Int = 0,
     ) : RecurringTransactionTimeProvider {
         override fun currentLocalDate(): LocalDate = localToday
         override fun currentInstant(): Instant = currentInstant
+        override fun currentLocalTime(): Pair<Int, Int> = Pair(currentHour, currentMinute)
     }
 
     private class FakeRecurringTransactionRepository(

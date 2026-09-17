@@ -266,6 +266,7 @@ data class DebtBalanceSummaryUiModel(
     val isSettled: Boolean,
     val statusText: String,
     val type: DebtType,
+    val progressRatio: Float = 0f,
 )
 
 /**

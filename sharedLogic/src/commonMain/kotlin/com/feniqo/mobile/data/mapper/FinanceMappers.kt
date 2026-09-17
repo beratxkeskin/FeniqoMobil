@@ -1,5 +1,7 @@
 package com.feniqo.mobile.data.mapper
 
+import com.feniqo.mobile.data.local.codec.TransactionSplitDecodeResult
+import com.feniqo.mobile.data.local.codec.TransactionSplitPersistenceCodec
 import com.feniqo.mobile.data.local.entity.AssetEntity
 import com.feniqo.mobile.data.local.entity.BudgetEntity
 import com.feniqo.mobile.data.local.entity.CategoryEntity
@@ -45,6 +47,7 @@ import com.feniqo.mobile.domain.model.SubscriptionPaymentSourceType
 import com.feniqo.mobile.domain.model.SubscriptionPriceHistory
 import com.feniqo.mobile.domain.model.Tag
 import com.feniqo.mobile.domain.model.Transaction
+import com.feniqo.mobile.domain.model.TransactionSplitMode
 import com.feniqo.mobile.domain.model.TransactionTag
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.YearMonth
@@ -137,26 +140,51 @@ fun Transaction.toEntity(sync: SyncMetadata): TransactionEntity = TransactionEnt
     createdAtEpochMillis = createdAt.toEpochMilliseconds(),
     note = note,
     sync = sync,
+    splitMode = splitMode.name,
+    participantSharesJson = if (splitMode == TransactionSplitMode.CUSTOM) {
+        TransactionSplitPersistenceCodec.encode(participantShares)
+    } else {
+        "[]"
+    },
 )
 
-fun TransactionEntity.toDomain(): Transaction = Transaction(
-    syncStatus = com.feniqo.mobile.domain.model.SyncStatus.valueOf(sync.syncStatus),
-    id = EntityId(id),
-    ownerId = EntityId(ownerId),
-    workspaceId = workspaceId?.let(::EntityId),
-    paidByUserId = paidByUserId?.let(::EntityId) ?: EntityId(ownerId),
-    participantUserIds = participantUserIds(),
-    amount = Money(amountMinor, Currency.valueOf(currencyCode)),
-    type = TransactionType.valueOf(typeCode),
-    categoryId = EntityId(categoryId),
-    description = description,
-    paymentMethod = PaymentMethod.valueOf(paymentMethodCode),
-    transactionDate = LocalDate.parse(transactionDate),
-    receiptPath = receiptPath?.let(::ReceiptPath),
-    installment = installmentInfo(),
-    createdAt = Instant.fromEpochMilliseconds(createdAtEpochMillis),
-    note = note,
-)
+fun TransactionEntity.toDomain(): Transaction {
+    val (decodedSplitMode, decodedShares) = when (
+        val decoded = TransactionSplitPersistenceCodec.decode(
+            splitModeCode = splitMode,
+            participantSharesJson = participantSharesJson,
+        )
+    ) {
+        is TransactionSplitDecodeResult.Valid -> decoded.splitMode to decoded.shares
+        is TransactionSplitDecodeResult.Invalid -> {
+            // Kontrollü fail-closed sentinel: CUSTOM modunda boş pay listesi.
+            // Bu temsil domain TransactionValidationRules tarafından doğrudan geçersiz sayılır
+            // ve settlement akışında hasExcludedExpenses = true ile güvenli şekilde dışlanır.
+            TransactionSplitMode.CUSTOM to emptyList()
+        }
+    }
+
+    return Transaction(
+        syncStatus = com.feniqo.mobile.domain.model.SyncStatus.valueOf(sync.syncStatus),
+        id = EntityId(id),
+        ownerId = EntityId(ownerId),
+        workspaceId = workspaceId?.let(::EntityId),
+        paidByUserId = paidByUserId?.let(::EntityId) ?: EntityId(ownerId),
+        participantUserIds = participantUserIds(),
+        amount = Money(amountMinor, Currency.valueOf(currencyCode)),
+        type = TransactionType.valueOf(typeCode),
+        categoryId = EntityId(categoryId),
+        description = description,
+        paymentMethod = PaymentMethod.valueOf(paymentMethodCode),
+        transactionDate = LocalDate.parse(transactionDate),
+        receiptPath = receiptPath?.let(::ReceiptPath),
+        installment = installmentInfo(),
+        createdAt = Instant.fromEpochMilliseconds(createdAtEpochMillis),
+        note = note,
+        splitMode = decodedSplitMode,
+        participantShares = decodedShares,
+    )
+}
 
 private fun TransactionEntity.participantUserIds(): List<EntityId> = participantUserIdsJson
     ?.let { Json.decodeFromString<List<String>>(it) }

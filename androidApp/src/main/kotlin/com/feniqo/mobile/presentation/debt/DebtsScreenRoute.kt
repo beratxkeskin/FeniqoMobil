@@ -20,6 +20,7 @@ fun DebtsScreenRoute(
     onDebtClick: (EntityId) -> Unit,
     onNavigateToSnowballPlan: () -> Unit,
     modifier: Modifier = Modifier,
+    onNavigateBack: (() -> Unit)? = null,
     viewModel: DebtsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -32,6 +33,7 @@ fun DebtsScreenRoute(
             onRetry = { viewModel.onIntent(DebtsIntent.Retry) },
             onAddDebt = onAddDebt,
             onDebtClick = onDebtClick,
+            onNavigateBack = onNavigateBack,
             onNavigateToSnowballPlan = onNavigateToSnowballPlan,
             modifier = Modifier.fillMaxSize(),
         )

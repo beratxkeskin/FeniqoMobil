@@ -21,6 +21,13 @@ import com.feniqo.mobile.domain.repository.CategoryRepository
 import com.feniqo.mobile.domain.repository.RepositoryResult
 import com.feniqo.mobile.domain.repository.TransactionFilter
 import com.feniqo.mobile.domain.repository.TransactionRepository
+import com.feniqo.mobile.domain.repository.WorkspaceInviteCode
+import com.feniqo.mobile.domain.repository.WorkspaceRepository
+import com.feniqo.mobile.domain.model.CreateWorkspaceCommand
+import com.feniqo.mobile.domain.model.UpdateWorkspaceCommand
+import com.feniqo.mobile.domain.model.Workspace
+import com.feniqo.mobile.domain.model.WorkspaceMember
+import com.feniqo.mobile.domain.model.WorkspaceRole
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -35,11 +42,13 @@ import kotlin.test.assertNull
 
 class CoreUseCasesTest {
 
+    private val defaultWorkspaceRepo = FakeWorkspaceRepository()
+
     @Test
     fun add_transaction_assigns_owner_from_session_and_normalizes_description() = runTest {
         val categoryRepository = FakeCategoryRepository(listOf(expenseCategory()))
         val transactionRepository = FakeTransactionRepository()
-        val useCase = AddTransactionUseCase(authRepository(), categoryRepository, transactionRepository)
+        val useCase = AddTransactionUseCase(authRepository(), categoryRepository, transactionRepository, defaultWorkspaceRepo)
 
         val result = useCase(transactionCommand(description = "  Market  "), TODAY, NOW)
 
@@ -56,6 +65,7 @@ class CoreUseCasesTest {
             authRepository(),
             FakeCategoryRepository(listOf(expenseCategory())),
             transactionRepository,
+            defaultWorkspaceRepo,
         )
 
         val result = useCase(
@@ -77,6 +87,7 @@ class CoreUseCasesTest {
             authRepository(),
             FakeCategoryRepository(listOf(expenseCategory())),
             transactionRepository,
+            defaultWorkspaceRepo,
         )
 
         val result = useCase(transactionCommand(description = "Yeni"), TODAY)
@@ -105,7 +116,7 @@ class CoreUseCasesTest {
         val cat = expenseCategory().copy(workspaceId = wsId)
         val catRepo = FakeCategoryRepository(listOf(cat))
         val trxRepo = FakeTransactionRepository()
-        val useCase = AddTransactionUseCase(authRepository(), catRepo, trxRepo)
+        val useCase = AddTransactionUseCase(authRepository(), catRepo, trxRepo, defaultWorkspaceRepo)
 
         val result = useCase(transactionCommand().copy(workspaceId = wsId), TODAY, NOW)
         assertIs<RepositoryResult.Success<EntityId>>(result)
@@ -116,7 +127,7 @@ class CoreUseCasesTest {
         val cat = expenseCategory().copy(workspaceId = EntityId("ws-other"))
         val catRepo = FakeCategoryRepository(listOf(cat))
         val trxRepo = FakeTransactionRepository()
-        val useCase = AddTransactionUseCase(authRepository(), catRepo, trxRepo)
+        val useCase = AddTransactionUseCase(authRepository(), catRepo, trxRepo, defaultWorkspaceRepo)
 
         val result = useCase(transactionCommand().copy(workspaceId = EntityId("ws-1")), TODAY, NOW)
         val failure = assertIs<RepositoryResult.Failure>(result)
@@ -128,7 +139,7 @@ class CoreUseCasesTest {
         val defaultCat = expenseCategory().copy(ownerId = null, workspaceId = null, isDefault = true)
         val catRepo = FakeCategoryRepository(listOf(defaultCat))
         val trxRepo = FakeTransactionRepository()
-        val useCase = AddTransactionUseCase(authRepository(), catRepo, trxRepo)
+        val useCase = AddTransactionUseCase(authRepository(), catRepo, trxRepo, defaultWorkspaceRepo)
 
         val result = useCase(transactionCommand().copy(workspaceId = EntityId("ws-any")), TODAY, NOW)
         assertIs<RepositoryResult.Success<EntityId>>(result)
@@ -141,7 +152,7 @@ class CoreUseCasesTest {
         val existing = transaction().copy(workspaceId = wsId)
         val catRepo = FakeCategoryRepository(listOf(cat))
         val trxRepo = FakeTransactionRepository(listOf(existing))
-        val useCase = UpdateTransactionUseCase(authRepository(), catRepo, trxRepo)
+        val useCase = UpdateTransactionUseCase(authRepository(), catRepo, trxRepo, defaultWorkspaceRepo)
 
         val result = useCase(transactionCommand().copy(workspaceId = wsId), TODAY)
         assertIs<RepositoryResult.Success<Unit>>(result)
@@ -153,7 +164,7 @@ class CoreUseCasesTest {
         val existing = transaction().copy(workspaceId = EntityId("ws-1"))
         val catRepo = FakeCategoryRepository(listOf(cat))
         val trxRepo = FakeTransactionRepository(listOf(existing))
-        val useCase = UpdateTransactionUseCase(authRepository(), catRepo, trxRepo)
+        val useCase = UpdateTransactionUseCase(authRepository(), catRepo, trxRepo, defaultWorkspaceRepo)
 
         val result = useCase(transactionCommand().copy(workspaceId = EntityId("ws-1")), TODAY)
         val failure = assertIs<RepositoryResult.Failure>(result)
@@ -166,7 +177,7 @@ class CoreUseCasesTest {
         val existing = transaction().copy(workspaceId = EntityId("ws-any"))
         val catRepo = FakeCategoryRepository(listOf(defaultCat))
         val trxRepo = FakeTransactionRepository(listOf(existing))
-        val useCase = UpdateTransactionUseCase(authRepository(), catRepo, trxRepo)
+        val useCase = UpdateTransactionUseCase(authRepository(), catRepo, trxRepo, defaultWorkspaceRepo)
 
         val result = useCase(transactionCommand().copy(workspaceId = EntityId("ws-any")), TODAY)
         assertIs<RepositoryResult.Success<Unit>>(result)
@@ -176,7 +187,7 @@ class CoreUseCasesTest {
     fun add_transaction_creates_with_null_installment() = runTest {
         val catRepo = FakeCategoryRepository(listOf(expenseCategory()))
         val trxRepo = FakeTransactionRepository()
-        val useCase = AddTransactionUseCase(authRepository(), catRepo, trxRepo)
+        val useCase = AddTransactionUseCase(authRepository(), catRepo, trxRepo, defaultWorkspaceRepo)
 
         val result = useCase(transactionCommand(), TODAY, NOW)
         assertIs<RepositoryResult.Success<EntityId>>(result)
@@ -190,7 +201,7 @@ class CoreUseCasesTest {
         val existing = transaction().copy(workspaceId = EntityId("ws-initial"))
         val catRepo = FakeCategoryRepository(listOf(expenseCategory().copy(workspaceId = EntityId("ws-initial"))))
         val trxRepo = FakeTransactionRepository(listOf(existing))
-        val useCase = UpdateTransactionUseCase(authRepository(), catRepo, trxRepo)
+        val useCase = UpdateTransactionUseCase(authRepository(), catRepo, trxRepo, defaultWorkspaceRepo)
 
         val result = useCase(transactionCommand().copy(workspaceId = EntityId("ws-different")), TODAY)
         val failure = assertIs<RepositoryResult.Failure>(result)
@@ -210,7 +221,7 @@ class CoreUseCasesTest {
         )
         val catRepo = FakeCategoryRepository(listOf(expenseCategory().copy(workspaceId = EntityId("ws-1"))))
         val trxRepo = FakeTransactionRepository(listOf(existing))
-        val useCase = UpdateTransactionUseCase(authRepository(), catRepo, trxRepo)
+        val useCase = UpdateTransactionUseCase(authRepository(), catRepo, trxRepo, defaultWorkspaceRepo)
 
         val result = useCase(transactionCommand(description = "Yeni").copy(workspaceId = EntityId("ws-1")), TODAY)
         assertIs<RepositoryResult.Success<Unit>>(result)
@@ -231,7 +242,7 @@ class CoreUseCasesTest {
         val existing = transaction().copy(installment = null)
         val catRepo = FakeCategoryRepository(listOf(expenseCategory()))
         val trxRepo = FakeTransactionRepository(listOf(existing))
-        val useCase = UpdateTransactionUseCase(authRepository(), catRepo, trxRepo)
+        val useCase = UpdateTransactionUseCase(authRepository(), catRepo, trxRepo, defaultWorkspaceRepo)
 
         val result = useCase(transactionCommand(description = "Güncel"), TODAY)
         assertIs<RepositoryResult.Success<Unit>>(result)
@@ -467,4 +478,42 @@ private class FakeTransactionRepository(initial: List<Transaction> = emptyList()
         transactions.value = transactions.value.filterNot { it.id in ids }
         return RepositoryResult.Success(Unit)
     }
+}
+
+private class FakeWorkspaceRepository(
+    var members: List<WorkspaceMember> = emptyList(),
+) : WorkspaceRepository {
+    private val defaultUserId = EntityId("user-1")
+    private val defaultNow = Instant.parse("2026-08-05T00:00:00Z")
+
+    override fun observeWorkspaces(): Flow<List<Workspace>> = flowOf(emptyList())
+    override fun observeActiveWorkspace(): Flow<Workspace?> = flowOf(null)
+    override fun observeMembers(workspaceId: EntityId): Flow<List<WorkspaceMember>> = flowOf(
+        if (members.any { it.workspaceId == workspaceId }) {
+            members.filter { it.workspaceId == workspaceId }
+        } else {
+            listOf(WorkspaceMember(workspaceId, defaultUserId, WorkspaceRole.OWNER, defaultNow))
+        },
+    )
+    override suspend fun create(name: String): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("ws-new"))
+    override suspend fun createWorkspace(command: CreateWorkspaceCommand): RepositoryResult<EntityId> =
+        RepositoryResult.Success(EntityId("ws-new"))
+    override suspend fun updateWorkspace(command: UpdateWorkspaceCommand): RepositoryResult<Unit> =
+        RepositoryResult.Success(Unit)
+    override suspend fun deleteWorkspace(id: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+    override suspend fun setActive(workspaceId: EntityId?): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+    override suspend fun join(inviteCode: WorkspaceInviteCode): RepositoryResult<EntityId> =
+        RepositoryResult.Success(EntityId("ws-new"))
+    override suspend fun leave(workspaceId: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+    override suspend fun createInvite(workspaceId: EntityId): RepositoryResult<WorkspaceInviteCode> =
+        RepositoryResult.Success(WorkspaceInviteCode("INVITE"))
+    override suspend fun changeMemberRole(
+        workspaceId: EntityId,
+        userId: EntityId,
+        role: WorkspaceRole,
+    ): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+    override suspend fun transferOwnership(workspaceId: EntityId, targetUserId: EntityId): RepositoryResult<Unit> =
+        RepositoryResult.Success(Unit)
+    override suspend fun removeMember(workspaceId: EntityId, userId: EntityId): RepositoryResult<Unit> =
+        RepositoryResult.Success(Unit)
 }

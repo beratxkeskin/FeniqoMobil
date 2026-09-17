@@ -27,13 +27,14 @@ class TransactionSuccessViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    private val route: TransactionSuccessRoute? = try {
-        savedStateHandle.toRoute<TransactionSuccessRoute>()
-    } catch (_: Exception) {
+    private val rawTransactionId: String? = try {
+        savedStateHandle.toRoute<TransactionSuccessRoute>().transactionId
+    } catch (e: Exception) {
+        if (e is kotlin.coroutines.cancellation.CancellationException) throw e
         null
     }
 
-    val uiState: StateFlow<TransactionSuccessUiState> = if (route == null) {
+    val uiState: StateFlow<TransactionSuccessUiState> = if (rawTransactionId == null || rawTransactionId.isBlank()) {
         MutableStateFlow(
             TransactionSuccessUiState(
                 isLoading = false,
@@ -42,7 +43,7 @@ class TransactionSuccessViewModel @Inject constructor(
             ),
         )
     } else {
-        val transactionId = EntityId(route.transactionId)
+        val transactionId = EntityId(rawTransactionId)
         combine(
             observeTransactionUseCase(transactionId),
             observeCategoriesForHistoryLookupUseCase(),

@@ -17,21 +17,40 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.border
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.CreditCard
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Leaderboard
 import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Scale
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,9 +71,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.DebtStatus
 import com.feniqo.mobile.domain.model.DebtType
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.presentation.debt.DebtDisplayModel
 import com.feniqo.mobile.presentation.debt.DebtDueStatus
 import com.feniqo.mobile.presentation.debt.DebtInsightType
@@ -66,9 +87,13 @@ import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoStatusColor
 import com.feniqo.mobile.presentation.theme.FeniqoTabularNumberStyle
+import com.feniqo.mobile.presentation.theme.FeniqoTextPrimary
+import com.feniqo.mobile.presentation.theme.FeniqoTextSecondary
 import com.feniqo.mobile.presentation.theme.FeniqoTouchTarget
 import com.feniqo.mobile.presentation.theme.FeniqoTrendGreen
+import com.feniqo.mobile.presentation.theme.FeniqoWarmStoneBackground
 import com.feniqo.mobile.presentation.theme.PhoenixGold
+import com.feniqo.mobile.presentation.util.DateFormatter
 
 /**
  * Referans görseldeki ↗ (sağ üst) kırmızı çapraz ok ikonu.
@@ -125,6 +150,169 @@ fun ArrowDownLeftIcon(
                 join = StrokeJoin.Round,
             ),
         )
+    }
+}
+
+/**
+ * Referans Görsel 01'deki grafit "Net durum" özet kartıdır.
+ * #303536 koyu yüzey, net durum renklendirmesi (negatif kırmızı, pozitif yeşil, nötr beyaz),
+ * Borçlarım ve Alacaklarım toplamları, kayıt sayıları ve döviz kodu (TRY) içerir.
+ */
+@Composable
+fun DebtsGraphiteSummaryCard(
+    summary: DebtsSummaryUiModel,
+    modifier: Modifier = Modifier,
+) {
+    val netAmountColor = when {
+        summary.isNetNegative -> Color(0xFFEF4444)
+        summary.isNetPositive -> Color(0xFF10B981)
+        else -> Color.White
+    }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp)),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFF303536),
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                // Net Durum Başlığı ve Büyük Tutar
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "Net durum",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color(0xFFCBD5E1),
+                        fontSize = 13.sp,
+                    )
+                    Text(
+                        text = summary.formattedNetBalance,
+                        style = MaterialTheme.typography.headlineMedium.merge(FeniqoTabularNumberStyle),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 32.sp,
+                        color = netAmountColor,
+                    )
+                }
+
+                HorizontalDivider(
+                    color = Color(0xFF434A4C),
+                    thickness = 1.dp,
+                )
+
+                // İki Eşit Kolon: Borçlarım & Alacaklarım
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom,
+                ) {
+                    // Sol Kolon: Borçlarım
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            text = "Borçlarım",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF94A3B8),
+                            fontSize = 12.sp,
+                        )
+                        Text(
+                            text = summary.formattedTotalDebt,
+                            style = MaterialTheme.typography.titleMedium.merge(FeniqoTabularNumberStyle),
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            fontSize = 18.sp,
+                        )
+                        Text(
+                            text = "Toplam ${summary.activeDebtCount} kayıt",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF94A3B8),
+                            fontSize = 11.sp,
+                        )
+                    }
+
+                    // Sağ Kolon: Alacaklarım
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            text = "Alacaklarım",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF94A3B8),
+                            fontSize = 12.sp,
+                        )
+                        Text(
+                            text = summary.formattedTotalReceivable,
+                            style = MaterialTheme.typography.titleMedium.merge(FeniqoTabularNumberStyle),
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            fontSize = 18.sp,
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = "Toplam ${summary.activeReceivableCount} kayıt",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF94A3B8),
+                                fontSize = 11.sp,
+                            )
+                            Text(
+                                text = summary.baseCurrency.name,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFFCBD5E1),
+                                fontSize = 11.sp,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Çoklu para birimi güvenliği uyarısı
+        if (summary.excludedCurrenciesCount > 0) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(FeniqoRadius.Small),
+                color = Color(0xFFF1EDE6),
+                border = BorderStroke(1.dp, Color(0xFFE2DDD4)),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = FeniqoSpacing.Medium, vertical = FeniqoSpacing.Small),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = null,
+                        tint = FeniqoTextSecondary,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Text(
+                        text = "${summary.excludedCurrenciesCount} kayıt farklı para biriminde (${summary.excludedCurrencies.joinToString { it.name }}) olduğu için bu toplama dahil edilmedi.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = FeniqoTextSecondary,
+                        fontSize = 12.sp,
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -488,89 +676,72 @@ private fun UpcomingPaymentItemRow(
             .clickable(role = Role.Button, onClick = onClick)
             .padding(vertical = 4.dp)
             .semantics {
-                contentDescription = "${item.title}, ${item.typeLabel}, Kalan: ${item.formattedRemainingAmount}, Vade: ${item.formattedDueDate}"
+                contentDescription = "Yaklaşan vade: ${item.title}, Kalan: ${item.formattedRemainingAmount}, Vade: ${item.formattedDueDate}"
             },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Avatar Yuvarlağı (38dp, nötr açık zemin)
+        // Takvim İkon Kutusu
         Box(
             modifier = Modifier
                 .size(38.dp)
-                .clip(CircleShape)
-                .background(Color(0xFFF2EFE9)),
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color(0xFFFEF3C7)),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = item.avatarInitial,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
+            Icon(
+                imageVector = Icons.Outlined.CalendarMonth,
+                contentDescription = null,
+                tint = Color(0xFFD97706),
+                modifier = Modifier.size(20.dp),
             )
         }
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // Başlık, Tür Rozeti ve Açıklama
+        // Yaklaşan Vade Etiketi ve Başlık
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(
+                text = "Yaklaşan vade • ${item.formattedShortDueDate}",
+                style = MaterialTheme.typography.bodySmall,
+                color = FeniqoTextSecondary,
+                fontSize = 12.sp,
+            )
+            Text(
                 text = item.title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = FeniqoTextPrimary,
+                fontSize = 14.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                CompactTypeBadge(type = item.type, label = item.typeLabel)
-                if (!item.description.isNullOrBlank()) {
-                    Text(
-                        text = item.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
         }
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Tutar ve Vade (Borç ise kırmızı, alacak ise yeşil)
-        Column(
-            horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            val amountColor = if (item.type == DebtType.DEBT) Color(0xFFDC2626) else Color(0xFF16A34A)
-            Text(
-                text = item.formattedRemainingAmount,
-                style = MaterialTheme.typography.bodyMedium.merge(FeniqoTabularNumberStyle),
-                fontWeight = FontWeight.Bold,
-                color = amountColor,
-            )
-            Text(
-                text = item.formattedShortDueDate,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        // Tutar
+        Text(
+            text = item.formattedRemainingAmount,
+            style = MaterialTheme.typography.titleMedium.merge(FeniqoTabularNumberStyle),
+            fontWeight = FontWeight.Bold,
+            color = FeniqoTextPrimary,
+            fontSize = 15.sp,
+        )
 
         Spacer(modifier = Modifier.width(4.dp))
 
         Icon(
             imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+            tint = Color(0xFF94A3B8),
             modifier = Modifier.size(16.dp),
         )
     }
 }
+
 
 /**
  * Referans görseldeki "Your Debts" ve "Receivables" için tek bir beyaz kart içinde gruplanmış kart bileşenidir.
@@ -728,25 +899,31 @@ fun DebtGroupedItemRow(
             },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Avatar (Baş harf, 38dp nötr açık yuvarlak)
+        // İkon (Borç ise Kredi Kartı, Alacak ise Kişi)
+        val (iconBoxBg, iconTint) = if (item.type == DebtType.DEBT) {
+            Pair(Color(0xFFF1EDE6), Color(0xFF475569))
+        } else {
+            Pair(Color(0xFFE8F1EC), FeniqoSageGreen)
+        }
+
         Box(
             modifier = Modifier
                 .size(38.dp)
-                .clip(CircleShape)
-                .background(Color(0xFFF2EFE9)),
+                .clip(RoundedCornerShape(10.dp))
+                .background(iconBoxBg),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = item.avatarInitial,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
+            Icon(
+                imageVector = if (item.type == DebtType.DEBT) Icons.Outlined.CreditCard else Icons.Outlined.Person,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(20.dp),
             )
         }
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // Başlık ve Açıklama
+        // Başlık ve Kalan Tutar
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -755,14 +932,23 @@ fun DebtGroupedItemRow(
                 text = item.title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = FeniqoTextPrimary,
+                fontSize = 15.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            val subtext = if (item.isSettled) {
+                "Tamamlandı"
+            } else if (item.type == DebtType.DEBT) {
+                "Kalan: ${item.formattedRemainingAmount}"
+            } else {
+                item.formattedRemainingAmount
+            }
             Text(
-                text = if (!item.description.isNullOrBlank()) item.description else "${item.typeLabel} kaydı",
+                text = subtext,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (item.isSettled) FeniqoTrendGreen else FeniqoTextSecondary,
+                fontSize = 13.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -770,34 +956,23 @@ fun DebtGroupedItemRow(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Tutar, Durum Rozeti ve Vade Tarihi
+        // Vade Tarihi veya Durum Rozeti
         Column(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                val amountColor = if (item.dueStatus is DebtDueStatus.Overdue) {
-                    Color(0xFFDC2626)
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                }
-                Text(
-                    text = item.formattedRemainingAmount,
-                    style = MaterialTheme.typography.bodyMedium.merge(FeniqoTabularNumberStyle),
-                    fontWeight = FontWeight.Bold,
-                    color = amountColor,
-                )
+            if (item.isSettled) {
+                WarmDueStatusBadge(status = item.dueStatus, label = "Tamamlandı")
+            } else if (item.dueStatus is DebtDueStatus.Overdue || item.dueStatus is DebtDueStatus.DueToday) {
                 WarmDueStatusBadge(status = item.dueStatus, label = item.formattedDueStatus)
+            } else {
+                Text(
+                    text = item.formattedShortDueDate,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = FeniqoTextSecondary,
+                    fontSize = 13.sp,
+                )
             }
-
-            Text(
-                text = item.formattedShortDueDate,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
 
         Spacer(modifier = Modifier.width(4.dp))
@@ -805,7 +980,7 @@ fun DebtGroupedItemRow(
         Icon(
             imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+            tint = Color(0xFF94A3B8),
             modifier = Modifier.size(16.dp),
         )
     }
@@ -1073,6 +1248,7 @@ fun DebtDeleteDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    debtTitle: String = "",
 ) {
     androidx.compose.material3.AlertDialog(
         onDismissRequest = {
@@ -1083,47 +1259,540 @@ fun DebtDeleteDialog(
         modifier = modifier.semantics {
             contentDescription = "Borç alacak silme onay diyaloğu"
         },
+        shape = RoundedCornerShape(16.dp),
+        containerColor = Color.White,
         title = {
             Text(
-                text = "Kaydı Sil",
+                text = "Kaydı silmek istiyor musun?",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
+                color = FeniqoTextPrimary,
+                fontSize = 18.sp,
             )
         },
         text = {
+            val descriptionText = if (debtTitle.isNotBlank()) {
+                "$debtTitle kaydını silmek istediğine emin misin?"
+            } else {
+                "Bu borç / alacak kaydını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+            }
             Text(
-                text = "Bu borç / alacak kaydını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+                text = descriptionText,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = FeniqoTextSecondary,
+                fontSize = 14.sp,
             )
         },
         confirmButton = {
-            androidx.compose.material3.Button(
+            Button(
                 onClick = onConfirm,
                 enabled = !isSubmitting,
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFDC2626),
+                    contentColor = Color.White,
                 ),
+                modifier = Modifier.height(44.dp),
             ) {
                 if (isSubmitting) {
                     androidx.compose.material3.CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
-                        color = MaterialTheme.colorScheme.onError,
+                        color = Color.White,
                         strokeWidth = 2.dp,
                     )
                 } else {
-                    Text("Sil")
+                    Text("Sil", fontWeight = FontWeight.Bold)
                 }
             }
         },
         dismissButton = {
-            androidx.compose.material3.TextButton(
+            OutlinedButton(
                 onClick = onDismiss,
                 enabled = !isSubmitting,
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                modifier = Modifier.height(44.dp),
             ) {
-                Text("Vazgeç")
+                Text("Vazgeç", color = FeniqoTextPrimary, fontWeight = FontWeight.Medium)
             }
         },
     )
+}
+
+/**
+ * Referans Görsel 01'deki "Borç kapatma planı" giriş kartı.
+ * Grafik ikonu, başlık, rehber alt metin ve chevron içerir.
+ */
+@Composable
+fun DebtSnowballEntryCard(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = "Borç kapatma planı" },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, Color(0xFFECE7DE)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFFE8F1EC)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Leaderboard,
+                    contentDescription = null,
+                    tint = FeniqoSageGreen,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = "Borç kapatma planı",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = FeniqoTextPrimary,
+                    fontSize = 15.sp,
+                )
+                Text(
+                    text = "Borçlarını daha hızlı kapatmak için bir plan oluştur.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = FeniqoTextSecondary,
+                    fontSize = 13.sp,
+                )
+            }
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                contentDescription = null,
+                tint = Color(0xFF94A3B8),
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+/**
+ * Referans Görsel 09'daki takvim modal bottom sheet seçicisidir.
+ * Vade tarihi seç, ay gezinimi, takvim ızgarası ve altta "Tarihi seç" butonu içerir.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DebtDatePickerSheet(
+    selectedDate: LocalDate?,
+    onDateSelected: (LocalDate) -> Unit,
+    onDismiss: () -> Unit,
+    title: String = "Vade tarihi seç",
+    modifier: Modifier = Modifier,
+) {
+    val initialDate = selectedDate ?: LocalDate(2026, 9, 15)
+    val initialUtcMillis = initialDate.toEpochDays() * 86_400_000L
+
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = initialUtcMillis,
+    )
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = Color.White,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        dragHandle = {
+            Surface(
+                modifier = Modifier
+                    .padding(vertical = 12.dp)
+                    .width(36.dp)
+                    .height(4.dp),
+                shape = RoundedCornerShape(2.dp),
+                color = Color(0xFFCBD5E1),
+            ) {}
+        },
+        modifier = modifier,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 28.dp),
+        ) {
+            // Başlık ve Kapat Butonu
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = FeniqoTextPrimary,
+                    fontSize = 18.sp,
+                )
+
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = "Kapat",
+                        tint = Color(0xFF64748B),
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Takvim
+            DatePicker(
+                state = datePickerState,
+                showModeToggle = false,
+                title = null,
+                headline = null,
+                colors = DatePickerDefaults.colors(
+                    containerColor = Color.White,
+                    selectedDayContainerColor = FeniqoSageGreen,
+                    todayDateBorderColor = FeniqoSageGreen,
+                    selectedDayContentColor = Color.White,
+                ),
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Alt Satır: Seçili Tarih ve "Tarihi seç" butonu
+            val currentMillis = datePickerState.selectedDateMillis
+            val currentLocalDate = currentMillis?.let {
+                LocalDate.fromEpochDays((it / 86_400_000L).toInt())
+            } ?: initialDate
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = DateFormatter.formatReadableDate(currentLocalDate),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = FeniqoTextPrimary,
+                    fontSize = 16.sp,
+                )
+
+                Button(
+                    onClick = {
+                        onDateSelected(currentLocalDate)
+                        onDismiss()
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = FeniqoSageGreen,
+                        contentColor = Color.White,
+                    ),
+                    modifier = Modifier.height(46.dp),
+                ) {
+                    Text(
+                        text = "Tarihi seç",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Referans Görsel 10'daki para birimi modal bottom sheet seçicisidir.
+ * TRY, USD, EUR seçenekleri, radyo ikonları ve para birimi sembolleri içerir.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DebtCurrencyPickerSheet(
+    selectedCurrency: Currency,
+    onCurrencySelected: (Currency) -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = Color.White,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        dragHandle = {
+            Surface(
+                modifier = Modifier
+                    .padding(vertical = 12.dp)
+                    .width(36.dp)
+                    .height(4.dp),
+                shape = RoundedCornerShape(2.dp),
+                color = Color(0xFFCBD5E1),
+            ) {}
+        },
+        modifier = modifier,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            // Başlık ve Kapat Butonu
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Para birimi seç",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = FeniqoTextPrimary,
+                    fontSize = 18.sp,
+                )
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = "Kapat",
+                        tint = Color(0xFF64748B),
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Currency.entries.forEach { currency ->
+                val isSelected = currency == selectedCurrency
+                val symbol = when (currency) {
+                    Currency.TRY -> "₺"
+                    Currency.USD -> "$"
+                    Currency.EUR -> "€"
+                }
+                val name = when (currency) {
+                    Currency.TRY -> "Türk lirası"
+                    Currency.USD -> "Amerikan doları"
+                    Currency.EUR -> "Euro"
+                }
+
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .clickable {
+                            onCurrencySelected(currency)
+                            onDismiss()
+                        },
+                    shape = RoundedCornerShape(14.dp),
+                    color = if (isSelected) Color(0xFFE8F1EC) else Color.White,
+                    border = BorderStroke(
+                        width = if (isSelected) 1.5.dp else 1.dp,
+                        color = if (isSelected) FeniqoSageGreen else Color(0xFFE2E8F0),
+                    ),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // Radio dairesi
+                        Box(
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clip(CircleShape)
+                                .background(Color.Transparent)
+                                .border(
+                                    BorderStroke(
+                                        2.dp,
+                                        if (isSelected) FeniqoSageGreen else Color(0xFF94A3B8),
+                                    ),
+                                    CircleShape,
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (isSelected) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .clip(CircleShape)
+                                        .background(FeniqoSageGreen),
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.width(14.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = currency.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = FeniqoTextPrimary,
+                                fontSize = 15.sp,
+                            )
+                            Text(
+                                text = name,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = FeniqoTextSecondary,
+                                fontSize = 13.sp,
+                            )
+                        }
+
+                        Text(
+                            text = symbol,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isSelected) FeniqoSageGreen else FeniqoTextSecondary,
+                            fontSize = 18.sp,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Referans Görsel 12'deki "Henüz kayıt yok" boş durum bileşeni.
+ * Çift yönlü ok ikonu, açıklama ve "İlk kaydını oluştur" butonu içerir.
+ */
+@Composable
+fun DebtEmptyState(
+    onAddDebt: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 48.dp, horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(72.dp)
+                .clip(CircleShape)
+                .background(Color(0xFFE8F1EC)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Default.SwapHoriz,
+                contentDescription = null,
+                tint = FeniqoSageGreen,
+                modifier = Modifier.size(36.dp),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        Text(
+            text = "Henüz kayıt yok",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = FeniqoTextPrimary,
+            fontSize = 20.sp,
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Text(
+            text = "Borçlarını ve alacaklarını tek yerde takip et.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = FeniqoTextSecondary,
+            fontSize = 14.sp,
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(
+            onClick = onAddDebt,
+            modifier = Modifier
+                .fillMaxWidth(0.75f)
+                .height(50.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = FeniqoSageGreen,
+                contentColor = Color.White,
+            ),
+        ) {
+            Text(
+                text = "İlk kaydını oluştur",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+            )
+        }
+    }
+}
+
+/**
+ * Referans Görsel 13'teki tamamlanmış borç / alacak bilgi banner'ı.
+ */
+@Composable
+fun DebtSettledBanner(
+    isDebt: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = Color(0xFFE8F1EC),
+        border = BorderStroke(1.dp, Color(0xFFC7DEC4)),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = null,
+                tint = FeniqoSageGreen,
+                modifier = Modifier.size(20.dp),
+            )
+            Text(
+                text = if (isDebt) "Bu borcun tamamı ödendi." else "Bu alacağın tamamı tahsil edildi.",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = FeniqoSageGreen,
+                fontSize = 14.sp,
+            )
+        }
+    }
+}
+
+/**
+ * Para birimi sembol uzantısı.
+ */
+fun Currency.symbol(): String = when (this) {
+    Currency.TRY -> "₺"
+    Currency.USD -> "$"
+    Currency.EUR -> "€"
+}
+
+fun Currency.symbolName(): String = when (this) {
+    Currency.TRY -> "Türk lirası"
+    Currency.USD -> "Amerikan doları"
+    Currency.EUR -> "Euro"
 }

@@ -14,6 +14,10 @@ interface SubscriptionPaymentReminderNotifier {
 
     /**
      * Vadesi gelen veya yaklaşan abonelik hatırlatıcısını sistem bildirim çubuğunda yayınlar.
+     * @param hideAmounts Kullanıcı ayarlarında bildirimlerde tutar gizleme aktif ise tutarı maskeler.
      */
-    suspend fun notifyReminder(candidate: SubscriptionPaymentReminderCandidate)
+    suspend fun notifyReminder(
+        candidate: SubscriptionPaymentReminderCandidate,
+        hideAmounts: Boolean = false,
+    )
 }

@@ -68,4 +68,20 @@ class AssetFormModelsTest {
         assertEquals(id, draft.toUpdateCommand().id)
         assertEquals("Altın", draft.toCreateCommand().name)
     }
+
+    @Test
+    fun computeCostPreview_calculatesLivePreview_whenValid() {
+        val input = AssetFormInput(
+            nameInput = "Gram altın",
+            currentValueInput = "150000",
+            quantityInput = "30",
+            purchaseUnitPriceInput = "4000",
+            currency = Currency.TRY,
+        )
+        val preview = input.computeCostPreview()
+        assertEquals("120.000,00 ₺", preview)
+
+        val invalidInput = input.copy(quantityInput = "abc")
+        assertNull(invalidInput.computeCostPreview())
+    }
 }

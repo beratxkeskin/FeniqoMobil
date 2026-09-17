@@ -122,6 +122,7 @@ fun GoalFormScreenRoute(
                         { onAddContribution(initialGoalId) }
                     } else null,
                     contributionsHistory = uiState.contributionsHistory,
+                    currentAmount = (effectiveLoadState as? GoalEditLoadState.Ready)?.currentAmount,
                     modifier = Modifier.fillMaxSize(),
                 )
 
@@ -164,9 +165,10 @@ fun GoalFormScreenRoute(
         }
     }
 
-    // Onaylı Silme Diyaloğu
+    // Onaylı Silme Diyaloğu (Panel 10)
     if (uiState.pendingDeleteConfirmation) {
         GoalDeleteDialog(
+            goalName = uiState.input.nameInput.takeIf { it.isNotBlank() },
             isSubmitting = uiState.isSubmitting,
             onConfirm = { viewModel.confirmDelete() },
             onDismiss = { viewModel.dismissDelete() },

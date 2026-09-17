@@ -12,7 +12,6 @@ import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
-import com.feniqo.mobile.presentation.screen.AssetDeleteDialog
 import com.feniqo.mobile.presentation.screen.AssetFormScreen
 
 @Composable
@@ -26,19 +25,26 @@ fun AssetFormScreenRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val loadState by viewModel.editLoadState.collectAsStateWithLifecycle()
+
     LaunchedEffect(initialAssetId, hasInvalidRouteId) {
         if (hasInvalidRouteId) viewModel.setInvalidRouteId()
         else if (initialAssetId != null) viewModel.loadForEdit(initialAssetId)
     }
+
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                is AssetFormUiEvent.MutationSuccess -> { onMessage(event.message); onNavigateBack() }
+                is AssetFormUiEvent.MutationSuccess -> {
+                    onMessage(event.message)
+                    onNavigateBack()
+                }
                 is AssetFormUiEvent.ShowMessage -> onMessage(event.message)
             }
         }
     }
+
     BackHandler(enabled = !state.isSubmitting, onBack = onNavigateBack)
+
     Surface(modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when {
             initialAssetId != null && loadState == AssetEditLoadState.Loading ->
@@ -54,11 +60,10 @@ fun AssetFormScreenRoute(
                 onInputChange = viewModel::updateInput,
                 onSubmit = viewModel::submit,
                 onRequestDelete = viewModel::requestDelete,
+                onConfirmDelete = viewModel::confirmDelete,
+                onDismissDelete = viewModel::dismissDelete,
                 modifier = Modifier.fillMaxSize(),
             )
         }
-    }
-    if (state.pendingDeleteConfirmation) {
-        AssetDeleteDialog(state.isSubmitting, viewModel::confirmDelete, viewModel::dismissDelete)
     }
 }

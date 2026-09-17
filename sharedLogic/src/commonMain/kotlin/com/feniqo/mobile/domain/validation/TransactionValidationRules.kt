@@ -6,6 +6,16 @@ import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.Transaction
 import com.feniqo.mobile.domain.model.TransactionDatePolicy
 
+import com.feniqo.mobile.domain.model.TransactionParticipantShare
+import com.feniqo.mobile.domain.model.TransactionSplitMode
+
+data class NormalizedSplitPlan(
+    val paidByUserId: EntityId,
+    val participantUserIds: List<EntityId>,
+    val splitMode: TransactionSplitMode,
+    val participantShares: List<TransactionParticipantShare>,
+)
+
 sealed interface TransactionValidationResult<out T> {
     data class Valid<T>(val value: T) : TransactionValidationResult<T>
     data class Invalid(val error: TransactionValidationError) : TransactionValidationResult<Nothing>
@@ -27,6 +37,16 @@ enum class TransactionValidationError {
     SPLIT_PARTICIPANTS_DUPLICATE,
     SPLIT_PAYER_NOT_IN_PARTICIPANTS,
     SPLIT_MEMBER_NOT_IN_WORKSPACE,
+    CUSTOM_SPLIT_REQUIRES_SHARED_EXPENSE,
+    CUSTOM_SPLIT_SHARES_REQUIRED,
+    CUSTOM_SPLIT_DUPLICATE_PARTICIPANT,
+    CUSTOM_SPLIT_PARTICIPANT_SET_MISMATCH,
+    CUSTOM_SPLIT_PAYER_NOT_PARTICIPANT,
+    CUSTOM_SPLIT_MEMBER_NOT_ACTIVE,
+    CUSTOM_SPLIT_NEGATIVE_SHARE,
+    CUSTOM_SPLIT_ZERO_SHARE_NOT_ALLOWED,
+    CUSTOM_SPLIT_TOTAL_MISMATCH,
+    CUSTOM_SPLIT_AMOUNT_OVERFLOW,
 }
 
 object TransactionValidationRules {
@@ -89,43 +109,165 @@ object TransactionValidationRules {
         return TransactionValidationResult.Valid(normalized)
     }
 
+    /** Özel dağıtımın bir harcama işleminde kullanılabilirliğini doğrular. */
+    fun validateCustomSplitEligibility(
+        workspaceId: EntityId?,
+        type: com.feniqo.mobile.domain.model.TransactionType,
+    ): TransactionValidationResult<Unit> {
+        if (workspaceId == null || type != com.feniqo.mobile.domain.model.TransactionType.EXPENSE) {
+            return TransactionValidationResult.Invalid(TransactionValidationError.CUSTOM_SPLIT_REQUIRES_SHARED_EXPENSE)
+        }
+        return TransactionValidationResult.Valid(Unit)
+    }
+
+    /**
+     * Ham komut alanlarını ve split girdilerini doğrulayan saf kural motoru.
+     * Kişisel veya INCOME işlemlerde: payer ve tek katılımcı ownerId, splitMode = EQUAL, participantShares = emptyList() yapılır.
+     * Ortak EXPENSE işlemlerde:
+     * - EQUAL modunda: payer ve katılımcılar workspace aktif üyeleri olmalı, payer katılımcı listesinde bulunmalıdır.
+     * - CUSTOM modunda: pay listesi dolu, tekrarsız, participantUserIds ile birebir aynı kümede, payer katılımcı,
+     *   payer >= 0, payer dışı > 0, toplam tam eşit, overflow korumalı ve tüm üyeler aktif olmalıdır.
+     */
+    fun validateSplit(
+        workspaceId: EntityId?,
+        type: com.feniqo.mobile.domain.model.TransactionType,
+        amountMinor: Long,
+        paidByUserId: EntityId,
+        participantUserIds: List<EntityId>,
+        splitMode: TransactionSplitMode,
+        participantShares: List<TransactionParticipantShare>,
+        activeMemberUserIds: Set<EntityId>,
+    ): TransactionValidationResult<NormalizedSplitPlan> {
+        if (workspaceId == null || type != com.feniqo.mobile.domain.model.TransactionType.EXPENSE) {
+            return TransactionValidationResult.Valid(
+                NormalizedSplitPlan(
+                    paidByUserId = paidByUserId,
+                    participantUserIds = listOf(paidByUserId),
+                    splitMode = TransactionSplitMode.EQUAL,
+                    participantShares = emptyList(),
+                ),
+            )
+        }
+
+        return when (splitMode) {
+            TransactionSplitMode.EQUAL -> {
+                if (participantUserIds.isEmpty()) {
+                    return TransactionValidationResult.Invalid(TransactionValidationError.SPLIT_PARTICIPANTS_EMPTY)
+                }
+
+                if (participantUserIds.distinct().size != participantUserIds.size) {
+                    return TransactionValidationResult.Invalid(TransactionValidationError.SPLIT_PARTICIPANTS_DUPLICATE)
+                }
+
+                if (paidByUserId !in participantUserIds) {
+                    return TransactionValidationResult.Invalid(TransactionValidationError.SPLIT_PAYER_NOT_IN_PARTICIPANTS)
+                }
+
+                if (paidByUserId !in activeMemberUserIds || participantUserIds.any { it !in activeMemberUserIds }) {
+                    return TransactionValidationResult.Invalid(TransactionValidationError.SPLIT_MEMBER_NOT_IN_WORKSPACE)
+                }
+
+                TransactionValidationResult.Valid(
+                    NormalizedSplitPlan(
+                        paidByUserId = paidByUserId,
+                        participantUserIds = participantUserIds,
+                        splitMode = TransactionSplitMode.EQUAL,
+                        participantShares = emptyList(),
+                    ),
+                )
+            }
+            TransactionSplitMode.CUSTOM -> {
+                if (participantShares.isEmpty()) {
+                    return TransactionValidationResult.Invalid(TransactionValidationError.CUSTOM_SPLIT_SHARES_REQUIRED)
+                }
+
+                if (participantShares.distinctBy { it.userId }.size != participantShares.size) {
+                    return TransactionValidationResult.Invalid(TransactionValidationError.CUSTOM_SPLIT_DUPLICATE_PARTICIPANT)
+                }
+
+                val shareUserIds = participantShares.map { it.userId }.toSet()
+                val participantUserIdsSet = participantUserIds.toSet()
+                if (shareUserIds != participantUserIdsSet || participantShares.size != participantUserIds.size) {
+                    return TransactionValidationResult.Invalid(TransactionValidationError.CUSTOM_SPLIT_PARTICIPANT_SET_MISMATCH)
+                }
+
+                if (paidByUserId !in participantUserIds) {
+                    return TransactionValidationResult.Invalid(TransactionValidationError.CUSTOM_SPLIT_PAYER_NOT_PARTICIPANT)
+                }
+
+                if (paidByUserId !in activeMemberUserIds || participantShares.any { it.userId !in activeMemberUserIds }) {
+                    return TransactionValidationResult.Invalid(TransactionValidationError.CUSTOM_SPLIT_MEMBER_NOT_ACTIVE)
+                }
+
+                if (participantShares.any { it.amountMinor < 0L }) {
+                    return TransactionValidationResult.Invalid(TransactionValidationError.CUSTOM_SPLIT_NEGATIVE_SHARE)
+                }
+
+                if (participantShares.any { it.userId != paidByUserId && it.amountMinor <= 0L }) {
+                    return TransactionValidationResult.Invalid(TransactionValidationError.CUSTOM_SPLIT_ZERO_SHARE_NOT_ALLOWED)
+                }
+
+                var totalShares = 0L
+                for (share in participantShares) {
+                    val next = totalShares + share.amountMinor
+                    if ((totalShares xor next) and (share.amountMinor xor next) < 0) {
+                        return TransactionValidationResult.Invalid(TransactionValidationError.CUSTOM_SPLIT_AMOUNT_OVERFLOW)
+                    }
+                    totalShares = next
+                }
+
+                if (totalShares != amountMinor) {
+                    return TransactionValidationResult.Invalid(TransactionValidationError.CUSTOM_SPLIT_TOTAL_MISMATCH)
+                }
+
+                TransactionValidationResult.Valid(
+                    NormalizedSplitPlan(
+                        paidByUserId = paidByUserId,
+                        participantUserIds = participantUserIds,
+                        splitMode = TransactionSplitMode.CUSTOM,
+                        participantShares = participantShares,
+                    ),
+                )
+            }
+        }
+    }
+
     /**
      * Ortak gider split bilgisini doğrular veya kişisel/gelir işlemleri için güvenli şekilde normalize eder.
-     * Kişisel veya INCOME işlemlerde: payer ve tek katılımcı ownerId yapılır.
-     * Ortak EXPENSE işlemlerde: payer ve katılımcılar workspace aktif üyeleri olmalı, payer katılımcı listesinde bulunmalıdır.
+     * Ortak karar motoru olan validateSplit'i kullanır.
      */
     fun normalizeAndValidateSplit(
         transaction: Transaction,
-        activeMemberUserIds: Set<EntityId>? = null,
+        activeMemberUserIds: Set<EntityId>,
     ): TransactionValidationResult<Transaction> {
-        if (transaction.workspaceId == null || transaction.type != com.feniqo.mobile.domain.model.TransactionType.EXPENSE) {
-            val normalized = transaction.copy(
-                paidByUserId = transaction.ownerId,
-                participantUserIds = listOf(transaction.ownerId),
-            )
-            return TransactionValidationResult.Valid(normalized)
-        }
+        val isPersonalOrIncome = transaction.workspaceId == null ||
+            transaction.type != com.feniqo.mobile.domain.model.TransactionType.EXPENSE
+        val effectivePaidBy = if (isPersonalOrIncome) transaction.ownerId else transaction.paidByUserId
+        val effectiveParticipants = if (isPersonalOrIncome) listOf(transaction.ownerId) else transaction.participantUserIds
 
-        if (transaction.participantUserIds.isEmpty()) {
-            return TransactionValidationResult.Invalid(TransactionValidationError.SPLIT_PARTICIPANTS_EMPTY)
-        }
-
-        if (transaction.participantUserIds.distinct().size != transaction.participantUserIds.size) {
-            return TransactionValidationResult.Invalid(TransactionValidationError.SPLIT_PARTICIPANTS_DUPLICATE)
-        }
-
-        if (transaction.paidByUserId !in transaction.participantUserIds) {
-            return TransactionValidationResult.Invalid(TransactionValidationError.SPLIT_PAYER_NOT_IN_PARTICIPANTS)
-        }
-
-        if (activeMemberUserIds != null) {
-            if (transaction.paidByUserId !in activeMemberUserIds ||
-                transaction.participantUserIds.any { it !in activeMemberUserIds }
-            ) {
-                return TransactionValidationResult.Invalid(TransactionValidationError.SPLIT_MEMBER_NOT_IN_WORKSPACE)
+        val splitResult = validateSplit(
+            workspaceId = transaction.workspaceId,
+            type = transaction.type,
+            amountMinor = transaction.amount.amountMinor,
+            paidByUserId = effectivePaidBy,
+            participantUserIds = effectiveParticipants,
+            splitMode = transaction.splitMode,
+            participantShares = transaction.participantShares,
+            activeMemberUserIds = activeMemberUserIds,
+        )
+        return when (splitResult) {
+            is TransactionValidationResult.Valid -> {
+                val plan = splitResult.value
+                TransactionValidationResult.Valid(
+                    transaction.copy(
+                        paidByUserId = plan.paidByUserId,
+                        participantUserIds = plan.participantUserIds,
+                        splitMode = plan.splitMode,
+                        participantShares = plan.participantShares,
+                    ),
+                )
             }
+            is TransactionValidationResult.Invalid -> splitResult
         }
-
-        return TransactionValidationResult.Valid(transaction)
     }
 }

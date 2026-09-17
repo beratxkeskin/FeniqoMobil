@@ -14,6 +14,22 @@ class SupabaseAuthErrorMapperTest {
             AuthErrorCode.InvalidCredentials.toAppError(),
         )
         assertEquals(
+            AppError.Authentication("auth_invalid_credentials"),
+            AuthErrorCode.ReauthenticationNotValid.toAppError(),
+        )
+        assertEquals(
+            AppError.Validation("auth_password_unchanged"),
+            AuthErrorCode.SamePassword.toAppError(),
+        )
+        assertEquals(
+            AppError.Authentication("auth_reauthentication_required"),
+            AuthErrorCode.ReauthenticationNeeded.toAppError(),
+        )
+        assertEquals(
+            AppError.Authentication("auth_reauthentication_required"),
+            AuthErrorCode.ReauthNonceMissing.toAppError(),
+        )
+        assertEquals(
             AppError.Conflict("auth_email_already_registered"),
             AuthErrorCode.UserAlreadyExists.toAppError(),
         )
