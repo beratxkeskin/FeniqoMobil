@@ -5,6 +5,7 @@ enum class Currency(val code: String, val minorUnitDigits: Int) {
     TRY(code = "TRY", minorUnitDigits = 2),
     USD(code = "USD", minorUnitDigits = 2),
     EUR(code = "EUR", minorUnitDigits = 2),
+    GBP(code = "GBP", minorUnitDigits = 2),
 }
 
 /**

@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="540" height="1850" viewBox="0 0 540 1850">
+  <rect width="540" height="1850" fill="#F7F5F0"/>
+  <g font-family="Arial, sans-serif" fill="#252B2B">
+    <text x="43" y="93" font-size="34">‹</text>
+    <text x="105" y="99" font-size="38" font-weight="700" font-family="Georgia, serif">Profil Merkezi</text>
+    <text x="105" y="130" font-size="17" fill="#667079">Hesabın, tercihler ve verilerin tek yerde.</text>
+
+    <rect x="42" y="154" width="456" height="172" rx="29" fill="#FFFFFF" stroke="#E6E3DE"/>
+    <circle cx="110" cy="238" r="43" fill="#E6F0EC"/>
+    <text x="96" y="251" font-size="37" font-weight="700" fill="#234E3F">F</text>
+    <text x="169" y="209" font-size="26" font-weight="700">Feniqo Kullanıcısı</text>
+    <text x="169" y="235" font-size="16" fill="#667079">Hesabım ve profil fotoğrafım</text>
+    <rect x="169" y="252" width="139" height="36" rx="15" fill="#EFF5F1"/>
+    <text x="183" y="276" font-size="16" fill="#285943">♙  Kişisel alan</text>
+    <text x="461" y="251" font-size="29">›</text>
+
+    <rect x="42" y="343" width="456" height="88" rx="24" fill="#EAF5F1"/>
+    <rect x="63" y="360" width="54" height="54" rx="17" fill="#FFFFFF"/>
+    <text x="78" y="397" font-size="26" fill="#285943">✓</text>
+    <text x="136" y="383" font-size="22" font-weight="700">Güncel</text>
+    <text x="136" y="407" font-size="16" fill="#667079">Son eşitleme: Az önce</text>
+
+    <text x="42" y="478" font-size="27" font-weight="700">Hesap</text>
+    <rect x="42" y="501" width="456" height="184" rx="29" fill="#FFFFFF" stroke="#E6E3DE"/>
+    <path d="M42 593H498" stroke="#E7E9E8"/>
+    <rect x="63" y="518" width="53" height="53" rx="15" fill="#E9F2EF"/>
+    <text x="79" y="553" font-size="24" fill="#285943">●</text>
+    <text x="136" y="545" font-size="21" font-weight="700">Kişisel Bilgiler</text>
+    <text x="136" y="568" font-size="16" fill="#667079">Adını ve profilini düzenle</text>
+    <text x="458" y="557" font-size="28">›</text>
+    <rect x="63" y="611" width="53" height="53" rx="15" fill="#FCECE5"/>
+    <text x="77" y="646" font-size="23" fill="#E46E26">♣</text>
+    <text x="136" y="638" font-size="21" font-weight="700">Ortak Alanlar</text>
+    <text x="136" y="661" font-size="16" fill="#667079">Kişisel alan</text>
+    <text x="458" y="650" font-size="28">›</text>
+
+    <text x="42" y="737" font-size="27" font-weight="700">Tercihler</text>
+    <rect x="42" y="760" width="456" height="273" rx="29" fill="#FFFFFF" stroke="#E6E3DE"/>
+    <path d="M42 851H498M42 942H498" stroke="#E7E9E8"/>
+    <rect x="63" y="777" width="53" height="53" rx="15" fill="#FFF1D9"/>
+    <text x="78" y="813" font-size="23" fill="#E49E22">◉</text>
+    <text x="136" y="805" font-size="21" font-weight="700">Görünüm</text>
+    <text x="136" y="828" font-size="16" fill="#667079">Açık tema</text>
+    <text x="458" y="817" font-size="28">›</text>
+    <rect x="63" y="868" width="53" height="53" rx="15" fill="#FFF0EA"/>
+    <text x="78" y="904" font-size="24" fill="#E99468">♟</text>
+    <text x="136" y="896" font-size="21" font-weight="700">Bildirimler</text>
+    <text x="136" y="919" font-size="16" fill="#667079">Hatırlatmalar ve gizlilik</text>
+    <text x="458" y="908" font-size="28">›</text>
+    <rect x="63" y="959" width="53" height="53" rx="15" fill="#EDF2F1"/>
+    <text x="77" y="995" font-size="25" fill="#648276">◎</text>
+    <text x="136" y="987" font-size="21" font-weight="700">Dil ve Bölge</text>
+    <text x="136" y="1010" font-size="16" fill="#667079">Türkçe · TRY</text>
+    <text x="458" y="999" font-size="28">›</text>
+
+    <text x="42" y="1085" font-size="27" font-weight="700">Güvenlik ve Veri</text>
+    <rect x="42" y="1108" width="456" height="273" rx="29" fill="#FFFFFF" stroke="#E6E3DE"/>
+    <path d="M42 1199H498M42 1290H498" stroke="#E7E9E8"/>
+    <rect x="63" y="1125" width="53" height="53" rx="15" fill="#E9F2EF"/>
+    <text x="78" y="1161" font-size="24" fill="#285943">▣</text>
+    <text x="136" y="1153" font-size="21" font-weight="700">Uygulama Kilidi</text>
+    <text x="136" y="1176" font-size="16" fill="#667079">Kapalı</text>
+    <text x="458" y="1165" font-size="28">›</text>
+    <rect x="63" y="1216" width="53" height="53" rx="15" fill="#FCECE5"/>
+    <text x="77" y="1252" font-size="24" fill="#E46E26">▣</text>
+    <text x="136" y="1244" font-size="21" font-weight="700">Veri Yönetimi</text>
+    <text x="136" y="1267" font-size="16" fill="#667079">CSV dışa aktarma ve JSON yedek</text>
+    <text x="458" y="1256" font-size="28">›</text>
+    <rect x="63" y="1307" width="53" height="53" rx="15" fill="#EEF0F6"/>
+    <text x="79" y="1343" font-size="23" fill="#75849C">◆</text>
+    <text x="136" y="1335" font-size="21" font-weight="700">Gizlilik</text>
+    <text x="136" y="1358" font-size="16" fill="#667079">Gizlilik ve hukuki bilgiler</text>
+    <text x="458" y="1347" font-size="28">›</text>
+
+    <text x="42" y="1433" font-size="27" font-weight="700">Destek</text>
+    <rect x="42" y="1456" width="456" height="184" rx="29" fill="#FFFFFF" stroke="#E6E3DE"/>
+    <path d="M42 1548H498" stroke="#E7E9E8"/>
+    <rect x="63" y="1473" width="53" height="53" rx="15" fill="#FFF5E6"/>
+    <text x="78" y="1509" font-size="24" fill="#D6A550">?</text>
+    <text x="136" y="1501" font-size="21" font-weight="700">Yardım ve Geri Bildirim</text>
+    <text x="136" y="1524" font-size="16" fill="#667079">Yardım merkezi ve iletişim</text>
+    <text x="458" y="1513" font-size="28">›</text>
+    <rect x="63" y="1565" width="53" height="53" rx="15" fill="#EEF0F6"/>
+    <text x="82" y="1601" font-size="23" fill="#75849C">i</text>
+    <text x="136" y="1593" font-size="21" font-weight="700">Uygulama sürümü</text>
+    <text x="136" y="1616" font-size="16" fill="#667079">Sürüm 1.0</text>
+
+    <text x="207" y="1720" font-size="22" font-weight="700" fill="#BF3B35">⇥  Çıkış Yap</text>
+    <text x="42" y="1800" font-size="14" fill="#84908D">Tasarım taslağı · değerler örnektir · 20.09.2026</text>
+  </g>
+</svg>

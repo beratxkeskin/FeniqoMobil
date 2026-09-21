@@ -17,6 +17,8 @@ import com.feniqo.mobile.domain.model.OcrCandidate
 import com.feniqo.mobile.domain.model.OcrCandidateConfidence
 import com.feniqo.mobile.domain.model.Transaction
 import com.feniqo.mobile.domain.model.TransactionType
+import com.feniqo.mobile.domain.model.TransactionSplitMode
+import com.feniqo.mobile.domain.model.TransactionParticipantShare
 import com.feniqo.mobile.domain.model.UserProfile
 import com.feniqo.mobile.domain.model.Workspace
 import com.feniqo.mobile.domain.model.WorkspaceMember
@@ -1004,6 +1006,10 @@ class TransactionFormViewModelTest {
         assertEquals(100000L, trxRepo.lastCreatedInstallments?.get(0)?.amount?.amountMinor)
         assertEquals(1, events.size)
         assertTrue(events[0] is TransactionFormEvent.TransactionCreated)
+        assertEquals(
+            trxRepo.lastCreatedInstallments!!.first().id,
+            (events.single() as TransactionFormEvent.TransactionCreated).transactionId,
+        )
 
         collectJob.cancel()
         eventJob.cancel()
@@ -1671,5 +1677,557 @@ class TransactionFormViewModelTest {
         assertFalse(viewModel.uiState.value.hasUnsavedChanges)
 
         collectJob.cancel()
+    }
+
+    @Test
+    fun customSplit_createAndPreserveOnEdit() = runTest {
+        val wsId = EntityId("ws-1")
+        val user1 = EntityId("user-1")
+        val user2 = EntityId("user-2")
+        val member1 = WorkspaceMember(workspaceId = wsId, userId = user1, role = WorkspaceRole.OWNER, joinedAt = Instant.parse("2026-08-01T00:00:00Z"))
+        val member2 = WorkspaceMember(workspaceId = wsId, userId = user2, role = WorkspaceRole.EDITOR, joinedAt = Instant.parse("2026-08-02T00:00:00Z"))
+        workspaceRepo.membersFlow.value = mapOf(wsId to listOf(member1, member2))
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(id = wsId, name = "Ev", ownerId = user1, createdAt = Instant.parse("2026-08-01T00:00:00Z"))
+
+        val category = sampleActiveExpenseCategory.copy(workspaceId = wsId)
+        catRepo.activeCategoriesFlow.value = listOf(category)
+
+        // 1. Create with CUSTOM split
+        val createViewModel = createViewModel(TransactionFormRoute(null))
+        val createJob = launch(UnconfinedTestDispatcher()) { createViewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        createViewModel.onTitleChanged("Market Alışverişi")
+        createViewModel.onAmountChanged("100")
+        createViewModel.onCategoryChanged(category.id)
+        createViewModel.onParticipantToggled(user2) // participants: user1, user2
+        createViewModel.onSplitModeChanged(TransactionSplitMode.CUSTOM)
+        createViewModel.onCustomShareChanged(user1, "40,00")
+        createViewModel.onCustomShareChanged(user2, "60,00")
+
+        createViewModel.submit()
+        advanceUntilIdle()
+
+        val created = trxRepo.lastCreatedTransaction
+        assertNotNull(created)
+        assertEquals(TransactionSplitMode.CUSTOM, created!!.splitMode)
+        assertEquals(2, created.participantShares.size)
+        assertEquals(4000L, created.participantShares.find { it.userId == user1 }?.amountMinor)
+        assertEquals(6000L, created.participantShares.find { it.userId == user2 }?.amountMinor)
+        createJob.cancel()
+
+        // 2. Edit existing transaction: only change title, shares must be preserved
+        val editViewModel = createViewModel(TransactionFormRoute(created.id.value))
+        val editJob = launch(UnconfinedTestDispatcher()) { editViewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        assertEquals(TransactionSplitMode.CUSTOM, editViewModel.uiState.value.splitMode)
+        assertEquals("40", editViewModel.uiState.value.customSharesText[user1])
+        assertEquals("60", editViewModel.uiState.value.customSharesText[user2])
+        assertFalse(editViewModel.uiState.value.hasUnsavedChanges)
+
+        editViewModel.onTitleChanged("Market Alışverişi Güncellendi")
+        assertTrue(editViewModel.uiState.value.hasUnsavedChanges)
+
+        editViewModel.submit()
+        advanceUntilIdle()
+
+        val updated = trxRepo.lastUpdatedTransaction
+        assertNotNull(updated)
+        assertEquals("Market Alışverişi Güncellendi", updated!!.description)
+        assertEquals(TransactionSplitMode.CUSTOM, updated.splitMode)
+        assertEquals(2, updated.participantShares.size)
+        assertEquals(4000L, updated.participantShares.find { it.userId == user1 }?.amountMinor)
+        assertEquals(6000L, updated.participantShares.find { it.userId == user2 }?.amountMinor)
+        editJob.cancel()
+    }
+
+    @Test
+    fun customSplit_equalCustomSwitching() = runTest {
+        val wsId = EntityId("ws-1")
+        val user1 = EntityId("user-1")
+        val user2 = EntityId("user-2")
+        workspaceRepo.membersFlow.value = mapOf(
+            wsId to listOf(
+                WorkspaceMember(wsId, user1, WorkspaceRole.OWNER, Instant.parse("2026-08-01T00:00:00Z")),
+                WorkspaceMember(wsId, user2, WorkspaceRole.EDITOR, Instant.parse("2026-08-02T00:00:00Z")),
+            )
+        )
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(wsId, "Ev", user1, Instant.parse("2026-08-01T00:00:00Z"))
+        val category = sampleActiveExpenseCategory.copy(workspaceId = wsId)
+        catRepo.activeCategoriesFlow.value = listOf(category)
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onTitleChanged("Fatura")
+        viewModel.onAmountChanged("200")
+        viewModel.onCategoryChanged(category.id)
+        viewModel.onParticipantToggled(user2)
+
+        // Switch to CUSTOM and add shares
+        viewModel.onSplitModeChanged(TransactionSplitMode.CUSTOM)
+        viewModel.onCustomShareChanged(user1, "80,00")
+        viewModel.onCustomShareChanged(user2, "120,00")
+        assertEquals(TransactionSplitMode.CUSTOM, viewModel.uiState.value.splitMode)
+
+        // Switch back to EQUAL
+        viewModel.onSplitModeChanged(TransactionSplitMode.EQUAL)
+        assertEquals(TransactionSplitMode.EQUAL, viewModel.uiState.value.splitMode)
+
+        viewModel.submit()
+        advanceUntilIdle()
+
+        val created = trxRepo.lastCreatedTransaction
+        assertNotNull(created)
+        assertEquals(TransactionSplitMode.EQUAL, created!!.splitMode)
+        assertTrue(created.participantShares.isEmpty())
+
+        job.cancel()
+    }
+
+    @Test
+    fun customSplit_draftCancelAndApply_andDirtyTracking() = runTest {
+        val wsId = EntityId("ws-1")
+        val user1 = EntityId("user-1")
+        val user2 = EntityId("user-2")
+        workspaceRepo.membersFlow.value = mapOf(
+            wsId to listOf(
+                WorkspaceMember(wsId, user1, WorkspaceRole.OWNER, Instant.parse("2026-08-01T00:00:00Z")),
+                WorkspaceMember(wsId, user2, WorkspaceRole.EDITOR, Instant.parse("2026-08-02T00:00:00Z")),
+            )
+        )
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(wsId, "Ev", user1, Instant.parse("2026-08-01T00:00:00Z"))
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+
+        // Simulating draft dialog: user creates a local draft and modifies it but cancels -> ViewModel never receives apply
+        var draft = TransactionDetailsDraft.from(viewModel.uiState.value)
+        draft = draft.setSplitMode(TransactionSplitMode.CUSTOM)
+        draft = draft.updateCustomShare(user1, "50,00")
+        // User cancels dialog -> viewModel state untouched
+        assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+        assertEquals(TransactionSplitMode.EQUAL, viewModel.uiState.value.splitMode)
+
+        // Now user applies draft
+        viewModel.onSplitDetailsApplied(
+            payer = draft.payer,
+            participants = draft.participants,
+            splitMode = draft.splitMode,
+            customSharesText = draft.customSharesText,
+        )
+        assertTrue(viewModel.uiState.value.hasUnsavedChanges)
+        assertEquals(TransactionSplitMode.CUSTOM, viewModel.uiState.value.splitMode)
+        assertEquals("50,00", viewModel.uiState.value.customSharesText[user1])
+
+        // User reverts draft back to original
+        viewModel.onSplitDetailsApplied(
+            payer = user1,
+            participants = setOf(user1),
+            splitMode = TransactionSplitMode.EQUAL,
+            customSharesText = emptyMap(),
+        )
+        assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+
+        job.cancel()
+    }
+
+    @Test
+    fun customSplit_payerZeroShareAllowed_nonPayerZeroOrInvalidFails() = runTest {
+        val wsId = EntityId("ws-1")
+        val user1 = EntityId("user-1") // payer
+        val user2 = EntityId("user-2") // non-payer
+        workspaceRepo.membersFlow.value = mapOf(
+            wsId to listOf(
+                WorkspaceMember(wsId, user1, WorkspaceRole.OWNER, Instant.parse("2026-08-01T00:00:00Z")),
+                WorkspaceMember(wsId, user2, WorkspaceRole.EDITOR, Instant.parse("2026-08-02T00:00:00Z")),
+            )
+        )
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(wsId, "Ev", user1, Instant.parse("2026-08-01T00:00:00Z"))
+        val category = sampleActiveExpenseCategory.copy(workspaceId = wsId)
+        catRepo.activeCategoriesFlow.value = listOf(category)
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onTitleChanged("Kira")
+        viewModel.onAmountChanged("500")
+        viewModel.onCategoryChanged(category.id)
+        viewModel.onParticipantToggled(user2)
+        viewModel.onSplitModeChanged(TransactionSplitMode.CUSTOM)
+
+        // 1. Non-payer has 0 share -> fails!
+        viewModel.onCustomShareChanged(user1, "500,00")
+        viewModel.onCustomShareChanged(user2, "0,00")
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertEquals(
+            TransactionFormFieldError.SPLIT_CUSTOM_NON_PAYER_ZERO_SHARE_NOT_ALLOWED,
+            viewModel.uiState.value.customShareErrors[user2],
+        )
+        assertNull(trxRepo.lastCreatedTransaction)
+
+        // 2. Non-payer has invalid text -> fails!
+        viewModel.onCustomShareChanged(user2, "abc")
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertEquals(
+            TransactionFormFieldError.SPLIT_CUSTOM_SHARE_INVALID,
+            viewModel.uiState.value.customShareErrors[user2],
+        )
+
+        // 3. Payer has 0 share and non-payer has 500,00 -> succeeds!
+        viewModel.onCustomShareChanged(user1, "0,00")
+        viewModel.onCustomShareChanged(user2, "500,00")
+        viewModel.submit()
+        advanceUntilIdle()
+
+        val created = trxRepo.lastCreatedTransaction
+        assertNotNull(created)
+        assertEquals(0L, created!!.participantShares.find { it.userId == user1 }?.amountMinor)
+        assertEquals(50000L, created.participantShares.find { it.userId == user2 }?.amountMinor)
+
+        job.cancel()
+    }
+
+    @Test
+    fun customSplit_totalMismatch_showsError() = runTest {
+        val wsId = EntityId("ws-1")
+        val user1 = EntityId("user-1")
+        val user2 = EntityId("user-2")
+        workspaceRepo.membersFlow.value = mapOf(
+            wsId to listOf(
+                WorkspaceMember(wsId, user1, WorkspaceRole.OWNER, Instant.parse("2026-08-01T00:00:00Z")),
+                WorkspaceMember(wsId, user2, WorkspaceRole.EDITOR, Instant.parse("2026-08-02T00:00:00Z")),
+            )
+        )
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(wsId, "Ev", user1, Instant.parse("2026-08-01T00:00:00Z"))
+        val category = sampleActiveExpenseCategory.copy(workspaceId = wsId)
+        catRepo.activeCategoriesFlow.value = listOf(category)
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onTitleChanged("İnternet")
+        viewModel.onAmountChanged("100")
+        viewModel.onCategoryChanged(category.id)
+        viewModel.onParticipantToggled(user2)
+        viewModel.onSplitModeChanged(TransactionSplitMode.CUSTOM)
+
+        // Total 100, shares sum 90 (40 + 50)
+        viewModel.onCustomShareChanged(user1, "40,00")
+        viewModel.onCustomShareChanged(user2, "50,00")
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertEquals(TransactionFormFieldError.SPLIT_CUSTOM_TOTAL_MISMATCH, viewModel.uiState.value.splitError)
+        assertNull(trxRepo.lastCreatedTransaction)
+
+        // Total 100, shares sum 110 (60 + 50)
+        viewModel.onCustomShareChanged(user1, "60,00")
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertEquals(TransactionFormFieldError.SPLIT_CUSTOM_TOTAL_MISMATCH, viewModel.uiState.value.splitError)
+        assertNull(trxRepo.lastCreatedTransaction)
+
+        job.cancel()
+    }
+
+    @Test
+    fun customSplit_payerChangeExposesZeroShareError() = runTest {
+        val wsId = EntityId("ws-1")
+        val user1 = EntityId("user-1")
+        val user2 = EntityId("user-2")
+        workspaceRepo.membersFlow.value = mapOf(
+            wsId to listOf(
+                WorkspaceMember(wsId, user1, WorkspaceRole.OWNER, Instant.parse("2026-08-01T00:00:00Z")),
+                WorkspaceMember(wsId, user2, WorkspaceRole.EDITOR, Instant.parse("2026-08-02T00:00:00Z")),
+            )
+        )
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(wsId, "Ev", user1, Instant.parse("2026-08-01T00:00:00Z"))
+        val category = sampleActiveExpenseCategory.copy(workspaceId = wsId)
+        catRepo.activeCategoriesFlow.value = listOf(category)
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onTitleChanged("Elektrik")
+        viewModel.onAmountChanged("100")
+        viewModel.onCategoryChanged(category.id)
+        viewModel.onParticipantToggled(user2)
+        viewModel.onSplitModeChanged(TransactionSplitMode.CUSTOM)
+
+        // user1 is payer with 0,00, user2 has 100,00
+        viewModel.onCustomShareChanged(user1, "0,00")
+        viewModel.onCustomShareChanged(user2, "100,00")
+
+        // Now switch payer to user2
+        viewModel.onPaidByUserSelected(user2)
+
+        // user1 is now non-payer and has 0,00 -> submit should fail with SPLIT_CUSTOM_NON_PAYER_ZERO_SHARE_NOT_ALLOWED on user1
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertEquals(
+            TransactionFormFieldError.SPLIT_CUSTOM_NON_PAYER_ZERO_SHARE_NOT_ALLOWED,
+            viewModel.uiState.value.customShareErrors[user1],
+        )
+        assertNull(trxRepo.lastCreatedTransaction)
+
+        job.cancel()
+    }
+
+    @Test
+    fun customSplit_personalOrIncomeNormalizesToEqual() = runTest {
+        // Personal workspace or null active workspace
+        workspaceRepo.activeWorkspaceFlow.value = null
+        val category = sampleActiveExpenseCategory
+        catRepo.activeCategoriesFlow.value = listOf(category)
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onTitleChanged("Kişisel Harcama")
+        viewModel.onAmountChanged("50")
+        viewModel.onCategoryChanged(category.id)
+
+        // Attempting to set custom shares
+        viewModel.onCustomShareChanged(EntityId("user-1"), "50,00")
+        viewModel.submit()
+        advanceUntilIdle()
+
+        val created = trxRepo.lastCreatedTransaction
+        assertNotNull(created)
+        assertEquals(TransactionSplitMode.EQUAL, created!!.splitMode)
+        assertTrue(created.participantShares.isEmpty())
+
+        job.cancel()
+    }
+
+    @Test
+    fun customSplit_withInstallmentEnabled_blocksSubmitAndNeverCallsUseCases() = runTest {
+        val wsId = EntityId("ws-1")
+        val user1 = EntityId("user-1")
+        val user2 = EntityId("user-2")
+        workspaceRepo.membersFlow.value = mapOf(
+            wsId to listOf(
+                WorkspaceMember(wsId, user1, WorkspaceRole.OWNER, Instant.parse("2026-08-01T00:00:00Z")),
+                WorkspaceMember(wsId, user2, WorkspaceRole.EDITOR, Instant.parse("2026-08-02T00:00:00Z")),
+            )
+        )
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(wsId, "Ev", user1, Instant.parse("2026-08-01T00:00:00Z"))
+        val category = sampleActiveExpenseCategory.copy(workspaceId = wsId)
+        catRepo.activeCategoriesFlow.value = listOf(category)
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onTitleChanged("Mobilya")
+        viewModel.onAmountChanged("600")
+        viewModel.onCategoryChanged(category.id)
+        viewModel.onPaymentMethodChanged(PaymentMethod.CREDIT_CARD)
+        viewModel.onInstallmentToggle(true)
+        viewModel.onInstallmentCountChanged("3")
+        viewModel.onParticipantToggled(user2)
+        viewModel.onSplitModeChanged(TransactionSplitMode.CUSTOM)
+        viewModel.onCustomShareChanged(user1, "300,00")
+        viewModel.onCustomShareChanged(user2, "300,00")
+
+        // canSubmitSplit must be false when CUSTOM + installment
+        assertFalse(viewModel.uiState.value.canSubmitSplit)
+
+        // Attempting to submit
+        viewModel.submit()
+        advanceUntilIdle()
+
+        // Verifications:
+        // 1. Error explicitly set on splitError and installmentCountError
+        assertEquals(
+            TransactionFormFieldError.SPLIT_CUSTOM_NOT_SUPPORTED_WITH_INSTALLMENT,
+            viewModel.uiState.value.splitError,
+        )
+        assertEquals(
+            TransactionFormFieldError.SPLIT_CUSTOM_NOT_SUPPORTED_WITH_INSTALLMENT,
+            viewModel.uiState.value.installmentCountError,
+        )
+
+        // 2. Zero use-case calls: no transaction and no installment group created
+        assertNull(trxRepo.lastCreatedTransaction)
+        assertNull(trxRepo.lastCreatedInstallments)
+
+        // 3. Custom shares are preserved and not wiped
+        assertEquals("300,00", viewModel.uiState.value.customSharesText[user1])
+        assertEquals("300,00", viewModel.uiState.value.customSharesText[user2])
+
+        job.cancel()
+    }
+
+    @Test
+    fun customSplit_membersFlowReemission_doesNotSilentlyAlterPayerOrParticipantsOrShares() = runTest {
+        val wsId = EntityId("ws-1")
+        val user1 = EntityId("user-1")
+        val user2 = EntityId("user-2")
+        val membersList = listOf(
+            WorkspaceMember(wsId, user1, WorkspaceRole.OWNER, Instant.parse("2026-08-01T00:00:00Z")),
+            WorkspaceMember(wsId, user2, WorkspaceRole.EDITOR, Instant.parse("2026-08-02T00:00:00Z")),
+        )
+        workspaceRepo.membersFlow.value = mapOf(wsId to membersList)
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(wsId, "Ev", user1, Instant.parse("2026-08-01T00:00:00Z"))
+        val category = sampleActiveExpenseCategory.copy(workspaceId = wsId)
+        catRepo.activeCategoriesFlow.value = listOf(category)
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onParticipantToggled(user2)
+        viewModel.onSplitModeChanged(TransactionSplitMode.CUSTOM)
+        viewModel.onCustomShareChanged(user1, "60,00")
+        viewModel.onCustomShareChanged(user2, "40,00")
+
+        assertEquals(user1, viewModel.uiState.value.selectedPaidByUserId)
+        assertEquals(setOf(user1, user2), viewModel.uiState.value.selectedParticipantUserIds)
+        assertEquals("60,00", viewModel.uiState.value.customSharesText[user1])
+        assertEquals("40,00", viewModel.uiState.value.customSharesText[user2])
+
+        // Re-emit membersFlow (e.g. room query re-trigger)
+        workspaceRepo.membersFlow.value = mapOf(wsId to membersList.map { it.copy() })
+        advanceUntilIdle()
+
+        // Payer, participants, and custom shares must NOT be altered
+        assertEquals(user1, viewModel.uiState.value.selectedPaidByUserId)
+        assertEquals(setOf(user1, user2), viewModel.uiState.value.selectedParticipantUserIds)
+        assertEquals("60,00", viewModel.uiState.value.customSharesText[user1])
+        assertEquals("40,00", viewModel.uiState.value.customSharesText[user2])
+
+        job.cancel()
+    }
+
+    @Test
+    fun customSplit_participantLeavesWorkspace_retainsSelectionAndBlocksSubmitWithoutWriting() = runTest {
+        val wsId = EntityId("ws-1")
+        val user1 = EntityId("user-1")
+        val user2 = EntityId("user-2")
+        workspaceRepo.membersFlow.value = mapOf(
+            wsId to listOf(
+                WorkspaceMember(wsId, user1, WorkspaceRole.OWNER, Instant.parse("2026-08-01T00:00:00Z")),
+                WorkspaceMember(wsId, user2, WorkspaceRole.EDITOR, Instant.parse("2026-08-02T00:00:00Z")),
+            )
+        )
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(wsId, "Ev", user1, Instant.parse("2026-08-01T00:00:00Z"))
+        val category = sampleActiveExpenseCategory.copy(workspaceId = wsId)
+        catRepo.activeCategoriesFlow.value = listOf(category)
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onTitleChanged("Akşam Yemeği")
+        viewModel.onAmountChanged("100")
+        viewModel.onCategoryChanged(category.id)
+        viewModel.onParticipantToggled(user2)
+        viewModel.onSplitModeChanged(TransactionSplitMode.CUSTOM)
+        viewModel.onCustomShareChanged(user1, "60,00")
+        viewModel.onCustomShareChanged(user2, "40,00")
+
+        // user2 leaves the workspace (active members list now only has user1)
+        workspaceRepo.membersFlow.value = mapOf(
+            wsId to listOf(
+                WorkspaceMember(wsId, user1, WorkspaceRole.OWNER, Instant.parse("2026-08-01T00:00:00Z")),
+            )
+        )
+        advanceUntilIdle()
+
+        // Selection and share text must be retained
+        assertTrue(viewModel.uiState.value.selectedParticipantUserIds.contains(user2))
+        assertEquals("40,00", viewModel.uiState.value.customSharesText[user2])
+
+        // user2 is retained in workspaceMembers with isActive = false
+        val departedMember = viewModel.uiState.value.workspaceMembers.find { it.userId == user2 }
+        assertNotNull(departedMember)
+        assertFalse(departedMember!!.isActive)
+
+        // Submission must be blocked
+        assertFalse(viewModel.uiState.value.canSubmitSplit)
+
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertEquals(
+            TransactionFormFieldError.SPLIT_CUSTOM_MEMBER_NOT_ACTIVE,
+            viewModel.uiState.value.customShareErrors[user2],
+        )
+        assertNull(trxRepo.lastCreatedTransaction)
+
+        job.cancel()
+    }
+
+    @Test
+    fun customSplit_payerLeavesWorkspace_retainsPayerAndBlocksSubmitWithoutWriting() = runTest {
+        val wsId = EntityId("ws-1")
+        val user1 = EntityId("user-1") // will be payer and then leave
+        val user2 = EntityId("user-2") // will remain
+        workspaceRepo.membersFlow.value = mapOf(
+            wsId to listOf(
+                WorkspaceMember(wsId, user1, WorkspaceRole.OWNER, Instant.parse("2026-08-01T00:00:00Z")),
+                WorkspaceMember(wsId, user2, WorkspaceRole.EDITOR, Instant.parse("2026-08-02T00:00:00Z")),
+            )
+        )
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(wsId, "Ev", user1, Instant.parse("2026-08-01T00:00:00Z"))
+        val category = sampleActiveExpenseCategory.copy(workspaceId = wsId)
+        catRepo.activeCategoriesFlow.value = listOf(category)
+
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onTitleChanged("Ofis Malzemeleri")
+        viewModel.onAmountChanged("100")
+        viewModel.onCategoryChanged(category.id)
+        viewModel.onParticipantToggled(user2)
+        viewModel.onSplitModeChanged(TransactionSplitMode.CUSTOM)
+        viewModel.onCustomShareChanged(user1, "60,00")
+        viewModel.onCustomShareChanged(user2, "40,00")
+
+        // user1 (payer) leaves workspace
+        workspaceRepo.membersFlow.value = mapOf(
+            wsId to listOf(
+                WorkspaceMember(wsId, user2, WorkspaceRole.EDITOR, Instant.parse("2026-08-02T00:00:00Z")),
+            )
+        )
+        advanceUntilIdle()
+
+        // Payer must NOT be silently replaced
+        assertEquals(user1, viewModel.uiState.value.selectedPaidByUserId)
+        val departedPayer = viewModel.uiState.value.workspaceMembers.find { it.userId == user1 }
+        assertNotNull(departedPayer)
+        assertFalse(departedPayer!!.isActive)
+
+        // Submit blocked
+        assertFalse(viewModel.uiState.value.canSubmitSplit)
+
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertEquals(
+            TransactionFormFieldError.SPLIT_CUSTOM_MEMBER_NOT_ACTIVE,
+            viewModel.uiState.value.splitError,
+        )
+        assertNull(trxRepo.lastCreatedTransaction)
+
+        job.cancel()
     }
 }

@@ -5,6 +5,7 @@ import com.feniqo.mobile.data.local.entity.SyncOperationEntity
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.ProfileDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
+import com.feniqo.mobile.data.remote.dto.TransactionParticipantShareDto
 import com.feniqo.mobile.domain.repository.SyncEntityType
 import kotlinx.serialization.json.Json
 
@@ -43,14 +44,24 @@ object EquivalentConflictResolver {
         val localPayer = local.paidByUserId?.takeIf { it.isNotBlank() } ?: local.userId
         val remotePayer = remote.paidByUserId?.takeIf { it.isNotBlank() } ?: remote.userId
 
-        val localParticipants = local.participantUserIds.filter { it.isNotBlank() }.ifEmpty { listOf(localPayer) }
-        val remoteParticipants = remote.participantUserIds.filter { it.isNotBlank() }.ifEmpty { listOf(remotePayer) }
+        val localContract = validateSplitContract(local, localPayer) ?: return false
+        val remoteContract = validateSplitContract(remote, remotePayer) ?: return false
+
+        when {
+            localContract is ValidatedSplitContract.Equal && remoteContract is ValidatedSplitContract.Equal -> {
+                if (localContract.participants != remoteContract.participants) return false
+            }
+            localContract is ValidatedSplitContract.Custom && remoteContract is ValidatedSplitContract.Custom -> {
+                if (localContract.participants != remoteContract.participants) return false
+                if (localContract.shares != remoteContract.shares) return false
+            }
+            else -> return false
+        }
 
         return local.id == remote.id &&
             local.userId == remote.userId &&
             local.workspaceId == remote.workspaceId &&
             localPayer == remotePayer &&
-            localParticipants == remoteParticipants &&
             local.amountMinor == remote.amountMinor &&
             local.currency.trim().uppercase() == remote.currency.trim().uppercase() &&
             local.type.trim().lowercase() == remote.type.trim().lowercase() &&
@@ -62,6 +73,70 @@ object EquivalentConflictResolver {
             local.installmentNumber == remote.installmentNumber &&
             local.totalInstallments == remote.totalInstallments &&
             local.installmentGroupId == remote.installmentGroupId
+    }
+
+    private sealed interface ValidatedSplitContract {
+        data class Equal(val participants: List<String>) : ValidatedSplitContract
+        data class Custom(val participants: Set<String>, val shares: List<TransactionParticipantShareDto>) : ValidatedSplitContract
+    }
+
+    private fun validateSplitContract(dto: TransactionDto, payer: String): ValidatedSplitContract? {
+        if (payer.isBlank()) return null
+        val rawMode = dto.splitMode
+        val mode = if (rawMode == null) {
+            "EQUAL"
+        } else {
+            val trimmed = rawMode.trim()
+            if (trimmed.isEmpty()) return null
+            val upper = trimmed.uppercase()
+            if (upper != "EQUAL" && upper != "CUSTOM") return null
+            upper
+        }
+
+        return when (mode) {
+            "EQUAL" -> {
+                if (!dto.participantShares.isNullOrEmpty()) return null
+                val participants = dto.participantUserIds.filter { it.isNotBlank() }
+                    .ifEmpty { listOf(payer) }
+                if (dto.participantUserIds.isNotEmpty() && dto.participantUserIds.any { it.isBlank() }) return null
+                if (dto.participantUserIds.distinct().size != dto.participantUserIds.size) return null
+                if (dto.participantUserIds.isNotEmpty() && payer !in participants) return null
+                ValidatedSplitContract.Equal(participants)
+            }
+            "CUSTOM" -> {
+                if (dto.participantUserIds.isEmpty()) return null
+                if (dto.participantUserIds.any { it.isBlank() }) return null
+                val participantSet = dto.participantUserIds.toSet()
+                if (participantSet.size != dto.participantUserIds.size) return null
+
+                val shares = dto.participantShares
+                if (shares.isNullOrEmpty()) return null
+
+                val seenShareUsers = mutableSetOf<String>()
+                var sum = 0L
+
+                for (share in shares) {
+                    val userId = share.userId.trim()
+                    if (userId.isEmpty()) return null
+                    if (!seenShareUsers.add(userId)) return null
+                    if (share.amountMinor < 0L) return null
+                    if (userId != payer && share.amountMinor <= 0L) return null
+
+                    if (Long.MAX_VALUE - sum < share.amountMinor) return null
+                    sum += share.amountMinor
+                }
+
+                if (payer !in seenShareUsers) return null
+                if (seenShareUsers != participantSet) return null
+                if (sum != dto.amountMinor) return null
+
+                ValidatedSplitContract.Custom(
+                    participants = participantSet,
+                    shares = shares.sortedBy { it.userId }
+                )
+            }
+            else -> null
+        }
     }
 
     fun isCategoryEquivalent(localJson: String, remoteJson: String): Boolean {

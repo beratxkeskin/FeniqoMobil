@@ -33,6 +33,7 @@ class SupabaseAuthRemoteDataSource(
                     userId = user.id,
                     email = email,
                     expiresAtEpochSeconds = session.expiresAt.epochSeconds,
+                    isEmailVerified = user.emailConfirmedAt != null,
                 )
             }
             .distinctUntilChanged()

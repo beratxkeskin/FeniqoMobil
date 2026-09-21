@@ -692,11 +692,13 @@ fun CurrencyPickerSheet(
                     Currency.TRY -> "₺"
                     Currency.USD -> "$"
                     Currency.EUR -> "€"
+                    Currency.GBP -> "£"
                 }
                 val name = when (currency) {
                     Currency.TRY -> "Türk lirası"
                     Currency.USD -> "Amerikan doları"
                     Currency.EUR -> "Euro"
+                    Currency.GBP -> "İngiliz sterlini"
                 }
 
                 Surface(

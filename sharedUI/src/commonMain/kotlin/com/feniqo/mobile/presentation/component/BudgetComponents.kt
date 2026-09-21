@@ -21,9 +21,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
@@ -32,6 +34,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -359,7 +363,7 @@ fun BudgetExceededBanner(
                 modifier = Modifier.weight(1f),
             )
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
                 contentDescription = "Aşılan bütçeleri gör",
                 tint = Color(0xFF92400E),
                 modifier = Modifier.size(16.dp),
@@ -489,7 +493,7 @@ fun BudgetProgressCard(
 
             // 4. Detaya Geçiş Chevron Oku
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
                 contentDescription = "${budget.categoryName} bütçesini incele",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.size(16.dp),
@@ -870,6 +874,7 @@ fun BudgetPeriodPickerSheet(
                                 Currency.TRY -> "Türk lirası (TRY)"
                                 Currency.USD -> "Amerikan doları (USD)"
                                 Currency.EUR -> "Avro (EUR)"
+                                Currency.GBP -> "İngiliz sterlini (GBP)"
                             }
                             Text(text = currName, style = MaterialTheme.typography.bodyMedium)
                             Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
@@ -1092,7 +1097,12 @@ fun BudgetCopyDialog(
                         verticalAlignment = Alignment.Top,
                         horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
                     ) {
-                        Text("ℹ️", style = MaterialTheme.typography.bodySmall)
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = null,
+                            tint = Color(0xFF1E40AF),
+                            modifier = Modifier.size(18.dp),
+                        )
                         Column {
                             Text(
                                 text = "Sadece bütçe tanımları kopyalanır.",
@@ -1126,17 +1136,36 @@ fun BudgetCopyDialog(
                             Text("Kaynak ay", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.height(4.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                TextButton(onClick = { onSourceMonthChanged(sourceMonth.previousMonth()) }) {
-                                    Text("◀", style = MaterialTheme.typography.labelSmall)
+                                IconButton(
+                                    onClick = { onSourceMonthChanged(sourceMonth.previousMonth()) },
+                                    modifier = Modifier.size(32.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ChevronLeft,
+                                        contentDescription = "Önceki ay",
+                                        modifier = Modifier.size(18.dp),
+                                    )
                                 }
                                 Text(formattedSource, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                                TextButton(onClick = { onSourceMonthChanged(sourceMonth.nextMonth()) }) {
-                                    Text("▶", style = MaterialTheme.typography.labelSmall)
+                                IconButton(
+                                    onClick = { onSourceMonthChanged(sourceMonth.nextMonth()) },
+                                    modifier = Modifier.size(32.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ChevronRight,
+                                        contentDescription = "Sonraki ay",
+                                        modifier = Modifier.size(18.dp),
+                                    )
                                 }
                             }
                         }
 
-                        Text("→", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp),
+                        )
 
                         Column(horizontalAlignment = Alignment.End) {
                             Text("Hedef ay", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -1157,7 +1186,12 @@ fun BudgetCopyDialog(
                         verticalAlignment = Alignment.Top,
                         horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
                     ) {
-                        Text("⚠️", style = MaterialTheme.typography.bodySmall)
+                        Icon(
+                            imageVector = Icons.Outlined.WarningAmber,
+                            contentDescription = null,
+                            tint = Color(0xFFD97706),
+                            modifier = Modifier.size(18.dp),
+                        )
                         Column {
                             Text(
                                 text = "Hedef aydaki mevcut bütçeler korunur.",

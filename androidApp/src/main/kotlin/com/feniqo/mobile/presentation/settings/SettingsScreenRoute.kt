@@ -1,5 +1,6 @@
 package com.feniqo.mobile.presentation.settings
 
+import java.io.File
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -28,19 +29,29 @@ import com.feniqo.mobile.data.backup.FENIQO_BACKUP_MAX_BYTES
 import com.feniqo.mobile.domain.model.AppLanguage
 import com.feniqo.mobile.domain.model.ThemePreference
 import com.feniqo.mobile.domain.repository.AutoLockTimeout
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
+import androidx.compose.ui.graphics.asImageBitmap
 import com.feniqo.mobile.presentation.screen.AccountScreen
 import com.feniqo.mobile.presentation.screen.AppearanceScreen
 import com.feniqo.mobile.presentation.screen.ChangeEmailScreen
 import com.feniqo.mobile.presentation.screen.ChangePasswordScreen
 import com.feniqo.mobile.presentation.screen.DataManagementScreen
 import com.feniqo.mobile.presentation.screen.DeleteAccountScreen
+import com.feniqo.mobile.presentation.screen.EmailSettingsScreen
 import com.feniqo.mobile.presentation.screen.EmailVerificationScreen
 import com.feniqo.mobile.presentation.screen.FeedbackScreen
 import com.feniqo.mobile.presentation.screen.HelpAboutScreen
+import com.feniqo.mobile.presentation.screen.HelpArticleStatusScreen
+import com.feniqo.mobile.presentation.screen.HelpCenterScreen
 import com.feniqo.mobile.presentation.screen.LanguageRegionScreen
+import com.feniqo.mobile.presentation.screen.LegalInfoScreen
 import com.feniqo.mobile.presentation.screen.NotificationsScreen
 import com.feniqo.mobile.presentation.screen.PendingBackupInfo
 import com.feniqo.mobile.presentation.screen.PersonalInfoScreen
+import com.feniqo.mobile.presentation.screen.PhotoPreviewScreen
 import com.feniqo.mobile.presentation.screen.SecurityPrivacyScreen
 import com.feniqo.mobile.presentation.screen.SettingsScreen
 import com.feniqo.mobile.presentation.screen.SignOutConfirmDialog
@@ -82,7 +93,7 @@ fun SettingsScreenRoute(
 
     SettingsScreen(
         displayName = uiState.profile?.fullName?.trim()?.ifBlank { null } ?: "Feniqo Kullanıcısı",
-        email = uiState.profile?.email.orEmpty(),
+        email = uiState.displayEmail,
         themeLabel = themeLabel,
         languageRegionLabel = languageRegionLabel,
         onBack = onBack,
@@ -121,7 +132,7 @@ fun SettingsScreenRoute(
 }
 
 /**
- * 02 Hesabım Rotası.
+ * 02 Hesabım Rotası (Pano A1 ve kamera/galeri/önizleme tetikleyicisi).
  */
 @Composable
 fun AccountScreenRoute(
@@ -129,6 +140,7 @@ fun AccountScreenRoute(
     onNavigateToChangeEmail: () -> Unit,
     onNavigateToChangePassword: () -> Unit,
     onNavigateToDeleteAccount: () -> Unit,
+    onNavigateToPhotoPreview: (draftFileName: String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
@@ -140,25 +152,75 @@ fun AccountScreenRoute(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val userId = uiState.profile?.id?.value.orEmpty()
+    val effectiveUserId = userId.ifBlank { "current_user" }
+
+    // Avatar dosyasını diskten oku
+    var avatarVersion by remember { mutableStateOf(0) }
+    val avatarBitmap = remember(effectiveUserId, avatarVersion) {
+        avatarManager.getAvatarFile(effectiveUserId)?.let { file ->
+            runCatching {
+                BitmapFactory.decodeFile(file.absolutePath)?.asImageBitmap()
+            }.getOrNull()
+        }
+    }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
     ) { uri: Uri? ->
         if (uri != null) {
-            val saved = avatarManager.saveAvatarFromUri(userId, uri)
-            Toast.makeText(
-                context,
-                if (saved) "Profil fotoğrafı kaydedildi." else "Fotoğraf kaydedilemedi.",
-                Toast.LENGTH_SHORT,
-            ).show()
+            val draftFile = avatarManager.copyUriToDraftPreview(uri)
+            if (draftFile != null) {
+                onNavigateToPhotoPreview(draftFile.name)
+            } else {
+                Toast.makeText(context, "Görsel yüklenemedi veya okunamadı.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingCameraFile by remember { mutableStateOf<java.io.File?>(null) }
+
+    val takePictureLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture(),
+    ) { success: Boolean ->
+        val file = pendingCameraFile
+        if (success && file != null && file.exists() && file.length() > 0) {
+            onNavigateToPhotoPreview(file.name)
+        } else {
+            file?.delete()
+        }
+        pendingCameraUri = null
+        pendingCameraFile = null
+    }
+
+    val launchCamera = {
+        val cameraTarget = avatarManager.createTempCameraFile()
+        if (cameraTarget != null) {
+            val (file, uri) = cameraTarget
+            pendingCameraFile = file
+            pendingCameraUri = uri
+            takePictureLauncher.launch(uri)
+        } else {
+            Toast.makeText(context, "Kamera için güvenli depolama alanı hazırlanamadı.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            launchCamera()
+        } else {
+            Toast.makeText(context, "Kamera ile fotoğraf çekebilmek için kamera izni vermelisiniz.", Toast.LENGTH_SHORT).show()
         }
     }
 
     AccountScreen(
         displayName = uiState.profile?.fullName?.trim()?.ifBlank { null } ?: "Feniqo Kullanıcısı",
-        email = uiState.profile?.email.orEmpty(),
-        isEmailVerified = uiState.profile?.email?.isNotBlank() == true,
-        loginMethod = if (uiState.profile?.email?.isNotBlank() == true) "E-posta" else "Hesap",
+        email = uiState.displayEmail,
+        emailVerificationStatus = uiState.emailVerificationStatus,
+        loginMethod = if (uiState.displayEmail.isNotBlank()) "E-posta" else "Hesap",
+        avatarBitmap = avatarBitmap,
         onBack = onBack,
         onNavigateToPersonalInfo = onNavigateToPersonalInfo,
         onNavigateToChangeEmail = onNavigateToChangeEmail,
@@ -166,11 +228,23 @@ fun AccountScreenRoute(
         onNavigateToDeleteAccount = onNavigateToDeleteAccount,
         onPickFromGallery = { photoPickerLauncher.launch("image/*") },
         onTakePhoto = {
-            Toast.makeText(context, "Kamera ile fotoğraf çekme hazırlanıyor.", Toast.LENGTH_SHORT).show()
+            val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.CAMERA,
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+            if (hasPermission) {
+                launchCamera()
+            } else {
+                cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+            }
         },
         onRemovePhoto = {
-            avatarManager.removeAvatar(userId)
-            Toast.makeText(context, "Profil fotoğrafı kaldırıldı.", Toast.LENGTH_SHORT).show()
+            val removed = avatarManager.removeAvatar(effectiveUserId)
+            if (removed) {
+                avatarVersion++
+                Toast.makeText(context, "Profil fotoğrafı kaldırıldı.", Toast.LENGTH_SHORT).show()
+            }
         },
         modifier = modifier,
     )
@@ -223,7 +297,7 @@ fun PersonalInfoScreenRoute(
 
     PersonalInfoScreen(
         currentFullName = uiState.profile?.fullName.orEmpty(),
-        email = uiState.profile?.email.orEmpty(),
+        email = uiState.displayEmail,
         isLoading = uiState.isSavingProfile,
         onBack = onBack,
         onChangePhoto = { photoPickerLauncher.launch("image/*") },
@@ -541,11 +615,93 @@ fun SyncStatusScreenRoute(
 }
 
 /**
+ * A2 Fotoğraf Önizleme ve Kırpma Rotası.
+ */
+@Composable
+fun PhotoPreviewScreenRoute(
+    draftFileName: String,
+    onBack: () -> Unit,
+    onReselect: () -> Unit,
+    onSaveSuccess: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = hiltViewModel(),
+    avatarManager: UserAvatarManager = run {
+        val context = LocalContext.current.applicationContext
+        remember(context) { UserAvatarManager(context) }
+    },
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val userId = uiState.profile?.id?.value.orEmpty()
+    val effectiveUserId = userId.ifBlank { "current_user" }
+
+    val draftFile = remember(draftFileName) {
+        val safeName = draftFileName.substringAfterLast("/").substringAfterLast("\\")
+        File(File(context.cacheDir, "camera"), safeName)
+    }
+
+    val sourceBitmap = remember(draftFile) {
+        if (draftFile.exists() && draftFile.length() > 0) {
+            decodeBoundedAndRotatedBitmap(draftFile)
+        } else {
+            null
+        }
+    }
+
+    LaunchedEffect(sourceBitmap) {
+        if (sourceBitmap == null) {
+            Toast.makeText(context, "Görsel yüklenemedi veya bozuk.", Toast.LENGTH_SHORT).show()
+            onBack()
+        }
+    }
+
+    val imageBitmap = remember(sourceBitmap) {
+        sourceBitmap?.asImageBitmap()
+    }
+
+    var isSaving by remember { mutableStateOf(false) }
+
+    PhotoPreviewScreen(
+        imageBitmap = imageBitmap,
+        onBack = onBack,
+        onReselect = {
+            draftFile.delete()
+            onReselect()
+        },
+        onSavePhoto = { zoom, panX, panY ->
+            if (isSaving) return@PhotoPreviewScreen
+            val bitmap = sourceBitmap
+            if (bitmap == null || bitmap.isRecycled) return@PhotoPreviewScreen
+            isSaving = true
+
+            runCatching {
+                val cropped = cropSquareAvatarBitmap(bitmap, zoom, panX, panY)
+                val saved = avatarManager.saveAvatarBitmap(effectiveUserId, cropped)
+                if (saved) {
+                    draftFile.delete()
+                    Toast.makeText(context, "Profil fotoğrafı kaydedildi.", Toast.LENGTH_SHORT).show()
+                    onSaveSuccess()
+                } else {
+                    isSaving = false
+                    Toast.makeText(context, "Fotoğraf kaydedilemedi. Lütfen tekrar deneyin.", Toast.LENGTH_SHORT).show()
+                }
+            }.onFailure {
+                isSaving = false
+                Toast.makeText(context, "Fotoğraf işlenirken hata oluştu.", Toast.LENGTH_SHORT).show()
+            }
+        },
+        modifier = modifier,
+    )
+}
+
+/**
  * 12 Yardım ve Hakkında Rotası.
  */
 @Composable
 fun HelpAboutScreenRoute(
     onNavigateToFeedback: (isBugReport: Boolean) -> Unit,
+    onNavigateToHelpCenter: () -> Unit,
+    onNavigateToLegalInfo: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -560,18 +716,40 @@ fun HelpAboutScreenRoute(
         appVersion = "Sürüm $versionName",
         onBack = onBack,
         onNavigateToFeedback = onNavigateToFeedback,
-        onOpenHelpCenter = {
-            Toast.makeText(context, "Yardım merkezi: Destek dokümanları hazırlanıyor.", Toast.LENGTH_SHORT).show()
-        },
-        onOpenPrivacyPolicy = {
-            Toast.makeText(context, "Gizlilik Politikası: Onaylı metin yakında sunulacaktır.", Toast.LENGTH_SHORT).show()
-        },
-        onOpenTermsOfService = {
-            Toast.makeText(context, "Kullanım Koşulları: Onaylı metin yakında sunulacaktır.", Toast.LENGTH_SHORT).show()
-        },
-        onOpenOpenSourceLicenses = {
-            Toast.makeText(context, "Açık Kaynak Lisansları: Kotlin, Jetpack Compose, Room, Kotlinx Coroutines.", Toast.LENGTH_LONG).show()
-        },
+        onOpenHelpCenter = onNavigateToHelpCenter,
+        onOpenPrivacyPolicy = onNavigateToLegalInfo,
+        onOpenTermsOfService = onNavigateToLegalInfo,
+        onOpenOpenSourceLicenses = onNavigateToLegalInfo,
+        modifier = modifier,
+    )
+}
+
+/**
+ * A3 E-posta Durum ve Yönetim Rotası.
+ */
+@Composable
+fun EmailSettingsScreenRoute(
+    onNavigateToChangeEmail: () -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = hiltViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val currentEmail = uiState.displayEmail
+
+    LaunchedEffect(Unit) {
+        viewModel.refreshEmailVerificationStatus()
+    }
+
+    EmailSettingsScreen(
+        currentEmail = currentEmail,
+        verificationStatus = uiState.emailVerificationStatus,
+        isSendingVerification = uiState.isSendingEmailVerification,
+        verificationSentSuccess = uiState.emailVerificationSent,
+        errorMessage = uiState.emailError,
+        onBack = onBack,
+        onResendVerification = { viewModel.resendEmailVerification(currentEmail) },
+        onNavigateToChangeEmail = onNavigateToChangeEmail,
         modifier = modifier,
     )
 }
@@ -590,14 +768,12 @@ fun ChangeEmailScreenRoute(
 
     LaunchedEffect(uiState.emailVerificationSent) {
         if (uiState.emailVerificationSent) {
-            val target = uiState.profile?.email.orEmpty()
             viewModel.clearEmailStatus()
-            // uiState.emailError is null and verification succeeded
         }
     }
 
     ChangeEmailScreen(
-        currentEmail = uiState.profile?.email.orEmpty(),
+        currentEmail = uiState.displayEmail,
         isLoading = uiState.isSendingEmailVerification,
         errorMessage = uiState.emailError,
         onSubmitNewEmail = { newEmail ->
@@ -663,34 +839,79 @@ fun ChangePasswordScreenRoute(
 }
 
 /**
- * 18 Hesap Silme Bilgilendirme Rotası.
+ * Pano A4: Hesap Silme Hazırlık Rotası.
  */
 @Composable
 fun DeleteAccountScreenRoute(
     onExportData: () -> Unit,
     onCheckWorkspaces: () -> Unit,
+    onInspectSync: () -> Unit,
+    onContactSupport: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-
     DeleteAccountScreen(
         onBack = onBack,
         onExportData = onExportData,
         onCheckSharedSpaces = onCheckWorkspaces,
-        onProceedWithDeletion = {
-            Toast.makeText(
-                context,
-                "Hesap silme işlemi için arka plan servis politikası ve onaylı doğrulama gereklidir. Destek ile iletişime geçin.",
-                Toast.LENGTH_LONG,
-            ).show()
-        },
+        onInspectSync = onInspectSync,
+        onContactSupport = onContactSupport,
         modifier = modifier,
     )
 }
 
 /**
- * 24 Geri Bildirim Rotası.
+ * Pano B1: Yardım Merkezi Rotası.
+ */
+@Composable
+fun HelpCenterScreenRoute(
+    onNavigateToArticle: (articleTitle: String) -> Unit,
+    onNavigateToFeedback: () -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    HelpCenterScreen(
+        onBack = onBack,
+        onArticleClick = onNavigateToArticle,
+        onNavigateToFeedback = onNavigateToFeedback,
+        modifier = modifier,
+    )
+}
+
+/**
+ * Pano B2: Hazırlanan Makale Durumu Rotası.
+ */
+@Composable
+fun HelpArticleStatusScreenRoute(
+    articleTitle: String,
+    onNavigateToFeedback: () -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    HelpArticleStatusScreen(
+        articleTitle = articleTitle,
+        onBack = onBack,
+        onNavigateToFeedback = onNavigateToFeedback,
+        modifier = modifier,
+    )
+}
+
+/**
+ * Pano B3: Gizlilik ve Hukuki Bilgiler Rotası.
+ */
+@Composable
+fun LegalInfoScreenRoute(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LegalInfoScreen(
+        onBack = onBack,
+        modifier = modifier,
+    )
+}
+
+/**
+ * Pano B4: Geri Bildirim Rotası.
  */
 @Composable
 fun FeedbackScreenRoute(
@@ -712,13 +933,21 @@ fun FeedbackScreenRoute(
     FeedbackScreen(
         initialIsBug = initialIsBug,
         onBack = onBack,
-        onSendFeedback = { isBug, _, _, _ ->
-            Toast.makeText(
-                context,
-                "${if (isBug) "Hata bildiriminiz" else "Öneriniz"} alındı. Katkınız için teşekkür ederiz!",
-                Toast.LENGTH_LONG,
-            ).show()
-            onBack()
+        onShareFeedback = { isBug, subject, message ->
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = if (attachmentUri != null) "image/*" else "text/plain"
+                putExtra(Intent.EXTRA_SUBJECT, "[Feniqo Geri Bildirim] ${if (isBug) "Hata" else "Öneri"}: $subject")
+                putExtra(Intent.EXTRA_TEXT, message)
+                attachmentUri?.let { uri ->
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+            }
+            runCatching {
+                context.startActivity(Intent.createChooser(intent, "Geri bildirimi paylaş"))
+            }.onFailure {
+                Toast.makeText(context, "Paylaşım yapabilecek uygun bir uygulama bulunamadı.", Toast.LENGTH_LONG).show()
+            }
         },
         onPickAttachment = { filePickerLauncher.launch("image/*") },
         hasAttachment = attachmentUri != null,
@@ -729,6 +958,96 @@ fun FeedbackScreenRoute(
         },
         modifier = modifier,
     )
+}
+
+/**
+ * Android Katmanı: Güvenli ve OOM Korumalı Görsel Decode ve EXIF Düzeltmesi.
+ */
+private fun decodeBoundedAndRotatedBitmap(file: File, maxDimension: Int = 1280): Bitmap? {
+    return runCatching {
+        // 1. Görsel boyutlarını oku
+        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.absolutePath, options)
+
+        if (options.outWidth <= 0 || options.outHeight <= 0) return null
+
+        // 2. inSampleSize hesapla (OOM koruması)
+        var sampleSize = 1
+        while (options.outWidth / sampleSize > maxDimension || options.outHeight / sampleSize > maxDimension) {
+            sampleSize *= 2
+        }
+
+        // 3. Gerçek görseli decode et
+        val decodeOptions = BitmapFactory.Options().apply {
+            inSampleSize = sampleSize
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
+        val decoded = BitmapFactory.decodeFile(file.absolutePath, decodeOptions) ?: return null
+
+        // 4. EXIF Orientation oku ve uygula
+        val orientation = runCatching {
+            ExifInterface(file.absolutePath).getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_NORMAL,
+            )
+        }.getOrNull() ?: ExifInterface.ORIENTATION_NORMAL
+
+        val rotationAngle = when (orientation) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+            ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+            ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+            else -> 0f
+        }
+
+        if (rotationAngle != 0f) {
+            val matrix = Matrix().apply { postRotate(rotationAngle) }
+            val rotated = Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true)
+            if (rotated != decoded) decoded.recycle()
+            rotated
+        } else {
+            decoded
+        }
+    }.getOrNull()
+}
+
+/**
+ * Android Katmanı: Önizleme parametrelerine göre dairesel avatar için kare kırpma.
+ */
+private fun cropSquareAvatarBitmap(
+    source: Bitmap,
+    zoom: Float,
+    panX: Float,
+    panY: Float,
+    targetSize: Int = 512,
+): Bitmap {
+    val srcWidth = source.width
+    val srcHeight = source.height
+    val minDim = minOf(srcWidth, srcHeight)
+
+    val effectiveZoom = zoom.coerceIn(1f, 4f)
+    val cropSize = (minDim / effectiveZoom).toInt().coerceIn(32, minDim)
+
+    // Pan oranını piksel ofsetine eşle
+    val maxOffsetX = (srcWidth - cropSize) / 2f
+    val maxOffsetY = (srcHeight - cropSize) / 2f
+
+    val panRatioX = (panX / 250f).coerceIn(-1f, 1f)
+    val panRatioY = (panY / 250f).coerceIn(-1f, 1f)
+
+    val centerX = (srcWidth / 2f) - (panRatioX * maxOffsetX)
+    val centerY = (srcHeight / 2f) - (panRatioY * maxOffsetY)
+
+    val left = (centerX - (cropSize / 2f)).toInt().coerceIn(0, maxOf(0, srcWidth - cropSize))
+    val top = (centerY - (cropSize / 2f)).toInt().coerceIn(0, maxOf(0, srcHeight - cropSize))
+
+    val cropped = Bitmap.createBitmap(source, left, top, cropSize, cropSize)
+    return if (cropSize != targetSize) {
+        val scaled = Bitmap.createScaledBitmap(cropped, targetSize, targetSize, true)
+        if (scaled != cropped) cropped.recycle()
+        scaled
+    } else {
+        cropped
+    }
 }
 
 private data class PendingBackupImport(

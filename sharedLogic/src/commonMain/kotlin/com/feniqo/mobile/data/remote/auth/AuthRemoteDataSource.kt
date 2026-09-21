@@ -10,6 +10,7 @@ data class RemoteAuthSession(
     val userId: String,
     val email: String,
     val expiresAtEpochSeconds: Long,
+    val isEmailVerified: Boolean? = null,
 )
 
 /**

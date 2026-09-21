@@ -1,0 +1,3 @@
+# FeniqoMobil - Supabase Yerel SQL Test Koşucusu Bağımlılıkları
+# Yalnızca yerel PostgreSQL ortamında test çalıştırmak içindir.
+psycopg2-binary==2.9.9

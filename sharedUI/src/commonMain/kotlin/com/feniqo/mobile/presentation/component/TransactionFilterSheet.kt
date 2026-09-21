@@ -20,9 +20,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -134,10 +137,10 @@ fun ActiveTransactionFilterChips(
                 onClick = { onTypeFilterChanged(null) },
                 label = { Text("Tür: $typeText") },
                 trailingIcon = {
-                    Text(
-                        text = "✕",
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(start = 2.dp),
+                    Icon(
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
                     )
                 },
                 modifier = Modifier
@@ -161,10 +164,10 @@ fun ActiveTransactionFilterChips(
                 onClick = { onCategoryFilterChanged(null) },
                 label = { Text("Kategori: $categoryLabel") },
                 trailingIcon = {
-                    Text(
-                        text = "✕",
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(start = 2.dp),
+                    Icon(
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
                     )
                 },
                 modifier = Modifier
@@ -182,10 +185,10 @@ fun ActiveTransactionFilterChips(
                 onClick = { onPaymentMethodFilterChanged(null) },
                 label = { Text("Ödeme: $paymentText") },
                 trailingIcon = {
-                    Text(
-                        text = "✕",
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(start = 2.dp),
+                    Icon(
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
                     )
                 },
                 modifier = Modifier
@@ -203,10 +206,10 @@ fun ActiveTransactionFilterChips(
                 onClick = { onPeriodPresetChanged(null) },
                 label = { Text("Dönem: $periodText") },
                 trailingIcon = {
-                    Text(
-                        text = "✕",
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(start = 2.dp),
+                    Icon(
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
                     )
                 },
                 modifier = Modifier

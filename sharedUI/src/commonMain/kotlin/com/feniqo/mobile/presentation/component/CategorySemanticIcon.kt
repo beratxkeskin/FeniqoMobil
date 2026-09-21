@@ -86,7 +86,21 @@ object CategorySemanticIconResolver {
         "credit-card" -> Icons.Outlined.CreditCard
         "tag" -> Icons.Outlined.LocalOffer
         "briefcase" -> Icons.Outlined.WorkOutline
+        "market" -> Icons.Outlined.ShoppingCart
+        "storefront", "merchant" -> Icons.Outlined.Storefront
         else -> Icons.Outlined.Category
+    }
+}
+
+/** Hub modüllerine ait semantik ikonları Compose vektörüne çözümler. Bulunamazsa null döner (baş harfe düşülür). */
+object HubSemanticIconResolver {
+    fun resolve(iconKey: String?): ImageVector? = when (iconKey?.trim()?.lowercase()) {
+        "budgets" -> Icons.Outlined.AccountBalance
+        "recurring_transactions" -> Icons.Outlined.Autorenew
+        "subscriptions" -> Icons.Outlined.CardGiftcard // veya Cards / Subscriptions
+        "goals" -> Icons.Outlined.ConfirmationNumber // veya TrackChanges
+        "debts" -> Icons.AutoMirrored.Outlined.ReceiptLong
+        else -> null
     }
 }
 

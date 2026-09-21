@@ -153,6 +153,7 @@ object MoneyFormatter {
         Currency.TRY -> "₺"
         Currency.USD -> "$"
         Currency.EUR -> "€"
+        Currency.GBP -> "£"
     }
 
     /**

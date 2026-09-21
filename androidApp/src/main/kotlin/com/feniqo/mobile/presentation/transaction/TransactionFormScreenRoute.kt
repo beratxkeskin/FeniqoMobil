@@ -130,6 +130,7 @@ fun TransactionFormScreenRoute(
         onRemoveReceipt = viewModel::onReceiptRemoved,
         onPaidByUserSelected = viewModel::onPaidByUserSelected,
         onParticipantToggled = viewModel::onParticipantToggled,
+        onSplitDetailsApplied = viewModel::onSplitDetailsApplied,
         modifier = modifier,
     )
 

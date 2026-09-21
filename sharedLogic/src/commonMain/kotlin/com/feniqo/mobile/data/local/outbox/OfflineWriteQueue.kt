@@ -300,7 +300,11 @@ class OfflineWriteQueue(
         nowEpochMillis = nowEpochMillisProvider(),
     )
 
-    suspend fun recordFailure(operationId: String, errorMessage: String): Boolean {
+    suspend fun recordFailure(
+        operationId: String,
+        errorMessage: String,
+        errorClassification: String? = null,
+    ): Boolean {
         val operation = operationDao.getById(operationId) ?: return false
         val attemptCount = operation.attemptCount.coerceAtLeast(1)
         val now = nowEpochMillisProvider()
@@ -310,6 +314,7 @@ class OfflineWriteQueue(
         return operationDao.markFailed(
             operationId = operationId,
             lastError = safeError,
+            errorClassification = errorClassification,
             nextAttemptAtEpochMillis = nextAttemptAt,
             nowEpochMillis = now,
         ) == 1

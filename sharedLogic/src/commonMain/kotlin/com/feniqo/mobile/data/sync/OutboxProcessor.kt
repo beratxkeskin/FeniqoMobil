@@ -78,8 +78,9 @@ class OutboxProcessor(
                 queue.markConflict(claimed.operationId, SAFE_CONFLICT_CODE)
                 conflictOperationId = claimed.operationId
                 break
-            } catch (error: Throwable) {
-                queue.recordFailure(claimed.operationId, SAFE_FAILURE_CODE)
+            } catch (error: Exception) {
+                val classification = error.classifyOutboxError().name
+                queue.recordFailure(claimed.operationId, SAFE_FAILURE_CODE, classification)
                 failedOperationId = claimed.operationId
                 lastError = error
                 break
@@ -117,6 +118,8 @@ interface OutboxQueue {
     suspend fun ackV2Execution(operationId: String, result: OutboxExecutionResult): Boolean
     suspend fun recordV2Conflict(conflict: com.feniqo.mobile.data.local.entity.SyncConflictEntity): Boolean
     suspend fun recordFailure(operationId: String, errorMessage: String): Boolean
+    suspend fun recordFailure(operationId: String, errorMessage: String, errorClassification: String?): Boolean =
+        recordFailure(operationId, errorMessage)
     suspend fun markConflict(operationId: String, errorMessage: String): Boolean
 }
 
@@ -131,7 +134,65 @@ class RoomOutboxQueue(
     override suspend fun recordV2Conflict(conflict: com.feniqo.mobile.data.local.entity.SyncConflictEntity): Boolean =
         delegate.recordV2Conflict(conflict)
     override suspend fun recordFailure(operationId: String, errorMessage: String): Boolean =
-        delegate.recordFailure(operationId, errorMessage)
+        delegate.recordFailure(operationId, errorMessage, null)
+    override suspend fun recordFailure(operationId: String, errorMessage: String, errorClassification: String?): Boolean =
+        delegate.recordFailure(operationId, errorMessage, errorClassification)
     override suspend fun markConflict(operationId: String, errorMessage: String): Boolean =
         delegate.markConflict(operationId, errorMessage)
+}
+
+/**
+ * Outbox işleminin uzak sunucuya gönderilmeden önce yerel kontrollerde (şema, DTO decode, ID eşleşmesi vb.)
+ * veya sunucu tarafında kesin olarak reddedildiğini ve uzak veritabanında hiçbir mutation kalıntısı
+ * oluşmadığını doğrulayan tipli hata.
+ */
+open class DefinitiveOutboxFailureException(
+    message: String,
+    val statusCode: Int? = null,
+    val errorCode: String? = null,
+    cause: Throwable? = null,
+) : IllegalArgumentException(message, cause)
+
+/**
+ * Sunucunun (PostgreSQL RPC / PostgREST) işlemi kesin olarak reddettiğini,
+ * rollback uygulandığını ve uzak veritabanında hiçbir kalıntı oluşmadığını
+ * doğrulayan tipli exception.
+ */
+class ServerRejectedMutationException(
+    message: String,
+    statusCode: Int? = null,
+    errorCode: String? = null,
+    cause: Throwable? = null,
+) : DefinitiveOutboxFailureException(message, statusCode, errorCode, cause)
+
+fun Throwable.classifyOutboxError(): com.feniqo.mobile.data.local.entity.OutboxErrorClassification {
+    return when (this) {
+        is DefinitiveOutboxFailureException -> {
+            com.feniqo.mobile.data.local.entity.OutboxErrorClassification.DEFINITIVE_REJECTION
+        }
+        is io.github.jan.supabase.exceptions.RestException -> {
+            // PostgREST RPC çağrılarında 4xx kodları (400, 401, 403, 404, 422),
+            // PostgreSQL transaction'ının EXCEPTION fırlatarak ROLLBACK ile bittiğini
+            // ve veritabanı kaydı oluşturulmadığını garanti eder.
+            // 5xx (500, 502, 503, 504) ise ağ geçidi timeout veya belirsiz sunucu hatası olabilir.
+            val statusCode = try { response.status.value } catch (_: Exception) { 0 }
+            when (statusCode) {
+                400, 401, 403, 404, 422 -> com.feniqo.mobile.data.local.entity.OutboxErrorClassification.DEFINITIVE_REJECTION
+                else -> com.feniqo.mobile.data.local.entity.OutboxErrorClassification.AMBIGUOUS_RESULT
+            }
+        }
+        is io.github.jan.supabase.auth.exception.AuthRestException -> when (errorCode) {
+            io.github.jan.supabase.auth.exception.AuthErrorCode.WeakPassword,
+            io.github.jan.supabase.auth.exception.AuthErrorCode.EmailAddressInvalid,
+            io.github.jan.supabase.auth.exception.AuthErrorCode.ValidationFailed -> {
+                com.feniqo.mobile.data.local.entity.OutboxErrorClassification.DEFINITIVE_REJECTION
+            }
+            else -> com.feniqo.mobile.data.local.entity.OutboxErrorClassification.AMBIGUOUS_RESULT
+        }
+        // SerializationException ve genel IllegalArgumentException sunucu işlemi başarıyla
+        // uyguladıktan sonra response decode aşamasında da oluşabileceğinden KESİNLİKLE AMBIGUOUS_RESULT olmalıdır.
+        is kotlinx.serialization.SerializationException -> com.feniqo.mobile.data.local.entity.OutboxErrorClassification.AMBIGUOUS_RESULT
+        is IllegalArgumentException -> com.feniqo.mobile.data.local.entity.OutboxErrorClassification.AMBIGUOUS_RESULT
+        else -> com.feniqo.mobile.data.local.entity.OutboxErrorClassification.AMBIGUOUS_RESULT
+    }
 }

@@ -87,14 +87,10 @@ class SyncErrorMapperTest {
         assertTrue(rest403 is AppError.Authentication)
         assertEquals("sync.unauthorized", rest403.code)
 
-        // 400, 404, 422 -> Validation
+        // 400, 422 -> Validation
         val rest400 = RestException(error = "Bad Request", description = null, response = mockResponse(HttpStatusCode.BadRequest)).toSyncAppError()
         assertTrue(rest400 is AppError.Validation)
         assertEquals("sync.invalid_request", rest400.code)
-
-        val rest404 = RestException(error = "Not Found", description = null, response = mockResponse(HttpStatusCode.NotFound)).toSyncAppError()
-        assertTrue(rest404 is AppError.Validation)
-        assertEquals("sync.invalid_request", rest404.code)
 
         val rest422 = RestException(error = "Unprocessable", description = null, response = mockResponse(HttpStatusCode.UnprocessableEntity)).toSyncAppError()
         assertTrue(rest422 is AppError.Validation)
@@ -105,7 +101,11 @@ class SyncErrorMapperTest {
         assertTrue(rest409 is AppError.Conflict)
         assertEquals("sync.remote_conflict", rest409.code)
 
-        // 408, 429, 500..599 -> Network
+        // 404, 408, 429, 500..599 -> Network
+        val rest404 = RestException(error = "Not Found", description = null, response = mockResponse(HttpStatusCode.NotFound)).toSyncAppError()
+        assertTrue(rest404 is AppError.Network)
+        assertEquals("sync.http_error_404", rest404.code)
+
         val rest408 = RestException(error = "Request Timeout", description = null, response = mockResponse(HttpStatusCode.RequestTimeout)).toSyncAppError()
         assertTrue(rest408 is AppError.Network)
         assertEquals("sync.http_error_408", rest408.code)

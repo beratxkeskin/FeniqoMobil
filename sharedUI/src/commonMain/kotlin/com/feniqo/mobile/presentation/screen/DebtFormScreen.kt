@@ -801,7 +801,7 @@ fun DebtFormScreen(
                     )
                 } else {
                     Text(
-                        text = if (isEditMode) "✓ Değişiklikleri kaydet" else "+ Kaydı oluştur",
+                        text = if (isEditMode) "Değişiklikleri kaydet" else "Kaydı oluştur",
                         style = TextStyle(
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,

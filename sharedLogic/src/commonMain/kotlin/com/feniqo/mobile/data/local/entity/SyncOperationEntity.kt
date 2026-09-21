@@ -47,4 +47,17 @@ data class SyncOperationEntity(
     val createdAtEpochMillis: Long,
     @ColumnInfo(name = "updated_at_epoch_ms")
     val updatedAtEpochMillis: Long,
+    @ColumnInfo(name = "error_classification", defaultValue = "NULL")
+    val errorClassification: String? = null,
 )
+
+enum class OutboxErrorClassification {
+    DEFINITIVE_REJECTION,
+    AMBIGUOUS_RESULT,
+}
+
+fun SyncOperationEntity.isDefinitiveRejection(): Boolean =
+    statusCode == "FAILED" && errorClassification == OutboxErrorClassification.DEFINITIVE_REJECTION.name
+
+fun SyncOperationEntity.isAmbiguousResult(): Boolean =
+    statusCode == "FAILED" && (errorClassification == OutboxErrorClassification.AMBIGUOUS_RESULT.name || errorClassification == null)

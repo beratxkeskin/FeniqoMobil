@@ -11,6 +11,7 @@ data class WorkspaceMemberUiModel(
     val displayName: String,
     val role: WorkspaceRole,
     val isCurrentUser: Boolean,
+    val isActive: Boolean = true,
 )
 
 data class WorkspaceDetailsUiModel(

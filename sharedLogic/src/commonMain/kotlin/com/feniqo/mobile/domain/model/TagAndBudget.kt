@@ -44,7 +44,34 @@ data class YearMonth(val value: String) {
         require(YEAR_MONTH.matches(value)) { "Bütçe dönemi YYYY-MM biçiminde olmalıdır." }
     }
 
-    private companion object {
-        val YEAR_MONTH = Regex("^\\d{4}-(0[1-9]|1[0-2])$")
+    val year: Int get() = value.substring(0, 4).toInt()
+    val month: Int get() = value.substring(5, 7).toInt()
+    val monthNumber: Int get() = month
+
+    fun previousMonth(): YearMonth {
+        return if (month == 1) {
+            from(year - 1, 12)
+        } else {
+            from(year, month - 1)
+        }
+    }
+
+    fun nextMonth(): YearMonth {
+        return if (month == 12) {
+            from(year + 1, 1)
+        } else {
+            from(year, month + 1)
+        }
+    }
+
+    companion object {
+        private val YEAR_MONTH = Regex("^\\d{4}-(0[1-9]|1[0-2])$")
+
+        fun from(year: Int, month: Int): YearMonth {
+            val formattedMonth = if (month < 10) "0$month" else month.toString()
+            return YearMonth("$year-$formattedMonth")
+        }
+
+        fun from(date: LocalDate): YearMonth = from(date.year, date.monthNumber)
     }
 }

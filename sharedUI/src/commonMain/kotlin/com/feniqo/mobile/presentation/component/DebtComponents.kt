@@ -1588,11 +1588,13 @@ fun DebtCurrencyPickerSheet(
                     Currency.TRY -> "₺"
                     Currency.USD -> "$"
                     Currency.EUR -> "€"
+                    Currency.GBP -> "£"
                 }
                 val name = when (currency) {
                     Currency.TRY -> "Türk lirası"
                     Currency.USD -> "Amerikan doları"
                     Currency.EUR -> "Euro"
+                    Currency.GBP -> "İngiliz sterlini"
                 }
 
                 Surface(
@@ -1789,10 +1791,12 @@ fun Currency.symbol(): String = when (this) {
     Currency.TRY -> "₺"
     Currency.USD -> "$"
     Currency.EUR -> "€"
+    Currency.GBP -> "£"
 }
 
 fun Currency.symbolName(): String = when (this) {
     Currency.TRY -> "Türk lirası"
     Currency.USD -> "Amerikan doları"
     Currency.EUR -> "Euro"
+    Currency.GBP -> "İngiliz sterlini"
 }

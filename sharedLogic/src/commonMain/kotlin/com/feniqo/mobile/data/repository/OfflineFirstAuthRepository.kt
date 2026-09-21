@@ -1,9 +1,17 @@
 package com.feniqo.mobile.data.repository
 
 import com.feniqo.mobile.data.local.dao.ProfileDao
+import com.feniqo.mobile.data.local.entity.UserProfileEntity
+import com.feniqo.mobile.data.local.outbox.OutboxOperationType
 import com.feniqo.mobile.data.mapper.toDomain
+import com.feniqo.mobile.data.mapper.toEntity
+import com.feniqo.mobile.data.mapper.toPendingUpdate
 import com.feniqo.mobile.data.remote.auth.AuthRemoteDataSource
 import com.feniqo.mobile.data.remote.auth.toAuthAppError
+import com.feniqo.mobile.data.remote.dto.ProfileDto
+import com.feniqo.mobile.data.remote.mapper.toDomain as remoteToDomain
+import com.feniqo.mobile.data.remote.mapper.toDto
+import com.feniqo.mobile.data.sync.toRemoteSyncMetadata
 import com.feniqo.mobile.domain.model.AppError
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.UserProfile
@@ -24,6 +32,8 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.Instant
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /**
  * Oturumu Supabase'ten, profil okumalarını ise Single Source of Truth olan Room'dan sunar.
@@ -33,6 +43,9 @@ class OfflineFirstAuthRepository(
     private val remoteDataSource: AuthRemoteDataSource,
     private val profileDao: ProfileDao,
     private val syncScheduler: com.feniqo.mobile.domain.sync.BackgroundSyncScheduler? = null,
+    private val fetchRemoteProfile: (suspend (String) -> ProfileDto?)? = null,
+    private val enqueueProfileUpdate: (suspend (UserProfileEntity, OutboxOperationType, String) -> Unit)? = null,
+    private val nowEpochMillisProvider: () -> Long = { kotlin.time.Clock.System.now().toEpochMilliseconds() },
 ) : AuthRepository {
 
     private val _recoveryState = MutableStateFlow<AuthRecoveryState>(AuthRecoveryState.Idle)
@@ -41,10 +54,16 @@ class OfflineFirstAuthRepository(
         .observeSession()
         .map { session ->
             session?.let {
+                val status = when (it.isEmailVerified) {
+                    true -> com.feniqo.mobile.domain.model.EmailVerificationStatus.VERIFIED
+                    false -> com.feniqo.mobile.domain.model.EmailVerificationStatus.PENDING_VERIFICATION
+                    null -> com.feniqo.mobile.domain.model.EmailVerificationStatus.UNKNOWN
+                }
                 AuthSession(
                     userId = EntityId(it.userId),
                     email = it.email,
                     expiresAt = Instant.fromEpochSeconds(it.expiresAtEpochSeconds),
+                    emailVerificationStatus = status,
                 )
             }
         }
@@ -101,9 +120,20 @@ class OfflineFirstAuthRepository(
         val normalized = AuthValidationRules.normalizeFullName(fullName)
         val session = remoteDataSource.observeSession().first()
             ?: error("session_expired")
-        val current = profileDao.observeById(session.userId).first()
-            ?: error("profile_not_found")
-        profileDao.upsert(current.copy(fullName = normalized))
+        var current = profileDao.observeById(session.userId).first()
+        if (current == null) {
+            val remoteProfile = fetchRemoteProfile?.invoke(session.userId)
+                ?: error("profile_not_found")
+            check(remoteProfile.id == session.userId) { "profile_owner_mismatch" }
+            val now = nowEpochMillisProvider()
+            profileDao.insertIfMissing(remoteProfile.remoteToDomain().toEntity(remoteProfile.toRemoteSyncMetadata(now)))
+            current = profileDao.observeById(session.userId).first()
+                ?: error("profile_not_found")
+        }
+        val updated = current.copy(fullName = normalized, sync = current.sync.toPendingUpdate(nowEpochMillisProvider()))
+        val payload = Json.encodeToString(updated.toDomain().toDto())
+        val enqueue = enqueueProfileUpdate ?: error("profile_write_unavailable")
+        enqueue(updated, OutboxOperationType.UPDATE, payload)
     }
 
     override suspend fun changePassword(

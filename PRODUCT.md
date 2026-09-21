@@ -68,6 +68,9 @@ Bu alanların domain modelleri veya altyapı hazırlıkları kodda bulunabilir. 
 özelliğin kullanıcıya hazır olduğu anlamına gelmez; güncel durum [FEATURES.md](FEATURES.md)
 dosyasında tutulur.
 
+Geliştirme için ayrı paketli, çevrimdışı **Feniqo Demo** sürümü desteklenir; son kullanıcıya açık
+bulut hesabı değildir. Kullanım ve veri kapsamı: [Demo kullanım rehberi](docs/DEMO_KULLANIM.md).
+
 ## 5. Ürün ilkeleri
 
 - **Offline-first:** Ağ, temel kullanım için ön koşul değildir.

@@ -98,9 +98,10 @@ data class RecurringTransactionDisplayModel(
                 Currency.TRY -> "₺"
                 Currency.USD -> "$"
                 Currency.EUR -> "€"
+                Currency.GBP -> "£"
             }
             val raw = MoneyFormatter.format(amount)
-            val numberPart = raw.replace("₺", "").replace("$", "").replace("€", "").trim()
+            val numberPart = raw.replace("₺", "").replace("$", "").replace("€", "").replace("£", "").trim()
             return "$sign$sym$numberPart"
         }
 }
@@ -200,8 +201,9 @@ fun formatRecurringDisplayAmount(money: Money, type: TransactionType): String {
         Currency.TRY -> "₺"
         Currency.USD -> "$"
         Currency.EUR -> "€"
+        Currency.GBP -> "£"
     }
     val raw = MoneyFormatter.format(money)
-    val numberPart = raw.replace("₺", "").replace("$", "").replace("€", "").trim()
+    val numberPart = raw.replace("₺", "").replace("$", "").replace("€", "").replace("£", "").trim()
     return "$sign$sym$numberPart"
 }

@@ -447,14 +447,19 @@ fun SignOutConfirmDialog(
 }
 
 /**
- * 18 Hesabı Sil Ön Hazırlık Ekranı.
+ * Pano A4: Hesap Silme Ön Hazırlık Ekranı.
+ *
+ * Gerçekte hesap ve yerel veri silmez; kullanıcıyı veri yedekleme, ortak alan ve
+ * senkronizasyon kontrollerine yönlendirir. Kalıcı silmenin destek üzerinden yürütüldüğünü
+ * şeffaf bir şekilde açıklar.
  */
 @Composable
 fun DeleteAccountScreen(
     onBack: () -> Unit,
     onExportData: () -> Unit,
     onCheckSharedSpaces: () -> Unit,
-    onProceedWithDeletion: () -> Unit,
+    onInspectSync: () -> Unit,
+    onContactSupport: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -467,94 +472,142 @@ fun DeleteAccountScreen(
                 .padding(horizontal = FeniqoSpacing.Screen, vertical = FeniqoSpacing.Medium),
         ) {
             SettingsTopBar(
-                title = "Hesabı sil",
+                title = "Hesap silme",
                 onBack = onBack,
             )
 
             LazyColumn(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Large),
+                verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
+                contentPadding = PaddingValues(vertical = FeniqoSpacing.Medium),
             ) {
                 item {
                     Column {
                         Text(
                             text = "Hesabını silmeden önce",
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Hesabını silmeden önce aşağıdaki adımları gözden geçirmeni öneririz.",
+                            text = "Hesabını silmek kalıcı bir işlemdir. Devam etmeden önce aşağıdaki adımları tamamlamanı öneririz.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
 
+                // Hazırlık Adımları Kart Grubu
                 item {
                     SettingsGroupCard {
                         SettingsRowItem(
-                            title = "Verilerini dışa aktar",
-                            subtitle = "Kendi verilerinin bir kopyasını indir.",
-                            icon = Icons.Outlined.FileDownload,
+                            title = "Verilerini yedekle",
+                            subtitle = "Kişisel kategorilerini ve işlemlerini dışa aktararak cihazında saklayabilirsin. Makbuzlar ve ortak alanlar bu yedeğe dahil değildir.",
+                            icon = Icons.Outlined.Description,
                             onClick = onExportData,
                         )
                         SettingsRowItem(
-                            title = "Paylaşılan alanlarını kontrol et",
-                            subtitle = "Seninle paylaşılan içerikleri gözden geçir.",
+                            title = "Ortak alanlarını kontrol et",
+                            subtitle = "Paylaştığın bütçe, hedef veya ortak alanlarda başka kişilerin erişimi olabilir.",
                             icon = Icons.Outlined.Group,
-                            showDivider = false,
                             onClick = onCheckSharedSpaces,
+                        )
+                        SettingsRowItem(
+                            title = "Eşitlenmemiş değişiklikleri incele",
+                            subtitle = "Henüz eşitlenmemiş işlemlerinin olup olmadığını kontrol et.",
+                            icon = Icons.Outlined.Sync,
+                            showDivider = false,
+                            onClick = onInspectSync,
                         )
                     }
                 }
 
+                // Pano A4: Kırmızı Şeffaf Bilgilendirme Kutusu
                 item {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                    Card(
+                        shape = RoundedCornerShape(FeniqoRadius.Medium),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(0xFFFDECEA),
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            Color(0xFFE57373).copy(alpha = 0.4f),
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Silme kapsamı ve saklama koşulları onaydan önce gösterilir.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        Row(
+                            modifier = Modifier.padding(FeniqoSpacing.Large),
+                            verticalAlignment = Alignment.Top,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.ErrorOutline,
+                                contentDescription = null,
+                                tint = Color(0xFFD32F2F),
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .padding(top = 2.dp),
+                            )
+                            Spacer(modifier = Modifier.width(FeniqoSpacing.Medium))
+                            Column {
+                                Text(
+                                    text = "Kalıcı silme şu anda destek üzerinden yürütülür. Bu ekrandan veriler silinmez.",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = Color(0xFFD32F2F),
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Hesabını silmek için bizimle iletişime geçmen gerekmektedir.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFFD32F2F).copy(alpha = 0.9f),
+                                )
+                            }
+                        }
                     }
                 }
             }
 
+            // Alt Eylem Butonları: "Verilerimi dışa aktar" ve "Destekle iletişime geç"
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
             ) {
-                OutlinedButton(
-                    onClick = onBack,
+                Button(
+                    onClick = onExportData,
                     shape = RoundedCornerShape(FeniqoRadius.Medium),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = FeniqoSageGreen,
+                        contentColor = FeniqoPureWhite,
+                    ),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(FeniqoTouchTarget.PrimaryAction),
                 ) {
-                    Text("Vazgeç", fontWeight = FontWeight.SemiBold)
+                    Icon(
+                        imageVector = Icons.Outlined.FileDownload,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
+                    Text("Verilerimi dışa aktar", fontWeight = FontWeight.SemiBold)
                 }
 
-                Button(
-                    onClick = onProceedWithDeletion,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.12f),
-                        contentColor = MaterialTheme.colorScheme.error,
-                    ),
+                OutlinedButton(
+                    onClick = onContactSupport,
                     shape = RoundedCornerShape(FeniqoRadius.Medium),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(FeniqoTouchTarget.PrimaryAction),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
                 ) {
-                    Text("Silme adımlarına devam et", fontWeight = FontWeight.SemiBold)
+                    Icon(
+                        imageVector = Icons.Outlined.ChatBubbleOutline,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
+                    Text("Destekle iletişime geç", fontWeight = FontWeight.SemiBold)
                 }
             }
         }

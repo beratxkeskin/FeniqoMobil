@@ -27,6 +27,8 @@ import com.feniqo.mobile.domain.usecase.TransactionCommand
 import com.feniqo.mobile.domain.usecase.UpdateTransactionUseCase
 import com.feniqo.mobile.domain.validation.InstallmentPlanCalculator
 import com.feniqo.mobile.domain.validation.InstallmentPlanError
+import com.feniqo.mobile.domain.model.TransactionParticipantShare
+import com.feniqo.mobile.domain.model.TransactionSplitMode
 import com.feniqo.mobile.domain.validation.InstallmentPlanResult
 import com.feniqo.mobile.domain.validation.TransactionValidationError
 import com.feniqo.mobile.domain.validation.TransactionValidationResult
@@ -36,6 +38,7 @@ import com.feniqo.mobile.presentation.common.CurrentDateProvider
 import com.feniqo.mobile.presentation.common.CurrentInstantProvider
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.common.toFinanceUiMessage
+import com.feniqo.mobile.presentation.transaction.CustomSplitUiHelper
 import com.feniqo.mobile.presentation.workspace.WorkspaceMemberUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -171,6 +174,8 @@ class TransactionFormViewModel @Inject constructor(
         val hasReceipt: Boolean = false,
         val paidByUserId: EntityId? = null,
         val participantUserIds: Set<EntityId> = emptySet(),
+        val splitMode: TransactionSplitMode = TransactionSplitMode.EQUAL,
+        val customSharesText: Map<EntityId, String> = emptyMap(),
     )
 
     private var initialSnapshot: FormSnapshot? = if (!isEditMode) {
@@ -188,6 +193,8 @@ class TransactionFormViewModel @Inject constructor(
             hasReceipt = false,
             paidByUserId = null,
             participantUserIds = emptySet(),
+            splitMode = TransactionSplitMode.EQUAL,
+            customSharesText = emptyMap(),
         )
     } else {
         null
@@ -195,6 +202,13 @@ class TransactionFormViewModel @Inject constructor(
 
     private fun calculateHasUnsavedChanges(state: TransactionFormUiState): Boolean {
         val snapshot = initialSnapshot ?: return false
+        val splitChanged = state.isSharedExpense && (
+            state.selectedPaidByUserId != snapshot.paidByUserId ||
+            state.selectedParticipantUserIds != snapshot.participantUserIds ||
+            state.splitMode != snapshot.splitMode ||
+            (state.splitMode == TransactionSplitMode.CUSTOM &&
+                state.customSharesText.mapValues { it.value.trim() } != snapshot.customSharesText.mapValues { it.value.trim() })
+        )
         return state.amountText != snapshot.amountText ||
             state.currency != snapshot.currency ||
             state.type != snapshot.type ||
@@ -206,7 +220,7 @@ class TransactionFormViewModel @Inject constructor(
             state.isInstallmentEnabled != snapshot.isInstallmentEnabled ||
             (state.isInstallmentEnabled && state.installmentCountText != snapshot.installmentCountText) ||
             state.hasReceipt != snapshot.hasReceipt ||
-            (state.isSharedExpense && (state.selectedPaidByUserId != snapshot.paidByUserId || state.selectedParticipantUserIds != snapshot.participantUserIds))
+            splitChanged
     }
 
     private fun updateStateWithDirtyCheck(transform: (TransactionFormUiState) -> TransactionFormUiState) {
@@ -363,34 +377,70 @@ class TransactionFormViewModel @Inject constructor(
                         .map { (uiMembers, currentUserId) ->
                             _uiState.update { state ->
                                 val activeMemberIds = uiMembers.map { it.userId }.toSet()
+                                val isCustomMode = state.splitMode == TransactionSplitMode.CUSTOM
 
-                                var selectedPayer = state.selectedPaidByUserId
-                                var selectedParticipants = state.selectedParticipantUserIds.filter { activeMemberIds.contains(it) }.toSet()
+                                val selectedPayer: EntityId?
+                                val selectedParticipants: Set<EntityId>
+                                val allDisplayMembers: List<WorkspaceMemberUiModel>
 
-                                if (selectedPayer != null && !activeMemberIds.contains(selectedPayer)) {
-                                    selectedPayer = selectedParticipants.firstOrNull()
-                                        ?: (if (currentUserId != null && activeMemberIds.contains(currentUserId)) currentUserId else uiMembers.firstOrNull()?.userId)
-                                } else if (selectedPayer == null) {
-                                    selectedPayer = if (currentUserId != null && activeMemberIds.contains(currentUserId)) currentUserId else uiMembers.firstOrNull()?.userId
-                                }
+                                if (isCustomMode) {
+                                    // CUSTOM formunda üyelik Flow'u payer/katılımcıları sessizce değiştirmesin.
+                                    // Kullanıcının oluşturduğu veya Room'dan yüklenen dağılımı koru.
+                                    selectedPayer = state.selectedPaidByUserId
+                                    selectedParticipants = state.selectedParticipantUserIds
 
-                                if (selectedPayer != null && !selectedParticipants.contains(selectedPayer)) {
-                                    selectedParticipants = selectedParticipants + selectedPayer
-                                }
+                                    // Ayrılan üyeleri listeye isActive = false olarak ekle ki UI'da invalid olduğu görünsün
+                                    val departedUserIds = (selectedParticipants + listOfNotNull(selectedPayer))
+                                        .filter { it !in activeMemberIds }
+                                        .toSet()
 
-                                if (selectedParticipants.isEmpty() && selectedPayer != null) {
-                                    selectedParticipants = setOf(selectedPayer)
-                                }
+                                    val departedMembers = departedUserIds.map { departedId ->
+                                        val existingName = state.workspaceMembers.find { it.userId == departedId }?.displayName
+                                            ?.removeSuffix(" (Ayrıldı)")
+                                        val name = existingName ?: "Kullanıcı ${departedId.value.take(8)}"
+                                        WorkspaceMemberUiModel(
+                                            userId = departedId,
+                                            displayName = "$name (Ayrıldı)",
+                                            role = com.feniqo.mobile.domain.model.WorkspaceRole.VIEWER,
+                                            isCurrentUser = (departedId == currentUserId),
+                                            isActive = false,
+                                        )
+                                    }
+                                    allDisplayMembers = uiMembers + departedMembers
+                                } else {
+                                    // EQUAL modunda mevcut reconciliation davranışı
+                                    var payerCandidate = state.selectedPaidByUserId
+                                    var participantsCandidate = state.selectedParticipantUserIds.filter { activeMemberIds.contains(it) }.toSet()
 
-                                if (!isEditMode && initialSnapshot != null && initialSnapshot?.paidByUserId == null && selectedPayer != null) {
-                                    initialSnapshot = initialSnapshot?.copy(
-                                        paidByUserId = selectedPayer,
-                                        participantUserIds = selectedParticipants,
-                                    )
+                                    if (payerCandidate != null && !activeMemberIds.contains(payerCandidate)) {
+                                        payerCandidate = participantsCandidate.firstOrNull()
+                                            ?: (if (currentUserId != null && activeMemberIds.contains(currentUserId)) currentUserId else uiMembers.firstOrNull()?.userId)
+                                    } else if (payerCandidate == null) {
+                                        payerCandidate = if (currentUserId != null && activeMemberIds.contains(currentUserId)) currentUserId else uiMembers.firstOrNull()?.userId
+                                    }
+
+                                    if (payerCandidate != null && !participantsCandidate.contains(payerCandidate)) {
+                                        participantsCandidate = participantsCandidate + payerCandidate
+                                    }
+
+                                    if (participantsCandidate.isEmpty() && payerCandidate != null) {
+                                        participantsCandidate = setOf(payerCandidate)
+                                    }
+
+                                    if (!isEditMode && initialSnapshot != null && initialSnapshot?.paidByUserId == null && payerCandidate != null) {
+                                        initialSnapshot = initialSnapshot?.copy(
+                                            paidByUserId = payerCandidate,
+                                            participantUserIds = participantsCandidate,
+                                        )
+                                    }
+
+                                    selectedPayer = payerCandidate
+                                    selectedParticipants = participantsCandidate
+                                    allDisplayMembers = uiMembers
                                 }
 
                                 val updated = state.copy(
-                                    workspaceMembers = uiMembers,
+                                    workspaceMembers = allDisplayMembers,
                                     isLoadingWorkspaceMembers = false,
                                     selectedPaidByUserId = selectedPayer,
                                     selectedParticipantUserIds = selectedParticipants,
@@ -457,6 +507,10 @@ class TransactionFormViewModel @Inject constructor(
                 }
 
                 val amountText = formatMinorUnitsToInputText(transaction.amount.amountMinor, transaction.amount.currency)
+                val loadedSplitMode = transaction.splitMode
+                val loadedCustomShares = transaction.participantShares.associate {
+                    it.userId to formatMinorUnitsToInputText(it.amountMinor, transaction.amount.currency)
+                }
 
                 initialSnapshot = FormSnapshot(
                     amountText = amountText,
@@ -472,6 +526,8 @@ class TransactionFormViewModel @Inject constructor(
                     hasReceipt = transaction.receiptPath != null,
                     paidByUserId = transaction.paidByUserId,
                     participantUserIds = transaction.participantUserIds.toSet(),
+                    splitMode = loadedSplitMode,
+                    customSharesText = loadedCustomShares,
                 )
 
                 _uiState.update {
@@ -496,10 +552,13 @@ class TransactionFormViewModel @Inject constructor(
                         hasReceipt = transaction.receiptPath != null,
                         selectedPaidByUserId = transaction.paidByUserId,
                         selectedParticipantUserIds = transaction.participantUserIds.toSet(),
+                        splitMode = loadedSplitMode,
+                        customSharesText = loadedCustomShares,
                         isLoadingTransaction = false,
                         hasUnsavedChanges = false,
                     )
                 }
+
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
@@ -724,6 +783,44 @@ class TransactionFormViewModel @Inject constructor(
         }
     }
 
+    fun onSplitModeChanged(mode: TransactionSplitMode) {
+        updateStateWithDirtyCheck {
+            it.copy(
+                splitMode = mode,
+                splitError = null,
+                customShareErrors = emptyMap(),
+            )
+        }
+    }
+
+    fun onCustomShareChanged(userId: EntityId, text: String) {
+        updateStateWithDirtyCheck {
+            it.copy(
+                customSharesText = it.customSharesText + (userId to text),
+                customShareErrors = it.customShareErrors - userId,
+                splitError = null,
+            )
+        }
+    }
+
+    fun onSplitDetailsApplied(
+        payer: EntityId?,
+        participants: Set<EntityId>,
+        splitMode: TransactionSplitMode,
+        customSharesText: Map<EntityId, String>,
+    ) {
+        updateStateWithDirtyCheck {
+            it.copy(
+                selectedPaidByUserId = payer,
+                selectedParticipantUserIds = participants,
+                splitMode = splitMode,
+                customSharesText = customSharesText,
+                splitError = null,
+                customShareErrors = emptyMap(),
+            )
+        }
+    }
+
     fun consumeMessage() {
         _uiState.update { it.copy(generalMessage = null) }
     }
@@ -822,23 +919,88 @@ class TransactionFormViewModel @Inject constructor(
 
         // 6. Split Doğrulaması
         var splitError: TransactionFormFieldError? = null
+        val customShareErrors = mutableMapOf<EntityId, TransactionFormFieldError>()
+        var parsedParticipantShares: List<TransactionParticipantShare> = emptyList()
+
+        if (currentState.isSharedExpense &&
+            currentState.splitMode == TransactionSplitMode.CUSTOM &&
+            currentState.isInstallmentOptionAvailable &&
+            currentState.isInstallmentEnabled
+        ) {
+            splitError = TransactionFormFieldError.SPLIT_CUSTOM_NOT_SUPPORTED_WITH_INSTALLMENT
+            installmentError = TransactionFormFieldError.SPLIT_CUSTOM_NOT_SUPPORTED_WITH_INSTALLMENT
+        }
+
         if (currentState.isSharedExpense) {
             val payer = currentState.selectedPaidByUserId
             val participants = currentState.selectedParticipantUserIds
-            val memberIds = currentState.workspaceMembers.map { it.userId }.toSet()
+            val activeMemberIds = currentState.workspaceMembers.filter { it.isActive }.map { it.userId }.toSet()
 
             if (currentState.isLoadingWorkspaceMembers) {
                 splitError = TransactionFormFieldError.SPLIT_PAYER_REQUIRED
-            } else if (payer == null || !memberIds.contains(payer)) {
+            } else if (payer == null) {
                 splitError = TransactionFormFieldError.SPLIT_PAYER_REQUIRED
-            } else if (participants.isEmpty() || !participants.all { memberIds.contains(it) }) {
+            } else if (payer !in activeMemberIds) {
+                splitError = if (currentState.splitMode == TransactionSplitMode.CUSTOM) {
+                    TransactionFormFieldError.SPLIT_CUSTOM_MEMBER_NOT_ACTIVE
+                } else {
+                    TransactionFormFieldError.SPLIT_PAYER_REQUIRED
+                }
+            } else if (participants.isEmpty()) {
+                splitError = TransactionFormFieldError.SPLIT_PARTICIPANTS_REQUIRED
+            } else if (currentState.splitMode == TransactionSplitMode.EQUAL && !participants.all { it in activeMemberIds }) {
                 splitError = TransactionFormFieldError.SPLIT_PARTICIPANTS_REQUIRED
             } else if (!participants.contains(payer)) {
                 splitError = TransactionFormFieldError.SPLIT_PAYER_NOT_IN_PARTICIPANTS
+            } else if (currentState.splitMode == TransactionSplitMode.CUSTOM) {
+                val sharesList = mutableListOf<TransactionParticipantShare>()
+                for (participantId in participants) {
+                    if (participantId !in activeMemberIds) {
+                        customShareErrors[participantId] = TransactionFormFieldError.SPLIT_CUSTOM_MEMBER_NOT_ACTIVE
+                    }
+                    val shareText = currentState.customSharesText[participantId].orEmpty()
+                    val isPayer = (participantId == payer)
+                    val (minor, err) = CustomSplitUiHelper.parseShare(shareText, isPayer, currentState.currency)
+                    if (err != null || minor == null) {
+                        customShareErrors[participantId] = customShareErrors[participantId] ?: (err ?: TransactionFormFieldError.SPLIT_CUSTOM_SHARE_INVALID)
+                    } else {
+                        sharesList.add(TransactionParticipantShare(participantId, minor))
+                    }
+                }
+
+                if (customShareErrors.isEmpty() && splitError == null && amountMinor != null) {
+                    val validation = TransactionValidationRules.validateSplit(
+                        workspaceId = currentState.activeWorkspaceId,
+                        type = currentState.type,
+                        amountMinor = amountMinor,
+                        paidByUserId = payer,
+                        participantUserIds = participants.toList(),
+                        splitMode = TransactionSplitMode.CUSTOM,
+                        participantShares = sharesList,
+                        activeMemberUserIds = activeMemberIds,
+                    )
+                    when (validation) {
+                        is TransactionValidationResult.Valid -> {
+                            parsedParticipantShares = sharesList
+                        }
+                        is TransactionValidationResult.Invalid -> {
+                            splitError = when (validation.error) {
+                                TransactionValidationError.CUSTOM_SPLIT_TOTAL_MISMATCH -> TransactionFormFieldError.SPLIT_CUSTOM_TOTAL_MISMATCH
+                                TransactionValidationError.CUSTOM_SPLIT_AMOUNT_OVERFLOW -> TransactionFormFieldError.SPLIT_CUSTOM_TOTAL_OVERFLOW
+                                TransactionValidationError.CUSTOM_SPLIT_ZERO_SHARE_NOT_ALLOWED -> TransactionFormFieldError.SPLIT_CUSTOM_NON_PAYER_ZERO_SHARE_NOT_ALLOWED
+                                TransactionValidationError.CUSTOM_SPLIT_MEMBER_NOT_ACTIVE -> TransactionFormFieldError.SPLIT_CUSTOM_MEMBER_NOT_ACTIVE
+                                TransactionValidationError.CUSTOM_SPLIT_PARTICIPANT_SET_MISMATCH -> TransactionFormFieldError.SPLIT_PARTICIPANT_SET_MISMATCH
+                                TransactionValidationError.CUSTOM_SPLIT_SHARES_REQUIRED -> TransactionFormFieldError.SPLIT_CUSTOM_SHARES_REQUIRED
+                                TransactionValidationError.CUSTOM_SPLIT_PAYER_NOT_PARTICIPANT -> TransactionFormFieldError.SPLIT_PAYER_NOT_IN_PARTICIPANTS
+                                else -> TransactionFormFieldError.SPLIT_CUSTOM_TOTAL_MISMATCH
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        if (amountError != null || categoryError != null || dateError != null || titleError != null || noteError != null || installmentError != null || splitError != null || amountMinor == null || date == null) {
+        if (amountError != null || categoryError != null || dateError != null || titleError != null || noteError != null || installmentError != null || splitError != null || customShareErrors.isNotEmpty() || amountMinor == null || date == null) {
             _uiState.update {
                 it.copy(
                     amountError = amountError,
@@ -849,6 +1011,7 @@ class TransactionFormViewModel @Inject constructor(
                     descriptionError = titleError,
                     installmentCountError = installmentError,
                     splitError = splitError,
+                    customShareErrors = customShareErrors,
                     generalMessage = null,
                 )
             }
@@ -872,6 +1035,7 @@ class TransactionFormViewModel @Inject constructor(
                 descriptionError = null,
                 installmentCountError = null,
                 splitError = null,
+                customShareErrors = emptyMap(),
                 generalMessage = null,
             )
         }
@@ -892,6 +1056,8 @@ class TransactionFormViewModel @Inject constructor(
                         paidByUserId = paidByUserId,
                         participantUserIds = participantUserIds,
                         note = normalizedNote,
+                        splitMode = if (currentState.isSharedExpense) currentState.splitMode else TransactionSplitMode.EQUAL,
+                        participantShares = if (currentState.isSharedExpense && currentState.splitMode == TransactionSplitMode.CUSTOM) parsedParticipantShares else emptyList(),
                     )
                     when (val result = updateTransactionUseCase(command, today)) {
                         is RepositoryResult.Success -> {
@@ -925,7 +1091,7 @@ class TransactionFormViewModel @Inject constructor(
                         is RepositoryResult.Success -> {
                             initialSnapshot = null
                             _uiState.update { it.copy(hasUnsavedChanges = false) }
-                            _events.send(TransactionFormEvent.TransactionCreated(result.value))
+                            _events.send(TransactionFormEvent.TransactionCreated(result.value.firstTransactionId))
                         }
                         is RepositoryResult.Failure -> {
                             _uiState.update {
@@ -949,6 +1115,8 @@ class TransactionFormViewModel @Inject constructor(
                         paidByUserId = paidByUserId,
                         participantUserIds = participantUserIds,
                         note = normalizedNote,
+                        splitMode = if (currentState.isSharedExpense) currentState.splitMode else TransactionSplitMode.EQUAL,
+                        participantShares = if (currentState.isSharedExpense && currentState.splitMode == TransactionSplitMode.CUSTOM) parsedParticipantShares else emptyList(),
                     )
                     when (val result = addTransactionUseCase(command, today, now)) {
                         is RepositoryResult.Success -> {

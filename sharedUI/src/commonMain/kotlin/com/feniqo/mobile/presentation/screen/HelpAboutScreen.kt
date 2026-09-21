@@ -1,5 +1,6 @@
 package com.feniqo.mobile.presentation.screen
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -168,20 +169,23 @@ fun HelpAboutScreen(
 }
 
 /**
- * 24 Geri Bildirim Formu Ekranı.
+ * Pano B4: Geri Bildirim Formu Ekranı.
+ *
+ * Kullanıcının öneri veya hata bildirimini e-posta paylaşım intent'ine hazırlar.
+ * Sunucuya sahte gönderim yapmaz; parola ve finansal veri paylaşılmaması için uyarır.
  */
 @Composable
 fun FeedbackScreen(
     initialIsBug: Boolean = false,
     onBack: () -> Unit,
-    onSendFeedback: (isBug: Boolean, subject: String, message: String, hasAttachment: Boolean) -> Unit,
+    onShareFeedback: (isBug: Boolean, subject: String, message: String) -> Unit,
     onPickAttachment: () -> Unit,
     hasAttachment: Boolean,
     attachmentName: String?,
     onRemoveAttachment: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var isBug by remember { mutableStateOf(initialIsBug) }
+    var isBug by remember(initialIsBug) { mutableStateOf(initialIsBug) }
     var subject by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
 
@@ -195,190 +199,292 @@ fun FeedbackScreen(
                 .padding(horizontal = FeniqoSpacing.Screen, vertical = FeniqoSpacing.Medium),
         ) {
             SettingsTopBar(
-                title = "Geri bildirim",
+                title = if (isBug) "Hata bildir" else "Geri bildirim gönder",
                 onBack = onBack,
             )
 
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
+                contentPadding = PaddingValues(vertical = FeniqoSpacing.Medium),
             ) {
-                // Öneri / Hata Seçici Sekmeleri
+                item {
+                    Text(
+                        text = if (isBug) {
+                            "Karşılaştığın bir sorunu bizimle paylaş. Ekran görüntüsü ve adımları eklemen çözmemizi hızlandırır."
+                        } else {
+                            "Deneyimini bizimle paylaş. Önerilerin ve geri bildirimlerin Feniqo'yu daha iyi hale getirmemize yardımcı olur."
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                // Pano B4: Öneri / Hata Seçici Çipleri
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
                     ) {
-                        OutlinedButton(
-                            onClick = { isBug = false },
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = if (!isBug) FeniqoSageGreen.copy(alpha = 0.12f) else Color.Transparent,
-                            ),
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (!isBug) FeniqoSageGreen else MaterialTheme.colorScheme.surface,
                             border = androidx.compose.foundation.BorderStroke(
                                 1.dp,
                                 if (!isBug) FeniqoSageGreen else MaterialTheme.colorScheme.outlineVariant,
                             ),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                                .clickable { isBug = false },
                         ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Lightbulb,
-                                contentDescription = null,
-                                tint = if (!isBug) FeniqoSageGreen else MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
-                            Text(
-                                text = "Öneri",
-                                color = if (!isBug) FeniqoSageGreen else MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.SemiBold,
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Lightbulb,
+                                    contentDescription = null,
+                                    tint = if (!isBug) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Öneri",
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (!isBug) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
 
-                        OutlinedButton(
-                            onClick = { isBug = true },
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = if (isBug) MaterialTheme.colorScheme.error.copy(alpha = 0.12f) else Color.Transparent,
-                            ),
+                        val bugActiveColor = Color(0xFFD32F2F)
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (isBug) bugActiveColor else MaterialTheme.colorScheme.surface,
                             border = androidx.compose.foundation.BorderStroke(
                                 1.dp,
-                                if (isBug) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant,
+                                if (isBug) bugActiveColor else MaterialTheme.colorScheme.outlineVariant,
                             ),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                                .clickable { isBug = true },
                         ) {
-                            Icon(
-                                imageVector = Icons.Outlined.BugReport,
-                                contentDescription = null,
-                                tint = if (isBug) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
-                            Text(
-                                text = "Hata",
-                                color = if (isBug) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.SemiBold,
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.BugReport,
+                                    contentDescription = null,
+                                    tint = if (isBug) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Hata",
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isBug) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 }
 
                 // Konu Alanı
                 item {
-                    Text(
-                        text = "Konu",
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    OutlinedTextField(
-                        value = subject,
-                        onValueChange = { subject = it },
-                        placeholder = { Text("Konu başlığını yaz") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(FeniqoRadius.Medium),
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            focusedBorderColor = FeniqoSageGreen,
-                        ),
-                    )
+                    Column {
+                        Text(
+                            text = "Konu",
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedTextField(
+                            value = subject,
+                            onValueChange = { subject = it },
+                            placeholder = { Text("Kısa bir başlık yaz") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(FeniqoRadius.Medium),
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                focusedBorderColor = FeniqoSageGreen,
+                            ),
+                        )
+                    }
                 }
 
-                // Mesaj Alanı
+                // Mesaj Alanı ve Sayaç (0/1000)
                 item {
-                    Text(
-                        text = "Mesaj",
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    OutlinedTextField(
-                        value = message,
-                        onValueChange = { message = it },
-                        placeholder = { Text("Mesajını buraya yaz...") },
-                        minLines = 4,
-                        maxLines = 8,
-                        shape = RoundedCornerShape(FeniqoRadius.Medium),
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            focusedBorderColor = FeniqoSageGreen,
-                        ),
-                    )
+                    Column {
+                        Text(
+                            text = "Mesaj",
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedTextField(
+                            value = message,
+                            onValueChange = { if (it.length <= 1000) message = it },
+                            placeholder = { Text("Detaylarını bizimle paylaş...") },
+                            minLines = 4,
+                            maxLines = 8,
+                            shape = RoundedCornerShape(FeniqoRadius.Medium),
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                focusedBorderColor = FeniqoSageGreen,
+                            ),
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "${message.length}/1000",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.align(Alignment.End),
+                        )
+                    }
                 }
 
-                // Ekran Görüntüsü Ekle
+                // Ekran Görüntüsü (İsteğe Bağlı)
                 item {
-                    Card(
-                        shape = RoundedCornerShape(FeniqoRadius.Medium),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
+                    Column {
+                        Text(
+                            text = "Ekran görüntüsü (isteğe bağlı)",
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(FeniqoSpacing.Large),
+                            horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(Icons.Outlined.AttachFile, null, tint = FeniqoSageGreen)
-                            Spacer(modifier = Modifier.width(FeniqoSpacing.Medium))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = if (hasAttachment) (attachmentName ?: "Ekran görüntüsü eklendi") else "Ekran görüntüsü ekle",
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                                )
-                                Text(
-                                    text = if (hasAttachment) "Ekli dosyayı değiştirmek için dokunun" else "(isteğe bağlı)",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
                             if (hasAttachment) {
-                                IconButton(onClick = onRemoveAttachment) {
-                                    Icon(Icons.Outlined.Close, "Eki kaldır", tint = MaterialTheme.colorScheme.error)
+                                // Ekli dosya kartı + kaldır butonu
+                                Card(
+                                    shape = RoundedCornerShape(FeniqoRadius.Medium),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                                    modifier = Modifier.height(56.dp),
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Icon(Icons.Outlined.Image, null, tint = FeniqoSageGreen, modifier = Modifier.size(20.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = (attachmentName ?: "Ekran görüntüsü").take(16),
+                                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        IconButton(
+                                            onClick = onRemoveAttachment,
+                                            modifier = Modifier.size(24.dp),
+                                        ) {
+                                            Icon(Icons.Outlined.Close, contentDescription = "Kaldır", tint = MaterialTheme.colorScheme.error)
+                                        }
+                                    }
                                 }
-                            } else {
-                                TextButton(onClick = onPickAttachment) {
-                                    Text("Seç", color = FeniqoSageGreen, fontWeight = FontWeight.SemiBold)
-                                }
+                            }
+
+                            // Ekle Butonu
+                            OutlinedButton(
+                                onClick = onPickAttachment,
+                                shape = RoundedCornerShape(FeniqoRadius.Medium),
+                                modifier = Modifier.height(48.dp),
+                            ) {
+                                Icon(Icons.Outlined.Add, null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Ekle")
                             }
                         }
                     }
                 }
 
-                // Gizlilik Uyarısı
+                // Pano B4: Kırmızı Güvenlik Uyarısı
                 item {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                    Card(
+                        shape = RoundedCornerShape(FeniqoRadius.Medium),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFDECEA)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE57373).copy(alpha = 0.4f)),
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Kişisel ve finansal bilgilerini paylaşma.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        Row(
+                            modifier = Modifier.padding(FeniqoSpacing.Large),
+                            verticalAlignment = Alignment.Top,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.ErrorOutline,
+                                contentDescription = null,
+                                tint = Color(0xFFD32F2F),
+                                modifier = Modifier.size(24.dp).padding(top = 2.dp),
+                            )
+                            Spacer(modifier = Modifier.width(FeniqoSpacing.Medium))
+                            Column {
+                                Text(
+                                    text = "Parola ve finansal ayrıntı paylaşma",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = Color(0xFFD32F2F),
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Güvenliğin için lütfen parola, kart bilgileri, bakiye gibi hassas finansal bilgileri gönderme.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFFD32F2F).copy(alpha = 0.9f),
+                                )
+                            }
+                        }
                     }
                 }
             }
 
-            // Gönder Butonu
+            // Geri Bildirimi Paylaş Butonu
             Button(
-                onClick = { onSendFeedback(isBug, subject, message, hasAttachment) },
+                onClick = { onShareFeedback(isBug, subject, message) },
                 enabled = subject.isNotBlank() && message.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = FeniqoSageGreen),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isBug) Color(0xFFD32F2F) else FeniqoSageGreen,
+                    contentColor = Color.White,
+                ),
                 shape = RoundedCornerShape(FeniqoRadius.Medium),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(FeniqoTouchTarget.PrimaryAction),
             ) {
-                Text("Gönder", fontWeight = FontWeight.SemiBold)
+                Icon(
+                    imageVector = Icons.Outlined.Share,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
+                Text("Geri bildirimi paylaş", fontWeight = FontWeight.SemiBold)
+            }
+
+            // Alt Bilgilendirme Notu
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = FeniqoSpacing.Small),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Feniqo sunucusuna otomatik gönderilmez. Cihazındaki paylaşım seçenekleri (e-posta, mesajlaşma vb.) üzerinden iletilmek üzere hazırlanır.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

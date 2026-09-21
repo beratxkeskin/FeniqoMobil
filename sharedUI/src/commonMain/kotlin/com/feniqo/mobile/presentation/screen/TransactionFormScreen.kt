@@ -77,10 +77,12 @@ import com.feniqo.mobile.presentation.component.TransactionPaymentMethodSelector
 import com.feniqo.mobile.presentation.component.TransactionSplitSection
 import com.feniqo.mobile.presentation.component.TransactionTitleField
 import com.feniqo.mobile.presentation.component.TransactionTypeSelector
+import com.feniqo.mobile.domain.model.TransactionSplitMode
 import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTheme
 import com.feniqo.mobile.presentation.theme.FeniqoTypographyTokens
+import com.feniqo.mobile.presentation.transaction.CustomSplitUiHelper
 import com.feniqo.mobile.presentation.transaction.InstallmentDisplayModel
 import com.feniqo.mobile.presentation.transaction.TransactionCategoryOptionUiModel
 import com.feniqo.mobile.presentation.transaction.TransactionFormFieldError
@@ -114,6 +116,12 @@ fun TransactionFormScreen(
     onAddCategory: (TransactionType) -> Unit = {},
     onPaidByUserSelected: (EntityId) -> Unit = {},
     onParticipantToggled: (EntityId) -> Unit = {},
+    onSplitDetailsApplied: (
+        payer: EntityId?,
+        participants: Set<EntityId>,
+        splitMode: TransactionSplitMode,
+        customSharesText: Map<EntityId, String>,
+    ) -> Unit = { _, _, _, _ -> },
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -182,6 +190,7 @@ fun TransactionFormScreen(
                     onRemoveReceipt = onRemoveReceipt,
                     onPaidByUserSelected = onPaidByUserSelected,
                     onParticipantToggled = onParticipantToggled,
+                    onSplitDetailsApplied = onSplitDetailsApplied,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues),
@@ -289,6 +298,12 @@ private fun TransactionFormContent(
     onRemoveReceipt: () -> Unit,
     onPaidByUserSelected: (EntityId) -> Unit,
     onParticipantToggled: (EntityId) -> Unit,
+    onSplitDetailsApplied: (
+        payer: EntityId?,
+        participants: Set<EntityId>,
+        splitMode: TransactionSplitMode,
+        customSharesText: Map<EntityId, String>,
+    ) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
@@ -407,8 +422,8 @@ private fun TransactionFormContent(
         var isMoreDetailsExpanded by remember { mutableStateOf(false) }
 
         // Yalnız ayrıntı alanlarında doğrulama hatası oluştuğunda akordeonu otomatik aç
-        LaunchedEffect(uiState.noteError, uiState.installmentCountError, uiState.splitError) {
-            if (uiState.noteError != null || uiState.installmentCountError != null || uiState.splitError != null) {
+        LaunchedEffect(uiState.noteError, uiState.installmentCountError, uiState.splitError, uiState.customShareErrors) {
+            if (uiState.noteError != null || uiState.installmentCountError != null || uiState.splitError != null || uiState.customShareErrors.isNotEmpty()) {
                 isMoreDetailsExpanded = true
             }
         }
@@ -510,15 +525,62 @@ private fun TransactionFormContent(
                                 onRemoveReceipt = { draft = draft.copy(hasReceipt = false) }, enabled = isFormEnabled)
                         }
                         if (uiState.isSharedExpense) {
-                            TransactionSplitSection(members = uiState.workspaceMembers,
+                            val activeMemberIds = remember(uiState.workspaceMembers) {
+                                uiState.workspaceMembers.filter { it.isActive }.map { it.userId }.toSet()
+                            }
+                            val liveDraftErrors = remember(
+                                uiState.currency,
+                                draft.payer,
+                                draft.participants,
+                                draft.customSharesText,
+                                uiState.customShareErrors,
+                                activeMemberIds,
+                            ) {
+                                CustomSplitUiHelper.validateDraftParticipantShares(
+                                    currency = uiState.currency,
+                                    payer = draft.payer,
+                                    participants = draft.participants,
+                                    customSharesText = draft.customSharesText,
+                                    priorSubmitErrors = uiState.customShareErrors,
+                                    activeMembers = activeMemberIds,
+                                )
+                            }
+                            TransactionSplitSection(
+                                members = uiState.workspaceMembers,
                                 isLoading = uiState.isLoadingWorkspaceMembers,
                                 selectedPaidByUserId = draft.payer,
                                 selectedParticipantUserIds = draft.participants,
                                 onPaidByUserSelected = { draft = draft.selectPayer(it) },
                                 onParticipantToggled = { draft = draft.toggleParticipant(it) },
-                                errorText = uiState.splitError?.toDisplayText(), enabled = isFormEnabled && uiState.canManageSplit)
-                            Text("Harcamalar seçilen katılımcılar arasında eşit paylaşılır.",
-                                style = MaterialTheme.typography.bodySmall)
+                                errorText = uiState.splitError?.toDisplayText(),
+                                enabled = isFormEnabled && uiState.canManageSplit,
+                                splitMode = draft.splitMode,
+                                customSharesText = draft.customSharesText,
+                                customShareErrors = liveDraftErrors,
+                                currency = uiState.currency,
+                                amountText = uiState.amountText,
+                                isInstallmentOptionAvailable = uiState.isInstallmentOptionAvailable,
+                                isInstallmentEnabled = draft.installmentEnabled,
+                                onToggleInstallment = { draft = draft.copy(installmentEnabled = it) },
+                                onSplitModeChanged = { draft = draft.setSplitMode(it) },
+                                onCustomShareChanged = { userId, text -> draft = draft.updateCustomShare(userId, text) },
+                                onApplyPayerRemainder = {
+                                    val isPayerActive = draft.payer != null && draft.payer in activeMemberIds
+                                    val areAllParticipantsActive = draft.participants.all { it in activeMemberIds }
+                                    if (isPayerActive && areAllParticipantsActive) {
+                                        draft = draft.copy(
+                                            customSharesText = CustomSplitUiHelper.applyPayerRemainder(
+                                                amountText = uiState.amountText,
+                                                currency = uiState.currency,
+                                                payer = draft.payer,
+                                                participants = draft.participants,
+                                                customSharesText = draft.customSharesText,
+                                                activeMembers = activeMemberIds,
+                                            ),
+                                        )
+                                    }
+                                },
+                            )
                         } else {
                             Text("Ortak harcama yalnız uygun ortak çalışma alanında kullanılabilir.",
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -531,10 +593,12 @@ private fun TransactionFormContent(
                                 onInstallmentCountChange(draft.installmentCount)
                             }
                             if (uiState.canManageSplit) {
-                                draft.payer?.let(onPaidByUserSelected)
-                                (draft.participants union uiState.selectedParticipantUserIds).filter {
-                                    (it in draft.participants) != (it in uiState.selectedParticipantUserIds) && it != draft.payer
-                                }.forEach(onParticipantToggled)
+                                onSplitDetailsApplied(
+                                    draft.payer,
+                                    draft.participants,
+                                    draft.splitMode,
+                                    draft.customSharesText,
+                                )
                             }
                             isMoreDetailsExpanded = false
                         }, modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp)) { Text("Ayrıntıları uygula") }

@@ -20,6 +20,7 @@ import com.feniqo.mobile.data.local.entity.SubscriptionPaymentEntity
 import com.feniqo.mobile.data.local.entity.SubscriptionPriceHistoryEntity
 import com.feniqo.mobile.data.local.entity.SyncConflictEntity
 import com.feniqo.mobile.data.local.entity.SyncOperationEntity
+import com.feniqo.mobile.data.local.entity.isDefinitiveRejection
 import com.feniqo.mobile.data.local.entity.TagEntity
 import com.feniqo.mobile.data.local.entity.TransactionEntity
 import com.feniqo.mobile.data.local.entity.TransactionTagCrossRef
@@ -2090,6 +2091,45 @@ interface LocalMutationDao {
         val tail = tailCandidates.firstOrNull()
 
         if (tail != null && tail.protocolVersion == 2) {
+            if (tail.operationTypeCode == OutboxOperationType.CREATE.name && tail.predecessorOperationId == null) {
+                if (type == OutboxOperationType.DELETE && canSafelyHardDeletePendingOrCreate(tail)) {
+                    deleteTransactionTagRows(entity.id)
+                    deleteTransactionRow(entity.id)
+                    val deleted = deleteOutboxRow(tail.operationId)
+                    check(deleted == 1) { "Outbox kaydı silinemedi: ${tail.operationId}" }
+                    return V2EnqueueResult(tail.operationId, V2EnqueueDecision.HARD_DELETED)
+                }
+                if (type == OutboxOperationType.UPDATE && canSafelyReplaceRejectedCreate(tail)) {
+                    val deleted = deleteOutboxRow(tail.operationId)
+                    check(deleted == 1) { "Başarısız outbox kaydı temizlenemedi: ${tail.operationId}" }
+                    upsertTransactionRow(entity)
+                    if (tags.isNotEmpty()) upsertTagRows(tags)
+                    deleteTransactionTagRows(entity.id)
+                    if (tagLinks.isNotEmpty()) upsertTransactionTagRows(tagLinks)
+                    val newOpId = operationIdFactory()
+                    validateOperationId(newOpId)
+                    val freshCreate = SyncOperationEntity(
+                        operationId = newOpId,
+                        entityTypeCode = "TRANSACTION",
+                        entityId = entity.id,
+                        operationTypeCode = OutboxOperationType.CREATE.name,
+                        baseVersion = null,
+                        payloadJson = payloadJson,
+                        predecessorOperationId = null,
+                        isBlocked = false,
+                        protocolVersion = 2,
+                        statusCode = "PENDING",
+                        attemptCount = 0,
+                        lastError = null,
+                        nextAttemptAtEpochMillis = nowEpochMillis,
+                        createdAtEpochMillis = nowEpochMillis,
+                        updatedAtEpochMillis = nowEpochMillis,
+                    )
+                    insertOutboxRow(freshCreate)
+                    return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+                }
+            }
+
             if (tail.attemptCount == 0 && tail.statusCode == "PENDING") {
                 if (type == OutboxOperationType.UPDATE) {
                     upsertTransactionRow(entity)
@@ -2100,18 +2140,10 @@ interface LocalMutationDao {
                     check(updated == 1) { "Outbox payload coalesce edilemedi: ${tail.operationId}" }
                     return V2EnqueueResult(tail.operationId, V2EnqueueDecision.COALESCED)
                 } else if (type == OutboxOperationType.DELETE) {
-                    if (tail.operationTypeCode == OutboxOperationType.CREATE.name && tail.predecessorOperationId == null) {
-                        deleteTransactionTagRows(entity.id)
-                        deleteTransactionRow(entity.id)
-                        val deleted = deleteOutboxRow(tail.operationId)
-                        check(deleted == 1) { "Outbox kaydı silinemedi: ${tail.operationId}" }
-                        return V2EnqueueResult(tail.operationId, V2EnqueueDecision.HARD_DELETED)
-                    } else {
-                        upsertTransactionRow(entity)
-                        val updated = convertToPendingDelete(tail.operationId, payloadJson, nowEpochMillis)
-                        check(updated == 1) { "Outbox kaydı DELETE'e dönüştürülemedi: ${tail.operationId}" }
-                        return V2EnqueueResult(tail.operationId, V2EnqueueDecision.CONVERTED_TO_DELETE)
-                    }
+                    upsertTransactionRow(entity)
+                    val updated = convertToPendingDelete(tail.operationId, payloadJson, nowEpochMillis)
+                    check(updated == 1) { "Outbox kaydı DELETE'e dönüştürülemedi: ${tail.operationId}" }
+                    return V2EnqueueResult(tail.operationId, V2EnqueueDecision.CONVERTED_TO_DELETE)
                 }
             }
 
@@ -2182,6 +2214,42 @@ interface LocalMutationDao {
         val tail = tailCandidates.firstOrNull()
 
         if (tail != null && tail.protocolVersion == 2) {
+            if (tail.operationTypeCode == OutboxOperationType.CREATE.name && tail.predecessorOperationId == null) {
+                if (type == OutboxOperationType.DELETE && canSafelyHardDeletePendingOrCreate(tail)) {
+                    deleteTransactionTagRows(entity.id)
+                    deleteTransactionRow(entity.id)
+                    val deleted = deleteOutboxRow(tail.operationId)
+                    check(deleted == 1) { "Outbox kaydı silinemedi: ${tail.operationId}" }
+                    return V2EnqueueResult(tail.operationId, V2EnqueueDecision.HARD_DELETED)
+                }
+                if (type == OutboxOperationType.UPDATE && canSafelyReplaceRejectedCreate(tail)) {
+                    val deleted = deleteOutboxRow(tail.operationId)
+                    check(deleted == 1) { "Başarısız outbox kaydı temizlenemedi: ${tail.operationId}" }
+                    upsertTransactionRow(entity)
+                    val newOpId = operationIdFactory()
+                    validateOperationId(newOpId)
+                    val freshCreate = SyncOperationEntity(
+                        operationId = newOpId,
+                        entityTypeCode = "TRANSACTION",
+                        entityId = entity.id,
+                        operationTypeCode = OutboxOperationType.CREATE.name,
+                        baseVersion = null,
+                        payloadJson = payloadJson,
+                        predecessorOperationId = null,
+                        isBlocked = false,
+                        protocolVersion = 2,
+                        statusCode = "PENDING",
+                        attemptCount = 0,
+                        lastError = null,
+                        nextAttemptAtEpochMillis = nowEpochMillis,
+                        createdAtEpochMillis = nowEpochMillis,
+                        updatedAtEpochMillis = nowEpochMillis,
+                    )
+                    insertOutboxRow(freshCreate)
+                    return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+                }
+            }
+
             if (tail.attemptCount == 0 && tail.statusCode == "PENDING") {
                 if (type == OutboxOperationType.UPDATE) {
                     upsertTransactionRow(entity)
@@ -2189,18 +2257,10 @@ interface LocalMutationDao {
                     check(updated == 1) { "Outbox payload coalesce edilemedi: ${tail.operationId}" }
                     return V2EnqueueResult(tail.operationId, V2EnqueueDecision.COALESCED)
                 } else if (type == OutboxOperationType.DELETE) {
-                    if (tail.operationTypeCode == OutboxOperationType.CREATE.name && tail.predecessorOperationId == null) {
-                        deleteTransactionTagRows(entity.id)
-                        deleteTransactionRow(entity.id)
-                        val deleted = deleteOutboxRow(tail.operationId)
-                        check(deleted == 1) { "Outbox kaydı silinemedi: ${tail.operationId}" }
-                        return V2EnqueueResult(tail.operationId, V2EnqueueDecision.HARD_DELETED)
-                    } else {
-                        upsertTransactionRow(entity)
-                        val updated = convertToPendingDelete(tail.operationId, payloadJson, nowEpochMillis)
-                        check(updated == 1) { "Outbox kaydı DELETE'e dönüştürülemedi: ${tail.operationId}" }
-                        return V2EnqueueResult(tail.operationId, V2EnqueueDecision.CONVERTED_TO_DELETE)
-                    }
+                    upsertTransactionRow(entity)
+                    val updated = convertToPendingDelete(tail.operationId, payloadJson, nowEpochMillis)
+                    check(updated == 1) { "Outbox kaydı DELETE'e dönüştürülemedi: ${tail.operationId}" }
+                    return V2EnqueueResult(tail.operationId, V2EnqueueDecision.CONVERTED_TO_DELETE)
                 }
             }
 
@@ -3567,6 +3627,18 @@ internal fun validateOperationId(operationId: String) {
     require(HEX_32_REGEX.matches(operationId)) {
         "Geçersiz outbox işlem kimliği: $operationId. 32 karakter küçük harfli onaltılık (hex) dize bekleniyor."
     }
+}
+
+internal fun canSafelyHardDeletePendingOrCreate(tail: SyncOperationEntity?): Boolean {
+    if (tail == null || tail.protocolVersion != 2) return false
+    if (tail.operationTypeCode != OutboxOperationType.CREATE.name || tail.predecessorOperationId != null) return false
+    return (tail.attemptCount == 0 && tail.statusCode == "PENDING") || tail.isDefinitiveRejection()
+}
+
+internal fun canSafelyReplaceRejectedCreate(tail: SyncOperationEntity?): Boolean {
+    if (tail == null || tail.protocolVersion != 2) return false
+    if (tail.operationTypeCode != OutboxOperationType.CREATE.name || tail.predecessorOperationId != null) return false
+    return tail.isDefinitiveRejection()
 }
 
 data class WorkspaceMutationInputV2(

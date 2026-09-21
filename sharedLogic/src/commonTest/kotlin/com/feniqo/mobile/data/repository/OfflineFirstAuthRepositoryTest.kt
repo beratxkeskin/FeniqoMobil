@@ -2,10 +2,14 @@ package com.feniqo.mobile.data.repository
 
 import com.feniqo.mobile.data.local.dao.ProfileDao
 import com.feniqo.mobile.data.local.entity.UserProfileEntity
+import com.feniqo.mobile.data.local.outbox.OutboxOperationType
+import com.feniqo.mobile.data.mapper.newSyncMetadata
 import com.feniqo.mobile.data.remote.auth.AuthRemoteDataSource
 import com.feniqo.mobile.data.remote.auth.RemoteAuthSession
+import com.feniqo.mobile.data.remote.dto.ProfileDto
 import com.feniqo.mobile.domain.model.AppError
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.domain.model.SyncStatus
 import com.feniqo.mobile.domain.repository.RepositoryResult
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -18,6 +22,90 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 
 class OfflineFirstAuthRepositoryTest {
+
+    @Test
+    fun update_name_queues_profile_update_instead_of_direct_dao_write() = runTest {
+        val remote = FakeAuthRemoteDataSource().apply {
+            session.value = RemoteAuthSession("user-1", "user@example.com", 1_800_000_000)
+        }
+        val profiles = FakeProfileDao()
+        profiles.upsert(profileRow())
+        var queued: UserProfileEntity? = null
+        var operation: OutboxOperationType? = null
+        var payload = ""
+        val repository = OfflineFirstAuthRepository(
+            remote, profiles,
+            enqueueProfileUpdate = { entity, type, json ->
+                queued = entity
+                operation = type
+                payload = json
+                profiles.upsert(entity)
+            },
+            nowEpochMillisProvider = { 2_000L },
+        )
+
+        assertIs<RepositoryResult.Success<Unit>>(repository.updateFullName("  Deniz Yılmaz  "))
+        assertEquals("Deniz Yılmaz", queued?.fullName)
+        assertEquals("PENDING_UPDATE", queued?.sync?.syncStatus)
+        assertEquals(3L, queued?.sync?.baseVersion)
+        assertEquals(OutboxOperationType.UPDATE, operation)
+        assertEquals(true, payload.contains("Deniz Yılmaz"))
+        assertEquals("Deniz Yılmaz", profiles.observeById("user-1").first()?.fullName)
+    }
+
+    @Test
+    fun update_name_bootstraps_missing_local_profile_from_remote_before_queuing() = runTest {
+        val remote = FakeAuthRemoteDataSource().apply {
+            session.value = RemoteAuthSession("user-1", "user@example.com", 1_800_000_000)
+        }
+        val profiles = FakeProfileDao()
+        var queued: UserProfileEntity? = null
+        val repository = OfflineFirstAuthRepository(
+            remote, profiles,
+            fetchRemoteProfile = { id ->
+                assertEquals("user-1", id)
+                ProfileDto(
+                    id = id, email = "user@example.com", fullName = null,
+                    createdAt = "2026-09-20T10:00:00Z", updatedAt = "2026-09-20T10:00:00Z", version = 4,
+                )
+            },
+            enqueueProfileUpdate = { entity, type, _ ->
+                assertEquals(OutboxOperationType.UPDATE, type)
+                queued = entity
+                profiles.upsert(entity)
+            },
+            nowEpochMillisProvider = { 2_000L },
+        )
+
+        assertIs<RepositoryResult.Success<Unit>>(repository.updateFullName("Deniz Yılmaz"))
+        assertEquals("Deniz Yılmaz", queued?.fullName)
+        assertEquals(4L, queued?.sync?.baseVersion)
+    }
+
+    @Test
+    fun update_name_does_not_claim_success_when_profile_cannot_be_loaded() = runTest {
+        val remote = FakeAuthRemoteDataSource().apply {
+            session.value = RemoteAuthSession("user-1", "user@example.com", 1_800_000_000)
+        }
+        val profiles = FakeProfileDao()
+        var enqueued = false
+        val repository = OfflineFirstAuthRepository(
+            remote, profiles,
+            fetchRemoteProfile = { null },
+            enqueueProfileUpdate = { _, _, _ -> enqueued = true },
+        )
+
+        assertIs<RepositoryResult.Failure>(repository.updateFullName("Deniz Yılmaz"))
+        assertEquals(false, enqueued)
+        assertEquals(null, profiles.observeById("user-1").first())
+    }
+
+    private fun profileRow() = UserProfileEntity(
+        id = "user-1", email = "user@example.com", fullName = null,
+        currencyCode = "TRY", themeCode = "SYSTEM", languageCode = "TR",
+        activeWorkspaceId = null, createdAtEpochMillis = 1_000L,
+        sync = newSyncMetadata(1_000L, SyncStatus.SYNCED).copy(version = 3, baseVersion = 3),
+    )
 
     @Test
     fun maps_remote_session_without_exposing_supabase_types() = runTest {
@@ -401,6 +489,12 @@ private class FakeProfileDao : ProfileDao {
 
     override suspend fun upsert(entity: UserProfileEntity) {
         profile.value = entity
+    }
+
+    override suspend fun insertIfMissing(entity: UserProfileEntity): Long {
+        if (profile.value != null) return -1L
+        profile.value = entity
+        return 1L
     }
 
     override suspend fun setActiveWorkspaceGuarded(profileId: String, workspaceId: String): Int {

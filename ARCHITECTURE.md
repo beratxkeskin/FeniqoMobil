@@ -191,6 +191,11 @@ ve uygulamanın temel çalışması için zorunlu bağımlılık olamaz.
 
 ## 11. Mimari değişiklik süreci
 
+Geliştirme demo varyantı (`com.feniqo.mobile.demo`) aynı Room/repository/UI zincirini kullanır.
+Yalnız Auth/Sync adaptörleri yereldir; INTERNET izni kaldırılır ve uzak yapılandırma `.invalid`
+hedefine sabitlenir. Fixture'lar normal entity + outbox yoluyla yazılır. Ayrıntı ve sandbox
+sıfırlama sınırı: [Demo kullanım rehberi](docs/DEMO_KULLANIM.md).
+
 ### Veri taşınabilirliği sınırı
 
 - JSON yedekleri açık `format_version` ile sürümlenir; v1 yalnız kişisel kategori ve işlemleri kapsar.

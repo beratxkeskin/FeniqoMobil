@@ -903,6 +903,7 @@ fun Currency.toTurkishName(): String = when (this) {
     Currency.TRY -> "Türk lirası"
     Currency.USD -> "Amerikan doları"
     Currency.EUR -> "Euro"
+    Currency.GBP -> "İngiliz sterlini"
 }
 
 val Currency.symbol: String

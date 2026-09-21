@@ -29,7 +29,19 @@ enum class TransactionFormFieldError {
     INSTALLMENT_AMOUNT_TOO_SMALL,
     SPLIT_PAYER_REQUIRED,
     SPLIT_PARTICIPANTS_REQUIRED,
-    SPLIT_PAYER_NOT_IN_PARTICIPANTS;
+    SPLIT_PAYER_NOT_IN_PARTICIPANTS,
+    SPLIT_CUSTOM_SHARES_REQUIRED,
+    SPLIT_CUSTOM_SHARE_REQUIRED,
+    SPLIT_CUSTOM_SHARE_INVALID,
+    SPLIT_CUSTOM_NON_PAYER_ZERO_SHARE_NOT_ALLOWED,
+    SPLIT_CUSTOM_SHARE_NEGATIVE,
+    SPLIT_CUSTOM_SHARE_TOO_LARGE,
+    SPLIT_CUSTOM_TOTAL_MISMATCH,
+    SPLIT_CUSTOM_TOTAL_OVERFLOW,
+    SPLIT_CUSTOM_MEMBER_NOT_ACTIVE,
+    SPLIT_PARTICIPANT_SET_MISMATCH,
+    SPLIT_CUSTOM_NOT_ALLOWED_IN_PERSONAL,
+    SPLIT_CUSTOM_NOT_SUPPORTED_WITH_INSTALLMENT;
 
     fun toDisplayText(): String = when (this) {
         AMOUNT_REQUIRED -> "Tutar boş bırakılamaz."
@@ -49,6 +61,18 @@ enum class TransactionFormFieldError {
         SPLIT_PAYER_REQUIRED -> "Lütfen harcamayı ödeyen kişiyi seçin."
         SPLIT_PARTICIPANTS_REQUIRED -> "En az bir katılımcı seçilmelidir."
         SPLIT_PAYER_NOT_IN_PARTICIPANTS -> "Ödeyen kişi katılımcılar arasında olmalıdır."
+        SPLIT_CUSTOM_SHARES_REQUIRED -> "Özel dağıtım için tüm katılımcıların payları girilmelidir."
+        SPLIT_CUSTOM_SHARE_REQUIRED -> "Pay tutarı boş bırakılamaz."
+        SPLIT_CUSTOM_SHARE_INVALID -> "Geçerli bir pay tutarı girin."
+        SPLIT_CUSTOM_NON_PAYER_ZERO_SHARE_NOT_ALLOWED -> "Yalnızca harcamayı ödeyen kişi 0 ₺ pay alabilir."
+        SPLIT_CUSTOM_SHARE_NEGATIVE -> "Pay tutarı negatif olamaz."
+        SPLIT_CUSTOM_SHARE_TOO_LARGE -> "Pay tutarı izin verilen sınırı aşıyor."
+        SPLIT_CUSTOM_TOTAL_MISMATCH -> "Paylar toplamı harcama tutarına eşit olmalıdır."
+        SPLIT_CUSTOM_TOTAL_OVERFLOW -> "Paylar toplamı sayı sınırını aşıyor."
+        SPLIT_CUSTOM_MEMBER_NOT_ACTIVE -> "Pay sahibi çalışma alanında aktif bir üye olmalıdır."
+        SPLIT_PARTICIPANT_SET_MISMATCH -> "Katılımcılar ile pay sahipleri aynı küme olmalıdır."
+        SPLIT_CUSTOM_NOT_ALLOWED_IN_PERSONAL -> "Özel dağıtım yalnızca ortak çalışma alanı harcamalarında kullanılabilir."
+        SPLIT_CUSTOM_NOT_SUPPORTED_WITH_INSTALLMENT -> "Özel tutarlı paylaşım taksitli işlemlerde kullanılamaz. Lütfen eşit paylaşımı seçin veya taksiti kapatın."
     }
 }
 
@@ -95,6 +119,9 @@ data class TransactionFormUiState(
     val isLoadingWorkspaceMembers: Boolean = false,
     val selectedPaidByUserId: EntityId? = null,
     val selectedParticipantUserIds: Set<EntityId> = emptySet(),
+    val splitMode: com.feniqo.mobile.domain.model.TransactionSplitMode = com.feniqo.mobile.domain.model.TransactionSplitMode.EQUAL,
+    val customSharesText: Map<EntityId, String> = emptyMap(),
+    val customShareErrors: Map<EntityId, TransactionFormFieldError> = emptyMap(),
     val splitError: TransactionFormFieldError? = null,
     val loadError: FinanceUiMessage? = null,
     val categoryLoadError: FinanceUiMessage? = null,
@@ -128,12 +155,22 @@ data class TransactionFormUiState(
         get() {
             if (!isSharedExpense) return true
             if (isLoadingWorkspaceMembers) return false
+            if (isInstallmentOptionAvailable && isInstallmentEnabled && splitMode == com.feniqo.mobile.domain.model.TransactionSplitMode.CUSTOM) {
+                return false
+            }
             val payer = selectedPaidByUserId ?: return false
             if (selectedParticipantUserIds.isEmpty()) return false
             if (payer !in selectedParticipantUserIds) return false
-            val activeMemberIds = workspaceMembers.map { it.userId }.toSet()
+            val activeMemberIds = workspaceMembers.filter { it.isActive }.map { it.userId }.toSet()
             if (payer !in activeMemberIds) return false
             if (!selectedParticipantUserIds.all { it in activeMemberIds }) return false
+            if (splitMode == com.feniqo.mobile.domain.model.TransactionSplitMode.CUSTOM) {
+                if (selectedParticipantUserIds.any { it !in customSharesText.keys || customSharesText[it].isNullOrBlank() }) {
+                    return false
+                }
+                if (customShareErrors.isNotEmpty()) return false
+                if (splitError != null) return false
+            }
             return true
         }
 }

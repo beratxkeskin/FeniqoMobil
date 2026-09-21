@@ -269,6 +269,54 @@ data object PlanRoute : FeniqoRoute
 data object MoreRoute : FeniqoRoute
 
 @Serializable
+data object ReportsRoute : FeniqoRoute
+
+@Serializable
+data object PeriodSummaryReportRoute : FeniqoRoute
+
+@Serializable
+data object AllReportsHubRoute : FeniqoRoute
+
+@Serializable
+data object CategoryBreakdownReportRoute : FeniqoRoute
+
+@Serializable
+data class CategoryDetailReportRoute(val categoryId: String, val categoryName: String) : FeniqoRoute
+
+@Serializable
+data object CashFlowReportRoute : FeniqoRoute
+
+@Serializable
+data object PeriodComparisonReportRoute : FeniqoRoute
+
+@Serializable
+data object SpendingCalendarReportRoute : FeniqoRoute
+
+@Serializable
+data object BudgetPerformanceReportRoute : FeniqoRoute
+
+@Serializable
+data object SubscriptionSummaryReportRoute : FeniqoRoute
+
+@Serializable
+data object DebtSummaryReportRoute : FeniqoRoute
+
+@Serializable
+data object ForecastReportRoute : FeniqoRoute
+
+@Serializable
+data object FinancialInsightsReportRoute : FeniqoRoute
+
+@Serializable
+data object CustomDateRangeRoute : FeniqoRoute
+
+@Serializable
+data object MultiCurrencyReportRoute : FeniqoRoute
+
+@Serializable
+data object ReportSystemStatusRoute : FeniqoRoute
+
+@Serializable
 data object ProfileRoute : FeniqoRoute
 
 @Serializable
@@ -346,7 +394,22 @@ data object ChangePasswordRoute : FeniqoRoute
 data object DeleteAccountRoute : FeniqoRoute
 
 @Serializable
-data object FeedbackRoute : FeniqoRoute
+data class FeedbackRoute(val isBug: Boolean = false) : FeniqoRoute
+
+@Serializable
+data class PhotoPreviewRoute(val draftFileName: String) : FeniqoRoute
+
+@Serializable
+data object EmailSettingsRoute : FeniqoRoute
+
+@Serializable
+data object HelpCenterRoute : FeniqoRoute
+
+@Serializable
+data class HelpArticleStatusRoute(val articleTitle: String) : FeniqoRoute
+
+@Serializable
+data object LegalInfoRoute : FeniqoRoute
 
 @Serializable
 data object WorkspacePickerRoute : FeniqoRoute

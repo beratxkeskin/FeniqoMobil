@@ -9,6 +9,9 @@ import com.feniqo.mobile.data.remote.dto.GoalDto
 import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
 import com.feniqo.mobile.data.remote.dto.SubscriptionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
+import com.feniqo.mobile.data.remote.dto.TransactionParticipantShareDto
+import com.feniqo.mobile.domain.model.TransactionParticipantShare
+import com.feniqo.mobile.domain.model.TransactionSplitMode
 import com.feniqo.mobile.domain.model.Category
 import com.feniqo.mobile.domain.model.Asset
 import com.feniqo.mobile.domain.model.AssetQuantity
@@ -116,14 +119,40 @@ fun TransactionDto.toDomain(): Transaction {
         throw RemoteMappingException("transactions.amount_minor sıfırdan büyük olmalıdır.")
     }
 
+    val rawPayerId = paidByUserId?.required("transactions.paid_by_user_id") ?: userId.required("transactions.user_id")
+    val resolvedPaidByUserId = EntityId(rawPayerId)
+
+    val isCustomMode = splitMode?.trim()?.uppercase() == TransactionSplitMode.CUSTOM.name
+
+    val resolvedParticipantUserIds = if (isCustomMode) {
+        if (participantUserIds.isEmpty()) {
+            throw RemoteMappingException("CUSTOM modunda participant_user_ids boş olamaz.")
+        }
+        participantUserIds.map { participantId ->
+            EntityId(participantId.required("transactions.participant_user_ids"))
+        }
+    } else {
+        participantUserIds.map { participantId ->
+            EntityId(participantId.required("transactions.participant_user_ids"))
+        }.ifEmpty {
+            listOf(resolvedPaidByUserId)
+        }
+    }
+
+    val (resolvedSplitMode, resolvedShares) = resolveSplitModeAndShares(
+        splitModeRaw = splitMode,
+        participantSharesDto = participantShares,
+        amountMinor = amountMinor,
+        paidByUserId = resolvedPaidByUserId,
+        participantUserIds = resolvedParticipantUserIds,
+    )
+
     return Transaction(
         id = EntityId(id.required("transactions.id")),
         ownerId = EntityId(userId.required("transactions.user_id")),
         workspaceId = workspaceId?.required("transactions.workspace_id")?.let(::EntityId),
-        paidByUserId = paidByUserId?.required("transactions.paid_by_user_id")?.let(::EntityId) ?: EntityId(userId.required("transactions.user_id")),
-        participantUserIds = participantUserIds.map(::EntityId).ifEmpty {
-            listOf(paidByUserId?.let(::EntityId) ?: EntityId(userId.required("transactions.user_id")))
-        },
+        paidByUserId = resolvedPaidByUserId,
+        participantUserIds = resolvedParticipantUserIds,
         amount = Money(amountMinor, currency.toCurrency()),
         type = type.toTransactionType("transactions.type"),
         categoryId = EntityId(categoryId.required("transactions.category_id")),
@@ -134,7 +163,96 @@ fun TransactionDto.toDomain(): Transaction {
         installment = toInstallmentInfo(),
         createdAt = createdAt.toInstant("transactions.created_at"),
         note = Transaction.normalizeNote(note),
+        splitMode = resolvedSplitMode,
+        participantShares = resolvedShares,
     )
+}
+
+private fun resolveSplitModeAndShares(
+    splitModeRaw: String?,
+    participantSharesDto: List<TransactionParticipantShareDto>?,
+    amountMinor: Long,
+    paidByUserId: EntityId,
+    participantUserIds: List<EntityId>,
+): Pair<TransactionSplitMode, List<TransactionParticipantShare>> {
+    val hasShares = !participantSharesDto.isNullOrEmpty()
+
+    if (splitModeRaw == null) {
+        if (hasShares) {
+            throw RemoteMappingException("split_mode belirtilmeden participant_shares verilemez.")
+        }
+        return TransactionSplitMode.EQUAL to emptyList()
+    }
+
+    val trimmedMode = splitModeRaw.trim()
+    if (trimmedMode.isEmpty()) {
+        throw RemoteMappingException("transactions.split_mode boş olamaz.")
+    }
+
+    val mode = when (trimmedMode.uppercase()) {
+        TransactionSplitMode.EQUAL.name -> TransactionSplitMode.EQUAL
+        TransactionSplitMode.CUSTOM.name -> TransactionSplitMode.CUSTOM
+        else -> throw RemoteMappingException("Desteklenmeyen transactions.split_mode: $splitModeRaw")
+    }
+
+    return when (mode) {
+        TransactionSplitMode.EQUAL -> {
+            if (hasShares) {
+                throw RemoteMappingException("Eşit paylaşım modunda (EQUAL) participant_shares boş olmalıdır.")
+            }
+            TransactionSplitMode.EQUAL to emptyList()
+        }
+
+        TransactionSplitMode.CUSTOM -> {
+            if (participantSharesDto == null || participantSharesDto.isEmpty()) {
+                throw RemoteMappingException("Özel paylaştırma modunda (CUSTOM) participant_shares boş olamaz.")
+            }
+
+            val seenUserIds = mutableSetOf<EntityId>()
+            val shares = ArrayList<TransactionParticipantShare>(participantSharesDto.size)
+            var sumShares = 0L
+
+            for ((index, dto) in participantSharesDto.withIndex()) {
+                val cleanUserId = dto.userId.trim()
+                if (cleanUserId.isEmpty()) {
+                    throw RemoteMappingException("transactions.participant_shares[$index].user_id boş olamaz.")
+                }
+                val shareUserId = EntityId(cleanUserId)
+                if (!seenUserIds.add(shareUserId)) {
+                    throw RemoteMappingException("transactions.participant_shares içinde tekrarlanan kullanıcı: ${shareUserId.value}")
+                }
+                if (dto.amountMinor < 0L) {
+                    throw RemoteMappingException("transactions.participant_shares[$index].amount_minor negatif olamaz: ${dto.amountMinor}")
+                }
+                if (shareUserId != paidByUserId && dto.amountMinor <= 0L) {
+                    throw RemoteMappingException("Ödeyen dışındaki katılımcıların payı sıfırdan büyük olmalıdır: ${shareUserId.value}")
+                }
+
+                val nextSum = sumShares + dto.amountMinor
+                if ((sumShares xor nextSum) and (dto.amountMinor xor nextSum) < 0) {
+                    throw RemoteMappingException("Katılımcı payları toplamında Long taşması (overflow).")
+                }
+                sumShares = nextSum
+
+                shares.add(TransactionParticipantShare(userId = shareUserId, amountMinor = dto.amountMinor))
+            }
+
+            if (paidByUserId !in seenUserIds) {
+                throw RemoteMappingException("Ödeme yapan kişi katılımcı payları listesinde olmalıdır: ${paidByUserId.value}")
+            }
+
+            val participantSet = participantUserIds.toSet()
+            if (seenUserIds != participantSet || shares.size != participantUserIds.size) {
+                throw RemoteMappingException("Katılımcı listesi ile özel pay listesi birebir uyuşmuyor.")
+            }
+
+            if (sumShares != amountMinor) {
+                throw RemoteMappingException("Katılımcı payları toplamı ($sumShares) işlem tutarına ($amountMinor) eşit olmalıdır.")
+            }
+
+            TransactionSplitMode.CUSTOM to shares
+        }
+    }
 }
 
 fun Transaction.toDto(): TransactionDto = TransactionDto(
@@ -156,6 +274,17 @@ fun Transaction.toDto(): TransactionDto = TransactionDto(
     installmentGroupId = installment?.groupId?.value,
     createdAt = createdAt.toString(),
     note = Transaction.normalizeNote(note),
+    splitMode = splitMode.name,
+    participantShares = if (splitMode == TransactionSplitMode.CUSTOM) {
+        participantShares.sortedBy { it.userId.value }.map {
+            TransactionParticipantShareDto(
+                userId = it.userId.value,
+                amountMinor = it.amountMinor,
+            )
+        }
+    } else {
+        emptyList()
+    },
 )
 
 fun RecurringTransactionDto.toDomain(): RecurringTransaction {

@@ -62,11 +62,17 @@ fun SyncStatusIndicator(
     onResolveConflict: () -> Unit = {},
     modifier: Modifier = Modifier,
     nowEpochMillis: Long = Clock.System.now().toEpochMilliseconds(),
+    autoHideWhenUpToDate: Boolean = true,
 ) {
     val displayModel = resolveSyncDisplayModel(uiState, nowEpochMillis)
+    val isVisible = if (autoHideWhenUpToDate) {
+        displayModel.severity != SyncDisplaySeverity.UP_TO_DATE
+    } else {
+        true
+    }
 
     AnimatedVisibility(
-        visible = true,
+        visible = isVisible,
         enter = fadeIn() + expandVertically(),
         exit = fadeOut() + shrinkVertically(),
         modifier = modifier,
@@ -259,6 +265,7 @@ private fun SyncStatusIndicatorOnlineLightPreview() {
             ),
             onManualSync = {},
             onRetryFailed = {},
+            autoHideWhenUpToDate = false,
         )
     }
 }
@@ -281,6 +288,7 @@ private fun SyncStatusIndicatorOnlineDarkPreview() {
             ),
             onManualSync = {},
             onRetryFailed = {},
+            autoHideWhenUpToDate = false,
         )
     }
 }

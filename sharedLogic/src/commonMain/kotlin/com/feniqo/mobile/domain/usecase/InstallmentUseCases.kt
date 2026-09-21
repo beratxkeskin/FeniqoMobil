@@ -42,6 +42,11 @@ data class AddInstallmentGroupCommand(
     val note: String? = null,
 )
 
+data class CreatedInstallmentGroup(
+    val groupId: EntityId,
+    val firstTransactionId: EntityId,
+)
+
 class AddInstallmentGroupUseCase(
     private val authRepository: AuthRepository,
     private val categoryRepository: CategoryRepository,
@@ -52,7 +57,7 @@ class AddInstallmentGroupUseCase(
         command: AddInstallmentGroupCommand,
         today: LocalDate,
         createdAt: Instant,
-    ): RepositoryResult<EntityId> {
+    ): RepositoryResult<CreatedInstallmentGroup> {
         val session = authRepository.observeSession().first()
             ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
 
@@ -138,6 +143,11 @@ class AddInstallmentGroupUseCase(
             )
         }
 
-        return transactionRepository.createInstallmentGroup(transactions)
+        return when (val result = transactionRepository.createInstallmentGroup(transactions)) {
+            is RepositoryResult.Success -> RepositoryResult.Success(
+                CreatedInstallmentGroup(groupId = result.value, firstTransactionId = transactions.first().id),
+            )
+            is RepositoryResult.Failure -> result
+        }
     }
 }

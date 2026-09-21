@@ -83,7 +83,7 @@ import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
         ReceiptFileEntity::class,
         ReceiptLinkageEntity::class,
     ],
-    version = 19,
+    version = 20,
     exportSchema = true,
 )
 @ConstructedBy(FeniqoDatabaseConstructor::class)

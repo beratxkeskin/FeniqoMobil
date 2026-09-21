@@ -618,7 +618,7 @@ private class FakeSyncOperationDao : SyncOperationDao {
     override suspend fun getById(operationId: String): SyncOperationEntity? = null
     override suspend fun insert(operation: SyncOperationEntity) {}
     override suspend fun claimOperation(operationId: String, nowEpochMillis: Long): Int = 1
-    override suspend fun markFailed(operationId: String, lastError: String, nextAttemptAtEpochMillis: Long, nowEpochMillis: Long): Int = 1
+    override suspend fun markFailed(operationId: String, lastError: String, errorClassification: String?, nextAttemptAtEpochMillis: Long, nowEpochMillis: Long): Int = 1
     override suspend fun markConflict(operationId: String, lastError: String, nowEpochMillis: Long): Int = 1
     override suspend fun recoverStaleInFlight(staleBeforeEpochMillis: Long, nowEpochMillis: Long, lastError: String): Int = 0
     override suspend fun retryAllFailed(nowEpochMillis: Long): Int = 0

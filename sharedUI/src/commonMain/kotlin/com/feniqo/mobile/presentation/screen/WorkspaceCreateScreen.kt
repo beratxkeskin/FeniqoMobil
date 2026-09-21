@@ -704,10 +704,12 @@ private fun Currency.toTurkishDisplayName(): String = when (this) {
     Currency.TRY -> "Türk lirası"
     Currency.USD -> "ABD doları"
     Currency.EUR -> "Euro"
+    Currency.GBP -> "İngiliz sterlini"
 }
 
 private fun Currency.symbol(): String = when (this) {
     Currency.TRY -> "₺"
     Currency.USD -> "$"
     Currency.EUR -> "€"
+    Currency.GBP -> "£"
 }

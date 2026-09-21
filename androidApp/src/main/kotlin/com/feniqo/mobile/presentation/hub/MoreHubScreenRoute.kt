@@ -18,6 +18,7 @@ fun MoreHubScreenRoute(
     onNavigateToSharedSpaces: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToProfile: () -> Unit,
+    onNavigateToReports: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: MoreHubViewModel = hiltViewModel(),
 ) {
@@ -33,6 +34,7 @@ fun MoreHubScreenRoute(
         onNavigateToSharedSpaces = onNavigateToSharedSpaces,
         onNavigateToSettings = onNavigateToSettings,
         onNavigateToProfile = onNavigateToProfile,
+        onNavigateToReports = onNavigateToReports,
         modifier = modifier,
     )
 }

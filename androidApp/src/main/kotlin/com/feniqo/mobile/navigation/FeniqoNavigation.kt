@@ -69,6 +69,21 @@ import com.feniqo.mobile.presentation.auth.ForgotPasswordViewModel
 import com.feniqo.mobile.presentation.auth.ResetPasswordViewModel
 import com.feniqo.mobile.presentation.auth.toDisplayText
 import com.feniqo.mobile.presentation.hub.MoreHubScreenRoute
+import com.feniqo.mobile.presentation.report.AllReportsHubRoute
+import com.feniqo.mobile.presentation.report.BudgetPerformanceReportRoute
+import com.feniqo.mobile.presentation.report.CashFlowReportRoute
+import com.feniqo.mobile.presentation.report.CategoryBreakdownReportRoute
+import com.feniqo.mobile.presentation.report.CategoryDetailReportRoute
+import com.feniqo.mobile.presentation.report.CustomDateRangeRoute
+import com.feniqo.mobile.presentation.report.DebtSummaryReportRoute
+import com.feniqo.mobile.presentation.report.FinancialInsightsReportRoute
+import com.feniqo.mobile.presentation.report.ForecastReportRoute
+import com.feniqo.mobile.presentation.report.MultiCurrencyReportRoute
+import com.feniqo.mobile.presentation.report.PeriodComparisonReportRoute
+import com.feniqo.mobile.presentation.report.PeriodSummaryReportRoute
+import com.feniqo.mobile.presentation.report.ReportsScreenRoute
+import com.feniqo.mobile.presentation.report.SpendingCalendarReportRoute
+import com.feniqo.mobile.presentation.report.SubscriptionSummaryReportRoute
 import com.feniqo.mobile.presentation.screen.ProfileScreen
 import com.feniqo.mobile.presentation.screen.SplashLoadingScreen
 import com.feniqo.mobile.presentation.settings.AccountScreenRoute
@@ -77,12 +92,17 @@ import com.feniqo.mobile.presentation.settings.ChangeEmailScreenRoute
 import com.feniqo.mobile.presentation.settings.ChangePasswordScreenRoute
 import com.feniqo.mobile.presentation.settings.DataManagementScreenRoute
 import com.feniqo.mobile.presentation.settings.DeleteAccountScreenRoute
+import com.feniqo.mobile.presentation.settings.EmailSettingsScreenRoute
 import com.feniqo.mobile.presentation.settings.EmailVerificationScreenRoute
 import com.feniqo.mobile.presentation.settings.FeedbackScreenRoute
 import com.feniqo.mobile.presentation.settings.HelpAboutScreenRoute
+import com.feniqo.mobile.presentation.settings.HelpArticleStatusScreenRoute
+import com.feniqo.mobile.presentation.settings.HelpCenterScreenRoute
 import com.feniqo.mobile.presentation.settings.LanguageRegionScreenRoute
+import com.feniqo.mobile.presentation.settings.LegalInfoScreenRoute
 import com.feniqo.mobile.presentation.settings.NotificationsScreenRoute
 import com.feniqo.mobile.presentation.settings.PersonalInfoScreenRoute
+import com.feniqo.mobile.presentation.settings.PhotoPreviewScreenRoute
 import com.feniqo.mobile.presentation.settings.SecurityPrivacyScreenRoute
 import com.feniqo.mobile.presentation.settings.SettingsScreenRoute
 import com.feniqo.mobile.presentation.settings.SyncStatusScreenRoute
@@ -444,14 +464,34 @@ fun MainNavHost(
         destination?.hasRoute<EmailVerificationRoute>() == true ||
         destination?.hasRoute<ChangePasswordRoute>() == true ||
         destination?.hasRoute<DeleteAccountRoute>() == true ||
-        destination?.hasRoute<FeedbackRoute>() == true
-    val isDetailForm = isTransactionForm || isTransactionSuccess || isCategoryForm || isBudgetForm || isBudgetDetail || isRecurringForm || isSubscriptionForm || isSubscriptionDetail || isGoalDetail || isGoalForm || isGoalContributionForm || isDebtForm || isDebtPaymentForm || isWorkspacePicker || isWorkspaceCreate || isWorkspaceJoin || isWorkspaceDetails || isWorkspaceSettlement || isAssetForm || isAssetDetail || isAssetDistribution || isProfile || isSettings || isSettingsSubRoute
+        destination?.hasRoute<FeedbackRoute>() == true ||
+        destination?.hasRoute<PhotoPreviewRoute>() == true ||
+        destination?.hasRoute<EmailSettingsRoute>() == true ||
+        destination?.hasRoute<HelpCenterRoute>() == true ||
+        destination?.hasRoute<HelpArticleStatusRoute>() == true ||
+        destination?.hasRoute<LegalInfoRoute>() == true
+    val isReportSubRoute = destination?.hasRoute<CustomDateRangeRoute>() == true ||
+        destination?.hasRoute<MultiCurrencyReportRoute>() == true ||
+        destination?.hasRoute<PeriodSummaryReportRoute>() == true ||
+        destination?.hasRoute<AllReportsHubRoute>() == true ||
+        destination?.hasRoute<CategoryBreakdownReportRoute>() == true ||
+        destination?.hasRoute<CategoryDetailReportRoute>() == true ||
+        destination?.hasRoute<CashFlowReportRoute>() == true ||
+        destination?.hasRoute<PeriodComparisonReportRoute>() == true ||
+        destination?.hasRoute<SpendingCalendarReportRoute>() == true ||
+        destination?.hasRoute<BudgetPerformanceReportRoute>() == true ||
+        destination?.hasRoute<SubscriptionSummaryReportRoute>() == true ||
+        destination?.hasRoute<DebtSummaryReportRoute>() == true ||
+        destination?.hasRoute<ForecastReportRoute>() == true ||
+        destination?.hasRoute<FinancialInsightsReportRoute>() == true
+    val isReports = destination?.hasRoute<ReportsRoute>() == true
+    val isDetailForm = isTransactionForm || isTransactionSuccess || isCategoryForm || isBudgetForm || isBudgetDetail || isRecurringForm || isSubscriptionForm || isSubscriptionDetail || isGoalDetail || isGoalForm || isGoalContributionForm || isDebtForm || isDebtPaymentForm || isWorkspacePicker || isWorkspaceCreate || isWorkspaceJoin || isWorkspaceDetails || isWorkspaceSettlement || isAssetForm || isAssetDetail || isAssetDistribution || isProfile || isSettings || isSettingsSubRoute || isReports || isReportSubRoute
     var showQuickAdd by remember { mutableStateOf(false) }
 
     val currentSection = when {
         destination?.hasRoute<TransactionsRoute>() == true || isTransactionForm -> AppSection.TRANSACTIONS
         destination?.hasRoute<BudgetsRoute>() == true || isBudgetForm || isBudgetDetail -> AppSection.BUDGET
-        destination?.hasRoute<MoreRoute>() == true || destination?.hasRoute<AssetsRoute>() == true || isAssetForm || isAssetDetail || isAssetDistribution || destination?.hasRoute<CategoriesRoute>() == true || isCategoryForm || destination?.hasRoute<RecurringTransactionsRoute>() == true || isRecurringForm || destination?.hasRoute<SubscriptionsRoute>() == true || isSubscriptionForm || isSubscriptionDetail || destination?.hasRoute<GoalsRoute>() == true || isGoalDetail || isGoalForm || isGoalContributionForm || destination?.hasRoute<DebtsRoute>() == true || isDebtForm || isDebtPaymentForm || isWorkspacePicker || isWorkspaceCreate || isWorkspaceJoin || isWorkspaceDetails || isWorkspaceSettlement -> AppSection.MORE
+        destination?.hasRoute<MoreRoute>() == true || destination?.hasRoute<AssetsRoute>() == true || isAssetForm || isAssetDetail || isAssetDistribution || destination?.hasRoute<CategoriesRoute>() == true || isCategoryForm || destination?.hasRoute<RecurringTransactionsRoute>() == true || isRecurringForm || destination?.hasRoute<SubscriptionsRoute>() == true || isSubscriptionForm || isSubscriptionDetail || destination?.hasRoute<GoalsRoute>() == true || isGoalDetail || isGoalForm || isGoalContributionForm || destination?.hasRoute<DebtsRoute>() == true || isDebtForm || isDebtPaymentForm || isWorkspacePicker || isWorkspaceCreate || isWorkspaceJoin || isWorkspaceDetails || isWorkspaceSettlement || isReports || isReportSubRoute -> AppSection.MORE
         else -> AppSection.DASHBOARD
     }
 
@@ -459,14 +499,7 @@ fun MainNavHost(
     FeniqoAppShell(
         selectedSection = currentSection,
         onSectionSelect = { section ->
-            val targetRoute = section.toTopLevelDestination().route
-            navController.navigate(targetRoute) {
-                popUpTo(navController.graph.findStartDestination().id) {
-                    saveState = true
-                }
-                launchSingleTop = true
-                restoreState = true
-            }
+            navController.navigateToSection(section.toTopLevelDestination())
         },
         onPrimaryAction = {
             showQuickAdd = true
@@ -492,13 +525,7 @@ fun MainNavHost(
                         }
                     },
                     onViewAllTransactions = {
-                        navController.navigate(TransactionsRoute()) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
+                        navController.navigateToSection(TopLevelDestination.TRANSACTIONS)
                     },
                     onTransactionClick = { transactionId ->
                         navController.navigate(TransactionFormRoute(transactionId.value)) {
@@ -578,12 +605,7 @@ fun MainNavHost(
                         }
                     },
                     onClose = {
-                        navController.navigate(TransactionsRoute()) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                        }
+                        navController.closeTransactionSuccess()
                     },
                 )
             }
@@ -729,6 +751,122 @@ fun MainNavHost(
                             launchSingleTop = true
                         }
                     },
+                    onNavigateToReports = {
+                        navController.navigate(ReportsRoute)
+                    },
+                )
+            }
+            composable<ReportsRoute> {
+                ReportsScreenRoute(
+                    onNavigateToCustomDateRange = { navController.navigate(CustomDateRangeRoute) },
+                    onNavigateToMultiCurrency = { navController.navigate(MultiCurrencyReportRoute) },
+                    onNavigateToPeriodSummary = { navController.navigate(PeriodSummaryReportRoute) },
+                    onNavigateToAllReportsHub = { navController.navigate(AllReportsHubRoute) },
+                    onNavigateToCategoryBreakdown = { navController.navigate(CategoryBreakdownReportRoute) },
+                    onNavigateToCategoryDetail = { catId, catName ->
+                        navController.navigate(CategoryDetailReportRoute(catId, catName))
+                    },
+                    onNavigateToCashFlow = { navController.navigate(CashFlowReportRoute) },
+                    onNavigateToPeriodComparison = { navController.navigate(PeriodComparisonReportRoute) },
+                    onNavigateToSpendingCalendar = { navController.navigate(SpendingCalendarReportRoute) },
+                    onNavigateToBudgetPerformance = { navController.navigate(BudgetPerformanceReportRoute) },
+                    onNavigateToSubscriptionSummary = { navController.navigate(SubscriptionSummaryReportRoute) },
+                    onNavigateToDebtSummary = { navController.navigate(DebtSummaryReportRoute) },
+                    onNavigateToForecast = { navController.navigate(ForecastReportRoute) },
+                    onNavigateToFinancialInsights = { navController.navigate(FinancialInsightsReportRoute) },
+                    onNavigateToAddTransaction = { navController.navigate(TransactionFormRoute()) },
+                    onNavigateHome = {
+                        navController.navigateToSection(TopLevelDestination.DASHBOARD)
+                    },
+                    onNavigateBack = { navController.popBackStack() },
+                )
+            }
+            composable<PeriodSummaryReportRoute> {
+                PeriodSummaryReportRoute(
+                    onNavigateToCategoryDetail = { catId, catName ->
+                        navController.navigate(CategoryDetailReportRoute(catId, catName))
+                    },
+                    onNavigateBack = { navController.popBackStack() },
+                )
+            }
+            composable<AllReportsHubRoute> {
+                AllReportsHubRoute(
+                    onNavigateToCategoryBreakdown = { navController.navigate(CategoryBreakdownReportRoute) },
+                    onNavigateToCashFlow = { navController.navigate(CashFlowReportRoute) },
+                    onNavigateToPeriodComparison = { navController.navigate(PeriodComparisonReportRoute) },
+                    onNavigateToSpendingCalendar = { navController.navigate(SpendingCalendarReportRoute) },
+                    onNavigateToBudgetPerformance = { navController.navigate(BudgetPerformanceReportRoute) },
+                    onNavigateToSubscriptions = { navController.navigate(SubscriptionSummaryReportRoute) },
+                    onNavigateToDebts = { navController.navigate(DebtSummaryReportRoute) },
+                    onNavigateToForecast = { navController.navigate(ForecastReportRoute) },
+                    onNavigateToInsights = { navController.navigate(FinancialInsightsReportRoute) },
+                    onNavigateBack = { navController.popBackStack() },
+                )
+            }
+            composable<CategoryBreakdownReportRoute> {
+                CategoryBreakdownReportRoute(
+                    onNavigateToCategoryDetail = { catId, catName ->
+                        navController.navigate(CategoryDetailReportRoute(catId, catName))
+                    },
+                    onNavigateBack = { navController.popBackStack() },
+                )
+            }
+            composable<CategoryDetailReportRoute> { backStackEntry ->
+                val route = backStackEntry.toRoute<CategoryDetailReportRoute>()
+                CategoryDetailReportRoute(
+                    categoryId = route.categoryId,
+                    categoryName = route.categoryName,
+                    onNavigateBack = { navController.popBackStack() },
+                )
+            }
+            composable<CashFlowReportRoute> {
+                CashFlowReportRoute(
+                    onNavigateBack = { navController.popBackStack() },
+                )
+            }
+            composable<PeriodComparisonReportRoute> {
+                PeriodComparisonReportRoute(
+                    onNavigateBack = { navController.popBackStack() },
+                )
+            }
+            composable<SpendingCalendarReportRoute> {
+                SpendingCalendarReportRoute(
+                    onNavigateBack = { navController.popBackStack() },
+                )
+            }
+            composable<BudgetPerformanceReportRoute> {
+                BudgetPerformanceReportRoute(
+                    onNavigateBack = { navController.popBackStack() },
+                )
+            }
+            composable<SubscriptionSummaryReportRoute> {
+                SubscriptionSummaryReportRoute(
+                    onNavigateBack = { navController.popBackStack() },
+                )
+            }
+            composable<DebtSummaryReportRoute> {
+                DebtSummaryReportRoute(
+                    onNavigateBack = { navController.popBackStack() },
+                )
+            }
+            composable<ForecastReportRoute> {
+                ForecastReportRoute(
+                    onNavigateBack = { navController.popBackStack() },
+                )
+            }
+            composable<FinancialInsightsReportRoute> {
+                FinancialInsightsReportRoute(
+                    onNavigateBack = { navController.popBackStack() },
+                )
+            }
+            composable<CustomDateRangeRoute> {
+                CustomDateRangeRoute(
+                    onNavigateBack = { navController.popBackStack() },
+                )
+            }
+            composable<MultiCurrencyReportRoute> {
+                MultiCurrencyReportRoute(
+                    onNavigateBack = { navController.popBackStack() },
                 )
             }
             composable<ProfileRoute> {
@@ -739,7 +877,11 @@ fun MainNavHost(
                     email = profileState.email,
                     workspaceName = profileState.workspaceName,
                     currencyCode = profileState.currencyCode,
+                    languageRegionLabel = profileState.languageRegionLabel,
                     isProfileLoading = profileState.isLoading,
+                    isProfileEmpty = profileState.isProfileEmpty,
+                    profileErrorMessage = profileState.profileErrorMessage,
+                    onRetryProfile = profileViewModel::retryProfile,
                     signOutError = profileState.signOutError,
                     themeLabel = when (themeMode) {
                         ThemeMode.SYSTEM -> "Sistem teması"
@@ -751,8 +893,16 @@ fun MainNavHost(
                     syncStatus = syncStatus,
                     appVersion = "Sürüm ${BuildConfig.VERSION_NAME}",
                     onBack = { navController.popBackStack() },
-                    onOpenSettings = { navController.navigate(SettingsRoute) { launchSingleTop = true } },
+                    onOpenAccount = { navController.navigate(AccountRoute) { launchSingleTop = true } },
+                    onOpenPersonalInfo = { navController.navigate(PersonalInfoRoute) { launchSingleTop = true } },
                     onOpenSharedSpaces = { navController.navigate(WorkspacePickerRoute) { launchSingleTop = true } },
+                    onOpenAppearance = { navController.navigate(AppearanceRoute) { launchSingleTop = true } },
+                    onOpenNotifications = { navController.navigate(NotificationsSettingsRoute) { launchSingleTop = true } },
+                    onOpenLanguageRegion = { navController.navigate(LanguageRegionRoute) { launchSingleTop = true } },
+                    onOpenSecurityPrivacy = { navController.navigate(SecurityPrivacyRoute) { launchSingleTop = true } },
+                    onOpenDataManagement = { navController.navigate(DataManagementRoute) { launchSingleTop = true } },
+                    onOpenLegalInfo = { navController.navigate(LegalInfoRoute) { launchSingleTop = true } },
+                    onOpenHelpAbout = { navController.navigate(HelpAboutRoute) { launchSingleTop = true } },
                     onSignOut = profileViewModel::signOut,
                 )
             }
@@ -912,9 +1062,27 @@ fun MainNavHost(
             composable<AccountRoute> {
                 AccountScreenRoute(
                     onNavigateToPersonalInfo = { navController.navigate(PersonalInfoRoute) { launchSingleTop = true } },
-                    onNavigateToChangeEmail = { navController.navigate(ChangeEmailRoute) { launchSingleTop = true } },
+                    onNavigateToChangeEmail = { navController.navigate(EmailSettingsRoute) { launchSingleTop = true } },
                     onNavigateToChangePassword = { navController.navigate(ChangePasswordRoute) { launchSingleTop = true } },
                     onNavigateToDeleteAccount = { navController.navigate(DeleteAccountRoute) { launchSingleTop = true } },
+                    onNavigateToPhotoPreview = { fileName ->
+                        navController.navigate(PhotoPreviewRoute(fileName)) { launchSingleTop = true }
+                    },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<PhotoPreviewRoute> { backStackEntry ->
+                val route = backStackEntry.toRoute<PhotoPreviewRoute>()
+                PhotoPreviewScreenRoute(
+                    draftFileName = route.draftFileName,
+                    onBack = { navController.popBackStack() },
+                    onReselect = { navController.popBackStack() },
+                    onSaveSuccess = { navController.popBackStack() },
+                )
+            }
+            composable<EmailSettingsRoute> {
+                EmailSettingsScreenRoute(
+                    onNavigateToChangeEmail = { navController.navigate(ChangeEmailRoute) { launchSingleTop = true } },
                     onBack = { navController.popBackStack() },
                 )
             }
@@ -967,9 +1135,41 @@ fun MainNavHost(
             }
             composable<HelpAboutRoute> {
                 HelpAboutScreenRoute(
-                    onNavigateToFeedback = { type ->
-                        navController.navigate(FeedbackRoute) { launchSingleTop = true }
+                    onNavigateToFeedback = { isBug ->
+                        navController.navigate(FeedbackRoute(isBug = isBug)) { launchSingleTop = true }
                     },
+                    onNavigateToHelpCenter = {
+                        navController.navigate(HelpCenterRoute) { launchSingleTop = true }
+                    },
+                    onNavigateToLegalInfo = {
+                        navController.navigate(LegalInfoRoute) { launchSingleTop = true }
+                    },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<HelpCenterRoute> {
+                HelpCenterScreenRoute(
+                    onNavigateToArticle = { articleTitle ->
+                        navController.navigate(HelpArticleStatusRoute(articleTitle)) { launchSingleTop = true }
+                    },
+                    onNavigateToFeedback = {
+                        navController.navigate(FeedbackRoute(isBug = false)) { launchSingleTop = true }
+                    },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<HelpArticleStatusRoute> { backStackEntry ->
+                val route = backStackEntry.toRoute<HelpArticleStatusRoute>()
+                HelpArticleStatusScreenRoute(
+                    articleTitle = route.articleTitle,
+                    onNavigateToFeedback = {
+                        navController.navigate(FeedbackRoute(isBug = false)) { launchSingleTop = true }
+                    },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<LegalInfoRoute> {
+                LegalInfoScreenRoute(
                     onBack = { navController.popBackStack() },
                 )
             }
@@ -1001,12 +1201,15 @@ fun MainNavHost(
                 DeleteAccountScreenRoute(
                     onExportData = { navController.navigate(DataManagementRoute) { launchSingleTop = true } },
                     onCheckWorkspaces = { navController.navigate(WorkspacePickerRoute) { launchSingleTop = true } },
+                    onInspectSync = { navController.navigate(SyncStatusRoute) { launchSingleTop = true } },
+                    onContactSupport = { navController.navigate(FeedbackRoute(isBug = false)) { launchSingleTop = true } },
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable<FeedbackRoute> {
+            composable<FeedbackRoute> { backStackEntry ->
+                val route = backStackEntry.toRoute<FeedbackRoute>()
                 FeedbackScreenRoute(
-                    initialIsBug = false,
+                    initialIsBug = route.isBug,
                     onBack = { navController.popBackStack() },
                 )
             }

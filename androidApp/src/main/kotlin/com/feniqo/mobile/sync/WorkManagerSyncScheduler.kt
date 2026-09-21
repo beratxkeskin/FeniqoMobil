@@ -24,6 +24,7 @@ class WorkManagerSyncScheduler @Inject constructor(
         .build()
 
     override fun scheduleInitialSync() {
+        if (com.feniqo.mobile.BuildConfig.DEMO) return
         val workRequest = OneTimeWorkRequestBuilder<SyncWorker>()
             .setConstraints(syncConstraints)
             .setBackoffCriteria(
@@ -42,6 +43,7 @@ class WorkManagerSyncScheduler @Inject constructor(
     }
 
     override fun scheduleOutboxSync() {
+        if (com.feniqo.mobile.BuildConfig.DEMO) return
         val workRequest = OneTimeWorkRequestBuilder<SyncWorker>()
             .setConstraints(syncConstraints)
             .setBackoffCriteria(

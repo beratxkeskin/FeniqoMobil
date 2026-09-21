@@ -33,6 +33,7 @@ import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.CreditCard
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.Payments
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -58,6 +59,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import com.feniqo.mobile.domain.model.TransactionSplitMode
+import com.feniqo.mobile.presentation.transaction.CustomSplitUiHelper
+import com.feniqo.mobile.presentation.transaction.TransactionFormFieldError
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -73,6 +77,7 @@ import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.LocalDate
+import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.PaymentMethod
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
@@ -241,6 +246,7 @@ fun TransactionAmountField(
                 Currency.TRY -> "Türk Lirası (TRY)"
                 Currency.USD -> "Amerikan Doları (USD)"
                 Currency.EUR -> "Euro (EUR)"
+                Currency.GBP -> "İngiliz Sterlini (GBP)"
             }, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = null)
         }
@@ -888,6 +894,17 @@ fun TransactionSplitSection(
     errorText: String?,
     enabled: Boolean,
     modifier: Modifier = Modifier,
+    splitMode: TransactionSplitMode = TransactionSplitMode.EQUAL,
+    customSharesText: Map<EntityId, String> = emptyMap(),
+    customShareErrors: Map<EntityId, TransactionFormFieldError> = emptyMap(),
+    currency: Currency = Currency.TRY,
+    amountText: String = "",
+    isInstallmentOptionAvailable: Boolean = false,
+    isInstallmentEnabled: Boolean = false,
+    onToggleInstallment: ((Boolean) -> Unit)? = null,
+    onSplitModeChanged: (TransactionSplitMode) -> Unit = {},
+    onCustomShareChanged: (EntityId, String) -> Unit = { _, _ -> },
+    onApplyPayerRemainder: () -> Unit = {},
 ) {
     Card(
         modifier = modifier
@@ -918,6 +935,50 @@ fun TransactionSplitSection(
                 )
             }
 
+            if (isInstallmentEnabled && splitMode == TransactionSplitMode.CUSTOM) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(FeniqoRadius.Small),
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(FeniqoSpacing.Medium),
+                        verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
+                    ) {
+                        Text(
+                            text = "Özel tutarlı paylaşım taksitli işlemlerde kullanılamaz.",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                        Text(
+                            text = "Lütfen eşit paylaşımı seçin veya taksiti kapatın.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                        Row(
+                            modifier = Modifier.padding(top = FeniqoSpacing.ExtraSmall),
+                            horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                        ) {
+                            TextButton(
+                                onClick = { onSplitModeChanged(TransactionSplitMode.EQUAL) },
+                            ) {
+                                Text("Eşit Paylaşımı Seç")
+                            }
+                            if (onToggleInstallment != null) {
+                                TextButton(
+                                    onClick = { onToggleInstallment(false) },
+                                ) {
+                                    Text("Taksiti Kapat")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             if (isLoading) {
                 Row(
                     modifier = Modifier
@@ -946,7 +1007,54 @@ fun TransactionSplitSection(
                     color = MaterialTheme.colorScheme.error,
                 )
             } else {
-                // 1. Ödeyen Kişi Seçimi
+                // 1. Paylaşım Modu Seçimi (Eşit Paylaşım vs Özel Tutarlar)
+                Column(verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small)) {
+                    Text(
+                        text = "Paylaşım Şekli",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        FilterChip(
+                            selected = splitMode == TransactionSplitMode.EQUAL,
+                            onClick = { onSplitModeChanged(TransactionSplitMode.EQUAL) },
+                            enabled = enabled,
+                            label = {
+                                Text(
+                                    text = "Eşit Paylaşım",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = if (splitMode == TransactionSplitMode.EQUAL) FontWeight.Bold else FontWeight.Normal,
+                                )
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .defaultMinSize(minHeight = 44.dp)
+                                .semantics { contentDescription = "Eşit Paylaşım Modu" },
+                        )
+                        FilterChip(
+                            selected = splitMode == TransactionSplitMode.CUSTOM,
+                            onClick = { onSplitModeChanged(TransactionSplitMode.CUSTOM) },
+                            enabled = enabled,
+                            label = {
+                                Text(
+                                    text = "Özel Tutarlar",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = if (splitMode == TransactionSplitMode.CUSTOM) FontWeight.Bold else FontWeight.Normal,
+                                )
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .defaultMinSize(minHeight = 44.dp)
+                                .semantics { contentDescription = "Özel Tutarlar Modu" },
+                        )
+                    }
+                }
+
+                // 2. Ödeyen Kişi Seçimi
                 Column(verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small)) {
                     Text(
                         text = "Ödeyen Kişi",
@@ -964,7 +1072,7 @@ fun TransactionSplitSection(
                             FilterChip(
                                 selected = isSelected,
                                 onClick = { onPaidByUserSelected(member.userId) },
-                                enabled = enabled,
+                                enabled = enabled && member.isActive,
                                 label = {
                                     Text(
                                         text = member.displayName,
@@ -982,7 +1090,7 @@ fun TransactionSplitSection(
                     }
                 }
 
-                // 2. Katılımcılar Seçimi
+                // 3. Katılımcılar Seçimi ve Dağıtım
                 Column(verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small)) {
                     Text(
                         text = "Katılımcılar",
@@ -995,55 +1103,260 @@ fun TransactionSplitSection(
                         val isParticipant = member.userId in selectedParticipantUserIds
                         val isPayer = member.userId == selectedPaidByUserId
 
-                        Row(
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(FeniqoRadius.Small))
-                                .clickable(
-                                    enabled = enabled && !isPayer,
-                                    role = Role.Checkbox,
-                                    onClick = { onParticipantToggled(member.userId) },
-                                )
-                                .padding(vertical = FeniqoSpacing.Small, horizontal = FeniqoSpacing.ExtraSmall)
-                                .semantics {
-                                    contentDescription = "${member.displayName} katılımcı: ${if (isParticipant) "seçili" else "seçili değil"}"
-                                },
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                                .padding(vertical = FeniqoSpacing.ExtraSmall),
+                            verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
                         ) {
                             Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(FeniqoRadius.Small))
+                                    .clickable(
+                                        enabled = enabled && !isPayer,
+                                        role = Role.Checkbox,
+                                        onClick = { onParticipantToggled(member.userId) },
+                                    )
+                                    .padding(vertical = FeniqoSpacing.Small, horizontal = FeniqoSpacing.ExtraSmall)
+                                    .semantics {
+                                        contentDescription = "${member.displayName} katılımcı: ${if (isParticipant) "seçili" else "seçili değil"}"
+                                    },
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                                modifier = Modifier.weight(1f),
+                                horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
-                                Checkbox(
-                                    checked = isParticipant,
-                                    onCheckedChange = if (enabled && !isPayer) {
-                                        { onParticipantToggled(member.userId) }
-                                    } else null,
-                                    enabled = enabled && !isPayer,
-                                    modifier = Modifier.size(24.dp),
-                                )
-                                Text(
-                                    text = member.displayName,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    Checkbox(
+                                        checked = isParticipant,
+                                        onCheckedChange = if (enabled && !isPayer) {
+                                            { onParticipantToggled(member.userId) }
+                                        } else null,
+                                        enabled = enabled && !isPayer,
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                    Text(
+                                        text = member.displayName,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = if (enabled && member.isActive) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                                    )
+                                }
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
+                                ) {
+                                    if (isPayer) {
+                                        Surface(
+                                            shape = androidx.compose.foundation.shape.CircleShape,
+                                            color = MaterialTheme.colorScheme.primaryContainer,
+                                        ) {
+                                            Text(
+                                                text = "Ödeyen (Zorunlu)",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                fontWeight = FontWeight.Medium,
+                                                modifier = Modifier.padding(horizontal = FeniqoSpacing.Small, vertical = 2.dp),
+                                            )
+                                        }
+                                    }
+                                    if (!member.isActive) {
+                                        Surface(
+                                            shape = androidx.compose.foundation.shape.CircleShape,
+                                            color = MaterialTheme.colorScheme.errorContainer,
+                                        ) {
+                                            Text(
+                                                text = "Ayrıldı",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                                fontWeight = FontWeight.Medium,
+                                                modifier = Modifier.padding(horizontal = FeniqoSpacing.Small, vertical = 2.dp),
+                                            )
+                                        }
+                                    }
+                                }
                             }
 
-                            if (isPayer) {
-                                Surface(
-                                    shape = androidx.compose.foundation.shape.CircleShape,
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    modifier = Modifier.padding(start = FeniqoSpacing.Small),
-                                ) {
+                            // CUSTOM Modunda Her Katılımcı İçin Tutar Girişi
+                            if (splitMode == TransactionSplitMode.CUSTOM && isParticipant) {
+                                val shareError = customShareErrors[member.userId]
+                                val displayError = shareError ?: if (!member.isActive) TransactionFormFieldError.SPLIT_CUSTOM_MEMBER_NOT_ACTIVE else null
+                                OutlinedTextField(
+                                    value = customSharesText[member.userId] ?: "",
+                                    onValueChange = { onCustomShareChanged(member.userId, it) },
+                                    enabled = enabled,
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    label = { Text("Pay Tutarı") },
+                                    trailingIcon = {
+                                        Text(
+                                            text = currency.symbol,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(end = FeniqoSpacing.Small),
+                                        )
+                                    },
+                                    isError = displayError != null,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 32.dp, bottom = FeniqoSpacing.ExtraSmall)
+                                        .semantics {
+                                            contentDescription = "${member.displayName} pay tutarı"
+                                        },
+                                )
+                                if (displayError != null) {
                                     Text(
-                                        text = "Ödeyen (Zorunlu)",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        fontWeight = FontWeight.Medium,
-                                        modifier = Modifier.padding(horizontal = FeniqoSpacing.Small, vertical = 2.dp),
+                                        text = displayError.toDisplayText(),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.padding(start = 36.dp, bottom = FeniqoSpacing.ExtraSmall),
                                     )
+                                }
+                            }
+                        }
+                    }
+
+                    if (splitMode == TransactionSplitMode.EQUAL) {
+                        Text(
+                            text = "Harcamalar seçilen katılımcılar arasında eşit paylaşılır.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = FeniqoSpacing.ExtraSmall),
+                        )
+                    } else if (splitMode == TransactionSplitMode.CUSTOM) {
+                        // CUSTOM Modu Dağıtım Durumu ve Kalan Aktarma Çubuğu
+                        val activeMemberIds = remember(members) {
+                            members.filter { it.isActive }.map { it.userId }.toSet()
+                        }
+                        val summary = remember(
+                            amountText,
+                            currency,
+                            selectedPaidByUserId,
+                            selectedParticipantUserIds,
+                            customSharesText,
+                            activeMemberIds,
+                        ) {
+                            CustomSplitUiHelper.calculateSplitSummary(
+                                amountText = amountText,
+                                currency = currency,
+                                payer = selectedPaidByUserId,
+                                participants = selectedParticipantUserIds,
+                                customSharesText = customSharesText,
+                                activeMembers = activeMemberIds,
+                            )
+                        }
+
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = FeniqoSpacing.Small)
+                                .semantics { contentDescription = "Özel Dağıtım Durumu" },
+                            shape = RoundedCornerShape(FeniqoRadius.Small),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                            ),
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(FeniqoSpacing.Medium),
+                                verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "Toplam: ${summary.totalAmountMinor?.let { MoneyFormatter.format(Money(it, currency)) } ?: "-"}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                        val distributedDisplay = when {
+                                            summary.isLongOverflow -> "Sayı sınırı aşıldı"
+                                            summary.isMoneyMaxExceeded -> "Desteklenen para sınırı aşıldı"
+                                            else -> MoneyFormatter.format(Money(summary.distributedAmountMinor, currency))
+                                        }
+                                        Text(
+                                            text = "Dağıtılan: $distributedDisplay",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                    }
+
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        if (summary.isBalanced) {
+                                            Text(
+                                                text = "✓ Tam Eşleşti",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                            )
+                                        } else if (summary.hasInactiveMember) {
+                                            Text(
+                                                text = "Aktif olmayan üye var",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                        } else if (summary.hasExcess) {
+                                            val excessText = when {
+                                                summary.isLongOverflow -> "Sayı sınırı aşıldı"
+                                                summary.remainingAmountMinor != null && kotlin.math.abs(summary.remainingAmountMinor) > Money.MAX_AMOUNT_MINOR -> "Desteklenen para sınırı aşıldı (Fazla)"
+                                                summary.remainingAmountMinor != null -> "${MoneyFormatter.format(Money(kotlin.math.abs(summary.remainingAmountMinor), currency))} Fazla"
+                                                else -> "Fazla"
+                                            }
+                                            Text(
+                                                text = excessText,
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                        } else if (summary.remainingAmountMinor != null && summary.remainingAmountMinor > 0) {
+                                            val remainingText = when {
+                                                summary.isLongOverflow -> "Sayı sınırı aşıldı"
+                                                summary.remainingAmountMinor > Money.MAX_AMOUNT_MINOR -> "Desteklenen para sınırı aşıldı (Kalan)"
+                                                else -> "${MoneyFormatter.format(Money(summary.remainingAmountMinor, currency))} Kalan"
+                                            }
+                                            Text(
+                                                text = remainingText,
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.tertiary,
+                                            )
+                                        } else if (summary.isOverflow) {
+                                            Text(
+                                                text = if (summary.isLongOverflow) "Sayı sınırı aşıldı" else "Desteklenen para sınırı aşıldı",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                        }
+                                    }
+                                }
+
+                                if (summary.hasInactiveMember && summary.inactiveMemberMessage != null) {
+                                    Text(
+                                        text = summary.inactiveMemberMessage,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.padding(top = FeniqoSpacing.ExtraSmall),
+                                    )
+                                }
+
+                                Button(
+                                    onClick = onApplyPayerRemainder,
+                                    enabled = enabled && summary.canApplyPayerRemainder,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .semantics { contentDescription = "Kalan tutarı ödeyene aktar" },
+                                ) {
+                                    Text("Kalan tutarı ödeyene aktar")
                                 }
                             }
                         }

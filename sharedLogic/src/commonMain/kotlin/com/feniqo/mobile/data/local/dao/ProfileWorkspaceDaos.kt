@@ -1,6 +1,8 @@
 package com.feniqo.mobile.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Upsert
 import com.feniqo.mobile.data.local.entity.UserProfileEntity
@@ -16,6 +18,9 @@ interface ProfileDao {
 
     @Upsert
     suspend fun upsert(entity: UserProfileEntity)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertIfMissing(entity: UserProfileEntity): Long
 
     @Query(
         """

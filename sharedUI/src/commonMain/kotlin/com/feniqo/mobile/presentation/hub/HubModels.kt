@@ -16,6 +16,7 @@ data class HubMenuItem(
     val title: String,
     val subtitle: String,
     val iconSymbol: String,
+    val iconKey: String? = null,
     val status: HubItemStatus = HubItemStatus.AVAILABLE,
 ) {
     val isAvailable: Boolean get() = status == HubItemStatus.AVAILABLE
@@ -30,6 +31,7 @@ object PlanHubRegistry {
         title = "Bütçeler",
         subtitle = "Kategori bazlı aylık bütçe ve harcama limitleri",
         iconSymbol = "▥",
+        iconKey = "budgets",
         status = HubItemStatus.AVAILABLE,
     )
 
@@ -38,6 +40,7 @@ object PlanHubRegistry {
         title = "Tekrarlayan İşlemler",
         subtitle = "Kira, maaş gibi otomatik tekrarlanan işlemler",
         iconSymbol = "↻",
+        iconKey = "recurring_transactions",
         status = HubItemStatus.AVAILABLE,
     )
 
@@ -46,6 +49,7 @@ object PlanHubRegistry {
         title = "Abonelikler",
         subtitle = "Dijital servisler ve düzenli abonelik ödemeleri",
         iconSymbol = "▰",
+        iconKey = "subscriptions",
         status = HubItemStatus.AVAILABLE,
     )
 
@@ -54,6 +58,7 @@ object PlanHubRegistry {
         title = "Hedefler",
         subtitle = "Birikim ve tasarruf hedefleri takibi",
         iconSymbol = "◎",
+        iconKey = "goals",
         status = HubItemStatus.AVAILABLE,
     )
 
@@ -62,6 +67,7 @@ object PlanHubRegistry {
         title = "Borç / Alacak",
         subtitle = "Kişi ve kurum bazlı borç ve alacak takibi",
         iconSymbol = "⇄",
+        iconKey = "debts",
         status = HubItemStatus.AVAILABLE,
     )
 

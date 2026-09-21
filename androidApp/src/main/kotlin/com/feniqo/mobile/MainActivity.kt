@@ -70,7 +70,7 @@ class MainActivity : FragmentActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 // Realtime yalnız foreground'da çalışır; gelen sinyal Room senkronizasyonunu tetikler.
-                realtimeSyncCoordinator.run()
+                if (!BuildConfig.DEMO) realtimeSyncCoordinator.run()
             }
         }
 
@@ -87,33 +87,35 @@ class MainActivity : FragmentActivity() {
             }
 
             App(themeMode = themeMode) {
-                if (authState == AppAuthState.Authenticated && appLockState.isLocked) {
-                    AppLockScreen(
-                        errorMessage = appLockState.errorMessage,
-                        onUnlock = { authenticate(AppLockAuthenticationAction.UNLOCK) },
-                    )
-                } else {
-                    FeniqoNavigation(
-                        authState = authState,
-                        syncStatus = syncStatus,
-                        onManualSync = syncStatusViewModel::requestManualSync,
-                        onRetryFailed = syncStatusViewModel::retryFailedOperations,
-                        onResolveConflict = syncStatusViewModel::openConflictDialog,
-                        onResolveConflictDecision = syncStatusViewModel::resolveWorkspaceConflict,
-                        onDismissConflictDialog = syncStatusViewModel::dismissConflictDialog,
-                        themeMode = themeMode,
-                        onThemeModeChange = themePreferences::saveThemeMode,
-                        biometricLockEnabled = appLockState.settings?.biometricLockEnabled == true,
-                        biometricLockAvailable =
-                            appLockState.availability == DeviceAuthenticationAvailability.AVAILABLE,
-                        autoLockTimeout = appLockState.settings?.autoLockTimeout
-                            ?: com.feniqo.mobile.domain.repository.AutoLockTimeout.AFTER_1_MINUTE,
-                        onBiometricLockChange = { enabled ->
-                            if (enabled) authenticate(AppLockAuthenticationAction.ENABLE)
-                            else appLockViewModel.disableLock()
-                        },
-                        onAutoLockTimeoutChange = appLockViewModel::setAutoLockTimeout,
-                    )
+                com.feniqo.mobile.demo.DemoGate {
+                    if (authState == AppAuthState.Authenticated && appLockState.isLocked) {
+                        AppLockScreen(
+                            errorMessage = appLockState.errorMessage,
+                            onUnlock = { authenticate(AppLockAuthenticationAction.UNLOCK) },
+                        )
+                    } else {
+                        FeniqoNavigation(
+                            authState = authState,
+                            syncStatus = syncStatus,
+                            onManualSync = syncStatusViewModel::requestManualSync,
+                            onRetryFailed = syncStatusViewModel::retryFailedOperations,
+                            onResolveConflict = syncStatusViewModel::openConflictDialog,
+                            onResolveConflictDecision = syncStatusViewModel::resolveWorkspaceConflict,
+                            onDismissConflictDialog = syncStatusViewModel::dismissConflictDialog,
+                            themeMode = themeMode,
+                            onThemeModeChange = themePreferences::saveThemeMode,
+                            biometricLockEnabled = appLockState.settings?.biometricLockEnabled == true,
+                            biometricLockAvailable =
+                                appLockState.availability == DeviceAuthenticationAvailability.AVAILABLE,
+                            autoLockTimeout = appLockState.settings?.autoLockTimeout
+                                ?: com.feniqo.mobile.domain.repository.AutoLockTimeout.AFTER_1_MINUTE,
+                            onBiometricLockChange = { enabled ->
+                                if (enabled) authenticate(AppLockAuthenticationAction.ENABLE)
+                                else appLockViewModel.disableLock()
+                            },
+                            onAutoLockTimeoutChange = appLockViewModel::setAutoLockTimeout,
+                        )
+                    }
                 }
             }
         }

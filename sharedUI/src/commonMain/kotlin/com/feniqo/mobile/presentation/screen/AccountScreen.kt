@@ -39,7 +39,7 @@ import com.feniqo.mobile.presentation.theme.FeniqoTouchTarget
 fun AccountScreen(
     displayName: String,
     email: String,
-    isEmailVerified: Boolean,
+    emailVerificationStatus: com.feniqo.mobile.domain.model.EmailVerificationStatus,
     loginMethod: String,
     onBack: () -> Unit,
     onNavigateToPersonalInfo: () -> Unit,
@@ -50,6 +50,7 @@ fun AccountScreen(
     onTakePhoto: () -> Unit,
     onRemovePhoto: () -> Unit,
     modifier: Modifier = Modifier,
+    avatarBitmap: androidx.compose.ui.graphics.ImageBitmap? = null,
 ) {
     var showPhotoSheet by remember { mutableStateOf(false) }
 
@@ -66,12 +67,12 @@ fun AccountScreen(
         ) {
             item {
                 SettingsTopBar(
-                    title = "Hesabım",
+                    title = "Profil fotoğrafı",
                     onBack = onBack,
                 )
             }
 
-            // Avatar & Fotoğrafı Değiştir Butonu
+            // Pano A1: Avatar ve Kullanıcı Başlığı
             item {
                 Column(
                     modifier = Modifier
@@ -81,27 +82,38 @@ fun AccountScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(96.dp)
+                            .size(112.dp)
                             .clip(CircleShape)
                             .background(FeniqoSageGreenContainer)
                             .clickable { showPhotoSheet = true },
                         contentAlignment = Alignment.Center,
                     ) {
-                        val initials = displayName.trim().split(" ")
-                            .mapNotNull { it.firstOrNull()?.uppercase() }
-                            .take(2)
-                            .joinToString("")
-                            .ifBlank { "F" }
-                        Text(
-                            text = initials,
-                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                            color = FeniqoSageGreen,
-                        )
+                        if (avatarBitmap != null) {
+                            androidx.compose.foundation.Image(
+                                bitmap = avatarBitmap,
+                                contentDescription = "Profil fotoğrafı",
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        } else {
+                            val initials = displayName.trim().split(" ")
+                                .mapNotNull { it.firstOrNull()?.uppercase() }
+                                .take(2)
+                                .joinToString("")
+                                .ifBlank { "F" }
+                            Text(
+                                text = initials,
+                                style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+                                color = FeniqoSageGreen,
+                            )
+                        }
+
                         // Kamera rozeti
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
-                                .size(32.dp)
+                                .padding(end = 4.dp, bottom = 4.dp)
+                                .size(34.dp)
                                 .clip(CircleShape)
                                 .background(FeniqoSageGreen),
                             contentAlignment = Alignment.Center,
@@ -110,23 +122,38 @@ fun AccountScreen(
                                 imageVector = Icons.Default.CameraAlt,
                                 contentDescription = "Fotoğrafı değiştir",
                                 tint = FeniqoPureWhite,
-                                modifier = Modifier.size(16.dp),
+                                modifier = Modifier.size(18.dp),
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
-                    TextButton(onClick = { showPhotoSheet = true }) {
-                        Text(
-                            text = "Fotoğrafı değiştir",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+
+                    Spacer(modifier = Modifier.height(FeniqoSpacing.Medium))
+
+                    Text(
+                        text = displayName,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Hesap ayarlarınla ilgili bilgiler burada yer alır.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
 
             // Hesap Satırları
             item {
+                val (badgeText, badgeColor) = when (emailVerificationStatus) {
+                    com.feniqo.mobile.domain.model.EmailVerificationStatus.VERIFIED ->
+                        "Doğrulandı" to Color(0xFF2E7D32)
+                    com.feniqo.mobile.domain.model.EmailVerificationStatus.PENDING_VERIFICATION ->
+                        "Doğrulama bekleniyor" to Color(0xFFE65100)
+                    com.feniqo.mobile.domain.model.EmailVerificationStatus.UNKNOWN ->
+                        "Durum alınamadı" to Color(0xFF757575)
+                }
+
                 SettingsGroupCard {
                     SettingsRowItem(
                         title = "Kişisel bilgiler",
@@ -138,8 +165,8 @@ fun AccountScreen(
                         title = "E-posta",
                         subtitle = email.ifBlank { "Belirtilmemiş" },
                         icon = Icons.Outlined.Mail,
-                        badgeText = if (isEmailVerified) "Doğrulandı" else null,
-                        badgeColor = Color(0xFF2E7D32),
+                        badgeText = badgeText,
+                        badgeColor = badgeColor,
                         onClick = onNavigateToChangeEmail,
                     )
                     SettingsRowItem(
@@ -159,7 +186,7 @@ fun AccountScreen(
                 }
             }
 
-            // Hesabı Sil Eylemi (18'e yönlendirir)
+            // Hesabı Sil Eylemi (Pano A4'e yönlendirir)
             item {
                 Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
                 SettingsDangerItem(
@@ -171,7 +198,7 @@ fun AccountScreen(
         }
     }
 
-    // 16 Fotoğraf Seçimi Modal Bottom Sheet
+    // Pano A1: Profil Fotoğrafı Seçimi Modal Bottom Sheet
     if (showPhotoSheet) {
         ModalBottomSheet(
             onDismissRequest = { showPhotoSheet = false },
@@ -185,17 +212,9 @@ fun AccountScreen(
                     .padding(horizontal = FeniqoSpacing.Large, vertical = FeniqoSpacing.Medium),
                 verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
             ) {
-                Text(
-                    text = "Fotoğrafı değiştir",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-
                 SettingsGroupCard {
                     SettingsRowItem(
-                        title = "Fotoğraflardan seç",
-                        subtitle = "Galeriden bir görsel yükleyin",
+                        title = "Galeriden seç",
                         icon = Icons.Outlined.Image,
                         onClick = {
                             showPhotoSheet = false
@@ -204,7 +223,6 @@ fun AccountScreen(
                     )
                     SettingsRowItem(
                         title = "Fotoğraf çek",
-                        subtitle = "Kameranızı kullanarak yeni fotoğraf çekin",
                         icon = Icons.Outlined.CameraAlt,
                         showDivider = false,
                         onClick = {
@@ -217,13 +235,36 @@ fun AccountScreen(
                 SettingsDangerItem(
                     title = "Fotoğrafı kaldır",
                     icon = Icons.Outlined.Delete,
-                    showChevron = false,
+                    showChevron = true,
                     onClick = {
                         showPhotoSheet = false
                         onRemovePhoto()
                     },
                 )
-                Spacer(modifier = Modifier.height(FeniqoSpacing.ExtraLarge))
+
+                // Güvenlik Açıklaması
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = FeniqoSpacing.Small),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Lock,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Yalnızca bu cihazda saklanır.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(FeniqoSpacing.Medium))
             }
         }
     }

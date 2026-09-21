@@ -241,6 +241,59 @@ class OfflineFirstSyncRepositoryTest {
     }
 
     @Test
+    fun initial_remote_sync_failure_preserves_pending_outbox_operations_and_does_not_advance_cursor() = runTest {
+        val auth = FakeAuthRepository(USER_1_SESSION)
+        val syncStateDao = FakeSyncStateDao()
+        val remoteSyncDao = FakeRemoteSyncDao()
+        val pendingOp = sampleOperationEntity("op-pending-local")
+        val outboxQueue = FakeOutboxQueue(
+            readyOps = listOf(pendingOp),
+        )
+        val executedOps = mutableListOf<String>()
+        val outboxExecutor = object : OutboxOperationExecutor {
+            override suspend fun execute(operation: SyncOperationEntity): com.feniqo.mobile.data.sync.OutboxExecutionResult {
+                executedOps.add(operation.operationId)
+                return com.feniqo.mobile.data.sync.OutboxExecutionResult.V1Completed
+            }
+        }
+        val outboxProcessor = OutboxProcessor(outboxQueue, outboxExecutor)
+
+        // Initial sync sırasında hata fırlatan bir remote kaynak
+        val failingRemote = object : CoreRemoteDataSource by FakeCoreRemoteDataSource() {
+            override suspend fun fetchProfile(userId: String): com.feniqo.mobile.data.remote.dto.ProfileDto? {
+                throw io.ktor.utils.io.errors.IOException("Remote schema unavailable")
+            }
+        }
+        val failingInitialSync = InitialRemoteSync(failingRemote, remoteSyncDao) { 1_000L }
+
+        val repository = OfflineFirstSyncRepository(
+            authRepository = auth,
+            initialRemoteSync = failingInitialSync,
+            workspaceInitialRemoteSync = com.feniqo.mobile.data.sync.WorkspaceInitialRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao) { 1_000L },
+            outboxProcessor = outboxProcessor,
+            incrementalRemoteSync = IncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
+            workspaceIncrementalRemoteSync = com.feniqo.mobile.data.sync.WorkspaceIncrementalRemoteSync(FakeCoreRemoteDataSource(), remoteSyncDao, syncStateDao) { 1_000L },
+            offlineWriteQueue = OfflineWriteQueue(FakeLocalMutationDao(), FakeSyncOperationDao()),
+            syncStateDao = syncStateDao,
+            remoteSyncDao = remoteSyncDao,
+            conflictRecoveryService = com.feniqo.mobile.data.sync.ConflictRecoveryService(syncStateDao, FakeSyncOperationDao(), FakeLocalMutationDao()) { 1_000L },
+            nowEpochMillisProvider = { 10_000L },
+        )
+
+        val result = repository.requestSync()
+        assertTrue(result is RepositoryResult.Failure)
+
+        // Outbox işlemleri çalıştırılmadı ve silinmedi; kuyrukta korunuyor
+        assertEquals(0, executedOps.size)
+        assertEquals(1, outboxQueue.readyOperations(limit = 10).size)
+        assertEquals("op-pending-local", outboxQueue.readyOperations(limit = 10).first().operationId)
+
+        // Başarılı sync cursor'ı yazılmadı
+        assertNull(syncStateDao.getUserState("user-1"))
+        assertNull(syncStateDao.getCursor(com.feniqo.mobile.domain.repository.SyncEntityType.PROFILE.name))
+    }
+
+    @Test
     fun conflict_during_sync_returns_conflict_failure_and_preserves_stored_sync_time() = runTest {
         val auth = FakeAuthRepository(USER_1_SESSION)
         val syncStateDao = FakeSyncStateDao()
@@ -1570,7 +1623,7 @@ class OfflineFirstSyncRepositoryTest {
         override suspend fun getById(operationId: String): SyncOperationEntity? = null
         override suspend fun insert(operation: SyncOperationEntity) = Unit
         override suspend fun claimOperation(operationId: String, nowEpochMillis: Long): Int = 1
-        override suspend fun markFailed(operationId: String, lastError: String, nextAttemptAtEpochMillis: Long, nowEpochMillis: Long): Int = 1
+        override suspend fun markFailed(operationId: String, lastError: String, errorClassification: String?, nextAttemptAtEpochMillis: Long, nowEpochMillis: Long): Int = 1
         override suspend fun markConflict(operationId: String, lastError: String, nowEpochMillis: Long): Int = 1
         override suspend fun recoverStaleInFlight(staleBeforeEpochMillis: Long, nowEpochMillis: Long, lastError: String): Int = 0
         override suspend fun retryAllFailed(nowEpochMillis: Long): Int = 0

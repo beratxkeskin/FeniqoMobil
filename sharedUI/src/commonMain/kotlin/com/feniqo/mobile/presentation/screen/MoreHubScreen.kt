@@ -74,6 +74,7 @@ fun MoreHubScreen(
     onNavigateToSharedSpaces: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToProfile: () -> Unit,
+    onNavigateToReports: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -193,7 +194,7 @@ fun MoreHubScreen(
                 }
             }
 
-            // 6. İçgörüler (Raporlar - Pasif)
+            // 6. İçgörüler (Raporlar)
             item("insights") {
                 SectionContainer(title = "İçgörüler") {
                     MoreHubMenuCard {
@@ -201,20 +202,7 @@ fun MoreHubScreen(
                             title = "Raporlar",
                             subtitle = "Aylık ve yıllık finansal analizler",
                             icon = { MoreHubBarChartIcon() },
-                            trailing = {
-                                Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = Color(0xFFEFF1F0),
-                                ) {
-                                    Text(
-                                        text = "Yakında",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = Color(0xFF64748B),
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                    )
-                                }
-                            },
-                            onClick = null,
+                            onClick = onNavigateToReports,
                         )
                     }
                 }

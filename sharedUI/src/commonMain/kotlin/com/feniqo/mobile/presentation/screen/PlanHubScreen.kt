@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -145,12 +146,22 @@ internal fun HubMenuItemCard(
                 modifier = Modifier.size(48.dp),
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = item.iconSymbol,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (item.isAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    val resolvedIcon = com.feniqo.mobile.presentation.component.HubSemanticIconResolver.resolve(item.iconKey)
+                    if (resolvedIcon != null) {
+                        Icon(
+                            imageVector = resolvedIcon,
+                            contentDescription = null,
+                            tint = if (item.isAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    } else {
+                        Text(
+                            text = item.iconSymbol,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (item.isAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
 

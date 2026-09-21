@@ -1166,7 +1166,7 @@ class V2OutboxOperationExecutorTest {
         val ex = assertFailsWith<IllegalArgumentException> {
             executor.execute(op)
         }
-        assertTrue(ex.message!!.contains("izin verilmeyen alanlar var"))
+        assertTrue(ex.message!!.contains("invalid_workspace_member_payload") || ex.message!!.contains("izin verilmeyen alanlar var"))
         assertNull(writer.lastOperationId)
     }
 

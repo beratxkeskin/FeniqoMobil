@@ -402,9 +402,9 @@ internal fun Throwable.toSyncAppError(): AppError = when (this) {
         val statusCode = try { response.status.value } catch (_: Throwable) { 0 }
         when (statusCode) {
             401, 403 -> AppError.Authentication("sync.unauthorized")
-            400, 404, 422 -> AppError.Validation("sync.invalid_request")
+            400, 422 -> AppError.Validation("sync.invalid_request")
             409 -> AppError.Conflict("sync.remote_conflict")
-            408, 429, in 500..599 -> AppError.Network("sync.http_error_$statusCode")
+            404, 408, 429, in 500..599 -> AppError.Network("sync.http_error_$statusCode")
             else -> AppError.Unknown("sync.http_error_$statusCode")
         }
     }

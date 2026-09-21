@@ -49,13 +49,21 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideAuthRepository(
-        remoteDataSource: AuthRemoteDataSource,
+        remoteDataSource: javax.inject.Provider<AuthRemoteDataSource>,
+        coreRemoteDataSource: javax.inject.Provider<com.feniqo.mobile.data.remote.core.CoreRemoteDataSource>,
         profileDao: ProfileDao,
         syncScheduler: com.feniqo.mobile.domain.sync.BackgroundSyncScheduler,
-    ): AuthRepository = OfflineFirstAuthRepository(
-        remoteDataSource = remoteDataSource,
+        queue: OfflineWriteQueue,
+    ): AuthRepository = if (com.feniqo.mobile.BuildConfig.DEMO) {
+        com.feniqo.mobile.demo.DemoAuthRepository(profileDao, queue)
+    } else OfflineFirstAuthRepository(
+        remoteDataSource = remoteDataSource.get(),
         profileDao = profileDao,
         syncScheduler = syncScheduler,
+        fetchRemoteProfile = coreRemoteDataSource.get()::fetchProfile,
+        enqueueProfileUpdate = { entity, type, payload ->
+            queue.enqueueProfileV2(entity, type, payload)
+        },
     )
 
     @Provides
@@ -345,7 +353,9 @@ object RepositoryModule {
         syncStateDao: SyncStateDao,
         remoteSyncDao: RemoteSyncDao,
         conflictRecoveryService: com.feniqo.mobile.data.sync.ConflictRecoveryService,
-    ): SyncRepository = OfflineFirstSyncRepository(
+    ): SyncRepository = if (com.feniqo.mobile.BuildConfig.DEMO) {
+        com.feniqo.mobile.demo.DemoSyncRepository(queue)
+    } else OfflineFirstSyncRepository(
         authRepository = authRepository,
         initialRemoteSync = initialRemoteSync,
         workspaceInitialRemoteSync = workspaceInitialRemoteSync,

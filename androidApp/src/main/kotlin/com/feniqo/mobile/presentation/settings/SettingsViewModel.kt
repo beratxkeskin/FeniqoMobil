@@ -63,11 +63,16 @@ data class SettingsUiState(
     val passwordError: String? = null,
     val passwordSuccess: Boolean = false,
     val isChangingPassword: Boolean = false,
+    val sessionEmail: String = "",
+    val emailVerificationStatus: com.feniqo.mobile.domain.model.EmailVerificationStatus = com.feniqo.mobile.domain.model.EmailVerificationStatus.UNKNOWN,
     val emailError: String? = null,
     val emailVerificationSent: Boolean = false,
     val isSendingEmailVerification: Boolean = false,
     val signOutError: String? = null,
-)
+) {
+    val displayEmail: String
+        get() = profile?.email?.trim()?.ifBlank { null } ?: sessionEmail.trim()
+}
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -143,17 +148,27 @@ class SettingsViewModel @Inject constructor(
     }
 
     val uiState: StateFlow<SettingsUiState> = combine(
-        authRepository.observeCurrentProfile(),
-        userSettingsRepository.observeSettings(),
+        combine(
+            authRepository.observeCurrentProfile(),
+            authRepository.observeSession(),
+            userSettingsRepository.observeSettings(),
+        ) { profile, session, settings ->
+            Triple(profile, session, settings)
+        },
         observeSyncOverviewUseCase(),
         backupScopeState,
         formOperationsFlow,
-    ) { profile, settings, sync, scope, forms ->
+    ) { pss, sync, scope, forms ->
+        val (profile, session, settings) = pss
+        val verificationStatus = session?.emailVerificationStatus
+            ?: com.feniqo.mobile.domain.model.EmailVerificationStatus.UNKNOWN
         SettingsUiState(
             profile = profile,
+            sessionEmail = session?.email.orEmpty(),
             settings = settings,
             syncOverview = sync,
             backupScope = scope,
+            emailVerificationStatus = verificationStatus,
             isSavingProfile = forms.isSavingProfile,
             profileSaveSuccess = forms.profileSaveSuccess,
             profileError = forms.profileError,
@@ -247,28 +262,26 @@ class SettingsViewModel @Inject constructor(
     // --- Profil & Kişisel Bilgiler ---
 
     fun savePersonalInfo(fullName: String) {
+        if (isSavingProfile.value) return
+        isSavingProfile.value = true
         viewModelScope.launch {
-            isSavingProfile.value = true
             profileError.value = null
             profileSaveSuccess.value = false
+            try {
+                val nameValid = com.feniqo.mobile.domain.validation.AuthValidationRules.validateFullName(fullName)
+                if (nameValid is com.feniqo.mobile.domain.validation.AuthValidationResult.Invalid) {
+                    profileError.value = "Görünen ad en az ${com.feniqo.mobile.domain.validation.AuthValidationRules.MIN_FULL_NAME_LENGTH} karakter olmalıdır."
+                    return@launch
+                }
 
-            val nameValid = com.feniqo.mobile.domain.validation.AuthValidationRules.validateFullName(fullName)
-            if (nameValid is com.feniqo.mobile.domain.validation.AuthValidationResult.Invalid) {
-                profileError.value = "Görünen ad en az ${com.feniqo.mobile.domain.validation.AuthValidationRules.MIN_FULL_NAME_LENGTH} karakter olmalıdır."
+                val normalized = com.feniqo.mobile.domain.validation.AuthValidationRules.normalizeFullName(fullName)
+                when (authRepository.updateFullName(normalized)) {
+                    is RepositoryResult.Success -> profileSaveSuccess.value = true
+                    is RepositoryResult.Failure -> profileError.value = "Kişisel bilgiler kaydedilemedi. Bağlantınızı ve eşitleme durumunu kontrol edip tekrar deneyin."
+                }
+            } finally {
                 isSavingProfile.value = false
-                return@launch
             }
-
-            val normalized = com.feniqo.mobile.domain.validation.AuthValidationRules.normalizeFullName(fullName)
-            when (authRepository.updateFullName(normalized)) {
-                is RepositoryResult.Success -> {
-                    profileSaveSuccess.value = true
-                }
-                is RepositoryResult.Failure -> {
-                    profileError.value = "Kişisel bilgiler kaydedilemedi. Lütfen tekrar deneyin."
-                }
-            }
-            isSavingProfile.value = false
         }
     }
 
@@ -367,6 +380,47 @@ class SettingsViewModel @Inject constructor(
             emailVerificationSent.value = true
             isSendingEmailVerification.value = false
             onSuccess?.invoke()
+        }
+    }
+
+    fun refreshEmailVerificationStatus() {
+        viewModelScope.launch {
+            authRepository.refreshSession()
+        }
+    }
+
+    fun resendEmailVerification(email: String) {
+        if (isSendingEmailVerification.value) return
+        viewModelScope.launch {
+            isSendingEmailVerification.value = true
+            emailError.value = null
+            emailVerificationSent.value = false
+
+            val emailValid = com.feniqo.mobile.domain.validation.AuthValidationRules.validateEmail(email)
+            if (emailValid is com.feniqo.mobile.domain.validation.AuthValidationResult.Invalid) {
+                emailError.value = "Geçerli bir e-posta adresi bulunamadı."
+                isSendingEmailVerification.value = false
+                return@launch
+            }
+
+            try {
+                when (val result = authRepository.resendEmailConfirmation(email.trim())) {
+                    is RepositoryResult.Success -> {
+                        emailVerificationSent.value = true
+                        emailError.value = null
+                    }
+                    is RepositoryResult.Failure -> {
+                        emailVerificationSent.value = false
+                        emailError.value = when (result.error.code) {
+                            "auth_rate_limited" -> "Lütfen tekrar göndermeden önce biraz bekleyin."
+                            "network_unavailable" -> "İnternet bağlantınızı kontrol edin."
+                            else -> "Doğrulama e-postası gönderilemedi. Lütfen tekrar deneyin."
+                        }
+                    }
+                }
+            } finally {
+                isSendingEmailVerification.value = false
+            }
         }
     }
 

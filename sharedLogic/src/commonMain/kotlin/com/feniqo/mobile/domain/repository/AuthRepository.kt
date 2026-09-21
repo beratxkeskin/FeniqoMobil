@@ -1,6 +1,7 @@
 package com.feniqo.mobile.domain.repository
 
 import com.feniqo.mobile.domain.model.AppError
+import com.feniqo.mobile.domain.model.EmailVerificationStatus
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.UserProfile
 import kotlinx.coroutines.flow.Flow
@@ -23,6 +24,7 @@ data class AuthSession(
     val userId: EntityId,
     val email: String,
     val expiresAt: Instant,
+    val emailVerificationStatus: EmailVerificationStatus = EmailVerificationStatus.UNKNOWN,
 )
 
 interface AuthRepository {

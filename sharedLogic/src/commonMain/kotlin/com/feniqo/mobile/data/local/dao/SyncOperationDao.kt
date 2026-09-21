@@ -52,6 +52,7 @@ interface SyncOperationDao {
         UPDATE sync_operations
         SET status_code = 'FAILED',
             last_error = :lastError,
+            error_classification = :errorClassification,
             next_attempt_at_epoch_ms = :nextAttemptAtEpochMillis,
             updated_at_epoch_ms = :nowEpochMillis
         WHERE operation_id = :operationId
@@ -60,6 +61,7 @@ interface SyncOperationDao {
     suspend fun markFailed(
         operationId: String,
         lastError: String,
+        errorClassification: String?,
         nextAttemptAtEpochMillis: Long,
         nowEpochMillis: Long,
     ): Int
@@ -80,6 +82,7 @@ interface SyncOperationDao {
         UPDATE sync_operations
         SET status_code = 'FAILED',
             last_error = :lastError,
+            error_classification = 'AMBIGUOUS_RESULT',
             next_attempt_at_epoch_ms = :nowEpochMillis,
             updated_at_epoch_ms = :nowEpochMillis
         WHERE status_code = 'IN_FLIGHT'
@@ -97,6 +100,7 @@ interface SyncOperationDao {
         UPDATE sync_operations
         SET status_code = 'PENDING',
             last_error = NULL,
+            error_classification = NULL,
             next_attempt_at_epoch_ms = :nowEpochMillis,
             updated_at_epoch_ms = :nowEpochMillis
         WHERE status_code = 'FAILED'

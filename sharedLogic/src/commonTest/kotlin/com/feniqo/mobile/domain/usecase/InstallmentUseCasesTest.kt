@@ -24,6 +24,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Instant
@@ -235,7 +236,7 @@ class InstallmentUseCasesTest {
         val useCase = AddInstallmentGroupUseCase(authRepo, catRepo, trxRepo, idGen)
 
         val result = useCase(sampleCommand(wsId = EntityId("any-ws")), today, now)
-        assertIs<RepositoryResult.Success<EntityId>>(result)
+        assertIs<RepositoryResult.Success<CreatedInstallmentGroup>>(result)
         assertEquals(1, trxRepo.createInstallmentGroupCalls.size)
     }
 
@@ -248,7 +249,7 @@ class InstallmentUseCasesTest {
         val useCase = AddInstallmentGroupUseCase(authRepo, catRepo, trxRepo, idGen)
 
         val result = useCase(sampleCommand(description = "   Bilgisayar Alımı   "), today, now)
-        assertIs<RepositoryResult.Success<EntityId>>(result)
+        assertIs<RepositoryResult.Success<CreatedInstallmentGroup>>(result)
 
         val created = trxRepo.createInstallmentGroupCalls[0]
         assertEquals(3, created.size)
@@ -336,14 +337,16 @@ class InstallmentUseCasesTest {
             createdAt = now,
         )
 
-        assertIs<RepositoryResult.Success<EntityId>>(result)
+        assertIs<RepositoryResult.Success<CreatedInstallmentGroup>>(result)
         assertEquals(1, trxRepo.createInstallmentGroupCalls.size)
 
         val list = trxRepo.createInstallmentGroupCalls[0]
         assertEquals(3, list.size)
 
         val commonGroupId = list[0].installment!!.groupId
-        assertEquals(commonGroupId, result.value)
+        assertEquals(commonGroupId, result.value.groupId)
+        assertEquals(list.first().id, result.value.firstTransactionId)
+        assertEquals(list.first(), trxRepo.observeTransaction(result.value.firstTransactionId).first())
 
         // Amounts: 333, 333, 334 (remainder on last installment)
         assertEquals(333L, list[0].amount.amountMinor)

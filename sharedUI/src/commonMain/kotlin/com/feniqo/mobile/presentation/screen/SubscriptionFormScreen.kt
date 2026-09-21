@@ -27,6 +27,7 @@ import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Info
@@ -501,12 +502,14 @@ fun SubscriptionFormScreen(
                     Currency.TRY -> "₺"
                     Currency.USD -> "$"
                     Currency.EUR -> "€"
+                    Currency.GBP -> "£"
                 }
 
                 val currencyFullName = when (input.currency) {
                     Currency.TRY -> "TRY · Türk lirası"
                     Currency.USD -> "USD · Amerikan doları"
                     Currency.EUR -> "EUR · Euro"
+                    Currency.GBP -> "GBP · İngiliz sterlini"
                 }
 
                 Surface(
@@ -584,6 +587,7 @@ fun SubscriptionFormScreen(
                             Currency.TRY -> "₺"
                             Currency.USD -> "$"
                             Currency.EUR -> "€"
+                            Currency.GBP -> "£"
                         }
                         Text(
                             text = "$symbol ",
@@ -2017,16 +2021,16 @@ private fun CurrencyChip(
  */
 @Composable
 private fun TemplateBrandIcon(name: String, size: androidx.compose.ui.unit.Dp) {
-    val (bgColor, iconTint, letter) = when (name.lowercase()) {
-        "netflix" -> Triple(Color(0xFFE50914), Color.White, "N")
-        "spotify" -> Triple(Color(0xFF1DB954), Color.White, "S")
-        "youtube premium" -> Triple(Color(0xFFFF0000), Color.White, "▶")
-        "icloud+" -> Triple(Color(0xFF3B99FC), Color.White, "☁")
-        "notion" -> Triple(Color(0xFF000000), Color.White, "N")
-        "amazon prime" -> Triple(Color(0xFF00A8E1), Color.White, "a")
-        "google one" -> Triple(Color(0xFF4285F4), Color.White, "G")
-        "disney+" -> Triple(Color(0xFF113CCF), Color.White, "D")
-        else -> Triple(Color(0xFF424242), Color.White, name.take(1).uppercase())
+    val (bgColor, iconTint, letter, vectorIcon) = when (name.lowercase()) {
+        "netflix" -> Quadruple(Color(0xFFE50914), Color.White, "N", null)
+        "spotify" -> Quadruple(Color(0xFF1DB954), Color.White, "S", null)
+        "youtube premium" -> Quadruple(Color(0xFFFF0000), Color.White, null, Icons.Outlined.PlayArrow)
+        "icloud+" -> Quadruple(Color(0xFF3B99FC), Color.White, null, Icons.Outlined.Cloud)
+        "notion" -> Quadruple(Color(0xFF000000), Color.White, "N", null)
+        "amazon prime" -> Quadruple(Color(0xFF00A8E1), Color.White, "a", null)
+        "google one" -> Quadruple(Color(0xFF4285F4), Color.White, "G", null)
+        "disney+" -> Quadruple(Color(0xFF113CCF), Color.White, "D", null)
+        else -> Quadruple(Color(0xFF424242), Color.White, name.take(1).uppercase(), null)
     }
 
     Box(
@@ -2035,12 +2039,23 @@ private fun TemplateBrandIcon(name: String, size: androidx.compose.ui.unit.Dp) {
             .background(bgColor, RoundedCornerShape(8.dp)),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = letter,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Black,
-            color = iconTint,
-            fontSize = (size.value * 0.5f).sp,
-        )
+        if (vectorIcon != null) {
+            Icon(
+                imageVector = vectorIcon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(size * 0.55f),
+            )
+        } else if (letter != null) {
+            Text(
+                text = letter,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Black,
+                color = iconTint,
+                fontSize = (size.value * 0.5f).sp,
+            )
+        }
     }
 }
+
+private data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)

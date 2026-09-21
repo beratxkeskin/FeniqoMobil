@@ -59,6 +59,14 @@ data class CategoryDto(
     val version: Long? = null,
 )
 
+@Serializable
+data class TransactionParticipantShareDto(
+    @SerialName("user_id")
+    val userId: String,
+    @SerialName("amount_minor")
+    val amountMinor: Long,
+)
+
 /**
  * Hedef mobil sözleşme yalnız `amount_minor: Long` ve private `receipt_path` kabul eder.
  * Eski `amount NUMERIC` ve public `receipt_url` alanları bilinçli olarak modellenmez.
@@ -102,6 +110,10 @@ data class TransactionDto(
     val version: Long? = null,
     @SerialName("note")
     val note: String? = null,
+    @SerialName("split_mode")
+    val splitMode: String? = null,
+    @SerialName("participant_shares")
+    val participantShares: List<TransactionParticipantShareDto>? = null,
 )
 
 @Serializable

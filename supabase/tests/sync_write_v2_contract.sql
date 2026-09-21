@@ -2779,6 +2779,7 @@ begin
     );
 
     v_error_caught := false;
+    perform set_config('request.jwt.claim.sub', extensions.gen_random_uuid()::text, true);
     begin
         perform public.redeem_workspace_invitation_v1('limit_reached_token_abc');
     exception when others then
@@ -2867,7 +2868,7 @@ begin
         p_operation_id := v_op_delete_inv,
         p_entity_type := 'WORKSPACE_INVITATION',
         p_operation := 'DELETE',
-        p_base_version := 1,
+        p_base_version := (select version from public.workspace_invitations where id = v_inv_id),
         p_payload := jsonb_build_object(
             'id', v_inv_id
         )
@@ -2889,12 +2890,13 @@ begin
         v_tr_res jsonb;
     begin
         -- v_test_user_id tarafından workspace oluşturulur (OWNER, version = 1)
+        insert into auth.users (id, email) values (v_tr_member_id, 'tr_member@feniqo.test') on conflict (id) do nothing;
         perform set_config('request.jwt.claim.sub', v_test_user_id::text, true);
 
         insert into public.workspaces (
-            id, owner_id, name, type_code, currency_code, created_at, updated_at, version
+            id, owner_id, name, normalized_name, type_code, currency_code, created_at, updated_at, version
         ) values (
-            v_ws_tr_id, v_test_user_id, 'Transfer Test WS', 'shared', 'TRY',
+            v_ws_tr_id, v_test_user_id, 'Transfer Test WS', 'transfer test ws', 'shared', 'TRY',
             timezone('utc'::text, now()), timezone('utc'::text, now()), 1
         );
 
@@ -3035,8 +3037,8 @@ begin
             (v_rem_other_id, 'rem_other@feniqo.test')
         on conflict (id) do nothing;
 
-        insert into public.workspaces (id, name, owner_id, version)
-        values (v_ws_rem_id, 'Çıkarma Test Alanı', v_rem_owner_id, 1);
+        insert into public.workspaces (id, name, normalized_name, owner_id, type_code, currency_code, version)
+        values (v_ws_rem_id, 'Çıkarma Test Alanı', 'çıkarma test alanı', v_rem_owner_id, 'shared', 'TRY', 1);
 
         insert into public.workspace_members (workspace_id, user_id, role_code, version) values
             (v_ws_rem_id, v_rem_owner_id, 'OWNER', 1),
@@ -3044,10 +3046,11 @@ begin
 
         -- 64.1: EDITOR başka bir üyeyi çıkaramaz (insufficient_privilege)
         perform set_config('request.jwt.claims', json_build_object('sub', v_rem_editor_id)::text, true);
+        perform set_config('request.jwt.claim.sub', v_rem_editor_id::text, true);
         v_error_caught := false;
         begin
             perform public.sync_write_v2(
-                p_operation_id := 'rem_op_001',
+                p_operation_id := md5('rem_op_001'),
                 p_entity_type := 'WORKSPACE_MEMBER',
                 p_operation := 'DELETE',
                 p_base_version := 1,
@@ -3063,10 +3066,11 @@ begin
 
         -- 64.2: OWNER kendini "üye çıkar" ile çıkaramaz
         perform set_config('request.jwt.claims', json_build_object('sub', v_rem_owner_id)::text, true);
+        perform set_config('request.jwt.claim.sub', v_rem_owner_id::text, true);
         v_error_caught := false;
         begin
             perform public.sync_write_v2(
-                p_operation_id := 'rem_op_002',
+                p_operation_id := md5('rem_op_002'),
                 p_entity_type := 'WORKSPACE_MEMBER',
                 p_operation := 'DELETE',
                 p_base_version := 1,
@@ -3084,7 +3088,7 @@ begin
 
         -- 64.3: OWNER EDITOR üyeyi başarıyla çıkarır (tombstone oluşur)
         v_rem_res := public.sync_write_v2(
-            p_operation_id := 'rem_op_003',
+            p_operation_id := md5('rem_op_003'),
             p_entity_type := 'WORKSPACE_MEMBER',
             p_operation := 'DELETE',
             p_base_version := 1,
@@ -3099,6 +3103,8 @@ begin
 
         -- 64.4: RLS E12-F0 Sözleşmesi: Çıkarılan üye kendi tombstone satırını okuyabilmeli
         perform set_config('request.jwt.claims', json_build_object('sub', v_rem_editor_id)::text, true);
+        perform set_config('request.jwt.claim.sub', v_rem_editor_id::text, true);
+        set local role authenticated;
         select exists (
             select 1 from public.workspace_members
             where workspace_id = v_ws_rem_id
@@ -3107,6 +3113,7 @@ begin
         ) into v_can_read_own_tombstone;
 
         if not v_can_read_own_tombstone then
+            reset role;
             raise exception 'Senaryo 64.4 Başarısız: Çıkarılan kullanıcı kendi membership tombstone satırını okuyamadı.';
         end if;
 
@@ -3116,6 +3123,7 @@ begin
             where workspace_id = v_ws_rem_id
               and user_id = v_rem_owner_id
         ) into v_can_read_other_member;
+        reset role;
 
         if v_can_read_other_member then
             raise exception 'Senaryo 64.5 Başarısız: Çıkarılan kullanıcı diğer workspace üyelerini okuyabildi.';
@@ -3131,14 +3139,14 @@ begin
         v_split_cat_id uuid := extensions.gen_random_uuid();
         v_split_owner_id uuid := v_test_user_id;
         v_split_member_id uuid := v_other_user_id;
-        v_split_op_create text := 'spl_op_create_001';
-        v_split_op_update text := 'spl_op_update_002';
-        v_split_op_delete text := 'spl_op_delete_003';
+        v_split_op_create text := md5('spl_op_create_001');
+        v_split_op_update text := md5('spl_op_update_002');
+        v_split_op_delete text := md5('spl_op_delete_003');
         v_split_res jsonb;
     begin
         -- 1. Test workspace ve üye oluştur (v_split_owner_id OWNER, v_split_member_id EDITOR)
         insert into public.workspaces (id, owner_id, name, normalized_name, type_code, currency_code, created_at)
-        values (v_ws_split_id, v_split_owner_id, 'Split Test Alanı', 'split test alani', 'FAMILY', 'TRY', timezone('utc', now()));
+        values (v_ws_split_id, v_split_owner_id, 'Split Test Alanı', 'split test alani', 'shared', 'TRY', timezone('utc', now()));
 
         insert into public.workspace_members (workspace_id, user_id, role_code, joined_at)
         values
@@ -3147,7 +3155,7 @@ begin
 
         -- 2. Workspace gider kategorisi oluştur
         insert into public.categories (id, user_id, workspace_id, name, slug, type, color, icon, is_default, created_at)
-        values (v_split_cat_id, null, v_ws_split_id, 'Ortak Market', 'ortak-market', 'expense', '#10B981', 'cart', false, timezone('utc', now()));
+        values (v_split_cat_id, v_split_owner_id, v_ws_split_id, 'Ortak Market', 'ortak-market', 'expense', '#10B981', 'cart', false, timezone('utc', now()));
 
         -- 3. Actor = v_split_owner_id
         perform set_config('request.jwt.claim.sub', v_split_owner_id::text, true);
@@ -3238,7 +3246,7 @@ begin
         perform set_config('request.jwt.claim.sub', v_test_user_id::text, true);
 
         v_norm_res := public.sync_write_v2(
-            p_operation_id := 'norm_op_001',
+            p_operation_id := md5('norm_op_001'),
             p_entity_type := 'TRANSACTION',
             p_operation := 'CREATE',
             p_base_version := null,
@@ -3263,13 +3271,13 @@ begin
 
         -- 66.2: Workspace INCOME işleminde split alanları actor'e normalize edilmeli
         insert into public.workspaces (id, owner_id, name, normalized_name, type_code, currency_code, created_at)
-        values (v_norm_ws_id, v_test_user_id, 'Norm WS', 'norm ws', 'FAMILY', 'TRY', timezone('utc', now()));
+        values (v_norm_ws_id, v_test_user_id, 'Norm WS', 'norm ws', 'shared', 'TRY', timezone('utc', now()));
 
         insert into public.workspace_members (workspace_id, user_id, role_code, joined_at)
         values (v_norm_ws_id, v_test_user_id, 'OWNER', timezone('utc', now()));
 
         v_norm_res := public.sync_write_v2(
-            p_operation_id := 'norm_op_002',
+            p_operation_id := md5('norm_op_002'),
             p_entity_type := 'TRANSACTION',
             p_operation := 'CREATE',
             p_base_version := null,
@@ -3304,20 +3312,20 @@ begin
         v_error_caught boolean := false;
     begin
         insert into public.workspaces (id, owner_id, name, normalized_name, type_code, currency_code, created_at)
-        values (v_fail_ws_id, v_test_user_id, 'Fail WS', 'fail ws', 'PROJECT', 'TRY', timezone('utc', now()));
+        values (v_fail_ws_id, v_test_user_id, 'Fail WS', 'fail ws', 'shared', 'TRY', timezone('utc', now()));
 
         insert into public.workspace_members (workspace_id, user_id, role_code, joined_at)
         values (v_fail_ws_id, v_test_user_id, 'OWNER', timezone('utc', now()));
 
         insert into public.categories (id, user_id, workspace_id, name, slug, type, color, icon, is_default, created_at)
-        values (v_fail_cat_id, null, v_fail_ws_id, 'Proje Gideri', 'proje-gideri', 'expense', '#3B82F6', 'tag', false, timezone('utc', now()));
+        values (v_fail_cat_id, v_test_user_id, v_fail_ws_id, 'Proje Gideri', 'proje-gideri', 'expense', '#3B82F6', 'tag', false, timezone('utc', now()));
 
         perform set_config('request.jwt.claim.sub', v_test_user_id::text, true);
 
         -- Non-member participant ile çağrı
         begin
             perform public.sync_write_v2(
-                p_operation_id := 'fail_op_001',
+                p_operation_id := md5('fail_op_001'),
                 p_entity_type := 'TRANSACTION',
                 p_operation := 'CREATE',
                 p_base_version := null,
@@ -3355,20 +3363,20 @@ begin
         v_error_caught boolean := false;
     begin
         insert into public.workspaces (id, owner_id, name, normalized_name, type_code, currency_code, created_at)
-        values (v_dup_ws_id, v_test_user_id, 'Dup WS', 'dup ws', 'BUSINESS', 'TRY', timezone('utc', now()));
+        values (v_dup_ws_id, v_test_user_id, 'Dup WS', 'dup ws', 'shared', 'TRY', timezone('utc', now()));
 
         insert into public.workspace_members (workspace_id, user_id, role_code, joined_at)
         values (v_dup_ws_id, v_test_user_id, 'OWNER', timezone('utc', now()));
 
         insert into public.categories (id, user_id, workspace_id, name, slug, type, color, icon, is_default, created_at)
-        values (v_dup_cat_id, null, v_dup_ws_id, 'Ofis', 'ofis', 'expense', '#F59E0B', 'briefcase', false, timezone('utc', now()));
+        values (v_dup_cat_id, v_test_user_id, v_dup_ws_id, 'Ofis', 'ofis', 'expense', '#F59E0B', 'briefcase', false, timezone('utc', now()));
 
         perform set_config('request.jwt.claim.sub', v_test_user_id::text, true);
 
         -- Tekrarlı katılımcı ile çağrı
         begin
             perform public.sync_write_v2(
-                p_operation_id := 'dup_op_001',
+                p_operation_id := md5('dup_op_001'),
                 p_entity_type := 'TRANSACTION',
                 p_operation := 'CREATE',
                 p_base_version := null,
@@ -3407,7 +3415,7 @@ begin
         v_error_caught boolean := false;
     begin
         insert into public.workspaces (id, owner_id, name, normalized_name, type_code, currency_code, created_at)
-        values (v_payer_ws_id, v_test_user_id, 'Payer WS', 'payer ws', 'FAMILY', 'TRY', timezone('utc', now()));
+        values (v_payer_ws_id, v_test_user_id, 'Payer WS', 'payer ws', 'shared', 'TRY', timezone('utc', now()));
 
         insert into public.workspace_members (workspace_id, user_id, role_code, joined_at)
         values
@@ -3415,14 +3423,14 @@ begin
             (v_payer_ws_id, v_second_user_id, 'EDITOR', timezone('utc', now()));
 
         insert into public.categories (id, user_id, workspace_id, name, slug, type, color, icon, is_default, created_at)
-        values (v_payer_cat_id, null, v_payer_ws_id, 'Kira', 'kira', 'expense', '#EC4899', 'home', false, timezone('utc', now()));
+        values (v_payer_cat_id, v_test_user_id, v_payer_ws_id, 'Kira', 'kira', 'expense', '#EC4899', 'home', false, timezone('utc', now()));
 
         perform set_config('request.jwt.claim.sub', v_test_user_id::text, true);
 
         -- 69.1: Payer (v_test_user_id), katılımcı listesinde (yalnız v_second_user_id) bulunmuyor
         begin
             perform public.sync_write_v2(
-                p_operation_id := 'payer_op_001',
+                p_operation_id := md5('payer_op_001'),
                 p_entity_type := 'TRANSACTION',
                 p_operation := 'CREATE',
                 p_base_version := null,
@@ -3455,7 +3463,7 @@ begin
         v_error_caught := false;
         begin
             perform public.sync_write_v2(
-                p_operation_id := 'payer_op_002',
+                p_operation_id := md5('payer_op_002'),
                 p_entity_type := 'TRANSACTION',
                 p_operation := 'CREATE',
                 p_base_version := null,
@@ -3522,9 +3530,683 @@ begin
     end;
 
     -- =========================================================================
-    -- SENARYO 71: BİLGİLENDİRME VE GÜVENLİ TEMİZLİK
+    -- SENARYO 71: CUSTOM SPLIT SÖZLEŞMESİ (GÖREV 7.3-D4)
     -- =========================================================================
-    raise notice 'Asset dahil tüm sync_write_v2 sözleşme senaryoları doğrulandı. İşlemler ROLLBACK ile geri alınıyor.';
+    declare
+        v_cs_ws_id uuid := extensions.gen_random_uuid();
+        v_cs_cat_id uuid := extensions.gen_random_uuid();
+        v_cs_tx_id uuid := extensions.gen_random_uuid();
+        v_cs_other_member uuid := v_other_user_id;
+        v_cs_non_member uuid := extensions.gen_random_uuid();
+        v_cs_res jsonb;
+        v_cs_error boolean := false;
+        v_cs_errmsg text := '';
+        v_cs_op text;
+    begin
+        perform set_config('request.jwt.claim.sub', v_test_user_id::text, true);
+
+        -- Test workspace ve üyeler (v_test_user_id OWNER, v_cs_other_member MEMBER)
+        insert into public.workspaces (id, owner_id, name, normalized_name, type_code, currency_code, created_at)
+        values (v_cs_ws_id, v_test_user_id, 'Custom Split Test WS', 'custom split test ws', 'shared', 'TRY', timezone('utc', now()));
+
+        insert into public.workspace_members (workspace_id, user_id, role_code, joined_at)
+        values
+            (v_cs_ws_id, v_test_user_id, 'OWNER', timezone('utc', now())),
+            (v_cs_ws_id, v_cs_other_member, 'EDITOR', timezone('utc', now()));
+
+        insert into public.categories (id, user_id, workspace_id, name, slug, type, color, icon, is_default, created_at)
+        values (v_cs_cat_id, v_test_user_id, v_cs_ws_id, 'Ortak Yemek', 'ortak-yemek', 'expense', '#EF4444', 'food', false, timezone('utc', now()));
+
+        -- 71.1: Geçerli CUSTOM Split CREATE (toplam 30000: payer 20000, other 10000)
+        v_cs_op := replace(extensions.gen_random_uuid()::text, '-', '');
+        v_cs_res := public.sync_write_v2(
+            p_operation_id := v_cs_op,
+            p_entity_type := 'TRANSACTION',
+            p_operation := 'CREATE',
+            p_base_version := null,
+            p_payload := jsonb_build_object(
+                'id', v_cs_tx_id,
+                'user_id', v_test_user_id,
+                'workspace_id', v_cs_ws_id,
+                'paid_by_user_id', v_test_user_id,
+                'participant_user_ids', jsonb_build_array(v_test_user_id::text, v_cs_other_member::text),
+                'split_mode', 'CUSTOM',
+                'participant_shares', jsonb_build_array(
+                    jsonb_build_object('user_id', v_test_user_id, 'amount_minor', 20000),
+                    jsonb_build_object('user_id', v_cs_other_member, 'amount_minor', 10000)
+                ),
+                'amount_minor', 30000,
+                'currency', 'TRY',
+                'type', 'expense',
+                'category_id', v_cs_cat_id,
+                'payment_method', 'credit_card',
+                'transaction_date', '2026-09-18'
+            )
+        );
+
+        if (v_cs_res ->> 'status') <> 'APPLIED'
+           or (v_cs_res -> 'record' ->> 'split_mode') <> 'CUSTOM'
+           or jsonb_array_length(v_cs_res -> 'record' -> 'participant_shares') <> 2
+           or (v_cs_res -> 'record' ->> 'version')::bigint <> 1 then
+            raise exception 'Senaryo 71.1 Başarısız: CUSTOM Split CREATE APPLIED dönmedi veya alanlar hatalı.';
+        end if;
+
+        -- 71.2: Geçerli CUSTOM Split UPDATE (oranları değiştir: 15000 / 15000)
+        v_cs_op := replace(extensions.gen_random_uuid()::text, '-', '');
+        v_cs_res := public.sync_write_v2(
+            p_operation_id := v_cs_op,
+            p_entity_type := 'TRANSACTION',
+            p_operation := 'UPDATE',
+            p_base_version := 1,
+            p_payload := jsonb_build_object(
+                'id', v_cs_tx_id,
+                'user_id', v_test_user_id,
+                'workspace_id', v_cs_ws_id,
+                'paid_by_user_id', v_test_user_id,
+                'participant_user_ids', jsonb_build_array(v_test_user_id::text, v_cs_other_member::text),
+                'split_mode', 'CUSTOM',
+                'participant_shares', jsonb_build_array(
+                    jsonb_build_object('user_id', v_test_user_id, 'amount_minor', 15000),
+                    jsonb_build_object('user_id', v_cs_other_member, 'amount_minor', 15000)
+                ),
+                'amount_minor', 30000,
+                'currency', 'TRY',
+                'type', 'expense',
+                'category_id', v_cs_cat_id,
+                'payment_method', 'credit_card',
+                'transaction_date', '2026-09-18'
+            )
+        );
+
+        if (v_cs_res ->> 'status') <> 'APPLIED'
+           or (v_cs_res -> 'record' ->> 'version')::bigint <> 2
+           or (v_cs_res -> 'record' -> 'participant_shares' -> 0 ->> 'amount_minor')::bigint <> 15000 then
+            raise exception 'Senaryo 71.2 Başarısız: CUSTOM Split UPDATE uygulanamadı.';
+        end if;
+
+        -- 71.3: Eski istemci UPDATE koruması (split_mode gönderilmediğinde mevcut CUSTOM korunmalı)
+        v_cs_op := replace(extensions.gen_random_uuid()::text, '-', '');
+        v_cs_res := public.sync_write_v2(
+            p_operation_id := v_cs_op,
+            p_entity_type := 'TRANSACTION',
+            p_operation := 'UPDATE',
+            p_base_version := 2,
+            p_payload := jsonb_build_object(
+                'id', v_cs_tx_id,
+                'user_id', v_test_user_id,
+                'workspace_id', v_cs_ws_id,
+                'paid_by_user_id', v_test_user_id,
+                'participant_user_ids', jsonb_build_array(v_test_user_id::text, v_cs_other_member::text),
+                'amount_minor', 30000,
+                'currency', 'TRY',
+                'type', 'expense',
+                'category_id', v_cs_cat_id,
+                'description', 'Eski İstemci Açıklama Güncellemesi',
+                'payment_method', 'credit_card',
+                'transaction_date', '2026-09-18'
+            )
+        );
+
+        if (v_cs_res ->> 'status') <> 'APPLIED'
+           or (v_cs_res -> 'record' ->> 'split_mode') <> 'CUSTOM'
+           or jsonb_array_length(v_cs_res -> 'record' -> 'participant_shares') <> 2 then
+            raise exception 'Senaryo 71.3 Başarısız: split_mode içermeyen UPDATE mevcut CUSTOM verisini korumadı.';
+        end if;
+
+        -- 71.4: Eski istemci UPDATE: tutar değiştiğinde güncel paylar olmadan reddedilmeli
+        v_cs_error := false;
+        v_cs_errmsg := '';
+        begin
+            perform public.sync_write_v2(
+                p_operation_id := replace(extensions.gen_random_uuid()::text, '-', ''),
+                p_entity_type := 'TRANSACTION',
+                p_operation := 'UPDATE',
+                p_base_version := 3,
+                p_payload := jsonb_build_object(
+                    'id', v_cs_tx_id,
+                    'user_id', v_test_user_id,
+                    'workspace_id', v_cs_ws_id,
+                    'amount_minor', 50000, -- tutar değişti ancak yeni pay listesi yok
+                    'currency', 'TRY',
+                    'type', 'expense',
+                    'category_id', v_cs_cat_id,
+                    'payment_method', 'credit_card',
+                    'transaction_date', '2026-09-18'
+                )
+            );
+        exception when others then
+            v_cs_error := true;
+            v_cs_errmsg := SQLERRM;
+        end;
+        if not v_cs_error then
+            raise exception 'Senaryo 71.4 Başarısız: Pay listesi olmadan tutar değişikliği reddedilmedi.';
+        end if;
+        if v_cs_errmsg not like '%INVALID_SPLIT_PAYLOAD: Katılımcı payları toplamı%' then
+            raise exception 'Senaryo 71.4 Başarısız: Beklenen hata mesajı alınamadı: %', v_cs_errmsg;
+        end if;
+
+        -- 71.4b: Eski istemci UPDATE: katılımcılar değiştiğinde güncel paylar olmadan reddedilmeli
+        v_cs_error := false;
+        v_cs_errmsg := '';
+        begin
+            perform public.sync_write_v2(
+                p_operation_id := replace(extensions.gen_random_uuid()::text, '-', ''),
+                p_entity_type := 'TRANSACTION',
+                p_operation := 'UPDATE',
+                p_base_version := 3,
+                p_payload := jsonb_build_object(
+                    'id', v_cs_tx_id,
+                    'user_id', v_test_user_id,
+                    'workspace_id', v_cs_ws_id,
+                    'paid_by_user_id', v_test_user_id,
+                    'participant_user_ids', jsonb_build_array(v_test_user_id::text), -- katılımcı silinmiş
+                    'amount_minor', 30000,
+                    'currency', 'TRY',
+                    'type', 'expense',
+                    'category_id', v_cs_cat_id,
+                    'payment_method', 'credit_card',
+                    'transaction_date', '2026-09-18'
+                )
+            );
+        exception when others then
+            v_cs_error := true;
+            v_cs_errmsg := SQLERRM;
+        end;
+        if not v_cs_error then
+            raise exception 'Senaryo 71.4b Başarısız: Katılımcı kümesi değişimi paylar güncellenmeden reddedilmedi.';
+        end if;
+        if v_cs_errmsg not like '%CUSTOM_SPLIT_PARTICIPANT_SET_MISMATCH%' then
+            raise exception 'Senaryo 71.4b Başarısız: Beklenen hata mesajı alınamadı: %', v_cs_errmsg;
+        end if;
+
+        -- 71.4c: Eski istemci UPDATE: ödeyen kişi pay sahipleri dışında birine değiştirildiğinde reddedilmeli
+        v_cs_error := false;
+        v_cs_errmsg := '';
+        begin
+            perform public.sync_write_v2(
+                p_operation_id := replace(extensions.gen_random_uuid()::text, '-', ''),
+                p_entity_type := 'TRANSACTION',
+                p_operation := 'UPDATE',
+                p_base_version := 3,
+                p_payload := jsonb_build_object(
+                    'id', v_cs_tx_id,
+                    'user_id', v_test_user_id,
+                    'workspace_id', v_cs_ws_id,
+                    'paid_by_user_id', v_cs_non_member,
+                    'amount_minor', 30000,
+                    'currency', 'TRY',
+                    'type', 'expense',
+                    'category_id', v_cs_cat_id,
+                    'payment_method', 'credit_card',
+                    'transaction_date', '2026-09-18'
+                )
+            );
+        exception when others then
+            v_cs_error := true;
+            v_cs_errmsg := SQLERRM;
+        end;
+        if not v_cs_error then
+            raise exception 'Senaryo 71.4c Başarısız: Pay sahibi olmayan ödeyen değişikliği reddedilmedi.';
+        end if;
+        if v_cs_errmsg not like '%INVALID_SPLIT_PAYLOAD: Ödeme yapan kişi pay listesinde olmalıdır%' then
+            raise exception 'Senaryo 71.4c Başarısız: Beklenen hata mesajı alınamadı: %', v_cs_errmsg;
+        end if;
+
+        -- 71.4d: Explicit null split_mode reddedilmeli (sessizce EQUAL yapılmamalı)
+        v_cs_error := false;
+        v_cs_errmsg := '';
+        begin
+            perform public.sync_write_v2(
+                p_operation_id := replace(extensions.gen_random_uuid()::text, '-', ''),
+                p_entity_type := 'TRANSACTION',
+                p_operation := 'UPDATE',
+                p_base_version := 3,
+                p_payload := jsonb_build_object(
+                    'id', v_cs_tx_id,
+                    'user_id', v_test_user_id,
+                    'workspace_id', v_cs_ws_id,
+                    'split_mode', null,
+                    'amount_minor', 30000,
+                    'currency', 'TRY',
+                    'type', 'expense',
+                    'category_id', v_cs_cat_id,
+                    'payment_method', 'credit_card',
+                    'transaction_date', '2026-09-18'
+                )
+            );
+        exception when others then
+            v_cs_error := true;
+            v_cs_errmsg := SQLERRM;
+        end;
+        if not v_cs_error then
+            raise exception 'Senaryo 71.4d Başarısız: Explicit null split_mode reddedilmedi.';
+        end if;
+        if v_cs_errmsg not like '%INVALID_SPLIT_MODE: split_mode null olamaz%' then
+            raise exception 'Senaryo 71.4d Başarısız: Beklenen hata mesajı alınamadı: %', v_cs_errmsg;
+        end if;
+
+        -- 71.4e: Boş metin split_mode reddedilmeli
+        v_cs_error := false;
+        v_cs_errmsg := '';
+        begin
+            perform public.sync_write_v2(
+                p_operation_id := replace(extensions.gen_random_uuid()::text, '-', ''),
+                p_entity_type := 'TRANSACTION',
+                p_operation := 'UPDATE',
+                p_base_version := 3,
+                p_payload := jsonb_build_object(
+                    'id', v_cs_tx_id,
+                    'user_id', v_test_user_id,
+                    'workspace_id', v_cs_ws_id,
+                    'split_mode', '   ',
+                    'amount_minor', 30000,
+                    'currency', 'TRY',
+                    'type', 'expense',
+                    'category_id', v_cs_cat_id,
+                    'payment_method', 'credit_card',
+                    'transaction_date', '2026-09-18'
+                )
+            );
+        exception when others then
+            v_cs_error := true;
+            v_cs_errmsg := SQLERRM;
+        end;
+        if not v_cs_error then
+            raise exception 'Senaryo 71.4e Başarısız: Boş metin split_mode reddedilmedi.';
+        end if;
+        if v_cs_errmsg not like '%INVALID_SPLIT_MODE: split_mode boş olamaz%' then
+            raise exception 'Senaryo 71.4e Başarısız: Beklenen hata mesajı alınamadı: %', v_cs_errmsg;
+        end if;
+
+        -- 71.4f: EQUAL modunda geçersiz JSON türünde participant_shares reddedilmeli
+        v_cs_error := false;
+        v_cs_errmsg := '';
+        begin
+            perform public.sync_write_v2(
+                p_operation_id := replace(extensions.gen_random_uuid()::text, '-', ''),
+                p_entity_type := 'TRANSACTION',
+                p_operation := 'CREATE',
+                p_base_version := null,
+                p_payload := jsonb_build_object(
+                    'id', extensions.gen_random_uuid(),
+                    'user_id', v_test_user_id,
+                    'workspace_id', v_cs_ws_id,
+                    'paid_by_user_id', v_test_user_id,
+                    'participant_user_ids', jsonb_build_array(v_test_user_id::text),
+                    'split_mode', 'EQUAL',
+                    'participant_shares', jsonb_build_object('user_id', v_test_user_id::text),
+                    'amount_minor', 30000,
+                    'currency', 'TRY',
+                    'type', 'expense',
+                    'category_id', v_cs_cat_id,
+                    'payment_method', 'cash',
+                    'transaction_date', '2026-09-18'
+                )
+            );
+        exception when others then
+            v_cs_error := true;
+            v_cs_errmsg := SQLERRM;
+        end;
+        if not v_cs_error then
+            raise exception 'Senaryo 71.4f Başarısız: EQUAL modunda yanlış JSON türü participant_shares reddedilmedi.';
+        end if;
+        if v_cs_errmsg not like '%INVALID_SPLIT_PAYLOAD: EQUAL modunda participant_shares%' then
+            raise exception 'Senaryo 71.4f Başarısız: Beklenen hata mesajı alınamadı: %', v_cs_errmsg;
+        end if;
+
+        -- 71.5: Açık CUSTOM -> EQUAL geçişi
+        v_cs_op := replace(extensions.gen_random_uuid()::text, '-', '');
+        v_cs_res := public.sync_write_v2(
+            p_operation_id := v_cs_op,
+            p_entity_type := 'TRANSACTION',
+            p_operation := 'UPDATE',
+            p_base_version := 3,
+            p_payload := jsonb_build_object(
+                'id', v_cs_tx_id,
+                'user_id', v_test_user_id,
+                'workspace_id', v_cs_ws_id,
+                'paid_by_user_id', v_test_user_id,
+                'participant_user_ids', jsonb_build_array(v_test_user_id::text, v_cs_other_member::text),
+                'split_mode', 'EQUAL',
+                'amount_minor', 30000,
+                'currency', 'TRY',
+                'type', 'expense',
+                'category_id', v_cs_cat_id,
+                'payment_method', 'credit_card',
+                'transaction_date', '2026-09-18'
+            )
+        );
+
+        if (v_cs_res ->> 'status') <> 'APPLIED'
+           or (v_cs_res -> 'record' ->> 'split_mode') <> 'EQUAL'
+           or jsonb_array_length(v_cs_res -> 'record' -> 'participant_shares') <> 0 then
+            raise exception 'Senaryo 71.5 Başarısız: CUSTOM -> EQUAL geçişi uygulanamadı.';
+        end if;
+
+        -- 71.6: Açık EQUAL -> CUSTOM geçişi
+        v_cs_op := replace(extensions.gen_random_uuid()::text, '-', '');
+        v_cs_res := public.sync_write_v2(
+            p_operation_id := v_cs_op,
+            p_entity_type := 'TRANSACTION',
+            p_operation := 'UPDATE',
+            p_base_version := 4,
+            p_payload := jsonb_build_object(
+                'id', v_cs_tx_id,
+                'user_id', v_test_user_id,
+                'workspace_id', v_cs_ws_id,
+                'paid_by_user_id', v_test_user_id,
+                'participant_user_ids', jsonb_build_array(v_test_user_id::text, v_cs_other_member::text),
+                'split_mode', 'CUSTOM',
+                'participant_shares', jsonb_build_array(
+                    jsonb_build_object('user_id', v_test_user_id, 'amount_minor', 25000),
+                    jsonb_build_object('user_id', v_cs_other_member, 'amount_minor', 5000)
+                ),
+                'amount_minor', 30000,
+                'currency', 'TRY',
+                'type', 'expense',
+                'category_id', v_cs_cat_id,
+                'payment_method', 'credit_card',
+                'transaction_date', '2026-09-18'
+            )
+        );
+
+        if (v_cs_res ->> 'status') <> 'APPLIED'
+           or (v_cs_res -> 'record' ->> 'split_mode') <> 'CUSTOM'
+           or jsonb_array_length(v_cs_res -> 'record' -> 'participant_shares') <> 2 then
+            raise exception 'Senaryo 71.6 Başarısız: EQUAL -> CUSTOM geçişi uygulanamadı.';
+        end if;
+
+        -- 71.7: Hata: CUSTOM modunda boş pay listesi
+        v_cs_error := false;
+        v_cs_errmsg := '';
+        begin
+            perform public.sync_write_v2(
+                p_operation_id := replace(extensions.gen_random_uuid()::text, '-', ''),
+                p_entity_type := 'TRANSACTION',
+                p_operation := 'CREATE',
+                p_base_version := null,
+                p_payload := jsonb_build_object(
+                    'id', extensions.gen_random_uuid(),
+                    'user_id', v_test_user_id,
+                    'workspace_id', v_cs_ws_id,
+                    'paid_by_user_id', v_test_user_id,
+                    'participant_user_ids', jsonb_build_array(v_test_user_id::text),
+                    'split_mode', 'CUSTOM',
+                    'participant_shares', '[]'::jsonb,
+                    'amount_minor', 10000,
+                    'currency', 'TRY',
+                    'type', 'expense',
+                    'category_id', v_cs_cat_id,
+                    'payment_method', 'cash',
+                    'transaction_date', '2026-09-18'
+                )
+            );
+        exception when others then
+            v_cs_error := true;
+            v_cs_errmsg := SQLERRM;
+        end;
+        if not v_cs_error then
+            raise exception 'Senaryo 71.7 Başarısız: Boş CUSTOM pay listesi reddedilmedi.';
+        end if;
+        if v_cs_errmsg not like '%INVALID_SPLIT_PAYLOAD: CUSTOM modunda participant_shares boş olamaz%' then
+            raise exception 'Senaryo 71.7 Başarısız: Beklenen hata mesajı alınamadı: %', v_cs_errmsg;
+        end if;
+
+        -- 71.8: Hata: Paylar toplamı uyuşmazlığı (15000 + 10000 != 30000)
+        v_cs_error := false;
+        v_cs_errmsg := '';
+        begin
+            perform public.sync_write_v2(
+                p_operation_id := replace(extensions.gen_random_uuid()::text, '-', ''),
+                p_entity_type := 'TRANSACTION',
+                p_operation := 'CREATE',
+                p_base_version := null,
+                p_payload := jsonb_build_object(
+                    'id', extensions.gen_random_uuid(),
+                    'user_id', v_test_user_id,
+                    'workspace_id', v_cs_ws_id,
+                    'paid_by_user_id', v_test_user_id,
+                    'participant_user_ids', jsonb_build_array(v_test_user_id::text, v_cs_other_member::text),
+                    'split_mode', 'CUSTOM',
+                    'participant_shares', jsonb_build_array(
+                        jsonb_build_object('user_id', v_test_user_id, 'amount_minor', 15000),
+                        jsonb_build_object('user_id', v_cs_other_member, 'amount_minor', 10000)
+                    ),
+                    'amount_minor', 30000,
+                    'currency', 'TRY',
+                    'type', 'expense',
+                    'category_id', v_cs_cat_id,
+                    'payment_method', 'cash',
+                    'transaction_date', '2026-09-18'
+                )
+            );
+        exception when others then
+            v_cs_error := true;
+            v_cs_errmsg := SQLERRM;
+        end;
+        if not v_cs_error then
+            raise exception 'Senaryo 71.8 Başarısız: Pay toplamı uyuşmazlığı reddedilmedi.';
+        end if;
+        if v_cs_errmsg not like '%INVALID_SPLIT_PAYLOAD: Katılımcı payları toplamı%' then
+            raise exception 'Senaryo 71.8 Başarısız: Beklenen hata mesajı alınamadı: %', v_cs_errmsg;
+        end if;
+
+        -- 71.9: Hata: Katılımcı kümesi uyuşmazlığı (participant_user_ids ile pay sahipleri farklı)
+        v_cs_error := false;
+        v_cs_errmsg := '';
+        begin
+            perform public.sync_write_v2(
+                p_operation_id := replace(extensions.gen_random_uuid()::text, '-', ''),
+                p_entity_type := 'TRANSACTION',
+                p_operation := 'CREATE',
+                p_base_version := null,
+                p_payload := jsonb_build_object(
+                    'id', extensions.gen_random_uuid(),
+                    'user_id', v_test_user_id,
+                    'workspace_id', v_cs_ws_id,
+                    'paid_by_user_id', v_test_user_id,
+                    'participant_user_ids', jsonb_build_array(v_test_user_id::text), -- eksik katılımcı!
+                    'split_mode', 'CUSTOM',
+                    'participant_shares', jsonb_build_array(
+                        jsonb_build_object('user_id', v_test_user_id, 'amount_minor', 20000),
+                        jsonb_build_object('user_id', v_cs_other_member, 'amount_minor', 10000)
+                    ),
+                    'amount_minor', 30000,
+                    'currency', 'TRY',
+                    'type', 'expense',
+                    'category_id', v_cs_cat_id,
+                    'payment_method', 'cash',
+                    'transaction_date', '2026-09-18'
+                )
+            );
+        exception when others then
+            v_cs_error := true;
+            v_cs_errmsg := SQLERRM;
+        end;
+        if not v_cs_error then
+            raise exception 'Senaryo 71.9 Başarısız: Katılımcı kümesi uyuşmazlığı reddedilmedi.';
+        end if;
+        if v_cs_errmsg not like '%CUSTOM_SPLIT_PARTICIPANT_SET_MISMATCH%' then
+            raise exception 'Senaryo 71.9 Başarısız: Beklenen hata mesajı alınamadı: %', v_cs_errmsg;
+        end if;
+
+        -- 71.10: Hata: Çalışma alanı üyesi olmayan kullanıcı payı
+        v_cs_error := false;
+        v_cs_errmsg := '';
+        begin
+            perform public.sync_write_v2(
+                p_operation_id := replace(extensions.gen_random_uuid()::text, '-', ''),
+                p_entity_type := 'TRANSACTION',
+                p_operation := 'CREATE',
+                p_base_version := null,
+                p_payload := jsonb_build_object(
+                    'id', extensions.gen_random_uuid(),
+                    'user_id', v_test_user_id,
+                    'workspace_id', v_cs_ws_id,
+                    'paid_by_user_id', v_test_user_id,
+                    'participant_user_ids', jsonb_build_array(v_test_user_id::text, v_cs_non_member::text),
+                    'split_mode', 'CUSTOM',
+                    'participant_shares', jsonb_build_array(
+                        jsonb_build_object('user_id', v_test_user_id, 'amount_minor', 20000),
+                        jsonb_build_object('user_id', v_cs_non_member, 'amount_minor', 10000)
+                    ),
+                    'amount_minor', 30000,
+                    'currency', 'TRY',
+                    'type', 'expense',
+                    'category_id', v_cs_cat_id,
+                    'payment_method', 'cash',
+                    'transaction_date', '2026-09-18'
+                )
+            );
+        exception when others then
+            v_cs_error := true;
+            v_cs_errmsg := SQLERRM;
+        end;
+        if not v_cs_error then
+            raise exception 'Senaryo 71.10 Başarısız: Üye olmayan katılımcı payı reddedilmedi.';
+        end if;
+        if v_cs_errmsg not like '%INVALID_SPLIT_PAYLOAD: Katılımcılar arasında çalışma alanının aktif üyesi olmayan kullanıcılar var%' then
+            raise exception 'Senaryo 71.10 Başarısız: Beklenen hata mesajı alınamadı: %', v_cs_errmsg;
+        end if;
+
+        -- 71.11: Hata: Ödeyen dışı katılımcıya 0 pay
+        v_cs_error := false;
+        v_cs_errmsg := '';
+        begin
+            perform public.sync_write_v2(
+                p_operation_id := replace(extensions.gen_random_uuid()::text, '-', ''),
+                p_entity_type := 'TRANSACTION',
+                p_operation := 'CREATE',
+                p_base_version := null,
+                p_payload := jsonb_build_object(
+                    'id', extensions.gen_random_uuid(),
+                    'user_id', v_test_user_id,
+                    'workspace_id', v_cs_ws_id,
+                    'paid_by_user_id', v_test_user_id,
+                    'participant_user_ids', jsonb_build_array(v_test_user_id::text, v_cs_other_member::text),
+                    'split_mode', 'CUSTOM',
+                    'participant_shares', jsonb_build_array(
+                        jsonb_build_object('user_id', v_test_user_id, 'amount_minor', 30000),
+                        jsonb_build_object('user_id', v_cs_other_member, 'amount_minor', 0)
+                    ),
+                    'amount_minor', 30000,
+                    'currency', 'TRY',
+                    'type', 'expense',
+                    'category_id', v_cs_cat_id,
+                    'payment_method', 'cash',
+                    'transaction_date', '2026-09-18'
+                )
+            );
+        exception when others then
+            v_cs_error := true;
+            v_cs_errmsg := SQLERRM;
+        end;
+        if not v_cs_error then
+            raise exception 'Senaryo 71.11 Başarısız: Ödeyen dışı 0 pay reddedilmedi.';
+        end if;
+        if v_cs_errmsg not like '%INVALID_SPLIT_PAYLOAD: Ödeyen dışındaki katılımcıların payı sıfırdan büyük olmalıdır%' then
+            raise exception 'Senaryo 71.11 Başarısız: Beklenen hata mesajı alınamadı: %', v_cs_errmsg;
+        end if;
+
+        -- 71.11b: Hata: Paylar toplamında Long taşması (overflow)
+        v_cs_error := false;
+        v_cs_errmsg := '';
+        begin
+            perform public.sync_write_v2(
+                p_operation_id := replace(extensions.gen_random_uuid()::text, '-', ''),
+                p_entity_type := 'TRANSACTION',
+                p_operation := 'CREATE',
+                p_base_version := null,
+                p_payload := jsonb_build_object(
+                    'id', extensions.gen_random_uuid(),
+                    'user_id', v_test_user_id,
+                    'workspace_id', v_cs_ws_id,
+                    'paid_by_user_id', v_test_user_id,
+                    'participant_user_ids', jsonb_build_array(v_test_user_id::text, v_cs_other_member::text),
+                    'split_mode', 'CUSTOM',
+                    'participant_shares', jsonb_build_array(
+                        jsonb_build_object('user_id', v_test_user_id, 'amount_minor', 9223372036854775800::bigint),
+                        jsonb_build_object('user_id', v_cs_other_member, 'amount_minor', 100)
+                    ),
+                    'amount_minor', 30000,
+                    'currency', 'TRY',
+                    'type', 'expense',
+                    'category_id', v_cs_cat_id,
+                    'payment_method', 'cash',
+                    'transaction_date', '2026-09-18'
+                )
+            );
+        exception when others then
+            v_cs_error := true;
+            v_cs_errmsg := SQLERRM;
+        end;
+        if not v_cs_error then
+            raise exception 'Senaryo 71.11b Başarısız: Long taşması reddedilmedi.';
+        end if;
+        if v_cs_errmsg not like '%INVALID_SPLIT_PAYLOAD: Katılımcı payları toplamında Long taşması%' then
+            raise exception 'Senaryo 71.11b Başarısız: Beklenen hata mesajı alınamadı: %', v_cs_errmsg;
+        end if;
+
+        -- 71.11c: Hata: amount_minor sayı yerine metin türünde ise reddedilmeli
+        v_cs_error := false;
+        v_cs_errmsg := '';
+        begin
+            perform public.sync_write_v2(
+                p_operation_id := replace(extensions.gen_random_uuid()::text, '-', ''),
+                p_entity_type := 'TRANSACTION',
+                p_operation := 'CREATE',
+                p_base_version := null,
+                p_payload := jsonb_build_object(
+                    'id', extensions.gen_random_uuid(),
+                    'user_id', v_test_user_id,
+                    'workspace_id', v_cs_ws_id,
+                    'amount_minor', '30000',
+                    'currency', 'TRY',
+                    'type', 'expense',
+                    'category_id', v_cs_cat_id,
+                    'payment_method', 'cash',
+                    'transaction_date', '2026-09-18'
+                )
+            );
+        exception when others then
+            v_cs_error := true;
+            v_cs_errmsg := SQLERRM;
+        end;
+        if not v_cs_error then
+            raise exception 'Senaryo 71.11c Başarısız: String amount_minor reddedilmedi.';
+        end if;
+        if v_cs_errmsg not like '%transactions.amount_minor sayı olmalıdır%' then
+            raise exception 'Senaryo 71.11c Başarısız: Beklenen hata mesajı alınamadı: %', v_cs_errmsg;
+        end if;
+
+        -- 71.12: Regresyon: Katılımcısı sonradan pasifleşmiş (silinmiş) bir işlemin DELETE/tombstone ile başarılı silinmesi
+        -- other_member'ı soft delete et
+        update public.workspace_members
+           set deleted_at = timezone('utc', now())
+         where workspace_id = v_cs_ws_id and user_id = v_cs_other_member;
+
+        v_cs_op := replace(extensions.gen_random_uuid()::text, '-', '');
+        v_cs_res := public.sync_write_v2(
+            p_operation_id := v_cs_op,
+            p_entity_type := 'TRANSACTION',
+            p_operation := 'DELETE',
+            p_base_version := 5,
+            p_payload := jsonb_build_object(
+                'id', v_cs_tx_id,
+                'user_id', v_test_user_id
+            )
+        );
+
+        if (v_cs_res ->> 'status') <> 'APPLIED'
+           or (v_cs_res -> 'record' ->> 'deleted_at') is null then
+            raise exception 'Senaryo 71.12 Başarısız: Pasifleşmiş katılımcılı işlem DELETE edilemedi.';
+        end if;
+    end;
+
+    -- =========================================================================
+    -- SENARYO 72: BİLGİLENDİRME VE GÜVENLİ TEMİZLİK
+    -- =========================================================================
+    raise notice 'Custom Split dahil tüm sync_write_v2 sözleşme senaryoları doğrulandı. İşlemler ROLLBACK ile geri alınıyor.';
 end
 $$;
 

@@ -31,6 +31,7 @@ class FeniqoApplication : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        if (BuildConfig.DEMO) return
         recurringStartupInitializer.onAppCreate()
         subscriptionReminderStartupInitializer.onAppCreate()
     }

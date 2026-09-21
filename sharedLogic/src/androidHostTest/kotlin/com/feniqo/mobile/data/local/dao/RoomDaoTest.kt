@@ -10,9 +10,15 @@ import com.feniqo.mobile.data.mapper.newSyncMetadata
 import com.feniqo.mobile.data.mapper.toEntity
 import com.feniqo.mobile.data.local.entity.CategoryEntity
 import com.feniqo.mobile.data.local.entity.AssetEntity
+import com.feniqo.mobile.data.local.entity.UserProfileEntity
+import com.feniqo.mobile.data.local.entity.OutboxErrorClassification
+import com.feniqo.mobile.data.local.entity.SyncOperationEntity
+import com.feniqo.mobile.data.local.entity.isDefinitiveRejection
+import com.feniqo.mobile.data.local.entity.isAmbiguousResult
 import com.feniqo.mobile.data.local.outbox.OfflineWriteQueue
 import com.feniqo.mobile.data.local.outbox.OutboxOperationType
 import com.feniqo.mobile.data.remote.dto.TransactionDto
+import com.feniqo.mobile.data.remote.mapper.toDto
 import com.feniqo.mobile.data.sync.OutboxExecutionResult
 import com.feniqo.mobile.data.sync.OutboxProcessor
 import com.feniqo.mobile.data.sync.RoomOutboxQueue
@@ -51,15 +57,36 @@ import kotlinx.serialization.json.Json
 import org.junit.Rule
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import com.feniqo.mobile.data.mapper.toPendingDelete
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 class RoomDaoTest {
+
+    @Test
+    fun profile_insert_if_missing_preserves_existing_local_profile() = runTest {
+        val db = inMemoryDatabase()
+        try {
+            val dao = db.profileDao()
+            val profile = UserProfileEntity(
+                id = "profile-user", email = "user@example.com", fullName = "Yerel Ad",
+                currencyCode = "TRY", themeCode = "SYSTEM", languageCode = "TR",
+                activeWorkspaceId = null, createdAtEpochMillis = 1_000L,
+                sync = newSyncMetadata(1_000L, SyncStatus.SYNCED).copy(version = 3, baseVersion = 3),
+            )
+            assertTrue(dao.insertIfMissing(profile) > 0)
+            assertEquals(-1L, dao.insertIfMissing(profile.copy(fullName = "Uzak Ad")))
+            assertEquals("Yerel Ad", dao.observeById(profile.id).first()?.fullName)
+        } finally {
+            db.close()
+        }
+    }
 
     @get:Rule
     val migrationHelper: MigrationTestHelper = MigrationTestHelper(
@@ -704,6 +731,73 @@ class RoomDaoTest {
     }
 
     @Test
+    fun migration_19_to_20_adds_error_classification_column() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val name = "migration_test_v19_to_v20.db"
+        val path = context.getDatabasePath(name).absolutePath
+        context.deleteDatabase(name)
+        val v19 = migrationHelper.createDatabase(path, 19)
+        try {
+            v19.execSQL(
+                """INSERT INTO sync_operations (
+                    operation_id, entity_type_code, entity_id, operation_type_code,
+                    base_version, payload_json, predecessor_operation_id, is_blocked,
+                    protocol_version, status_code, attempt_count, last_error,
+                    next_attempt_at_epoch_ms, created_at_epoch_ms, updated_at_epoch_ms
+                ) VALUES (
+                    'op-v19-1', 'TRANSACTION', 'tx-v19-1', 'CREATE',
+                    NULL, '{"amount":100}', NULL, 0,
+                    2, 'FAILED', 1, 'timeout',
+                    1000, 1000, 1000
+                )""".trimIndent(),
+            )
+        } finally {
+            v19.close()
+        }
+
+        val migrated = migrationHelper.runMigrationsAndValidate(
+            path, 20, true,
+            com.feniqo.mobile.data.local.database.ANDROID_MIGRATION_19_20,
+        )
+        try {
+            migrated.query(
+                "SELECT operation_id, status_code, error_classification FROM sync_operations WHERE operation_id='op-v19-1'".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals("op-v19-1", it.getString(0))
+                assertEquals("FAILED", it.getString(1))
+                assertNull(it.getString(2))
+            }
+
+            migrated.execSQL(
+                """INSERT INTO sync_operations (
+                    operation_id, entity_type_code, entity_id, operation_type_code,
+                    base_version, payload_json, predecessor_operation_id, is_blocked,
+                    protocol_version, status_code, attempt_count, last_error,
+                    next_attempt_at_epoch_ms, created_at_epoch_ms, updated_at_epoch_ms,
+                    error_classification
+                ) VALUES (
+                    'op-v20-1', 'TRANSACTION', 'tx-v20-1', 'CREATE',
+                    NULL, '{"amount":200}', NULL, 0,
+                    2, 'FAILED', 1, 'validation_error',
+                    2000, 2000, 2000, 'DEFINITIVE_REJECTION'
+                )""".trimIndent(),
+            )
+
+            migrated.query(
+                "SELECT operation_id, error_classification FROM sync_operations WHERE operation_id='op-v20-1'".trimIndent(),
+            ).use {
+                assertTrue(it.moveToFirst())
+                assertEquals("op-v20-1", it.getString(0))
+                assertEquals("DEFINITIVE_REJECTION", it.getString(1))
+            }
+        } finally {
+            migrated.close()
+            context.deleteDatabase(name)
+        }
+    }
+
+    @Test
     fun custom_split_persistence_roundtrip_reopen_and_corrupt_json_resilience() = runTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val dbName = "test-custom-split-reopen.db"
@@ -901,6 +995,152 @@ class RoomDaoTest {
             val synced = database.transactionDao().observeWithTags(local.id).first()!!.transaction
             assertEquals(SyncStatus.SYNCED.name, synced.sync.syncStatus)
             assertEquals(1L, synced.sync.version)
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun transactionMutationV2_failedCreateCanBeSafelyHardDeleted() = runTest {
+        val database = inMemoryDatabase()
+        try {
+            database.categoryDao().upsert(category().toEntity(SYNC))
+            var now = 10_000L
+            val queue = OfflineWriteQueue(
+                database.localMutationDao(),
+                database.syncOperationDao(),
+                nowEpochMillisProvider = { now },
+            )
+            val local = transaction().toEntity(newSyncMetadata(now))
+            val remote = TransactionDto(
+                id = local.id,
+                userId = local.ownerId,
+                paidByUserId = local.ownerId,
+                participantUserIds = listOf(local.ownerId),
+                amountMinor = local.amountMinor,
+                currency = local.currencyCode,
+                type = local.typeCode,
+                categoryId = local.categoryId,
+                description = local.description,
+                paymentMethod = local.paymentMethodCode,
+                transactionDate = local.transactionDate,
+                createdAt = "2026-08-05T00:00:00Z",
+                updatedAt = "2026-08-05T00:00:01Z",
+                version = 1L,
+            )
+            val opId = queue.enqueueTransactionV2(
+                entity = local,
+                tags = emptyList(),
+                tagLinks = emptyList(),
+                type = OutboxOperationType.CREATE,
+                payloadJson = Json.encodeToString(remote.copy(updatedAt = null, version = null)),
+            )
+
+            // Sunucudan hata döndüğünü ve operasyonun FAILED olduğunu simüle et
+            database.syncOperationDao().markFailed(
+                operationId = opId,
+                lastError = "VALIDATION_ERROR: Geçersiz kategori",
+                errorClassification = OutboxErrorClassification.DEFINITIVE_REJECTION.name,
+                nextAttemptAtEpochMillis = now + 60_000L,
+                nowEpochMillis = now,
+            )
+            val failedOp = database.localMutationDao().getOutboxById(opId)!!
+            assertEquals("FAILED", failedOp.statusCode)
+
+            // Kullanıcı bu başarısız yerel kaydı sildiğinde
+            val deletedLocal = local.copy(sync = local.sync.toPendingDelete(now))
+            val result = database.localMutationDao().mutateTransactionKeepingTagsV2(
+                entity = deletedLocal,
+                type = OutboxOperationType.DELETE,
+                payloadJson = "{}",
+                operationIdFactory = { "op-del-1" },
+                nowEpochMillis = now,
+            )
+            assertEquals(V2EnqueueDecision.HARD_DELETED, result.decision)
+            assertEquals(opId, result.operationId)
+
+            // Başarısız outbox kaydı ve yerel entity temizlenmiş olmalı
+            assertNull(database.localMutationDao().getOutboxById(opId))
+            assertNull(database.transactionDao().observeWithTags(local.id).first())
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun transactionMutationV2_failedCreateCanBeUpdatedWithFreshOperationId() = runTest {
+        val database = inMemoryDatabase()
+        try {
+            database.categoryDao().upsert(category().toEntity(SYNC))
+            val correctedCat = category().copy(id = EntityId("cat-corrected-id"), name = "Düzeltilmiş Kategori").toEntity(SYNC)
+            database.categoryDao().upsert(correctedCat)
+
+            var now = 10_000L
+            val queue = OfflineWriteQueue(
+                database.localMutationDao(),
+                database.syncOperationDao(),
+                nowEpochMillisProvider = { now },
+            )
+            val local = transaction().toEntity(newSyncMetadata(now))
+            val initialDto = TransactionDto(
+                id = local.id,
+                userId = local.ownerId,
+                paidByUserId = local.ownerId,
+                participantUserIds = listOf(local.ownerId),
+                amountMinor = local.amountMinor,
+                currency = local.currencyCode,
+                type = local.typeCode,
+                categoryId = local.categoryId,
+                description = local.description,
+                paymentMethod = local.paymentMethodCode,
+                transactionDate = local.transactionDate,
+                createdAt = "2026-08-05T00:00:00Z",
+                updatedAt = "2026-08-05T00:00:01Z",
+                version = 1L,
+            )
+            val opId1 = queue.enqueueTransactionV2(
+                entity = local,
+                tags = emptyList(),
+                tagLinks = emptyList(),
+                type = OutboxOperationType.CREATE,
+                payloadJson = Json.encodeToString(initialDto.copy(updatedAt = null, version = null)),
+            )
+
+            // İlk deneme başarısız oldu
+            database.syncOperationDao().markFailed(
+                operationId = opId1,
+                lastError = "VALIDATION_ERROR: Geçersiz kategori",
+                errorClassification = OutboxErrorClassification.DEFINITIVE_REJECTION.name,
+                nextAttemptAtEpochMillis = now + 60_000L,
+                nowEpochMillis = now,
+            )
+
+            // Kullanıcı kategoriyi düzeltti ve güncelledi
+            val updatedLocal = local.copy(categoryId = correctedCat.id)
+            val correctedDto = initialDto.copy(categoryId = correctedCat.id, updatedAt = null, version = null)
+            val correctedPayload = Json.encodeToString(correctedDto)
+
+            val freshOpId = "2".padStart(32, '0')
+            val result = database.localMutationDao().mutateTransactionKeepingTagsV2(
+                entity = updatedLocal,
+                type = OutboxOperationType.UPDATE,
+                payloadJson = correctedPayload,
+                operationIdFactory = { freshOpId },
+                nowEpochMillis = now,
+            )
+
+            assertEquals(V2EnqueueDecision.INSERTED, result.decision)
+            assertEquals(freshOpId, result.operationId)
+
+            // Eski başarısız işlem silinmiş, yeni işlem temiz PENDING ve unblocked olarak eklenmiş olmalı
+            assertNull(database.localMutationDao().getOutboxById(opId1))
+            val freshOp = database.localMutationDao().getOutboxById(freshOpId)!!
+            assertEquals("PENDING", freshOp.statusCode)
+            assertEquals(0, freshOp.attemptCount)
+            assertFalse(freshOp.isBlocked)
+            assertNull(freshOp.predecessorOperationId)
+            assertEquals("CREATE", freshOp.operationTypeCode)
+            assertTrue(freshOp.payloadJson!!.contains(correctedCat.id))
         } finally {
             database.close()
         }
@@ -1524,7 +1764,7 @@ class RoomDaoTest {
             assertEquals(1, dao.observePendingCount().first())
             assertEquals(0, dao.observeFailedCount().first())
 
-            dao.markFailed("op-1", "network_error", 2_000L, 1_500L)
+            dao.markFailed("op-1", "network_error", OutboxErrorClassification.AMBIGUOUS_RESULT.name, 2_000L, 1_500L)
             assertEquals(1, dao.observePendingCount().first())
             assertEquals(1, dao.observeFailedCount().first())
 
@@ -1543,7 +1783,7 @@ class RoomDaoTest {
                     updatedAtEpochMillis = 1_000L,
                 ),
             )
-            dao.markFailed("op-2", "timeout", 2_000L, 1_500L)
+            dao.markFailed("op-2", "timeout", OutboxErrorClassification.AMBIGUOUS_RESULT.name, 2_000L, 1_500L)
             assertEquals(2, dao.observePendingCount().first())
             assertEquals(2, dao.observeFailedCount().first())
 
@@ -2480,6 +2720,1066 @@ class RoomDaoTest {
         createdAtEpochMillis = NOW.toEpochMilliseconds(),
         sync = sync,
     )
+
+    @Test
+    fun applyInitialSnapshot_does_not_overwrite_pending_local_mutation_records() = runTest {
+        val db = inMemoryDatabase()
+        val syncDao = db.remoteSyncDao()
+        val transactionDao = db.transactionDao()
+        val categoryDao = db.categoryDao()
+
+        // 1. Yerel veritabanında bir kategori ve bekleyen bir işlem (PENDING_UPDATE) oluşturuluyor
+        val cat = category()
+        categoryDao.upsert(cat.toEntity(newSyncMetadata(1000L)))
+
+        val localTxEntity = transaction().toEntity(
+            newSyncMetadata(1000L).copy(syncStatus = "PENDING_UPDATE"),
+        ).copy(
+            description = "Bekleyen Yerel Açıklama",
+        )
+        transactionDao.upsert(localTxEntity)
+
+        val beforeSnapshot = syncDao.getTransactionRow(TRANSACTION_ID.value)
+        assertNotNull(beforeSnapshot)
+        assertEquals("PENDING_UPDATE", beforeSnapshot.sync.syncStatus)
+        assertEquals("Bekleyen Yerel Açıklama", beforeSnapshot.description)
+
+        // 2. Uzak sunucudan gelen snapshot içinde aynı işlem (eski remote sürüm, SYNCED) ve yeni bir işlem geliyor
+        val remoteProfile = com.feniqo.mobile.data.local.entity.UserProfileEntity(
+            id = USER_ID.value,
+            email = "test@feniqo.com",
+            fullName = "Test User",
+            currencyCode = "TRY",
+            themeCode = "SYSTEM",
+            languageCode = "tr",
+            activeWorkspaceId = null,
+            createdAtEpochMillis = 1000L,
+            sync = newSyncMetadata(1000L, SyncStatus.SYNCED),
+        )
+
+        val conflictingRemoteTx = beforeSnapshot.copy(
+            description = "Eski Uzak Başlık",
+            sync = newSyncMetadata(2000L, SyncStatus.SYNCED),
+        )
+
+        val newRemoteTx = beforeSnapshot.copy(
+            id = "tx-new-remote",
+            description = "Yeni Uzak İşlem",
+            sync = newSyncMetadata(2000L, SyncStatus.SYNCED),
+        )
+
+        // 3. applyInitialSnapshot çağrılıyor
+        syncDao.applyInitialSnapshot(
+            profile = remoteProfile,
+            categories = listOf(cat.toEntity(newSyncMetadata(1000L, SyncStatus.SYNCED))),
+            transactions = listOf(conflictingRemoteTx, newRemoteTx),
+        )
+
+        // 4. Doğrulama:
+        // Bekleyen yerel işlem ezilmemeli!
+        val preservedLocalTx = syncDao.getTransactionRow(TRANSACTION_ID.value)
+        assertNotNull(preservedLocalTx)
+        assertEquals("PENDING_UPDATE", preservedLocalTx.sync.syncStatus)
+        assertEquals("Bekleyen Yerel Açıklama", preservedLocalTx.description)
+
+        // Yerelde olmayan yeni uzak işlem ise başarıyla eklenmiş olmalı!
+        val addedRemoteTx = syncDao.getTransactionRow("tx-new-remote")
+        assertNotNull(addedRemoteTx)
+        assertEquals("SYNCED", addedRemoteTx.sync.syncStatus)
+        assertEquals("Yeni Uzak İşlem", addedRemoteTx.description)
+
+        db.close()
+    }
+
+    @Test
+    fun applyInitialSnapshot_does_not_overwrite_pending_create_or_pending_delete_records() = runTest {
+        val db = inMemoryDatabase()
+        val syncDao = db.remoteSyncDao()
+        val transactionDao = db.transactionDao()
+        val categoryDao = db.categoryDao()
+
+        val cat = category()
+        categoryDao.upsert(cat.toEntity(newSyncMetadata(1000L, SyncStatus.SYNCED)))
+
+        // 1. Yerel veritabanında PENDING_CREATE ve PENDING_DELETE kayıtları oluşturuluyor
+        val localCreateTx = transaction().toEntity(
+            newSyncMetadata(1000L, SyncStatus.PENDING_CREATE),
+        ).copy(
+            id = "tx-local-create",
+            description = "Yerel Yeni Oluşturulan İşlem",
+        )
+        transactionDao.upsert(localCreateTx)
+
+        val localDeleteTx = transaction().toEntity(
+            newSyncMetadata(1000L, SyncStatus.PENDING_DELETE).copy(deletedAtEpochMillis = 1500L),
+        ).copy(
+            id = "tx-local-delete",
+            description = "Yerelde Silinmiş İşlem",
+        )
+        transactionDao.upsert(localDeleteTx)
+
+        // 2. Uzak sunucudan gelen snapshot:
+        // - tx-local-create için sunucuda SYNCED sürüm gelirse ezmemeli
+        // - tx-local-delete için sunucuda canlı (deleted_at == null, SYNCED) sürüm gelirse canlandırmamalı
+        val remoteProfile = com.feniqo.mobile.data.local.entity.UserProfileEntity(
+            id = USER_ID.value,
+            email = "test@feniqo.com",
+            fullName = "Test User",
+            currencyCode = "TRY",
+            themeCode = "SYSTEM",
+            languageCode = "tr",
+            activeWorkspaceId = null,
+            createdAtEpochMillis = 1000L,
+            sync = newSyncMetadata(1000L, SyncStatus.SYNCED),
+        )
+
+        val conflictingCreateRemoteTx = localCreateTx.copy(
+            description = "Uzak Çakışan Açıklama",
+            sync = newSyncMetadata(2000L, SyncStatus.SYNCED),
+        )
+
+        val resurrectingDeleteRemoteTx = localDeleteTx.copy(
+            description = "Uzakta Hâlâ Canlı Açıklama",
+            sync = newSyncMetadata(2000L, SyncStatus.SYNCED).copy(deletedAtEpochMillis = null),
+        )
+
+        val newRemoteTx = localCreateTx.copy(
+            id = "tx-new-independent",
+            description = "Yeni Bağımsız Uzak İşlem",
+            sync = newSyncMetadata(2000L, SyncStatus.SYNCED),
+        )
+
+        val testCursor = com.feniqo.mobile.data.local.entity.SyncCursorEntity(
+            entityTypeCode = "TRANSACTION",
+            updatedAtEpochMillis = 2000L,
+            entityId = "tx-new-independent",
+        )
+
+        // 3. applyInitialSnapshot çağrılıyor
+        syncDao.applyInitialSnapshot(
+            profile = remoteProfile,
+            categories = listOf(cat.toEntity(newSyncMetadata(1000L, SyncStatus.SYNCED))),
+            transactions = listOf(conflictingCreateRemoteTx, resurrectingDeleteRemoteTx, newRemoteTx),
+            cursors = listOf(testCursor),
+        )
+
+        // 4. Doğrulama:
+        // PENDING_CREATE korunmalı
+        val preservedCreate = syncDao.getTransactionRow("tx-local-create")
+        assertNotNull(preservedCreate)
+        assertEquals("PENDING_CREATE", preservedCreate.sync.syncStatus)
+        assertEquals("Yerel Yeni Oluşturulan İşlem", preservedCreate.description)
+
+        // PENDING_DELETE korunmalı ve deletedAt null yapılmamalı (canlandırılmamalı)
+        val preservedDelete = syncDao.getTransactionRow("tx-local-delete")
+        assertNotNull(preservedDelete)
+        assertEquals("PENDING_DELETE", preservedDelete.sync.syncStatus)
+        assertEquals(1500L, preservedDelete.sync.deletedAtEpochMillis)
+        assertEquals("Yerelde Silinmiş İşlem", preservedDelete.description)
+
+        // Yeni uzak işlem başarıyla eklenmeli
+        val addedRemote = syncDao.getTransactionRow("tx-new-independent")
+        assertNotNull(addedRemote)
+        assertEquals("SYNCED", addedRemote.sync.syncStatus)
+        assertEquals("Yeni Bağımsız Uzak İşlem", addedRemote.description)
+
+        // Cursor Room'a yazılmış olmalı
+        val storedCursor = db.syncStateDao().getCursor("TRANSACTION")
+        assertNotNull(storedCursor)
+        assertEquals(2000L, storedCursor.updatedAtEpochMillis)
+        assertEquals("tx-new-independent", storedCursor.entityId)
+
+        db.close()
+    }
+
+    @Test
+    fun applyWorkspaceSnapshot_does_not_overwrite_pending_workspace_or_member_mutations() = runTest {
+        val db = inMemoryDatabase()
+        val syncDao = db.remoteSyncDao()
+        val wsDao = db.workspaceDao()
+
+        // 1. Yerel veritabanında bekleyen bir workspace (PENDING_UPDATE) ve üye (PENDING_UPDATE) oluşturuluyor
+        val localWs = com.feniqo.mobile.data.local.entity.WorkspaceEntity(
+            id = "ws-1",
+            name = "Yerel Bekleyen Workspace",
+            normalizedName = "yerel bekleyen workspace",
+            ownerId = USER_ID.value,
+            createdAtEpochMillis = 1000L,
+            sync = newSyncMetadata(1000L, SyncStatus.PENDING_UPDATE),
+        )
+        wsDao.upsertWorkspace(localWs)
+
+        val localMember = com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity(
+            workspaceId = "ws-1",
+            userId = USER_ID.value,
+            roleCode = "OWNER",
+            joinedAtEpochMillis = 1000L,
+            sync = newSyncMetadata(1000L, SyncStatus.PENDING_UPDATE),
+        )
+        wsDao.upsertMember(localMember)
+
+        // 2. Uzak sunucudan gelen workspace snapshot'ı:
+        // - ws-1 için eski uzak versiyon (SYNCED, farklı isim)
+        // - üye için farklı role sahip eski versiyon (SYNCED)
+        // - yeni bir workspace (ws-2) ve üyesi
+        val conflictingRemoteWs = localWs.copy(
+            name = "Eski Uzak İsim",
+            sync = newSyncMetadata(2000L, SyncStatus.SYNCED),
+        )
+        val conflictingRemoteMember = localMember.copy(
+            roleCode = "MEMBER",
+            sync = newSyncMetadata(2000L, SyncStatus.SYNCED),
+        )
+
+        val newRemoteWs = com.feniqo.mobile.data.local.entity.WorkspaceEntity(
+            id = "ws-2",
+            name = "Yeni Uzak Workspace",
+            normalizedName = "yeni uzak workspace",
+            ownerId = USER_ID.value,
+            createdAtEpochMillis = 2000L,
+            sync = newSyncMetadata(2000L, SyncStatus.SYNCED),
+        )
+        val newRemoteMember = com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity(
+            workspaceId = "ws-2",
+            userId = USER_ID.value,
+            roleCode = "OWNER",
+            joinedAtEpochMillis = 2000L,
+            sync = newSyncMetadata(2000L, SyncStatus.SYNCED),
+        )
+
+        val wsCursor = com.feniqo.mobile.data.local.entity.SyncCursorEntity(
+            entityTypeCode = "WORKSPACE",
+            updatedAtEpochMillis = 2000L,
+            entityId = "ws-2",
+        )
+
+        // 3. applyWorkspaceSnapshot çağrılıyor
+        syncDao.applyWorkspaceSnapshot(
+            workspaces = listOf(conflictingRemoteWs, newRemoteWs),
+            members = listOf(conflictingRemoteMember, newRemoteMember),
+            cursors = listOf(wsCursor),
+        )
+
+        // 4. Doğrulama:
+        // Bekleyen yerel workspace ezilmemeli!
+        val preservedWs = syncDao.getWorkspaceRow("ws-1")
+        assertNotNull(preservedWs)
+        assertEquals("PENDING_UPDATE", preservedWs.sync.syncStatus)
+        assertEquals("Yerel Bekleyen Workspace", preservedWs.name)
+
+        // Bekleyen yerel üye ezilmemeli!
+        val preservedMember = syncDao.getWorkspaceMemberRow("ws-1", USER_ID.value)
+        assertNotNull(preservedMember)
+        assertEquals("PENDING_UPDATE", preservedMember.sync.syncStatus)
+        assertEquals("OWNER", preservedMember.roleCode)
+
+        // Yeni uzak workspace ve üye başarıyla eklenmiş olmalı!
+        val addedWs = syncDao.getWorkspaceRow("ws-2")
+        assertNotNull(addedWs)
+        assertEquals("SYNCED", addedWs.sync.syncStatus)
+        assertEquals("Yeni Uzak Workspace", addedWs.name)
+
+        val addedMember = syncDao.getWorkspaceMemberRow("ws-2", USER_ID.value)
+        assertNotNull(addedMember)
+        assertEquals("SYNCED", addedMember.sync.syncStatus)
+
+        // Cursor kaydedilmiş olmalı
+        val storedCursor = db.syncStateDao().getCursor("WORKSPACE")
+        assertNotNull(storedCursor)
+        assertEquals(2000L, storedCursor.updatedAtEpochMillis)
+        assertEquals("ws-2", storedCursor.entityId)
+
+        db.close()
+    }
+
+    @Test
+    fun cursorAdvanceWithPendingMutation_preservesBothVersionsOnConflict_andDoesNotMissRecords() = runTest {
+        val db = inMemoryDatabase()
+        val syncDao = db.remoteSyncDao()
+        val syncStateDao = db.syncStateDao()
+        val transactionDao = db.transactionDao()
+        val categoryDao = db.categoryDao()
+        val opDao = db.syncOperationDao()
+
+        val cat = category()
+        categoryDao.upsert(cat.toEntity(newSyncMetadata(1000L, SyncStatus.SYNCED)))
+
+        // 1. Yerel veritabanında PENDING_UPDATE durumunda bir işlem ve buna ait outbox operasyonu oluşturuluyor
+        val localTx = transaction().toEntity(
+            newSyncMetadata(1000L, SyncStatus.PENDING_UPDATE).copy(version = 1L, baseVersion = 1L),
+        ).copy(
+            id = "tx-conflict-1",
+            description = "Yerel Bekleyen Açıklama",
+            amountMinor = 15_000L,
+        )
+        transactionDao.upsert(localTx)
+
+        val outboxOp = com.feniqo.mobile.data.local.entity.SyncOperationEntity(
+            operationId = "op-tx-1",
+            entityTypeCode = "TRANSACTION",
+            entityId = "tx-conflict-1",
+            operationTypeCode = "UPDATE",
+            baseVersion = 1L,
+            payloadJson = """{"id":"tx-conflict-1","description":"Yerel Bekleyen Açıklama","amount_minor":15000}""",
+            statusCode = "PENDING",
+            attemptCount = 0,
+            lastError = null,
+            nextAttemptAtEpochMillis = 1000L,
+            createdAtEpochMillis = 1000L,
+            updatedAtEpochMillis = 1000L,
+        )
+        opDao.insert(outboxOp)
+
+        // 2. Uzak sunucudan gelen ilk snapshot:
+        // - tx-conflict-1 için sunucuda daha yeni (version 2, amount 25000) bir sürüm var
+        // - tx-other-2 için yeni bir bağımsız işlem var (timestamp 2500L)
+        // - TRANSACTION cursor'ı snapshot'taki en son kayıt olan 2500L'ye ayarlanıyor
+        val remoteProfile = com.feniqo.mobile.data.local.entity.UserProfileEntity(
+            id = USER_ID.value,
+            email = "test@feniqo.com",
+            fullName = "Test User",
+            currencyCode = "TRY",
+            themeCode = "SYSTEM",
+            languageCode = "tr",
+            activeWorkspaceId = null,
+            createdAtEpochMillis = 1000L,
+            sync = newSyncMetadata(1000L, SyncStatus.SYNCED),
+        )
+
+        val conflictingRemoteTx = localTx.copy(
+            description = "Sunucudaki Yeni Açıklama",
+            amountMinor = 25_000L,
+            sync = newSyncMetadata(2000L, SyncStatus.SYNCED).copy(version = 2L),
+        )
+
+        val otherRemoteTx = localTx.copy(
+            id = "tx-other-2",
+            description = "Diğer Uzak İşlem",
+            amountMinor = 30_000L,
+            sync = newSyncMetadata(2500L, SyncStatus.SYNCED).copy(version = 1L),
+        )
+
+        val snapshotCursor = com.feniqo.mobile.data.local.entity.SyncCursorEntity(
+            entityTypeCode = "TRANSACTION",
+            updatedAtEpochMillis = 2500L,
+            entityId = "tx-other-2",
+        )
+
+        // applyInitialSnapshot çağrılıyor:
+        syncDao.applyInitialSnapshot(
+            profile = remoteProfile,
+            categories = listOf(cat.toEntity(newSyncMetadata(1000L, SyncStatus.SYNCED))),
+            transactions = listOf(conflictingRemoteTx, otherRemoteTx),
+            cursors = listOf(snapshotCursor),
+        )
+
+        // Doğrulama 1: İlk snapshot bekleyen yerel kaydı ezmedi!
+        val preservedLocal = syncDao.getTransactionRow("tx-conflict-1")
+        assertNotNull(preservedLocal)
+        assertEquals("PENDING_UPDATE", preservedLocal.sync.syncStatus)
+        assertEquals("Yerel Bekleyen Açıklama", preservedLocal.description)
+        assertEquals(15_000L, preservedLocal.amountMinor)
+
+        // Diğer uzak işlem başarıyla eklendi ve cursor kaydedildi:
+        val insertedOther = syncDao.getTransactionRow("tx-other-2")
+        assertNotNull(insertedOther)
+        assertEquals("SYNCED", insertedOther.sync.syncStatus)
+        assertEquals(2500L, syncStateDao.getCursor("TRANSACTION")?.updatedAtEpochMillis)
+
+        // 3. Outbox Push & Conflict Tespiti:
+        // Outbox gönderiminde sunucu versiyon çakışması (baseVersion 1 < serverVersion 2) döner.
+        // Sistem iki kopyayı da sync_conflicts tablosuna yazar:
+        val conflictEntity = com.feniqo.mobile.data.local.entity.SyncConflictEntity(
+            entityTypeCode = "TRANSACTION",
+            entityId = "tx-conflict-1",
+            operationId = "op-tx-1",
+            localVersion = 1L,
+            remoteVersion = 2L,
+            localPayloadJson = """{"amount_minor":15000,"description":"Yerel Bekleyen Açıklama"}""",
+            remotePayloadJson = """{"amount_minor":25000,"description":"Sunucudaki Yeni Açıklama"}""",
+            detectedAtEpochMillis = 2600L,
+        )
+        syncDao.upsertConflictRow(conflictEntity)
+
+        // Doğrulama 2: Çakışma sırasında iki kopya da Room'da korunuyor!
+        val storedConflict = syncStateDao.getConflict("TRANSACTION", "tx-conflict-1")
+        assertNotNull(storedConflict)
+        assertTrue(storedConflict.localPayloadJson.contains("Yerel Bekleyen Açıklama"))
+        assertTrue(storedConflict.remotePayloadJson.contains("Sunucudaki Yeni Açıklama"))
+        assertEquals(1L, storedConflict.localVersion)
+        assertEquals(2L, storedConflict.remoteVersion)
+
+        // 4. Çakışma Çözümü (KEEP_REMOTE):
+        // Kullanıcı uzaktaki kopyayı seçtiğinde:
+        syncDao.resolveTransactionKeepRemote(conflictingRemoteTx)
+
+        // Doğrulama 3: Çözüm sonrası yerel kayıt uzaktaki versiyonla güncellendi ve conflict silindi:
+        val resolvedTx = syncDao.getTransactionRow("tx-conflict-1")
+        assertNotNull(resolvedTx)
+        assertEquals("SYNCED", resolvedTx.sync.syncStatus)
+        assertEquals("Sunucudaki Yeni Açıklama", resolvedTx.description)
+        assertEquals(25_000L, resolvedTx.amountMinor)
+        assertEquals(2L, resolvedTx.sync.version)
+        assertNull(syncStateDao.getConflict("TRANSACTION", "tx-conflict-1"))
+        assertNull(opDao.getById("op-tx-1")) // Outbox operasyonu silindi
+
+        // 5. Sonraki Pull Adımı:
+        // Cursor 2500L'de kalmıştı. Sunucudan 3000L zaman damgalı yeni bir tx-3 geldiğinde:
+        val futureRemoteTx = localTx.copy(
+            id = "tx-future-3",
+            description = "Gelecekteki Yeni İşlem",
+            sync = newSyncMetadata(3000L, SyncStatus.SYNCED).copy(version = 1L),
+        )
+        val advancedCursor = com.feniqo.mobile.data.local.entity.SyncCursorEntity(
+            entityTypeCode = "TRANSACTION",
+            updatedAtEpochMillis = 3000L,
+            entityId = "tx-future-3",
+        )
+        syncDao.applyTransactionPull(futureRemoteTx, advancedCursor)
+
+        // Doğrulama 4: Yeni işlem sorunsuz uygulandı ve hiçbir kayıt kaçırılmadı:
+        val insertedFuture = syncDao.getTransactionRow("tx-future-3")
+        assertNotNull(insertedFuture)
+        assertEquals("Gelecekteki Yeni İşlem", insertedFuture.description)
+        assertEquals(3000L, syncStateDao.getCursor("TRANSACTION")?.updatedAtEpochMillis)
+
+        db.close()
+    }
+
+    @Test
+    fun definitive_rejection_create_updated_removes_old_and_inserts_fresh_uuid() = runTest {
+        val db = inMemoryDatabase()
+        val mutationDao = db.localMutationDao()
+        val opDao = db.syncOperationDao()
+        val categoryDao = db.categoryDao()
+
+        val cat = category()
+        categoryDao.upsert(cat.toEntity(newSyncMetadata(1000L, SyncStatus.SYNCED)))
+
+        val txId = "tx-def-rej-1"
+        val oldOpId = "11111111111111111111111111111111"
+        val initialTx = transaction().toEntity(
+            newSyncMetadata(1000L, SyncStatus.PENDING_CREATE),
+        ).copy(id = txId)
+
+        // 1. İlk CREATE işlemi DEFINITIVE_REJECTION ile FAILED durumda kaydedilir
+        mutationDao.mutateTransactionV2(
+            entity = initialTx,
+            tags = emptyList(),
+            tagLinks = emptyList(),
+            type = OutboxOperationType.CREATE,
+            payloadJson = "{\"amount\":1000}",
+            operationIdFactory = { oldOpId },
+            nowEpochMillis = 1000L,
+        )
+        opDao.markFailed(
+            operationId = oldOpId,
+            lastError = "sync_operation_failed",
+            errorClassification = OutboxErrorClassification.DEFINITIVE_REJECTION.name,
+            nextAttemptAtEpochMillis = 2000L,
+            nowEpochMillis = 1500L,
+        )
+
+        val failedOp = opDao.getById(oldOpId)
+        assertNotNull(failedOp)
+        assertTrue(failedOp.isDefinitiveRejection())
+
+        // 2. Kullanıcı kesin reddedilmiş işlemi günceller (UPDATE)
+        val newOpId = "22222222222222222222222222222222"
+        val updatedTx = initialTx.copy(description = "Düzeltilmiş İşlem")
+        val result = mutationDao.mutateTransactionV2(
+            entity = updatedTx,
+            tags = emptyList(),
+            tagLinks = emptyList(),
+            type = OutboxOperationType.UPDATE,
+            payloadJson = "{\"amount\":1500}",
+            operationIdFactory = { newOpId },
+            nowEpochMillis = 2500L,
+        )
+
+        // Doğrulama: Eski operasyon kaldırıldı, yeni operation_id ile temiz CREATE oluştu
+        assertEquals(newOpId, result.operationId)
+        assertEquals(V2EnqueueDecision.INSERTED, result.decision)
+        assertNull(opDao.getById(oldOpId)) // Eski operasyon silindi
+
+        val freshCreate = opDao.getById(newOpId)
+        assertNotNull(freshCreate)
+        assertEquals("CREATE", freshCreate.operationTypeCode)
+        assertNull(freshCreate.predecessorOperationId)
+        assertFalse(freshCreate.isBlocked)
+        assertEquals("PENDING", freshCreate.statusCode)
+        assertEquals(0, freshCreate.attemptCount)
+
+        db.close()
+    }
+
+    @Test
+    fun definitive_rejection_create_deleted_performs_safe_hard_delete() = runTest {
+        val db = inMemoryDatabase()
+        val mutationDao = db.localMutationDao()
+        val opDao = db.syncOperationDao()
+        val txDao = db.transactionDao()
+        val categoryDao = db.categoryDao()
+
+        val cat = category()
+        categoryDao.upsert(cat.toEntity(newSyncMetadata(1000L, SyncStatus.SYNCED)))
+
+        val txId = "tx-def-del-1"
+        val opId = "33333333333333333333333333333333"
+        val initialTx = transaction().toEntity(
+            newSyncMetadata(1000L, SyncStatus.PENDING_CREATE),
+        ).copy(id = txId)
+
+        // 1. CREATE işlemi DEFINITIVE_REJECTION ile FAILED durumda
+        mutationDao.mutateTransactionV2(
+            entity = initialTx,
+            tags = emptyList(),
+            tagLinks = emptyList(),
+            type = OutboxOperationType.CREATE,
+            payloadJson = "{\"amount\":1000}",
+            operationIdFactory = { opId },
+            nowEpochMillis = 1000L,
+        )
+        opDao.markFailed(
+            operationId = opId,
+            lastError = "sync_operation_failed",
+            errorClassification = OutboxErrorClassification.DEFINITIVE_REJECTION.name,
+            nextAttemptAtEpochMillis = 2000L,
+            nowEpochMillis = 1500L,
+        )
+
+        // 2. Kullanıcı siler (DELETE)
+        val result = mutationDao.mutateTransactionV2(
+            entity = initialTx,
+            tags = emptyList(),
+            tagLinks = emptyList(),
+            type = OutboxOperationType.DELETE,
+            payloadJson = "{}",
+            operationIdFactory = { "44444444444444444444444444444444" },
+            nowEpochMillis = 2500L,
+        )
+
+        // Doğrulama: Güvenli yerel HARD_DELETE gerçekleşti
+        assertEquals(opId, result.operationId)
+        assertEquals(V2EnqueueDecision.HARD_DELETED, result.decision)
+        assertNull(opDao.getById(opId))
+        assertNull(db.remoteSyncDao().getTransactionRow(txId))
+
+        db.close()
+    }
+
+    @Test
+    fun ambiguous_failed_create_updated_does_not_generate_new_operation_id_for_create() = runTest {
+        val db = inMemoryDatabase()
+        val mutationDao = db.localMutationDao()
+        val opDao = db.syncOperationDao()
+        val categoryDao = db.categoryDao()
+
+        val cat = category()
+        categoryDao.upsert(cat.toEntity(newSyncMetadata(1000L, SyncStatus.SYNCED)))
+
+        val txId = "tx-ambig-upd-1"
+        val originalCreateOpId = "55555555555555555555555555555555"
+        val initialTx = transaction().toEntity(
+            newSyncMetadata(1000L, SyncStatus.PENDING_CREATE),
+        ).copy(id = txId)
+
+        // 1. CREATE işlemi timeout/stale sonrası AMBIGUOUS_RESULT ile FAILED durumda
+        mutationDao.mutateTransactionV2(
+            entity = initialTx,
+            tags = emptyList(),
+            tagLinks = emptyList(),
+            type = OutboxOperationType.CREATE,
+            payloadJson = "{\"amount\":1000}",
+            operationIdFactory = { originalCreateOpId },
+            nowEpochMillis = 1000L,
+        )
+        opDao.markFailed(
+            operationId = originalCreateOpId,
+            lastError = "sync_operation_failed",
+            errorClassification = OutboxErrorClassification.AMBIGUOUS_RESULT.name,
+            nextAttemptAtEpochMillis = 2000L,
+            nowEpochMillis = 1500L,
+        )
+
+        val ambigOp = opDao.getById(originalCreateOpId)
+        assertNotNull(ambigOp)
+        assertTrue(ambigOp.isAmbiguousResult())
+
+        // 2. Kullanıcı düzenler (UPDATE)
+        val successorUpdateOpId = "66666666666666666666666666666666"
+        val updatedTx = initialTx.copy(description = "Belirsiz Sonrası Güncelleme")
+        val result = mutationDao.mutateTransactionV2(
+            entity = updatedTx,
+            tags = emptyList(),
+            tagLinks = emptyList(),
+            type = OutboxOperationType.UPDATE,
+            payloadJson = "{\"amount\":2000}",
+            operationIdFactory = { successorUpdateOpId },
+            nowEpochMillis = 2500L,
+        )
+
+        // Doğrulama:
+        // - Yeni bir CREATE üretilmedi!
+        // - Eski CREATE silinmedi veya payload'ı değiştirilmedi!
+        val preservedCreate = opDao.getById(originalCreateOpId)
+        assertNotNull(preservedCreate)
+        assertEquals("CREATE", preservedCreate.operationTypeCode)
+        assertEquals("{\"amount\":1000}", preservedCreate.payloadJson)
+
+        // - Successor UPDATE olarak zincirlendi ve bloklandı!
+        val successor = opDao.getById(successorUpdateOpId)
+        assertNotNull(successor)
+        assertEquals("UPDATE", successor.operationTypeCode)
+        assertEquals(originalCreateOpId, successor.predecessorOperationId)
+        assertTrue(successor.isBlocked)
+
+        db.close()
+    }
+
+    private class FakeRemoteTransactionRpc {
+        data class RemoteTx(
+            val id: String,
+            val userId: String,
+            val categoryId: String,
+            val amountMinor: Long,
+            val currency: String,
+            val type: String,
+            val description: String?,
+            val paymentMethod: String,
+            val transactionDate: String,
+            val createdAt: String,
+            var version: Long,
+            var isDeleted: Boolean = false,
+            var deletedAt: String? = null,
+        )
+
+        val remoteRecords = mutableMapOf<String, RemoteTx>()
+        val remoteReceipts = mutableMapOf<String, String>() // operationId -> entityId
+        var simulateAckLossOnReturn = false
+        private val json = Json { ignoreUnknownKeys = true }
+
+        fun execute(operation: SyncOperationEntity): OutboxExecutionResult {
+            // Idempotency kontrolü: Bu operation_id daha önce uzakta işlendiyse
+            if (remoteReceipts.containsKey(operation.operationId)) {
+                val existing = remoteRecords[operation.entityId]!!
+                if (simulateAckLossOnReturn) {
+                    throw kotlinx.serialization.SerializationException("Simulated response decode error / ACK loss on replay")
+                }
+                return OutboxExecutionResult.TransactionApplied(
+                    record = TransactionDto(
+                        id = existing.id,
+                        userId = existing.userId,
+                        categoryId = existing.categoryId,
+                        amountMinor = existing.amountMinor,
+                        currency = existing.currency,
+                        type = existing.type,
+                        description = existing.description,
+                        paymentMethod = existing.paymentMethod,
+                        transactionDate = existing.transactionDate,
+                        createdAt = existing.createdAt,
+                        version = existing.version,
+                        deletedAt = if (existing.isDeleted) existing.deletedAt else null,
+                    )
+                )
+            }
+
+            if (operation.operationTypeCode == "CREATE") {
+                val rawPayload = checkNotNull(operation.payloadJson) { "CREATE requires payloadJson" }
+                val decodedDto = json.decodeFromString<TransactionDto>(rawPayload)
+                val record = RemoteTx(
+                    id = decodedDto.id,
+                    userId = decodedDto.userId,
+                    categoryId = decodedDto.categoryId,
+                    amountMinor = decodedDto.amountMinor,
+                    currency = decodedDto.currency,
+                    type = decodedDto.type,
+                    description = decodedDto.description,
+                    paymentMethod = decodedDto.paymentMethod,
+                    transactionDate = decodedDto.transactionDate,
+                    createdAt = decodedDto.createdAt,
+                    version = 1L,
+                    isDeleted = false,
+                )
+                remoteRecords[operation.entityId] = record
+                remoteReceipts[operation.operationId] = operation.entityId
+
+                if (simulateAckLossOnReturn) {
+                    // Sunucu işlemi ve receipt'i kaydetti fakat istemci cevabı decode ederken koptu / ACK kayboldu!
+                    throw kotlinx.serialization.SerializationException("Simulated response decode failure / ACK loss")
+                }
+
+                return OutboxExecutionResult.TransactionApplied(
+                    record = TransactionDto(
+                        id = record.id,
+                        userId = record.userId,
+                        categoryId = record.categoryId,
+                        amountMinor = record.amountMinor,
+                        currency = record.currency,
+                        type = record.type,
+                        description = record.description,
+                        paymentMethod = record.paymentMethod,
+                        transactionDate = record.transactionDate,
+                        createdAt = record.createdAt,
+                        version = record.version,
+                    )
+                )
+            } else if (operation.operationTypeCode == "DELETE") {
+                val existing = remoteRecords[operation.entityId]
+                checkNotNull(existing) { "Entity not found on remote: ${operation.entityId}" }
+                existing.version += 1
+                existing.isDeleted = true
+                existing.deletedAt = "2026-09-21T00:00:00Z"
+                remoteReceipts[operation.operationId] = operation.entityId
+
+                return OutboxExecutionResult.TransactionApplied(
+                    record = TransactionDto(
+                        id = existing.id,
+                        userId = existing.userId,
+                        categoryId = existing.categoryId,
+                        amountMinor = existing.amountMinor,
+                        currency = existing.currency,
+                        type = existing.type,
+                        description = existing.description,
+                        paymentMethod = existing.paymentMethod,
+                        transactionDate = existing.transactionDate,
+                        createdAt = existing.createdAt,
+                        version = existing.version,
+                        deletedAt = existing.deletedAt,
+                    )
+                )
+            }
+            error("Desteklenmeyen işlem türü: ${operation.operationTypeCode}")
+        }
+    }
+
+    @Test
+    fun ambiguous_create_replayed_with_same_operation_id_keeps_remote_record_unique() = runTest {
+        val db = inMemoryDatabase()
+        val mutationDao = db.localMutationDao()
+        val opDao = db.syncOperationDao()
+        val categoryDao = db.categoryDao()
+
+        val cat = category()
+        categoryDao.upsert(cat.toEntity(newSyncMetadata(1000L, SyncStatus.SYNCED)))
+
+        val txId = "tx-ambig-replay-1"
+        val opId = "77777777777777777777777777777777"
+        val txDomain = transaction().copy(id = EntityId(txId))
+        val initialTx = txDomain.toEntity(
+            newSyncMetadata(1000L, SyncStatus.PENDING_CREATE),
+        )
+        val payloadDto = txDomain.toDto()
+        val payloadJson = Json.encodeToString(payloadDto)
+
+        val fakeRemote = FakeRemoteTransactionRpc()
+        val writeQueue = OfflineWriteQueue(mutationDao, opDao)
+        val roomQueue = RoomOutboxQueue(writeQueue)
+        val outboxProcessor = OutboxProcessor(roomQueue) { op -> fakeRemote.execute(op) }
+
+        // 1. CREATE kuyruğa yazılır (gerçek immutable DTO payload snapshot ile)
+        mutationDao.mutateTransactionV2(
+            entity = initialTx,
+            tags = emptyList(),
+            tagLinks = emptyList(),
+            type = OutboxOperationType.CREATE,
+            payloadJson = payloadJson,
+            operationIdFactory = { opId },
+            nowEpochMillis = 1000L,
+        )
+
+        // 2. İlk gönderimde uzak sunucu kaydı uygular fakat response decode / ACK kaybı simüle edilir:
+        fakeRemote.simulateAckLossOnReturn = true
+        val run1 = outboxProcessor.processReadyOperations()
+        assertEquals(opId, run1.failedOperationId)
+
+        // Yerel işlem FAILED ve AMBIGUOUS_RESULT olur:
+        val failedOp = opDao.getById(opId)
+        assertNotNull(failedOp)
+        assertEquals("FAILED", failedOp.statusCode)
+        assertEquals(OutboxErrorClassification.AMBIGUOUS_RESULT.name, failedOp.errorClassification)
+
+        // Uzak sunucuda ise kayıt payload verileriyle ve idempotency receipt ZATEN oluşmuştur:
+        assertEquals(1, fakeRemote.remoteRecords.size)
+        assertEquals(payloadDto.amountMinor, fakeRemote.remoteRecords[txId]?.amountMinor)
+        assertEquals(payloadDto.userId, fakeRemote.remoteRecords[txId]?.userId)
+        assertEquals(payloadDto.categoryId, fakeRemote.remoteRecords[txId]?.categoryId)
+        assertEquals(payloadDto.paymentMethod, fakeRemote.remoteRecords[txId]?.paymentMethod)
+        assertEquals(payloadDto.transactionDate, fakeRemote.remoteRecords[txId]?.transactionDate)
+        assertEquals(1, fakeRemote.remoteReceipts.size)
+        assertTrue(fakeRemote.remoteReceipts.containsKey(opId))
+
+        // 3. Ağ geri gelip operasyon aynı operation_id ile replay edildiğinde:
+        opDao.retryAllFailed(1400L)
+        fakeRemote.simulateAckLossOnReturn = false
+        val run2 = outboxProcessor.processReadyOperations()
+        assertEquals(1, run2.succeededCount)
+        kotlin.test.assertNull(run2.failedOperationId)
+
+        // 4. Doğrulamalar:
+        // - Uzakta ÇİFT KAYIT oluşmadı, tekil kaldı!
+        assertEquals(1, fakeRemote.remoteRecords.size)
+        assertEquals(1L, fakeRemote.remoteRecords[txId]?.version)
+        assertEquals(1, fakeRemote.remoteReceipts.size)
+
+        // - Yerel outbox işlemi ACK sonrası başarıyla tamamlandı (temizlendi):
+        val remainingOp = opDao.getById(opId)
+        kotlin.test.assertNull(remainingOp)
+        assertEquals(0, opDao.observePendingCount().first())
+
+        db.close()
+    }
+
+    @Test
+    fun ambiguous_failed_create_deleted_enqueues_successor_delete_preventing_remote_zombie() = runTest {
+        val db = inMemoryDatabase()
+        val mutationDao = db.localMutationDao()
+        val opDao = db.syncOperationDao()
+        val categoryDao = db.categoryDao()
+
+        val cat = category()
+        categoryDao.upsert(cat.toEntity(newSyncMetadata(1000L, SyncStatus.SYNCED)))
+
+        val txId = "tx-zombie-prevent-1"
+        val originalCreateOpId = "88888888888888888888888888888888"
+        val txDomain = transaction().copy(id = EntityId(txId))
+        val initialTx = txDomain.toEntity(
+            newSyncMetadata(1000L, SyncStatus.PENDING_CREATE),
+        )
+        val payloadDto = txDomain.toDto()
+        val payloadJson = Json.encodeToString(payloadDto)
+
+        val fakeRemote = FakeRemoteTransactionRpc()
+        val writeQueue = OfflineWriteQueue(mutationDao, opDao)
+        val roomQueue = RoomOutboxQueue(writeQueue)
+        val outboxProcessor = OutboxProcessor(roomQueue) { op -> fakeRemote.execute(op) }
+
+        // 1. CREATE kuyruğa eklenir ve sunucuya gönderilir, ACK kaybı yaşanır:
+        mutationDao.mutateTransactionV2(
+            entity = initialTx,
+            tags = emptyList(),
+            tagLinks = emptyList(),
+            type = OutboxOperationType.CREATE,
+            payloadJson = payloadJson,
+            operationIdFactory = { originalCreateOpId },
+            nowEpochMillis = 1000L,
+        )
+        fakeRemote.simulateAckLossOnReturn = true
+        outboxProcessor.processReadyOperations()
+
+        val failedCreate = opDao.getById(originalCreateOpId)
+        assertNotNull(failedCreate)
+        assertEquals("FAILED", failedCreate.statusCode)
+        assertEquals(OutboxErrorClassification.AMBIGUOUS_RESULT.name, failedCreate.errorClassification)
+
+        // Uzak sunucuda kayıt oluşmuş durumdadır (zombi adayı), immutable payload amount işlenmiştir:
+        assertNotNull(fakeRemote.remoteRecords[txId])
+        assertEquals(payloadDto.amountMinor, fakeRemote.remoteRecords[txId]!!.amountMinor)
+        kotlin.test.assertFalse(fakeRemote.remoteRecords[txId]!!.isDeleted)
+
+        // 2. Kullanıcı bu belirsiz işlemi yerelde siler (DELETE):
+        val successorDeleteOpId = "99999999999999999999999999999999"
+        val deletedTx = initialTx.copy(
+            sync = initialTx.sync.copy(deletedAtEpochMillis = 2500L),
+        )
+        val deletePayloadJson = Json.encodeToString(
+            payloadDto.copy(
+                deletedAt = "2026-09-21T00:00:00Z",
+                version = 1L,
+            )
+        )
+        mutationDao.mutateTransactionV2(
+            entity = deletedTx,
+            tags = emptyList(),
+            tagLinks = emptyList(),
+            type = OutboxOperationType.DELETE,
+            payloadJson = deletePayloadJson,
+            operationIdFactory = { successorDeleteOpId },
+            nowEpochMillis = 2500L,
+        )
+
+        // Yerel HARD_DELETE yapılmadı, CREATE korundu ve ardıl DELETE bloklu eklendi:
+        assertNotNull(opDao.getById(originalCreateOpId))
+        val successorDelete = opDao.getById(successorDeleteOpId)
+        assertNotNull(successorDelete)
+        assertEquals("DELETE", successorDelete.operationTypeCode)
+        assertEquals(originalCreateOpId, successorDelete.predecessorOperationId)
+        assertTrue(successorDelete.isBlocked)
+
+        // 3. Ağ geri gelir: CREATE replay edilir ve ACK alınır:
+        fakeRemote.simulateAckLossOnReturn = false
+        opDao.retryAllFailed(2600L)
+        val runReplay = outboxProcessor.processReadyOperations()
+        assertEquals(1, runReplay.succeededCount)
+
+        // CREATE ackV2Execution ile tamamlandı ve ardıl DELETE unblock edildi:
+        kotlin.test.assertNull(opDao.getById(originalCreateOpId))
+        val unblockedDelete = opDao.getById(successorDeleteOpId)
+        assertNotNull(unblockedDelete)
+        kotlin.test.assertFalse(unblockedDelete.isBlocked)
+        assertEquals(1L, unblockedDelete.baseVersion)
+
+        // 4. Artık bloksuz olan ardıl DELETE gerçek uzak servis üzerinde çalıştırılır:
+        val runDelete = outboxProcessor.processReadyOperations()
+        assertEquals(1, runDelete.succeededCount)
+
+        // 5. Kesin Doğrulama:
+        // - Uzak servis üzerinde DELETE gerçekten çalıştı!
+        val remoteRecord = fakeRemote.remoteRecords[txId]
+        assertNotNull(remoteRecord)
+        assertTrue(remoteRecord.isDeleted, "Uzak kayıt tombstone yapılmış olmalı!")
+        assertEquals(2L, remoteRecord.version)
+
+        // - Uzakta zombi kayıt kalmadı!
+        // - Yerel outbox tamamen temizlendi!
+        kotlin.test.assertNull(opDao.getById(successorDeleteOpId))
+        assertEquals(0, opDao.observePendingCount().first())
+
+        db.close()
+    }
+
+    @Test
+    fun predecessor_successor_chain_preserved_during_recovery() = runTest {
+        val db = inMemoryDatabase()
+        val mutationDao = db.localMutationDao()
+        val opDao = db.syncOperationDao()
+        val categoryDao = db.categoryDao()
+
+        val cat = category()
+        categoryDao.upsert(cat.toEntity(newSyncMetadata(1000L, SyncStatus.SYNCED)))
+
+        val txId = "tx-chain-1"
+        val op1 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        val op2 = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        val op3 = "cccccccccccccccccccccccccccccccc"
+        val initialTx = transaction().toEntity(
+            newSyncMetadata(1000L, SyncStatus.PENDING_CREATE),
+        ).copy(id = txId)
+
+        // op1 (CREATE)
+        mutationDao.mutateTransactionV2(
+            entity = initialTx,
+            tags = emptyList(),
+            tagLinks = emptyList(),
+            type = OutboxOperationType.CREATE,
+            payloadJson = "{\"amount\":100}",
+            operationIdFactory = { op1 },
+            nowEpochMillis = 1000L,
+        )
+        // op1 ambiguous failure
+        opDao.markFailed(op1, "error", OutboxErrorClassification.AMBIGUOUS_RESULT.name, 2000L, 1100L)
+
+        // op2 (UPDATE successor, op1'e bağlı ve bloklu olarak eklenir)
+        mutationDao.mutateTransactionV2(
+            entity = initialTx.copy(description = "Güncelleme 1"),
+            tags = emptyList(),
+            tagLinks = emptyList(),
+            type = OutboxOperationType.UPDATE,
+            payloadJson = "{\"amount\":200}",
+            operationIdFactory = { op2 },
+            nowEpochMillis = 1200L,
+        )
+
+        val entityOp1 = opDao.getById(op1)
+        val entityOp2Blocked = opDao.getById(op2)
+        assertNotNull(entityOp1)
+        assertNotNull(entityOp2Blocked)
+        assertEquals(op1, entityOp2Blocked.predecessorOperationId)
+        assertTrue(entityOp2Blocked.isBlocked)
+
+        // op1 uzak sunucuda uzlaştırılıp/replay edilip tamamlandığında ardılı op2 unblock edilir:
+        val unblockCount = opDao.unblockSuccessor(op2, op1, appliedVersion = 1L, nowEpochMillis = 2000L)
+        assertEquals(1, unblockCount)
+        val entityOp2Unblocked = opDao.getById(op2)
+        assertNotNull(entityOp2Unblocked)
+        assertFalse(entityOp2Unblocked.isBlocked)
+        assertEquals(1L, entityOp2Unblocked.baseVersion)
+
+        // op2 işleme alınır (IN_FLIGHT)
+        val claimed = opDao.claimOperation(op2, 2100L)
+        assertEquals(1, claimed)
+
+        // op3 (UPDATE successor of op2, işlenmekte olan op2'ye zincirlenir)
+        mutationDao.mutateTransactionV2(
+            entity = initialTx.copy(description = "Güncelleme 2"),
+            tags = emptyList(),
+            tagLinks = emptyList(),
+            type = OutboxOperationType.UPDATE,
+            payloadJson = "{\"amount\":300}",
+            operationIdFactory = { op3 },
+            nowEpochMillis = 2200L,
+        )
+
+        val entityOp3 = opDao.getById(op3)
+        assertNotNull(entityOp3)
+        assertEquals(op2, entityOp3.predecessorOperationId)
+        assertTrue(entityOp3.isBlocked)
+
+        db.close()
+    }
+
+    @Test
+    fun app_restart_preserves_error_classification_and_recovery_decisions() = runTest {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val dbName = "test-error-class-restart.db"
+        context.deleteDatabase(dbName)
+
+        val opId1 = "dddddddddddddddddddddddddddddddd"
+        val opId2 = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+
+        // 1. İlk oturumda iki operasyon yazılır
+        val db1 = persistentDatabase(context, dbName)
+        val opDao1 = db1.syncOperationDao()
+        val mutationDao1 = db1.localMutationDao()
+        db1.categoryDao().upsert(category().toEntity(newSyncMetadata(1000L, SyncStatus.SYNCED)))
+
+        val tx1 = transaction().toEntity(newSyncMetadata(1000L, SyncStatus.PENDING_CREATE)).copy(id = "tx-restart-1")
+        mutationDao1.mutateTransactionV2(
+            entity = tx1,
+            tags = emptyList(),
+            tagLinks = emptyList(),
+            type = OutboxOperationType.CREATE,
+            payloadJson = "{\"amount\":100}",
+            operationIdFactory = { opId1 },
+            nowEpochMillis = 1000L,
+        )
+        opDao1.markFailed(opId1, "err", OutboxErrorClassification.DEFINITIVE_REJECTION.name, 2000L, 1100L)
+
+        val tx2 = transaction().toEntity(newSyncMetadata(1000L, SyncStatus.PENDING_CREATE)).copy(id = "tx-restart-2")
+        mutationDao1.mutateTransactionV2(
+            entity = tx2,
+            tags = emptyList(),
+            tagLinks = emptyList(),
+            type = OutboxOperationType.CREATE,
+            payloadJson = "{\"amount\":200}",
+            operationIdFactory = { opId2 },
+            nowEpochMillis = 1200L,
+        )
+        opDao1.markFailed(opId2, "err", OutboxErrorClassification.AMBIGUOUS_RESULT.name, 2000L, 1300L)
+
+        db1.close()
+
+        // 2. Uygulama yeniden açıldığında (db2)
+        val db2 = persistentDatabase(context, dbName)
+        val opDao2 = db2.syncOperationDao()
+
+        val reloadedOp1 = opDao2.getById(opId1)
+        val reloadedOp2 = opDao2.getById(opId2)
+
+        assertNotNull(reloadedOp1)
+        assertNotNull(reloadedOp2)
+
+        assertEquals("DEFINITIVE_REJECTION", reloadedOp1.errorClassification)
+        assertTrue(reloadedOp1.isDefinitiveRejection())
+        assertFalse(reloadedOp1.isAmbiguousResult())
+
+        assertEquals("AMBIGUOUS_RESULT", reloadedOp2.errorClassification)
+        assertTrue(reloadedOp2.isAmbiguousResult())
+        assertFalse(reloadedOp2.isDefinitiveRejection())
+
+        db2.close()
+        context.deleteDatabase(dbName)
+    }
 
     private companion object {
         val USER_ID = EntityId("user-1")

@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuite name="com.feniqo.mobile.presentation.transaction.CustomSplitMembershipDepartureAndroidTest" tests="2" failures="0" errors="0" skipped="0" time="18.043" timestamp="2026-09-19T12:22:04" hostname="localhost">
+  <properties>
+    <property name="device" value="SM-A715F - 13" />
+    <property name="flavor" value="" />
+    <property name="project" value=":androidApp" />
+  </properties>
+  <testcase name="payerDeparture_preservesShares_removesBalancedBadge_andBlocksSubmit" classname="com.feniqo.mobile.presentation.transaction.CustomSplitMembershipDepartureAndroidTest" time="11.505" />
+  <testcase name="participantDeparture_preservesShares_removesBalancedBadge_andBlocksSubmit" classname="com.feniqo.mobile.presentation.transaction.CustomSplitMembershipDepartureAndroidTest" time="3.669" />
+</testsuite>

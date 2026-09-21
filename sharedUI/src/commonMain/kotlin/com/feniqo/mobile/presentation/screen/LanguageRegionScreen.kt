@@ -435,6 +435,7 @@ private fun Currency.displayName(): String = when (this) {
     Currency.TRY -> "Türk lirası"
     Currency.USD -> "Amerikan doları"
     Currency.EUR -> "Euro"
+    Currency.GBP -> "İngiliz sterlini"
 }
 
 private fun Currency.symbol(): String = com.feniqo.mobile.presentation.util.MoneyFormatter.getCurrencySymbol(this)

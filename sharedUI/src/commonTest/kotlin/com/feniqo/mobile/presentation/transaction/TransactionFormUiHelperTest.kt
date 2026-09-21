@@ -56,6 +56,17 @@ class TransactionFormUiHelperTest {
         assertEquals("Lütfen harcamayı ödeyen kişiyi seçin.", TransactionFormFieldError.SPLIT_PAYER_REQUIRED.toDisplayText())
         assertEquals("En az bir katılımcı seçilmelidir.", TransactionFormFieldError.SPLIT_PARTICIPANTS_REQUIRED.toDisplayText())
         assertEquals("Ödeyen kişi katılımcılar arasında olmalıdır.", TransactionFormFieldError.SPLIT_PAYER_NOT_IN_PARTICIPANTS.toDisplayText())
+        assertEquals("Özel dağıtım için tüm katılımcıların payları girilmelidir.", TransactionFormFieldError.SPLIT_CUSTOM_SHARES_REQUIRED.toDisplayText())
+        assertEquals("Pay tutarı boş bırakılamaz.", TransactionFormFieldError.SPLIT_CUSTOM_SHARE_REQUIRED.toDisplayText())
+        assertEquals("Geçerli bir pay tutarı girin.", TransactionFormFieldError.SPLIT_CUSTOM_SHARE_INVALID.toDisplayText())
+        assertEquals("Yalnızca harcamayı ödeyen kişi 0 ₺ pay alabilir.", TransactionFormFieldError.SPLIT_CUSTOM_NON_PAYER_ZERO_SHARE_NOT_ALLOWED.toDisplayText())
+        assertEquals("Pay tutarı negatif olamaz.", TransactionFormFieldError.SPLIT_CUSTOM_SHARE_NEGATIVE.toDisplayText())
+        assertEquals("Pay tutarı izin verilen sınırı aşıyor.", TransactionFormFieldError.SPLIT_CUSTOM_SHARE_TOO_LARGE.toDisplayText())
+        assertEquals("Paylar toplamı harcama tutarına eşit olmalıdır.", TransactionFormFieldError.SPLIT_CUSTOM_TOTAL_MISMATCH.toDisplayText())
+        assertEquals("Paylar toplamı sayı sınırını aşıyor.", TransactionFormFieldError.SPLIT_CUSTOM_TOTAL_OVERFLOW.toDisplayText())
+        assertEquals("Pay sahibi çalışma alanında aktif bir üye olmalıdır.", TransactionFormFieldError.SPLIT_CUSTOM_MEMBER_NOT_ACTIVE.toDisplayText())
+        assertEquals("Katılımcılar ile pay sahipleri aynı küme olmalıdır.", TransactionFormFieldError.SPLIT_PARTICIPANT_SET_MISMATCH.toDisplayText())
+        assertEquals("Özel dağıtım yalnızca ortak çalışma alanı harcamalarında kullanılabilir.", TransactionFormFieldError.SPLIT_CUSTOM_NOT_ALLOWED_IN_PERSONAL.toDisplayText())
     }
 
     @Test

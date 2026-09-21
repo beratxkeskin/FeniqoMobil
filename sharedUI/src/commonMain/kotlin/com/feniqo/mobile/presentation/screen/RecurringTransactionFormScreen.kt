@@ -526,6 +526,7 @@ private fun RecurringAmountCard(
         Currency.TRY -> "₺"
         Currency.USD -> "$"
         Currency.EUR -> "€"
+        Currency.GBP -> "£"
     }
 
     val amountColor = when (transactionType) {

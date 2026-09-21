@@ -16,7 +16,7 @@
 
 ## 2. Room şeması
 
-Güncel Room şema sürümü **16**'dır. Export edilen şemalar
+Güncel Room şema sürümü **19**'dur. Export edilen şemalar
 `sharedLogic/schemas/com.feniqo.mobile.data.local.database.FeniqoDatabase/` altında commit edilir.
 
 ### İş verisi tabloları
@@ -144,6 +144,10 @@ Kurallar:
 - Para `amount_minor bigint` + `currency` ile taşınır.
 - Silme tombstone'dur.
 - Makbuz için public URL değil sahiplik kontrollü nesne yolu saklanır.
+- Ortak harcamalar için `split_mode` (`EQUAL` | `CUSTOM`) ve `participant_shares jsonb` alanları desteklenir (`20260918000100_sync_write_v2_custom_split.sql`).
+  - `CUSTOM` modunda `participant_shares` dizisi boş olamaz; her pay elemanı pozitif tam sayı `amount_minor` taşımalı ve paylar toplamı işlem tutarına birebir eşit olmalıdır.
+  - Pay sahipleri `participant_user_ids` kümesiyle birebir örtüşmelidir (`CUSTOM_SPLIT_PARTICIPANT_SET_MISMATCH`).
+  - Eski istemcilerden gelen split alanı içermeyen UPDATE çağrılarında mevcut CUSTOM dağılımı korunur.
 
 ## 9. RLS ve uzak yazma
 

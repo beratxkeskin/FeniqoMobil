@@ -491,6 +491,7 @@ val com.feniqo.mobile.domain.model.Currency.symbolText: String
         com.feniqo.mobile.domain.model.Currency.TRY -> "₺"
         com.feniqo.mobile.domain.model.Currency.USD -> "$"
         com.feniqo.mobile.domain.model.Currency.EUR -> "€"
+        com.feniqo.mobile.domain.model.Currency.GBP -> "£"
     }
 
 /**

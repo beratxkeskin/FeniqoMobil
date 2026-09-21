@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -312,7 +313,12 @@ fun BudgetFormScreen(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
                                     ) {
-                                        Text("📊", style = MaterialTheme.typography.bodyMedium)
+                                        Icon(
+                                            imageVector = Icons.Outlined.BarChart,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(18.dp),
+                                        )
                                         Text(
                                             text = "Önizleme",
                                             style = MaterialTheme.typography.titleSmall,
@@ -575,6 +581,7 @@ fun BudgetFormScreen(
                                             Currency.TRY -> "Türk lirası (TRY)"
                                             Currency.USD -> "Amerikan doları (USD)"
                                             Currency.EUR -> "Avro (EUR)"
+                                            Currency.GBP -> "İngiliz sterlini (GBP)"
                                         }
                                         Text(
                                             text = currLabel,

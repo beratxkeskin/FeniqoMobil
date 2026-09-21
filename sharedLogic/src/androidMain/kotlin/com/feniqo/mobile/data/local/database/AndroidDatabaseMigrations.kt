@@ -565,3 +565,10 @@ val ANDROID_MIGRATION_18_19 = Migration(18, 19) { database ->
         "ALTER TABLE transactions ADD COLUMN participant_shares_json TEXT NOT NULL DEFAULT '[]'",
     )
 }
+
+/** v20, sync_operations tablosuna error_classification kolonunu ekler. */
+val ANDROID_MIGRATION_19_20 = Migration(19, 20) { database ->
+    database.execSQL(
+        "ALTER TABLE sync_operations ADD COLUMN error_classification TEXT DEFAULT NULL",
+    )
+}

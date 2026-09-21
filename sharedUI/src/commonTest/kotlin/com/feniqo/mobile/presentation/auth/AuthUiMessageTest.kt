@@ -88,9 +88,9 @@ class AuthUiMessageTest {
 
     @Test
     fun authUiMessage_toDisplayText_returnsSafeTurkishStrings() {
-        assertEquals("E-posta veya parola hatalı.", AuthUiMessage.INVALID_CREDENTIALS.toDisplayText())
+        assertEquals("E-posta veya parola hatalı.\nBilgilerini kontrol edip tekrar dene.", AuthUiMessage.INVALID_CREDENTIALS.toDisplayText())
         assertEquals("Bu e-posta adresiyle kayıtlı bir hesap zaten var.", AuthUiMessage.EMAIL_ALREADY_REGISTERED.toDisplayText())
-        assertEquals("İnternet bağlantınızı kontrol edip tekrar deneyin.", AuthUiMessage.NETWORK_UNAVAILABLE.toDisplayText())
+        assertEquals("Bağlantı kurulamadı.\nİnternet bağlantını kontrol edip yeniden dene.", AuthUiMessage.NETWORK_UNAVAILABLE.toDisplayText())
         assertEquals("Çok fazla deneme yaptınız. Lütfen bir süre bekleyip tekrar deneyin.", AuthUiMessage.RATE_LIMITED.toDisplayText())
         assertEquals("Giriş yapmadan önce e-posta adresinizi doğrulayın.", AuthUiMessage.EMAIL_NOT_CONFIRMED.toDisplayText())
         assertEquals("Giriş ve kayıt işlemleri şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.", AuthUiMessage.AUTH_PROVIDER_UNAVAILABLE.toDisplayText())
@@ -103,10 +103,10 @@ class AuthUiMessageTest {
     @Test
     fun authValidationError_toDisplayText_returnsSafeTurkishStrings() {
         assertEquals("E-posta adresi gereklidir.", AuthValidationError.EMAIL_REQUIRED.toDisplayText())
-        assertEquals("Geçerli bir e-posta adresi girin.", AuthValidationError.EMAIL_INVALID.toDisplayText())
+        assertEquals("Geçerli bir e-posta adresi gir.", AuthValidationError.EMAIL_INVALID.toDisplayText())
         assertEquals("Parola gereklidir.", AuthValidationError.PASSWORD_REQUIRED.toDisplayText())
         assertEquals("Parola en az 6 karakter olmalıdır.", AuthValidationError.NEW_PASSWORD_TOO_SHORT.toDisplayText())
-        assertEquals("Parolalar birbiriyle eşleşmiyor.", AuthValidationError.PASSWORDS_DO_NOT_MATCH.toDisplayText())
+        assertEquals("Parolalar eşleşmiyor.", AuthValidationError.PASSWORDS_DO_NOT_MATCH.toDisplayText())
         assertEquals("Ad soyad en az 2 karakter olmalıdır.", AuthValidationError.FULL_NAME_TOO_SHORT.toDisplayText())
     }
 

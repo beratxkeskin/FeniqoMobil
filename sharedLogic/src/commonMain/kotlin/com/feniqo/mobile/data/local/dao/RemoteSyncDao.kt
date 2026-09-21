@@ -886,15 +886,59 @@ interface RemoteSyncDao {
         debts: List<DebtEntity> = emptyList(),
         debtPayments: List<DebtPaymentEntity> = emptyList(),
     ) {
-        upsertProfileRow(profile)
-        if (categories.isNotEmpty()) upsertCategoryRows(categories)
-        if (recurringTransactions.isNotEmpty()) upsertRecurringTransactionRows(recurringTransactions)
-        if (subscriptions.isNotEmpty()) upsertSubscriptionRows(subscriptions)
-        if (goals.isNotEmpty()) upsertGoalRows(goals)
-        if (goalContributions.isNotEmpty()) upsertGoalContributionRows(goalContributions)
-        if (debts.isNotEmpty()) upsertDebtRows(debts)
-        if (debtPayments.isNotEmpty()) upsertDebtPaymentRows(debtPayments)
-        if (transactions.isNotEmpty()) upsertTransactionRows(transactions)
+        val existingProfile = getProfileRow(profile.id)
+        if (existingProfile == null || existingProfile.sync.syncStatus == "SYNCED") {
+            upsertProfileRow(profile)
+        }
+
+        val safeCategories = categories.filter { row ->
+            val existing = getCategoryRow(row.id)
+            existing == null || existing.sync.syncStatus == "SYNCED"
+        }
+        if (safeCategories.isNotEmpty()) upsertCategoryRows(safeCategories)
+
+        val safeRecurring = recurringTransactions.filter { row ->
+            val existing = getRecurringTransactionRow(row.id)
+            existing == null || existing.sync.syncStatus == "SYNCED"
+        }
+        if (safeRecurring.isNotEmpty()) upsertRecurringTransactionRows(safeRecurring)
+
+        val safeSubscriptions = subscriptions.filter { row ->
+            val existing = getSubscriptionRow(row.id)
+            existing == null || existing.sync.syncStatus == "SYNCED"
+        }
+        if (safeSubscriptions.isNotEmpty()) upsertSubscriptionRows(safeSubscriptions)
+
+        val safeGoals = goals.filter { row ->
+            val existing = getGoalRow(row.id)
+            existing == null || existing.sync.syncStatus == "SYNCED"
+        }
+        if (safeGoals.isNotEmpty()) upsertGoalRows(safeGoals)
+
+        val safeContributions = goalContributions.filter { row ->
+            val existing = getGoalContributionRow(row.id)
+            existing == null || existing.sync.syncStatus == "SYNCED"
+        }
+        if (safeContributions.isNotEmpty()) upsertGoalContributionRows(safeContributions)
+
+        val safeDebts = debts.filter { row ->
+            val existing = getDebtRow(row.id)
+            existing == null || existing.sync.syncStatus == "SYNCED"
+        }
+        if (safeDebts.isNotEmpty()) upsertDebtRows(safeDebts)
+
+        val safePayments = debtPayments.filter { row ->
+            val existing = getDebtPaymentRow(row.id)
+            existing == null || existing.sync.syncStatus == "SYNCED"
+        }
+        if (safePayments.isNotEmpty()) upsertDebtPaymentRows(safePayments)
+
+        val safeTransactions = transactions.filter { row ->
+            val existing = getTransactionRow(row.id)
+            existing == null || existing.sync.syncStatus == "SYNCED"
+        }
+        if (safeTransactions.isNotEmpty()) upsertTransactionRows(safeTransactions)
+
         if (cursors.isNotEmpty()) upsertCursorRows(cursors)
     }
 
@@ -923,12 +967,21 @@ interface RemoteSyncDao {
             }
         }
 
-        if (workspaces.isNotEmpty()) {
-            upsertWorkspaceRows(workspaces)
+        val safeWorkspaces = workspaces.filter { ws ->
+            val existing = getWorkspaceRow(ws.id)
+            existing == null || existing.sync.syncStatus == "SYNCED"
         }
-        if (members.isNotEmpty()) {
-            upsertWorkspaceMemberRows(members)
-            for (member in members) {
+        if (safeWorkspaces.isNotEmpty()) {
+            upsertWorkspaceRows(safeWorkspaces)
+        }
+
+        val safeMembers = members.filter { m ->
+            val existing = getWorkspaceMemberRow(m.workspaceId, m.userId)
+            existing == null || existing.sync.syncStatus == "SYNCED"
+        }
+        if (safeMembers.isNotEmpty()) {
+            upsertWorkspaceMemberRows(safeMembers)
+            for (member in safeMembers) {
                 if (member.sync.deletedAtEpochMillis != null) {
                     clearActiveWorkspaceIfMatches(member.userId, member.workspaceId)
                 }

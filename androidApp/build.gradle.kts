@@ -102,6 +102,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "SUPABASE_URL", supabaseUrl.asBuildConfigString())
         buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", supabasePublishableKey.asBuildConfigString())
+        buildConfigField("boolean", "DEMO", "false")
     }
     packaging {
         resources {
@@ -109,6 +110,15 @@ android {
         }
     }
     buildTypes {
+        create("demo") {
+            initWith(getByName("debug"))
+            matchingFallbacks += "debug"
+            applicationIdSuffix = ".demo"
+            versionNameSuffix = "-demo"
+            buildConfigField("boolean", "DEMO", "true")
+            buildConfigField("String", "SUPABASE_URL", "\"https://demo.invalid\"")
+            buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"sb_publishable_demo_offline_0000000000000000\"")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -136,4 +146,10 @@ tasks.withType<Test>().configureEach {
     // Robolectric/Conscrypt, Türkçe Windows yerel ayarında native kütüphane adını hatalı küçültüyor.
     systemProperty("user.language", "en")
     systemProperty("user.country", "US")
+}
+
+androidComponents {
+    beforeVariants(selector().withBuildType("demo")) { builder ->
+        (builder as com.android.build.api.variant.HasUnitTestBuilder).enableUnitTest = true
+    }
 }
