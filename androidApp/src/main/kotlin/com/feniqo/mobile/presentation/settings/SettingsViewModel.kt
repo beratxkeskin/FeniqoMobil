@@ -68,7 +68,6 @@ data class SettingsUiState(
     val emailError: String? = null,
     val emailVerificationSent: Boolean = false,
     val isSendingEmailVerification: Boolean = false,
-    val signOutError: String? = null,
 ) {
     val displayEmail: String
         get() = profile?.email?.trim()?.ifBlank { null } ?: sessionEmail.trim()
@@ -97,7 +96,6 @@ class SettingsViewModel @Inject constructor(
     private val emailVerificationSent = MutableStateFlow(false)
     private val isSendingEmailVerification = MutableStateFlow(false)
 
-    private val signOutError = MutableStateFlow<String?>(null)
     private val backupScopeState = MutableStateFlow(BackupScope(0, 0))
 
     private data class FormOperationState(
@@ -110,7 +108,6 @@ class SettingsViewModel @Inject constructor(
         val emailError: String?,
         val emailVerificationSent: Boolean,
         val isSendingEmailVerification: Boolean,
-        val signOutError: String?,
     )
 
     private val formOperationsFlow = combine(
@@ -128,9 +125,8 @@ class SettingsViewModel @Inject constructor(
             emailError,
             emailVerificationSent,
             isSendingEmailVerification,
-            signOutError,
-        ) { cp, ee, evs, sev, soe ->
-            FiveFlags2(cp, ee, evs, sev, soe)
+        ) { cp, ee, evs, sev ->
+            FourFlags2(cp, ee, evs, sev)
         },
     ) { f1, f2 ->
         FormOperationState(
@@ -143,7 +139,6 @@ class SettingsViewModel @Inject constructor(
             emailError = f2.ee,
             emailVerificationSent = f2.evs,
             isSendingEmailVerification = f2.sev,
-            signOutError = f2.soe,
         )
     }
 
@@ -178,7 +173,6 @@ class SettingsViewModel @Inject constructor(
             emailError = forms.emailError,
             emailVerificationSent = forms.emailVerificationSent,
             isSendingEmailVerification = forms.isSendingEmailVerification,
-            signOutError = forms.signOutError,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
@@ -429,18 +423,6 @@ class SettingsViewModel @Inject constructor(
         emailVerificationSent.value = false
     }
 
-    // --- Çıkış ---
-
-    fun signOut(onComplete: () -> Unit) {
-        viewModelScope.launch {
-            signOutError.value = null
-            when (authRepository.signOut()) {
-                is RepositoryResult.Success -> onComplete()
-                is RepositoryResult.Failure -> signOutError.value = "Çıkış yapılamadı. Lütfen tekrar deneyin."
-            }
-        }
-    }
-
     // --- Veri Yönetimi & Dışa Aktarma ---
 
     suspend fun buildCsv(): String = csvExporter.export(observeTransactions().first())
@@ -472,10 +454,9 @@ private data class FiveFlags(
     val pws: Boolean,
 )
 
-private data class FiveFlags2(
+private data class FourFlags2(
     val cp: Boolean,
     val ee: String?,
     val evs: Boolean,
     val sev: Boolean,
-    val soe: String?,
 )

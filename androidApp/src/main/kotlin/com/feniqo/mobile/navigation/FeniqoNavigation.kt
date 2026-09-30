@@ -17,6 +17,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -107,13 +108,13 @@ import com.feniqo.mobile.presentation.settings.SecurityPrivacyScreenRoute
 import com.feniqo.mobile.presentation.settings.SettingsScreenRoute
 import com.feniqo.mobile.presentation.settings.SyncStatusScreenRoute
 import com.feniqo.mobile.presentation.profile.ProfileViewModel
-import com.feniqo.mobile.BuildConfig
 import com.feniqo.mobile.presentation.subscription.SubscriptionDetailScreenRoute
 import com.feniqo.mobile.presentation.subscription.SubscriptionDetailViewModel
 import com.feniqo.mobile.presentation.subscription.SubscriptionFormScreenRoute
 import com.feniqo.mobile.presentation.subscription.SubscriptionsScreenRoute
 import com.feniqo.mobile.presentation.subscription.SubscriptionsViewModel
 import com.feniqo.mobile.presentation.transaction.TransactionFormScreenRoute
+import com.feniqo.mobile.presentation.transaction.TransactionDetailScreenRoute
 import com.feniqo.mobile.presentation.transaction.TransactionsScreenRoute
 import com.feniqo.mobile.presentation.shell.AppSection
 import com.feniqo.mobile.presentation.shell.FeniqoAppShell
@@ -429,6 +430,7 @@ fun MainNavHost(
     val destination = navBackStackEntry?.destination
 
     val isTransactionForm = destination?.hasRoute<TransactionFormRoute>() == true
+    val isTransactionDetail = destination?.hasRoute<TransactionDetailRoute>() == true
     val isTransactionSuccess = destination?.hasRoute<TransactionSuccessRoute>() == true
     val isCategoryForm = destination?.hasRoute<CategoryFormRoute>() == true
     val isBudgetForm = destination?.hasRoute<BudgetFormRoute>() == true
@@ -441,6 +443,7 @@ fun MainNavHost(
     val isGoalContributionForm = destination?.hasRoute<GoalContributionFormRoute>() == true
     val isDebtForm = destination?.hasRoute<DebtFormRoute>() == true
     val isDebtPaymentForm = destination?.hasRoute<DebtPaymentFormRoute>() == true
+    val isDebtSnowballPlan = destination?.hasRoute<DebtSnowballPlanRoute>() == true
     val isWorkspacePicker = destination?.hasRoute<WorkspacePickerRoute>() == true
     val isWorkspaceCreate = destination?.hasRoute<WorkspaceCreateRoute>() == true
     val isWorkspaceJoin = destination?.hasRoute<WorkspaceJoinRoute>() == true
@@ -485,13 +488,13 @@ fun MainNavHost(
         destination?.hasRoute<ForecastReportRoute>() == true ||
         destination?.hasRoute<FinancialInsightsReportRoute>() == true
     val isReports = destination?.hasRoute<ReportsRoute>() == true
-    val isDetailForm = isTransactionForm || isTransactionSuccess || isCategoryForm || isBudgetForm || isBudgetDetail || isRecurringForm || isSubscriptionForm || isSubscriptionDetail || isGoalDetail || isGoalForm || isGoalContributionForm || isDebtForm || isDebtPaymentForm || isWorkspacePicker || isWorkspaceCreate || isWorkspaceJoin || isWorkspaceDetails || isWorkspaceSettlement || isAssetForm || isAssetDetail || isAssetDistribution || isProfile || isSettings || isSettingsSubRoute || isReports || isReportSubRoute
+    val isDetailForm = shouldHideMainNavigationChrome(destination)
     var showQuickAdd by remember { mutableStateOf(false) }
 
     val currentSection = when {
-        destination?.hasRoute<TransactionsRoute>() == true || isTransactionForm -> AppSection.TRANSACTIONS
+        destination?.hasRoute<TransactionsRoute>() == true || isTransactionForm || isTransactionDetail -> AppSection.TRANSACTIONS
         destination?.hasRoute<BudgetsRoute>() == true || isBudgetForm || isBudgetDetail -> AppSection.BUDGET
-        destination?.hasRoute<MoreRoute>() == true || destination?.hasRoute<AssetsRoute>() == true || isAssetForm || isAssetDetail || isAssetDistribution || destination?.hasRoute<CategoriesRoute>() == true || isCategoryForm || destination?.hasRoute<RecurringTransactionsRoute>() == true || isRecurringForm || destination?.hasRoute<SubscriptionsRoute>() == true || isSubscriptionForm || isSubscriptionDetail || destination?.hasRoute<GoalsRoute>() == true || isGoalDetail || isGoalForm || isGoalContributionForm || destination?.hasRoute<DebtsRoute>() == true || isDebtForm || isDebtPaymentForm || isWorkspacePicker || isWorkspaceCreate || isWorkspaceJoin || isWorkspaceDetails || isWorkspaceSettlement || isReports || isReportSubRoute -> AppSection.MORE
+        destination?.hasRoute<MoreRoute>() == true || destination?.hasRoute<AssetsRoute>() == true || isAssetForm || isAssetDetail || isAssetDistribution || destination?.hasRoute<CategoriesRoute>() == true || isCategoryForm || destination?.hasRoute<RecurringTransactionsRoute>() == true || isRecurringForm || destination?.hasRoute<SubscriptionsRoute>() == true || isSubscriptionForm || isSubscriptionDetail || destination?.hasRoute<GoalsRoute>() == true || isGoalDetail || isGoalForm || isGoalContributionForm || destination?.hasRoute<DebtsRoute>() == true || isDebtForm || isDebtPaymentForm || isDebtSnowballPlan || isWorkspacePicker || isWorkspaceCreate || isWorkspaceJoin || isWorkspaceDetails || isWorkspaceSettlement || isReports || isReportSubRoute -> AppSection.MORE
         else -> AppSection.DASHBOARD
     }
 
@@ -529,7 +532,7 @@ fun MainNavHost(
                         navController.navigateToSection(TopLevelDestination.TRANSACTIONS)
                     },
                     onTransactionClick = { transactionId ->
-                        navController.navigate(TransactionsRoute(selectedTransactionId = transactionId.value)) {
+                        navController.navigate(TransactionDetailRoute(transactionId.value)) {
                             launchSingleTop = true
                         }
                     },
@@ -547,17 +550,35 @@ fun MainNavHost(
                     },
                 )
             }
-            composable<TransactionsRoute> { backStackEntry ->
-                val route = backStackEntry.toRoute<TransactionsRoute>()
+            composable<TransactionsRoute> {
                 TransactionsScreenRoute(
-                    initialSelectedTransactionId = parseOptionalTransactionId(route.selectedTransactionId),
                     onAddTransaction = {
                         navController.navigate(TransactionFormRoute(null)) {
                             launchSingleTop = true
                         }
                     },
-                    onEditTransaction = { transactionId ->
+                    onTransactionClick = { transactionId ->
+                        navController.navigate(TransactionDetailRoute(transactionId.value)) {
+                            launchSingleTop = true
+                        }
+                    },
+                )
+            }
+            composable<TransactionDetailRoute> {
+                TransactionDetailScreenRoute(
+                    onBack = {
+                        if (!navController.popBackStack()) {
+                            navController.navigate(TransactionsRoute()) { launchSingleTop = true }
+                        }
+                    },
+                    onEdit = { transactionId ->
                         navController.navigate(TransactionFormRoute(transactionId.value)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onDeleted = {
+                        navController.navigate(TransactionsRoute()) {
+                            popUpTo<TransactionDetailRoute> { inclusive = true }
                             launchSingleTop = true
                         }
                     },
@@ -602,7 +623,7 @@ fun MainNavHost(
                         }
                     },
                     onViewTransaction = { id ->
-                        navController.navigate(TransactionsRoute(selectedTransactionId = id.value)) {
+                        navController.navigate(TransactionDetailRoute(id.value)) {
                             popUpTo<TransactionSuccessRoute> { inclusive = true }
                             launchSingleTop = true
                         }
@@ -704,28 +725,44 @@ fun MainNavHost(
             }
             composable<BudgetDetailRoute> { backStackEntry ->
                 val route = backStackEntry.toRoute<BudgetDetailRoute>()
-                val budgetId = EntityId(route.budgetId)
-                val month = YearMonth(route.month)
-                BudgetDetailScreenRoute(
-                    budgetId = budgetId,
-                    month = month,
-                    onBack = { navController.popBackStack() },
-                    onEditBudget = { bId, m ->
-                        navController.navigate(
-                            BudgetFormRoute(
-                                initialMonth = m.value,
-                                budgetId = bId.value,
-                            ),
-                        ) {
-                            launchSingleTop = true
-                        }
-                    },
-                    onViewAllTransactions = { categoryId, month ->
-                        navController.navigate(createBudgetTransactionsRoute(categoryId, month)) {
-                            launchSingleTop = true
-                        }
-                    },
-                )
+                val parsedArguments = remember(route.budgetId, route.month) {
+                    parseBudgetDetailRouteArguments(route.budgetId, route.month)
+                }
+                when (parsedArguments) {
+                    is BudgetDetailRouteArgumentsResult.Valid -> BudgetDetailScreenRoute(
+                        budgetId = parsedArguments.budgetId,
+                        month = parsedArguments.month,
+                        onBack = {
+                            if (!navController.popBackStack()) navController.navigate(BudgetsRoute)
+                        },
+                        onEditBudget = { bId, m ->
+                            navController.navigate(
+                                BudgetFormRoute(
+                                    initialMonth = m.value,
+                                    budgetId = bId.value,
+                                ),
+                            ) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onViewAllTransactions = { categoryId, month ->
+                            navController.navigate(createBudgetTransactionsRoute(categoryId, month)) {
+                                launchSingleTop = true
+                            }
+                        },
+                    )
+                    BudgetDetailRouteArgumentsResult.Invalid -> {
+                        com.feniqo.mobile.presentation.component.ErrorState(
+                            title = "Bütçe açılamadı",
+                            description = "Bütçe bağlantısı geçersiz veya eksik.",
+                            onRetry = {
+                                if (!navController.popBackStack()) navController.navigate(BudgetsRoute)
+                            },
+                            actionLabel = "Geri dön",
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                }
             }
             composable<MoreRoute> {
                 MoreHubScreenRoute(
@@ -879,33 +916,18 @@ fun MainNavHost(
                     displayName = profileState.displayName,
                     email = profileState.email,
                     workspaceName = profileState.workspaceName,
-                    currencyCode = profileState.currencyCode,
-                    languageRegionLabel = profileState.languageRegionLabel,
                     isProfileLoading = profileState.isLoading,
                     isProfileEmpty = profileState.isProfileEmpty,
                     profileErrorMessage = profileState.profileErrorMessage,
                     onRetryProfile = profileViewModel::retryProfile,
                     signOutError = profileState.signOutError,
-                    themeLabel = when (themeMode) {
-                        ThemeMode.SYSTEM -> "Sistem teması"
-                        ThemeMode.LIGHT -> "Açık tema"
-                        ThemeMode.DARK -> "Koyu tema"
-                    },
-                    biometricLockEnabled = biometricLockEnabled,
-                    autoLockLabel = autoLockTimeout.profileLabel(),
                     syncStatus = syncStatus,
-                    appVersion = "Sürüm ${BuildConfig.VERSION_NAME}",
                     onBack = { navController.popBackStack() },
                     onOpenAccount = { navController.navigate(AccountRoute) { launchSingleTop = true } },
                     onOpenPersonalInfo = { navController.navigate(PersonalInfoRoute) { launchSingleTop = true } },
                     onOpenSharedSpaces = { navController.navigate(WorkspacePickerRoute) { launchSingleTop = true } },
-                    onOpenAppearance = { navController.navigate(AppearanceRoute) { launchSingleTop = true } },
-                    onOpenNotifications = { navController.navigate(NotificationsSettingsRoute) { launchSingleTop = true } },
-                    onOpenLanguageRegion = { navController.navigate(LanguageRegionRoute) { launchSingleTop = true } },
-                    onOpenSecurityPrivacy = { navController.navigate(SecurityPrivacyRoute) { launchSingleTop = true } },
+                    onOpenSettings = { navController.navigate(SettingsRoute) { launchSingleTop = true } },
                     onOpenDataManagement = { navController.navigate(DataManagementRoute) { launchSingleTop = true } },
-                    onOpenLegalInfo = { navController.navigate(LegalInfoRoute) { launchSingleTop = true } },
-                    onOpenHelpAbout = { navController.navigate(HelpAboutRoute) { launchSingleTop = true } },
                     onSignOut = profileViewModel::signOut,
                 )
             }
@@ -919,19 +941,33 @@ fun MainNavHost(
             }
             composable<AssetDetailRoute> { backStackEntry ->
                 val route = backStackEntry.toRoute<AssetDetailRoute>()
+                val parsedAssetId = remember(route.assetId) { parseAssetDetailRouteId(route.assetId) }
                 val snackbarHostState = remember { SnackbarHostState() }
                 val scope = rememberCoroutineScope()
                 Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
-                    AssetDetailScreenRoute(
-                        assetId = EntityId(route.assetId),
-                        onBack = { if (!navController.popBackStack()) navController.navigate(AssetsRoute) },
-                        onEdit = { id -> navController.navigate(AssetFormRoute(id.value)) },
-                        onAssetDeleted = {
-                            if (!navController.popBackStack()) navController.navigate(AssetsRoute)
-                        },
-                        onMessage = { message -> scope.launch { snackbarHostState.showSnackbar(message.toDisplayText()) } },
-                        modifier = Modifier.padding(padding),
-                    )
+                    when (parsedAssetId) {
+                        is ChildRouteIdResult.ValidId -> AssetDetailScreenRoute(
+                            assetId = parsedAssetId.id,
+                            onBack = { if (!navController.popBackStack()) navController.navigate(AssetsRoute) },
+                            onEdit = { id -> navController.navigate(AssetFormRoute(id.value)) },
+                            onAssetDeleted = {
+                                if (!navController.popBackStack()) navController.navigate(AssetsRoute)
+                            },
+                            onMessage = { message -> scope.launch { snackbarHostState.showSnackbar(message.toDisplayText()) } },
+                            modifier = Modifier.padding(padding),
+                        )
+                        ChildRouteIdResult.InvalidId -> {
+                            com.feniqo.mobile.presentation.component.ErrorState(
+                                title = "Varlık açılamadı",
+                                description = "Varlık bağlantısı geçersiz veya eksik.",
+                                onRetry = {
+                                    if (!navController.popBackStack()) navController.navigate(AssetsRoute)
+                                },
+                                actionLabel = "Geri dön",
+                                modifier = Modifier.padding(padding).fillMaxSize(),
+                            )
+                        }
+                    }
                 }
             }
             composable<AssetDistributionRoute> { backStackEntry ->
@@ -1044,21 +1080,17 @@ fun MainNavHost(
             }
             composable<SettingsRoute> {
                 SettingsScreenRoute(
-                    onNavigateToAccount = { navController.navigate(AccountRoute) { launchSingleTop = true } },
+                    onNavigateToProfile = {
+                        if (!navController.popBackStack(ProfileRoute, inclusive = false)) {
+                            navController.navigate(ProfileRoute) { launchSingleTop = true }
+                        }
+                    },
                     onNavigateToAppearance = { navController.navigate(AppearanceRoute) { launchSingleTop = true } },
                     onNavigateToLanguageRegion = { navController.navigate(LanguageRegionRoute) { launchSingleTop = true } },
                     onNavigateToNotifications = { navController.navigate(NotificationsSettingsRoute) { launchSingleTop = true } },
                     onNavigateToSecurity = { navController.navigate(SecurityPrivacyRoute) { launchSingleTop = true } },
                     onNavigateToDataManagement = { navController.navigate(DataManagementRoute) { launchSingleTop = true } },
                     onNavigateToHelpAbout = { navController.navigate(HelpAboutRoute) { launchSingleTop = true } },
-                    onSignOutSuccess = {
-                        navController.navigate(LoginRoute) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                inclusive = true
-                            }
-                            launchSingleTop = true
-                        }
-                    },
                     onBack = { navController.popBackStack() },
                 )
             }
@@ -1615,14 +1647,70 @@ fun MainNavHost(
     }
 }
 
+internal fun shouldHideMainNavigationChrome(destination: NavDestination?): Boolean =
+    destination?.let { current ->
+        current.hasRoute<TransactionFormRoute>() ||
+            current.hasRoute<TransactionDetailRoute>() ||
+            current.hasRoute<TransactionSuccessRoute>() ||
+            current.hasRoute<CategoryFormRoute>() ||
+            current.hasRoute<BudgetFormRoute>() ||
+            current.hasRoute<BudgetDetailRoute>() ||
+            current.hasRoute<RecurringTransactionFormRoute>() ||
+            current.hasRoute<SubscriptionFormRoute>() ||
+            current.hasRoute<SubscriptionDetailRoute>() ||
+            current.hasRoute<GoalDetailRoute>() ||
+            current.hasRoute<GoalFormRoute>() ||
+            current.hasRoute<GoalContributionFormRoute>() ||
+            current.hasRoute<DebtFormRoute>() ||
+            current.hasRoute<DebtPaymentFormRoute>() ||
+            current.hasRoute<DebtSnowballPlanRoute>() ||
+            current.hasRoute<WorkspacePickerRoute>() ||
+            current.hasRoute<WorkspaceCreateRoute>() ||
+            current.hasRoute<WorkspaceJoinRoute>() ||
+            current.hasRoute<WorkspaceDetailsRoute>() ||
+            current.hasRoute<WorkspaceSettlementRoute>() ||
+            current.hasRoute<AssetFormRoute>() ||
+            current.hasRoute<AssetDetailRoute>() ||
+            current.hasRoute<AssetDistributionRoute>() ||
+            current.hasRoute<ProfileRoute>() ||
+            current.hasRoute<SettingsRoute>() ||
+            current.hasRoute<AccountRoute>() ||
+            current.hasRoute<PersonalInfoRoute>() ||
+            current.hasRoute<AppearanceRoute>() ||
+            current.hasRoute<LanguageRegionRoute>() ||
+            current.hasRoute<NotificationsSettingsRoute>() ||
+            current.hasRoute<SecurityPrivacyRoute>() ||
+            current.hasRoute<DataManagementRoute>() ||
+            current.hasRoute<SyncStatusRoute>() ||
+            current.hasRoute<HelpAboutRoute>() ||
+            current.hasRoute<ChangeEmailRoute>() ||
+            current.hasRoute<EmailVerificationRoute>() ||
+            current.hasRoute<ChangePasswordRoute>() ||
+            current.hasRoute<DeleteAccountRoute>() ||
+            current.hasRoute<FeedbackRoute>() ||
+            current.hasRoute<PhotoPreviewRoute>() ||
+            current.hasRoute<EmailSettingsRoute>() ||
+            current.hasRoute<HelpCenterRoute>() ||
+            current.hasRoute<HelpArticleStatusRoute>() ||
+            current.hasRoute<LegalInfoRoute>() ||
+            current.hasRoute<ReportsRoute>() ||
+            current.hasRoute<CustomDateRangeRoute>() ||
+            current.hasRoute<MultiCurrencyReportRoute>() ||
+            current.hasRoute<PeriodSummaryReportRoute>() ||
+            current.hasRoute<AllReportsHubRoute>() ||
+            current.hasRoute<CategoryBreakdownReportRoute>() ||
+            current.hasRoute<CategoryDetailReportRoute>() ||
+            current.hasRoute<CashFlowReportRoute>() ||
+            current.hasRoute<PeriodComparisonReportRoute>() ||
+            current.hasRoute<SpendingCalendarReportRoute>() ||
+            current.hasRoute<BudgetPerformanceReportRoute>() ||
+            current.hasRoute<SubscriptionSummaryReportRoute>() ||
+            current.hasRoute<DebtSummaryReportRoute>() ||
+            current.hasRoute<ForecastReportRoute>() ||
+            current.hasRoute<FinancialInsightsReportRoute>()
+    } == true
+
 internal fun shouldShowGlobalSyncStatus(
     isDetailForm: Boolean,
     isProfile: Boolean,
 ): Boolean = !isDetailForm && !isProfile
-
-private fun AutoLockTimeout.profileLabel(): String = when (this) {
-    AutoLockTimeout.IMMEDIATELY -> "Anında"
-    AutoLockTimeout.AFTER_30_SECONDS -> "30 saniye"
-    AutoLockTimeout.AFTER_1_MINUTE -> "1 dakika"
-    AutoLockTimeout.AFTER_5_MINUTES -> "5 dakika"
-}

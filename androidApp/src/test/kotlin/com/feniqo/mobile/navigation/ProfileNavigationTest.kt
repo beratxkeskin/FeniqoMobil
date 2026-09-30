@@ -19,15 +19,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/**
- * ProfileScreen bileşeninin satır tıklama eylemlerinin (callback) Navigation Compose
- * NavController.navigate(Route) çağrılarına doğru bağlandığını ve hedeflenen rota sınıflarına
- * (AccountRoute, PersonalInfoRoute vb.) geçiş yaptığını doğrulayan entegrasyon testidir.
- *
- * KAPSAM NOTU: Bu test, ProfileScreen'in Compose seviyesindeki callback-to-route geçişlerini doğrular.
- * Üretim seviyesindeki tam MainNavHost ve Hilt bağlamlarının uçtan uca doğrulanması
- * fiziksel/sanal cihaz kabul adımlarıyla tamamlanmalıdır.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w1080dp-h3000dp")
 class ProfileNavigationTest {
@@ -40,54 +31,36 @@ class ProfileNavigationTest {
         compose.setContent {
             FeniqoTheme {
                 navController = rememberNavController()
-                NavHost(
-                    navController = navController,
-                    startDestination = ProfileRoute,
-                ) {
+                NavHost(navController = navController, startDestination = ProfileRoute) {
                     composable<ProfileRoute> {
                         ProfileScreen(
                             displayName = "Berat Keskin",
                             email = "berat@feniqo.com",
                             workspaceName = "Kişisel alan",
-                            currencyCode = "TRY",
                             isProfileLoading = false,
                             signOutError = null,
-                            themeLabel = "Açık tema",
-                            biometricLockEnabled = false,
-                            autoLockLabel = "Kapalı",
                             syncStatus = SyncStatusUiState.Initial,
-                            appVersion = "Sürüm 1.0",
                             onBack = { navController.popBackStack() },
-                            onOpenAccount = { navController.navigate(AccountRoute) { launchSingleTop = true } },
-                            onOpenPersonalInfo = { navController.navigate(PersonalInfoRoute) { launchSingleTop = true } },
-                            onOpenSharedSpaces = { navController.navigate(WorkspacePickerRoute) { launchSingleTop = true } },
-                            onOpenAppearance = { navController.navigate(AppearanceRoute) { launchSingleTop = true } },
-                            onOpenNotifications = { navController.navigate(NotificationsSettingsRoute) { launchSingleTop = true } },
-                            onOpenLanguageRegion = { navController.navigate(LanguageRegionRoute) { launchSingleTop = true } },
-                            onOpenSecurityPrivacy = { navController.navigate(SecurityPrivacyRoute) { launchSingleTop = true } },
-                            onOpenDataManagement = { navController.navigate(DataManagementRoute) { launchSingleTop = true } },
-                            onOpenLegalInfo = { navController.navigate(LegalInfoRoute) { launchSingleTop = true } },
-                            onOpenHelpAbout = { navController.navigate(HelpAboutRoute) { launchSingleTop = true } },
+                            onOpenAccount = { navController.navigate(AccountRoute) },
+                            onOpenPersonalInfo = { navController.navigate(PersonalInfoRoute) },
+                            onOpenSharedSpaces = { navController.navigate(WorkspacePickerRoute) },
+                            onOpenSettings = { navController.navigate(SettingsRoute) },
+                            onOpenDataManagement = { navController.navigate(DataManagementRoute) },
                             onSignOut = {},
                         )
                     }
                     composable<AccountRoute> { }
                     composable<PersonalInfoRoute> { }
                     composable<WorkspacePickerRoute> { }
-                    composable<AppearanceRoute> { }
-                    composable<NotificationsSettingsRoute> { }
-                    composable<LanguageRegionRoute> { }
-                    composable<SecurityPrivacyRoute> { }
+                    composable<SettingsRoute> { }
                     composable<DataManagementRoute> { }
-                    composable<LegalInfoRoute> { }
-                    composable<HelpAboutRoute> { }
                 }
             }
         }
     }
 
     @Test
-    fun clicking_profile_summary_transitions_navhost_to_account_route() {
+    fun clicking_profile_summary_transitions_to_account() {
         setupNavHost()
         compose.onNodeWithText("Berat Keskin").performClick()
         compose.waitForIdle()
@@ -95,7 +68,7 @@ class ProfileNavigationTest {
     }
 
     @Test
-    fun clicking_personal_info_transitions_navhost_to_personal_info_route() {
+    fun clicking_personal_info_transitions_to_personal_info() {
         setupNavHost()
         compose.onNodeWithText("Kişisel Bilgiler").performScrollTo().performClick()
         compose.waitForIdle()
@@ -103,7 +76,7 @@ class ProfileNavigationTest {
     }
 
     @Test
-    fun clicking_shared_spaces_transitions_navhost_to_workspace_picker_route() {
+    fun clicking_shared_spaces_transitions_to_workspace_picker() {
         setupNavHost()
         compose.onNodeWithText("Ortak Alanlar").performScrollTo().performClick()
         compose.waitForIdle()
@@ -111,58 +84,10 @@ class ProfileNavigationTest {
     }
 
     @Test
-    fun clicking_appearance_transitions_navhost_to_appearance_route() {
+    fun clicking_application_settings_transitions_to_settings() {
         setupNavHost()
-        compose.onNodeWithText("Görünüm").performScrollTo().performClick()
+        compose.onNodeWithText("Uygulama Ayarları").performScrollTo().performClick()
         compose.waitForIdle()
-        assertTrue(navController.currentDestination!!.hasRoute<AppearanceRoute>())
-    }
-
-    @Test
-    fun clicking_notifications_transitions_navhost_to_notifications_route() {
-        setupNavHost()
-        compose.onNodeWithText("Bildirimler").performScrollTo().performClick()
-        compose.waitForIdle()
-        assertTrue(navController.currentDestination!!.hasRoute<NotificationsSettingsRoute>())
-    }
-
-    @Test
-    fun clicking_language_region_transitions_navhost_to_language_region_route() {
-        setupNavHost()
-        compose.onNodeWithText("Dil ve Bölge").performScrollTo().performClick()
-        compose.waitForIdle()
-        assertTrue(navController.currentDestination!!.hasRoute<LanguageRegionRoute>())
-    }
-
-    @Test
-    fun clicking_security_privacy_transitions_navhost_to_security_privacy_route() {
-        setupNavHost()
-        compose.onNodeWithText("Uygulama Kilidi").performScrollTo().performClick()
-        compose.waitForIdle()
-        assertTrue(navController.currentDestination!!.hasRoute<SecurityPrivacyRoute>())
-    }
-
-    @Test
-    fun clicking_data_management_transitions_navhost_to_data_management_route() {
-        setupNavHost()
-        compose.onNodeWithText("Veri Yönetimi").performScrollTo().performClick()
-        compose.waitForIdle()
-        assertTrue(navController.currentDestination!!.hasRoute<DataManagementRoute>())
-    }
-
-    @Test
-    fun clicking_legal_info_transitions_navhost_to_legal_info_route() {
-        setupNavHost()
-        compose.onNodeWithText("Gizlilik").performScrollTo().performClick()
-        compose.waitForIdle()
-        assertTrue(navController.currentDestination!!.hasRoute<LegalInfoRoute>())
-    }
-
-    @Test
-    fun clicking_help_about_transitions_navhost_to_help_about_route() {
-        setupNavHost()
-        compose.onNodeWithText("Yardım ve Geri Bildirim").performScrollTo().performClick()
-        compose.waitForIdle()
-        assertTrue(navController.currentDestination!!.hasRoute<HelpAboutRoute>())
+        assertTrue(navController.currentDestination!!.hasRoute<SettingsRoute>())
     }
 }

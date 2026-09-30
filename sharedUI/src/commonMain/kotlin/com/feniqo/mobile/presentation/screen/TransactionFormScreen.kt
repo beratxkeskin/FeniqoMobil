@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
@@ -262,7 +263,7 @@ private fun TransactionFormHeader(
                         fontSize = 22.sp,
                     ),
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -350,7 +351,7 @@ private fun TransactionFormContent(
                     TextButton(
                         onClick = onDismissMessage,
                         enabled = isFormEnabled,
-                        modifier = Modifier.defaultMinSize(minHeight = 40.dp),
+                        modifier = Modifier.defaultMinSize(minHeight = 48.dp),
                     ) {
                         Text(
                             text = "Kapat",
@@ -473,7 +474,7 @@ private fun TransactionFormContent(
                                 text = "Dolu",
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = 10.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.SemiBold,
                                 ),
                                 color = MaterialTheme.colorScheme.primary,
@@ -662,7 +663,7 @@ private fun TransactionFormBottomBar(
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
+                    .heightIn(min = 56.dp)
                     .semantics {
                         contentDescription = submitButtonText
                     },

@@ -10,7 +10,6 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.compose.BackHandler
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -37,6 +36,7 @@ import com.feniqo.mobile.ocr.CameraPermissionAction
 import com.feniqo.mobile.ocr.CameraPermissionPolicy
 import com.feniqo.mobile.ocr.ReceiptCameraCaptureDialog
 import com.feniqo.mobile.ocr.ReceiptOcrViewModel
+import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
 import com.feniqo.mobile.presentation.screen.TransactionFormScreen
 
 /**
@@ -82,20 +82,11 @@ fun TransactionFormScreenRoute(
         }
     }
 
-    var showExitConfirmDialog by remember { mutableStateOf(false) }
-
-    val handleBackPress: () -> Unit = {
-        if (state.hasUnsavedChanges && !state.isSubmitting) {
-            showExitConfirmDialog = true
-        } else if (!state.isSubmitting) {
-            onNavigateBack()
-        }
-    }
-
-    // 1. Geri hareketini yakalama (Kaydedilmemiş değişiklik varsa onay ister)
-    BackHandler(enabled = !state.isSubmitting) {
-        handleBackPress()
-    }
+    val handleBackPress = rememberGuardedFormExit(
+        isSubmitting = state.isSubmitting,
+        hasUnsavedChanges = state.hasUnsavedChanges,
+        onNavigateBack = onNavigateBack,
+    )
 
     // 2. ViewModel tek seferlik olaylarını toplama
     LaunchedEffect(viewModel.events) {
@@ -263,29 +254,6 @@ fun TransactionFormScreenRoute(
             text = { Text(message) },
             confirmButton = {
                 TextButton(onClick = ocrViewModel::dismissError) { Text("Tamam") }
-            },
-        )
-    }
-
-    if (showExitConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = { showExitConfirmDialog = false },
-            title = { Text("Değişiklikler Kaydedilmedi") },
-            text = { Text("Yaptığınız değişiklikler kaydedilmedi. Ayrılmak istediğinizden emin misiniz?") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showExitConfirmDialog = false
-                        onNavigateBack()
-                    },
-                ) {
-                    Text("Değişikliklerden Vazgeç")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showExitConfirmDialog = false }) {
-                    Text("Düzenlemeye Devam Et")
-                }
             },
         )
     }

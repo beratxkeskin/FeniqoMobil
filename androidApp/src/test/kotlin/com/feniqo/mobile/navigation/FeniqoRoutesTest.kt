@@ -180,6 +180,16 @@ class FeniqoRoutesTest {
             com.feniqo.mobile.domain.model.EntityId("asset-123"),
             (valid as AssetRouteIdResult.ValidId).id,
         )
+
+        assertEquals(ChildRouteIdResult.InvalidId, parseAssetDetailRouteId(null))
+        assertEquals(ChildRouteIdResult.InvalidId, parseAssetDetailRouteId(""))
+        assertEquals(ChildRouteIdResult.InvalidId, parseAssetDetailRouteId("   "))
+        val validDetailId = parseAssetDetailRouteId("  asset-detail-123  ")
+        assertTrue(validDetailId is ChildRouteIdResult.ValidId)
+        assertEquals(
+            com.feniqo.mobile.domain.model.EntityId("asset-detail-123"),
+            (validDetailId as ChildRouteIdResult.ValidId).id,
+        )
     }
 
     @Test
@@ -189,7 +199,6 @@ class FeniqoRoutesTest {
         assertNull(defaultRoute.categoryId)
         assertNull(defaultRoute.startDate)
         assertNull(defaultRoute.endDate)
-        assertNull(defaultRoute.selectedTransactionId)
 
         val filteredRoute = TransactionsRoute(
             categoryId = "cat-food",
@@ -200,13 +209,18 @@ class FeniqoRoutesTest {
         assertEquals("2026-09-01", filteredRoute.startDate)
         assertEquals("2026-09-30", filteredRoute.endDate)
 
-        val detailRoute = TransactionsRoute(selectedTransactionId = "transaction-1")
-        assertEquals("transaction-1", detailRoute.selectedTransactionId)
+        val detailRoute = TransactionDetailRoute(transactionId = "transaction-1")
+        assertTrue(detailRoute is FeniqoRoute)
+        assertEquals("transaction-1", detailRoute.transactionId)
+        val parsedDetailId = parseTransactionDetailRouteId("  ${detailRoute.transactionId}  ")
+        assertTrue(parsedDetailId is ChildRouteIdResult.ValidId)
         assertEquals(
             com.feniqo.mobile.domain.model.EntityId("transaction-1"),
-            parseOptionalTransactionId(detailRoute.selectedTransactionId),
+            (parsedDetailId as ChildRouteIdResult.ValidId).id,
         )
-        assertNull(parseOptionalTransactionId("  "))
+        assertEquals(ChildRouteIdResult.InvalidId, parseTransactionDetailRouteId(null))
+        assertEquals(ChildRouteIdResult.InvalidId, parseTransactionDetailRouteId("  "))
+        assertTrue("TransactionDetailRoute top-level hedef olmamalıdır", detailRoute !in TopLevelDestination.entries.map { it.route })
     }
 
     @Test
@@ -550,5 +564,18 @@ class FeniqoRoutesTest {
         assertEquals("2026-09", route.month)
         val topLevelRoutes = TopLevelDestination.entries.map { it.route }
         assertTrue("BudgetDetailRoute top-level hedef olmamalıdır", route !in topLevelRoutes)
+
+        val valid = parseBudgetDetailRouteArguments("  b-123  ", " 2026-09 ")
+        assertTrue(valid is BudgetDetailRouteArgumentsResult.Valid)
+        assertEquals(
+            com.feniqo.mobile.domain.model.EntityId("b-123"),
+            (valid as BudgetDetailRouteArgumentsResult.Valid).budgetId,
+        )
+        assertEquals(YearMonth("2026-09"), valid.month)
+
+        assertEquals(BudgetDetailRouteArgumentsResult.Invalid, parseBudgetDetailRouteArguments(null, "2026-09"))
+        assertEquals(BudgetDetailRouteArgumentsResult.Invalid, parseBudgetDetailRouteArguments("", "2026-09"))
+        assertEquals(BudgetDetailRouteArgumentsResult.Invalid, parseBudgetDetailRouteArguments("b-123", ""))
+        assertEquals(BudgetDetailRouteArgumentsResult.Invalid, parseBudgetDetailRouteArguments("b-123", "invalid"))
     }
 }

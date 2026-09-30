@@ -50,11 +50,19 @@ data class TransactionsRoute(
     val categoryId: String? = null,
     val startDate: String? = null,
     val endDate: String? = null,
-    val selectedTransactionId: String? = null,
 ) : FeniqoRoute
 
-fun parseOptionalTransactionId(rawId: String?): com.feniqo.mobile.domain.model.EntityId? =
-    rawId?.trim()?.takeIf(String::isNotEmpty)?.let { com.feniqo.mobile.domain.model.EntityId(it) }
+@Serializable
+data class TransactionDetailRoute(
+    val transactionId: String,
+) : FeniqoRoute
+
+fun parseTransactionDetailRouteId(rawId: String?): ChildRouteIdResult {
+    if (rawId.isNullOrBlank()) return ChildRouteIdResult.InvalidId
+    return runCatching {
+        ChildRouteIdResult.ValidId(com.feniqo.mobile.domain.model.EntityId(rawId.trim()))
+    }.getOrElse { ChildRouteIdResult.InvalidId }
+}
 
 /**
  * Bütçe detayından seçili kategori ve bütçe ayının başlangıç/bitiş tarihleriyle
@@ -110,6 +118,30 @@ data class BudgetDetailRoute(
     val budgetId: String,
     val month: String,
 ) : FeniqoRoute
+
+sealed interface BudgetDetailRouteArgumentsResult {
+    data class Valid(
+        val budgetId: com.feniqo.mobile.domain.model.EntityId,
+        val month: com.feniqo.mobile.domain.model.YearMonth,
+    ) : BudgetDetailRouteArgumentsResult
+
+    data object Invalid : BudgetDetailRouteArgumentsResult
+}
+
+fun parseBudgetDetailRouteArguments(
+    rawBudgetId: String?,
+    rawMonth: String?,
+): BudgetDetailRouteArgumentsResult {
+    if (rawBudgetId.isNullOrBlank() || rawMonth.isNullOrBlank()) {
+        return BudgetDetailRouteArgumentsResult.Invalid
+    }
+    return runCatching {
+        BudgetDetailRouteArgumentsResult.Valid(
+            budgetId = com.feniqo.mobile.domain.model.EntityId(rawBudgetId.trim()),
+            month = com.feniqo.mobile.domain.model.YearMonth(rawMonth.trim()),
+        )
+    }.getOrElse { BudgetDetailRouteArgumentsResult.Invalid }
+}
 
 /**
  * Rota veya harici kaynaktan gelen bütçe kimliğini ayrıştırır.
@@ -262,9 +294,6 @@ fun parseDebtPaymentRouteId(rawId: String?): ChildRouteIdResult {
 @Serializable
 data object DebtSnowballPlanRoute : FeniqoRoute
 
-@Serializable
-data object PlanRoute : FeniqoRoute
-
 
 
 
@@ -318,9 +347,6 @@ data object CustomDateRangeRoute : FeniqoRoute
 data object MultiCurrencyReportRoute : FeniqoRoute
 
 @Serializable
-data object ReportSystemStatusRoute : FeniqoRoute
-
-@Serializable
 data object ProfileRoute : FeniqoRoute
 
 @Serializable
@@ -330,6 +356,13 @@ data object AssetsRoute : FeniqoRoute
 data class AssetDetailRoute(
     val assetId: String,
 ) : FeniqoRoute
+
+fun parseAssetDetailRouteId(rawId: String?): ChildRouteIdResult {
+    if (rawId.isNullOrBlank()) return ChildRouteIdResult.InvalidId
+    return runCatching {
+        ChildRouteIdResult.ValidId(com.feniqo.mobile.domain.model.EntityId(rawId.trim()))
+    }.getOrElse { ChildRouteIdResult.InvalidId }
+}
 
 @Serializable
 data class AssetDistributionRoute(

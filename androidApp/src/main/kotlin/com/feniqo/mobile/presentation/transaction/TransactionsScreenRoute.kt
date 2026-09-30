@@ -9,11 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.activity.compose.BackHandler
-import com.feniqo.mobile.presentation.screen.TransactionDetailScreen
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -22,58 +17,31 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.presentation.screen.TransactionsScreen
 
-/**
- * Android Jetpack Compose Navigation için Transactions rotası adaptörüdür.
- * Hilt ViewModel'e bağlanır, UI state'ini toplar ve stateless TransactionsScreen'e aktarır.
- */
+/** İşlem listesi rotası yalnız liste, filtre ve liste kaynaklı silme davranışlarını yönetir. */
 @Composable
 fun TransactionsScreenRoute(
     onAddTransaction: () -> Unit = {},
-    onEditTransaction: (EntityId) -> Unit = {},
-    initialSelectedTransactionId: EntityId? = null,
+    onTransactionClick: (EntityId) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: TransactionsViewModel = hiltViewModel(),
-    conflictViewModel: TransactionConflictViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val conflicts by conflictViewModel.conflicts.collectAsStateWithLifecycle()
-    val resolving by conflictViewModel.resolving.collectAsStateWithLifecycle()
-    val conflictError by conflictViewModel.error.collectAsStateWithLifecycle()
-    var showConflict by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
-    var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
-    LaunchedEffect(initialSelectedTransactionId) {
-        if (initialSelectedTransactionId != null) {
-            selectedId = initialSelectedTransactionId.value
-        }
-    }
-    val selectedItem = state.groupedItems.flatMap { it.items }.find { it.id.value == selectedId }
-    BackHandler(enabled = selectedItem != null) {
-        selectedId = null
-        showConflict = false
-    }
-    LaunchedEffect(selectedId) {
-        showConflict = false
-    }
 
-    val userMessage = state.userMessage
-    LaunchedEffect(userMessage) {
-        if (userMessage != null) {
-            val text = userMessage.toDisplayText()
+    LaunchedEffect(state.userMessage) {
+        state.userMessage?.let { message ->
             viewModel.consumeMessage()
-            snackbarHostState.showSnackbar(message = text)
+            snackbarHostState.showSnackbar(message.toDisplayText())
         }
     }
 
-    Box(
-        modifier = modifier.fillMaxSize(),
-    ) {
+    Box(modifier = modifier.fillMaxSize()) {
         TransactionsScreen(
             state = state,
             canAddTransaction = true,
             canEditTransaction = true,
             onAddTransactionClick = onAddTransaction,
-            onTransactionClick = { item -> selectedId = item.id.value },
+            onTransactionClick = { item -> onTransactionClick(item.id) },
             onSearchQueryChanged = viewModel::onSearchQueryChanged,
             onFilterClick = viewModel::openFilters,
             onFilterDismiss = viewModel::dismissFilters,
@@ -91,26 +59,6 @@ fun TransactionsScreenRoute(
             onRetryObservation = viewModel::retryObservation,
             modifier = Modifier.fillMaxSize(),
         )
-
-        selectedItem?.let { item ->
-            TransactionDetailScreen(
-                item = item,
-                onBack = { selectedId = null },
-                onEdit = { onEditTransaction(item.id) },
-                onDelete = { viewModel.onDeleteClicked(item) },
-                onResolveConflict = if (conflicts.any { it.entityId == item.id }) ({ showConflict = true }) else null,
-            )
-        }
-
-        if (showConflict) {
-            conflicts.find { it.entityId.value == selectedId }?.let { conflict ->
-                com.feniqo.mobile.presentation.component.TransactionConflictDialog(
-                    conflict, resolving, conflictError,
-                    onResolve = { conflictViewModel.resolve(conflict.entityId, it) },
-                    onDismiss = { showConflict = false },
-                )
-            }
-        }
 
         SnackbarHost(
             hostState = snackbarHostState,

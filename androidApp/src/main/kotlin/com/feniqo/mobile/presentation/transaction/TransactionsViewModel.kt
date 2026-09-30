@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -341,8 +342,18 @@ class TransactionsViewModel @Inject constructor(
         DialogAndMessageState(isExpanded, message, dialog, isDeleteInProgress)
     }
 
+    /**
+     * Arama veya filtre değişiminde yeni Room akışı kurulurken son başarılı içeriği korur.
+     * İlk yükleme ve hata sonrası açık yeniden deneme davranışı değişmeden kalır.
+     */
+    private val stableObservationResultFlow = observationResultFlow.scan<ObservationResult, ObservationResult>(
+        initial = ObservationResult.Loading,
+    ) { previous, next ->
+        if (next is ObservationResult.Loading && previous is ObservationResult.Success) previous else next
+    }
+
     val uiState: StateFlow<TransactionsUiState> = combine(
-        observationResultFlow,
+        stableObservationResultFlow,
         _searchQuery,
         _filter,
         dialogAndMessageFlow,

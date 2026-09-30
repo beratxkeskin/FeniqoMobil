@@ -9,8 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.feniqo.mobile.presentation.component.SettingsDangerItem
-import com.feniqo.mobile.presentation.component.SettingsGraphiteProfileCard
 import com.feniqo.mobile.presentation.component.SettingsGroupCard
 import com.feniqo.mobile.presentation.component.SettingsRowItem
 import com.feniqo.mobile.presentation.component.SettingsTopBar
@@ -19,23 +17,20 @@ import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 
 /**
  * 01 Ayarlar Ana Ekranı.
- * Onaylı tasarım 01'e sadık, kompakt grafit profil kartı, Tercihler ve Kontrol grupları.
+ * Uygulama tercihleri, güvenlik, veri ve yardım araçlarının tek sahibi olan ayarlar ekranı.
  */
 @Composable
 fun SettingsScreen(
-    displayName: String,
-    email: String,
     themeLabel: String,
     languageRegionLabel: String,
     onBack: (() -> Unit)?,
-    onManageProfile: () -> Unit,
+    onNavigateToProfile: () -> Unit,
     onNavigateToAppearance: () -> Unit,
     onNavigateToLanguageRegion: () -> Unit,
     onNavigateToNotifications: () -> Unit,
     onNavigateToSecurity: () -> Unit,
     onNavigateToDataManagement: () -> Unit,
     onNavigateToHelpAbout: () -> Unit,
-    onSignOutClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -53,15 +48,6 @@ fun SettingsScreen(
                 SettingsTopBar(
                     title = "Ayarlar",
                     onBack = onBack,
-                )
-            }
-
-            // Üst kompakt grafit profil kartı
-            item {
-                SettingsGraphiteProfileCard(
-                    displayName = displayName,
-                    email = email,
-                    onManageProfile = onManageProfile,
                 )
             }
 
@@ -133,14 +119,24 @@ fun SettingsScreen(
                 }
             }
 
-            // Ayrı Çıkış Butonu
+            // Hesap ve oturum işlemlerinin tek sahibi Profil Merkezi'dir.
             item {
-                Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
-                SettingsDangerItem(
-                    title = "Çıkış yap",
-                    icon = Icons.Outlined.Logout,
-                    onClick = onSignOutClick,
+                Text(
+                    text = "Hesap",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
                 )
+                SettingsGroupCard {
+                    SettingsRowItem(
+                        title = "Hesap ve çıkış",
+                        subtitle = "Profil bilgileri, ortak alanlar ve oturum",
+                        icon = Icons.Outlined.AccountCircle,
+                        iconTint = MaterialTheme.colorScheme.primary,
+                        showDivider = false,
+                        onClick = onNavigateToProfile,
+                    )
+                }
             }
         }
     }

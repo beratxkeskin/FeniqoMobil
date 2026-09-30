@@ -34,33 +34,21 @@ fun ProfileScreen(
     displayName: String,
     email: String,
     workspaceName: String,
-    currencyCode: String,
     isProfileLoading: Boolean,
     signOutError: String?,
-    themeLabel: String,
-    biometricLockEnabled: Boolean,
-    autoLockLabel: String,
     syncStatus: SyncStatusUiState,
-    appVersion: String,
     onBack: () -> Unit,
     onOpenAccount: () -> Unit,
     onOpenPersonalInfo: () -> Unit,
     onOpenSharedSpaces: () -> Unit,
-    onOpenAppearance: () -> Unit,
-    onOpenNotifications: () -> Unit,
-    onOpenLanguageRegion: () -> Unit,
-    onOpenSecurityPrivacy: () -> Unit,
+    onOpenSettings: () -> Unit,
     onOpenDataManagement: () -> Unit,
-    onOpenLegalInfo: () -> Unit,
-    onOpenHelpAbout: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
     isProfileEmpty: Boolean = false,
     profileErrorMessage: String? = null,
     onRetryProfile: (() -> Unit)? = null,
-    languageRegionLabel: String = "Türkçe · $currencyCode",
     listState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(),
-    onOpenSettings: () -> Unit = {},
 ) {
     var showSignOutConfirmation by remember { mutableStateOf(false) }
     val sync = resolveSyncDisplayModel(syncStatus)
@@ -76,7 +64,7 @@ fun ProfileScreen(
                     Column {
                         Text("Profil Merkezi", style = FeniqoTypographyTokens.DisplayTitle)
                         Text(
-                            "Hesabın, tercihler ve verilerin tek yerde.",
+                            "Hesabın, ortak alanların ve eşitleme durumun.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -123,80 +111,16 @@ fun ProfileScreen(
                     )
                 }
             }
-            item { Section("Tercihler") }
+            item { Section("Uygulama") }
             item {
                 ProfileGroup {
                     ProfileRow(
-                        title = "Görünüm",
-                        subtitle = themeLabel,
-                        icon = Icons.Default.Palette,
+                        title = "Uygulama Ayarları",
+                        subtitle = "Görünüm, bildirimler, güvenlik ve veri araçları",
+                        icon = Icons.Default.Settings,
                         tint = MaterialTheme.colorScheme.secondary,
-                        onClick = onOpenAppearance,
-                    )
-                    ProfileRow(
-                        title = "Bildirimler",
-                        subtitle = "Hatırlatmalar ve gizlilik",
-                        icon = Icons.Default.Notifications,
-                        tint = MaterialTheme.colorScheme.tertiary,
-                        onClick = onOpenNotifications,
-                    )
-                    ProfileRow(
-                        title = "Dil ve Bölge",
-                        subtitle = languageRegionLabel,
-                        icon = Icons.Default.Language,
-                        tint = MaterialTheme.colorScheme.primary,
-                        onClick = onOpenLanguageRegion,
+                        onClick = onOpenSettings,
                         last = true,
-                    )
-                }
-            }
-            item { Section("Güvenlik ve Veri") }
-            item {
-                ProfileGroup {
-                    val lockText = if (biometricLockEnabled) "Açık · $autoLockLabel" else "Kapalı"
-                    ProfileRow(
-                        title = "Uygulama Kilidi",
-                        subtitle = lockText,
-                        icon = Icons.Default.Lock,
-                        tint = MaterialTheme.colorScheme.primary,
-                        onClick = onOpenSecurityPrivacy,
-                    )
-                    ProfileRow(
-                        title = "Veri Yönetimi",
-                        subtitle = "CSV dışa aktarma ve JSON yedek",
-                        icon = Icons.Default.FolderCopy,
-                        tint = MaterialTheme.colorScheme.tertiary,
-                        onClick = onOpenDataManagement,
-                    )
-                    ProfileRow(
-                        title = "Gizlilik",
-                        subtitle = "Gizlilik ve hukuki bilgiler",
-                        icon = Icons.Default.PrivacyTip,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        onClick = onOpenLegalInfo,
-                        last = true,
-                    )
-                }
-            }
-            item { Section("Destek") }
-            item {
-                ProfileGroup {
-                    ProfileRow(
-                        title = "Yardım ve Geri Bildirim",
-                        subtitle = "Yardım merkezi ve iletişim",
-                        icon = Icons.Default.HelpOutline,
-                        tint = MaterialTheme.colorScheme.secondary,
-                        onClick = onOpenHelpAbout,
-                    )
-                    ProfileRow(
-                        title = "Uygulama sürümü",
-                        subtitle = appVersion,
-                        icon = Icons.Default.Info,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        onClick = null,
-                        last = true,
-                        showArrow = false,
-                        comingSoon = false,
                     )
                 }
             }
@@ -222,19 +146,16 @@ fun ProfileScreen(
         }
     }
     if (showSignOutConfirmation) {
-        AlertDialog(
-            onDismissRequest = { showSignOutConfirmation = false },
-            title = { Text("Çıkış yapılsın mı?") },
-            text = { Text("Bu cihazdaki oturumunuz güvenle kapatılacak.") },
-            confirmButton = {
-                TextButton(onClick = { showSignOutConfirmation = false; onSignOut() }) {
-                    Text("Çıkış Yap")
-                }
+        SignOutConfirmDialog(
+            pendingChangesCount = syncStatus.pendingCount,
+            onDismiss = { showSignOutConfirmation = false },
+            onNavigateToSync = {
+                showSignOutConfirmation = false
+                onOpenDataManagement()
             },
-            dismissButton = {
-                TextButton(onClick = { showSignOutConfirmation = false }) {
-                    Text("Vazgeç")
-                }
+            onConfirmSignOut = {
+                showSignOutConfirmation = false
+                onSignOut()
             },
         )
     }

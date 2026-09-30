@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.presentation.component.CategorySemanticIconResolver
+import com.feniqo.mobile.presentation.component.ResponsiveLabelValueRow
 import com.feniqo.mobile.presentation.component.toDisplayText
 import com.feniqo.mobile.presentation.theme.*
 import com.feniqo.mobile.presentation.transaction.TransactionDisplayModel
@@ -231,10 +232,10 @@ private fun TransactionSuccessContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = 52.dp)
-                .semantics { contentDescription = "İşlemi düzenle" },
+                .semantics { contentDescription = "İşlemi görüntüle" },
         ) {
             Text(
-                text = "İşlemi düzenle",
+                text = "İşlemi görüntüle",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -369,25 +370,12 @@ private fun SummaryDetailRow(
     value: String,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Top,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.End,
-            modifier = Modifier.padding(start = 16.dp),
-        )
-    }
+    ResponsiveLabelValueRow(
+        label = label,
+        value = value,
+        modifier = modifier,
+        valueStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+    )
 }
 
 @Composable

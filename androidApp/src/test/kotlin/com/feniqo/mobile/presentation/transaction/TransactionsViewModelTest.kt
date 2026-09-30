@@ -66,6 +66,7 @@ class TransactionsViewModelTest {
         var softDeleteCallCount = 0
         var observeSubscriptionCount = 0
         var applyFilters = false
+        var observeDeferred: CompletableDeferred<Unit>? = null
 
         override fun observeTransactions(filter: TransactionFilter): Flow<List<Transaction>> {
             observeSubscriptionCount++
@@ -73,6 +74,18 @@ class TransactionsViewModelTest {
             val exception = shouldThrowOnObserve
             return if (exception != null) {
                 flow { throw exception }
+            } else if (observeDeferred != null) {
+                val deferred = checkNotNull(observeDeferred)
+                flow {
+                    deferred.await()
+                    transactionsFlow.map { rows ->
+                        if (!applyFilters) rows else rows.filter { row ->
+                            (filter.type == null || row.type == filter.type) &&
+                                (filter.period?.let { row.transactionDate in it.startDate..it.endDate } != false) &&
+                                (filter.query?.let { row.description.orEmpty().contains(it, ignoreCase = true) } != false)
+                        }
+                    }.collect { emit(it) }
+                }
             } else {
                 transactionsFlow.map { rows ->
                     if (!applyFilters) rows else rows.filter { row ->
@@ -236,6 +249,47 @@ class TransactionsViewModelTest {
         assertEquals(0, viewModel.uiState.value.summary.transactionCount)
         assertNull(viewModel.uiState.value.filter.periodPreset)
         job.cancel()
+    }
+
+    @Test
+    fun searchRefresh_preservesLastSuccessfulSummaryUntilNewRoomResultArrives() = runTest {
+        val (viewModel, repo) = createViewModel()
+        repo.applyFilters = true
+        repo.transactionsFlow.value = listOf(
+            Transaction(
+                id = EntityId("expense"),
+                ownerId = EntityId("user-1"),
+                workspaceId = null,
+                amount = Money(12_500L, Currency.TRY),
+                type = TransactionType.EXPENSE,
+                categoryId = EntityId("category"),
+                description = "Market",
+                paymentMethod = PaymentMethod.CASH,
+                transactionDate = fixedToday,
+                receiptPath = null,
+                installment = null,
+                createdAt = Instant.parse("2026-08-21T10:00:00Z"),
+            ),
+        )
+        val collectJob = launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
+        advanceUntilIdle()
+        val successfulSummary = viewModel.uiState.value.summary
+        assertEquals(1, successfulSummary.transactionCount)
+
+        val refreshGate = CompletableDeferred<Unit>()
+        repo.observeDeferred = refreshGate
+        viewModel.onSearchQueryChanged("M")
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isLoading)
+        assertEquals(successfulSummary, viewModel.uiState.value.summary)
+        assertEquals("M", viewModel.uiState.value.searchQuery)
+
+        refreshGate.complete(Unit)
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.isLoading)
+        assertEquals(successfulSummary, viewModel.uiState.value.summary)
+        collectJob.cancel()
     }
 
     @Test

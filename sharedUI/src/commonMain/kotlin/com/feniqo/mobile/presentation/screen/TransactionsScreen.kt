@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -27,7 +28,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -155,7 +156,7 @@ fun TransactionsScreen(
             Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 ZenSearchField(query = state.searchQuery, onQueryChange = onSearchQueryChanged,
-                    onCloseSearch = { onSearchQueryChanged("") }, modifier = Modifier.weight(1f))
+                    modifier = Modifier.weight(1f))
                 Surface(onClick = onFilterClick, shape = RoundedCornerShape(14.dp),
                     color = MaterialTheme.colorScheme.primary, modifier = Modifier.size(52.dp)) {
                     Box(contentAlignment = Alignment.Center) {
@@ -280,15 +281,44 @@ private fun ZenPeriodSummaryCard(
     Card(modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min).padding(vertical = 16.dp)) {
-            listOf("Gelir" to summary.totalIncomeFormatted, "Gider" to summary.totalSpendingFormatted,
-                "İşlem" to summary.transactionCount.toString()).forEachIndexed { index, (label, value) ->
-                if (index > 0) Box(Modifier.width(1.dp).fillMaxHeight().background(MaterialTheme.colorScheme.outlineVariant))
-                Column(Modifier.weight(1f).padding(horizontal = 6.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(label, style = MaterialTheme.typography.bodyMedium)
-                    Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val useStackedSummary = maxWidth < 300.dp || LocalDensity.current.fontScale >= 1.3f
+            val metrics = listOf(
+                "Gelir" to summary.totalIncomeFormatted,
+                "Gider" to summary.totalSpendingFormatted,
+                "İşlem" to summary.transactionCount.toString(),
+            )
+            if (useStackedSummary) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    metrics.forEach { (label, value) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(label, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                value,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                            )
+                        }
+                    }
+                }
+            } else {
+                Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min).padding(vertical = 16.dp)) {
+                    metrics.forEachIndexed { index, (label, value) ->
+                        if (index > 0) Box(Modifier.width(1.dp).fillMaxHeight().background(MaterialTheme.colorScheme.outlineVariant))
+                        Column(Modifier.weight(1f).padding(horizontal = 6.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(label, style = MaterialTheme.typography.bodyMedium)
+                            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        }
+                    }
                 }
             }
         }
@@ -657,7 +687,6 @@ private fun ZenQuickFiltersRow(
 private fun ZenSearchField(
     query: String,
     onQueryChange: (String) -> Unit,
-    onCloseSearch: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -704,7 +733,7 @@ private fun ZenSearchField(
             if (query.isNotEmpty()) {
                 IconButton(
                     onClick = { onQueryChange("") },
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(48.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Clear,
@@ -713,18 +742,6 @@ private fun ZenSearchField(
                         modifier = Modifier.size(16.dp),
                     )
                 }
-            }
-
-            IconButton(
-                onClick = onCloseSearch,
-                modifier = Modifier.size(24.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Aramayı kapat",
-                    tint = Color.White,
-                    modifier = Modifier.size(16.dp),
-                )
             }
         }
     }

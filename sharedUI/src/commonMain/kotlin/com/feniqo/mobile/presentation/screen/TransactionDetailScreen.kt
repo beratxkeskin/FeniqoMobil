@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.feniqo.mobile.domain.model.SyncStatus
 import com.feniqo.mobile.presentation.component.CategoryTonalIcon
+import com.feniqo.mobile.presentation.component.ResponsiveLabelValueRow
 import com.feniqo.mobile.presentation.component.formatDisplayDate
 import com.feniqo.mobile.presentation.component.toDisplayText
 import com.feniqo.mobile.presentation.transaction.TransactionDisplayModel
@@ -83,8 +84,5 @@ fun TransactionDetailScreen(
 
 @Composable
 private fun DetailField(label: String, value: String) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text(label, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, Modifier.weight(1f))
-    }
+    ResponsiveLabelValueRow(label = label, value = value)
 }

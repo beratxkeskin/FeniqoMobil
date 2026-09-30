@@ -54,7 +54,6 @@ import com.feniqo.mobile.presentation.screen.PersonalInfoScreen
 import com.feniqo.mobile.presentation.screen.PhotoPreviewScreen
 import com.feniqo.mobile.presentation.screen.SecurityPrivacyScreen
 import com.feniqo.mobile.presentation.screen.SettingsScreen
-import com.feniqo.mobile.presentation.screen.SignOutConfirmDialog
 import com.feniqo.mobile.presentation.screen.SyncStatusScreen
 import com.feniqo.mobile.presentation.sync.SyncConnectionUiState
 import com.feniqo.mobile.presentation.sync.SyncStatusViewModel
@@ -68,20 +67,18 @@ import kotlinx.coroutines.withContext
  */
 @Composable
 fun SettingsScreenRoute(
-    onNavigateToAccount: () -> Unit,
+    onNavigateToProfile: () -> Unit,
     onNavigateToAppearance: () -> Unit,
     onNavigateToLanguageRegion: () -> Unit,
     onNavigateToNotifications: () -> Unit,
     onNavigateToSecurity: () -> Unit,
     onNavigateToDataManagement: () -> Unit,
     onNavigateToHelpAbout: () -> Unit,
-    onSignOutSuccess: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var showSignOutConfirm by remember { mutableStateOf(false) }
 
     val themeLabel = when (uiState.settings.theme) {
         ThemePreference.SYSTEM -> "Sistem teması"
@@ -92,43 +89,18 @@ fun SettingsScreenRoute(
     val languageRegionLabel = "${if (uiState.settings.language == AppLanguage.TR) "Türkçe" else "English"} • ${uiState.settings.currency.code}"
 
     SettingsScreen(
-        displayName = uiState.profile?.fullName?.trim()?.ifBlank { null } ?: "Feniqo Kullanıcısı",
-        email = uiState.displayEmail,
         themeLabel = themeLabel,
         languageRegionLabel = languageRegionLabel,
         onBack = onBack,
-        onManageProfile = onNavigateToAccount,
+        onNavigateToProfile = onNavigateToProfile,
         onNavigateToAppearance = onNavigateToAppearance,
         onNavigateToLanguageRegion = onNavigateToLanguageRegion,
         onNavigateToNotifications = onNavigateToNotifications,
         onNavigateToSecurity = onNavigateToSecurity,
         onNavigateToDataManagement = onNavigateToDataManagement,
         onNavigateToHelpAbout = onNavigateToHelpAbout,
-        onSignOutClick = {
-            if (uiState.syncOverview.pendingOperationCount > 0) {
-                showSignOutConfirm = true
-            } else {
-                viewModel.signOut(onComplete = onSignOutSuccess)
-            }
-        },
         modifier = modifier,
     )
-
-    // 17 Çıkış Onayı (Bekleyen değişiklik varsa uyaran, yoksa doğrudan onaylayan diyalog)
-    if (showSignOutConfirm) {
-        SignOutConfirmDialog(
-            pendingChangesCount = uiState.syncOverview.pendingOperationCount,
-            onDismiss = { showSignOutConfirm = false },
-            onNavigateToSync = {
-                showSignOutConfirm = false
-                onNavigateToDataManagement()
-            },
-            onConfirmSignOut = {
-                showSignOutConfirm = false
-                viewModel.signOut(onComplete = onSignOutSuccess)
-            },
-        )
-    }
 }
 
 /**

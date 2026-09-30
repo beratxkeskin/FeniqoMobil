@@ -9,6 +9,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.createGraph
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -32,7 +33,11 @@ class MainNavigationActionsTest {
             composable<BudgetsRoute> { }
             composable<MoreRoute> { }
             composable<ReportsRoute> { }
+            composable<DebtsRoute> { }
+            composable<DebtSnowballPlanRoute> { }
+            composable<WorkspacePickerRoute> { }
             composable<TransactionFormRoute> { }
+            composable<TransactionDetailRoute> { }
             composable<TransactionSuccessRoute> { }
         }
     }
@@ -85,5 +90,49 @@ class MainNavigationActionsTest {
         nav.navigateToSection(TopLevelDestination.BUDGET)
         nav.navigateToSection(TopLevelDestination.TRANSACTIONS)
         assertEquals("expense", nav.currentBackStackEntry!!.savedStateHandle.get<String>("filter"))
+    }
+
+    @Test
+    fun navigationChrome_isHiddenForChildDestinationsIncludingDebtSnowball() {
+        nav.navigate(DebtsRoute)
+        assertFalse(shouldHideMainNavigationChrome(nav.currentDestination))
+
+        nav.navigate(DebtSnowballPlanRoute)
+        assertTrue(shouldHideMainNavigationChrome(nav.currentDestination))
+
+        nav.navigate(ReportsRoute)
+        assertTrue(shouldHideMainNavigationChrome(nav.currentDestination))
+
+        nav.navigate(WorkspacePickerRoute)
+        assertTrue(shouldHideMainNavigationChrome(nav.currentDestination))
+
+        nav.navigate(TransactionDetailRoute("transaction-1"))
+        assertTrue(shouldHideMainNavigationChrome(nav.currentDestination))
+    }
+
+    @Test
+    fun transactionDetail_editAndSystemBackPreserveExpectedStack() {
+        nav.navigateToSection(TopLevelDestination.TRANSACTIONS)
+        nav.navigate(TransactionDetailRoute("transaction-1"))
+        nav.navigate(TransactionFormRoute("transaction-1"))
+
+        assertTrue(nav.popBackStack())
+        assertTrue(nav.currentDestination!!.hasRoute<TransactionDetailRoute>())
+        assertTrue(nav.popBackStack())
+        assertTrue(nav.currentDestination!!.hasRoute<TransactionsRoute>())
+    }
+
+    @Test
+    fun transactionDetail_deleteReplacementLeavesSingleTransactionsDestination() {
+        nav.navigateToSection(TopLevelDestination.TRANSACTIONS)
+        nav.navigate(TransactionDetailRoute("transaction-1"))
+        nav.navigate(TransactionsRoute()) {
+            popUpTo<TransactionDetailRoute> { inclusive = true }
+            launchSingleTop = true
+        }
+
+        assertTrue(nav.currentDestination!!.hasRoute<TransactionsRoute>())
+        assertTrue(nav.popBackStack())
+        assertTrue(nav.currentDestination!!.hasRoute<DashboardRoute>())
     }
 }
