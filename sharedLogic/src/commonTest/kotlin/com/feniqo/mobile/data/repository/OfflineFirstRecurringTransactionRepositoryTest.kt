@@ -212,16 +212,16 @@ class OfflineFirstRecurringTransactionRepositoryTest {
         override suspend fun insertOutboxRow(operation: SyncOperationEntity) {
             enqueuedOutbox.add(operation)
         }
-        override suspend fun deleteOutboxRow(operationId: String): Int = 0
-        override suspend fun getOutboxById(operationId: String): SyncOperationEntity? =
-            enqueuedOutbox.find { it.operationId == operationId }
-        override suspend fun getSuccessors(predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun getActiveTailCandidates(entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun coalescePendingPayload(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
-        override suspend fun convertToPendingDelete(operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 0
-        override suspend fun convertPendingDeleteToUpdate(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
-        override suspend fun unblockSuccessor(operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun deleteConflictRow(entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun deleteOutboxRow(syncScopeKey: String, operationId: String): Int = 0
+        override suspend fun getOutboxById(syncScopeKey: String, operationId: String): SyncOperationEntity? =
+            enqueuedOutbox.find { it.syncScopeKey == syncScopeKey && it.operationId == operationId }
+        override suspend fun getSuccessors(syncScopeKey: String, predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun getActiveTailCandidates(syncScopeKey: String, entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun coalescePendingPayload(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
+        override suspend fun convertToPendingDelete(syncScopeKey: String, operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 0
+        override suspend fun convertPendingDeleteToUpdate(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
+        override suspend fun unblockSuccessor(syncScopeKey: String, operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun deleteConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
         override suspend fun rebaseProfileVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseCategoryVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseTransactionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
@@ -275,16 +275,16 @@ class OfflineFirstRecurringTransactionRepositoryTest {
         override suspend fun markDebtSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
         override suspend fun tombstoneGoalContributionsForDeletedGoal(goalId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int = 0
         override suspend fun tombstoneDebtPaymentsForDeletedDebt(debtId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getActiveGoalAggregateTailCandidates(goalId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun getActiveDebtAggregateTailCandidates(debtId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun countPendingGoalAggregateOperations(goalId: String, operationId: String): Int = 0
-        override suspend fun countPendingDebtAggregateOperations(debtId: String, operationId: String): Int = 0
+        override suspend fun getActiveGoalAggregateTailCandidates(syncScopeKey: String, goalId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun getActiveDebtAggregateTailCandidates(syncScopeKey: String, debtId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun countPendingGoalAggregateOperations(syncScopeKey: String, goalId: String, operationId: String): Int = 0
+        override suspend fun countPendingDebtAggregateOperations(syncScopeKey: String, debtId: String, operationId: String): Int = 0
         override suspend fun setGoalSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setGoalContributionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setDebtSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setDebtPaymentSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun upsertConflictRow(entity: SyncConflictEntity) {}
-        override suspend fun setOutboxStatusConflict(operationId: String, nowEpochMillis: Long): Int = 1
+        override suspend fun setOutboxStatusConflict(syncScopeKey: String, operationId: String, nowEpochMillis: Long): Int = 1
         override suspend fun setProfileSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setCategorySyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setTransactionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
@@ -305,23 +305,25 @@ class OfflineFirstRecurringTransactionRepositoryTest {
     }
 
     private class FakeSyncOperationDao : SyncOperationDao {
-        override fun observePendingCount(): Flow<Int> = flowOf(0)
-        override fun observeFailedCount(): Flow<Int> = flowOf(0)
-        override suspend fun getReadyOperations(nowEpochMillis: Long, limit: Int) = emptyList<SyncOperationEntity>()
-        override suspend fun getById(operationId: String): SyncOperationEntity? = null
+        override fun observePendingCount(syncScopeKey: String): Flow<Int> = flowOf(0)
+        override fun observeFailedCount(syncScopeKey: String): Flow<Int> = flowOf(0)
+        override suspend fun getReadyOperations(syncScopeKey: String, nowEpochMillis: Long, limit: Int) = emptyList<SyncOperationEntity>()
+        override suspend fun getById(syncScopeKey: String, operationId: String): SyncOperationEntity? = null
         override suspend fun insert(operation: SyncOperationEntity) {}
-        override suspend fun claimOperation(operationId: String, nowEpochMillis: Long): Int = 1
-        override suspend fun markFailed(operationId: String, lastError: String, errorClassification: String?, nextAttemptAtEpochMillis: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun markConflict(operationId: String, lastError: String, nowEpochMillis: Long): Int = 1
-        override suspend fun recoverStaleInFlight(staleBeforeEpochMillis: Long, nowEpochMillis: Long, lastError: String): Int = 0
-        override suspend fun retryAllFailed(nowEpochMillis: Long): Int = 0
-        override suspend fun deleteCompleted(operationId: String): Int = 1
-        override suspend fun deleteForEntity(entityTypeCode: String, entityId: String): Int = 0
-        override suspend fun getSuccessors(predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun unblockSuccessor(operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun getActiveTailCandidates(entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun coalescePendingPayload(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 1
-        override suspend fun convertToPendingDelete(operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 1
+        override suspend fun claimOperation(syncScopeKey: String, operationId: String, nowEpochMillis: Long): Int = 1
+        override suspend fun markFailed(syncScopeKey: String, operationId: String, lastError: String, errorClassification: String?, nextAttemptAtEpochMillis: Long, nowEpochMillis: Long): Int = 1
+        override suspend fun markConflict(syncScopeKey: String, operationId: String, lastError: String, nowEpochMillis: Long): Int = 1
+        override suspend fun recoverStaleInFlight(syncScopeKey: String, staleBeforeEpochMillis: Long, nowEpochMillis: Long, lastError: String): Int = 0
+        override suspend fun retryAllFailed(syncScopeKey: String, nowEpochMillis: Long): Int = 0
+        override suspend fun deleteCompleted(syncScopeKey: String, operationId: String): Int = 1
+        override suspend fun deleteForEntity(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun getSuccessors(syncScopeKey: String, predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun unblockSuccessor(syncScopeKey: String, operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 1
+        override suspend fun getActiveTailCandidates(syncScopeKey: String, entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun coalescePendingPayload(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 1
+        override suspend fun convertToPendingDelete(syncScopeKey: String, operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 1
+        override fun observeLegacyQuarantineOperationCount(): Flow<Int> = flowOf(0)
+        override suspend fun getLegacyQuarantineOperationCount(): Int = 0
     }
 
     private class SequentialEntityIdGenerator : EntityIdGenerator {
@@ -331,7 +333,7 @@ class OfflineFirstRecurringTransactionRepositoryTest {
 
     private fun createCategory(
         id: String = "cat-1",
-        ownerId: String = "user-1",
+        ownerId: String = "11111111-1111-4111-8111-111111111111",
         typeCode: String = "EXPENSE",
         deletedAt: Long? = null,
     ) = CategoryEntity(
@@ -352,7 +354,7 @@ class OfflineFirstRecurringTransactionRepositoryTest {
 
     private fun createRecurringEntity(
         id: String = "rec-1",
-        ownerId: String = "user-1",
+        ownerId: String = "11111111-1111-4111-8111-111111111111",
         workspaceId: String? = null,
         categoryId: String = "cat-1",
         typeCode: String = "EXPENSE",
@@ -380,7 +382,7 @@ class OfflineFirstRecurringTransactionRepositoryTest {
     )
 
     private fun createFixture(
-        sessionUserId: String = "user-1",
+        sessionUserId: String = "11111111-1111-4111-8111-111111111111",
     ): Pair<OfflineFirstRecurringTransactionRepository, TestContext> {
         val authRepo = FakeAuthRepository(AuthSession(EntityId(sessionUserId), "user@test.com", nowInstant))
         val categoryDao = FakeCategoryDao()
@@ -425,7 +427,7 @@ class OfflineFirstRecurringTransactionRepositoryTest {
     @Test
     fun validPersonalActiveRule_createsTransactionOccurrenceAndV2Outbox() = runTest {
         val (repo, ctx) = createFixture()
-        ctx.categoryDao.upsert(createCategory(id = "cat-1", ownerId = "user-1"))
+        ctx.categoryDao.upsert(createCategory(id = "cat-1", ownerId = "11111111-1111-4111-8111-111111111111"))
         ctx.recurringDao.upsert(createRecurringEntity(id = "rec-1", startDate = "2026-08-01"))
 
         val result = repo.generateDueTransactions(
@@ -463,7 +465,7 @@ class OfflineFirstRecurringTransactionRepositoryTest {
     @Test
     fun queuedRecurringOccurrenceCreatePayload_containsExplicitNullsForNullableV2Fields() = runTest {
         val (repo, ctx) = createFixture()
-        ctx.categoryDao.upsert(createCategory(id = "cat-1", ownerId = "user-1"))
+        ctx.categoryDao.upsert(createCategory(id = "cat-1", ownerId = "11111111-1111-4111-8111-111111111111"))
         ctx.recurringDao.upsert(createRecurringEntity(id = "rec-1", startDate = "2026-08-01"))
 
         val result = repo.generateDueTransactions(
@@ -497,7 +499,7 @@ class OfflineFirstRecurringTransactionRepositoryTest {
     @Test
     fun secondCallWithSameThroughDate_producesNoNewCandidates() = runTest {
         val (repo, ctx) = createFixture()
-        ctx.categoryDao.upsert(createCategory(id = "cat-1", ownerId = "user-1"))
+        ctx.categoryDao.upsert(createCategory(id = "cat-1", ownerId = "11111111-1111-4111-8111-111111111111"))
         ctx.recurringDao.upsert(createRecurringEntity(id = "rec-1", startDate = "2026-08-01"))
 
         // First run generates candidate
@@ -520,7 +522,7 @@ class OfflineFirstRecurringTransactionRepositoryTest {
     @Test
     fun occurrenceAlreadyExists_returnsAlreadyGenerated_andDoesNotCallScheduler() = runTest {
         val (repo, ctx) = createFixture()
-        ctx.categoryDao.upsert(createCategory(id = "cat-1", ownerId = "user-1"))
+        ctx.categoryDao.upsert(createCategory(id = "cat-1", ownerId = "11111111-1111-4111-8111-111111111111"))
         ctx.recurringDao.upsert(createRecurringEntity(id = "rec-1", startDate = "2026-08-01", lastGeneratedDate = null))
 
         // Pre-insert occurrence in DAO so candidate is planned but already exists in Room
@@ -543,7 +545,7 @@ class OfflineFirstRecurringTransactionRepositoryTest {
     @Test
     fun inactiveAndWorkspaceRules_areNotGenerated() = runTest {
         val (repo, ctx) = createFixture()
-        ctx.categoryDao.upsert(createCategory(id = "cat-1", ownerId = "user-1"))
+        ctx.categoryDao.upsert(createCategory(id = "cat-1", ownerId = "11111111-1111-4111-8111-111111111111"))
         ctx.recurringDao.upsert(createRecurringEntity(id = "rec-inactive", isActive = false))
         ctx.recurringDao.upsert(createRecurringEntity(id = "rec-ws", workspaceId = "ws-1"))
 
@@ -592,7 +594,7 @@ class OfflineFirstRecurringTransactionRepositoryTest {
     @Test
     fun staleCasState_reportsStaleIdAndDoesNotCreateTransaction() = runTest {
         val (repo, ctx) = createFixture()
-        ctx.categoryDao.upsert(createCategory(id = "cat-1", ownerId = "user-1"))
+        ctx.categoryDao.upsert(createCategory(id = "cat-1", ownerId = "11111111-1111-4111-8111-111111111111"))
         ctx.recurringDao.upsert(createRecurringEntity(id = "rec-stale"))
         ctx.mutationDao.staleOnNext = true
 
@@ -744,12 +746,12 @@ class OfflineFirstRecurringTransactionRepositoryTest {
 
     @Test
     fun activeWorkspaceScope_isolatesObserveAndEnforcesScopedWrites() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "token", nowInstant))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "token", nowInstant))
         val categoryDao = FakeCategoryDao().apply {
             upsert(
                 createCategory(
                     id = "cat-ws-1",
-                    ownerId = "user-1",
+                    ownerId = "11111111-1111-4111-8111-111111111111",
                 ).copy(workspaceId = "ws-1", scopeKey = "workspace:ws-1"),
             )
         }

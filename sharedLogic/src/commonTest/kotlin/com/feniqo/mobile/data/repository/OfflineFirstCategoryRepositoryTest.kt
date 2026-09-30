@@ -70,7 +70,7 @@ class OfflineFirstCategoryRepositoryTest {
 
     @Test
     fun observeCategory_canObserveDefaultCategorySafely() = runTest {
-        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val defaultEntity = sampleCategoryEntity(id = "c-default", ownerId = null, isDefault = true)
         val dao = FakeCategoryDao(listOf(defaultEntity))
         val queue = FakeCategoryOfflineWriteQueueHolder()
@@ -83,10 +83,10 @@ class OfflineFirstCategoryRepositoryTest {
 
     @Test
     fun observeCategories_doesNotIncludeDeletedCategories() = runTest {
-        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
-        val active = sampleCategoryEntity(id = "c-active", ownerId = "user-1")
+        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
+        val active = sampleCategoryEntity(id = "c-active", ownerId = "11111111-1111-4111-8111-111111111111")
         val deletedSync = newSyncMetadata(1_000L).copy(deletedAtEpochMillis = 2_000L)
-        val deleted = sampleCategoryEntity(id = "c-del", ownerId = "user-1", sync = deletedSync)
+        val deleted = sampleCategoryEntity(id = "c-del", ownerId = "11111111-1111-4111-8111-111111111111", sync = deletedSync)
         val dao = FakeCategoryDao(listOf(active, deleted))
         val queue = FakeCategoryOfflineWriteQueueHolder()
         val repository = OfflineFirstCategoryRepository(authRepo, dao, queue.queue)
@@ -98,11 +98,11 @@ class OfflineFirstCategoryRepositoryTest {
 
     @Test
     fun observeCategoriesForHistoryLookup_includesSameOwnerDeletedCategories() = runTest {
-        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
-        val active = sampleCategoryEntity(id = "c-act", ownerId = "user-1")
+        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
+        val active = sampleCategoryEntity(id = "c-act", ownerId = "11111111-1111-4111-8111-111111111111")
         val deletedSync = newSyncMetadata(1_000L).copy(deletedAtEpochMillis = 2_000L)
-        val deleted = sampleCategoryEntity(id = "c-del", ownerId = "user-1", sync = deletedSync)
-        val otherDeleted = sampleCategoryEntity(id = "c-other-del", ownerId = "user-2", sync = deletedSync)
+        val deleted = sampleCategoryEntity(id = "c-del", ownerId = "11111111-1111-4111-8111-111111111111", sync = deletedSync)
+        val otherDeleted = sampleCategoryEntity(id = "c-other-del", ownerId = "22222222-2222-4222-8222-222222222222", sync = deletedSync)
         val dao = FakeCategoryDao(listOf(active, deleted, otherDeleted))
         val queue = FakeCategoryOfflineWriteQueueHolder()
         val repository = OfflineFirstCategoryRepository(authRepo, dao, queue.queue)
@@ -116,7 +116,7 @@ class OfflineFirstCategoryRepositoryTest {
 
     @Test
     fun create_rejectsDefaultOrNullOwnerCategoryCreation() = runTest {
-        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val dao = FakeCategoryDao()
         val queue = FakeCategoryOfflineWriteQueueHolder()
         val repository = OfflineFirstCategoryRepository(authRepo, dao, queue.queue)
@@ -130,7 +130,7 @@ class OfflineFirstCategoryRepositoryTest {
 
     @Test
     fun create_enqueuesPendingCreateWithVersion0AndNullBaseVersion() = runTest {
-        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val dao = FakeCategoryDao()
         val queue = FakeCategoryOfflineWriteQueueHolder()
         val repository = OfflineFirstCategoryRepository(
@@ -140,7 +140,7 @@ class OfflineFirstCategoryRepositoryTest {
             nowEpochMillisProvider = { 10_000L },
         )
 
-        val cat = sampleCategory("c-new", ownerId = "user-1")
+        val cat = sampleCategory("c-new", ownerId = "11111111-1111-4111-8111-111111111111")
         val result = repository.create(cat)
 
         assertIs<RepositoryResult.Success<EntityId>>(result)
@@ -156,7 +156,7 @@ class OfflineFirstCategoryRepositoryTest {
 
     @Test
     fun update_preservesRemoteVersionAndSetsPendingUpdate() = runTest {
-        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val existingSync = SyncMetadata(
             syncStatus = SyncStatus.SYNCED.name,
             updatedAtEpochMillis = 5_000L,
@@ -166,7 +166,7 @@ class OfflineFirstCategoryRepositoryTest {
             baseVersion = 5L,
             lastSyncError = null,
         )
-        val existingEntity = sampleCategoryEntity(id = "c-remote", ownerId = "user-1", sync = existingSync)
+        val existingEntity = sampleCategoryEntity(id = "c-remote", ownerId = "11111111-1111-4111-8111-111111111111", sync = existingSync)
         val dao = FakeCategoryDao(listOf(existingEntity))
         val queue = FakeCategoryOfflineWriteQueueHolder()
         val repository = OfflineFirstCategoryRepository(
@@ -176,7 +176,7 @@ class OfflineFirstCategoryRepositoryTest {
             nowEpochMillisProvider = { 15_000L },
         )
 
-        val updatedCat = sampleCategory(id = "c-remote", ownerId = "user-1", name = "Yeni Kategori")
+        val updatedCat = sampleCategory(id = "c-remote", ownerId = "11111111-1111-4111-8111-111111111111", name = "Yeni Kategori")
         val result = repository.update(updatedCat)
 
         assertIs<RepositoryResult.Success<Unit>>(result)
@@ -193,7 +193,7 @@ class OfflineFirstCategoryRepositoryTest {
 
     @Test
     fun update_withExistingSlug_preservesSlugInEntityAndDtoSnapshot() = runTest {
-        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val existingSync = SyncMetadata(
             syncStatus = SyncStatus.SYNCED.name,
             updatedAtEpochMillis = 5_000L,
@@ -203,7 +203,7 @@ class OfflineFirstCategoryRepositoryTest {
             baseVersion = 5L,
             lastSyncError = null,
         )
-        val existingEntity = sampleCategoryEntity(id = "c-slug", ownerId = "user-1", sync = existingSync).copy(slug = "food-dining")
+        val existingEntity = sampleCategoryEntity(id = "c-slug", ownerId = "11111111-1111-4111-8111-111111111111", sync = existingSync).copy(slug = "food-dining")
         val dao = FakeCategoryDao(listOf(existingEntity))
         val queue = FakeCategoryOfflineWriteQueueHolder()
         val repository = OfflineFirstCategoryRepository(
@@ -213,7 +213,7 @@ class OfflineFirstCategoryRepositoryTest {
             nowEpochMillisProvider = { 15_000L },
         )
 
-        val updatedCat = sampleCategory(id = "c-slug", ownerId = "user-1", name = "Yemek Düzenleme")
+        val updatedCat = sampleCategory(id = "c-slug", ownerId = "11111111-1111-4111-8111-111111111111", name = "Yemek Düzenleme")
         val result = repository.update(updatedCat)
 
         assertIs<RepositoryResult.Success<Unit>>(result)
@@ -225,9 +225,9 @@ class OfflineFirstCategoryRepositoryTest {
 
     @Test
     fun update_onUnsyncedCategory_preservesPendingCreateAndNullBaseVersion() = runTest {
-        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val existingSync = newSyncMetadata(5_000L) // PENDING_CREATE
-        val existingEntity = sampleCategoryEntity(id = "c-local", ownerId = "user-1", sync = existingSync)
+        val existingEntity = sampleCategoryEntity(id = "c-local", ownerId = "11111111-1111-4111-8111-111111111111", sync = existingSync)
         val dao = FakeCategoryDao(listOf(existingEntity))
         val queue = FakeCategoryOfflineWriteQueueHolder()
         val repository = OfflineFirstCategoryRepository(
@@ -237,7 +237,7 @@ class OfflineFirstCategoryRepositoryTest {
             nowEpochMillisProvider = { 15_000L },
         )
 
-        val updatedCat = sampleCategory(id = "c-local", ownerId = "user-1", name = "Yerel Düzenleme")
+        val updatedCat = sampleCategory(id = "c-local", ownerId = "11111111-1111-4111-8111-111111111111", name = "Yerel Düzenleme")
         val result = repository.update(updatedCat)
 
         assertIs<RepositoryResult.Success<Unit>>(result)
@@ -252,7 +252,7 @@ class OfflineFirstCategoryRepositoryTest {
 
     @Test
     fun softDelete_setsPendingDeleteAndDeletedAtTimestamp() = runTest {
-        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val existingSync = SyncMetadata(
             syncStatus = SyncStatus.SYNCED.name,
             updatedAtEpochMillis = 5_000L,
@@ -262,7 +262,7 @@ class OfflineFirstCategoryRepositoryTest {
             baseVersion = 2L,
             lastSyncError = null,
         )
-        val existingEntity = sampleCategoryEntity(id = "c-del", ownerId = "user-1", sync = existingSync)
+        val existingEntity = sampleCategoryEntity(id = "c-del", ownerId = "11111111-1111-4111-8111-111111111111", sync = existingSync)
         val dao = FakeCategoryDao(listOf(existingEntity))
         val queue = FakeCategoryOfflineWriteQueueHolder()
         val repository = OfflineFirstCategoryRepository(
@@ -438,18 +438,18 @@ private class FakeCategoryOfflineWriteQueueHolder {
         override suspend fun deleteCategoryRow(id: String): Int = 0
         override suspend fun deleteBudgetRow(id: String): Int = 0
         override suspend fun deleteTransactionRow(id: String): Int = 0
-        override suspend fun deleteOutboxRow(operationId: String): Int = 0
-        override suspend fun getOutboxById(operationId: String): SyncOperationEntity? = null
-        override suspend fun getSuccessors(predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun getActiveTailCandidates(entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun coalescePendingPayload(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
-        override suspend fun convertToPendingDelete(operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 0
-        override suspend fun convertPendingDeleteToUpdate(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
-        override suspend fun unblockSuccessor(operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun deleteOutboxRow(syncScopeKey: String, operationId: String): Int = 0
+        override suspend fun getOutboxById(syncScopeKey: String, operationId: String): SyncOperationEntity? = null
+        override suspend fun getSuccessors(syncScopeKey: String, predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun getActiveTailCandidates(syncScopeKey: String, entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun coalescePendingPayload(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
+        override suspend fun convertToPendingDelete(syncScopeKey: String, operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 0
+        override suspend fun convertPendingDeleteToUpdate(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
+        override suspend fun unblockSuccessor(syncScopeKey: String, operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun insertOutboxRow(operation: SyncOperationEntity) {
             lastInsertedOperation = operation
         }
-        override suspend fun deleteConflictRow(entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun deleteConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
         override suspend fun rebaseProfileVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseCategoryVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseTransactionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
@@ -503,16 +503,16 @@ private class FakeCategoryOfflineWriteQueueHolder {
         override suspend fun markDebtSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
         override suspend fun tombstoneGoalContributionsForDeletedGoal(goalId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int = 0
         override suspend fun tombstoneDebtPaymentsForDeletedDebt(debtId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getActiveGoalAggregateTailCandidates(goalId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun getActiveDebtAggregateTailCandidates(debtId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun countPendingGoalAggregateOperations(goalId: String, operationId: String): Int = 0
-        override suspend fun countPendingDebtAggregateOperations(debtId: String, operationId: String): Int = 0
+        override suspend fun getActiveGoalAggregateTailCandidates(syncScopeKey: String, goalId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun getActiveDebtAggregateTailCandidates(syncScopeKey: String, debtId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun countPendingGoalAggregateOperations(syncScopeKey: String, goalId: String, operationId: String): Int = 0
+        override suspend fun countPendingDebtAggregateOperations(syncScopeKey: String, debtId: String, operationId: String): Int = 0
         override suspend fun setGoalSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setGoalContributionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setDebtSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setDebtPaymentSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun upsertConflictRow(entity: com.feniqo.mobile.data.local.entity.SyncConflictEntity) {}
-        override suspend fun setOutboxStatusConflict(operationId: String, nowEpochMillis: Long): Int = 1
+        override suspend fun setOutboxStatusConflict(syncScopeKey: String, operationId: String, nowEpochMillis: Long): Int = 1
         override suspend fun setProfileSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setCategorySyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setTransactionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
@@ -525,25 +525,27 @@ private class FakeCategoryOfflineWriteQueueHolder {
     }
 
     val operationDao = object : SyncOperationDao {
-        override fun observePendingCount(): Flow<Int> = flowOf(0)
-        override fun observeFailedCount(): Flow<Int> = flowOf(0)
-        override suspend fun getReadyOperations(nowEpochMillis: Long, limit: Int) = emptyList<SyncOperationEntity>()
-        override suspend fun getById(operationId: String): SyncOperationEntity? = null
+        override fun observePendingCount(syncScopeKey: String): Flow<Int> = flowOf(0)
+        override fun observeFailedCount(syncScopeKey: String): Flow<Int> = flowOf(0)
+        override suspend fun getReadyOperations(syncScopeKey: String, nowEpochMillis: Long, limit: Int) = emptyList<SyncOperationEntity>()
+        override suspend fun getById(syncScopeKey: String, operationId: String): SyncOperationEntity? = null
         override suspend fun insert(operation: SyncOperationEntity) {
             lastInsertedOperation = operation
         }
-        override suspend fun claimOperation(operationId: String, nowEpochMillis: Long): Int = 1
-        override suspend fun markFailed(operationId: String, lastError: String, errorClassification: String?, nextAttemptAtEpochMillis: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun markConflict(operationId: String, lastError: String, nowEpochMillis: Long): Int = 1
-        override suspend fun recoverStaleInFlight(staleBeforeEpochMillis: Long, nowEpochMillis: Long, lastError: String): Int = 0
-        override suspend fun retryAllFailed(nowEpochMillis: Long): Int = 0
-        override suspend fun deleteCompleted(operationId: String): Int = 1
-        override suspend fun deleteForEntity(entityTypeCode: String, entityId: String): Int = 0
-        override suspend fun getSuccessors(predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun unblockSuccessor(operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun getActiveTailCandidates(entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun coalescePendingPayload(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 1
-        override suspend fun convertToPendingDelete(operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 1
+        override suspend fun claimOperation(syncScopeKey: String, operationId: String, nowEpochMillis: Long): Int = 1
+        override suspend fun markFailed(syncScopeKey: String, operationId: String, lastError: String, errorClassification: String?, nextAttemptAtEpochMillis: Long, nowEpochMillis: Long): Int = 1
+        override suspend fun markConflict(syncScopeKey: String, operationId: String, lastError: String, nowEpochMillis: Long): Int = 1
+        override suspend fun recoverStaleInFlight(syncScopeKey: String, staleBeforeEpochMillis: Long, nowEpochMillis: Long, lastError: String): Int = 0
+        override suspend fun retryAllFailed(syncScopeKey: String, nowEpochMillis: Long): Int = 0
+        override suspend fun deleteCompleted(syncScopeKey: String, operationId: String): Int = 1
+        override suspend fun deleteForEntity(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun getSuccessors(syncScopeKey: String, predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun unblockSuccessor(syncScopeKey: String, operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 1
+        override suspend fun getActiveTailCandidates(syncScopeKey: String, entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun coalescePendingPayload(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 1
+        override suspend fun convertToPendingDelete(syncScopeKey: String, operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 1
+        override fun observeLegacyQuarantineOperationCount(): Flow<Int> = flowOf(0)
+        override suspend fun getLegacyQuarantineOperationCount(): Int = 0
     }
 
     val queue = OfflineWriteQueue(

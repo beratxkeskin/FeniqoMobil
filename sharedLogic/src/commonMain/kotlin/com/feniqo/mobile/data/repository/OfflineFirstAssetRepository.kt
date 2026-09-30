@@ -9,6 +9,7 @@ import com.feniqo.mobile.data.mapper.toEntity
 import com.feniqo.mobile.data.mapper.toPendingDelete
 import com.feniqo.mobile.data.mapper.toPendingUpdate
 import com.feniqo.mobile.data.remote.mapper.toDto
+import com.feniqo.mobile.data.sync.SyncScopeKey
 import com.feniqo.mobile.domain.model.AppError
 import com.feniqo.mobile.domain.model.Asset
 import com.feniqo.mobile.domain.model.CreateAssetCommand
@@ -61,7 +62,13 @@ class OfflineFirstAssetRepository(
             purchaseUnitPrice = valid.purchaseUnitPrice, trackingSymbol = valid.trackingSymbol, autoTrack = valid.autoTrack,
             createdAt = Instant.fromEpochMilliseconds(now),
         )
-        offlineWriteQueue.enqueueAssetV2(asset.toEntity(newSyncMetadata(now)), OutboxOperationType.CREATE, json.encodeToString(asset.toDto()))
+        val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
+        offlineWriteQueue.enqueueAssetV2(
+            syncScopeKey = syncScopeKey,
+            entity = asset.toEntity(newSyncMetadata(now)),
+            type = OutboxOperationType.CREATE,
+            payloadJson = json.encodeToString(asset.toDto()),
+        )
         RepositoryResult.Success(asset.id)
     } catch (cancelled: CancellationException) { throw cancelled } catch (_: Throwable) { RepositoryResult.Failure(AppError.Unknown("asset_write_failed")) }
 
@@ -76,7 +83,13 @@ class OfflineFirstAssetRepository(
             is AssetValidationResult.Invalid -> return RepositoryResult.Failure(AppError.Validation(result.error.name))
         }
         val now = nowEpochMillisProvider()
-        offlineWriteQueue.enqueueAssetV2(asset.toEntity(existing.sync.toPendingUpdate(now)), OutboxOperationType.UPDATE, json.encodeToString(asset.toDto()))
+        val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
+        offlineWriteQueue.enqueueAssetV2(
+            syncScopeKey = syncScopeKey,
+            entity = asset.toEntity(existing.sync.toPendingUpdate(now)),
+            type = OutboxOperationType.UPDATE,
+            payloadJson = json.encodeToString(asset.toDto()),
+        )
         RepositoryResult.Success(Unit)
     } catch (cancelled: CancellationException) { throw cancelled } catch (_: Throwable) { RepositoryResult.Failure(AppError.Unknown("asset_write_failed")) }
 
@@ -87,7 +100,13 @@ class OfflineFirstAssetRepository(
             ?.takeIf { it.ownerId == session.userId.value && it.sync.deletedAtEpochMillis == null }
             ?: return RepositoryResult.Failure(AppError.Validation("asset_not_found"))
         val now = nowEpochMillisProvider()
-        offlineWriteQueue.enqueueAssetV2(existing.copy(sync = existing.sync.toPendingDelete(now)), OutboxOperationType.DELETE, json.encodeToString(existing.toDomain().toDto()))
+        val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
+        offlineWriteQueue.enqueueAssetV2(
+            syncScopeKey = syncScopeKey,
+            entity = existing.copy(sync = existing.sync.toPendingDelete(now)),
+            type = OutboxOperationType.DELETE,
+            payloadJson = json.encodeToString(existing.toDomain().toDto()),
+        )
         RepositoryResult.Success(Unit)
     } catch (cancelled: CancellationException) { throw cancelled } catch (_: Throwable) { RepositoryResult.Failure(AppError.Unknown("asset_write_failed")) }
 

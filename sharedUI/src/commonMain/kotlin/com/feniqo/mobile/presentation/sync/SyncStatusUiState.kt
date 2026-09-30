@@ -48,6 +48,7 @@ data class SyncStatusUiState(
     val canRetryFailed: Boolean,
     val hasResolvableWorkspaceConflict: Boolean = false,
     val activeConflictDialog: WorkspaceConflictDialogState? = null,
+    val hasLegacyQuarantinedData: Boolean = false,
 ) {
     val isConflictDialogVisible: Boolean
         get() = activeConflictDialog != null
@@ -68,6 +69,7 @@ data class SyncStatusUiState(
             canRetryFailed = false,
             hasResolvableWorkspaceConflict = false,
             activeConflictDialog = null,
+            hasLegacyQuarantinedData = false,
         )
     }
 }

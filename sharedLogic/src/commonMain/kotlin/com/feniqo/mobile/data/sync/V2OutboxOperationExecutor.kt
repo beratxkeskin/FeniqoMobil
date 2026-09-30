@@ -19,6 +19,7 @@ import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
 import com.feniqo.mobile.data.remote.dto.SubscriptionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.remote.mapper.RemoteMappingException
+import com.feniqo.mobile.data.util.UuidHelper
 import com.feniqo.mobile.domain.repository.SyncEntityType
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerializationException
@@ -70,6 +71,11 @@ class V2OutboxOperationExecutor(
         if (dtoId != operation.entityId) {
             throw DefinitiveOutboxFailureException(
                 message = "Payload entity ID'si işlem entity ID'si ile uyuşmuyor (payload_entity_id_mismatch)"
+            )
+        }
+        if (!UuidHelper.isCanonicalUuid(dtoId)) {
+            throw DefinitiveOutboxFailureException(
+                message = "Payload id geçerli bir UUID olmalıdır (invalid_uuid_format)"
             )
         }
         return dto
@@ -158,6 +164,7 @@ class V2OutboxOperationExecutor(
             is ConditionalRemoteWriteResult.Applied -> OutboxExecutionResult.AssetApplied(result.record)
             is ConditionalRemoteWriteResult.Conflict -> OutboxExecutionResult.ConflictDetected(
                 SyncConflictEntity(
+                    syncScopeKey = operation.syncScopeKey,
                     entityTypeCode = operation.entityTypeCode,
                     entityId = operation.entityId,
                     operationId = operation.operationId,
@@ -188,6 +195,7 @@ class V2OutboxOperationExecutor(
             is ConditionalRemoteWriteResult.Applied -> OutboxExecutionResult.ProfileApplied(result.record)
             is ConditionalRemoteWriteResult.Conflict -> OutboxExecutionResult.ConflictDetected(
                 SyncConflictEntity(
+                    syncScopeKey = operation.syncScopeKey,
                     entityTypeCode = operation.entityTypeCode,
                     entityId = operation.entityId,
                     operationId = operation.operationId,
@@ -219,6 +227,7 @@ class V2OutboxOperationExecutor(
             is ConditionalRemoteWriteResult.Applied -> OutboxExecutionResult.CategoryApplied(result.record)
             is ConditionalRemoteWriteResult.Conflict -> OutboxExecutionResult.ConflictDetected(
                 SyncConflictEntity(
+                    syncScopeKey = operation.syncScopeKey,
                     entityTypeCode = operation.entityTypeCode,
                     entityId = operation.entityId,
                     operationId = operation.operationId,
@@ -250,6 +259,7 @@ class V2OutboxOperationExecutor(
             is ConditionalRemoteWriteResult.Applied -> OutboxExecutionResult.TransactionApplied(result.record)
             is ConditionalRemoteWriteResult.Conflict -> OutboxExecutionResult.ConflictDetected(
                 SyncConflictEntity(
+                    syncScopeKey = operation.syncScopeKey,
                     entityTypeCode = operation.entityTypeCode,
                     entityId = operation.entityId,
                     operationId = operation.operationId,
@@ -281,6 +291,7 @@ class V2OutboxOperationExecutor(
             is ConditionalRemoteWriteResult.Applied -> OutboxExecutionResult.BudgetApplied(result.record)
             is ConditionalRemoteWriteResult.Conflict -> OutboxExecutionResult.ConflictDetected(
                 SyncConflictEntity(
+                    syncScopeKey = operation.syncScopeKey,
                     entityTypeCode = operation.entityTypeCode,
                     entityId = operation.entityId,
                     operationId = operation.operationId,
@@ -312,6 +323,7 @@ class V2OutboxOperationExecutor(
             is ConditionalRemoteWriteResult.Applied -> OutboxExecutionResult.RecurringTransactionApplied(result.record)
             is ConditionalRemoteWriteResult.Conflict -> OutboxExecutionResult.ConflictDetected(
                 SyncConflictEntity(
+                    syncScopeKey = operation.syncScopeKey,
                     entityTypeCode = operation.entityTypeCode,
                     entityId = operation.entityId,
                     operationId = operation.operationId,
@@ -343,6 +355,7 @@ class V2OutboxOperationExecutor(
             is ConditionalRemoteWriteResult.Applied -> OutboxExecutionResult.SubscriptionApplied(result.record)
             is ConditionalRemoteWriteResult.Conflict -> OutboxExecutionResult.ConflictDetected(
                 SyncConflictEntity(
+                    syncScopeKey = operation.syncScopeKey,
                     entityTypeCode = operation.entityTypeCode,
                     entityId = operation.entityId,
                     operationId = operation.operationId,
@@ -374,6 +387,7 @@ class V2OutboxOperationExecutor(
             is ConditionalRemoteWriteResult.Applied -> OutboxExecutionResult.GoalApplied(result.record)
             is ConditionalRemoteWriteResult.Conflict -> OutboxExecutionResult.ConflictDetected(
                 SyncConflictEntity(
+                    syncScopeKey = operation.syncScopeKey,
                     entityTypeCode = operation.entityTypeCode,
                     entityId = operation.entityId,
                     operationId = operation.operationId,
@@ -408,6 +422,7 @@ class V2OutboxOperationExecutor(
             is ConditionalRemoteWriteResult.Applied -> OutboxExecutionResult.GoalContributionApplied(result.record)
             is ConditionalRemoteWriteResult.Conflict -> OutboxExecutionResult.ConflictDetected(
                 SyncConflictEntity(
+                    syncScopeKey = operation.syncScopeKey,
                     entityTypeCode = operation.entityTypeCode,
                     entityId = operation.entityId,
                     operationId = operation.operationId,
@@ -435,6 +450,7 @@ class V2OutboxOperationExecutor(
             is ConditionalRemoteWriteResult.Applied -> OutboxExecutionResult.DebtApplied(result.record)
             is ConditionalRemoteWriteResult.Conflict -> OutboxExecutionResult.ConflictDetected(
                 SyncConflictEntity(
+                    syncScopeKey = operation.syncScopeKey,
                     entityTypeCode = operation.entityTypeCode,
                     entityId = operation.entityId,
                     operationId = operation.operationId,
@@ -469,6 +485,7 @@ class V2OutboxOperationExecutor(
             is ConditionalRemoteWriteResult.Applied -> OutboxExecutionResult.DebtPaymentApplied(result.record)
             is ConditionalRemoteWriteResult.Conflict -> OutboxExecutionResult.ConflictDetected(
                 SyncConflictEntity(
+                    syncScopeKey = operation.syncScopeKey,
                     entityTypeCode = operation.entityTypeCode,
                     entityId = operation.entityId,
                     operationId = operation.operationId,
@@ -514,6 +531,7 @@ class V2OutboxOperationExecutor(
             is ConditionalRemoteWriteResult.Applied -> OutboxExecutionResult.WorkspaceApplied(result.record)
             is ConditionalRemoteWriteResult.Conflict -> OutboxExecutionResult.ConflictDetected(
                 SyncConflictEntity(
+                    syncScopeKey = operation.syncScopeKey,
                     entityTypeCode = operation.entityTypeCode,
                     entityId = operation.entityId,
                     operationId = operation.operationId,
@@ -568,6 +586,7 @@ class V2OutboxOperationExecutor(
             is ConditionalRemoteWriteResult.Applied -> OutboxExecutionResult.WorkspaceMemberApplied(result.record)
             is ConditionalRemoteWriteResult.Conflict -> OutboxExecutionResult.ConflictDetected(
                 SyncConflictEntity(
+                    syncScopeKey = operation.syncScopeKey,
                     entityTypeCode = operation.entityTypeCode,
                     entityId = operation.entityId,
                     operationId = operation.operationId,
@@ -622,6 +641,7 @@ class V2OutboxOperationExecutor(
             is ConditionalRemoteWriteResult.Applied -> OutboxExecutionResult.WorkspaceInvitationApplied(result.record)
             is ConditionalRemoteWriteResult.Conflict -> OutboxExecutionResult.ConflictDetected(
                 SyncConflictEntity(
+                    syncScopeKey = operation.syncScopeKey,
                     entityTypeCode = operation.entityTypeCode,
                     entityId = operation.entityId,
                     operationId = operation.operationId,

@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
+import com.feniqo.mobile.data.sync.SyncScopeKey
 import com.feniqo.mobile.data.local.dao.WorkspaceDao
 import com.feniqo.mobile.domain.validation.TransactionValidationResult
 import com.feniqo.mobile.domain.validation.TransactionValidationRules
@@ -128,8 +129,10 @@ class OfflineFirstTransactionRepository(
             val entity = validatedTransaction.toEntity(sync)
             val dto = validatedTransaction.toDto()
             val payloadJson = json.encodeToString(dto)
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
 
             offlineWriteQueue.enqueueTransactionV2(
+                syncScopeKey = syncScopeKey,
                 entity = entity,
                 tags = emptyList(),
                 tagLinks = emptyList(),
@@ -148,6 +151,7 @@ class OfflineFirstTransactionRepository(
         try {
             val session = authRepository.observeSession().first()
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
 
             if (transactions.size !in 2..60) {
                 return RepositoryResult.Failure(AppError.Validation("installment_count_out_of_range"))
@@ -233,7 +237,7 @@ class OfflineFirstTransactionRepository(
                 )
             }
 
-            offlineWriteQueue.enqueueTransactionCreatesV2(inputs)
+            offlineWriteQueue.enqueueTransactionCreatesV2(syncScopeKey = syncScopeKey, inputs = inputs)
             return RepositoryResult.Success(groupIds.first())
         } catch (e: CancellationException) {
             throw e
@@ -283,7 +287,10 @@ class OfflineFirstTransactionRepository(
                 OutboxOperationType.UPDATE
             }
 
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
+
             offlineWriteQueue.enqueueTransactionKeepingTagsV2(
+                syncScopeKey = syncScopeKey,
                 entity = updatedEntity,
                 type = outboxType,
                 payloadJson = payloadJson,
@@ -300,6 +307,7 @@ class OfflineFirstTransactionRepository(
         try {
             val session = authRepository.observeSession().first()
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
 
             val existing = transactionDao.getByIdAndOwner(id.value, session.userId.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("transaction_not_found"))
@@ -314,6 +322,7 @@ class OfflineFirstTransactionRepository(
             val payloadJson = json.encodeToString(dto)
 
             offlineWriteQueue.enqueueTransactionKeepingTagsV2(
+                syncScopeKey = syncScopeKey,
                 entity = deletedEntity,
                 type = OutboxOperationType.DELETE,
                 payloadJson = payloadJson,
@@ -330,6 +339,7 @@ class OfflineFirstTransactionRepository(
         try {
             val session = authRepository.observeSession().first()
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
 
             if (ids.isEmpty()) {
                 return RepositoryResult.Failure(AppError.Validation("installment_ids_empty"))
@@ -383,7 +393,7 @@ class OfflineFirstTransactionRepository(
                 )
             }
 
-            offlineWriteQueue.enqueueTransactionDeletionsV2(inputs)
+            offlineWriteQueue.enqueueTransactionDeletionsV2(syncScopeKey = syncScopeKey, inputs = inputs)
             return RepositoryResult.Success(Unit)
         } catch (e: CancellationException) {
             throw e

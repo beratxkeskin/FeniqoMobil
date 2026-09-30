@@ -36,6 +36,8 @@ import kotlin.test.assertTrue
 @RunWith(RobolectricTestRunner::class)
 class GoalDebtLocalMutationDaoTest {
 
+    private val SCOPE = "USER:11111111-1111-4111-8111-111111111111"
+
     private fun inMemoryDatabase(): FeniqoDatabase {
         return Room.inMemoryDatabaseBuilder<FeniqoDatabase>(
             context = ApplicationProvider.getApplicationContext(),
@@ -181,12 +183,13 @@ class GoalDebtLocalMutationDaoTest {
             val queue = createQueue(db)
             val goal = sampleGoalEntity(id = "g-1", currentAmountMinor = 20_000L)
             val opId = queue.enqueueGoalV2(
+                syncScopeKey = SCOPE,
                 entity = goal,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"id":"g-1","user_id":"user-1","workspace_id":null,"name":"Tatil Fonu","target_amount_minor":100000,"current_amount_minor":20000,"currency":"TRY","target_date":"2026-12-31","color_hex":"#2E7D32","icon_key":"savings","created_at":"2026-09-01T10:00:00Z","updated_at":null,"deleted_at":null,"version":null}""",
             )
 
-            queue.claimOperation(opId)
+            queue.claimOperation(SCOPE, opId)
 
             val remoteDto = GoalDto(
                 id = "g-1",
@@ -206,13 +209,14 @@ class GoalDebtLocalMutationDaoTest {
             )
 
             val ackSuccess = db.localMutationDao().ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = opId,
                 result = OutboxExecutionResult.GoalApplied(remoteDto),
                 nowEpochMillis = 3000L,
             )
             assertTrue(ackSuccess)
 
-            assertNull(db.syncOperationDao().getById(opId))
+            assertNull(db.syncOperationDao().getById(SCOPE, opId))
             val stored = db.goalDao().getById("g-1")
             assertNotNull(stored)
             assertEquals(1L, stored.sync.version)
@@ -231,13 +235,14 @@ class GoalDebtLocalMutationDaoTest {
             // Goal created locally (or updated) -> in outbox
             val initialGoal = sampleGoalEntity(id = "g-1", currentAmountMinor = 20_000L)
             val goalOpId = queue.enqueueGoalV2(
+                syncScopeKey = SCOPE,
                 entity = initialGoal,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"id":"g-1"}""",
             )
 
             // Claim goal create -> IN_FLIGHT
-            val claimedGoalOp = queue.claimOperation(goalOpId)
+            val claimedGoalOp = queue.claimOperation(SCOPE, goalOpId)
             assertNotNull(claimedGoalOp)
             assertEquals("IN_FLIGHT", claimedGoalOp.statusCode)
 
@@ -249,6 +254,7 @@ class GoalDebtLocalMutationDaoTest {
                 sync = initialGoal.sync.toPendingUpdate(2500L),
             )
             val contribOpId = queue.enqueueGoalContributionV2(
+                syncScopeKey = SCOPE,
                 entity = contribEntity,
                 updatedGoal = updatedGoalEntity,
                 payloadJson = """{"id":"c-1"}""",
@@ -273,6 +279,7 @@ class GoalDebtLocalMutationDaoTest {
             )
 
             val ackSuccess = db.localMutationDao().ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = goalOpId,
                 result = OutboxExecutionResult.GoalApplied(remoteGoalDto),
                 nowEpochMillis = 3000L,
@@ -288,7 +295,7 @@ class GoalDebtLocalMutationDaoTest {
             assertEquals("PENDING_CREATE", storedGoal.sync.syncStatus) // Still pending because child operation is pending!
 
             // Successor child contribution operation should now have predecessor cleared and parent base_version resolved
-            val storedContribOp = db.syncOperationDao().getById(contribOpId)
+            val storedContribOp = db.syncOperationDao().getById(SCOPE, contribOpId)
             assertNotNull(storedContribOp)
             assertFalse(storedContribOp.isBlocked)
             assertEquals(1L, storedContribOp.baseVersion) // Rebased to parent's resolved version 1L!
@@ -313,12 +320,13 @@ class GoalDebtLocalMutationDaoTest {
                 sync = goal.sync.toPendingUpdate(2500L),
             )
             val contribOpId = queue.enqueueGoalContributionV2(
+                syncScopeKey = SCOPE,
                 entity = contribEntity,
                 updatedGoal = updatedGoalEntity,
                 payloadJson = """{"id":"c-1"}""",
             )
 
-            queue.claimOperation(contribOpId)
+            queue.claimOperation(SCOPE, contribOpId)
 
             val remoteAggregateResponse = GoalContributionSyncRecordDto(
                 contribution = GoalContributionDto(
@@ -352,6 +360,7 @@ class GoalDebtLocalMutationDaoTest {
             )
 
             val ackSuccess = db.localMutationDao().ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = contribOpId,
                 result = OutboxExecutionResult.GoalContributionApplied(remoteAggregateResponse),
                 nowEpochMillis = 3000L,
@@ -359,7 +368,7 @@ class GoalDebtLocalMutationDaoTest {
             assertTrue(ackSuccess)
 
             // Child and Parent are both SYNCED
-            assertNull(db.syncOperationDao().getById(contribOpId))
+            assertNull(db.syncOperationDao().getById(SCOPE, contribOpId))
             val storedContrib = db.goalDao().getContributionById("c-1")
             assertNotNull(storedContrib)
             assertEquals("SYNCED", storedContrib.sync.syncStatus)
@@ -383,13 +392,14 @@ class GoalDebtLocalMutationDaoTest {
             // Debt is OPEN with 50_000L
             val debt = sampleDebtEntity(id = "d-1", amountMinor = 50_000L, status = "OPEN")
             val debtOpId = queue.enqueueDebtV2(
+                syncScopeKey = SCOPE,
                 entity = debt,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"id":"d-1"}""",
             )
 
             // Claim debt CREATE -> IN_FLIGHT
-            queue.claimOperation(debtOpId)
+            queue.claimOperation(SCOPE, debtOpId)
 
             // Payment added locally for full amount 50_000L -> Debt status becomes SETTLED
             val payEntity = sampleDebtPaymentEntity(id = "p-1", debtId = "d-1", amountMinor = 50_000L)
@@ -398,6 +408,7 @@ class GoalDebtLocalMutationDaoTest {
                 sync = debt.sync.toPendingUpdate(2500L),
             )
             val payOpId = queue.enqueueDebtPaymentV2(
+                syncScopeKey = SCOPE,
                 entity = payEntity,
                 updatedDebt = settledDebtEntity,
                 payloadJson = """{"id":"p-1"}""",
@@ -422,6 +433,7 @@ class GoalDebtLocalMutationDaoTest {
             )
 
             val ackSuccess = db.localMutationDao().ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = debtOpId,
                 result = OutboxExecutionResult.DebtApplied(remoteDebtDto),
                 nowEpochMillis = 3000L,
@@ -436,7 +448,7 @@ class GoalDebtLocalMutationDaoTest {
             assertEquals("PENDING_CREATE", storedDebt.sync.syncStatus)
 
             // Payment operation is unblocked and has baseVersion = 1L
-            val storedPayOp = db.syncOperationDao().getById(payOpId)
+            val storedPayOp = db.syncOperationDao().getById(SCOPE, payOpId)
             assertNotNull(storedPayOp)
             assertFalse(storedPayOp.isBlocked)
             assertEquals(1L, storedPayOp.baseVersion)
@@ -466,6 +478,7 @@ class GoalDebtLocalMutationDaoTest {
                 ),
             )
             val deleteOpId = queue.enqueueGoalV2(
+                syncScopeKey = SCOPE,
                 entity = deletedGoal,
                 type = OutboxOperationType.DELETE,
                 payloadJson = """{"id":"g-1"}""",

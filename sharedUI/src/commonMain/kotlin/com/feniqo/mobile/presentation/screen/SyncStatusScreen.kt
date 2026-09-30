@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.semantics
 import com.feniqo.mobile.presentation.component.ConflictAlertCard
 import com.feniqo.mobile.presentation.component.SettingsGroupCard
 import com.feniqo.mobile.presentation.component.SettingsRowItem
@@ -33,6 +34,7 @@ fun SyncStatusScreen(
     pendingChangesCount: Int,
     lastSyncFormatted: String,
     conflictCount: Int,
+    hasLegacyQuarantinedData: Boolean,
     onBack: () -> Unit,
     onRetrySync: () -> Unit,
     onInspectConflict: () -> Unit,
@@ -62,6 +64,13 @@ fun SyncStatusScreen(
                         isOnline = isOnline,
                         isSyncing = isSyncing,
                     )
+                }
+
+                // Karantina Uyarısı (yalnızca hasLegacyQuarantinedData true iken görünür)
+                if (hasLegacyQuarantinedData) {
+                    item {
+                        LegacyQuarantineWarningCard()
+                    }
                 }
 
                 // Sayı ve Zaman Satırları
@@ -138,6 +147,54 @@ fun SyncStatusScreen(
                     Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
                     Text("Yeniden dene", fontWeight = FontWeight.SemiBold)
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Fail-closed tutulan eski karantina kayıtları için genel bilgilendirme kartı.
+ * Herhangi bir mutation aksiyonu içermez ve exact metadata göstermez.
+ */
+@Composable
+fun LegacyQuarantineWarningCard(
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {},
+        shape = RoundedCornerShape(FeniqoRadius.Medium),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(FeniqoSpacing.Large),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Shield,
+                contentDescription = null,
+                tint = Color(0xFFD97706),
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(modifier = Modifier.width(FeniqoSpacing.Medium))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Eski eşitleme verisi korunuyor",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Bazı eski eşitleme kayıtlarının hangi hesaba ait olduğu doğrulanamadı. Kayıtlar silinmedi ve otomatik olarak gönderilmeyecek.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

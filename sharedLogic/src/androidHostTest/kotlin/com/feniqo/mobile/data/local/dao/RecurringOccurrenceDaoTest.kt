@@ -131,9 +131,11 @@ class RecurringOccurrenceDaoTest {
     private fun testOutboxOperation(
         operationId: String = "0123456789abcdef0123456789abcdef",
         transactionId: String = "trx-1",
+        syncScopeKey: String = "USER:11111111-1111-4111-8111-111111111111",
     ): SyncOperationEntity {
         return SyncOperationEntity(
             operationId = operationId,
+            syncScopeKey = syncScopeKey,
             entityTypeCode = "TRANSACTION",
             entityId = transactionId,
             operationTypeCode = "CREATE",
@@ -186,7 +188,7 @@ class RecurringOccurrenceDaoTest {
             assertEquals("2026-08-01", trx.transactionDate)
 
             // Verify Outbox written
-            val op = db.localMutationDao().getOutboxById("a1b2c3d4e5f60718293a4b5c6d7e8f90")
+            val op = db.localMutationDao().getOutboxById("USER:11111111-1111-4111-8111-111111111111", "a1b2c3d4e5f60718293a4b5c6d7e8f90")
             assertNotNull(op)
             assertEquals("TRANSACTION", op.entityTypeCode)
             assertEquals("CREATE", op.operationTypeCode)
@@ -234,7 +236,7 @@ class RecurringOccurrenceDaoTest {
             // Verify trx-2 and second outbox were NOT created
             val trx2 = db.transactionDao().observeByIdAndOwner("trx-2", "user-1").first()
             assertNull(trx2)
-            val op2 = db.localMutationDao().getOutboxById("22222222222222222222222222222222")
+            val op2 = db.localMutationDao().getOutboxById("USER:11111111-1111-4111-8111-111111111111", "22222222222222222222222222222222")
             assertNull(op2)
         } finally {
             db.close()
@@ -264,7 +266,7 @@ class RecurringOccurrenceDaoTest {
             // Verify no transaction or outbox written
             val trx = db.transactionDao().observeByIdAndOwner("trx-stale", "user-1").first()
             assertNull(trx)
-            val op = db.localMutationDao().getOutboxById("33333333333333333333333333333333")
+            val op = db.localMutationDao().getOutboxById("USER:11111111-1111-4111-8111-111111111111", "33333333333333333333333333333333")
             assertNull(op)
             val occ = db.recurringTransactionDao().getOccurrence("rec-1", "2026-09-01")
             assertNull(occ)
@@ -425,7 +427,7 @@ class RecurringOccurrenceDaoTest {
             // Verify no occurrence or outbox added for the recurring transaction
             val occ = db.recurringTransactionDao().getOccurrence("rec-1", "2026-08-01")
             assertNull(occ)
-            val op = db.localMutationDao().getOutboxById("99999999999999999999999999999999")
+            val op = db.localMutationDao().getOutboxById("USER:11111111-1111-4111-8111-111111111111", "99999999999999999999999999999999")
             assertNull(op)
 
             // Verify recurring lastGeneratedDate did NOT advance

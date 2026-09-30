@@ -12,7 +12,8 @@ import com.feniqo.mobile.data.mapper.toEntity
 import com.feniqo.mobile.data.mapper.toPendingDelete
 import com.feniqo.mobile.data.mapper.toPendingUpdate
 import com.feniqo.mobile.data.remote.mapper.toDto
-import com.feniqo.mobile.data.util.RandomHexEntityIdGenerator
+import com.feniqo.mobile.data.sync.SyncScopeKey
+import com.feniqo.mobile.data.util.RandomUuidEntityIdGenerator
 import com.feniqo.mobile.domain.model.AppError
 import com.feniqo.mobile.domain.model.Budget
 import com.feniqo.mobile.domain.model.CopyBudgetsCommand
@@ -45,7 +46,7 @@ class OfflineFirstBudgetRepository(
     private val budgetDao: BudgetDao,
     private val categoryDao: CategoryDao,
     private val offlineWriteQueue: OfflineWriteQueue,
-    private val entityIdGenerator: EntityIdGenerator = RandomHexEntityIdGenerator(),
+    private val entityIdGenerator: EntityIdGenerator = RandomUuidEntityIdGenerator(),
     private val activeWorkspaceScope: ActiveWorkspaceScope = PersonalActiveWorkspaceScope,
     private val nowEpochMillisProvider: () -> Long = { kotlin.time.Clock.System.now().toEpochMilliseconds() },
 ) : BudgetRepository {
@@ -140,8 +141,10 @@ class OfflineFirstBudgetRepository(
                 )
                 val entity = domainBudget.toEntity(newSyncMetadata(now))
                 val payloadJson = json.encodeToString(domainBudget.toDto())
+                val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
 
                 offlineWriteQueue.enqueueBudgetV2(
+                    syncScopeKey = syncScopeKey,
                     entity = entity,
                     type = OutboxOperationType.CREATE,
                     payloadJson = payloadJson,
@@ -168,8 +171,10 @@ class OfflineFirstBudgetRepository(
                     val freshSync = newSyncMetadata(now).copy(deletedAtEpochMillis = null)
                     restoredDomain.toEntity(freshSync) to OutboxOperationType.CREATE
                 }
+                val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
 
                 offlineWriteQueue.enqueueBudgetV2(
+                    syncScopeKey = syncScopeKey,
                     entity = entity,
                     type = outboxType,
                     payloadJson = payloadJson,
@@ -207,8 +212,10 @@ class OfflineFirstBudgetRepository(
             val updatedSync = existing.sync.toPendingUpdate(now)
             val updatedEntity = updatedDomain.toEntity(updatedSync)
             val payloadJson = json.encodeToString(updatedDomain.toDto())
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
 
             offlineWriteQueue.enqueueBudgetV2(
+                syncScopeKey = syncScopeKey,
                 entity = updatedEntity,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = payloadJson,
@@ -236,8 +243,10 @@ class OfflineFirstBudgetRepository(
             val deletedSync = existing.sync.toPendingDelete(now)
             val deletedEntity = existing.copy(sync = deletedSync)
             val payloadJson = json.encodeToString(existing.toDomain().toDto())
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
 
             offlineWriteQueue.enqueueBudgetV2(
+                syncScopeKey = syncScopeKey,
                 entity = deletedEntity,
                 type = OutboxOperationType.DELETE,
                 payloadJson = payloadJson,
@@ -350,7 +359,8 @@ class OfflineFirstBudgetRepository(
             }
 
             if (mutationInputs.isNotEmpty()) {
-                offlineWriteQueue.enqueueBudgetsV2(mutationInputs)
+                val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
+                offlineWriteQueue.enqueueBudgetsV2(syncScopeKey = syncScopeKey, inputs = mutationInputs)
             }
 
             return RepositoryResult.Success(

@@ -24,7 +24,8 @@ class WorkspaceInitialRemoteSync(
     private val remoteSyncDao: RemoteSyncDao,
     private val nowEpochMillisProvider: () -> Long,
 ) {
-    suspend fun pull(): WorkspaceInitialSyncResult {
+    suspend fun pull(syncScopeKey: String): WorkspaceInitialSyncResult {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         val receivedAt = nowEpochMillisProvider()
 
         // 1. Tüm workspace sayfalarını deterministik olarak çek
@@ -47,11 +48,12 @@ class WorkspaceInitialRemoteSync(
 
         // 4. Çekilen kayıtlardan başlangıç cursor'larını üret ve her durumda bootstrap marker ekle
         val cursors = mutableListOf<SyncCursorEntity>()
-        cursors += WorkspaceSyncCursorKeys.bootstrapCompleteEntity(receivedAt)
+        cursors += WorkspaceSyncCursorKeys.bootstrapCompleteEntity(syncScopeKey, receivedAt)
 
         workspaceDtos.lastOrNull()?.let { lastWs ->
             cursors += WorkspaceSyncCursorKeys.workspaceCursorToEntity(
-                RemoteSyncCursor(updatedAt = lastWs.updatedAt, entityId = lastWs.id),
+                syncScopeKey = syncScopeKey,
+                cursor = RemoteSyncCursor(updatedAt = lastWs.updatedAt, entityId = lastWs.id),
             )
         }
 
@@ -60,7 +62,8 @@ class WorkspaceInitialRemoteSync(
         for ((wsId, members) in membersByWs) {
             members.lastOrNull()?.let { lastMember ->
                 cursors += WorkspaceSyncCursorKeys.workspaceMemberCursorToEntity(
-                    WorkspaceMemberSyncCursor(
+                    syncScopeKey = syncScopeKey,
+                    cursor = WorkspaceMemberSyncCursor(
                         updatedAt = lastMember.updatedAt,
                         workspaceId = wsId,
                         userId = lastMember.userId,
@@ -71,6 +74,7 @@ class WorkspaceInitialRemoteSync(
 
         // 5. Tüm fetch ve map işlemleri başarıyla tamamlandıktan sonra Room'a tek ve atomik snapshot olarak uygula
         remoteSyncDao.applyWorkspaceSnapshot(
+            syncScopeKey = syncScopeKey,
             workspaces = workspaceEntities,
             members = memberEntities,
             cursors = cursors,

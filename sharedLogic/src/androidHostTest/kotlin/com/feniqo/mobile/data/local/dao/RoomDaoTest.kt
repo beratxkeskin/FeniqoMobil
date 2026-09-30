@@ -22,6 +22,7 @@ import com.feniqo.mobile.data.remote.mapper.toDto
 import com.feniqo.mobile.data.sync.OutboxExecutionResult
 import com.feniqo.mobile.data.sync.OutboxProcessor
 import com.feniqo.mobile.data.sync.RoomOutboxQueue
+import com.feniqo.mobile.data.sync.SyncScopeKey
 import com.feniqo.mobile.domain.model.Budget
 import com.feniqo.mobile.domain.model.Category
 import com.feniqo.mobile.domain.model.CategoryColor
@@ -68,6 +69,8 @@ import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 class RoomDaoTest {
+
+    private val SCOPE = SyncScopeKey.user(USER_ID.value).rawValue
 
     @Test
     fun profile_insert_if_missing_preserves_existing_local_profile() = runTest {
@@ -970,6 +973,7 @@ class RoomDaoTest {
                 version = 1L,
             )
             val operationId = queue.enqueueTransactionV2(
+                syncScopeKey = SCOPE,
                 entity = local,
                 tags = emptyList(),
                 tagLinks = emptyList(),
@@ -982,16 +986,16 @@ class RoomDaoTest {
                 OutboxExecutionResult.TransactionApplied(remote)
             }
 
-            val failed = processor.processReadyOperations()
+            val failed = processor.processReadyOperations(SCOPE, assertSessionCurrent = {})
             assertEquals(operationId, failed.failedOperationId)
             assertNotNull(database.transactionDao().observeWithTags(local.id).first())
-            assertNotNull(database.localMutationDao().getOutboxById(operationId))
+            assertNotNull(database.localMutationDao().getOutboxById(SCOPE, operationId))
 
             shouldFail = false
             now = 20_000L
-            val retried = processor.processReadyOperations()
+            val retried = processor.processReadyOperations(SCOPE, assertSessionCurrent = {})
             assertEquals(1, retried.succeededCount)
-            assertNull(database.localMutationDao().getOutboxById(operationId))
+            assertNull(database.localMutationDao().getOutboxById(SCOPE, operationId))
             val synced = database.transactionDao().observeWithTags(local.id).first()!!.transaction
             assertEquals(SyncStatus.SYNCED.name, synced.sync.syncStatus)
             assertEquals(1L, synced.sync.version)
@@ -1029,6 +1033,7 @@ class RoomDaoTest {
                 version = 1L,
             )
             val opId = queue.enqueueTransactionV2(
+                syncScopeKey = SCOPE,
                 entity = local,
                 tags = emptyList(),
                 tagLinks = emptyList(),
@@ -1038,18 +1043,20 @@ class RoomDaoTest {
 
             // Sunucudan hata döndüğünü ve operasyonun FAILED olduğunu simüle et
             database.syncOperationDao().markFailed(
+                syncScopeKey = SCOPE,
                 operationId = opId,
                 lastError = "VALIDATION_ERROR: Geçersiz kategori",
                 errorClassification = OutboxErrorClassification.DEFINITIVE_REJECTION.name,
                 nextAttemptAtEpochMillis = now + 60_000L,
                 nowEpochMillis = now,
             )
-            val failedOp = database.localMutationDao().getOutboxById(opId)!!
+            val failedOp = database.localMutationDao().getOutboxById(SCOPE, opId)!!
             assertEquals("FAILED", failedOp.statusCode)
 
             // Kullanıcı bu başarısız yerel kaydı sildiğinde
             val deletedLocal = local.copy(sync = local.sync.toPendingDelete(now))
             val result = database.localMutationDao().mutateTransactionKeepingTagsV2(
+                syncScopeKey = SCOPE,
                 entity = deletedLocal,
                 type = OutboxOperationType.DELETE,
                 payloadJson = "{}",
@@ -1060,7 +1067,7 @@ class RoomDaoTest {
             assertEquals(opId, result.operationId)
 
             // Başarısız outbox kaydı ve yerel entity temizlenmiş olmalı
-            assertNull(database.localMutationDao().getOutboxById(opId))
+            assertNull(database.localMutationDao().getOutboxById(SCOPE, opId))
             assertNull(database.transactionDao().observeWithTags(local.id).first())
         } finally {
             database.close()
@@ -1099,6 +1106,7 @@ class RoomDaoTest {
                 version = 1L,
             )
             val opId1 = queue.enqueueTransactionV2(
+                syncScopeKey = SCOPE,
                 entity = local,
                 tags = emptyList(),
                 tagLinks = emptyList(),
@@ -1108,6 +1116,7 @@ class RoomDaoTest {
 
             // İlk deneme başarısız oldu
             database.syncOperationDao().markFailed(
+                syncScopeKey = SCOPE,
                 operationId = opId1,
                 lastError = "VALIDATION_ERROR: Geçersiz kategori",
                 errorClassification = OutboxErrorClassification.DEFINITIVE_REJECTION.name,
@@ -1122,6 +1131,7 @@ class RoomDaoTest {
 
             val freshOpId = "2".padStart(32, '0')
             val result = database.localMutationDao().mutateTransactionKeepingTagsV2(
+                syncScopeKey = SCOPE,
                 entity = updatedLocal,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = correctedPayload,
@@ -1133,8 +1143,8 @@ class RoomDaoTest {
             assertEquals(freshOpId, result.operationId)
 
             // Eski başarısız işlem silinmiş, yeni işlem temiz PENDING ve unblocked olarak eklenmiş olmalı
-            assertNull(database.localMutationDao().getOutboxById(opId1))
-            val freshOp = database.localMutationDao().getOutboxById(freshOpId)!!
+            assertNull(database.localMutationDao().getOutboxById(SCOPE, opId1))
+            val freshOp = database.localMutationDao().getOutboxById(SCOPE, freshOpId)!!
             assertEquals("PENDING", freshOp.statusCode)
             assertEquals(0, freshOp.attemptCount)
             assertFalse(freshOp.isBlocked)
@@ -1301,6 +1311,7 @@ class RoomDaoTest {
             var sequence = 0
 
             val operationIds = database.localMutationDao().importPersonalBackupV1(
+                syncScopeKey = SCOPE,
                 categoryInputs = listOf(BackupCategoryCreateInputV1(categoryEntity, "{\"id\":\"backup-cat\"}")),
                 transactionInputs = listOf(TransactionCreateInputV2(transactionEntity, payloadJson = "{\"id\":\"backup-tx\"}")),
                 operationIdFactory = { (++sequence).toString(16).padStart(32, '0') },
@@ -1310,7 +1321,7 @@ class RoomDaoTest {
             assertEquals(2, operationIds.size)
             assertNotNull(database.categoryDao().observeById("backup-cat").first())
             assertNotNull(database.transactionDao().observeWithTags("backup-tx").first())
-            assertTrue(operationIds.all { database.localMutationDao().getOutboxById(it) != null })
+            assertTrue(operationIds.all { database.localMutationDao().getOutboxById(SCOPE, it) != null })
         } finally {
             database.close()
         }
@@ -1327,6 +1338,7 @@ class RoomDaoTest {
 
             assertFailsWith<Exception> {
                 database.localMutationDao().importPersonalBackupV1(
+                    syncScopeKey = SCOPE,
                     categoryInputs = listOf(
                         BackupCategoryCreateInputV1(first, "{\"id\":\"rollback-cat-1\"}"),
                         BackupCategoryCreateInputV1(duplicateName, "{\"id\":\"rollback-cat-2\"}"),
@@ -1339,7 +1351,7 @@ class RoomDaoTest {
 
             assertNull(database.categoryDao().observeById("rollback-cat-1").first())
             assertNull(database.categoryDao().observeById("rollback-cat-2").first())
-            assertNull(database.localMutationDao().getOutboxById(duplicateOperationId))
+            assertNull(database.localMutationDao().getOutboxById(SCOPE, duplicateOperationId))
         } finally {
             database.close()
         }
@@ -1552,6 +1564,7 @@ class RoomDaoTest {
                 nowEpochMillisProvider = { nowEpochMillis },
                 operationIdFactory = { "operation-persisted" },
             ).enqueueTransaction(
+                syncScopeKey = SCOPE,
                 entity = transaction().toEntity(SYNC),
                 tags = emptyList(),
                 tagLinks = emptyList(),
@@ -1565,7 +1578,7 @@ class RoomDaoTest {
                     TRANSACTION_ID.value,
                     reopenedDatabase.transactionDao().observeById(TRANSACTION_ID.value).first()?.id,
                 )
-                assertEquals(1, reopenedDatabase.syncOperationDao().observePendingCount().first())
+                assertEquals(1, reopenedDatabase.syncOperationDao().observePendingCount(SCOPE).first())
 
                 val queue = OfflineWriteQueue(
                     mutationDao = reopenedDatabase.localMutationDao(),
@@ -1573,17 +1586,17 @@ class RoomDaoTest {
                     nowEpochMillisProvider = { nowEpochMillis },
                     operationIdFactory = { "unused" },
                 )
-                assertTrue(queue.markInFlight("operation-persisted"))
-                assertTrue(queue.recordFailure("operation-persisted", "ağ bağlantısı yok"))
+                assertTrue(queue.markInFlight(SCOPE, "operation-persisted"))
+                assertTrue(queue.recordFailure(SCOPE, "operation-persisted", "ağ bağlantısı yok"))
 
-                val failed = reopenedDatabase.syncOperationDao().getById("operation-persisted")
+                val failed = reopenedDatabase.syncOperationDao().getById(SCOPE, "operation-persisted")
                 assertEquals(1, failed?.attemptCount)
                 assertEquals("ağ bağlantısı yok", failed?.lastError)
                 assertEquals(25_000L, failed?.nextAttemptAtEpochMillis)
-                assertTrue(queue.getReadyOperations().isEmpty())
+                assertTrue(queue.getReadyOperations(SCOPE).isEmpty())
 
                 nowEpochMillis = 25_000L
-                assertEquals(listOf("operation-persisted"), queue.getReadyOperations().map { it.operationId })
+                assertEquals(listOf("operation-persisted"), queue.getReadyOperations(SCOPE).map { it.operationId })
             } finally {
                 reopenedDatabase.close()
             }
@@ -1602,18 +1615,18 @@ class RoomDaoTest {
                 nowEpochMillisProvider = { 10_000L },
                 operationIdFactory = { "duplicate-operation" },
             )
-            queue.enqueueCategory(category().toEntity(SYNC), OutboxOperationType.CREATE)
+            queue.enqueueCategory(SCOPE, category().toEntity(SYNC), OutboxOperationType.CREATE)
 
             val secondCategory = category().copy(
                 id = EntityId("category-2"),
                 name = "Ulaşım",
             ).toEntity(SYNC)
             assertFailsWith<Exception> {
-                queue.enqueueCategory(secondCategory, OutboxOperationType.CREATE)
+                queue.enqueueCategory(SCOPE, secondCategory, OutboxOperationType.CREATE)
             }
 
             assertNull(database.categoryDao().observeById(secondCategory.id).first())
-            assertEquals(1, database.syncOperationDao().observePendingCount().first())
+            assertEquals(1, database.syncOperationDao().observePendingCount(SCOPE).first())
         } finally {
             database.close()
         }
@@ -1632,7 +1645,7 @@ class RoomDaoTest {
                 operationIdFactory = { "operation-${++operationNumber}" },
             )
             val created = category().toEntity(SYNC)
-            queue.enqueueCategory(created, OutboxOperationType.CREATE)
+            queue.enqueueCategory(SCOPE, created, OutboxOperationType.CREATE)
 
             nowEpochMillis = 2_000L
             val updated = created.copy(
@@ -1643,7 +1656,7 @@ class RoomDaoTest {
                     localUpdatedAtEpochMillis = nowEpochMillis,
                 ),
             )
-            queue.enqueueCategory(updated, OutboxOperationType.UPDATE)
+            queue.enqueueCategory(SCOPE, updated, OutboxOperationType.UPDATE)
 
             nowEpochMillis = 3_000L
             val deleted = updated.copy(
@@ -1653,11 +1666,11 @@ class RoomDaoTest {
                     localUpdatedAtEpochMillis = nowEpochMillis,
                 ),
             )
-            queue.enqueueCategory(deleted, OutboxOperationType.DELETE)
+            queue.enqueueCategory(SCOPE, deleted, OutboxOperationType.DELETE)
 
             assertEquals(
                 listOf("CREATE", "UPDATE", "DELETE"),
-                queue.getReadyOperations().map { it.operationTypeCode },
+                queue.getReadyOperations(SCOPE).map { it.operationTypeCode },
             )
         } finally {
             database.close()
@@ -1682,7 +1695,7 @@ class RoomDaoTest {
                 operationIdFactory = { "op-1" },
             )
             val category = category().toEntity(newSyncMetadata(1_000L).copy(syncStatus = SyncStatus.PENDING_CREATE.name))
-            queue.enqueueCategory(category, OutboxOperationType.CREATE)
+            queue.enqueueCategory(SCOPE, category, OutboxOperationType.CREATE)
 
             assertEquals(1, outboxSyncCalled)
         } finally {
@@ -1739,11 +1752,12 @@ class RoomDaoTest {
         try {
             val dao = database.syncOperationDao()
 
-            assertEquals(0, dao.observePendingCount().first())
-            assertEquals(0, dao.observeFailedCount().first())
+            assertEquals(0, dao.observePendingCount(SCOPE).first())
+            assertEquals(0, dao.observeFailedCount(SCOPE).first())
 
             dao.insert(
                 com.feniqo.mobile.data.local.entity.SyncOperationEntity(
+                    syncScopeKey = SCOPE,
                     operationId = "op-1",
                     entityTypeCode = "CATEGORY",
                     entityId = "cat-1",
@@ -1757,19 +1771,20 @@ class RoomDaoTest {
                     updatedAtEpochMillis = 1_000L,
                 ),
             )
-            assertEquals(1, dao.observePendingCount().first())
-            assertEquals(0, dao.observeFailedCount().first())
+            assertEquals(1, dao.observePendingCount(SCOPE).first())
+            assertEquals(0, dao.observeFailedCount(SCOPE).first())
 
-            dao.claimOperation("op-1", 1_000L)
-            assertEquals(1, dao.observePendingCount().first())
-            assertEquals(0, dao.observeFailedCount().first())
+            dao.claimOperation(SCOPE, "op-1", 1_000L)
+            assertEquals(1, dao.observePendingCount(SCOPE).first())
+            assertEquals(0, dao.observeFailedCount(SCOPE).first())
 
-            dao.markFailed("op-1", "network_error", OutboxErrorClassification.AMBIGUOUS_RESULT.name, 2_000L, 1_500L)
-            assertEquals(1, dao.observePendingCount().first())
-            assertEquals(1, dao.observeFailedCount().first())
+            dao.markFailed(SCOPE, "op-1", "network_error", OutboxErrorClassification.AMBIGUOUS_RESULT.name, 2_000L, 1_500L)
+            assertEquals(1, dao.observePendingCount(SCOPE).first())
+            assertEquals(1, dao.observeFailedCount(SCOPE).first())
 
             dao.insert(
                 com.feniqo.mobile.data.local.entity.SyncOperationEntity(
+                    syncScopeKey = SCOPE,
                     operationId = "op-2",
                     entityTypeCode = "TRANSACTION",
                     entityId = "tx-1",
@@ -1783,17 +1798,17 @@ class RoomDaoTest {
                     updatedAtEpochMillis = 1_000L,
                 ),
             )
-            dao.markFailed("op-2", "timeout", OutboxErrorClassification.AMBIGUOUS_RESULT.name, 2_000L, 1_500L)
-            assertEquals(2, dao.observePendingCount().first())
-            assertEquals(2, dao.observeFailedCount().first())
+            dao.markFailed(SCOPE, "op-2", "timeout", OutboxErrorClassification.AMBIGUOUS_RESULT.name, 2_000L, 1_500L)
+            assertEquals(2, dao.observePendingCount(SCOPE).first())
+            assertEquals(2, dao.observeFailedCount(SCOPE).first())
 
-            dao.retryAllFailed(2_000L)
-            assertEquals(2, dao.observePendingCount().first())
-            assertEquals(0, dao.observeFailedCount().first())
+            dao.retryAllFailed(SCOPE, 2_000L)
+            assertEquals(2, dao.observePendingCount(SCOPE).first())
+            assertEquals(0, dao.observeFailedCount(SCOPE).first())
 
-            dao.deleteCompleted("op-1")
-            assertEquals(1, dao.observePendingCount().first())
-            assertEquals(0, dao.observeFailedCount().first())
+            dao.deleteCompleted(SCOPE, "op-1")
+            assertEquals(1, dao.observePendingCount(SCOPE).first())
+            assertEquals(0, dao.observeFailedCount(SCOPE).first())
         } finally {
             database.close()
         }
@@ -1807,10 +1822,11 @@ class RoomDaoTest {
                 mutationDao = database.localMutationDao(),
                 operationDao = database.syncOperationDao(),
             )
-            assertEquals(0, queue.observeFailedCount().first())
+            assertEquals(0, queue.observeFailedCount(SCOPE).first())
 
             database.syncOperationDao().insert(
                 com.feniqo.mobile.data.local.entity.SyncOperationEntity(
+                    syncScopeKey = SCOPE,
                     operationId = "op-f",
                     entityTypeCode = "CATEGORY",
                     entityId = "cat-f",
@@ -1824,7 +1840,7 @@ class RoomDaoTest {
                     updatedAtEpochMillis = 1_000L,
                 ),
             )
-            assertEquals(1, queue.observeFailedCount().first())
+            assertEquals(1, queue.observeFailedCount(SCOPE).first())
         } finally {
             database.close()
         }
@@ -2104,21 +2120,21 @@ class RoomDaoTest {
             database.transactionDao().upsert(trxDeleted)
 
             // User 1 sees their own active transaction
-            val observed1 = database.transactionDao().observeByIdAndOwner("transaction-1", "user-1").first()
+            val observed1 = database.transactionDao().observeByIdAndOwner("transaction-1", USER_ID.value).first()
             assertEquals("transaction-1", observed1?.id)
 
-            val fetched1 = database.transactionDao().getByIdAndOwner("transaction-1", "user-1")
+            val fetched1 = database.transactionDao().getByIdAndOwner("transaction-1", USER_ID.value)
             assertEquals("transaction-1", fetched1?.id)
 
             // User 1 cannot see user 2's transaction
-            val observedOther = database.transactionDao().observeByIdAndOwner("t2", "user-1").first()
+            val observedOther = database.transactionDao().observeByIdAndOwner("t2", USER_ID.value).first()
             assertNull(observedOther)
 
-            val fetchedOther = database.transactionDao().getByIdAndOwner("t2", "user-1")
+            val fetchedOther = database.transactionDao().getByIdAndOwner("t2", USER_ID.value)
             assertNull(fetchedOther)
 
             // Deleted transaction is not returned
-            val observedDel = database.transactionDao().observeByIdAndOwner("t3", "user-1").first()
+            val observedDel = database.transactionDao().observeByIdAndOwner("t3", USER_ID.value).first()
             assertNull(observedDel)
         } finally {
             database.close()
@@ -2245,6 +2261,7 @@ class RoomDaoTest {
             val tag = Tag(TAG_ID, USER_ID, null, "Yemek", NOW).toEntity(SYNC)
             val link = TransactionTag(transaction().id, TAG_ID).toEntity(NOW.toEpochMilliseconds(), SYNC)
             val createOp = com.feniqo.mobile.data.local.entity.SyncOperationEntity(
+                syncScopeKey = SCOPE,
                 operationId = "op-1",
                 entityTypeCode = "TRANSACTION",
                 entityId = trx.id,
@@ -2292,7 +2309,7 @@ class RoomDaoTest {
             )
 
             // Outbox operations exist
-            val pendingCount = database.syncOperationDao().observePendingCount().first()
+            val pendingCount = database.syncOperationDao().observePendingCount(SCOPE).first()
             assertEquals(3, pendingCount)
         } finally {
             database.close()
@@ -2315,6 +2332,7 @@ class RoomDaoTest {
             val link1 = TransactionTag(EntityId(t1.id), TAG_ID).toEntity(NOW.toEpochMilliseconds(), SYNC)
 
             fun makeOp(opId: String, entityId: String) = com.feniqo.mobile.data.local.entity.SyncOperationEntity(
+                syncScopeKey = SCOPE,
                 operationId = opId,
                 entityTypeCode = "TRANSACTION",
                 entityId = entityId,
@@ -2354,7 +2372,7 @@ class RoomDaoTest {
 
             val activeTrxs = database.transactionDao().observeAll(USER_ID.value, null, null, null, null, null, null, null).first()
             assertEquals(3, activeTrxs.size)
-            assertEquals(3, database.syncOperationDao().observePendingCount().first())
+            assertEquals(3, database.syncOperationDao().observePendingCount(SCOPE).first())
             assertEquals(1, database.transactionDao().observeWithTags(t1.id).first()?.tags?.size)
 
             // 2. Rollback test on error
@@ -2381,7 +2399,7 @@ class RoomDaoTest {
             // Verify full rollback: rollback-trx-1 was NOT saved, and op-rb-1 was NOT enqueued!
             val rollbackTrx = database.transactionDao().getByIdAndOwner("rollback-trx-1", USER_ID.value)
             assertNull(rollbackTrx)
-            assertEquals(3, database.syncOperationDao().observePendingCount().first()) // Still 3 from previous batch
+            assertEquals(3, database.syncOperationDao().observePendingCount(SCOPE).first()) // Still 3 from previous batch
         } finally {
             database.close()
         }
@@ -2415,6 +2433,7 @@ class RoomDaoTest {
             assertEquals(1, database.transactionDao().observeWithTags(t3.id).first()?.tags?.size)
 
             fun makeDelOp(opId: String, entityId: String) = com.feniqo.mobile.data.local.entity.SyncOperationEntity(
+                syncScopeKey = SCOPE,
                 operationId = opId,
                 entityTypeCode = "TRANSACTION",
                 entityId = entityId,
@@ -2449,7 +2468,7 @@ class RoomDaoTest {
 
             val activeTrxs = database.transactionDao().observeAll(USER_ID.value, null, null, null, null, null, null, null).first()
             assertEquals(0, activeTrxs.size) // All 3 are soft-deleted
-            assertEquals(3, database.syncOperationDao().observePendingCount().first())
+            assertEquals(3, database.syncOperationDao().observePendingCount(SCOPE).first())
 
             // Verify tag links are PRESERVED in SQLite cross-ref table!
             val cursor = database.openHelper.readableDatabase.query("SELECT COUNT(*) FROM transaction_tags WHERE transaction_id IN ('del-trx-1', 'del-trx-2', 'del-trx-3')")
@@ -2480,7 +2499,7 @@ class RoomDaoTest {
             val t4AfterRollback = database.transactionDao().getByIdAndOwner(t4.id, USER_ID.value)
             assertNotNull(t4AfterRollback)
             assertNull(t4AfterRollback.sync.deletedAtEpochMillis)
-            assertEquals(3, database.syncOperationDao().observePendingCount().first()) // Still 3, op-del-4 was rolled back
+            assertEquals(3, database.syncOperationDao().observePendingCount(SCOPE).first()) // Still 3, op-del-4 was rolled back
         } finally {
             database.close()
         }
@@ -2770,6 +2789,7 @@ class RoomDaoTest {
 
         // 3. applyInitialSnapshot çağrılıyor
         syncDao.applyInitialSnapshot(
+            syncScopeKey = com.feniqo.mobile.data.sync.SyncScopeKey.forUser(remoteProfile.id),
             profile = remoteProfile,
             categories = listOf(cat.toEntity(newSyncMetadata(1000L, SyncStatus.SYNCED))),
             transactions = listOf(conflictingRemoteTx, newRemoteTx),
@@ -2850,6 +2870,7 @@ class RoomDaoTest {
         )
 
         val testCursor = com.feniqo.mobile.data.local.entity.SyncCursorEntity(
+            syncScopeKey = com.feniqo.mobile.data.sync.SyncScopeKey.forUser(remoteProfile.id),
             entityTypeCode = "TRANSACTION",
             updatedAtEpochMillis = 2000L,
             entityId = "tx-new-independent",
@@ -2857,6 +2878,7 @@ class RoomDaoTest {
 
         // 3. applyInitialSnapshot çağrılıyor
         syncDao.applyInitialSnapshot(
+            syncScopeKey = com.feniqo.mobile.data.sync.SyncScopeKey.forUser(remoteProfile.id),
             profile = remoteProfile,
             categories = listOf(cat.toEntity(newSyncMetadata(1000L, SyncStatus.SYNCED))),
             transactions = listOf(conflictingCreateRemoteTx, resurrectingDeleteRemoteTx, newRemoteTx),
@@ -2884,7 +2906,7 @@ class RoomDaoTest {
         assertEquals("Yeni Bağımsız Uzak İşlem", addedRemote.description)
 
         // Cursor Room'a yazılmış olmalı
-        val storedCursor = db.syncStateDao().getCursor("TRANSACTION")
+        val storedCursor = db.syncStateDao().getCursor(com.feniqo.mobile.data.sync.SyncScopeKey.forUser(remoteProfile.id), "TRANSACTION")
         assertNotNull(storedCursor)
         assertEquals(2000L, storedCursor.updatedAtEpochMillis)
         assertEquals("tx-new-independent", storedCursor.entityId)
@@ -2947,7 +2969,9 @@ class RoomDaoTest {
             sync = newSyncMetadata(2000L, SyncStatus.SYNCED),
         )
 
+        val scope = com.feniqo.mobile.data.sync.SyncScopeKey.forUser(USER_ID.value)
         val wsCursor = com.feniqo.mobile.data.local.entity.SyncCursorEntity(
+            syncScopeKey = scope,
             entityTypeCode = "WORKSPACE",
             updatedAtEpochMillis = 2000L,
             entityId = "ws-2",
@@ -2955,6 +2979,7 @@ class RoomDaoTest {
 
         // 3. applyWorkspaceSnapshot çağrılıyor
         syncDao.applyWorkspaceSnapshot(
+            syncScopeKey = scope,
             workspaces = listOf(conflictingRemoteWs, newRemoteWs),
             members = listOf(conflictingRemoteMember, newRemoteMember),
             cursors = listOf(wsCursor),
@@ -2984,7 +3009,7 @@ class RoomDaoTest {
         assertEquals("SYNCED", addedMember.sync.syncStatus)
 
         // Cursor kaydedilmiş olmalı
-        val storedCursor = db.syncStateDao().getCursor("WORKSPACE")
+        val storedCursor = db.syncStateDao().getCursor(scope, "WORKSPACE")
         assertNotNull(storedCursor)
         assertEquals(2000L, storedCursor.updatedAtEpochMillis)
         assertEquals("ws-2", storedCursor.entityId)
@@ -3015,6 +3040,7 @@ class RoomDaoTest {
         transactionDao.upsert(localTx)
 
         val outboxOp = com.feniqo.mobile.data.local.entity.SyncOperationEntity(
+            syncScopeKey = SCOPE,
             operationId = "op-tx-1",
             entityTypeCode = "TRANSACTION",
             entityId = "tx-conflict-1",
@@ -3060,6 +3086,7 @@ class RoomDaoTest {
         )
 
         val snapshotCursor = com.feniqo.mobile.data.local.entity.SyncCursorEntity(
+            syncScopeKey = com.feniqo.mobile.data.sync.SyncScopeKey.forUser(remoteProfile.id),
             entityTypeCode = "TRANSACTION",
             updatedAtEpochMillis = 2500L,
             entityId = "tx-other-2",
@@ -3067,6 +3094,7 @@ class RoomDaoTest {
 
         // applyInitialSnapshot çağrılıyor:
         syncDao.applyInitialSnapshot(
+            syncScopeKey = com.feniqo.mobile.data.sync.SyncScopeKey.forUser(remoteProfile.id),
             profile = remoteProfile,
             categories = listOf(cat.toEntity(newSyncMetadata(1000L, SyncStatus.SYNCED))),
             transactions = listOf(conflictingRemoteTx, otherRemoteTx),
@@ -3084,12 +3112,13 @@ class RoomDaoTest {
         val insertedOther = syncDao.getTransactionRow("tx-other-2")
         assertNotNull(insertedOther)
         assertEquals("SYNCED", insertedOther.sync.syncStatus)
-        assertEquals(2500L, syncStateDao.getCursor("TRANSACTION")?.updatedAtEpochMillis)
+        assertEquals(2500L, syncStateDao.getCursor(SCOPE, "TRANSACTION")?.updatedAtEpochMillis)
 
         // 3. Outbox Push & Conflict Tespiti:
         // Outbox gönderiminde sunucu versiyon çakışması (baseVersion 1 < serverVersion 2) döner.
         // Sistem iki kopyayı da sync_conflicts tablosuna yazar:
         val conflictEntity = com.feniqo.mobile.data.local.entity.SyncConflictEntity(
+            syncScopeKey = SCOPE,
             entityTypeCode = "TRANSACTION",
             entityId = "tx-conflict-1",
             operationId = "op-tx-1",
@@ -3102,7 +3131,7 @@ class RoomDaoTest {
         syncDao.upsertConflictRow(conflictEntity)
 
         // Doğrulama 2: Çakışma sırasında iki kopya da Room'da korunuyor!
-        val storedConflict = syncStateDao.getConflict("TRANSACTION", "tx-conflict-1")
+        val storedConflict = syncStateDao.getConflict(SCOPE, "TRANSACTION", "tx-conflict-1")
         assertNotNull(storedConflict)
         assertTrue(storedConflict.localPayloadJson.contains("Yerel Bekleyen Açıklama"))
         assertTrue(storedConflict.remotePayloadJson.contains("Sunucudaki Yeni Açıklama"))
@@ -3111,7 +3140,7 @@ class RoomDaoTest {
 
         // 4. Çakışma Çözümü (KEEP_REMOTE):
         // Kullanıcı uzaktaki kopyayı seçtiğinde:
-        syncDao.resolveTransactionKeepRemote(conflictingRemoteTx)
+        syncDao.resolveTransactionKeepRemote(SCOPE, conflictingRemoteTx)
 
         // Doğrulama 3: Çözüm sonrası yerel kayıt uzaktaki versiyonla güncellendi ve conflict silindi:
         val resolvedTx = syncDao.getTransactionRow("tx-conflict-1")
@@ -3120,8 +3149,8 @@ class RoomDaoTest {
         assertEquals("Sunucudaki Yeni Açıklama", resolvedTx.description)
         assertEquals(25_000L, resolvedTx.amountMinor)
         assertEquals(2L, resolvedTx.sync.version)
-        assertNull(syncStateDao.getConflict("TRANSACTION", "tx-conflict-1"))
-        assertNull(opDao.getById("op-tx-1")) // Outbox operasyonu silindi
+        assertNull(syncStateDao.getConflict(SCOPE, "TRANSACTION", "tx-conflict-1"))
+        assertNull(opDao.getById(SCOPE, "op-tx-1")) // Outbox operasyonu silindi
 
         // 5. Sonraki Pull Adımı:
         // Cursor 2500L'de kalmıştı. Sunucudan 3000L zaman damgalı yeni bir tx-3 geldiğinde:
@@ -3131,17 +3160,18 @@ class RoomDaoTest {
             sync = newSyncMetadata(3000L, SyncStatus.SYNCED).copy(version = 1L),
         )
         val advancedCursor = com.feniqo.mobile.data.local.entity.SyncCursorEntity(
+            syncScopeKey = SCOPE,
             entityTypeCode = "TRANSACTION",
             updatedAtEpochMillis = 3000L,
             entityId = "tx-future-3",
         )
-        syncDao.applyTransactionPull(futureRemoteTx, advancedCursor)
+        syncDao.applyTransactionPull(SCOPE, futureRemoteTx, advancedCursor)
 
         // Doğrulama 4: Yeni işlem sorunsuz uygulandı ve hiçbir kayıt kaçırılmadı:
         val insertedFuture = syncDao.getTransactionRow("tx-future-3")
         assertNotNull(insertedFuture)
         assertEquals("Gelecekteki Yeni İşlem", insertedFuture.description)
-        assertEquals(3000L, syncStateDao.getCursor("TRANSACTION")?.updatedAtEpochMillis)
+        assertEquals(3000L, syncStateDao.getCursor(SCOPE, "TRANSACTION")?.updatedAtEpochMillis)
 
         db.close()
     }
@@ -3164,6 +3194,7 @@ class RoomDaoTest {
 
         // 1. İlk CREATE işlemi DEFINITIVE_REJECTION ile FAILED durumda kaydedilir
         mutationDao.mutateTransactionV2(
+            syncScopeKey = SCOPE,
             entity = initialTx,
             tags = emptyList(),
             tagLinks = emptyList(),
@@ -3173,6 +3204,7 @@ class RoomDaoTest {
             nowEpochMillis = 1000L,
         )
         opDao.markFailed(
+            syncScopeKey = SCOPE,
             operationId = oldOpId,
             lastError = "sync_operation_failed",
             errorClassification = OutboxErrorClassification.DEFINITIVE_REJECTION.name,
@@ -3180,7 +3212,7 @@ class RoomDaoTest {
             nowEpochMillis = 1500L,
         )
 
-        val failedOp = opDao.getById(oldOpId)
+        val failedOp = opDao.getById(SCOPE, oldOpId)
         assertNotNull(failedOp)
         assertTrue(failedOp.isDefinitiveRejection())
 
@@ -3188,6 +3220,7 @@ class RoomDaoTest {
         val newOpId = "22222222222222222222222222222222"
         val updatedTx = initialTx.copy(description = "Düzeltilmiş İşlem")
         val result = mutationDao.mutateTransactionV2(
+            syncScopeKey = SCOPE,
             entity = updatedTx,
             tags = emptyList(),
             tagLinks = emptyList(),
@@ -3200,9 +3233,9 @@ class RoomDaoTest {
         // Doğrulama: Eski operasyon kaldırıldı, yeni operation_id ile temiz CREATE oluştu
         assertEquals(newOpId, result.operationId)
         assertEquals(V2EnqueueDecision.INSERTED, result.decision)
-        assertNull(opDao.getById(oldOpId)) // Eski operasyon silindi
+        assertNull(opDao.getById(SCOPE, oldOpId)) // Eski operasyon silindi
 
-        val freshCreate = opDao.getById(newOpId)
+        val freshCreate = opDao.getById(SCOPE, newOpId)
         assertNotNull(freshCreate)
         assertEquals("CREATE", freshCreate.operationTypeCode)
         assertNull(freshCreate.predecessorOperationId)
@@ -3232,6 +3265,7 @@ class RoomDaoTest {
 
         // 1. CREATE işlemi DEFINITIVE_REJECTION ile FAILED durumda
         mutationDao.mutateTransactionV2(
+            syncScopeKey = SCOPE,
             entity = initialTx,
             tags = emptyList(),
             tagLinks = emptyList(),
@@ -3241,6 +3275,7 @@ class RoomDaoTest {
             nowEpochMillis = 1000L,
         )
         opDao.markFailed(
+            syncScopeKey = SCOPE,
             operationId = opId,
             lastError = "sync_operation_failed",
             errorClassification = OutboxErrorClassification.DEFINITIVE_REJECTION.name,
@@ -3250,6 +3285,7 @@ class RoomDaoTest {
 
         // 2. Kullanıcı siler (DELETE)
         val result = mutationDao.mutateTransactionV2(
+            syncScopeKey = SCOPE,
             entity = initialTx,
             tags = emptyList(),
             tagLinks = emptyList(),
@@ -3262,7 +3298,7 @@ class RoomDaoTest {
         // Doğrulama: Güvenli yerel HARD_DELETE gerçekleşti
         assertEquals(opId, result.operationId)
         assertEquals(V2EnqueueDecision.HARD_DELETED, result.decision)
-        assertNull(opDao.getById(opId))
+        assertNull(opDao.getById(SCOPE, opId))
         assertNull(db.remoteSyncDao().getTransactionRow(txId))
 
         db.close()
@@ -3286,15 +3322,17 @@ class RoomDaoTest {
 
         // 1. CREATE işlemi timeout/stale sonrası AMBIGUOUS_RESULT ile FAILED durumda
         mutationDao.mutateTransactionV2(
+            syncScopeKey = SCOPE,
             entity = initialTx,
             tags = emptyList(),
             tagLinks = emptyList(),
             type = OutboxOperationType.CREATE,
-            payloadJson = "{\"amount\":1000}",
+            payloadJson = "{\"amount\":100}",
             operationIdFactory = { originalCreateOpId },
             nowEpochMillis = 1000L,
         )
         opDao.markFailed(
+            syncScopeKey = SCOPE,
             operationId = originalCreateOpId,
             lastError = "sync_operation_failed",
             errorClassification = OutboxErrorClassification.AMBIGUOUS_RESULT.name,
@@ -3302,7 +3340,7 @@ class RoomDaoTest {
             nowEpochMillis = 1500L,
         )
 
-        val ambigOp = opDao.getById(originalCreateOpId)
+        val ambigOp = opDao.getById(SCOPE, originalCreateOpId)
         assertNotNull(ambigOp)
         assertTrue(ambigOp.isAmbiguousResult())
 
@@ -3310,6 +3348,7 @@ class RoomDaoTest {
         val successorUpdateOpId = "66666666666666666666666666666666"
         val updatedTx = initialTx.copy(description = "Belirsiz Sonrası Güncelleme")
         val result = mutationDao.mutateTransactionV2(
+            syncScopeKey = SCOPE,
             entity = updatedTx,
             tags = emptyList(),
             tagLinks = emptyList(),
@@ -3322,13 +3361,13 @@ class RoomDaoTest {
         // Doğrulama:
         // - Yeni bir CREATE üretilmedi!
         // - Eski CREATE silinmedi veya payload'ı değiştirilmedi!
-        val preservedCreate = opDao.getById(originalCreateOpId)
+        val preservedCreate = opDao.getById(SCOPE, originalCreateOpId)
         assertNotNull(preservedCreate)
         assertEquals("CREATE", preservedCreate.operationTypeCode)
-        assertEquals("{\"amount\":1000}", preservedCreate.payloadJson)
+        assertEquals("{\"amount\":100}", preservedCreate.payloadJson)
 
         // - Successor UPDATE olarak zincirlendi ve bloklandı!
-        val successor = opDao.getById(successorUpdateOpId)
+        val successor = opDao.getById(SCOPE, successorUpdateOpId)
         assertNotNull(successor)
         assertEquals("UPDATE", successor.operationTypeCode)
         assertEquals(originalCreateOpId, successor.predecessorOperationId)
@@ -3479,6 +3518,7 @@ class RoomDaoTest {
 
         // 1. CREATE kuyruğa yazılır (gerçek immutable DTO payload snapshot ile)
         mutationDao.mutateTransactionV2(
+            syncScopeKey = SCOPE,
             entity = initialTx,
             tags = emptyList(),
             tagLinks = emptyList(),
@@ -3490,11 +3530,11 @@ class RoomDaoTest {
 
         // 2. İlk gönderimde uzak sunucu kaydı uygular fakat response decode / ACK kaybı simüle edilir:
         fakeRemote.simulateAckLossOnReturn = true
-        val run1 = outboxProcessor.processReadyOperations()
+        val run1 = outboxProcessor.processReadyOperations(SCOPE, assertSessionCurrent = {})
         assertEquals(opId, run1.failedOperationId)
 
         // Yerel işlem FAILED ve AMBIGUOUS_RESULT olur:
-        val failedOp = opDao.getById(opId)
+        val failedOp = opDao.getById(SCOPE, opId)
         assertNotNull(failedOp)
         assertEquals("FAILED", failedOp.statusCode)
         assertEquals(OutboxErrorClassification.AMBIGUOUS_RESULT.name, failedOp.errorClassification)
@@ -3510,9 +3550,9 @@ class RoomDaoTest {
         assertTrue(fakeRemote.remoteReceipts.containsKey(opId))
 
         // 3. Ağ geri gelip operasyon aynı operation_id ile replay edildiğinde:
-        opDao.retryAllFailed(1400L)
+        opDao.retryAllFailed(SCOPE, 1400L)
         fakeRemote.simulateAckLossOnReturn = false
-        val run2 = outboxProcessor.processReadyOperations()
+        val run2 = outboxProcessor.processReadyOperations(SCOPE, assertSessionCurrent = {})
         assertEquals(1, run2.succeededCount)
         kotlin.test.assertNull(run2.failedOperationId)
 
@@ -3523,9 +3563,9 @@ class RoomDaoTest {
         assertEquals(1, fakeRemote.remoteReceipts.size)
 
         // - Yerel outbox işlemi ACK sonrası başarıyla tamamlandı (temizlendi):
-        val remainingOp = opDao.getById(opId)
+        val remainingOp = opDao.getById(SCOPE, opId)
         kotlin.test.assertNull(remainingOp)
-        assertEquals(0, opDao.observePendingCount().first())
+        assertEquals(0, opDao.observePendingCount(SCOPE).first())
 
         db.close()
     }
@@ -3556,6 +3596,7 @@ class RoomDaoTest {
 
         // 1. CREATE kuyruğa eklenir ve sunucuya gönderilir, ACK kaybı yaşanır:
         mutationDao.mutateTransactionV2(
+            syncScopeKey = SCOPE,
             entity = initialTx,
             tags = emptyList(),
             tagLinks = emptyList(),
@@ -3565,9 +3606,9 @@ class RoomDaoTest {
             nowEpochMillis = 1000L,
         )
         fakeRemote.simulateAckLossOnReturn = true
-        outboxProcessor.processReadyOperations()
+        outboxProcessor.processReadyOperations(SCOPE, assertSessionCurrent = {})
 
-        val failedCreate = opDao.getById(originalCreateOpId)
+        val failedCreate = opDao.getById(SCOPE, originalCreateOpId)
         assertNotNull(failedCreate)
         assertEquals("FAILED", failedCreate.statusCode)
         assertEquals(OutboxErrorClassification.AMBIGUOUS_RESULT.name, failedCreate.errorClassification)
@@ -3589,6 +3630,7 @@ class RoomDaoTest {
             )
         )
         mutationDao.mutateTransactionV2(
+            syncScopeKey = SCOPE,
             entity = deletedTx,
             tags = emptyList(),
             tagLinks = emptyList(),
@@ -3599,8 +3641,8 @@ class RoomDaoTest {
         )
 
         // Yerel HARD_DELETE yapılmadı, CREATE korundu ve ardıl DELETE bloklu eklendi:
-        assertNotNull(opDao.getById(originalCreateOpId))
-        val successorDelete = opDao.getById(successorDeleteOpId)
+        assertNotNull(opDao.getById(SCOPE, originalCreateOpId))
+        val successorDelete = opDao.getById(SCOPE, successorDeleteOpId)
         assertNotNull(successorDelete)
         assertEquals("DELETE", successorDelete.operationTypeCode)
         assertEquals(originalCreateOpId, successorDelete.predecessorOperationId)
@@ -3608,19 +3650,19 @@ class RoomDaoTest {
 
         // 3. Ağ geri gelir: CREATE replay edilir ve ACK alınır:
         fakeRemote.simulateAckLossOnReturn = false
-        opDao.retryAllFailed(2600L)
-        val runReplay = outboxProcessor.processReadyOperations()
+        opDao.retryAllFailed(SCOPE, 2600L)
+        val runReplay = outboxProcessor.processReadyOperations(SCOPE, assertSessionCurrent = {})
         assertEquals(1, runReplay.succeededCount)
 
         // CREATE ackV2Execution ile tamamlandı ve ardıl DELETE unblock edildi:
-        kotlin.test.assertNull(opDao.getById(originalCreateOpId))
-        val unblockedDelete = opDao.getById(successorDeleteOpId)
+        kotlin.test.assertNull(opDao.getById(SCOPE, originalCreateOpId))
+        val unblockedDelete = opDao.getById(SCOPE, successorDeleteOpId)
         assertNotNull(unblockedDelete)
         kotlin.test.assertFalse(unblockedDelete.isBlocked)
         assertEquals(1L, unblockedDelete.baseVersion)
 
         // 4. Artık bloksuz olan ardıl DELETE gerçek uzak servis üzerinde çalıştırılır:
-        val runDelete = outboxProcessor.processReadyOperations()
+        val runDelete = outboxProcessor.processReadyOperations(SCOPE, assertSessionCurrent = {})
         assertEquals(1, runDelete.succeededCount)
 
         // 5. Kesin Doğrulama:
@@ -3632,8 +3674,8 @@ class RoomDaoTest {
 
         // - Uzakta zombi kayıt kalmadı!
         // - Yerel outbox tamamen temizlendi!
-        kotlin.test.assertNull(opDao.getById(successorDeleteOpId))
-        assertEquals(0, opDao.observePendingCount().first())
+        kotlin.test.assertNull(opDao.getById(SCOPE, successorDeleteOpId))
+        assertEquals(0, opDao.observePendingCount(SCOPE).first())
 
         db.close()
     }
@@ -3658,6 +3700,7 @@ class RoomDaoTest {
 
         // op1 (CREATE)
         mutationDao.mutateTransactionV2(
+            syncScopeKey = SCOPE,
             entity = initialTx,
             tags = emptyList(),
             tagLinks = emptyList(),
@@ -3667,10 +3710,11 @@ class RoomDaoTest {
             nowEpochMillis = 1000L,
         )
         // op1 ambiguous failure
-        opDao.markFailed(op1, "error", OutboxErrorClassification.AMBIGUOUS_RESULT.name, 2000L, 1100L)
+        opDao.markFailed(SCOPE, op1, "error", OutboxErrorClassification.AMBIGUOUS_RESULT.name, 2000L, 1100L)
 
         // op2 (UPDATE successor, op1'e bağlı ve bloklu olarak eklenir)
         mutationDao.mutateTransactionV2(
+            syncScopeKey = SCOPE,
             entity = initialTx.copy(description = "Güncelleme 1"),
             tags = emptyList(),
             tagLinks = emptyList(),
@@ -3680,27 +3724,28 @@ class RoomDaoTest {
             nowEpochMillis = 1200L,
         )
 
-        val entityOp1 = opDao.getById(op1)
-        val entityOp2Blocked = opDao.getById(op2)
+        val entityOp1 = opDao.getById(SCOPE, op1)
+        val entityOp2Blocked = opDao.getById(SCOPE, op2)
         assertNotNull(entityOp1)
         assertNotNull(entityOp2Blocked)
         assertEquals(op1, entityOp2Blocked.predecessorOperationId)
         assertTrue(entityOp2Blocked.isBlocked)
 
         // op1 uzak sunucuda uzlaştırılıp/replay edilip tamamlandığında ardılı op2 unblock edilir:
-        val unblockCount = opDao.unblockSuccessor(op2, op1, appliedVersion = 1L, nowEpochMillis = 2000L)
+        val unblockCount = opDao.unblockSuccessor(SCOPE, op2, op1, appliedVersion = 1L, nowEpochMillis = 2000L)
         assertEquals(1, unblockCount)
-        val entityOp2Unblocked = opDao.getById(op2)
+        val entityOp2Unblocked = opDao.getById(SCOPE, op2)
         assertNotNull(entityOp2Unblocked)
         assertFalse(entityOp2Unblocked.isBlocked)
         assertEquals(1L, entityOp2Unblocked.baseVersion)
 
         // op2 işleme alınır (IN_FLIGHT)
-        val claimed = opDao.claimOperation(op2, 2100L)
+        val claimed = opDao.claimOperation(SCOPE, op2, 2100L)
         assertEquals(1, claimed)
 
         // op3 (UPDATE successor of op2, işlenmekte olan op2'ye zincirlenir)
         mutationDao.mutateTransactionV2(
+            syncScopeKey = SCOPE,
             entity = initialTx.copy(description = "Güncelleme 2"),
             tags = emptyList(),
             tagLinks = emptyList(),
@@ -3710,7 +3755,7 @@ class RoomDaoTest {
             nowEpochMillis = 2200L,
         )
 
-        val entityOp3 = opDao.getById(op3)
+        val entityOp3 = opDao.getById(SCOPE, op3)
         assertNotNull(entityOp3)
         assertEquals(op2, entityOp3.predecessorOperationId)
         assertTrue(entityOp3.isBlocked)
@@ -3735,6 +3780,7 @@ class RoomDaoTest {
 
         val tx1 = transaction().toEntity(newSyncMetadata(1000L, SyncStatus.PENDING_CREATE)).copy(id = "tx-restart-1")
         mutationDao1.mutateTransactionV2(
+            syncScopeKey = SCOPE,
             entity = tx1,
             tags = emptyList(),
             tagLinks = emptyList(),
@@ -3743,10 +3789,11 @@ class RoomDaoTest {
             operationIdFactory = { opId1 },
             nowEpochMillis = 1000L,
         )
-        opDao1.markFailed(opId1, "err", OutboxErrorClassification.DEFINITIVE_REJECTION.name, 2000L, 1100L)
+        opDao1.markFailed(SCOPE, opId1, "err", OutboxErrorClassification.DEFINITIVE_REJECTION.name, 2000L, 1100L)
 
         val tx2 = transaction().toEntity(newSyncMetadata(1000L, SyncStatus.PENDING_CREATE)).copy(id = "tx-restart-2")
         mutationDao1.mutateTransactionV2(
+            syncScopeKey = SCOPE,
             entity = tx2,
             tags = emptyList(),
             tagLinks = emptyList(),
@@ -3755,7 +3802,7 @@ class RoomDaoTest {
             operationIdFactory = { opId2 },
             nowEpochMillis = 1200L,
         )
-        opDao1.markFailed(opId2, "err", OutboxErrorClassification.AMBIGUOUS_RESULT.name, 2000L, 1300L)
+        opDao1.markFailed(SCOPE, opId2, "err", OutboxErrorClassification.AMBIGUOUS_RESULT.name, 2000L, 1300L)
 
         db1.close()
 
@@ -3763,8 +3810,8 @@ class RoomDaoTest {
         val db2 = persistentDatabase(context, dbName)
         val opDao2 = db2.syncOperationDao()
 
-        val reloadedOp1 = opDao2.getById(opId1)
-        val reloadedOp2 = opDao2.getById(opId2)
+        val reloadedOp1 = opDao2.getById(SCOPE, opId1)
+        val reloadedOp2 = opDao2.getById(SCOPE, opId2)
 
         assertNotNull(reloadedOp1)
         assertNotNull(reloadedOp2)
@@ -3782,7 +3829,7 @@ class RoomDaoTest {
     }
 
     private companion object {
-        val USER_ID = EntityId("user-1")
+        val USER_ID = EntityId("11111111-1111-4111-8111-111111111111")
         val CATEGORY_ID = EntityId("category-1")
         val TRANSACTION_ID = EntityId("transaction-1")
         val TAG_ID = EntityId("tag-1")

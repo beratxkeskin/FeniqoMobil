@@ -98,7 +98,7 @@ class SubscriptionV2OutboxExecutorTest {
         val writer = RecordingSubscriptionWriter()
         val executor = V2OutboxOperationExecutor(writer) { 1000L }
 
-        val snapshotJson = subscriptionSnapshotJson(id = "different-sub-id", version = null)
+        val snapshotJson = subscriptionSnapshotJson(id = "99999999-9999-4999-8999-999999999999", version = null)
         val op = subscriptionOperation(
             operationType = "CREATE",
             baseVersion = null,
@@ -215,15 +215,16 @@ class SubscriptionV2OutboxExecutorTest {
 
     private companion object {
         const val OP_ID = "0123456789abcdef0123456789abcdef"
-        const val SUB_ID = "sub-uuid-1"
-        const val USER_ID = "usr-uuid-1"
-        const val CAT_ID = "cat-uuid-1"
+        const val SUB_ID = "11111111-1111-4111-8111-111111111111"
+        const val USER_ID = "fdbd49aa-640a-4ec5-9f1a-f348a949034c"
+        const val CAT_ID = "22222222-2222-4222-8222-222222222222"
 
         fun subscriptionOperation(
             operationType: String,
             baseVersion: Long?,
             payloadJson: String?,
         ): SyncOperationEntity = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = OP_ID,
             entityTypeCode = "SUBSCRIPTION",
             entityId = SUB_ID,

@@ -44,7 +44,7 @@ class OfflineFirstWorkspaceRepositoryJoinTest {
 
     private class FakeAuthRepository(
         session: AuthSession? = AuthSession(
-            userId = EntityId("user-joiner"),
+            userId = EntityId("22222222-2222-4222-8222-222222222222"),
             email = "joiner@example.com",
             expiresAt = Instant.fromEpochMilliseconds(2000000000000L),
         ),
@@ -55,7 +55,7 @@ class OfflineFirstWorkspaceRepositoryJoinTest {
         override fun observeCurrentProfile(): Flow<UserProfile?> = MutableStateFlow(null)
         override suspend fun signIn(email: String, password: String): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
         override suspend fun signUp(email: String, password: String, fullName: String?): RepositoryResult<EntityId> =
-            RepositoryResult.Success(EntityId("user-joiner"))
+            RepositoryResult.Success(EntityId("22222222-2222-4222-8222-222222222222"))
         override suspend fun refreshSession(): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
         override suspend fun signOut(): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
 
@@ -83,7 +83,7 @@ class OfflineFirstWorkspaceRepositoryJoinTest {
 
     private fun sampleRedeemResult(
         workspaceId: String = "ws-target-1",
-        userId: String = "user-joiner",
+        userId: String = "22222222-2222-4222-8222-222222222222",
         role: String = "EDITOR",
         version: Long = 1L,
         deletedAt: String? = null,
@@ -93,7 +93,7 @@ class OfflineFirstWorkspaceRepositoryJoinTest {
             id = workspaceId,
             name = "Davetli Çalışma Alanı",
             normalizedName = "davetli calisma alani",
-            ownerId = "user-owner",
+            ownerId = "11111111-1111-4111-8111-111111111111",
             typeCode = "shared",
             currencyCode = "TRY",
             description = "Ortak çalışma alanı",
@@ -159,7 +159,7 @@ class OfflineFirstWorkspaceRepositoryJoinTest {
         try {
             val authRepo = FakeAuthRepository()
             val remote = FakeWorkspaceCoreRemoteDataSource {
-                sampleRedeemResult(workspaceId = "ws-123", userId = "user-joiner")
+                sampleRedeemResult(workspaceId = "ws-123", userId = "22222222-2222-4222-8222-222222222222")
             }
             val repo = createRepository(database, authRepo, remote)
 
@@ -177,14 +177,14 @@ class OfflineFirstWorkspaceRepositoryJoinTest {
             assertEquals(SyncStatus.SYNCED.name, ws.sync.syncStatus)
             assertEquals(1L, ws.sync.version)
 
-            val member = database.remoteSyncDao().getWorkspaceMemberRow("ws-123", "user-joiner")
+            val member = database.remoteSyncDao().getWorkspaceMemberRow("ws-123", "22222222-2222-4222-8222-222222222222")
             assertNotNull(member)
             assertEquals("EDITOR", member.roleCode)
             assertEquals(SyncStatus.SYNCED.name, member.sync.syncStatus)
             assertEquals(1L, member.sync.version)
 
             // Kesin kural: V2 outbox operasyonu ASLA üretilmemeli
-            val pendingOps = database.syncOperationDao().getReadyOperations(nowEpochMillis = fixedNow + 10000L, limit = 100)
+            val pendingOps = database.syncOperationDao().getReadyOperations(syncScopeKey = "USER:user-joiner", nowEpochMillis = fixedNow + 10000L, limit = 100)
             assertTrue(pendingOps.isEmpty(), "Redeem sonrası hiçbir outbox işlemi oluşturulmamalıdır.")
         } finally {
             database.close()
@@ -197,7 +197,7 @@ class OfflineFirstWorkspaceRepositoryJoinTest {
         try {
             val authRepo = FakeAuthRepository()
             val remote = FakeWorkspaceCoreRemoteDataSource {
-                sampleRedeemResult(workspaceId = "ws-idempotent", userId = "user-joiner", version = 2L)
+                sampleRedeemResult(workspaceId = "ws-idempotent", userId = "22222222-2222-4222-8222-222222222222", version = 2L)
             }
             val repo = createRepository(database, authRepo, remote)
 
@@ -213,7 +213,7 @@ class OfflineFirstWorkspaceRepositoryJoinTest {
             assertEquals(1, members.size, "Tek kullanıcı için birden fazla member kaydı oluşmamalıdır.")
             assertEquals(2L, members.first().sync.version)
 
-            val pendingOps = database.syncOperationDao().getReadyOperations(nowEpochMillis = fixedNow + 10000L, limit = 100)
+            val pendingOps = database.syncOperationDao().getReadyOperations(syncScopeKey = "USER:user-joiner", nowEpochMillis = fixedNow + 10000L, limit = 100)
             assertTrue(pendingOps.isEmpty(), "İdempotent redeem outbox üretmemelidir.")
         } finally {
             database.close()
@@ -231,7 +231,7 @@ class OfflineFirstWorkspaceRepositoryJoinTest {
                     id = "ws-revive",
                     name = "Eski Alan",
                     normalizedName = "eski alan",
-                    ownerId = "user-owner",
+                    ownerId = "11111111-1111-4111-8111-111111111111",
                     typeCode = "shared",
                     currencyCode = "TRY",
                     description = null,
@@ -251,7 +251,7 @@ class OfflineFirstWorkspaceRepositoryJoinTest {
                 listOf(
                     WorkspaceMemberEntity(
                         workspaceId = "ws-revive",
-                        userId = "user-joiner",
+                        userId = "22222222-2222-4222-8222-222222222222",
                         roleCode = "VIEWER",
                         joinedAtEpochMillis = fixedNow - 100000L,
                         sync = SyncMetadata(
@@ -268,20 +268,20 @@ class OfflineFirstWorkspaceRepositoryJoinTest {
             )
 
             val remote = FakeWorkspaceCoreRemoteDataSource {
-                sampleRedeemResult(workspaceId = "ws-revive", userId = "user-joiner", role = "EDITOR", version = 2L, deletedAt = null)
+                sampleRedeemResult(workspaceId = "ws-revive", userId = "22222222-2222-4222-8222-222222222222", role = "EDITOR", version = 2L, deletedAt = null)
             }
             val repo = createRepository(database, authRepo, remote)
 
             val result = repo.join(WorkspaceInviteCode("REVIVE-TOKEN"))
             assertIs<RepositoryResult.Success<EntityId>>(result)
 
-            val member = database.remoteSyncDao().getWorkspaceMemberRow("ws-revive", "user-joiner")
+            val member = database.remoteSyncDao().getWorkspaceMemberRow("ws-revive", "22222222-2222-4222-8222-222222222222")
             assertNotNull(member)
             assertEquals("EDITOR", member.roleCode)
             assertNull(member.sync.deletedAtEpochMillis, "Üyelik canlandırılmalı ve deletedAt null olmalıdır.")
             assertEquals(2L, member.sync.version)
 
-            val pendingOps = database.syncOperationDao().getReadyOperations(nowEpochMillis = fixedNow + 10000L, limit = 100)
+            val pendingOps = database.syncOperationDao().getReadyOperations(syncScopeKey = "USER:user-joiner", nowEpochMillis = fixedNow + 10000L, limit = 100)
             assertTrue(pendingOps.isEmpty(), "Canlandırma işlemi outbox üretmemelidir.")
         } finally {
             database.close()
@@ -331,10 +331,10 @@ class OfflineFirstWorkspaceRepositoryJoinTest {
             val authRepo = FakeAuthRepository()
             val remote = FakeWorkspaceCoreRemoteDataSource {
                 // Member ve Workspace ID uyuşmazlığı Room transaction'ında require() hatası tetikler
-                sampleRedeemResult(workspaceId = "ws-main", userId = "user-joiner").copy(
+                sampleRedeemResult(workspaceId = "ws-main", userId = "22222222-2222-4222-8222-222222222222").copy(
                     member = WorkspaceMemberDto(
                         workspaceId = "ws-mismatch",
-                        userId = "user-joiner",
+                        userId = "22222222-2222-4222-8222-222222222222",
                         roleCode = "EDITOR",
                         joinedAt = "2026-09-08T10:00:00Z",
                         updatedAt = "2026-09-08T10:00:00Z",
@@ -349,8 +349,8 @@ class OfflineFirstWorkspaceRepositoryJoinTest {
 
             // Transaction rollback: Yerelde ne ws-main ne de member kalmalıdır
             assertNull(database.workspaceDao().getWorkspaceById("ws-main"))
-            assertNull(database.remoteSyncDao().getWorkspaceMemberRow("ws-main", "user-joiner"))
-            assertNull(database.remoteSyncDao().getWorkspaceMemberRow("ws-mismatch", "user-joiner"))
+            assertNull(database.remoteSyncDao().getWorkspaceMemberRow("ws-main", "22222222-2222-4222-8222-222222222222"))
+            assertNull(database.remoteSyncDao().getWorkspaceMemberRow("ws-mismatch", "22222222-2222-4222-8222-222222222222"))
         } finally {
             database.close()
         }
@@ -363,7 +363,7 @@ class OfflineFirstWorkspaceRepositoryJoinTest {
             val authRepo = FakeAuthRepository()
             val secretToken = "SECRET-TOKEN-999-XYZ"
             val remote = FakeWorkspaceCoreRemoteDataSource {
-                sampleRedeemResult(workspaceId = "ws-secure", userId = "user-joiner")
+                sampleRedeemResult(workspaceId = "ws-secure", userId = "22222222-2222-4222-8222-222222222222")
             }
             val repo = createRepository(database, authRepo, remote)
 
@@ -375,7 +375,7 @@ class OfflineFirstWorkspaceRepositoryJoinTest {
             assertFalse(ws.name.contains(secretToken))
             assertFalse(ws.description?.contains(secretToken) == true)
 
-            val ops = database.syncOperationDao().getReadyOperations(nowEpochMillis = fixedNow + 10000L, limit = 100)
+            val ops = database.syncOperationDao().getReadyOperations(syncScopeKey = "USER:user-joiner", nowEpochMillis = fixedNow + 10000L, limit = 100)
             assertTrue(ops.isEmpty())
 
             // Hata mesajı içine sızmama testi
@@ -397,7 +397,7 @@ class OfflineFirstWorkspaceRepositoryJoinTest {
             val authRepo = FakeAuthRepository()
             val remote = FakeWorkspaceCoreRemoteDataSource {
                 // session'daki user-joiner yerine başka bir user_id dönüyor
-                sampleRedeemResult(workspaceId = "ws-user-mismatch", userId = "user-intruder")
+                sampleRedeemResult(workspaceId = "ws-user-mismatch", userId = "33333333-3333-4333-8333-333333333333")
             }
             val repo = createRepository(database, authRepo, remote)
 
@@ -418,7 +418,7 @@ class OfflineFirstWorkspaceRepositoryJoinTest {
         try {
             val authRepo = FakeAuthRepository()
             val remote = FakeWorkspaceCoreRemoteDataSource {
-                sampleRedeemResult(workspaceId = "ws-tombstone", userId = "user-joiner", deletedAt = "2026-09-08T10:00:00Z")
+                sampleRedeemResult(workspaceId = "ws-tombstone", userId = "22222222-2222-4222-8222-222222222222", deletedAt = "2026-09-08T10:00:00Z")
             }
             val repo = createRepository(database, authRepo, remote)
 
@@ -444,7 +444,7 @@ class OfflineFirstWorkspaceRepositoryJoinTest {
                     id = targetWsId,
                     name = "Yerel Değişiklikteki Alan",
                     normalizedName = "yerel degisiklikteki alan",
-                    ownerId = "user-joiner",
+                    ownerId = "22222222-2222-4222-8222-222222222222",
                     typeCode = "personal",
                     currencyCode = "TRY",
                     description = "Henüz sunucuya gitmedi",
@@ -462,7 +462,7 @@ class OfflineFirstWorkspaceRepositoryJoinTest {
             )
 
             val remote = FakeWorkspaceCoreRemoteDataSource {
-                sampleRedeemResult(workspaceId = targetWsId, userId = "user-joiner", version = 5L)
+                sampleRedeemResult(workspaceId = targetWsId, userId = "22222222-2222-4222-8222-222222222222", version = 5L)
             }
             val repo = createRepository(database, authRepo, remote)
 
@@ -480,7 +480,7 @@ class OfflineFirstWorkspaceRepositoryJoinTest {
             assertEquals(1L, localWs.sync.version)
 
             // Outbox üretilmemeli
-            val pendingOps = database.syncOperationDao().getReadyOperations(nowEpochMillis = fixedNow + 10000L, limit = 100)
+            val pendingOps = database.syncOperationDao().getReadyOperations(syncScopeKey = "USER:user-joiner", nowEpochMillis = fixedNow + 10000L, limit = 100)
             assertTrue(pendingOps.isEmpty())
         } finally {
             database.close()

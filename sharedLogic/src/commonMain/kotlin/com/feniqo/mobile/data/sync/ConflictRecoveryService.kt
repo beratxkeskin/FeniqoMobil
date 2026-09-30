@@ -24,9 +24,13 @@ class ConflictRecoveryService(
      * Tekil bir CREATE çakışmasını inceler; operasyon durumu CONFLICT ve yerel/uzak kayıt tam eşdeğerse
      * tek Room transaction'ında çözer. IN_FLIGHT veya farklı durumlardaki operasyonlara dokunmaz.
      */
-    suspend fun recoverSingleEquivalentCreate(entityTypeCode: String, entityId: String): Boolean {
-        val conflict = syncStateDao.getConflict(entityTypeCode, entityId) ?: return false
-        val operation = syncOperationDao.getById(conflict.operationId) ?: return false
+    suspend fun recoverSingleEquivalentCreate(syncScopeKey: String, entityTypeCode: String, entityId: String): Boolean {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        val conflict = syncStateDao.getConflict(syncScopeKey, entityTypeCode, entityId) ?: return false
+        require(conflict.syncScopeKey == syncScopeKey) {
+            "Conflict scope (${conflict.syncScopeKey}) yetkili syncScopeKey ($syncScopeKey) ile eşleşmiyor."
+        }
+        val operation = syncOperationDao.getById(syncScopeKey, conflict.operationId) ?: return false
 
         if (operation.statusCode != "CONFLICT") {
             return false
@@ -40,11 +44,11 @@ class ConflictRecoveryService(
         return when (conflict.entityTypeCode) {
             "CATEGORY" -> {
                 val remoteDto = runCatching { json.decodeFromString<CategoryDto>(conflict.remotePayloadJson) }.getOrNull() ?: return false
-                localMutationDao.recoverEquivalentCategory(operation.operationId, remoteDto, now)
+                localMutationDao.recoverEquivalentCategory(syncScopeKey, operation.operationId, remoteDto, now)
             }
             "TRANSACTION" -> {
                 val remoteDto = runCatching { json.decodeFromString<TransactionDto>(conflict.remotePayloadJson) }.getOrNull() ?: return false
-                localMutationDao.recoverEquivalentTransaction(operation.operationId, remoteDto, now)
+                localMutationDao.recoverEquivalentTransaction(syncScopeKey, operation.operationId, remoteDto, now)
             }
             else -> false
         }
@@ -55,10 +59,11 @@ class ConflictRecoveryService(
      * tek Room transaction'ında all-or-nothing çözer.
      * Herhangi bir taksit eksikse, IN_FLIGHT ise veya eşdeğer değilse hiçbir taksite dokunulmaz.
      */
-    suspend fun recoverInstallmentGroup(installmentGroupId: String): Boolean {
+    suspend fun recoverInstallmentGroup(syncScopeKey: String, installmentGroupId: String): Boolean {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         require(installmentGroupId.isNotBlank()) { "installmentGroupId boş olamaz" }
 
-        val allTxConflicts = syncStateDao.getConflictsByEntityType("TRANSACTION")
+        val allTxConflicts = syncStateDao.getConflictsByEntityType(syncScopeKey, "TRANSACTION")
         val groupConflicts = allTxConflicts.filter { conflict ->
             val localDto = runCatching { json.decodeFromString<TransactionDto>(conflict.localPayloadJson) }.getOrNull()
             localDto?.installmentGroupId == installmentGroupId
@@ -70,7 +75,10 @@ class ConflictRecoveryService(
         val remoteDtos = mutableListOf<TransactionDto>()
 
         for (conflict in groupConflicts) {
-            val operation = syncOperationDao.getById(conflict.operationId) ?: return false
+            require(conflict.syncScopeKey == syncScopeKey) {
+                "Grup conflict scope (${conflict.syncScopeKey}) yetkili scope ($syncScopeKey) ile eşleşmiyor."
+            }
+            val operation = syncOperationDao.getById(syncScopeKey, conflict.operationId) ?: return false
             if (operation.statusCode != "CONFLICT") {
                 return false
             }
@@ -98,7 +106,7 @@ class ConflictRecoveryService(
         val units = pairs.mapIndexed { index, (_, op) ->
             op.operationId to remoteDtos[index]
         }
-        return localMutationDao.recoverEquivalentTransactionGroup(units, now)
+        return localMutationDao.recoverEquivalentTransactionGroup(syncScopeKey, units, now)
     }
 
     /**
@@ -106,11 +114,12 @@ class ConflictRecoveryService(
      * Önce taksit gruplarını, ardından tekil TRANSACTION ve CATEGORY çakışmalarını inceler.
      * Yalnızca CONFLICT, CREATE, protocol 1 veya 2 ve tam eşdeğer kayıtları çözer; gerçek çakışmalara dokunmaz.
      */
-    suspend fun recoverAllPendingConflicts(): Int {
+    suspend fun recoverAllPendingConflicts(syncScopeKey: String): Int {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         var recoveredCount = 0
 
         // 1. Önce transaction çakışmalarını incele ve taksit gruplarını topla
-        val txConflicts = syncStateDao.getConflictsByEntityType("TRANSACTION")
+        val txConflicts = syncStateDao.getConflictsByEntityType(syncScopeKey, "TRANSACTION")
         val installmentGroupEntityIds = mutableSetOf<String>()
 
         val installmentGroupIds = txConflicts.mapNotNull { conflict ->
@@ -124,7 +133,7 @@ class ConflictRecoveryService(
         }.distinct()
 
         for (groupId in installmentGroupIds) {
-            val success = recoverInstallmentGroup(groupId)
+            val success = recoverInstallmentGroup(syncScopeKey, groupId)
             if (success) {
                 val groupConflicts = txConflicts.filter { conflict ->
                     val localDto = runCatching { json.decodeFromString<TransactionDto>(conflict.localPayloadJson) }.getOrNull()
@@ -137,16 +146,16 @@ class ConflictRecoveryService(
         // 2. Geriye kalan tekil TRANSACTION çakışmalarını çöz (taksit gruplarına ait olanlar asla tekil döngüye girmez)
         for (conflict in txConflicts) {
             if (conflict.entityId in installmentGroupEntityIds) continue
-            val success = recoverSingleEquivalentCreate("TRANSACTION", conflict.entityId)
+            val success = recoverSingleEquivalentCreate(syncScopeKey, "TRANSACTION", conflict.entityId)
             if (success) {
                 recoveredCount++
             }
         }
 
         // 3. CATEGORY çakışmalarını çöz
-        val categoryConflicts = syncStateDao.getConflictsByEntityType("CATEGORY")
+        val categoryConflicts = syncStateDao.getConflictsByEntityType(syncScopeKey, "CATEGORY")
         for (conflict in categoryConflicts) {
-            val success = recoverSingleEquivalentCreate("CATEGORY", conflict.entityId)
+            val success = recoverSingleEquivalentCreate(syncScopeKey, "CATEGORY", conflict.entityId)
             if (success) {
                 recoveredCount++
             }

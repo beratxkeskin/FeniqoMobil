@@ -243,7 +243,9 @@ class EquivalentConflictResolverTest {
         opId: String,
         local: T,
         remote: T,
+        syncScopeKey: String = "USER:test-user",
     ) = SyncConflictEntity(
+        syncScopeKey = syncScopeKey,
         entityTypeCode = entityType,
         entityId = entityId,
         operationId = opId,
@@ -260,6 +262,7 @@ class EquivalentConflictResolverTest {
         opId: String,
         opType: String,
     ) = SyncOperationEntity(
+        syncScopeKey = "USER:test-user",
         operationId = opId,
         entityTypeCode = entityType,
         entityId = entityId,

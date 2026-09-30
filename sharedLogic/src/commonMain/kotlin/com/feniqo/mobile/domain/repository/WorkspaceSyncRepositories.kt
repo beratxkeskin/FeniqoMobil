@@ -64,6 +64,7 @@ data class SyncOverview(
     val conflictCount: Int,
     val lastSuccessfulSyncAt: Instant?,
     val lastError: AppError?,
+    val hasLegacyQuarantinedData: Boolean = false,
 ) {
     init {
         require(pendingOperationCount >= 0) { "Bekleyen senkronizasyon sayısı negatif olamaz." }

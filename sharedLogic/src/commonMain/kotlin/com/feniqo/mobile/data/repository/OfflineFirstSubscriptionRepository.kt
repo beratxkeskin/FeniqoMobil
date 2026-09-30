@@ -12,6 +12,7 @@ import com.feniqo.mobile.data.mapper.toEntity
 import com.feniqo.mobile.data.mapper.toPendingDelete
 import com.feniqo.mobile.data.mapper.toPendingUpdate
 import com.feniqo.mobile.data.remote.mapper.toDto
+import com.feniqo.mobile.data.sync.SyncScopeKey
 import com.feniqo.mobile.domain.model.AppError
 import com.feniqo.mobile.domain.model.CreateSubscriptionCommand
 import com.feniqo.mobile.domain.model.EntityId
@@ -130,7 +131,9 @@ class OfflineFirstSubscriptionRepository(
                 websiteUrl = validCommand.websiteUrl,
                 notes = validCommand.notes,
             )
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
             offlineWriteQueue.enqueueSubscriptionV2(
+                syncScopeKey = syncScopeKey,
                 entity = subscription.toEntity(newSyncMetadata(now)),
                 type = OutboxOperationType.CREATE,
                 payloadJson = json.encodeToString(subscription.toDto()),
@@ -160,6 +163,7 @@ class OfflineFirstSubscriptionRepository(
             val now = nowEpochMillisProvider()
             val isAmountChanged = oldDomain.amount.amountMinor != updated.amount.amountMinor ||
                 oldDomain.amount.currency != updated.amount.currency
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
 
             if (isAmountChanged) {
                 val priceHistory = SubscriptionPriceHistory(
@@ -170,6 +174,7 @@ class OfflineFirstSubscriptionRepository(
                     changedAt = Instant.fromEpochMilliseconds(now),
                 )
                 offlineWriteQueue.enqueueSubscriptionWithPriceHistoryV2(
+                    syncScopeKey = syncScopeKey,
                     entity = updated.toEntity(existing.sync.toPendingUpdate(now)),
                     priceHistory = priceHistory.toEntity(newSyncMetadata(now)),
                     type = OutboxOperationType.UPDATE,
@@ -177,6 +182,7 @@ class OfflineFirstSubscriptionRepository(
                 )
             } else {
                 offlineWriteQueue.enqueueSubscriptionV2(
+                    syncScopeKey = syncScopeKey,
                     entity = updated.toEntity(existing.sync.toPendingUpdate(now)),
                     type = OutboxOperationType.UPDATE,
                     payloadJson = json.encodeToString(updated.toDto()),
@@ -203,7 +209,9 @@ class OfflineFirstSubscriptionRepository(
                 isActive = command.isActive,
                 lifecycleStatus = newStatus,
             )
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
             offlineWriteQueue.enqueueSubscriptionV2(
+                syncScopeKey = syncScopeKey,
                 entity = updated.toEntity(existing.sync.toPendingUpdate(now)),
                 type = OutboxOperationType.UPDATE,
                 payloadJson = json.encodeToString(updated.toDto()),
@@ -242,7 +250,9 @@ class OfflineFirstSubscriptionRepository(
                 accessEndDate = command.accessEndDate ?: domain.accessEndDate,
                 isActive = isEffectivelyActive,
             )
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
             offlineWriteQueue.enqueueSubscriptionV2(
+                syncScopeKey = syncScopeKey,
                 entity = updated.toEntity(existing.sync.toPendingUpdate(now)),
                 type = OutboxOperationType.UPDATE,
                 payloadJson = json.encodeToString(updated.toDto()),
@@ -280,6 +290,7 @@ class OfflineFirstSubscriptionRepository(
             val now = nowEpochMillisProvider()
             val dueDateStr = domainSubscription.nextRenewalDate.toString()
             val alreadyPaid = subscriptionPaymentDao?.findBySubscriptionAndRenewalDue(domainSubscription.id.value, dueDateStr)
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
 
             if (alreadyPaid == null && subscriptionPaymentDao != null) {
                 val payment = SubscriptionPayment(
@@ -292,6 +303,7 @@ class OfflineFirstSubscriptionRepository(
                     createdAt = Instant.fromEpochMilliseconds(now),
                 )
                 offlineWriteQueue.enqueueSubscriptionWithPaymentV2(
+                    syncScopeKey = syncScopeKey,
                     entity = updated.toEntity(existing.sync.toPendingUpdate(now)),
                     payment = payment.toEntity(newSyncMetadata(now)),
                     type = OutboxOperationType.UPDATE,
@@ -299,6 +311,7 @@ class OfflineFirstSubscriptionRepository(
                 )
             } else {
                 offlineWriteQueue.enqueueSubscriptionV2(
+                    syncScopeKey = syncScopeKey,
                     entity = updated.toEntity(existing.sync.toPendingUpdate(now)),
                     type = OutboxOperationType.UPDATE,
                     payloadJson = json.encodeToString(updated.toDto()),
@@ -320,7 +333,9 @@ class OfflineFirstSubscriptionRepository(
             val existing = scopedExisting(id, session.userId.value, activeWorkspaceId?.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("subscription_not_found"))
             val now = nowEpochMillisProvider()
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
             offlineWriteQueue.enqueueSubscriptionV2(
+                syncScopeKey = syncScopeKey,
                 entity = existing.copy(sync = existing.sync.toPendingDelete(now)),
                 type = OutboxOperationType.DELETE,
                 payloadJson = json.encodeToString(existing.toDomain().toDto()),

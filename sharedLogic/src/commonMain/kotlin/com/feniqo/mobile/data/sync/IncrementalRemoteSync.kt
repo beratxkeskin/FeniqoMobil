@@ -67,20 +67,28 @@ class IncrementalRemoteSync(
 
     private val snapshotJson = Json { encodeDefaults = true; explicitNulls = true }
 
-    suspend fun pullFor(userId: EntityId): IncrementalSyncResult {
+    suspend fun pullFor(
+        userId: EntityId,
+        syncScopeKey: String,
+    ): IncrementalSyncResult {
+        val userScopeFromId = SyncScopeKey.user(userId.value).userId
+        val userScopeFromKey = SyncScopeKey.requireUserScope(syncScopeKey).userId
+        require(userScopeFromId == userScopeFromKey) {
+            "Mismatched userId (${userId.value}) and syncScopeKey ($syncScopeKey)"
+        }
         var applied = 0
         var conflicts = 0
 
         remote.fetchProfile(userId.value)?.let { profile ->
-            val storedCursor = syncStateDao.getCursor(PROFILE)
+            val storedCursor = syncStateDao.getCursor(syncScopeKey, PROFILE)
             if (profile.isAfter(storedCursor)) {
-                val result = applyProfile(profile)
+                val result = applyProfile(profile, syncScopeKey)
                 applied += result.applied
                 conflicts += result.conflicts
             }
         }
 
-        val categoryCursor = syncStateDao.getCursor(CATEGORY)
+        val categoryCursor = syncStateDao.getCursor(syncScopeKey, CATEGORY)
         val categories = fetchAll { page ->
             remote.fetchCategories(
                 CategoryRemoteQuery(
@@ -91,12 +99,12 @@ class IncrementalRemoteSync(
             )
         }
         categories.forEach { dto ->
-            val result = applyCategory(dto)
+            val result = applyCategory(dto, syncScopeKey = syncScopeKey)
             applied += result.applied
             conflicts += result.conflicts
         }
 
-        val recurringCursor = syncStateDao.getCursor(RECURRING_TRANSACTION)
+        val recurringCursor = syncStateDao.getCursor(syncScopeKey, RECURRING_TRANSACTION)
         val recurringTransactions = fetchAll { page ->
             remote.fetchRecurringTransactions(
                 RecurringTransactionRemoteQuery(
@@ -107,12 +115,12 @@ class IncrementalRemoteSync(
             )
         }
         recurringTransactions.forEach { dto ->
-            val result = applyRecurringTransaction(dto)
+            val result = applyRecurringTransaction(dto, syncScopeKey)
             applied += result.applied
             conflicts += result.conflicts
         }
 
-        val subscriptionCursor = syncStateDao.getCursor(SUBSCRIPTION)
+        val subscriptionCursor = syncStateDao.getCursor(syncScopeKey, SUBSCRIPTION)
         val subscriptions = fetchAll { page ->
             remote.fetchSubscriptions(
                 SubscriptionRemoteQuery(
@@ -123,22 +131,22 @@ class IncrementalRemoteSync(
             )
         }
         subscriptions.forEach { dto ->
-            val result = applySubscription(dto)
+            val result = applySubscription(dto, syncScopeKey)
             applied += result.applied
             conflicts += result.conflicts
         }
 
-        val assetCursor = syncStateDao.getCursor(ASSET)
+        val assetCursor = syncStateDao.getCursor(syncScopeKey, ASSET)
         val assets = if (assetDao == null) emptyList() else fetchAll { page ->
             remote.fetchAssets(AssetRemoteQuery(page = page, updatedAfter = assetCursor?.toRemoteCursor()))
         }
         assets.forEach { dto ->
-            val result = applyAsset(dto)
+            val result = applyAsset(dto, syncScopeKey)
             applied += result.applied
             conflicts += result.conflicts
         }
 
-        val goalCursor = syncStateDao.getCursor(GOAL)
+        val goalCursor = syncStateDao.getCursor(syncScopeKey, GOAL)
         val goals = fetchAll { page ->
             remote.fetchGoals(
                 GoalRemoteQuery(
@@ -149,12 +157,12 @@ class IncrementalRemoteSync(
             )
         }
         goals.forEach { dto ->
-            val result = applyGoal(dto)
+            val result = applyGoal(dto, syncScopeKey)
             applied += result.applied
             conflicts += result.conflicts
         }
 
-        val goalContributionCursor = syncStateDao.getCursor(GOAL_CONTRIBUTION)
+        val goalContributionCursor = syncStateDao.getCursor(syncScopeKey, GOAL_CONTRIBUTION)
         val goalContributions = fetchAll { page ->
             remote.fetchGoalContributions(
                 GoalContributionRemoteQuery(
@@ -172,12 +180,12 @@ class IncrementalRemoteSync(
             }
         }
         goalContributions.forEach { dto ->
-            val result = applyGoalContribution(dto)
+            val result = applyGoalContribution(dto, syncScopeKey)
             applied += result.applied
             conflicts += result.conflicts
         }
 
-        val debtCursor = syncStateDao.getCursor(DEBT)
+        val debtCursor = syncStateDao.getCursor(syncScopeKey, DEBT)
         val debts = fetchAll { page ->
             remote.fetchDebts(
                 DebtRemoteQuery(
@@ -188,12 +196,12 @@ class IncrementalRemoteSync(
             )
         }
         debts.forEach { dto ->
-            val result = applyDebt(dto)
+            val result = applyDebt(dto, syncScopeKey)
             applied += result.applied
             conflicts += result.conflicts
         }
 
-        val debtPaymentCursor = syncStateDao.getCursor(DEBT_PAYMENT)
+        val debtPaymentCursor = syncStateDao.getCursor(syncScopeKey, DEBT_PAYMENT)
         val debtPayments = fetchAll { page ->
             remote.fetchDebtPayments(
                 DebtPaymentRemoteQuery(
@@ -211,14 +219,14 @@ class IncrementalRemoteSync(
             }
         }
         debtPayments.forEach { dto ->
-            val result = applyDebtPayment(dto)
+            val result = applyDebtPayment(dto, syncScopeKey)
             applied += result.applied
             conflicts += result.conflicts
         }
 
 
 
-        val transactionCursor = syncStateDao.getCursor(TRANSACTION)
+        val transactionCursor = syncStateDao.getCursor(syncScopeKey, TRANSACTION)
         val transactions = fetchAll { page ->
             remote.fetchTransactions(
                 TransactionRemoteQuery(
@@ -229,7 +237,7 @@ class IncrementalRemoteSync(
             )
         }
         transactions.forEach { dto ->
-            val result = applyTransaction(dto)
+            val result = applyTransaction(dto, syncScopeKey = syncScopeKey)
             applied += result.applied
             conflicts += result.conflicts
         }
@@ -256,11 +264,15 @@ class IncrementalRemoteSync(
      * category/transaction cursors must remain personal-only: reusing them here could skip
      * records created before a user joined a workspace.
      */
-    suspend fun pullWorkspaceFinance(workspaceId: EntityId): WorkspaceFinanceSyncResult {
+    suspend fun pullWorkspaceFinance(
+        workspaceId: EntityId,
+        syncScopeKey: String,
+    ): WorkspaceFinanceSyncResult {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         val categoryCursorKey = workspaceCursorKey(CATEGORY, workspaceId)
         val transactionCursorKey = workspaceCursorKey(TRANSACTION, workspaceId)
-        val categoryCursor = syncStateDao.getCursor(categoryCursorKey)
-        val transactionCursor = syncStateDao.getCursor(transactionCursorKey)
+        val categoryCursor = syncStateDao.getCursor(syncScopeKey, categoryCursorKey)
+        val transactionCursor = syncStateDao.getCursor(syncScopeKey, transactionCursorKey)
 
         var applied = 0
         var conflicts = 0
@@ -274,7 +286,7 @@ class IncrementalRemoteSync(
             )
         }
         categories.forEach { dto ->
-            val result = applyCategory(dto, cursorEntityType = categoryCursorKey)
+            val result = applyCategory(dto, syncScopeKey = syncScopeKey, cursorEntityType = categoryCursorKey)
             applied += result.applied
             conflicts += result.conflicts
         }
@@ -289,7 +301,7 @@ class IncrementalRemoteSync(
             )
         }
         transactions.forEach { dto ->
-            val result = applyTransaction(dto, cursorEntityType = transactionCursorKey)
+            val result = applyTransaction(dto, syncScopeKey = syncScopeKey, cursorEntityType = transactionCursorKey)
             applied += result.applied
             conflicts += result.conflicts
         }
@@ -303,20 +315,22 @@ class IncrementalRemoteSync(
         )
     }
 
-    private suspend fun applyProfile(dto: ProfileDto): ApplyResult {
-        val cursor = dto.cursor(PROFILE)
+    private suspend fun applyProfile(dto: ProfileDto, syncScopeKey: String): ApplyResult {
+        val cursor = dto.cursor(PROFILE, syncScopeKey)
         val local = remoteSyncDao.getProfileRow(dto.id)
         val remoteEntity = dto.toDomain().toEntity(dto.toRemoteSyncMetadata(nowEpochMillisProvider()))
         return applyOrConflict(
             local = local,
             remoteVersion = dto.requiredVersion(PROFILE),
-            apply = { remoteSyncDao.applyProfilePull(remoteEntity, cursor) },
+            apply = { remoteSyncDao.applyProfilePull(syncScopeKey, remoteEntity, cursor) },
             conflict = {
                 remoteSyncDao.recordProfilePullConflict(
+                    syncScopeKey = syncScopeKey,
                     conflict = pullConflict(
+                        syncScopeKey = syncScopeKey,
                         entityType = PROFILE,
                         entityId = dto.id,
-                        operationId = requiredOutboxOperationId(PROFILE, dto.id),
+                        operationId = requiredOutboxOperationId(syncScopeKey, PROFILE, dto.id),
                         localVersion = local!!.sync.version,
                         remoteVersion = dto.requiredVersion(PROFILE),
                         local = local.toDomain().toDto(),
@@ -325,28 +339,31 @@ class IncrementalRemoteSync(
                     cursor = cursor,
                 )
             },
-            advance = { remoteSyncDao.advancePullCursor(cursor) },
+            advance = { remoteSyncDao.advancePullCursor(syncScopeKey, cursor) },
         )
     }
 
     private suspend fun applyCategory(
         dto: CategoryDto,
+        syncScopeKey: String,
         cursorEntityType: String = CATEGORY,
     ): ApplyResult {
-        val cursor = dto.cursor(cursorEntityType)
+        val cursor = dto.cursor(cursorEntityType, syncScopeKey)
         val local = remoteSyncDao.getCategoryRow(dto.id)
         val remoteEntity = dto.toDomain().toEntity(dto.toRemoteSyncMetadata(nowEpochMillisProvider()), slug = dto.slug)
         return applyOrConflict(
             local = local,
             remoteVersion = dto.requiredVersion(CATEGORY),
-            apply = { remoteSyncDao.applyCategoryPull(remoteEntity, cursor) },
+            apply = { remoteSyncDao.applyCategoryPull(syncScopeKey, remoteEntity, cursor) },
             conflict = {
                 val localDto = local!!.toDomain().toDto().copy(slug = local.slug)
                 remoteSyncDao.recordCategoryPullConflict(
+                    syncScopeKey = syncScopeKey,
                     conflict = pullConflict(
+                        syncScopeKey = syncScopeKey,
                         entityType = CATEGORY,
                         entityId = dto.id,
-                        operationId = requiredOutboxOperationId(CATEGORY, dto.id),
+                        operationId = requiredOutboxOperationId(syncScopeKey, CATEGORY, dto.id),
                         localVersion = local.sync.version,
                         remoteVersion = dto.requiredVersion(CATEGORY),
                         local = localDto,
@@ -355,24 +372,26 @@ class IncrementalRemoteSync(
                     cursor = cursor,
                 )
             },
-            advance = { remoteSyncDao.advancePullCursor(cursor) },
+            advance = { remoteSyncDao.advancePullCursor(syncScopeKey, cursor) },
         )
     }
 
-    private suspend fun applyRecurringTransaction(dto: RecurringTransactionDto): ApplyResult {
-        val cursor = dto.cursor(RECURRING_TRANSACTION)
+    private suspend fun applyRecurringTransaction(dto: RecurringTransactionDto, syncScopeKey: String): ApplyResult {
+        val cursor = dto.cursor(RECURRING_TRANSACTION, syncScopeKey)
         val local = remoteSyncDao.getRecurringTransactionRow(dto.id)
         val remoteEntity = dto.toDomain().toEntity(dto.toRemoteSyncMetadata(nowEpochMillisProvider()))
         return applyOrConflict(
             local = local,
             remoteVersion = dto.requiredVersion(RECURRING_TRANSACTION),
-            apply = { remoteSyncDao.applyRecurringTransactionPull(remoteEntity, cursor) },
+            apply = { remoteSyncDao.applyRecurringTransactionPull(syncScopeKey, remoteEntity, cursor) },
             conflict = {
                 remoteSyncDao.recordRecurringTransactionPullConflict(
+                    syncScopeKey = syncScopeKey,
                     conflict = pullConflict(
+                        syncScopeKey = syncScopeKey,
                         entityType = RECURRING_TRANSACTION,
                         entityId = dto.id,
-                        operationId = requiredOutboxOperationId(RECURRING_TRANSACTION, dto.id),
+                        operationId = requiredOutboxOperationId(syncScopeKey, RECURRING_TRANSACTION, dto.id),
                         localVersion = local!!.sync.version,
                         remoteVersion = dto.requiredVersion(RECURRING_TRANSACTION),
                         local = local.toDomain().toDto(),
@@ -381,24 +400,26 @@ class IncrementalRemoteSync(
                     cursor = cursor,
                 )
             },
-            advance = { remoteSyncDao.advancePullCursor(cursor) },
+            advance = { remoteSyncDao.advancePullCursor(syncScopeKey, cursor) },
         )
     }
 
-    private suspend fun applySubscription(dto: SubscriptionDto): ApplyResult {
-        val cursor = dto.cursor(SUBSCRIPTION)
+    private suspend fun applySubscription(dto: SubscriptionDto, syncScopeKey: String): ApplyResult {
+        val cursor = dto.cursor(SUBSCRIPTION, syncScopeKey)
         val local = remoteSyncDao.getSubscriptionRow(dto.id)
         val remoteEntity = dto.toDomain().toEntity(dto.toRemoteSyncMetadata(nowEpochMillisProvider()))
         return applyOrConflict(
             local = local,
             remoteVersion = dto.requiredVersion(SUBSCRIPTION),
-            apply = { remoteSyncDao.applySubscriptionPull(remoteEntity, cursor) },
+            apply = { remoteSyncDao.applySubscriptionPull(syncScopeKey, remoteEntity, cursor) },
             conflict = {
                 remoteSyncDao.recordSubscriptionPullConflict(
+                    syncScopeKey = syncScopeKey,
                     conflict = pullConflict(
+                        syncScopeKey = syncScopeKey,
                         entityType = SUBSCRIPTION,
                         entityId = dto.id,
-                        operationId = requiredOutboxOperationId(SUBSCRIPTION, dto.id),
+                        operationId = requiredOutboxOperationId(syncScopeKey, SUBSCRIPTION, dto.id),
                         localVersion = local!!.sync.version,
                         remoteVersion = dto.requiredVersion(SUBSCRIPTION),
                         local = local.toDomain().toDto(),
@@ -407,24 +428,26 @@ class IncrementalRemoteSync(
                     cursor = cursor,
                 )
             },
-            advance = { remoteSyncDao.advancePullCursor(cursor) },
+            advance = { remoteSyncDao.advancePullCursor(syncScopeKey, cursor) },
         )
     }
 
-    private suspend fun applyGoal(dto: GoalDto): ApplyResult {
-        val cursor = dto.cursor(GOAL)
+    private suspend fun applyGoal(dto: GoalDto, syncScopeKey: String): ApplyResult {
+        val cursor = dto.cursor(GOAL, syncScopeKey)
         val local = remoteSyncDao.getGoalRow(dto.id)
         val remoteEntity = dto.toDomain().toEntity(dto.toRemoteSyncMetadata(nowEpochMillisProvider()))
         return applyOrConflict(
             local = local,
             remoteVersion = dto.requiredVersion(GOAL),
-            apply = { remoteSyncDao.applyGoalPull(remoteEntity, cursor) },
+            apply = { remoteSyncDao.applyGoalPull(syncScopeKey, remoteEntity, cursor) },
             conflict = {
                 remoteSyncDao.recordGoalPullConflict(
+                    syncScopeKey = syncScopeKey,
                     conflict = pullConflict(
+                        syncScopeKey = syncScopeKey,
                         entityType = GOAL,
                         entityId = dto.id,
-                        operationId = requiredOutboxOperationId(GOAL, dto.id),
+                        operationId = requiredOutboxOperationId(syncScopeKey, GOAL, dto.id),
                         localVersion = local!!.sync.version,
                         remoteVersion = dto.requiredVersion(GOAL),
                         local = local.toDomain().toDto(),
@@ -433,25 +456,27 @@ class IncrementalRemoteSync(
                     cursor = cursor,
                 )
             },
-            advance = { remoteSyncDao.advancePullCursor(cursor) },
+            advance = { remoteSyncDao.advancePullCursor(syncScopeKey, cursor) },
         )
     }
 
-    private suspend fun applyAsset(dto: AssetDto): ApplyResult {
-        val cursor = dto.cursor(ASSET)
+    private suspend fun applyAsset(dto: AssetDto, syncScopeKey: String): ApplyResult {
+        val cursor = dto.cursor(ASSET, syncScopeKey)
         val dao = requireNotNull(assetDao)
         val local = dao.getAnyById(dto.id)
         val remoteEntity = dto.toDomain().toEntity(dto.toRemoteSyncMetadata(nowEpochMillisProvider()))
         return applyOrConflict(
             local = local,
             remoteVersion = dto.requiredVersion(ASSET),
-            apply = { dao.applyPull(remoteEntity, cursor) },
+            apply = { dao.applyPull(syncScopeKey, remoteEntity, cursor) },
             conflict = {
                 dao.recordPullConflict(
+                    syncScopeKey = syncScopeKey,
                     conflict = pullConflict(
+                        syncScopeKey = syncScopeKey,
                         entityType = ASSET,
                         entityId = dto.id,
-                        operationId = requiredOutboxOperationId(ASSET, dto.id),
+                        operationId = requiredOutboxOperationId(syncScopeKey, ASSET, dto.id),
                         localVersion = local!!.sync.version,
                         remoteVersion = dto.requiredVersion(ASSET),
                         local = local.toDomain().toDto(),
@@ -460,12 +485,12 @@ class IncrementalRemoteSync(
                     cursor = cursor,
                 )
             },
-            advance = { remoteSyncDao.advancePullCursor(cursor) },
+            advance = { remoteSyncDao.advancePullCursor(syncScopeKey, cursor) },
         )
     }
 
-    private suspend fun applyGoalContribution(dto: GoalContributionDto): ApplyResult {
-        val cursor = dto.cursor(GOAL_CONTRIBUTION)
+    private suspend fun applyGoalContribution(dto: GoalContributionDto, syncScopeKey: String): ApplyResult {
+        val cursor = dto.cursor(GOAL_CONTRIBUTION, syncScopeKey)
         if (dto.deletedAt == null) {
             val parentGoal = remoteSyncDao.getGoalRow(dto.goalId)
             checkNotNull(parentGoal) {
@@ -478,13 +503,15 @@ class IncrementalRemoteSync(
         return applyOrConflict(
             local = local,
             remoteVersion = dto.requiredVersion(GOAL_CONTRIBUTION),
-            apply = { remoteSyncDao.applyGoalContributionPull(remoteEntity, cursor) },
+            apply = { remoteSyncDao.applyGoalContributionPull(syncScopeKey, remoteEntity, cursor) },
             conflict = {
                 remoteSyncDao.recordGoalContributionPullConflict(
+                    syncScopeKey = syncScopeKey,
                     conflict = pullConflict(
+                        syncScopeKey = syncScopeKey,
                         entityType = GOAL_CONTRIBUTION,
                         entityId = dto.id,
-                        operationId = requiredOutboxOperationId(GOAL_CONTRIBUTION, dto.id),
+                        operationId = requiredOutboxOperationId(syncScopeKey, GOAL_CONTRIBUTION, dto.id),
                         localVersion = local!!.sync.version,
                         remoteVersion = dto.requiredVersion(GOAL_CONTRIBUTION),
                         local = local.toDomain().toDto(),
@@ -493,24 +520,26 @@ class IncrementalRemoteSync(
                     cursor = cursor,
                 )
             },
-            advance = { remoteSyncDao.advancePullCursor(cursor) },
+            advance = { remoteSyncDao.advancePullCursor(syncScopeKey, cursor) },
         )
     }
 
-    private suspend fun applyDebt(dto: DebtDto): ApplyResult {
-        val cursor = dto.cursor(DEBT)
+    private suspend fun applyDebt(dto: DebtDto, syncScopeKey: String): ApplyResult {
+        val cursor = dto.cursor(DEBT, syncScopeKey)
         val local = remoteSyncDao.getDebtRow(dto.id)
         val remoteEntity = dto.toDomain().toEntity(dto.toRemoteSyncMetadata(nowEpochMillisProvider()))
         return applyOrConflict(
             local = local,
             remoteVersion = dto.requiredVersion(DEBT),
-            apply = { remoteSyncDao.applyDebtPull(remoteEntity, cursor) },
+            apply = { remoteSyncDao.applyDebtPull(syncScopeKey, remoteEntity, cursor) },
             conflict = {
                 remoteSyncDao.recordDebtPullConflict(
+                    syncScopeKey = syncScopeKey,
                     conflict = pullConflict(
+                        syncScopeKey = syncScopeKey,
                         entityType = DEBT,
                         entityId = dto.id,
-                        operationId = requiredOutboxOperationId(DEBT, dto.id),
+                        operationId = requiredOutboxOperationId(syncScopeKey, DEBT, dto.id),
                         localVersion = local!!.sync.version,
                         remoteVersion = dto.requiredVersion(DEBT),
                         local = local.toDomain().toDto(),
@@ -519,12 +548,12 @@ class IncrementalRemoteSync(
                     cursor = cursor,
                 )
             },
-            advance = { remoteSyncDao.advancePullCursor(cursor) },
+            advance = { remoteSyncDao.advancePullCursor(syncScopeKey, cursor) },
         )
     }
 
-    private suspend fun applyDebtPayment(dto: DebtPaymentDto): ApplyResult {
-        val cursor = dto.cursor(DEBT_PAYMENT)
+    private suspend fun applyDebtPayment(dto: DebtPaymentDto, syncScopeKey: String): ApplyResult {
+        val cursor = dto.cursor(DEBT_PAYMENT, syncScopeKey)
         if (dto.deletedAt == null) {
             val parentDebt = remoteSyncDao.getDebtRow(dto.debtId)
             checkNotNull(parentDebt) {
@@ -537,13 +566,15 @@ class IncrementalRemoteSync(
         return applyOrConflict(
             local = local,
             remoteVersion = dto.requiredVersion(DEBT_PAYMENT),
-            apply = { remoteSyncDao.applyDebtPaymentPull(remoteEntity, cursor) },
+            apply = { remoteSyncDao.applyDebtPaymentPull(syncScopeKey, remoteEntity, cursor) },
             conflict = {
                 remoteSyncDao.recordDebtPaymentPullConflict(
+                    syncScopeKey = syncScopeKey,
                     conflict = pullConflict(
+                        syncScopeKey = syncScopeKey,
                         entityType = DEBT_PAYMENT,
                         entityId = dto.id,
-                        operationId = requiredOutboxOperationId(DEBT_PAYMENT, dto.id),
+                        operationId = requiredOutboxOperationId(syncScopeKey, DEBT_PAYMENT, dto.id),
                         localVersion = local!!.sync.version,
                         remoteVersion = dto.requiredVersion(DEBT_PAYMENT),
                         local = local.toDomain().toDto(),
@@ -552,27 +583,30 @@ class IncrementalRemoteSync(
                     cursor = cursor,
                 )
             },
-            advance = { remoteSyncDao.advancePullCursor(cursor) },
+            advance = { remoteSyncDao.advancePullCursor(syncScopeKey, cursor) },
         )
     }
 
     private suspend fun applyTransaction(
         dto: TransactionDto,
+        syncScopeKey: String,
         cursorEntityType: String = TRANSACTION,
     ): ApplyResult {
-        val cursor = dto.cursor(cursorEntityType)
+        val cursor = dto.cursor(cursorEntityType, syncScopeKey)
         val local = remoteSyncDao.getTransactionRow(dto.id)
         val remoteEntity = dto.toDomain().toEntity(dto.toRemoteSyncMetadata(nowEpochMillisProvider()))
         return applyOrConflict(
             local = local,
             remoteVersion = dto.requiredVersion(TRANSACTION),
-            apply = { remoteSyncDao.applyTransactionPull(remoteEntity, cursor) },
+            apply = { remoteSyncDao.applyTransactionPull(syncScopeKey, remoteEntity, cursor) },
             conflict = {
                 remoteSyncDao.recordTransactionPullConflict(
+                    syncScopeKey = syncScopeKey,
                     conflict = pullConflict(
+                        syncScopeKey = syncScopeKey,
                         entityType = TRANSACTION,
                         entityId = dto.id,
-                        operationId = requiredOutboxOperationId(TRANSACTION, dto.id),
+                        operationId = requiredOutboxOperationId(syncScopeKey, TRANSACTION, dto.id),
                         localVersion = local!!.sync.version,
                         remoteVersion = dto.requiredVersion(TRANSACTION),
                         local = local.toDomain().toDto(),
@@ -581,7 +615,7 @@ class IncrementalRemoteSync(
                     cursor = cursor,
                 )
             },
-            advance = { remoteSyncDao.advancePullCursor(cursor) },
+            advance = { remoteSyncDao.advancePullCursor(syncScopeKey, cursor) },
         )
     }
 
@@ -635,6 +669,7 @@ class IncrementalRemoteSync(
     }
 
     private inline fun <reified L : Any, reified R : Any> pullConflict(
+        syncScopeKey: String,
         entityType: String,
         entityId: String,
         operationId: String,
@@ -643,6 +678,7 @@ class IncrementalRemoteSync(
         local: L,
         remote: R,
     ): SyncConflictEntity = SyncConflictEntity(
+        syncScopeKey = syncScopeKey,
         entityTypeCode = entityType,
         entityId = entityId,
         operationId = operationId,
@@ -653,8 +689,8 @@ class IncrementalRemoteSync(
         detectedAtEpochMillis = nowEpochMillisProvider(),
     )
 
-    private suspend fun requiredOutboxOperationId(entityType: String, entityId: String): String =
-        requireNotNull(remoteSyncDao.getFirstOutboxOperationId(entityType, entityId)) {
+    private suspend fun requiredOutboxOperationId(syncScopeKey: String, entityType: String, entityId: String): String =
+        requireNotNull(remoteSyncDao.getFirstOutboxOperationId(syncScopeKey, entityType, entityId)) {
             "Pending yerel kayıt için outbox işlemi bulunamadı: $entityType/$entityId"
         }
 
@@ -670,18 +706,19 @@ class IncrementalRemoteSync(
         return remoteInstant > cursorInstant || (remoteInstant == cursorInstant && id > cursor.entityId)
     }
 
-    private fun ProfileDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
-    private fun CategoryDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
-    private fun TransactionDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
-    private fun RecurringTransactionDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
-    private fun SubscriptionDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
-    private fun AssetDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
-    private fun GoalDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
-    private fun GoalContributionDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
-    private fun DebtDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
-    private fun DebtPaymentDto.cursor(entityType: String) = cursor(entityType, id, updatedAt ?: createdAt)
+    private fun ProfileDto.cursor(entityType: String, syncScopeKey: String) = cursor(entityType, id, updatedAt ?: createdAt, syncScopeKey)
+    private fun CategoryDto.cursor(entityType: String, syncScopeKey: String) = cursor(entityType, id, updatedAt ?: createdAt, syncScopeKey)
+    private fun TransactionDto.cursor(entityType: String, syncScopeKey: String) = cursor(entityType, id, updatedAt ?: createdAt, syncScopeKey)
+    private fun RecurringTransactionDto.cursor(entityType: String, syncScopeKey: String) = cursor(entityType, id, updatedAt ?: createdAt, syncScopeKey)
+    private fun SubscriptionDto.cursor(entityType: String, syncScopeKey: String) = cursor(entityType, id, updatedAt ?: createdAt, syncScopeKey)
+    private fun AssetDto.cursor(entityType: String, syncScopeKey: String) = cursor(entityType, id, updatedAt ?: createdAt, syncScopeKey)
+    private fun GoalDto.cursor(entityType: String, syncScopeKey: String) = cursor(entityType, id, updatedAt ?: createdAt, syncScopeKey)
+    private fun GoalContributionDto.cursor(entityType: String, syncScopeKey: String) = cursor(entityType, id, updatedAt ?: createdAt, syncScopeKey)
+    private fun DebtDto.cursor(entityType: String, syncScopeKey: String) = cursor(entityType, id, updatedAt ?: createdAt, syncScopeKey)
+    private fun DebtPaymentDto.cursor(entityType: String, syncScopeKey: String) = cursor(entityType, id, updatedAt ?: createdAt, syncScopeKey)
 
-    private fun cursor(entityType: String, entityId: String, updatedAt: String) = SyncCursorEntity(
+    private fun cursor(entityType: String, entityId: String, updatedAt: String, syncScopeKey: String) = SyncCursorEntity(
+        syncScopeKey = syncScopeKey,
         entityTypeCode = entityType,
         updatedAtEpochMillis = Instant.parse(updatedAt).toEpochMilliseconds(),
         entityId = entityId,

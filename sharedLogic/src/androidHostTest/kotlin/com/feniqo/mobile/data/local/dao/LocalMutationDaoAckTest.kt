@@ -17,6 +17,7 @@ import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.ProfileDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.sync.OutboxExecutionResult
+import com.feniqo.mobile.data.sync.SyncScopeKey
 import com.feniqo.mobile.domain.model.SyncStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
@@ -32,6 +33,9 @@ import kotlin.test.assertTrue
 @RunWith(RobolectricTestRunner::class)
 class LocalMutationDaoAckTest {
 
+    private val USER_ID = "11111111-1111-4111-8111-111111111111"
+    private val SCOPE = SyncScopeKey.user(USER_ID).rawValue
+
     @Test
     fun v2_ack_without_successor_applies_remote_record_and_removes_outbox_and_conflict() = runTest {
         val db = inMemoryDatabase()
@@ -39,24 +43,25 @@ class LocalMutationDaoAckTest {
             val queue = createQueue(db)
             val category = categoryEntity("cat-1", "Market")
             val opId = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = category,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"id":"cat-1","name":"Market","created_at":"2026-08-25T17:00:00Z"}""",
             )
 
             // Claim op -> IN_FLIGHT
-            val claimed = queue.claimOperation(opId)
+            val claimed = queue.claimOperation(SCOPE, opId)
             assertNotNull(claimed)
             assertEquals("IN_FLIGHT", claimed.statusCode)
 
             // Insert a dummy conflict row to verify it gets cleaned
             db.syncStateDao().upsertConflict(
-                SyncConflictEntity("CATEGORY", "cat-1", opId, 0L, 1L, "{}", "{}", 1000L),
+                SyncConflictEntity(SCOPE, "CATEGORY", "cat-1", opId, 0L, 1L, "{}", "{}", 1000L),
             )
 
             val remoteDto = CategoryDto(
                 id = "cat-1",
-                userId = "usr-1",
+                userId = USER_ID,
                 name = "Market Remote",
                 slug = "market-remote",
                 type = "expense",
@@ -69,6 +74,7 @@ class LocalMutationDaoAckTest {
             )
 
             val ackResult = db.localMutationDao().ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = opId,
                 result = OutboxExecutionResult.CategoryApplied(remoteDto),
                 nowEpochMillis = 1000L,
@@ -76,9 +82,9 @@ class LocalMutationDaoAckTest {
             assertTrue(ackResult)
 
             // Verify: outbox removed, conflict removed, entity updated with remote values and SYNCED
-            assertNull(db.syncOperationDao().getById(opId))
-            assertNull(db.syncStateDao().getConflict("CATEGORY", "cat-1"))
-            val entity = db.categoryDao().getByIdAndOwner("cat-1", "usr-1")
+            assertNull(db.syncOperationDao().getById(SCOPE, opId))
+            assertNull(db.syncStateDao().getConflict(SCOPE, "CATEGORY", "cat-1"))
+            val entity = db.categoryDao().getByIdAndOwner("cat-1", USER_ID)
             assertNotNull(entity)
             assertEquals("Market Remote", entity.name)
             assertEquals("market-remote", entity.slug)
@@ -97,13 +103,14 @@ class LocalMutationDaoAckTest {
             val queue = createQueue(db)
             val category = categoryEntity("cat-2", "Market V1")
             val op1Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = category,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"id":"cat-2","name":"Market V1","created_at":"2026-08-25T17:00:00Z"}""",
             )
 
             // Claim op1 -> IN_FLIGHT
-            queue.claimOperation(op1Id)
+            queue.claimOperation(SCOPE, op1Id)
 
             // User edits category locally while op1 is IN_FLIGHT -> op2 created as blocked successor
             val newerCategory = category.copy(
@@ -111,12 +118,13 @@ class LocalMutationDaoAckTest {
                 sync = category.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name),
             )
             val op2Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = newerCategory,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"id":"cat-2","name":"Market V2 (Local Edit)","created_at":"2026-08-25T17:00:00Z"}""",
             )
 
-            val successorBeforeAck = db.syncOperationDao().getById(op2Id)
+            val successorBeforeAck = db.syncOperationDao().getById(SCOPE, op2Id)
             assertNotNull(successorBeforeAck)
             assertTrue(successorBeforeAck.isBlocked)
             assertNull(successorBeforeAck.baseVersion)
@@ -124,7 +132,7 @@ class LocalMutationDaoAckTest {
             // Remote returns applied for op1 with version = 1 and old name "Market V1"
             val remoteDto = CategoryDto(
                 id = "cat-2",
-                userId = "usr-1",
+                userId = USER_ID,
                 name = "Market V1",
                 slug = "market-v1",
                 type = "expense",
@@ -134,6 +142,7 @@ class LocalMutationDaoAckTest {
             )
 
             val ackResult = db.localMutationDao().ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = op1Id,
                 result = OutboxExecutionResult.CategoryApplied(remoteDto),
                 nowEpochMillis = 1000L,
@@ -141,10 +150,10 @@ class LocalMutationDaoAckTest {
             assertTrue(ackResult)
 
             // 1. op1 deleted
-            assertNull(db.syncOperationDao().getById(op1Id))
+            assertNull(db.syncOperationDao().getById(SCOPE, op1Id))
 
             // 2. Entity's local user fields ("Market V2 (Local Edit)") are NOT overwritten!
-            val currentEntity = db.categoryDao().getByIdAndOwner("cat-2", "usr-1")
+            val currentEntity = db.categoryDao().getByIdAndOwner("cat-2", USER_ID)
             assertNotNull(currentEntity)
             assertEquals("Market V2 (Local Edit)", currentEntity.name, "Local user edit must NOT be overwritten by older remote record")
             assertEquals("PENDING_UPDATE", currentEntity.sync.syncStatus)
@@ -152,7 +161,7 @@ class LocalMutationDaoAckTest {
             assertEquals(1L, currentEntity.sync.baseVersion)
 
             // 3. Successor op2 is UNBLOCKED and has baseVersion = 1L
-            val successorAfterAck = db.syncOperationDao().getById(op2Id)
+            val successorAfterAck = db.syncOperationDao().getById(SCOPE, op2Id)
             assertNotNull(successorAfterAck)
             assertEquals(false, successorAfterAck.isBlocked, "Successor must be unblocked")
             assertEquals(1L, successorAfterAck.baseVersion, "Successor baseVersion must be updated to appliedVersion")
@@ -168,11 +177,12 @@ class LocalMutationDaoAckTest {
             val queue = createQueue(db)
             val category = categoryEntity("cat-3", "Market")
             val opId = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = category,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"id":"cat-3","name":"Market","created_at":"2026-08-25T17:00:00Z"}""",
             )
-            queue.claimOperation(opId)
+            queue.claimOperation(SCOPE, opId)
 
             // Remote DTO has mismatched id "cat-other"
             val remoteDto = CategoryDto(
@@ -186,6 +196,7 @@ class LocalMutationDaoAckTest {
 
             assertFailsWith<IllegalStateException> {
                 db.localMutationDao().ackV2Execution(
+                    syncScopeKey = SCOPE,
                     operationId = opId,
                     result = OutboxExecutionResult.CategoryApplied(remoteDto),
                     nowEpochMillis = 1000L,
@@ -193,7 +204,7 @@ class LocalMutationDaoAckTest {
             }
 
             // Op still in DB due to rollback
-            val opStillExists = db.syncOperationDao().getById(opId)
+            val opStillExists = db.syncOperationDao().getById(SCOPE, opId)
             assertNotNull(opStillExists)
             assertEquals("IN_FLIGHT", opStillExists.statusCode)
         } finally {
@@ -212,20 +223,22 @@ class LocalMutationDaoAckTest {
             db.categoryDao().upsert(category)
 
             val opId = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = category,
                 type = OutboxOperationType.DELETE,
                 payloadJson = """{"id":"cat-4","name":"Market","created_at":"2026-08-25T17:00:00Z"}""",
             )
-            queue.claimOperation(opId)
+            queue.claimOperation(SCOPE, opId)
 
             val ackResult = db.localMutationDao().ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = opId,
                 result = OutboxExecutionResult.MissingDeleteAcknowledged,
                 nowEpochMillis = 1000L,
             )
             assertTrue(ackResult)
 
-            assertNull(db.syncOperationDao().getById(opId))
+            assertNull(db.syncOperationDao().getById(SCOPE, opId))
             val cat = db.remoteSyncDao().getCategoryRow("cat-4")
             assertNotNull(cat)
             assertEquals("SYNCED", cat.sync.syncStatus)
@@ -245,17 +258,19 @@ class LocalMutationDaoAckTest {
             db.categoryDao().upsert(category)
 
             val op1Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = category,
                 type = OutboxOperationType.DELETE,
                 payloadJson = """{"id":"cat-5","name":"Market","created_at":"2026-08-25T17:00:00Z"}""",
             )
-            queue.claimOperation(op1Id)
+            queue.claimOperation(SCOPE, op1Id)
 
             // Add successor to DELETE
             val recreate = category.copy(
                 sync = SyncMetadata("PENDING_UPDATE", 1000L, 1000L, null, 1, 1, null),
             )
             val op2Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = recreate,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"id":"cat-5","name":"Market Recreated","created_at":"2026-08-25T17:00:00Z"}""",
@@ -263,6 +278,7 @@ class LocalMutationDaoAckTest {
 
             val error = assertFailsWith<IllegalStateException> {
                 db.localMutationDao().ackV2Execution(
+                    syncScopeKey = SCOPE,
                     operationId = op1Id,
                     result = OutboxExecutionResult.MissingDeleteAcknowledged,
                     nowEpochMillis = 1000L,
@@ -271,7 +287,7 @@ class LocalMutationDaoAckTest {
             assertTrue(error.message?.contains("DELETE NOT_FOUND") == true)
 
             // op1 preserved due to rollback
-            assertNotNull(db.syncOperationDao().getById(op1Id))
+            assertNotNull(db.syncOperationDao().getById(SCOPE, op1Id))
         } finally {
             db.close()
         }
@@ -284,13 +300,15 @@ class LocalMutationDaoAckTest {
             val queue = createQueue(db)
             val category = categoryEntity("cat-c1", "Market")
             val opId = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = category,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"id":"cat-c1","name":"Market","created_at":"2026-08-25T17:00:00Z"}""",
             )
-            queue.claimOperation(opId)
+            queue.claimOperation(SCOPE, opId)
 
             val conflict = SyncConflictEntity(
+                syncScopeKey = SCOPE,
                 entityTypeCode = "CATEGORY",
                 entityId = "cat-c1",
                 operationId = opId,
@@ -301,14 +319,14 @@ class LocalMutationDaoAckTest {
                 detectedAtEpochMillis = 1000L,
             )
 
-            val result = queue.recordV2Conflict(conflict)
+            val result = queue.recordV2Conflict(SCOPE, conflict)
             assertTrue(result)
 
-            val op = db.syncOperationDao().getById(opId)
+            val op = db.syncOperationDao().getById(SCOPE, opId)
             assertNotNull(op)
             assertEquals("CONFLICT", op.statusCode)
 
-            val savedConflict = db.syncStateDao().getConflict("CATEGORY", "cat-c1")
+            val savedConflict = db.syncStateDao().getConflict(SCOPE, "CATEGORY", "cat-c1")
             assertNotNull(savedConflict)
             assertEquals(opId, savedConflict.operationId)
 
@@ -327,23 +345,26 @@ class LocalMutationDaoAckTest {
             val queue = createQueue(db)
             val category = categoryEntity("cat-c2", "Market V1")
             val op1Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = category,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"id":"cat-c2","name":"Market V1","created_at":"2026-08-25T17:00:00Z"}""",
             )
-            queue.claimOperation(op1Id)
+            queue.claimOperation(SCOPE, op1Id)
 
             val updateEntity = category.copy(
                 name = "Market V2",
                 sync = SyncMetadata("PENDING_UPDATE", 1000L, 1000L, null, 1, 1, null),
             )
             val op2Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = updateEntity,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"id":"cat-c2","name":"Market V2","created_at":"2026-08-25T17:00:00Z"}""",
             )
 
             val conflict = SyncConflictEntity(
+                syncScopeKey = SCOPE,
                 entityTypeCode = "CATEGORY",
                 entityId = "cat-c2",
                 operationId = op1Id,
@@ -354,24 +375,24 @@ class LocalMutationDaoAckTest {
                 detectedAtEpochMillis = 1000L,
             )
 
-            val result = queue.recordV2Conflict(conflict)
+            val result = queue.recordV2Conflict(SCOPE, conflict)
             assertTrue(result)
 
-            val op1 = db.syncOperationDao().getById(op1Id)
+            val op1 = db.syncOperationDao().getById(SCOPE, op1Id)
             assertNotNull(op1)
             assertEquals("CONFLICT", op1.statusCode)
 
-            val savedConflict = db.syncStateDao().getConflict("CATEGORY", "cat-c2")
+            val savedConflict = db.syncStateDao().getConflict(SCOPE, "CATEGORY", "cat-c2")
             assertNotNull(savedConflict)
 
             // Entity should PRESERVE newer local business fields and PENDING_UPDATE
-            val entity = db.categoryDao().getByIdAndOwner("cat-c2", "usr-1")
+            val entity = db.categoryDao().getByIdAndOwner("cat-c2", USER_ID)
             assertNotNull(entity)
             assertEquals("Market V2", entity.name)
             assertEquals("PENDING_UPDATE", entity.sync.syncStatus)
 
             // Successor should remain BLOCKED
-            val op2 = db.syncOperationDao().getById(op2Id)
+            val op2 = db.syncOperationDao().getById(SCOPE, op2Id)
             assertNotNull(op2)
             assertTrue(op2.isBlocked)
             assertEquals("PENDING", op2.statusCode)
@@ -386,12 +407,12 @@ class LocalMutationDaoAckTest {
         try {
             val queue = createQueue(db)
             val category = categoryEntity("cat-v1", "Market")
-            val opId = queue.enqueueCategory(category, OutboxOperationType.CREATE)
-            queue.claimOperation(opId)
+            val opId = queue.enqueueCategory(SCOPE, category, OutboxOperationType.CREATE)
+            queue.claimOperation(SCOPE, opId)
 
             val remoteDto = CategoryDto(
                 id = "cat-v1",
-                userId = "usr-1",
+                userId = USER_ID,
                 name = "Market",
                 type = "expense",
                 color = "#EF4444",
@@ -400,7 +421,7 @@ class LocalMutationDaoAckTest {
             )
 
             val error = assertFailsWith<IllegalStateException> {
-                db.localMutationDao().ackCategoryWriteV2(opId, remoteDto, 1000L)
+                db.localMutationDao().ackCategoryWriteV2(SCOPE, opId, remoteDto, 1000L)
             }
             assertTrue(error.message?.contains("protocolVersion=2") == true)
         } finally {
@@ -414,18 +435,18 @@ class LocalMutationDaoAckTest {
         try {
             val queue = createQueue(db)
             val category = categoryEntity("cat-pv1", "Market")
-            val opId = queue.enqueueCategory(category, OutboxOperationType.CREATE)
-            queue.claimOperation(opId)
-            queue.markConflict(opId, "Conflict")
+            val opId = queue.enqueueCategory(SCOPE, category, OutboxOperationType.CREATE)
+            queue.claimOperation(SCOPE, opId)
+            queue.markConflict(SCOPE, opId, "Conflict")
 
-            val op = db.syncOperationDao().getById(opId)
+            val op = db.syncOperationDao().getById(SCOPE, opId)
             assertNotNull(op)
             assertEquals(1, op.protocolVersion)
             assertEquals("CONFLICT", op.statusCode)
 
             val remoteDto = CategoryDto(
                 id = "cat-pv1",
-                userId = "usr-1",
+                userId = USER_ID,
                 name = "Market",
                 type = "expense",
                 color = "#EF4444",
@@ -434,14 +455,14 @@ class LocalMutationDaoAckTest {
                 version = 1L,
             )
 
-            val result = db.localMutationDao().recoverEquivalentCategory(opId, remoteDto, 1000L)
+            val result = db.localMutationDao().recoverEquivalentCategory(SCOPE, opId, remoteDto, 1000L)
             assertTrue(result)
 
-            val syncedCat = db.categoryDao().getByIdAndOwner("cat-pv1", "usr-1")
+            val syncedCat = db.categoryDao().getByIdAndOwner("cat-pv1", USER_ID)
             assertNotNull(syncedCat)
             assertEquals("SYNCED", syncedCat.sync.syncStatus)
             assertEquals(1L, syncedCat.sync.version)
-            assertNull(db.syncOperationDao().getById(opId))
+            assertNull(db.syncOperationDao().getById(SCOPE, opId))
         } finally {
             db.close()
         }
@@ -454,13 +475,15 @@ class LocalMutationDaoAckTest {
             val queue = createQueue(db)
             val category = categoryEntity("cat-pv2", "Market")
             val opId = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = category,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"id":"cat-pv2","name":"Market"}""",
             )
-            queue.claimOperation(opId)
+            queue.claimOperation(SCOPE, opId)
 
             val conflict = SyncConflictEntity(
+                syncScopeKey = SCOPE,
                 entityTypeCode = "CATEGORY",
                 entityId = "cat-pv2",
                 operationId = opId,
@@ -470,16 +493,16 @@ class LocalMutationDaoAckTest {
                 remotePayloadJson = """{"id":"cat-pv2","name":"Market","version":1}""",
                 detectedAtEpochMillis = 1000L,
             )
-            queue.recordV2Conflict(conflict)
+            queue.recordV2Conflict(SCOPE, conflict)
 
-            val op = db.syncOperationDao().getById(opId)
+            val op = db.syncOperationDao().getById(SCOPE, opId)
             assertNotNull(op)
             assertEquals(2, op.protocolVersion)
             assertEquals("CONFLICT", op.statusCode)
 
             val remoteDto = CategoryDto(
                 id = "cat-pv2",
-                userId = "usr-1",
+                userId = USER_ID,
                 name = "Market",
                 type = "expense",
                 color = "#EF4444",
@@ -488,15 +511,15 @@ class LocalMutationDaoAckTest {
                 version = 1L,
             )
 
-            val result = db.localMutationDao().recoverEquivalentCategory(opId, remoteDto, 1000L)
+            val result = db.localMutationDao().recoverEquivalentCategory(SCOPE, opId, remoteDto, 1000L)
             assertTrue(result)
 
-            val syncedCat = db.categoryDao().getByIdAndOwner("cat-pv2", "usr-1")
+            val syncedCat = db.categoryDao().getByIdAndOwner("cat-pv2", USER_ID)
             assertNotNull(syncedCat)
             assertEquals("SYNCED", syncedCat.sync.syncStatus)
             assertEquals(1L, syncedCat.sync.version)
-            assertNull(db.syncOperationDao().getById(opId))
-            assertNull(db.syncStateDao().getConflict("CATEGORY", "cat-pv2"))
+            assertNull(db.syncOperationDao().getById(SCOPE, opId))
+            assertNull(db.syncStateDao().getConflict(SCOPE, "CATEGORY", "cat-pv2"))
         } finally {
             db.close()
         }
@@ -508,6 +531,7 @@ class LocalMutationDaoAckTest {
         try {
             val op = SyncOperationEntity(
                 operationId = "op-pv99",
+                syncScopeKey = SCOPE,
                 entityTypeCode = "CATEGORY",
                 entityId = "cat-pv99",
                 operationTypeCode = "CREATE",
@@ -527,7 +551,7 @@ class LocalMutationDaoAckTest {
 
             val remoteDto = CategoryDto(
                 id = "cat-pv99",
-                userId = "usr-1",
+                userId = USER_ID,
                 name = "Market",
                 type = "expense",
                 color = "#EF4444",
@@ -537,11 +561,11 @@ class LocalMutationDaoAckTest {
             )
 
             val error = assertFailsWith<IllegalStateException> {
-                db.localMutationDao().recoverEquivalentCategory("op-pv99", remoteDto, 1000L)
+                db.localMutationDao().recoverEquivalentCategory(SCOPE, "op-pv99", remoteDto, 1000L)
             }
             assertTrue(error.message?.contains("Desteklenmeyen protokol sürümü: 99") == true)
             // Operation remains intact in DB
-            assertNotNull(db.syncOperationDao().getById("op-pv99"))
+            assertNotNull(db.syncOperationDao().getById(SCOPE, "op-pv99"))
         } finally {
             db.close()
         }
@@ -554,13 +578,15 @@ class LocalMutationDaoAckTest {
             val queue = createQueue(db)
             val category = categoryEntity("cat-del", "Market")
             val opId = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = category,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"id":"cat-del","name":"Market"}""",
             )
-            queue.claimOperation(opId)
+            queue.claimOperation(SCOPE, opId)
 
             val conflict = SyncConflictEntity(
+                syncScopeKey = SCOPE,
                 entityTypeCode = "CATEGORY",
                 entityId = "cat-del",
                 operationId = opId,
@@ -570,11 +596,11 @@ class LocalMutationDaoAckTest {
                 remotePayloadJson = """{"id":"cat-del","name":"Market","deleted_at":"2026-08-25T17:00:00Z","version":1}""",
                 detectedAtEpochMillis = 1000L,
             )
-            queue.recordV2Conflict(conflict)
+            queue.recordV2Conflict(SCOPE, conflict)
 
             val remoteDtoWithDeletedAt = CategoryDto(
                 id = "cat-del",
-                userId = "usr-1",
+                userId = USER_ID,
                 name = "Market",
                 type = "expense",
                 color = "#EF4444",
@@ -584,13 +610,13 @@ class LocalMutationDaoAckTest {
             )
 
             val error = assertFailsWith<IllegalStateException> {
-                db.localMutationDao().recoverEquivalentCategory(opId, remoteDtoWithDeletedAt, 1000L)
+                db.localMutationDao().recoverEquivalentCategory(SCOPE, opId, remoteDtoWithDeletedAt, 1000L)
             }
             assertTrue(error.message?.contains("Silinmiş uzak kayıt eşdeğer kabul edilemez") == true)
 
             // Conflict and outbox are preserved
-            assertNotNull(db.syncOperationDao().getById(opId))
-            assertNotNull(db.syncStateDao().getConflict("CATEGORY", "cat-del"))
+            assertNotNull(db.syncOperationDao().getById(SCOPE, opId))
+            assertNotNull(db.syncStateDao().getConflict(SCOPE, "CATEGORY", "cat-del"))
         } finally {
             db.close()
         }
@@ -603,6 +629,7 @@ class LocalMutationDaoAckTest {
             // Case A: Missing entity in Room table
             val opMissing = SyncOperationEntity(
                 operationId = "op-missing",
+                syncScopeKey = SCOPE,
                 entityTypeCode = "CATEGORY",
                 entityId = "cat-nonexistent",
                 operationTypeCode = "CREATE",
@@ -621,6 +648,7 @@ class LocalMutationDaoAckTest {
             db.syncOperationDao().insert(opMissing)
 
             val conflictMissing = SyncConflictEntity(
+                syncScopeKey = SCOPE,
                 entityTypeCode = "CATEGORY",
                 entityId = "cat-nonexistent",
                 operationId = "op-missing",
@@ -632,17 +660,18 @@ class LocalMutationDaoAckTest {
             )
 
             val errorMissing = assertFailsWith<IllegalStateException> {
-                db.localMutationDao().recordV2Conflict(conflictMissing, 1000L)
+                db.localMutationDao().recordV2Conflict(SCOPE, conflictMissing, 1000L)
             }
             assertTrue(errorMissing.message?.contains("Entity sync_status güncellenemedi veya entity bulunamadı") == true)
 
             // Rollback verification: outbox status remains IN_FLIGHT, conflict row NOT saved
-            assertEquals("IN_FLIGHT", db.syncOperationDao().getById("op-missing")?.statusCode)
-            assertNull(db.syncStateDao().getConflict("CATEGORY", "cat-nonexistent"))
+            assertEquals("IN_FLIGHT", db.syncOperationDao().getById(SCOPE, "op-missing")?.statusCode)
+            assertNull(db.syncStateDao().getConflict(SCOPE, "CATEGORY", "cat-nonexistent"))
 
             // Case B: Unknown entityTypeCode
             val opUnknownType = SyncOperationEntity(
                 operationId = "op-unknown",
+                syncScopeKey = SCOPE,
                 entityTypeCode = "UNKNOWN_TYPE",
                 entityId = "ent-1",
                 operationTypeCode = "CREATE",
@@ -661,6 +690,7 @@ class LocalMutationDaoAckTest {
             db.syncOperationDao().insert(opUnknownType)
 
             val conflictUnknown = SyncConflictEntity(
+                syncScopeKey = SCOPE,
                 entityTypeCode = "UNKNOWN_TYPE",
                 entityId = "ent-1",
                 operationId = "op-unknown",
@@ -672,13 +702,13 @@ class LocalMutationDaoAckTest {
             )
 
             val errorUnknown = assertFailsWith<IllegalStateException> {
-                db.localMutationDao().recordV2Conflict(conflictUnknown, 1000L)
+                db.localMutationDao().recordV2Conflict(SCOPE, conflictUnknown, 1000L)
             }
             assertTrue(errorUnknown.message?.contains("Bilinmeyen entityTypeCode") == true)
 
             // Rollback verification: outbox status remains IN_FLIGHT, conflict row NOT saved
-            assertEquals("IN_FLIGHT", db.syncOperationDao().getById("op-unknown")?.statusCode)
-            assertNull(db.syncStateDao().getConflict("UNKNOWN_TYPE", "ent-1"))
+            assertEquals("IN_FLIGHT", db.syncOperationDao().getById(SCOPE, "op-unknown")?.statusCode)
+            assertNull(db.syncStateDao().getConflict(SCOPE, "UNKNOWN_TYPE", "ent-1"))
         } finally {
             db.close()
         }
@@ -704,9 +734,9 @@ class LocalMutationDaoAckTest {
 
     private fun categoryEntity(id: String, name: String) = CategoryEntity(
         id = id,
-        ownerId = "usr-1",
+        ownerId = USER_ID,
         workspaceId = null,
-        scopeKey = "usr-1",
+        scopeKey = "user:$USER_ID",
         name = name,
         normalizedName = name.lowercase(),
         slug = name.lowercase(),

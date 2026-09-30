@@ -29,11 +29,11 @@ class AssetV2AckTest {
         val db = database()
         try {
             val queue = queue(db)
-            val op = queue.enqueueAssetV2(entity("PENDING_CREATE", 0, null), OutboxOperationType.CREATE, payload())
-            assertNotNull(queue.claimOperation(op))
+            val op = queue.enqueueAssetV2(SCOPE, entity("PENDING_CREATE", 0, null), OutboxOperationType.CREATE, payload())
+            assertNotNull(queue.claimOperation(SCOPE, op))
 
-            assertTrue(db.localMutationDao().ackV2Execution(op, OutboxExecutionResult.AssetApplied(dto("Uzak Altın", 1)), NOW))
-            assertNull(db.syncOperationDao().getById(op))
+            assertTrue(db.localMutationDao().ackV2Execution(SCOPE, op, OutboxExecutionResult.AssetApplied(dto("Uzak Altın", 1)), NOW))
+            assertNull(db.syncOperationDao().getById(SCOPE, op))
             val stored = assertNotNull(db.assetDao().getAnyById(ASSET_ID))
             assertEquals("Uzak Altın", stored.name)
             assertEquals("SYNCED", stored.sync.syncStatus)
@@ -46,14 +46,14 @@ class AssetV2AckTest {
         val db = database()
         try {
             val queue = queue(db)
-            val first = queue.enqueueAssetV2(entity("PENDING_CREATE", 0, null), OutboxOperationType.CREATE, payload())
-            queue.claimOperation(first)
-            val successor = queue.enqueueAssetV2(entity("PENDING_UPDATE", 0, null).copy(name = "Yerel yeni ad"), OutboxOperationType.UPDATE, payload("Yerel yeni ad"))
-            assertTrue(db.syncOperationDao().getById(successor)!!.isBlocked)
+            val first = queue.enqueueAssetV2(SCOPE, entity("PENDING_CREATE", 0, null), OutboxOperationType.CREATE, payload())
+            queue.claimOperation(SCOPE, first)
+            val successor = queue.enqueueAssetV2(SCOPE, entity("PENDING_UPDATE", 0, null).copy(name = "Yerel yeni ad"), OutboxOperationType.UPDATE, payload("Yerel yeni ad"))
+            assertTrue(db.syncOperationDao().getById(SCOPE, successor)!!.isBlocked)
 
-            db.localMutationDao().ackV2Execution(first, OutboxExecutionResult.AssetApplied(dto("Sunucu eski ad", 1)), NOW)
+            db.localMutationDao().ackV2Execution(SCOPE, first, OutboxExecutionResult.AssetApplied(dto("Sunucu eski ad", 1)), NOW)
 
-            val next = assertNotNull(db.syncOperationDao().getById(successor))
+            val next = assertNotNull(db.syncOperationDao().getById(SCOPE, successor))
             assertFalse(next.isBlocked)
             assertEquals(1, next.baseVersion)
             val stored = assertNotNull(db.assetDao().getAnyById(ASSET_ID))
@@ -69,11 +69,11 @@ class AssetV2AckTest {
         try {
             val queue = queue(db)
             val deleted = entity("PENDING_DELETE", 2, 2).copy(sync = entity("PENDING_DELETE", 2, 2).sync.copy(deletedAtEpochMillis = NOW))
-            val op = queue.enqueueAssetV2(deleted, OutboxOperationType.DELETE, payload())
-            queue.claimOperation(op)
+            val op = queue.enqueueAssetV2(SCOPE, deleted, OutboxOperationType.DELETE, payload())
+            queue.claimOperation(SCOPE, op)
 
-            assertTrue(db.localMutationDao().ackV2Execution(op, OutboxExecutionResult.MissingDeleteAcknowledged, NOW + 1))
-            assertNull(db.syncOperationDao().getById(op))
+            assertTrue(db.localMutationDao().ackV2Execution(SCOPE, op, OutboxExecutionResult.MissingDeleteAcknowledged, NOW + 1))
+            assertNull(db.syncOperationDao().getById(SCOPE, op))
             val stored = assertNotNull(db.assetDao().getAnyById(ASSET_ID))
             assertEquals("SYNCED", stored.sync.syncStatus)
             assertEquals(NOW, stored.sync.deletedAtEpochMillis)
@@ -96,6 +96,7 @@ class AssetV2AckTest {
 
     private companion object {
         const val USER_ID = "11111111-1111-1111-1111-111111111111"
+        const val SCOPE = "USER:$USER_ID"
         const val ASSET_ID = "33333333-3333-3333-3333-333333333333"
         const val NOW = 1_800_000_000_000L
     }

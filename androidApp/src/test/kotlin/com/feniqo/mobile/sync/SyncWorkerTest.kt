@@ -14,10 +14,14 @@ import com.feniqo.mobile.domain.repository.SyncConflict
 import com.feniqo.mobile.domain.repository.SyncOverview
 import com.feniqo.mobile.domain.repository.SyncPhase
 import com.feniqo.mobile.domain.repository.SyncRepository
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -110,6 +114,36 @@ class SyncWorkerTest {
     }
 
     @Test
+    fun `session invalidated auth failure finishes worker without retry`() = runTest {
+        val fakeRepo = FakeSyncRepository(
+            resultToReturn = RepositoryResult.Failure(AppError.Authentication("sync.session_invalidated")),
+        )
+        val worker = buildWorker(fakeRepo)
+
+        val result = worker.doWork()
+
+        assertEquals(ListenableWorker.Result.success(), result)
+        assertEquals(1, fakeRepo.requestSyncCallCount)
+    }
+
+    @Test
+    fun `worker propagates external cancellation`() = runTest {
+        val started = CompletableDeferred<Unit>()
+        val cancelled = CompletableDeferred<Unit>()
+        val fakeRepo = SuspendingSyncRepository(started, cancelled)
+        val worker = buildWorker(fakeRepo)
+
+        val job = launch {
+            worker.doWork()
+        }
+        started.await()
+        job.cancel()
+        cancelled.await()
+        job.join()
+        assertTrue(job.isCancelled)
+    }
+
+    @Test
     fun `when requestSync fails with unknown error then worker returns failure`() = runTest {
         val fakeRepo = FakeSyncRepository(
             resultToReturn = RepositoryResult.Failure(AppError.Unknown("sync.unknown")),
@@ -155,6 +189,41 @@ private class FakeSyncRepository(
     override suspend fun requestSync(): RepositoryResult<Unit> {
         requestSyncCallCount++
         return resultToReturn
+    }
+
+    override suspend fun retryFailedOperations(): RepositoryResult<Unit> = requestSync()
+
+    override suspend fun resolveConflict(
+        entityId: EntityId,
+        resolution: ConflictResolution,
+    ): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+}
+
+private class SuspendingSyncRepository(
+    private val started: CompletableDeferred<Unit>,
+    private val cancelled: CompletableDeferred<Unit>,
+) : SyncRepository {
+    override fun observeOverview(): Flow<SyncOverview> = flowOf(
+        SyncOverview(
+            phase = SyncPhase.IDLE,
+            pendingOperationCount = 0,
+            failedOperationCount = 0,
+            conflictCount = 0,
+            lastSuccessfulSyncAt = null,
+            lastError = null,
+        ),
+    )
+
+    override fun observeConflicts(): Flow<List<SyncConflict>> = flowOf(emptyList())
+
+    override suspend fun requestSync(): RepositoryResult<Unit> {
+        started.complete(Unit)
+        try {
+            awaitCancellation()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            cancelled.complete(Unit)
+            throw e
+        }
     }
 
     override suspend fun retryFailedOperations(): RepositoryResult<Unit> = requestSync()

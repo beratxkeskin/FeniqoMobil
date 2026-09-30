@@ -51,7 +51,7 @@ class OfflineFirstWorkspaceRepositoryTest {
     private class FakeAuthRepository(
         private val sessionFlow: MutableStateFlow<AuthSession?> = MutableStateFlow(
             AuthSession(
-                userId = EntityId("user-1"),
+                userId = EntityId("11111111-1111-4111-8111-111111111111"),
                 email = "user1@example.com",
                 expiresAt = Instant.fromEpochMilliseconds(2000000000000L),
             ),
@@ -61,7 +61,7 @@ class OfflineFirstWorkspaceRepositoryTest {
         override fun observeCurrentProfile(): Flow<UserProfile?> = MutableStateFlow(null)
         override suspend fun signIn(email: String, password: String): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
         override suspend fun signUp(email: String, password: String, fullName: String?): RepositoryResult<EntityId> =
-            RepositoryResult.Success(EntityId("user-1"))
+            RepositoryResult.Success(EntityId("11111111-1111-4111-8111-111111111111"))
         override suspend fun refreshSession(): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
         override suspend fun signOut(): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
 
@@ -112,7 +112,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             assertNotNull(wsEntity)
             assertEquals("Yeni Ortak Alan 🚀", wsEntity.name)
             assertEquals("yeni ortak alan 🚀", wsEntity.normalizedName)
-            assertEquals("user-1", wsEntity.ownerId)
+            assertEquals("11111111-1111-4111-8111-111111111111", wsEntity.ownerId)
             assertEquals("shared", wsEntity.typeCode)
             assertEquals("TRY", wsEntity.currencyCode)
             assertEquals("Ortak harcamalar", wsEntity.description)
@@ -127,12 +127,12 @@ class OfflineFirstWorkspaceRepositoryTest {
             assertEquals(1, members.size)
             val ownerMember = members.first()
             assertEquals("ws-100", ownerMember.workspaceId)
-            assertEquals("user-1", ownerMember.userId)
+            assertEquals("11111111-1111-4111-8111-111111111111", ownerMember.userId)
             assertEquals("OWNER", ownerMember.roleCode)
             assertEquals("PENDING_CREATE", ownerMember.sync.syncStatus)
 
             // Outbox V2 kaydı ve canonical D3 payload kontrolü
-            val readyOps = operationDao.getReadyOperations(nowEpochMillis = 1757160000000L, limit = 10)
+            val readyOps = operationDao.getReadyOperations(syncScopeKey = "USER:11111111-1111-4111-8111-111111111111", nowEpochMillis = 1757160000000L, limit = 10)
             assertEquals(1, readyOps.size)
             val op = readyOps.first()
             assertEquals("WORKSPACE", op.entityTypeCode)
@@ -192,7 +192,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             val uuidRegex = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
             assertTrue(uuidRegex.matches(generatedId), "Workspace ID must match RFC-4122 v4 hyphenated UUID: $generatedId")
 
-            val readyOps = operationDao.getReadyOperations(nowEpochMillis = 1757160000000L, limit = 10)
+            val readyOps = operationDao.getReadyOperations(syncScopeKey = "USER:11111111-1111-4111-8111-111111111111", nowEpochMillis = 1757160000000L, limit = 10)
             assertEquals(1, readyOps.size)
             val op = readyOps.first()
             assertEquals(generatedId, op.entityId)
@@ -230,7 +230,7 @@ class OfflineFirstWorkspaceRepositoryTest {
                     id = "ws-200",
                     name = "Eski Başlık",
                     normalizedName = "eski başlık",
-                    ownerId = "user-1",
+                    ownerId = "11111111-1111-4111-8111-111111111111",
                     typeCode = "personal",
                     currencyCode = "TRY",
                     description = null,
@@ -249,7 +249,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             workspaceDao.upsertMember(
                 WorkspaceMemberEntity(
                     workspaceId = "ws-200",
-                    userId = "user-1",
+                    userId = "11111111-1111-4111-8111-111111111111",
                     roleCode = "OWNER",
                     joinedAtEpochMillis = 1757150000000L,
                     sync = SyncMetadata(
@@ -288,7 +288,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             assertEquals(3L, updatedWs.sync.baseVersion)
 
             // Outbox kontrolü
-            val readyOps = operationDao.getReadyOperations(nowEpochMillis = 1757170000000L, limit = 10)
+            val readyOps = operationDao.getReadyOperations(syncScopeKey = "USER:11111111-1111-4111-8111-111111111111", nowEpochMillis = 1757170000000L, limit = 10)
             assertEquals(1, readyOps.size)
             val op = readyOps.first()
             assertEquals("UPDATE", op.operationTypeCode)
@@ -331,7 +331,7 @@ class OfflineFirstWorkspaceRepositoryTest {
                     id = "ws-300",
                     name = "Silinecek Çalışma Alanı",
                     normalizedName = "silinecek çalışma alanı",
-                    ownerId = "user-1",
+                    ownerId = "11111111-1111-4111-8111-111111111111",
                     typeCode = "shared",
                     currencyCode = "TRY",
                     description = null,
@@ -350,7 +350,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             workspaceDao.upsertMember(
                 WorkspaceMemberEntity(
                     workspaceId = "ws-300",
-                    userId = "user-1",
+                    userId = "11111111-1111-4111-8111-111111111111",
                     roleCode = "OWNER",
                     joinedAtEpochMillis = 1757150000000L,
                     sync = SyncMetadata(
@@ -376,7 +376,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             assertEquals(5L, deletedWs.sync.baseVersion)
 
             // Outbox kontrolü
-            val readyOps = operationDao.getReadyOperations(nowEpochMillis = 1757180000000L, limit = 10)
+            val readyOps = operationDao.getReadyOperations(syncScopeKey = "USER:11111111-1111-4111-8111-111111111111", nowEpochMillis = 1757180000000L, limit = 10)
             assertEquals(1, readyOps.size)
             val op = readyOps.first()
             assertEquals("DELETE", op.operationTypeCode)
@@ -400,7 +400,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             // Aktif kullanıcı viewer olsun
             authRepo.setSession(
                 AuthSession(
-                    userId = EntityId("user-viewer"),
+                    userId = EntityId("33333333-3333-4333-8333-333333333333"),
                     email = "viewer@example.com",
                     expiresAt = Instant.fromEpochMilliseconds(2000000000000L),
                 ),
@@ -425,7 +425,7 @@ class OfflineFirstWorkspaceRepositoryTest {
                     id = "ws-400",
                     name = "Korumalı Alan",
                     normalizedName = "korumalı alan",
-                    ownerId = "user-owner",
+                    ownerId = "11111111-1111-4111-8111-111111111111",
                     typeCode = "shared",
                     currencyCode = "TRY",
                     description = null,
@@ -444,7 +444,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             workspaceDao.upsertMember(
                 WorkspaceMemberEntity(
                     workspaceId = "ws-400",
-                    userId = "user-owner",
+                    userId = "11111111-1111-4111-8111-111111111111",
                     roleCode = "OWNER",
                     joinedAtEpochMillis = 1757150000000L,
                     sync = SyncMetadata(
@@ -461,7 +461,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             workspaceDao.upsertMember(
                 WorkspaceMemberEntity(
                     workspaceId = "ws-400",
-                    userId = "user-viewer",
+                    userId = "33333333-3333-4333-8333-333333333333",
                     roleCode = "VIEWER",
                     joinedAtEpochMillis = 1757150000000L,
                     sync = SyncMetadata(
@@ -494,7 +494,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             assertEquals("actor_not_permitted", (deleteResult.error as AppError.Authentication).code)
 
             // Hiçbir outbox kaydı veya yerel değişiklik oluşmamalı
-            val readyOps = operationDao.getReadyOperations(nowEpochMillis = 1757190000000L, limit = 10)
+            val readyOps = operationDao.getReadyOperations(syncScopeKey = "USER:11111111-1111-4111-8111-111111111111", nowEpochMillis = 1757190000000L, limit = 10)
             assertEquals(0, readyOps.size)
 
             val ws = workspaceDao.getWorkspaceById("ws-400")
@@ -527,7 +527,7 @@ class OfflineFirstWorkspaceRepositoryTest {
                     id = "ws-active-1",
                     name = "Aktif Alan A",
                     normalizedName = "aktif alan a",
-                    ownerId = "user-1",
+                    ownerId = "11111111-1111-4111-8111-111111111111",
                     typeCode = "shared",
                     currencyCode = "TRY",
                     description = null,
@@ -546,7 +546,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             workspaceDao.upsertMember(
                 WorkspaceMemberEntity(
                     workspaceId = "ws-active-1",
-                    userId = "user-1",
+                    userId = "11111111-1111-4111-8111-111111111111",
                     roleCode = "OWNER",
                     joinedAtEpochMillis = 1000L,
                     sync = SyncMetadata(
@@ -567,7 +567,7 @@ class OfflineFirstWorkspaceRepositoryTest {
                     id = "ws-deleted",
                     name = "Silinmiş Alan",
                     normalizedName = "silinmiş alan",
-                    ownerId = "user-1",
+                    ownerId = "11111111-1111-4111-8111-111111111111",
                     typeCode = "shared",
                     currencyCode = "TRY",
                     description = null,
@@ -586,7 +586,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             workspaceDao.upsertMember(
                 WorkspaceMemberEntity(
                     workspaceId = "ws-deleted",
-                    userId = "user-1",
+                    userId = "11111111-1111-4111-8111-111111111111",
                     roleCode = "OWNER",
                     joinedAtEpochMillis = 1000L,
                     sync = SyncMetadata(
@@ -607,7 +607,7 @@ class OfflineFirstWorkspaceRepositoryTest {
                     id = "ws-other-user",
                     name = "Başkası",
                     normalizedName = "başkası",
-                    ownerId = "user-2",
+                    ownerId = "22222222-2222-4222-8222-222222222222",
                     typeCode = "shared",
                     currencyCode = "TRY",
                     description = null,
@@ -626,7 +626,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             workspaceDao.upsertMember(
                 WorkspaceMemberEntity(
                     workspaceId = "ws-other-user",
-                    userId = "user-2",
+                    userId = "22222222-2222-4222-8222-222222222222",
                     roleCode = "OWNER",
                     joinedAtEpochMillis = 1000L,
                     sync = SyncMetadata(
@@ -681,7 +681,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             )
             assertTrue(createResult is RepositoryResult.Success)
 
-            val initialOps = operationDao.getReadyOperations(nowEpochMillis = 1000L, limit = 10)
+            val initialOps = operationDao.getReadyOperations(syncScopeKey = "USER:11111111-1111-4111-8111-111111111111", nowEpochMillis = 1000L, limit = 10)
             assertEquals(1, initialOps.size)
             val initialOpId = initialOps.first().operationId
             assertEquals("CREATE", initialOps.first().operationTypeCode)
@@ -700,7 +700,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             assertTrue(updateResult is RepositoryResult.Success)
 
             // Outbox kontrolü: Hâlâ tek bir CREATE operasyonu olmalı (coalesce edildi)
-            val pendingOps = operationDao.getReadyOperations(nowEpochMillis = 2000L, limit = 10)
+            val pendingOps = operationDao.getReadyOperations(syncScopeKey = "USER:11111111-1111-4111-8111-111111111111", nowEpochMillis = 2000L, limit = 10)
             assertEquals(1, pendingOps.size)
             val coalescedOp = pendingOps.first()
             assertEquals(initialOpId, coalescedOp.operationId)
@@ -759,7 +759,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             )
             assertTrue(createResult is RepositoryResult.Success)
 
-            val initialOps = operationDao.getReadyOperations(nowEpochMillis = 1000L, limit = 10)
+            val initialOps = operationDao.getReadyOperations(syncScopeKey = "USER:11111111-1111-4111-8111-111111111111", nowEpochMillis = 1000L, limit = 10)
             assertEquals(1, initialOps.size)
 
             // 2. Henüz gönderilmemiş PENDING_CREATE workspace üzerinde DELETE -> HARD_DELETE olmalı
@@ -767,7 +767,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             assertTrue(deleteResult is RepositoryResult.Success)
 
             // Outbox sıfırlanmış olmalı
-            val pendingOps = operationDao.getReadyOperations(nowEpochMillis = 2000L, limit = 10)
+            val pendingOps = operationDao.getReadyOperations(syncScopeKey = "USER:11111111-1111-4111-8111-111111111111", nowEpochMillis = 2000L, limit = 10)
             assertEquals(0, pendingOps.size)
 
             // Workspace ve Member Room'dan tamamen silinmiş olmalı
@@ -794,7 +794,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             // 1. Profil ekle
             profileDao.upsert(
                 UserProfileEntity(
-                    id = "user-1",
+                    id = "11111111-1111-4111-8111-111111111111",
                     email = "user1@example.com",
                     fullName = "Test Kullanıcı",
                     currencyCode = "TRY",
@@ -812,7 +812,7 @@ class OfflineFirstWorkspaceRepositoryTest {
                     id = "ws-valid",
                     name = "Canlı Alan",
                     normalizedName = "canlı alan",
-                    ownerId = "user-1",
+                    ownerId = "11111111-1111-4111-8111-111111111111",
                     createdAtEpochMillis = 1000L,
                     sync = newSyncMetadata(nowEpochMillis = 1000L),
                 ),
@@ -820,7 +820,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             workspaceDao.upsertMember(
                 WorkspaceMemberEntity(
                     workspaceId = "ws-valid",
-                    userId = "user-1",
+                    userId = "11111111-1111-4111-8111-111111111111",
                     roleCode = "OWNER",
                     joinedAtEpochMillis = 1000L,
                     sync = newSyncMetadata(nowEpochMillis = 1000L),
@@ -850,12 +850,12 @@ class OfflineFirstWorkspaceRepositoryTest {
             assertEquals("Canlı Alan", active.name)
 
             // Profil entity'si güncellenmiş olmalı
-            val profile = profileDao.observeById("user-1").first()
+            val profile = profileDao.observeById("11111111-1111-4111-8111-111111111111").first()
             assertNotNull(profile)
             assertEquals("ws-valid", profile.activeWorkspaceId)
 
             // Kesinlikle outbox/sync operation üretilmemiş olmalı (yerel tercih kuralı)
-            val readyOps = operationDao.getReadyOperations(nowEpochMillis = 5000L, limit = 10)
+            val readyOps = operationDao.getReadyOperations(syncScopeKey = "USER:11111111-1111-4111-8111-111111111111", nowEpochMillis = 5000L, limit = 10)
             assertTrue(readyOps.isEmpty())
         } finally {
             database.close()
@@ -873,7 +873,7 @@ class OfflineFirstWorkspaceRepositoryTest {
 
             profileDao.upsert(
                 UserProfileEntity(
-                    id = "user-1",
+                    id = "11111111-1111-4111-8111-111111111111",
                     email = "user1@example.com",
                     fullName = "Test Kullanıcı",
                     currencyCode = "TRY",
@@ -891,7 +891,7 @@ class OfflineFirstWorkspaceRepositoryTest {
                     id = "ws-tombstone",
                     name = "Silinmiş Alan",
                     normalizedName = "silinmiş alan",
-                    ownerId = "user-1",
+                    ownerId = "11111111-1111-4111-8111-111111111111",
                     createdAtEpochMillis = 1000L,
                     sync = newSyncMetadata(nowEpochMillis = 1000L).copy(
                         deletedAtEpochMillis = 2000L,
@@ -901,7 +901,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             workspaceDao.upsertMember(
                 WorkspaceMemberEntity(
                     workspaceId = "ws-tombstone",
-                    userId = "user-1",
+                    userId = "11111111-1111-4111-8111-111111111111",
                     roleCode = "OWNER",
                     joinedAtEpochMillis = 1000L,
                     sync = newSyncMetadata(nowEpochMillis = 1000L),
@@ -928,7 +928,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             assertEquals("workspace_not_found", tombstoneResult.error.code)
 
             // Profil kesinlikle değişmemiş olmalı
-            val profile = profileDao.observeById("user-1").first()
+            val profile = profileDao.observeById("11111111-1111-4111-8111-111111111111").first()
             assertNotNull(profile)
             assertNull(profile.activeWorkspaceId)
         } finally {
@@ -947,7 +947,7 @@ class OfflineFirstWorkspaceRepositoryTest {
 
             profileDao.upsert(
                 UserProfileEntity(
-                    id = "user-1",
+                    id = "11111111-1111-4111-8111-111111111111",
                     email = "user1@example.com",
                     fullName = "Test Kullanıcı",
                     currencyCode = "TRY",
@@ -965,7 +965,7 @@ class OfflineFirstWorkspaceRepositoryTest {
                     id = "ws-other",
                     name = "Başkasının Alanı",
                     normalizedName = "başkasının alanı",
-                    ownerId = "user-2",
+                    ownerId = "22222222-2222-4222-8222-222222222222",
                     createdAtEpochMillis = 1000L,
                     sync = newSyncMetadata(nowEpochMillis = 1000L),
                 ),
@@ -973,7 +973,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             workspaceDao.upsertMember(
                 WorkspaceMemberEntity(
                     workspaceId = "ws-other",
-                    userId = "user-2",
+                    userId = "22222222-2222-4222-8222-222222222222",
                     roleCode = "OWNER",
                     joinedAtEpochMillis = 1000L,
                     sync = newSyncMetadata(nowEpochMillis = 1000L),
@@ -986,7 +986,7 @@ class OfflineFirstWorkspaceRepositoryTest {
                     id = "ws-tombstone-member",
                     name = "Üyeliği Silinmiş Alan",
                     normalizedName = "üyeliği silinmiş alan",
-                    ownerId = "user-2",
+                    ownerId = "22222222-2222-4222-8222-222222222222",
                     createdAtEpochMillis = 1000L,
                     sync = newSyncMetadata(nowEpochMillis = 1000L),
                 ),
@@ -994,7 +994,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             workspaceDao.upsertMember(
                 WorkspaceMemberEntity(
                     workspaceId = "ws-tombstone-member",
-                    userId = "user-1",
+                    userId = "11111111-1111-4111-8111-111111111111",
                     roleCode = "VIEWER",
                     joinedAtEpochMillis = 1000L,
                     sync = newSyncMetadata(nowEpochMillis = 1000L).copy(
@@ -1023,7 +1023,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             assertEquals("workspace_not_found", tombstoneMemberResult.error.code)
 
             // Profil değişmemeli
-            val profile = profileDao.observeById("user-1").first()
+            val profile = profileDao.observeById("11111111-1111-4111-8111-111111111111").first()
             assertNotNull(profile)
             assertNull(profile.activeWorkspaceId)
         } finally {
@@ -1044,7 +1044,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             // 2 farklı kullanıcı profili
             profileDao.upsert(
                 UserProfileEntity(
-                    id = "user-1",
+                    id = "11111111-1111-4111-8111-111111111111",
                     email = "user1@example.com",
                     fullName = "User 1",
                     currencyCode = "TRY",
@@ -1057,7 +1057,7 @@ class OfflineFirstWorkspaceRepositoryTest {
             )
             profileDao.upsert(
                 UserProfileEntity(
-                    id = "user-2",
+                    id = "22222222-2222-4222-8222-222222222222",
                     email = "user2@example.com",
                     fullName = "User 2",
                     currencyCode = "TRY",
@@ -1083,17 +1083,17 @@ class OfflineFirstWorkspaceRepositoryTest {
             assertTrue(clearResult is RepositoryResult.Success)
 
             // user-1 profilinde active_workspace_id temizlenmiş olmalı
-            val p1 = profileDao.observeById("user-1").first()
+            val p1 = profileDao.observeById("11111111-1111-4111-8111-111111111111").first()
             assertNotNull(p1)
             assertNull(p1.activeWorkspaceId)
 
             // user-2 profilinde active_workspace_id KESİNLİKLE DEĞİŞMEMİŞ olmalı
-            val p2 = profileDao.observeById("user-2").first()
+            val p2 = profileDao.observeById("22222222-2222-4222-8222-222222222222").first()
             assertNotNull(p2)
             assertEquals("ws-shared", p2.activeWorkspaceId)
 
             // Outbox işlemi üretilmemiş olmalı
-            val ops = operationDao.getReadyOperations(nowEpochMillis = 5000L, limit = 10)
+            val ops = operationDao.getReadyOperations(syncScopeKey = "USER:11111111-1111-4111-8111-111111111111", nowEpochMillis = 5000L, limit = 10)
             assertTrue(ops.isEmpty())
         } finally {
             database.close()

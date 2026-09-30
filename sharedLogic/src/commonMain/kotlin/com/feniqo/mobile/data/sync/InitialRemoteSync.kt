@@ -42,7 +42,15 @@ class InitialRemoteSync(
         nowEpochMillisProvider: () -> Long,
     ) : this(remote, remoteSyncDao, nowEpochMillisProvider, null)
 
-    suspend fun pullFor(userId: EntityId): InitialSyncResult {
+    suspend fun pullFor(
+        userId: EntityId,
+        syncScopeKey: String,
+    ): InitialSyncResult {
+        val userScopeFromId = SyncScopeKey.user(userId.value).userId
+        val userScopeFromKey = SyncScopeKey.requireUserScope(syncScopeKey).userId
+        require(userScopeFromId == userScopeFromKey) {
+            "Mismatched userId (${userId.value}) and syncScopeKey ($syncScopeKey)"
+        }
         val profile = requireNotNull(remote.fetchProfile(userId.value)) {
             "Geçerli oturum için uzak profil bulunamadı."
         }
@@ -94,6 +102,7 @@ class InitialRemoteSync(
         val receivedAt = nowEpochMillisProvider()
 
         remoteSyncDao.applyInitialSnapshot(
+            syncScopeKey = syncScopeKey,
             profile = profile.toDomain().toEntity(profile.toRemoteSyncMetadata(receivedAt)),
             categories = categories.map { dto ->
                 dto.toDomain().toEntity(dto.toRemoteSyncMetadata(receivedAt), slug = dto.slug)
@@ -120,20 +129,21 @@ class InitialRemoteSync(
                 dto.toDomain().toEntity(dto.toRemoteSyncMetadata(receivedAt))
             },
             cursors = listOfNotNull(
-                cursorFor(PROFILE, listOf(profile.id to (profile.updatedAt ?: profile.createdAt))),
-                cursorFor(CATEGORY, categories.map { it.id to (it.updatedAt ?: it.createdAt) }),
-                cursorFor(RECURRING_TRANSACTION, recurringTransactions.map { it.id to (it.updatedAt ?: it.createdAt) }),
-                cursorFor(SUBSCRIPTION, subscriptions.map { it.id to (it.updatedAt ?: it.createdAt) }),
-                cursorFor(GOAL, goals.map { it.id to (it.updatedAt ?: it.createdAt) }),
-                cursorFor(GOAL_CONTRIBUTION, goalContributions.map { it.id to (it.updatedAt ?: it.createdAt) }),
-                cursorFor(DEBT, debts.map { it.id to (it.updatedAt ?: it.createdAt) }),
-                cursorFor(DEBT_PAYMENT, debtPayments.map { it.id to (it.updatedAt ?: it.createdAt) }),
-                cursorFor(TRANSACTION, transactions.map { it.id to (it.updatedAt ?: it.createdAt) }),
+                cursorFor(syncScopeKey, PROFILE, listOf(profile.id to (profile.updatedAt ?: profile.createdAt))),
+                cursorFor(syncScopeKey, CATEGORY, categories.map { it.id to (it.updatedAt ?: it.createdAt) }),
+                cursorFor(syncScopeKey, RECURRING_TRANSACTION, recurringTransactions.map { it.id to (it.updatedAt ?: it.createdAt) }),
+                cursorFor(syncScopeKey, SUBSCRIPTION, subscriptions.map { it.id to (it.updatedAt ?: it.createdAt) }),
+                cursorFor(syncScopeKey, GOAL, goals.map { it.id to (it.updatedAt ?: it.createdAt) }),
+                cursorFor(syncScopeKey, GOAL_CONTRIBUTION, goalContributions.map { it.id to (it.updatedAt ?: it.createdAt) }),
+                cursorFor(syncScopeKey, DEBT, debts.map { it.id to (it.updatedAt ?: it.createdAt) }),
+                cursorFor(syncScopeKey, DEBT_PAYMENT, debtPayments.map { it.id to (it.updatedAt ?: it.createdAt) }),
+                cursorFor(syncScopeKey, TRANSACTION, transactions.map { it.id to (it.updatedAt ?: it.createdAt) }),
             ),
         )
         assetDao?.applyInitialSnapshot(
-            assets.map { it.toDomain().toEntity(it.toRemoteSyncMetadata(receivedAt)) },
-            cursorFor(ASSET, assets.map { it.id to (it.updatedAt ?: it.createdAt) }),
+            syncScopeKey = syncScopeKey,
+            assets = assets.map { it.toDomain().toEntity(it.toRemoteSyncMetadata(receivedAt)) },
+            cursor = cursorFor(syncScopeKey, ASSET, assets.map { it.id to (it.updatedAt ?: it.createdAt) }),
         )
         return InitialSyncResult(
             categoryCount = categories.size,
@@ -159,11 +169,12 @@ class InitialRemoteSync(
         return result
     }
 
-    private fun cursorFor(entityType: String, records: List<Pair<String, String>>): SyncCursorEntity? {
+    private fun cursorFor(syncScopeKey: String, entityType: String, records: List<Pair<String, String>>): SyncCursorEntity? {
         val last = records.maxWithOrNull(
             compareBy<Pair<String, String>> { Instant.parse(it.second) }.thenBy { it.first },
         ) ?: return null
         return SyncCursorEntity(
+            syncScopeKey = syncScopeKey,
             entityTypeCode = entityType,
             updatedAtEpochMillis = Instant.parse(last.second).toEpochMilliseconds(),
             entityId = last.first,

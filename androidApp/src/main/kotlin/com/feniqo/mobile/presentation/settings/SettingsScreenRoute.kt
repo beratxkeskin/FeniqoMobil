@@ -597,6 +597,7 @@ fun SyncStatusScreenRoute(
                 .format(java.util.Date(epochMillis))
         } ?: "Henüz eşitlenmedi",
         conflictCount = syncState.conflictCount,
+        hasLegacyQuarantinedData = syncState.hasLegacyQuarantinedData,
         onBack = onBack,
         onRetrySync = { syncViewModel.requestManualSync() },
         onInspectConflict = { syncViewModel.openConflictDialog() },

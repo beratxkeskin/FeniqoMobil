@@ -19,6 +19,7 @@ import com.feniqo.mobile.data.remote.codec.WorkspaceMembershipPayloadCodec
 import com.feniqo.mobile.data.remote.codec.WorkspacePayloadCodec
 import com.feniqo.mobile.data.remote.core.CoreRemoteDataSource
 import com.feniqo.mobile.data.remote.mapper.toEntity
+import com.feniqo.mobile.data.sync.SyncScopeKey
 import com.feniqo.mobile.data.util.RandomUuidEntityIdGenerator
 import com.feniqo.mobile.data.util.WorkspaceInvitationCrypto
 import com.feniqo.mobile.domain.model.AppError
@@ -129,6 +130,7 @@ class OfflineFirstWorkspaceRepository(
 
             val now = nowEpochMillisProvider()
             val workspaceId = entityIdGenerator.nextId().value
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
 
             val workspaceEntity = WorkspaceEntity(
                 id = workspaceId,
@@ -157,6 +159,7 @@ class OfflineFirstWorkspaceRepository(
             )
 
             localMutationDao.mutateWorkspaceV2(
+                syncScopeKey = syncScopeKey,
                 entity = workspaceEntity,
                 members = listOf(ownerMemberEntity),
                 type = OutboxOperationType.CREATE,
@@ -177,6 +180,7 @@ class OfflineFirstWorkspaceRepository(
         try {
             val session = authRepository.observeSession().first()
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
 
             val existing = workspaceDao.getWorkspaceById(command.id.value)
             if (existing == null || existing.sync.deletedAtEpochMillis != null) {
@@ -223,6 +227,7 @@ class OfflineFirstWorkspaceRepository(
                 )
 
                 localMutationDao.mutateWorkspaceV2(
+                    syncScopeKey = syncScopeKey,
                     entity = updatedEntity,
                     members = emptyList(),
                     type = OutboxOperationType.UPDATE,
@@ -256,6 +261,7 @@ class OfflineFirstWorkspaceRepository(
                 )
 
                 localMutationDao.mutateWorkspaceV2(
+                    syncScopeKey = syncScopeKey,
                     entity = updatedEntity,
                     members = emptyList(),
                     type = OutboxOperationType.UPDATE,
@@ -277,6 +283,7 @@ class OfflineFirstWorkspaceRepository(
         try {
             val session = authRepository.observeSession().first()
                 ?: return RepositoryResult.Failure(AppError.Authentication("auth_session_required"))
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
 
             val existing = workspaceDao.getWorkspaceById(id.value)
             if (existing == null || existing.sync.deletedAtEpochMillis != null) {
@@ -306,6 +313,7 @@ class OfflineFirstWorkspaceRepository(
                 val payloadJson = WorkspacePayloadCodec.encodePendingCreateHardDeletePayload(existing.id)
 
                 localMutationDao.mutateWorkspaceV2(
+                    syncScopeKey = syncScopeKey,
                     entity = deletedEntity,
                     members = emptyList(),
                     type = OutboxOperationType.DELETE,
@@ -334,6 +342,7 @@ class OfflineFirstWorkspaceRepository(
                 )
 
                 localMutationDao.mutateWorkspaceV2(
+                    syncScopeKey = syncScopeKey,
                     entity = deletedEntity,
                     members = emptyList(),
                     type = OutboxOperationType.DELETE,
@@ -442,7 +451,10 @@ class OfflineFirstWorkspaceRepository(
                 createdAtIso = createdAt.toString(),
             )
 
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
+
             localMutationDao.mutateWorkspaceInvitationCreateV2(
+                syncScopeKey = syncScopeKey,
                 entity = invitationEntity,
                 payloadJson = payloadJson,
                 operationIdFactory = operationIdFactory,
@@ -567,7 +579,10 @@ class OfflineFirstWorkspaceRepository(
                 ),
             )
 
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
+
             localMutationDao.mutateWorkspaceMemberRoleV2(
+                syncScopeKey = syncScopeKey,
                 entity = updatedMember,
                 payloadJson = payloadJson,
                 operationIdFactory = operationIdFactory,
@@ -621,7 +636,10 @@ class OfflineFirstWorkspaceRepository(
                 ),
             )
 
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
+
             localMutationDao.mutateWorkspaceMemberLeaveV2(
+                syncScopeKey = syncScopeKey,
                 entity = tombstonedMember,
                 activeProfileId = actorId.value,
                 payloadJson = payloadJson,
@@ -812,7 +830,10 @@ class OfflineFirstWorkspaceRepository(
                 ),
             )
 
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
+
             localMutationDao.mutateWorkspaceMemberRemovalV2(
+                syncScopeKey = syncScopeKey,
                 entity = tombstonedTarget,
                 payloadJson = payloadJson,
                 operationIdFactory = operationIdFactory,

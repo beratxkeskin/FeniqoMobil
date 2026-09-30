@@ -406,7 +406,7 @@ class WorkspaceOwnershipTransferRepositoryTest {
             assertEquals(2L, targetAfter.sync.version)
 
             // Outbox üretilmediği doğrulandı
-            val outboxOps = database.remoteSyncDao().getAllWorkspaceOperations("ws-1")
+            val outboxOps = database.remoteSyncDao().getAllWorkspaceOperations("USER:user-owner", "ws-1")
             assertTrue(outboxOps.isEmpty(), "Ownership transfer işleminde kesinlikle outbox üretilmemelidir.")
         } finally {
             database.close()
@@ -450,7 +450,7 @@ class WorkspaceOwnershipTransferRepositoryTest {
             assertNotNull(actor)
             assertEquals("OWNER", actor.roleCode)
 
-            val outboxOps = database.remoteSyncDao().getAllWorkspaceOperations("ws-1")
+            val outboxOps = database.remoteSyncDao().getAllWorkspaceOperations("USER:user-owner", "ws-1")
             assertTrue(outboxOps.isEmpty())
         } finally {
             database.close()

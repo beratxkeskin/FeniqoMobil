@@ -5,8 +5,13 @@ import androidx.room.Entity
 import androidx.room.Index
 
 /** Her uzak tablo için son başarıyla uygulanmış `(updated_at, id)` pull cursor'u. */
-@Entity(tableName = "sync_cursors", primaryKeys = ["entity_type_code"])
+@Entity(
+    tableName = "sync_cursors",
+    primaryKeys = ["sync_scope_key", "entity_type_code"],
+)
 data class SyncCursorEntity(
+    @ColumnInfo(name = "sync_scope_key")
+    val syncScopeKey: String,
     @ColumnInfo(name = "entity_type_code")
     val entityTypeCode: String,
     @ColumnInfo(name = "updated_at_epoch_ms")
@@ -18,10 +23,12 @@ data class SyncCursorEntity(
 /** Kullanıcı karar verene kadar hem yerel hem uzak snapshot'ı kalıcı biçimde korur. */
 @Entity(
     tableName = "sync_conflicts",
-    primaryKeys = ["entity_type_code", "entity_id"],
-    indices = [Index(value = ["detected_at_epoch_ms"])],
+    primaryKeys = ["sync_scope_key", "entity_type_code", "entity_id"],
+    indices = [Index(value = ["sync_scope_key", "detected_at_epoch_ms"])],
 )
 data class SyncConflictEntity(
+    @ColumnInfo(name = "sync_scope_key")
+    val syncScopeKey: String,
     @ColumnInfo(name = "entity_type_code")
     val entityTypeCode: String,
     @ColumnInfo(name = "entity_id")

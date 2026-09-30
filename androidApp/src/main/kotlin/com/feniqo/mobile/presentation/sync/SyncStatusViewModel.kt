@@ -194,6 +194,7 @@ class SyncStatusViewModel @Inject constructor(
             canRetryFailed = canRetryFailed,
             hasResolvableWorkspaceConflict = hasResolvableWorkspaceConflict,
             activeConflictDialog = activeConflictDialog,
+            hasLegacyQuarantinedData = overview.hasLegacyQuarantinedData,
         )
     }
 

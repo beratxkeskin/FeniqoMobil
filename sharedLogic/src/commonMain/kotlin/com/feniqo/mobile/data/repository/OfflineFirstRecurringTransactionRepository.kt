@@ -11,6 +11,7 @@ import com.feniqo.mobile.data.mapper.toPendingDelete
 import com.feniqo.mobile.data.mapper.toPendingUpdate
 import com.feniqo.mobile.data.local.outbox.OutboxOperationType
 import com.feniqo.mobile.data.remote.mapper.toDto
+import com.feniqo.mobile.data.sync.SyncScopeKey
 import com.feniqo.mobile.domain.model.AppError
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.EntityIdGenerator
@@ -105,7 +106,9 @@ class OfflineFirstRecurringTransactionRepository(
                 isActive = true,
                 createdAt = Instant.fromEpochMilliseconds(now),
             )
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
             offlineWriteQueue.enqueueRecurringTransactionV2(
+                syncScopeKey = syncScopeKey,
                 entity = recurring.toEntity(newSyncMetadata(now)),
                 type = OutboxOperationType.CREATE,
                 payloadJson = json.encodeToString(recurring.toDto()),
@@ -132,7 +135,9 @@ class OfflineFirstRecurringTransactionRepository(
             validateExpenseCategoryForScope(updated.categoryId, updated.type, session.userId.value, activeWorkspaceId?.value)?.let { return it }
 
             val now = nowEpochMillisProvider()
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
             offlineWriteQueue.enqueueRecurringTransactionV2(
+                syncScopeKey = syncScopeKey,
                 entity = updated.toEntity(existing.sync.toPendingUpdate(now)),
                 type = OutboxOperationType.UPDATE,
                 payloadJson = json.encodeToString(updated.toDto()),
@@ -154,7 +159,9 @@ class OfflineFirstRecurringTransactionRepository(
                 ?: return RepositoryResult.Failure(AppError.Validation("recurring_transaction_not_found"))
             val now = nowEpochMillisProvider()
             val updated = existing.toDomain().copy(isActive = command.isActive)
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
             offlineWriteQueue.enqueueRecurringTransactionV2(
+                syncScopeKey = syncScopeKey,
                 entity = updated.toEntity(existing.sync.toPendingUpdate(now)),
                 type = OutboxOperationType.UPDATE,
                 payloadJson = json.encodeToString(updated.toDto()),
@@ -175,7 +182,9 @@ class OfflineFirstRecurringTransactionRepository(
             val existing = scopedExisting(id, session.userId.value, activeWorkspaceId?.value)
                 ?: return RepositoryResult.Failure(AppError.Validation("recurring_transaction_not_found"))
             val now = nowEpochMillisProvider()
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
             offlineWriteQueue.enqueueRecurringTransactionV2(
+                syncScopeKey = syncScopeKey,
                 entity = existing.copy(sync = existing.sync.toPendingDelete(now)),
                 type = OutboxOperationType.DELETE,
                 payloadJson = json.encodeToString(existing.toDomain().toDto()),
@@ -290,7 +299,9 @@ class OfflineFirstRecurringTransactionRepository(
                 val payloadJson = json.encodeToString(dto)
                 val entity = transaction.toEntity(newSyncMetadata(nowEpochMillisProvider()))
 
+                val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
                 val result = offlineWriteQueue.enqueueRecurringTransactionOccurrenceV2(
+                    syncScopeKey = syncScopeKey,
                     recurringTransactionId = recurringId.value,
                     expectedPreviousLastGeneratedDate = currentExpectedLastGenerated?.toString(),
                     dueDate = candidate.dueDate.toString(),

@@ -35,6 +35,10 @@ class RecurringTransactionOfflineWriteQueueTest {
         override fun cancelSyncWork() {}
     }
 
+    private companion object {
+        const val SCOPE = "USER:11111111-1111-4111-8111-111111111111"
+    }
+
     @Test
     fun create_entity_and_v2_outbox_added_atomically() = runTest {
         val db = inMemoryDatabase()
@@ -45,6 +49,7 @@ class RecurringTransactionOfflineWriteQueueTest {
             val entity = recurringEntity("rec-1", categoryId = "cat-1", amountMinor = 50000L, syncStatus = SyncStatus.PENDING_CREATE)
 
             val opId = queue.enqueueRecurringTransactionV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"amountMinor":50000,"categoryId":"cat-1","frequency":"MONTHLY"}""",
@@ -56,7 +61,7 @@ class RecurringTransactionOfflineWriteQueueTest {
             assertEquals(50000L, stored.amountMinor)
 
             // Protocol version 2 outbox satırı oluştu
-            val op = db.syncOperationDao().getById(opId)
+            val op = db.syncOperationDao().getById(SCOPE, opId)
             assertNotNull(op)
             assertEquals("RECURRING_TRANSACTION", op.entityTypeCode)
             assertEquals("rec-1", op.entityId)
@@ -85,6 +90,7 @@ class RecurringTransactionOfflineWriteQueueTest {
             val entity = recurringEntity("rec-2", categoryId = "cat-1", amountMinor = 50000L, syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1 = queue.enqueueRecurringTransactionV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"amountMinor":50000}""",
@@ -95,6 +101,7 @@ class RecurringTransactionOfflineWriteQueueTest {
                 sync = entity.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name),
             )
             val op2 = queue.enqueueRecurringTransactionV2(
+                syncScopeKey = SCOPE,
                 entity = updatedEntity,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"amountMinor":75000}""",
@@ -106,7 +113,7 @@ class RecurringTransactionOfflineWriteQueueTest {
             assertNotNull(stored)
             assertEquals(75000L, stored.amountMinor)
 
-            val storedOp = db.syncOperationDao().getById(op1)
+            val storedOp = db.syncOperationDao().getById(SCOPE, op1)
             assertNotNull(storedOp)
             assertEquals("CREATE", storedOp.operationTypeCode)
             assertEquals("""{"amountMinor":75000}""", storedOp.payloadJson)
@@ -128,6 +135,7 @@ class RecurringTransactionOfflineWriteQueueTest {
             val entity = recurringEntity("rec-3", categoryId = "cat-1", amountMinor = 50000L, syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1 = queue.enqueueRecurringTransactionV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"amountMinor":50000}""",
@@ -141,6 +149,7 @@ class RecurringTransactionOfflineWriteQueueTest {
                 ),
             )
             val op2 = queue.enqueueRecurringTransactionV2(
+                syncScopeKey = SCOPE,
                 entity = delEntity,
                 type = OutboxOperationType.DELETE,
                 payloadJson = "{}",
@@ -155,8 +164,8 @@ class RecurringTransactionOfflineWriteQueueTest {
             cursor.close()
 
             // Outbox kaydı silinir
-            assertNull(db.syncOperationDao().getById(op1))
-            assertEquals(0, db.syncOperationDao().observePendingCount().first())
+            assertNull(db.syncOperationDao().getById(SCOPE, op1))
+            assertEquals(0, db.syncOperationDao().observePendingCount(SCOPE).first())
 
             // Hard delete durumunda scheduler çağrılmaz (sayaç hala 1 olmalı)
             assertEquals(1, scheduler.scheduleCount)
@@ -175,12 +184,13 @@ class RecurringTransactionOfflineWriteQueueTest {
             val entity = recurringEntity("rec-4", categoryId = "cat-1", amountMinor = 50000L, syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1 = queue.enqueueRecurringTransactionV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"amountMinor":50000}""",
             )
 
-            val claimed = queue.claimOperation(op1)
+            val claimed = queue.claimOperation(SCOPE, op1)
             assertNotNull(claimed)
             assertEquals("IN_FLIGHT", claimed.statusCode)
 
@@ -189,12 +199,13 @@ class RecurringTransactionOfflineWriteQueueTest {
                 sync = entity.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name),
             )
             val op2 = queue.enqueueRecurringTransactionV2(
+                syncScopeKey = SCOPE,
                 entity = updatedEntity,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"amountMinor":80000}""",
             )
 
-            val successor = db.syncOperationDao().getById(op2)
+            val successor = db.syncOperationDao().getById(SCOPE, op2)
             assertNotNull(successor)
             assertEquals("UPDATE", successor.operationTypeCode)
             assertTrue(successor.isBlocked)

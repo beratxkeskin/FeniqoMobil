@@ -122,6 +122,16 @@ Realtime SUBSCRIBED/değişiklik sinyali -> SyncRepository -> incremental pull -
 - Kullanıcı `KEEP_LOCAL` veya `KEEP_REMOTE` seçeneğiyle conflict çözer.
 - Realtime yalnız invalidation/telafi sinyalidir; payload veri kaynağı değildir.
 - Aynı anda birden fazla senkronizasyon `Mutex` ile seri hale getirilir.
+- Room v22 ile `sync_operations`, `sync_cursors` ve `sync_conflicts` kayıtları `sync_scope_key` (`USER:<canonical_uuid>`) ile kullanıcı bazında izole edilir.
+- PROFILE cursor sahibi ile aktif oturum kullanıcısı farklıysa senkronizasyon fail-closed durur (`AppError.Authentication("sync.local_data_owner_mismatch")`).
+- Farklı hesap durumunda otomatik outbox (`clearAllOperations`) veya cursor (`clearAllCursors`) silinmez; önceki kullanıcının verisi korunur.
+- Sahipliği kanıtlanamayan veya workspace kapsamındaki legacy kayıtlar `LEGACY_UNRESOLVED` karantinasında silinmeden fail-closed tutulur; aktif kullanıcıya körlemesine atanmaz veya runtime execution akışlarına dahil edilmez.
+- UI senkronizasyon durumunda karantina uyarısı exact sayaç, ID veya payload sızdırmadan salt genel bilgi verir ve üzerinde remote/mutation aksiyonu barındırmaz.
+- Oturum yarışında (session race) aktif oturum değişirse in-flight senkronizasyon iptal edilir; uzak çağrı başlamışsa işlem definitive ret veya başarı sayılmayıp aynı ID ve payload ile `AMBIGUOUS_RESULT` olarak kaydedilir.
+- WorkManager, Realtime ve manuel senkronizasyon aynı repository ve session guard sözleşmesine tabidir; oturum kapandığında (sign-out) senkronizasyon iptal edilir fakat Room verisi silinmez.
+- Kişisel yedek içe aktarma (`PersonalBackupImporter`) aktör bilgisini payload'dan değil oturumdan alır ve enqueue öncesinde oturumu tekrar doğrular.
+- Demo repository yalnızca canonical `USER:de000000-0000-4000-8000-000000000001` scope'unu kullanır ve `hasLegacyQuarantinedData = false` bildirir.
+- Güvenli hesap değiştirme ve yerel veri yönetimi ayrı ve açık bir kullanıcı kararı/onayı gerektirir.
 
 ## 6. Para ve zaman modeli
 

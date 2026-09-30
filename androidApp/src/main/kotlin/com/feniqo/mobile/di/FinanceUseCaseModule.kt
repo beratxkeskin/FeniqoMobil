@@ -114,7 +114,7 @@ object FinanceUseCaseModule {
     @Provides
     @Singleton
     fun provideEntityIdGenerator(): com.feniqo.mobile.domain.model.EntityIdGenerator =
-        com.feniqo.mobile.data.util.RandomHexEntityIdGenerator()
+        com.feniqo.mobile.data.util.RandomUuidEntityIdGenerator()
 
     @Provides
     @Singleton

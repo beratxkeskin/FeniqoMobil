@@ -80,6 +80,7 @@ class V2OutboxOperationExecutorTest {
         """.trimIndent()
 
         val op = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = OP_ID,
             entityTypeCode = "CATEGORY",
             entityId = ENTITY_ID,
@@ -130,7 +131,7 @@ class V2OutboxOperationExecutorTest {
 
         val snapshotJson = """
             {
-                "id": "different-id",
+                "id": "99999999-9999-4999-8999-999999999999",
                 "user_id": "$USER_ID",
                 "name": "Category",
                 "type": "expense",
@@ -319,6 +320,7 @@ class V2OutboxOperationExecutorTest {
             }
         """.trimIndent()
         val wsOp = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = "op-ws-1",
             entityTypeCode = "WORKSPACE",
             entityId = testWsId,
@@ -377,6 +379,7 @@ class V2OutboxOperationExecutorTest {
             }
         """.trimIndent()
         val updateOp = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = "op-ws-update",
             entityTypeCode = "WORKSPACE",
             entityId = testWsId,
@@ -402,6 +405,7 @@ class V2OutboxOperationExecutorTest {
         writer.workspaceResult = ConditionalRemoteWriteResult.NotFound
         val deletePayload = """{"id": "$testWsId"}"""
         val deleteOp = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = "op-ws-delete",
             entityTypeCode = "WORKSPACE",
             entityId = testWsId,
@@ -446,6 +450,7 @@ class V2OutboxOperationExecutorTest {
             }
         """.trimIndent()
         val opForbidden = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = "op-ws-invalid-1",
             entityTypeCode = "WORKSPACE",
             entityId = testWsId,
@@ -478,6 +483,7 @@ class V2OutboxOperationExecutorTest {
             }
         """.trimIndent()
         val opNonUuid = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = "op-ws-invalid-2",
             entityTypeCode = "WORKSPACE",
             entityId = "ws-not-uuid",
@@ -510,6 +516,7 @@ class V2OutboxOperationExecutorTest {
             }
         """.trimIndent()
         val opBlankDesc = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = "op-ws-invalid-3",
             entityTypeCode = "WORKSPACE",
             entityId = testWsId,
@@ -542,6 +549,7 @@ class V2OutboxOperationExecutorTest {
             }
         """.trimIndent()
         val opNonZ = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = "op-ws-invalid-4",
             entityTypeCode = "WORKSPACE",
             entityId = testWsId,
@@ -573,6 +581,7 @@ class V2OutboxOperationExecutorTest {
             }
         """.trimIndent()
         val opWhitespaceEntityId = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = "op-ws-invalid-5",
             entityTypeCode = "WORKSPACE",
             entityId = " $testWsId",
@@ -604,6 +613,7 @@ class V2OutboxOperationExecutorTest {
             }
         """.trimIndent()
         val opWhitespacePayloadId = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = "op-ws-invalid-6",
             entityTypeCode = "WORKSPACE",
             entityId = testWsId,
@@ -634,6 +644,7 @@ class V2OutboxOperationExecutorTest {
         val wsId = "11111111-1111-1111-1111-111111111111"
         val userId = "22222222-2222-2222-2222-222222222222"
         val op = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = "00000000000000000000000000000099",
             entityTypeCode = "WORKSPACE_MEMBER",
             entityId = "$wsId:$userId",
@@ -696,6 +707,7 @@ class V2OutboxOperationExecutorTest {
         val executor = V2OutboxOperationExecutor(writer) { 1000L }
 
         val op = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = "00000000000000000000000000000101",
             entityTypeCode = "WORKSPACE_INVITATION",
             entityId = invitationId,
@@ -761,6 +773,7 @@ class V2OutboxOperationExecutorTest {
         val executor = V2OutboxOperationExecutor(writer) { 2000L }
 
         val op = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = "00000000000000000000000000000102",
             entityTypeCode = "WORKSPACE_INVITATION",
             entityId = invitationId,
@@ -817,6 +830,7 @@ class V2OutboxOperationExecutorTest {
         val executor = V2OutboxOperationExecutor(writer) { 1000L }
 
         val op = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = "00000000000000000000000000000103",
             entityTypeCode = "WORKSPACE_INVITATION",
             entityId = invitationId,
@@ -848,6 +862,7 @@ class V2OutboxOperationExecutorTest {
 
         val invitationId = "33333333-3333-3333-3333-333333333333"
         val op = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = "00000000000000000000000000000104",
             entityTypeCode = "WORKSPACE_INVITATION",
             entityId = invitationId,
@@ -881,6 +896,7 @@ class V2OutboxOperationExecutorTest {
         val entityId = WorkspaceMemberEntityId.encode(wsId, userId)
 
         val op = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = "00000000000000000000000000000201",
             entityTypeCode = "WORKSPACE_MEMBER",
             entityId = entityId,
@@ -927,6 +943,7 @@ class V2OutboxOperationExecutorTest {
 
         val payloadJson = WorkspaceMembershipPayloadCodec.encodeMemberRoleChange(wsId, userId, "VIEWER")
         val op = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = "00000000000000000000000000000202",
             entityTypeCode = "WORKSPACE_MEMBER",
             entityId = entityId,
@@ -978,6 +995,7 @@ class V2OutboxOperationExecutorTest {
 
         val payloadJson = WorkspaceMembershipPayloadCodec.encodeMemberRoleChange(wsId, userId, "VIEWER")
         val op = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = "00000000000000000000000000000203",
             entityTypeCode = "WORKSPACE_MEMBER",
             entityId = entityId,
@@ -1023,6 +1041,7 @@ class V2OutboxOperationExecutorTest {
 
         val payloadJson = WorkspaceMembershipPayloadCodec.encodeMemberRoleChange(wsId, userId, "VIEWER")
         val op = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = "00000000000000000000000000000204",
             entityTypeCode = "WORKSPACE_MEMBER",
             entityId = entityId,
@@ -1068,6 +1087,7 @@ class V2OutboxOperationExecutorTest {
 
         val payloadJson = WorkspaceMembershipPayloadCodec.encodeMemberLeave(wsId, userId)
         val op = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = "00000000000000000000000000000205",
             entityTypeCode = "WORKSPACE_MEMBER",
             entityId = entityId,
@@ -1105,6 +1125,7 @@ class V2OutboxOperationExecutorTest {
 
         val payloadJson = WorkspaceMembershipPayloadCodec.encodeMemberLeave(wsId, userId)
         val op = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = "00000000000000000000000000000206",
             entityTypeCode = "WORKSPACE_MEMBER",
             entityId = entityId,
@@ -1146,6 +1167,7 @@ class V2OutboxOperationExecutorTest {
         """.trimIndent()
 
         val op = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = "00000000000000000000000000000207",
             entityTypeCode = "WORKSPACE_MEMBER",
             entityId = entityId,
@@ -1305,8 +1327,8 @@ class V2OutboxOperationExecutorTest {
         override suspend fun getWorkspaceMemberRow(workspaceId: String, userId: String): com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity? = null
         override suspend fun getWorkspaceMemberRows(workspaceId: String): List<com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity> = emptyList()
         override suspend fun getAllKnownLiveWorkspaceIds(): List<String> = emptyList()
-        override suspend fun getFirstOutboxOperationId(entityTypeCode: String, entityId: String): String? = OP_ID
-        override suspend fun countOutboxRows(entityTypeCode: String, entityId: String): Int = 1
+        override suspend fun getFirstOutboxOperationId(syncScopeKey: String, entityTypeCode: String, entityId: String): String? = OP_ID
+        override suspend fun countOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 1
         override suspend fun upsertProfileRow(entity: UserProfileEntity) = Unit
         override suspend fun upsertWorkspaceRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceEntity>) = Unit
         override suspend fun upsertWorkspaceMemberRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity>) = Unit
@@ -1325,7 +1347,7 @@ class V2OutboxOperationExecutorTest {
             this.conflict = conflict
         }
         override suspend fun upsertCursorRows(cursors: List<SyncCursorEntity>) = Unit
-        override suspend fun deleteConflictRow(entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun deleteConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 1
         override suspend fun markProfileConflict(entityId: String, error: String): Int = 1
         override suspend fun markCategoryConflict(entityId: String, error: String): Int = 1
         override suspend fun markTransactionConflict(entityId: String, error: String): Int = 1
@@ -1335,21 +1357,21 @@ class V2OutboxOperationExecutorTest {
         override suspend fun markGoalContributionConflict(entityId: String, error: String): Int = 1
         override suspend fun markDebtConflict(entityId: String, error: String): Int = 1
         override suspend fun markDebtPaymentConflict(entityId: String, error: String): Int = 1
-        override suspend fun deleteOutboxRows(entityTypeCode: String, entityId: String): Int = 0
-        override suspend fun deleteOtherOutboxRows(entityTypeCode: String, entityId: String, keptOperationId: String): Int = 0
-        override suspend fun resetConflictOperation(operationId: String, operationTypeCode: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
+        override suspend fun deleteOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun deleteOtherOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String, keptOperationId: String): Int = 0
+        override suspend fun resetConflictOperation(syncScopeKey: String, operationId: String, operationTypeCode: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
         override suspend fun rebaseProfileForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
         override suspend fun rebaseCategoryForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
         override suspend fun rebaseTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
         override suspend fun rebaseRecurringTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
         override suspend fun rebaseSubscriptionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun getActiveWorkspaceTailOperation(workspaceId: String): SyncOperationEntity? = null
+        override suspend fun getActiveWorkspaceTailOperation(syncScopeKey: String, workspaceId: String): SyncOperationEntity? = null
         override suspend fun markWorkspaceConflict(entityId: String, error: String): Int = 1
-        override suspend fun getAllWorkspaceOperations(workspaceId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun deleteSpecificWorkspaceOperations(workspaceId: String, operationIds: List<String>): Int = 0
+        override suspend fun getAllWorkspaceOperations(syncScopeKey: String, workspaceId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun deleteSpecificWorkspaceOperations(syncScopeKey: String, workspaceId: String, operationIds: List<String>): Int = 0
         override suspend fun rebaseWorkspaceForRetry(workspaceId: String, syncStatus: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun resetWorkspaceConflictOperation(operationId: String, operationTypeCode: String, payloadJson: String?, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getConflictRow(entityTypeCode: String, entityId: String): SyncConflictEntity? = null
+        override suspend fun resetWorkspaceConflictOperation(syncScopeKey: String, operationId: String, operationTypeCode: String, payloadJson: String?, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun getConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): SyncConflictEntity? = null
     }
 
 
@@ -1402,6 +1424,7 @@ class V2OutboxOperationExecutorTest {
             baseVersion: Long? = null,
             payloadJson: String? = null,
         ) = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = OP_ID,
             entityTypeCode = entityType,
             entityId = ENTITY_ID,

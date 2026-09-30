@@ -92,9 +92,23 @@ class GoalDebtV2OutboxExecutorTest {
         }
     }
 
-    private fun sampleGoalDto(id: String = "goal-1", version: Long? = 1L): GoalDto = GoalDto(
+    private companion object {
+        const val GOAL_ID = "11111111-1111-4111-8111-111111111111"
+        const val CONTRIB_ID = "22222222-2222-4222-8222-222222222222"
+        const val DEBT_ID = "33333333-3333-4333-8333-333333333333"
+        const val PAYMENT_ID = "44444444-4444-4444-8444-444444444444"
+        const val USER_ID = "fdbd49aa-640a-4ec5-9f1a-f348a949034c"
+        const val OP_G1 = "00000000000000000000000000000001"
+        const val OP_G2 = "00000000000000000000000000000002"
+        const val OP_G3 = "00000000000000000000000000000003"
+        const val OP_C1 = "00000000000000000000000000000004"
+        const val OP_D1 = "00000000000000000000000000000005"
+        const val OP_P1 = "00000000000000000000000000000006"
+    }
+
+    private fun sampleGoalDto(id: String = GOAL_ID, version: Long? = 1L): GoalDto = GoalDto(
         id = id,
-        userId = "user-1",
+        userId = USER_ID,
         workspaceId = null,
         name = "Hedef",
         targetAmountMinor = 100_000L,
@@ -109,9 +123,9 @@ class GoalDebtV2OutboxExecutorTest {
         version = version,
     )
 
-    private fun sampleDebtDto(id: String = "debt-1", version: Long? = 1L): DebtDto = DebtDto(
+    private fun sampleDebtDto(id: String = DEBT_ID, version: Long? = 1L): DebtDto = DebtDto(
         id = id,
-        userId = "user-1",
+        userId = USER_ID,
         workspaceId = null,
         title = "Borç",
         amountMinor = 50_000L,
@@ -134,6 +148,7 @@ class GoalDebtV2OutboxExecutorTest {
         baseVersion: Long?,
         payloadJson: String?,
     ) = SyncOperationEntity(
+        syncScopeKey = "USER:test-user",
         operationId = operationId,
         entityTypeCode = entityType,
         entityId = entityId,
@@ -158,19 +173,19 @@ class GoalDebtV2OutboxExecutorTest {
         val executor = V2OutboxOperationExecutor(writer) { 1000L }
 
         val op = buildOperation(
-            operationId = "op-g1",
+            operationId = OP_G1,
             entityType = "GOAL",
-            entityId = "goal-1",
+            entityId = GOAL_ID,
             operationType = "CREATE",
             baseVersion = null,
-            payloadJson = """{"id":"goal-1","user_id":"user-1","workspace_id":null,"name":"Hedef","target_amount_minor":100000,"current_amount_minor":20000,"currency":"TRY","target_date":"2026-12-31","color_hex":"#2E7D32","icon_key":"savings","created_at":"2026-09-01T10:00:00Z","updated_at":null,"deleted_at":null,"version":null}""",
+            payloadJson = """{"id":"$GOAL_ID","user_id":"$USER_ID","workspace_id":null,"name":"Hedef","target_amount_minor":100000,"current_amount_minor":20000,"currency":"TRY","target_date":"2026-12-31","color_hex":"#2E7D32","icon_key":"savings","created_at":"2026-09-01T10:00:00Z","updated_at":null,"deleted_at":null,"version":null}""",
         )
 
         val result = executor.execute(op)
         assertIs<OutboxExecutionResult.GoalApplied>(result)
-        assertEquals("goal-1", result.record.id)
+        assertEquals(GOAL_ID, result.record.id)
         assertEquals(1L, result.record.version)
-        assertEquals("op-g1", writer.lastOperationId)
+        assertEquals(OP_G1, writer.lastOperationId)
         assertEquals(RemoteWriteOperation.CREATE, writer.lastOperation)
         assertEquals(null, writer.lastBaseVersion)
     }
@@ -182,19 +197,19 @@ class GoalDebtV2OutboxExecutorTest {
         val executor = V2OutboxOperationExecutor(writer) { 2000L }
 
         val op = buildOperation(
-            operationId = "op-g2",
+            operationId = OP_G2,
             entityType = "GOAL",
-            entityId = "goal-1",
+            entityId = GOAL_ID,
             operationType = "UPDATE",
             baseVersion = 1L,
-            payloadJson = """{"id":"goal-1","user_id":"user-1","workspace_id":null,"name":"Yeni Ad","target_amount_minor":120000,"current_amount_minor":20000,"currency":"TRY","target_date":"2026-12-31","color_hex":"#2E7D32","icon_key":"savings","created_at":"2026-09-01T10:00:00Z","updated_at":"2026-09-01T10:05:00Z","deleted_at":null,"version":1}""",
+            payloadJson = """{"id":"$GOAL_ID","user_id":"$USER_ID","workspace_id":null,"name":"Yeni Ad","target_amount_minor":120000,"current_amount_minor":20000,"currency":"TRY","target_date":"2026-12-31","color_hex":"#2E7D32","icon_key":"savings","created_at":"2026-09-01T10:00:00Z","updated_at":"2026-09-01T10:05:00Z","deleted_at":null,"version":1}""",
         )
 
         val result = executor.execute(op)
         assertIs<OutboxExecutionResult.ConflictDetected>(result)
-        assertEquals("op-g2", result.conflict.operationId)
+        assertEquals(OP_G2, result.conflict.operationId)
         assertEquals("GOAL", result.conflict.entityTypeCode)
-        assertEquals("goal-1", result.conflict.entityId)
+        assertEquals(GOAL_ID, result.conflict.entityId)
         assertEquals(1L, result.conflict.localVersion)
         assertEquals(3L, result.conflict.remoteVersion)
     }
@@ -205,12 +220,12 @@ class GoalDebtV2OutboxExecutorTest {
         val executor = V2OutboxOperationExecutor(writer) { 1000L }
 
         val op = buildOperation(
-            operationId = "op-g3",
+            operationId = OP_G3,
             entityType = "GOAL",
-            entityId = "goal-1",
+            entityId = GOAL_ID,
             operationType = "DELETE",
             baseVersion = 1L,
-            payloadJson = """{"id":"goal-1","user_id":"user-1","workspace_id":null,"name":"Hedef","target_amount_minor":100000,"current_amount_minor":20000,"currency":"TRY","target_date":"2026-12-31","color_hex":"#2E7D32","icon_key":"savings","created_at":"2026-09-01T10:00:00Z","updated_at":null,"deleted_at":"2026-09-01T10:10:00Z","version":1}""",
+            payloadJson = """{"id":"$GOAL_ID","user_id":"$USER_ID","workspace_id":null,"name":"Hedef","target_amount_minor":100000,"current_amount_minor":20000,"currency":"TRY","target_date":"2026-12-31","color_hex":"#2E7D32","icon_key":"savings","created_at":"2026-09-01T10:00:00Z","updated_at":null,"deleted_at":"2026-09-01T10:10:00Z","version":1}""",
         )
 
         val result = executor.execute(op)
@@ -221,8 +236,8 @@ class GoalDebtV2OutboxExecutorTest {
     fun goal_contribution_create_applied_returns_goal_contribution_applied() = runTest {
         val aggregateResponse = GoalContributionSyncRecordDto(
             contribution = GoalContributionDto(
-                id = "c-1",
-                goalId = "goal-1",
+                id = CONTRIB_ID,
+                goalId = GOAL_ID,
                 amountMinor = 10_000L,
                 currency = "TRY",
                 direction = "ADD",
@@ -232,24 +247,24 @@ class GoalDebtV2OutboxExecutorTest {
                 deletedAt = null,
                 version = 1L,
             ),
-            goal = sampleGoalDto(id = "goal-1", version = 2L),
+            goal = sampleGoalDto(id = GOAL_ID, version = 2L),
         )
         val writer = RecordingWriter(goalContributionResult = ConditionalRemoteWriteResult.Applied(aggregateResponse))
         val executor = V2OutboxOperationExecutor(writer) { 1000L }
 
         val op = buildOperation(
-            operationId = "op-c1",
+            operationId = OP_C1,
             entityType = "GOAL_CONTRIBUTION",
-            entityId = "c-1",
+            entityId = CONTRIB_ID,
             operationType = "CREATE",
             baseVersion = 1L,
-            payloadJson = """{"id":"c-1","goal_id":"goal-1","amount_minor":10000,"currency":"TRY","direction":"ADD","occurred_on":"2026-09-01","note":"Not","created_at":"2026-09-01T10:00:00Z","deleted_at":null,"version":null}""",
+            payloadJson = """{"id":"$CONTRIB_ID","goal_id":"$GOAL_ID","amount_minor":10000,"currency":"TRY","direction":"ADD","occurred_on":"2026-09-01","note":"Not","created_at":"2026-09-01T10:00:00Z","deleted_at":null,"version":null}""",
         )
 
         val result = executor.execute(op)
         assertIs<OutboxExecutionResult.GoalContributionApplied>(result)
-        assertEquals("c-1", result.record.contribution.id)
-        assertEquals("goal-1", result.record.goal.id)
+        assertEquals(CONTRIB_ID, result.record.contribution.id)
+        assertEquals(GOAL_ID, result.record.goal.id)
         assertEquals(2L, result.record.goal.version)
         assertEquals(1L, writer.lastBaseVersion)
     }
@@ -261,24 +276,24 @@ class GoalDebtV2OutboxExecutorTest {
         val executor = V2OutboxOperationExecutor(writer) { 1000L }
 
         val debtOp = buildOperation(
-            operationId = "op-d1",
+            operationId = OP_D1,
             entityType = "DEBT",
-            entityId = "debt-1",
+            entityId = DEBT_ID,
             operationType = "CREATE",
             baseVersion = null,
-            payloadJson = """{"id":"debt-1","user_id":"user-1","workspace_id":null,"title":"Borç","amount_minor":50000,"currency":"TRY","type":"DEBT","due_date":"2026-10-15","status":"OPEN","description":"Açıklama","created_at":"2026-09-01T10:00:00Z","updated_at":null,"deleted_at":null,"version":null}""",
+            payloadJson = """{"id":"$DEBT_ID","user_id":"$USER_ID","workspace_id":null,"title":"Borç","amount_minor":50000,"currency":"TRY","type":"DEBT","due_date":"2026-10-15","status":"OPEN","description":"Açıklama","created_at":"2026-09-01T10:00:00Z","updated_at":null,"deleted_at":null,"version":null}""",
         )
 
         val debtResult = executor.execute(debtOp)
         assertIs<OutboxExecutionResult.DebtApplied>(debtResult)
-        assertEquals("debt-1", debtResult.record.id)
+        assertEquals(DEBT_ID, debtResult.record.id)
         assertEquals(1L, debtResult.record.version)
 
         // Debt Payment
         val paymentAggregateResponse = DebtPaymentSyncRecordDto(
             payment = DebtPaymentDto(
-                id = "p-1",
-                debtId = "debt-1",
+                id = PAYMENT_ID,
+                debtId = DEBT_ID,
                 amountMinor = 50_000L,
                 currency = "TRY",
                 paidOn = "2026-09-02",
@@ -286,22 +301,22 @@ class GoalDebtV2OutboxExecutorTest {
                 deletedAt = null,
                 version = 1L,
             ),
-            debt = sampleDebtDto(id = "debt-1", version = 2L).copy(status = "SETTLED"),
+            debt = sampleDebtDto(id = DEBT_ID, version = 2L).copy(status = "SETTLED"),
         )
         writer.debtPaymentResult = ConditionalRemoteWriteResult.Applied(paymentAggregateResponse)
 
         val paymentOp = buildOperation(
-            operationId = "op-p1",
+            operationId = OP_P1,
             entityType = "DEBT_PAYMENT",
-            entityId = "p-1",
+            entityId = PAYMENT_ID,
             operationType = "CREATE",
             baseVersion = 1L,
-            payloadJson = """{"id":"p-1","debt_id":"debt-1","amount_minor":50000,"currency":"TRY","paid_on":"2026-09-02","created_at":"2026-09-02T10:00:00Z","deleted_at":null,"version":null}""",
+            payloadJson = """{"id":"$PAYMENT_ID","debt_id":"$DEBT_ID","amount_minor":50000,"currency":"TRY","paid_on":"2026-09-02","created_at":"2026-09-02T10:00:00Z","deleted_at":null,"version":null}""",
         )
 
         val payResult = executor.execute(paymentOp)
         assertIs<OutboxExecutionResult.DebtPaymentApplied>(payResult)
-        assertEquals("p-1", payResult.record.payment.id)
+        assertEquals(PAYMENT_ID, payResult.record.payment.id)
         assertEquals("SETTLED", payResult.record.debt.status)
         assertEquals(2L, payResult.record.debt.version)
     }

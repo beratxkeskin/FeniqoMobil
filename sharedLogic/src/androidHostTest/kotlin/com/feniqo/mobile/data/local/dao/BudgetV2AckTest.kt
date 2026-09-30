@@ -14,6 +14,7 @@ import com.feniqo.mobile.data.local.outbox.OfflineWriteQueue
 import com.feniqo.mobile.data.local.outbox.OutboxOperationType
 import com.feniqo.mobile.data.remote.dto.BudgetDto
 import com.feniqo.mobile.data.sync.OutboxExecutionResult
+import com.feniqo.mobile.data.sync.SyncScopeKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import org.junit.runner.RunWith
@@ -29,6 +30,9 @@ import kotlin.test.assertTrue
 @RunWith(RobolectricTestRunner::class)
 class BudgetV2AckTest {
 
+    private val USER_ID = "11111111-1111-4111-8111-111111111111"
+    private val SCOPE = SyncScopeKey.user(USER_ID).rawValue
+
     @Test
     fun budget_v2_ack_without_successor_applies_remote_record_and_removes_outbox_and_conflict() = runTest {
         val db = inMemoryDatabase()
@@ -38,24 +42,35 @@ class BudgetV2AckTest {
 
             val budget = budgetEntity("bgt-1", "cat-1", 500000L)
             val opId = queue.enqueueBudgetV2(
+                syncScopeKey = SCOPE,
                 entity = budget,
                 type = OutboxOperationType.CREATE,
-                payloadJson = """{"id":"bgt-1","user_id":"usr-1","category_id":"cat-1","month":"2026-08","limit_minor":500000,"currency":"TRY","created_at":"2026-08-25T17:00:00Z"}""",
+                payloadJson = """{"id":"bgt-1","user_id":"$USER_ID","category_id":"cat-1","month":"2026-08","limit_minor":500000,"currency":"TRY","created_at":"2026-08-25T17:00:00Z"}""",
             )
 
             // Claim op -> IN_FLIGHT
-            val claimed = queue.claimOperation(opId)
+            val claimed = queue.claimOperation(SCOPE, opId)
             assertNotNull(claimed)
             assertEquals("IN_FLIGHT", claimed.statusCode)
 
             // Insert dummy conflict row to verify it gets cleaned
             db.syncStateDao().upsertConflict(
-                SyncConflictEntity("BUDGET", "bgt-1", opId, 0L, 1L, "{}", "{}", 1000L),
+                SyncConflictEntity(
+                    syncScopeKey = SCOPE,
+                    entityTypeCode = "BUDGET",
+                    entityId = "bgt-1",
+                    operationId = opId,
+                    localVersion = 0L,
+                    remoteVersion = 1L,
+                    localPayloadJson = "{}",
+                    remotePayloadJson = "{}",
+                    detectedAtEpochMillis = 1000L,
+                ),
             )
 
             val remoteDto = BudgetDto(
                 id = "bgt-1",
-                userId = "usr-1",
+                userId = USER_ID,
                 workspaceId = null,
                 categoryId = "cat-1",
                 month = "2026-08",
@@ -68,6 +83,7 @@ class BudgetV2AckTest {
             )
 
             val ackResult = db.localMutationDao().ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = opId,
                 result = OutboxExecutionResult.BudgetApplied(remoteDto),
                 nowEpochMillis = 1000L,
@@ -75,9 +91,9 @@ class BudgetV2AckTest {
             assertTrue(ackResult)
 
             // Verify: outbox removed, conflict removed, entity updated with remote values and SYNCED
-            assertNull(db.syncOperationDao().getById(opId))
-            assertNull(db.syncStateDao().getConflict("BUDGET", "bgt-1"))
-            val entity = db.budgetDao().getByIdAndOwner("bgt-1", "usr-1")
+            assertNull(db.syncOperationDao().getById(SCOPE, opId))
+            assertNull(db.syncStateDao().getConflict(SCOPE, "BUDGET", "bgt-1"))
+            val entity = db.budgetDao().getByIdAndOwner("bgt-1", USER_ID)
             assertNotNull(entity)
             assertEquals(550000L, entity.limitMinor)
             assertEquals("SYNCED", entity.sync.syncStatus)
@@ -97,13 +113,14 @@ class BudgetV2AckTest {
 
             val budget = budgetEntity("bgt-2", "cat-1", 500000L)
             val op1Id = queue.enqueueBudgetV2(
+                syncScopeKey = SCOPE,
                 entity = budget,
                 type = OutboxOperationType.CREATE,
-                payloadJson = """{"id":"bgt-2","user_id":"usr-1","category_id":"cat-1","month":"2026-08","limit_minor":500000,"currency":"TRY","created_at":"2026-08-25T17:00:00Z"}""",
+                payloadJson = """{"id":"bgt-2","user_id":"$USER_ID","category_id":"cat-1","month":"2026-08","limit_minor":500000,"currency":"TRY","created_at":"2026-08-25T17:00:00Z"}""",
             )
 
             // Claim op1 -> IN_FLIGHT
-            val claimed = queue.claimOperation(op1Id)
+            val claimed = queue.claimOperation(SCOPE, op1Id)
             assertNotNull(claimed)
             assertEquals("IN_FLIGHT", claimed.statusCode)
 
@@ -113,12 +130,13 @@ class BudgetV2AckTest {
                 sync = budget.sync.copy(syncStatus = "PENDING_UPDATE"),
             )
             val op2Id = queue.enqueueBudgetV2(
+                syncScopeKey = SCOPE,
                 entity = updatedBudget,
                 type = OutboxOperationType.UPDATE,
-                payloadJson = """{"id":"bgt-2","user_id":"usr-1","category_id":"cat-1","month":"2026-08","limit_minor":750000,"currency":"TRY","created_at":"2026-08-25T17:00:00Z"}""",
+                payloadJson = """{"id":"bgt-2","user_id":"$USER_ID","category_id":"cat-1","month":"2026-08","limit_minor":750000,"currency":"TRY","created_at":"2026-08-25T17:00:00Z"}""",
             )
 
-            val successorBefore = db.syncOperationDao().getById(op2Id)
+            val successorBefore = db.syncOperationDao().getById(SCOPE, op2Id)
             assertNotNull(successorBefore)
             assertTrue(successorBefore.isBlocked)
             assertEquals(op1Id, successorBefore.predecessorOperationId)
@@ -126,7 +144,7 @@ class BudgetV2AckTest {
             // ACK op1 with appliedVersion = 1L (with old limit)
             val remoteDto = BudgetDto(
                 id = "bgt-2",
-                userId = "usr-1",
+                userId = USER_ID,
                 workspaceId = null,
                 categoryId = "cat-1",
                 month = "2026-08",
@@ -139,6 +157,7 @@ class BudgetV2AckTest {
             )
 
             val ackResult = db.localMutationDao().ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = op1Id,
                 result = OutboxExecutionResult.BudgetApplied(remoteDto),
                 nowEpochMillis = 1000L,
@@ -146,17 +165,17 @@ class BudgetV2AckTest {
             assertTrue(ackResult)
 
             // Verify op1 deleted
-            assertNull(db.syncOperationDao().getById(op1Id))
+            assertNull(db.syncOperationDao().getById(SCOPE, op1Id))
 
             // Verify successor unblocked and rebased to 1L
-            val successorAfter = db.syncOperationDao().getById(op2Id)
+            val successorAfter = db.syncOperationDao().getById(SCOPE, op2Id)
             assertNotNull(successorAfter)
             assertFalse(successorAfter.isBlocked)
             assertEquals(op1Id, successorAfter.predecessorOperationId)
             assertEquals(1L, successorAfter.baseVersion)
 
             // Verify budget entity preserves newer local limit (750_000) and version is rebased to 1L
-            val entity = db.budgetDao().getByIdAndOwner("bgt-2", "usr-1")
+            val entity = db.budgetDao().getByIdAndOwner("bgt-2", USER_ID)
             assertNotNull(entity)
             assertEquals(750000L, entity.limitMinor)
             assertEquals("PENDING_UPDATE", entity.sync.syncStatus)
@@ -186,18 +205,19 @@ class BudgetV2AckTest {
                 ),
             )
             val opId = queue.enqueueBudgetV2(
+                syncScopeKey = SCOPE,
                 entity = budget,
                 type = OutboxOperationType.DELETE,
-                payloadJson = """{"id":"bgt-3","user_id":"usr-1","category_id":"cat-1","month":"2026-08","limit_minor":500000,"currency":"TRY","created_at":"2026-08-25T17:00:00Z","deleted_at":"2026-08-25T17:05:00Z","version":2}""",
+                payloadJson = """{"id":"bgt-3","user_id":"$USER_ID","category_id":"cat-1","month":"2026-08","limit_minor":500000,"currency":"TRY","created_at":"2026-08-25T17:00:00Z","deleted_at":"2026-08-25T17:05:00Z","version":2}""",
             )
 
-            val claimed = queue.claimOperation(opId)
+            val claimed = queue.claimOperation(SCOPE, opId)
             assertNotNull(claimed)
             assertEquals("IN_FLIGHT", claimed.statusCode)
 
             val remoteDto = BudgetDto(
                 id = "bgt-3",
-                userId = "usr-1",
+                userId = USER_ID,
                 workspaceId = null,
                 categoryId = "cat-1",
                 month = "2026-08",
@@ -210,14 +230,15 @@ class BudgetV2AckTest {
             )
 
             val ackResult = db.localMutationDao().ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = opId,
                 result = OutboxExecutionResult.BudgetApplied(remoteDto),
                 nowEpochMillis = 2000L,
             )
             assertTrue(ackResult)
 
-            assertNull(db.syncOperationDao().getById(opId))
-            val entity = db.budgetDao().getAnyByScopeCategoryAndMonth("user:usr-1", "cat-1", "2026-08")
+            assertNull(db.syncOperationDao().getById(SCOPE, opId))
+            val entity = db.budgetDao().getAnyByScopeCategoryAndMonth("user:$USER_ID", "cat-1", "2026-08")
             assertNotNull(entity)
             assertNotNull(entity.sync.deletedAtEpochMillis)
             assertEquals("SYNCED", entity.sync.syncStatus)
@@ -247,24 +268,26 @@ class BudgetV2AckTest {
                 ),
             )
             val opId = queue.enqueueBudgetV2(
+                syncScopeKey = SCOPE,
                 entity = budget,
                 type = OutboxOperationType.DELETE,
-                payloadJson = """{"id":"bgt-4","user_id":"usr-1","category_id":"cat-1","month":"2026-08","limit_minor":500000,"currency":"TRY","created_at":"2026-08-25T17:00:00Z","deleted_at":"2026-08-25T17:05:00Z","version":2}""",
+                payloadJson = """{"id":"bgt-4","user_id":"$USER_ID","category_id":"cat-1","month":"2026-08","limit_minor":500000,"currency":"TRY","created_at":"2026-08-25T17:00:00Z","deleted_at":"2026-08-25T17:05:00Z","version":2}""",
             )
 
-            val claimed = queue.claimOperation(opId)
+            val claimed = queue.claimOperation(SCOPE, opId)
             assertNotNull(claimed)
             assertEquals("IN_FLIGHT", claimed.statusCode)
 
             val ackResult = db.localMutationDao().ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = opId,
                 result = OutboxExecutionResult.MissingDeleteAcknowledged,
                 nowEpochMillis = 2000L,
             )
             assertTrue(ackResult)
 
-            assertNull(db.syncOperationDao().getById(opId))
-            val entity = db.budgetDao().getAnyByScopeCategoryAndMonth("user:usr-1", "cat-1", "2026-08")
+            assertNull(db.syncOperationDao().getById(SCOPE, opId))
+            val entity = db.budgetDao().getAnyByScopeCategoryAndMonth("user:$USER_ID", "cat-1", "2026-08")
             assertNotNull(entity)
             assertNotNull(entity.sync.deletedAtEpochMillis)
             assertEquals("SYNCED", entity.sync.syncStatus)
@@ -282,16 +305,18 @@ class BudgetV2AckTest {
 
             val budget = budgetEntity("bgt-5", "cat-1", 500000L)
             val opId = queue.enqueueBudgetV2(
+                syncScopeKey = SCOPE,
                 entity = budget,
                 type = OutboxOperationType.CREATE,
-                payloadJson = """{"id":"bgt-5","user_id":"usr-1","category_id":"cat-1","month":"2026-08","limit_minor":500000,"currency":"TRY","created_at":"2026-08-25T17:00:00Z"}""",
+                payloadJson = """{"id":"bgt-5","user_id":"$USER_ID","category_id":"cat-1","month":"2026-08","limit_minor":500000,"currency":"TRY","created_at":"2026-08-25T17:00:00Z"}""",
             )
 
-            val claimed = queue.claimOperation(opId)
+            val claimed = queue.claimOperation(SCOPE, opId)
             assertNotNull(claimed)
             assertEquals("IN_FLIGHT", claimed.statusCode)
 
             val conflict = SyncConflictEntity(
+                syncScopeKey = SCOPE,
                 entityTypeCode = "BUDGET",
                 entityId = "bgt-5",
                 operationId = opId,
@@ -303,21 +328,22 @@ class BudgetV2AckTest {
             )
 
             val result = db.localMutationDao().ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = opId,
                 result = OutboxExecutionResult.ConflictDetected(conflict),
                 nowEpochMillis = 2000L,
             )
             assertTrue(result)
 
-            val op = db.syncOperationDao().getById(opId)
+            val op = db.syncOperationDao().getById(SCOPE, opId)
             assertNotNull(op)
             assertEquals("CONFLICT", op.statusCode)
 
-            val entity = db.budgetDao().getByIdAndOwner("bgt-5", "usr-1")
+            val entity = db.budgetDao().getByIdAndOwner("bgt-5", USER_ID)
             assertNotNull(entity)
             assertEquals("CONFLICT", entity.sync.syncStatus)
 
-            val savedConflict = db.syncStateDao().getConflict("BUDGET", "bgt-5")
+            val savedConflict = db.syncStateDao().getConflict(SCOPE, "BUDGET", "bgt-5")
             assertNotNull(savedConflict)
             assertEquals(3L, savedConflict.remoteVersion)
         } finally {
@@ -332,6 +358,7 @@ class BudgetV2AckTest {
             // Outbox exists for bgt-missing, but no budget entity exists in Room
             val op = SyncOperationEntity(
                 operationId = "op-missing",
+                syncScopeKey = SCOPE,
                 entityTypeCode = "BUDGET",
                 entityId = "bgt-missing",
                 operationTypeCode = "CREATE",
@@ -350,6 +377,7 @@ class BudgetV2AckTest {
             db.syncOperationDao().insert(op)
 
             val conflict = SyncConflictEntity(
+                syncScopeKey = SCOPE,
                 entityTypeCode = "BUDGET",
                 entityId = "bgt-missing",
                 operationId = "op-missing",
@@ -362,6 +390,7 @@ class BudgetV2AckTest {
 
             assertFailsWith<IllegalStateException> {
                 db.localMutationDao().ackV2Execution(
+                    syncScopeKey = SCOPE,
                     operationId = "op-missing",
                     result = OutboxExecutionResult.ConflictDetected(conflict),
                     nowEpochMillis = 2000L,
@@ -369,8 +398,8 @@ class BudgetV2AckTest {
             }
 
             // Verify rollback: op status remains IN_FLIGHT, no conflict row saved
-            assertEquals("IN_FLIGHT", db.syncOperationDao().getById("op-missing")?.statusCode)
-            assertNull(db.syncStateDao().getConflict("BUDGET", "bgt-missing"))
+            assertEquals("IN_FLIGHT", db.syncOperationDao().getById(SCOPE, "op-missing")?.statusCode)
+            assertNull(db.syncStateDao().getConflict(SCOPE, "BUDGET", "bgt-missing"))
         } finally {
             db.close()
         }
@@ -396,9 +425,9 @@ class BudgetV2AckTest {
 
     private fun categoryEntity(id: String, name: String) = CategoryEntity(
         id = id,
-        ownerId = "usr-1",
+        ownerId = USER_ID,
         workspaceId = null,
-        scopeKey = "user:usr-1",
+        scopeKey = "user:$USER_ID",
         name = name,
         normalizedName = name.lowercase(),
         slug = name.lowercase(),
@@ -420,9 +449,9 @@ class BudgetV2AckTest {
 
     private fun budgetEntity(id: String, categoryId: String, limit: Long) = BudgetEntity(
         id = id,
-        ownerId = "usr-1",
+        ownerId = USER_ID,
         workspaceId = null,
-        scopeKey = "user:usr-1",
+        scopeKey = "user:$USER_ID",
         categoryId = categoryId,
         month = "2026-08",
         limitMinor = limit,

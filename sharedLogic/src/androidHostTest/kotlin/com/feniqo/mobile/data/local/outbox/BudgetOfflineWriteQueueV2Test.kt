@@ -27,6 +27,8 @@ import kotlin.test.assertTrue
 @RunWith(RobolectricTestRunner::class)
 class BudgetOfflineWriteQueueV2Test {
 
+    private val SCOPE = "USER:11111111-1111-4111-8111-111111111111"
+
     private class FakeBackgroundSyncScheduler : BackgroundSyncScheduler {
         var scheduleCount = 0
         override fun scheduleInitialSync() {}
@@ -46,6 +48,7 @@ class BudgetOfflineWriteQueueV2Test {
             val entity = budgetEntity("b-1", categoryId = "cat-1", limitMinor = 100_000L, syncStatus = SyncStatus.PENDING_CREATE)
 
             val opId = queue.enqueueBudgetV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"categoryId":"cat-1","month":"2026-08","limitMinor":100000}""",
@@ -57,7 +60,7 @@ class BudgetOfflineWriteQueueV2Test {
             assertEquals(100_000L, storedBudget.limitMinor)
 
             // Protocol version 2 outbox satırı oluştu
-            val op = db.syncOperationDao().getById(opId)
+            val op = db.syncOperationDao().getById(SCOPE, opId)
             assertNotNull(op)
             assertEquals("BUDGET", op.entityTypeCode)
             assertEquals("b-1", op.entityId)
@@ -86,6 +89,7 @@ class BudgetOfflineWriteQueueV2Test {
             val entity = budgetEntity("b-2", categoryId = "cat-1", limitMinor = 100_000L, syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1 = queue.enqueueBudgetV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"limitMinor":100000}""",
@@ -96,6 +100,7 @@ class BudgetOfflineWriteQueueV2Test {
                 sync = entity.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name),
             )
             val op2 = queue.enqueueBudgetV2(
+                syncScopeKey = SCOPE,
                 entity = updatedEntity,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"limitMinor":150000}""",
@@ -107,7 +112,7 @@ class BudgetOfflineWriteQueueV2Test {
             assertNotNull(storedBudget)
             assertEquals(150_000L, storedBudget.limitMinor)
 
-            val storedOp = db.syncOperationDao().getById(op1)
+            val storedOp = db.syncOperationDao().getById(SCOPE, op1)
             assertNotNull(storedOp)
             assertEquals("CREATE", storedOp.operationTypeCode) // CREATE olarak kalır
             assertEquals("""{"limitMinor":150000}""", storedOp.payloadJson)
@@ -129,6 +134,7 @@ class BudgetOfflineWriteQueueV2Test {
             val entity = budgetEntity("b-3", categoryId = "cat-1", limitMinor = 100_000L, syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1 = queue.enqueueBudgetV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"limitMinor":100000}""",
@@ -142,6 +148,7 @@ class BudgetOfflineWriteQueueV2Test {
                 ),
             )
             val op2 = queue.enqueueBudgetV2(
+                syncScopeKey = SCOPE,
                 entity = delEntity,
                 type = OutboxOperationType.DELETE,
                 payloadJson = "{}",
@@ -156,8 +163,8 @@ class BudgetOfflineWriteQueueV2Test {
             cursor.close()
 
             // Outbox kaydı silinir
-            assertNull(db.syncOperationDao().getById(op1))
-            assertEquals(0, db.syncOperationDao().observePendingCount().first())
+            assertNull(db.syncOperationDao().getById(SCOPE, op1))
+            assertEquals(0, db.syncOperationDao().observePendingCount(SCOPE).first())
 
             // Hard delete durumunda scheduler çağrılmaz (sayaç hala 1 olmalı)
             assertEquals(1, scheduler.scheduleCount)
@@ -181,6 +188,7 @@ class BudgetOfflineWriteQueueV2Test {
                 sync = syncedEntity.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name),
             )
             val op1 = queue.enqueueBudgetV2(
+                syncScopeKey = SCOPE,
                 entity = updateEntity,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"limitMinor":120000}""",
@@ -193,6 +201,7 @@ class BudgetOfflineWriteQueueV2Test {
                 ),
             )
             val op2 = queue.enqueueBudgetV2(
+                syncScopeKey = SCOPE,
                 entity = delEntity,
                 type = OutboxOperationType.DELETE,
                 payloadJson = "{}",
@@ -200,7 +209,7 @@ class BudgetOfflineWriteQueueV2Test {
 
             assertEquals(op1, op2)
 
-            val storedOp = db.syncOperationDao().getById(op1)
+            val storedOp = db.syncOperationDao().getById(SCOPE, op1)
             assertNotNull(storedOp)
             assertEquals("DELETE", storedOp.operationTypeCode)
             assertEquals("{}", storedOp.payloadJson)
@@ -228,6 +237,7 @@ class BudgetOfflineWriteQueueV2Test {
                 ),
             )
             val op1 = queue.enqueueBudgetV2(
+                syncScopeKey = SCOPE,
                 entity = delEntity,
                 type = OutboxOperationType.DELETE,
                 payloadJson = "{}",
@@ -242,6 +252,7 @@ class BudgetOfflineWriteQueueV2Test {
                 ),
             )
             val op2 = queue.enqueueBudgetV2(
+                syncScopeKey = SCOPE,
                 entity = reactivatedEntity,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"limitMinor":200000}""",
@@ -250,7 +261,7 @@ class BudgetOfflineWriteQueueV2Test {
             assertEquals(op1, op2)
 
             // Operasyon UPDATE'e geri dönüştürülmüştür ve baseVersion korunmuştur
-            val storedOp = db.syncOperationDao().getById(op1)
+            val storedOp = db.syncOperationDao().getById(SCOPE, op1)
             assertNotNull(storedOp)
             assertEquals("UPDATE", storedOp.operationTypeCode)
             assertEquals("""{"limitMinor":200000}""", storedOp.payloadJson)
@@ -276,6 +287,7 @@ class BudgetOfflineWriteQueueV2Test {
             val entity = budgetEntity("b-6", categoryId = "cat-1", limitMinor = 100_000L, syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1 = queue.enqueueBudgetV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"limitMinor":100000}""",
@@ -291,6 +303,7 @@ class BudgetOfflineWriteQueueV2Test {
                 sync = entity.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name),
             )
             val op2 = queue.enqueueBudgetV2(
+                syncScopeKey = SCOPE,
                 entity = updatedEntity,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"limitMinor":180000}""",
@@ -299,13 +312,13 @@ class BudgetOfflineWriteQueueV2Test {
             assertTrue(op1 != op2)
 
             // Predecessor değişmemiştir
-            val predOp = db.syncOperationDao().getById(op1)
+            val predOp = db.syncOperationDao().getById(SCOPE, op1)
             assertNotNull(predOp)
             assertEquals("IN_FLIGHT", predOp.statusCode)
             assertEquals(1, predOp.attemptCount)
 
             // Successor blocked olarak eklenmiştir
-            val succOp = db.syncOperationDao().getById(op2)
+            val succOp = db.syncOperationDao().getById(SCOPE, op2)
             assertNotNull(succOp)
             assertEquals("UPDATE", succOp.operationTypeCode)
             assertEquals(op1, succOp.predecessorOperationId)
@@ -327,6 +340,7 @@ class BudgetOfflineWriteQueueV2Test {
 
             val v1Op = SyncOperationEntity(
                 operationId = "00000000000000000000000000000001",
+                syncScopeKey = SCOPE,
                 entityTypeCode = "BUDGET",
                 entityId = "b-7",
                 operationTypeCode = "CREATE",
@@ -346,19 +360,20 @@ class BudgetOfflineWriteQueueV2Test {
 
             val entity = budgetEntity("b-7", categoryId = "cat-1", limitMinor = 150_000L, syncStatus = SyncStatus.PENDING_UPDATE)
             val op2 = queue.enqueueBudgetV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"limitMinor":150000}""",
             )
 
             // V1 operasyon satırı değişmez
-            val storedV1 = db.syncOperationDao().getById(v1Op.operationId)
+            val storedV1 = db.syncOperationDao().getById(SCOPE, v1Op.operationId)
             assertNotNull(storedV1)
             assertEquals(1, storedV1.protocolVersion)
             assertEquals("CREATE", storedV1.operationTypeCode)
 
             // V2 successor blocked olarak eklenir
-            val storedV2 = db.syncOperationDao().getById(op2)
+            val storedV2 = db.syncOperationDao().getById(SCOPE, op2)
             assertNotNull(storedV2)
             assertEquals(2, storedV2.protocolVersion)
             assertEquals(v1Op.operationId, storedV2.predecessorOperationId)
@@ -382,6 +397,7 @@ class BudgetOfflineWriteQueueV2Test {
 
             assertFailsWith<IllegalArgumentException> {
                 failingQueue.enqueueBudgetV2(
+                    syncScopeKey = SCOPE,
                     entity = entity,
                     type = OutboxOperationType.CREATE,
                     payloadJson = "{}",
@@ -394,7 +410,7 @@ class BudgetOfflineWriteQueueV2Test {
             assertEquals(0, cursor.getInt(0))
             cursor.close()
 
-            assertEquals(0, db.syncOperationDao().observePendingCount().first())
+            assertEquals(0, db.syncOperationDao().observePendingCount(SCOPE).first())
         } finally {
             db.close()
         }
@@ -410,6 +426,7 @@ class BudgetOfflineWriteQueueV2Test {
             // 2 ayrı aktif tail yerleştir
             val opA = SyncOperationEntity(
                 operationId = "0000000000000000000000000000000a",
+                syncScopeKey = SCOPE,
                 entityTypeCode = "BUDGET",
                 entityId = "b-9",
                 operationTypeCode = "CREATE",
@@ -433,6 +450,7 @@ class BudgetOfflineWriteQueueV2Test {
 
             assertFailsWith<IllegalStateException> {
                 queue.enqueueBudgetV2(
+                    syncScopeKey = SCOPE,
                     entity = entity,
                     type = OutboxOperationType.UPDATE,
                     payloadJson = "{}",
@@ -459,17 +477,17 @@ class BudgetOfflineWriteQueueV2Test {
 
             // 1. CREATE -> scheduler çağrılır (count = 1)
             val entity = budgetEntity("b-10", categoryId = "cat-1", limitMinor = 100_000L, syncStatus = SyncStatus.PENDING_CREATE)
-            queue.enqueueBudgetV2(entity, OutboxOperationType.CREATE, "{}")
+            queue.enqueueBudgetV2(syncScopeKey = SCOPE, entity = entity, type = OutboxOperationType.CREATE, payloadJson = "{}")
             assertEquals(1, scheduler.scheduleCount)
 
             // 2. UPDATE (coalesce) -> scheduler çağrılır (count = 2)
             val updateEntity = entity.copy(limitMinor = 110_000L, sync = entity.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name))
-            queue.enqueueBudgetV2(updateEntity, OutboxOperationType.UPDATE, "{}")
+            queue.enqueueBudgetV2(syncScopeKey = SCOPE, entity = updateEntity, type = OutboxOperationType.UPDATE, payloadJson = "{}")
             assertEquals(2, scheduler.scheduleCount)
 
             // 3. HARD DELETE on untried create -> scheduler ÇAĞRILMAZ (count = 2)
             val delEntity = updateEntity.copy(sync = updateEntity.sync.copy(syncStatus = SyncStatus.PENDING_DELETE.name, deletedAtEpochMillis = 2000L))
-            queue.enqueueBudgetV2(delEntity, OutboxOperationType.DELETE, "{}")
+            queue.enqueueBudgetV2(syncScopeKey = SCOPE, entity = delEntity, type = OutboxOperationType.DELETE, payloadJson = "{}")
             assertEquals(2, scheduler.scheduleCount)
         } finally {
             db.close()

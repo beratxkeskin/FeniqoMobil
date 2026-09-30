@@ -18,7 +18,10 @@ import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceInvitationDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceMemberDto
+import com.feniqo.mobile.data.local.entity.OutboxErrorClassification
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 
 /** Outbox işleminin sunucuda yürütülmesi sonrası dönen tip güvenli sonuç. */
 sealed interface OutboxExecutionResult {
@@ -49,38 +52,143 @@ class OutboxProcessor(
     private val queue: OutboxQueue,
     private val executor: OutboxOperationExecutor,
 ) {
-    suspend fun processReadyOperations(limit: Int = DEFAULT_BATCH_SIZE): OutboxProcessResult {
+    suspend fun processReadyOperations(
+        syncScopeKey: String,
+        assertSessionCurrent: suspend () -> Unit,
+        limit: Int = DEFAULT_BATCH_SIZE,
+    ): OutboxProcessResult {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         var succeeded = 0
         var failedOperationId: String? = null
         var conflictOperationId: String? = null
         var lastError: Throwable? = null
 
-        for (candidate in queue.readyOperations(limit)) {
-            val claimed = queue.claimOperation(candidate.operationId) ?: continue
+        // 1. Ready operation sorgusundan önce
+        assertSessionCurrent()
+
+        for (candidate in queue.readyOperations(syncScopeKey, limit)) {
+            // 2. Her candidate için claim'den hemen önce
+            assertSessionCurrent()
+
+            val claimed = queue.claimOperation(syncScopeKey, candidate.operationId) ?: continue
+
+            // 3. Claim'den sonra, executor'a vermeden hemen önce
             try {
-                val result = executor.execute(claimed)
+                assertSessionCurrent()
+            } catch (e: Throwable) {
+                if (e is CancellationException && e !is SyncSessionInvalidatedException) {
+                    throw e
+                }
+                withContext(NonCancellable) {
+                    queue.recordFailure(
+                        syncScopeKey = syncScopeKey,
+                        operationId = claimed.operationId,
+                        errorMessage = SAFE_FAILURE_CODE,
+                        errorClassification = OutboxErrorClassification.AMBIGUOUS_RESULT.name,
+                    )
+                }
+                throw e
+            }
+
+            try {
+                val result = try {
+                    executor.execute(claimed)
+                } catch (cancelled: CancellationException) {
+                    val isSessionInvalid = cancelled is SyncSessionInvalidatedException || runCatching {
+                        withContext(NonCancellable) {
+                            assertSessionCurrent()
+                        }
+                    }.isFailure
+
+                    if (isSessionInvalid) {
+                        withContext(NonCancellable) {
+                            queue.recordFailure(
+                                syncScopeKey = syncScopeKey,
+                                operationId = claimed.operationId,
+                                errorMessage = SAFE_FAILURE_CODE,
+                                errorClassification = OutboxErrorClassification.AMBIGUOUS_RESULT.name,
+                            )
+                        }
+                    }
+                    throw cancelled
+                }
+
+                // 4. Executor remote sonucu döndükten sonra, herhangi bir ACK/success/conflict yazımından önce
+                try {
+                    assertSessionCurrent()
+                } catch (e: Throwable) {
+                    if (e is CancellationException && e !is SyncSessionInvalidatedException) {
+                        throw e
+                    }
+                    withContext(NonCancellable) {
+                        queue.recordFailure(
+                            syncScopeKey = syncScopeKey,
+                            operationId = claimed.operationId,
+                            errorMessage = SAFE_FAILURE_CODE,
+                            errorClassification = OutboxErrorClassification.AMBIGUOUS_RESULT.name,
+                        )
+                    }
+                    throw e
+                }
+
                 when (result) {
                     is OutboxExecutionResult.V1Completed -> {
-                        if (queue.markSucceeded(claimed.operationId)) succeeded++
+                        if (queue.markSucceeded(syncScopeKey, claimed.operationId)) succeeded++
                     }
                     is OutboxExecutionResult.ConflictDetected -> {
-                        queue.recordV2Conflict(result.conflict)
+                        queue.recordV2Conflict(syncScopeKey, result.conflict)
                         conflictOperationId = claimed.operationId
                         break
                     }
                     else -> {
-                        if (queue.ackV2Execution(claimed.operationId, result)) succeeded++
+                        if (queue.ackV2Execution(syncScopeKey, claimed.operationId, result)) succeeded++
                     }
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (conflict: OutboxConflictException) {
-                queue.markConflict(claimed.operationId, SAFE_CONFLICT_CODE)
+                // 5. Executor exception fırlattığında, exception DEFINITIVE_REJECTION / conflict olarak yazılmadan önce
+                val sessionCheck = runCatching {
+                    withContext(NonCancellable) {
+                        assertSessionCurrent()
+                    }
+                }
+                if (sessionCheck.isFailure) {
+                    withContext(NonCancellable) {
+                        queue.recordFailure(
+                            syncScopeKey = syncScopeKey,
+                            operationId = claimed.operationId,
+                            errorMessage = SAFE_FAILURE_CODE,
+                            errorClassification = OutboxErrorClassification.AMBIGUOUS_RESULT.name,
+                        )
+                    }
+                    throw sessionCheck.exceptionOrNull()!!
+                }
+
+                queue.markConflict(syncScopeKey, claimed.operationId, SAFE_CONFLICT_CODE)
                 conflictOperationId = claimed.operationId
                 break
             } catch (error: Exception) {
+                // 5. Executor exception fırlattığında, exception DEFINITIVE_REJECTION olarak sınıflandırılmadan önce
+                val sessionCheck = runCatching {
+                    withContext(NonCancellable) {
+                        assertSessionCurrent()
+                    }
+                }
+                if (sessionCheck.isFailure) {
+                    withContext(NonCancellable) {
+                        queue.recordFailure(
+                            syncScopeKey = syncScopeKey,
+                            operationId = claimed.operationId,
+                            errorMessage = SAFE_FAILURE_CODE,
+                            errorClassification = OutboxErrorClassification.AMBIGUOUS_RESULT.name,
+                        )
+                    }
+                    throw sessionCheck.exceptionOrNull()!!
+                }
+
                 val classification = error.classifyOutboxError().name
-                queue.recordFailure(claimed.operationId, SAFE_FAILURE_CODE, classification)
+                queue.recordFailure(syncScopeKey, claimed.operationId, SAFE_FAILURE_CODE, classification)
                 failedOperationId = claimed.operationId
                 lastError = error
                 break
@@ -112,33 +220,47 @@ fun interface OutboxOperationExecutor {
 
 /** İşleyiciyi Room uygulamasından ayırır; testte yan etkisiz sahte kuyruk kullanılabilir. */
 interface OutboxQueue {
-    suspend fun readyOperations(limit: Int): List<SyncOperationEntity>
-    suspend fun claimOperation(operationId: String): SyncOperationEntity?
-    suspend fun markSucceeded(operationId: String): Boolean
-    suspend fun ackV2Execution(operationId: String, result: OutboxExecutionResult): Boolean
-    suspend fun recordV2Conflict(conflict: com.feniqo.mobile.data.local.entity.SyncConflictEntity): Boolean
-    suspend fun recordFailure(operationId: String, errorMessage: String): Boolean
-    suspend fun recordFailure(operationId: String, errorMessage: String, errorClassification: String?): Boolean =
-        recordFailure(operationId, errorMessage)
-    suspend fun markConflict(operationId: String, errorMessage: String): Boolean
+    suspend fun readyOperations(syncScopeKey: String, limit: Int): List<SyncOperationEntity>
+    suspend fun claimOperation(syncScopeKey: String, operationId: String): SyncOperationEntity?
+    suspend fun markSucceeded(syncScopeKey: String, operationId: String): Boolean
+    suspend fun ackV2Execution(syncScopeKey: String, operationId: String, result: OutboxExecutionResult): Boolean
+    suspend fun recordV2Conflict(syncScopeKey: String, conflict: com.feniqo.mobile.data.local.entity.SyncConflictEntity): Boolean
+    suspend fun recordFailure(syncScopeKey: String, operationId: String, errorMessage: String): Boolean
+    suspend fun recordFailure(syncScopeKey: String, operationId: String, errorMessage: String, errorClassification: String?): Boolean =
+        recordFailure(syncScopeKey, operationId, errorMessage)
+    suspend fun markConflict(syncScopeKey: String, operationId: String, errorMessage: String): Boolean
 }
 
 class RoomOutboxQueue(
     private val delegate: OfflineWriteQueue,
 ) : OutboxQueue {
-    override suspend fun readyOperations(limit: Int): List<SyncOperationEntity> = delegate.getReadyOperations(limit)
-    override suspend fun claimOperation(operationId: String): SyncOperationEntity? = delegate.claimOperation(operationId)
-    override suspend fun markSucceeded(operationId: String): Boolean = delegate.markSucceeded(operationId)
-    override suspend fun ackV2Execution(operationId: String, result: OutboxExecutionResult): Boolean =
-        delegate.ackV2Execution(operationId, result)
-    override suspend fun recordV2Conflict(conflict: com.feniqo.mobile.data.local.entity.SyncConflictEntity): Boolean =
-        delegate.recordV2Conflict(conflict)
-    override suspend fun recordFailure(operationId: String, errorMessage: String): Boolean =
-        delegate.recordFailure(operationId, errorMessage, null)
-    override suspend fun recordFailure(operationId: String, errorMessage: String, errorClassification: String?): Boolean =
-        delegate.recordFailure(operationId, errorMessage, errorClassification)
-    override suspend fun markConflict(operationId: String, errorMessage: String): Boolean =
-        delegate.markConflict(operationId, errorMessage)
+    override suspend fun readyOperations(syncScopeKey: String, limit: Int): List<SyncOperationEntity> =
+        delegate.getReadyOperations(syncScopeKey, limit)
+
+    override suspend fun claimOperation(syncScopeKey: String, operationId: String): SyncOperationEntity? =
+        delegate.claimOperation(syncScopeKey, operationId)
+
+    override suspend fun markSucceeded(syncScopeKey: String, operationId: String): Boolean =
+        delegate.markSucceeded(syncScopeKey, operationId)
+
+    override suspend fun ackV2Execution(syncScopeKey: String, operationId: String, result: OutboxExecutionResult): Boolean =
+        delegate.ackV2Execution(syncScopeKey, operationId, result)
+
+    override suspend fun recordV2Conflict(syncScopeKey: String, conflict: com.feniqo.mobile.data.local.entity.SyncConflictEntity): Boolean =
+        delegate.recordV2Conflict(syncScopeKey, conflict)
+
+    override suspend fun recordFailure(syncScopeKey: String, operationId: String, errorMessage: String): Boolean =
+        delegate.recordFailure(syncScopeKey, operationId, errorMessage, null)
+
+    override suspend fun recordFailure(
+        syncScopeKey: String,
+        operationId: String,
+        errorMessage: String,
+        errorClassification: String?,
+    ): Boolean = delegate.recordFailure(syncScopeKey, operationId, errorMessage, errorClassification)
+
+    override suspend fun markConflict(syncScopeKey: String, operationId: String, errorMessage: String): Boolean =
+        delegate.markConflict(syncScopeKey, operationId, errorMessage)
 }
 
 /**

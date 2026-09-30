@@ -13,6 +13,7 @@ import com.feniqo.mobile.data.local.outbox.OfflineWriteQueue
 import com.feniqo.mobile.data.local.outbox.OutboxOperationType
 import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
 import com.feniqo.mobile.data.sync.OutboxExecutionResult
+import com.feniqo.mobile.data.sync.SyncScopeKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import org.junit.runner.RunWith
@@ -27,6 +28,9 @@ import kotlin.test.assertTrue
 @RunWith(RobolectricTestRunner::class)
 class RecurringTransactionV2AckTest {
 
+    private val USER_ID = "11111111-1111-4111-8111-111111111111"
+    private val SCOPE = SyncScopeKey.user(USER_ID).rawValue
+
     @Test
     fun recurring_transaction_v2_ack_without_successor_applies_remote_record_and_removes_outbox_and_conflict() = runTest {
         val db = inMemoryDatabase()
@@ -36,24 +40,35 @@ class RecurringTransactionV2AckTest {
 
             val entity = recurringEntity("rec-1", "cat-1", 50000L)
             val opId = queue.enqueueRecurringTransactionV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.CREATE,
-                payloadJson = """{"id":"rec-1","user_id":"usr-1","amount_minor":50000,"currency":"TRY","type":"expense","category_id":"cat-1","payment_method":"CREDIT_CARD","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","created_at":"2026-08-25T17:00:00Z"}""",
+                payloadJson = """{"id":"rec-1","user_id":"$USER_ID","amount_minor":50000,"currency":"TRY","type":"expense","category_id":"cat-1","payment_method":"CREDIT_CARD","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","created_at":"2026-08-25T17:00:00Z"}""",
             )
 
             // Claim op -> IN_FLIGHT
-            val claimed = queue.claimOperation(opId)
+            val claimed = queue.claimOperation(SCOPE, opId)
             assertNotNull(claimed)
             assertEquals("IN_FLIGHT", claimed.statusCode)
 
             // Insert dummy conflict row to verify it gets cleaned
             db.syncStateDao().upsertConflict(
-                SyncConflictEntity("RECURRING_TRANSACTION", "rec-1", opId, 0L, 1L, "{}", "{}", 1000L),
+                SyncConflictEntity(
+                    syncScopeKey = SCOPE,
+                    entityTypeCode = "RECURRING_TRANSACTION",
+                    entityId = "rec-1",
+                    operationId = opId,
+                    localVersion = 0L,
+                    remoteVersion = 1L,
+                    localPayloadJson = "{}",
+                    remotePayloadJson = "{}",
+                    detectedAtEpochMillis = 1000L,
+                ),
             )
 
             val remoteDto = RecurringTransactionDto(
                 id = "rec-1",
-                userId = "usr-1",
+                userId = USER_ID,
                 workspaceId = null,
                 amountMinor = 55000L,
                 currency = "TRY",
@@ -74,6 +89,7 @@ class RecurringTransactionV2AckTest {
             )
 
             val ackResult = db.localMutationDao().ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = opId,
                 result = OutboxExecutionResult.RecurringTransactionApplied(remoteDto),
                 nowEpochMillis = 1000L,
@@ -81,8 +97,8 @@ class RecurringTransactionV2AckTest {
             assertTrue(ackResult)
 
             // Verify: outbox removed, conflict removed, entity updated with remote values and SYNCED
-            assertNull(db.syncOperationDao().getById(opId))
-            assertNull(db.syncStateDao().getConflict("RECURRING_TRANSACTION", "rec-1"))
+            assertNull(db.syncOperationDao().getById(SCOPE, opId))
+            assertNull(db.syncStateDao().getConflict(SCOPE, "RECURRING_TRANSACTION", "rec-1"))
             val stored = db.recurringTransactionDao().getById("rec-1")
             assertNotNull(stored)
             assertEquals(55000L, stored.amountMinor)
@@ -104,13 +120,14 @@ class RecurringTransactionV2AckTest {
 
             val initial = recurringEntity("rec-2", "cat-1", 50000L)
             val op1Id = queue.enqueueRecurringTransactionV2(
+                syncScopeKey = SCOPE,
                 entity = initial,
                 type = OutboxOperationType.CREATE,
-                payloadJson = """{"id":"rec-2","user_id":"usr-1","amount_minor":50000,"currency":"TRY","type":"expense","category_id":"cat-1","payment_method":"CREDIT_CARD","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","created_at":"2026-08-25T17:00:00Z"}""",
+                payloadJson = """{"id":"rec-2","user_id":"$USER_ID","amount_minor":50000,"currency":"TRY","type":"expense","category_id":"cat-1","payment_method":"CREDIT_CARD","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","created_at":"2026-08-25T17:00:00Z"}""",
             )
 
             // Claim op1 -> IN_FLIGHT
-            val claimed = queue.claimOperation(op1Id)
+            val claimed = queue.claimOperation(SCOPE, op1Id)
             assertNotNull(claimed)
             assertEquals("IN_FLIGHT", claimed.statusCode)
 
@@ -121,12 +138,13 @@ class RecurringTransactionV2AckTest {
                 sync = initial.sync.copy(syncStatus = "PENDING_UPDATE"),
             )
             val op2Id = queue.enqueueRecurringTransactionV2(
+                syncScopeKey = SCOPE,
                 entity = updated,
                 type = OutboxOperationType.UPDATE,
-                payloadJson = """{"id":"rec-2","user_id":"usr-1","amount_minor":75000,"currency":"TRY","type":"expense","category_id":"cat-1","description":"Güncel Açıklama","payment_method":"CREDIT_CARD","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","created_at":"2026-08-25T17:00:00Z"}""",
+                payloadJson = """{"id":"rec-2","user_id":"$USER_ID","amount_minor":75000,"currency":"TRY","type":"expense","category_id":"cat-1","description":"Güncel Açıklama","payment_method":"CREDIT_CARD","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","created_at":"2026-08-25T17:00:00Z"}""",
             )
 
-            val successorBefore = db.syncOperationDao().getById(op2Id)
+            val successorBefore = db.syncOperationDao().getById(SCOPE, op2Id)
             assertNotNull(successorBefore)
             assertTrue(successorBefore.isBlocked)
             assertEquals(op1Id, successorBefore.predecessorOperationId)
@@ -134,7 +152,7 @@ class RecurringTransactionV2AckTest {
             // ACK op1 with appliedVersion = 1L
             val remoteDto = RecurringTransactionDto(
                 id = "rec-2",
-                userId = "usr-1",
+                userId = USER_ID,
                 workspaceId = null,
                 amountMinor = 50000L,
                 currency = "TRY",
@@ -155,6 +173,7 @@ class RecurringTransactionV2AckTest {
             )
 
             val ackResult = db.localMutationDao().ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = op1Id,
                 result = OutboxExecutionResult.RecurringTransactionApplied(remoteDto),
                 nowEpochMillis = 1000L,
@@ -162,10 +181,10 @@ class RecurringTransactionV2AckTest {
             assertTrue(ackResult)
 
             // Verify op1 deleted
-            assertNull(db.syncOperationDao().getById(op1Id))
+            assertNull(db.syncOperationDao().getById(SCOPE, op1Id))
 
             // Verify successor unblocked and rebased to 1L
-            val successorAfter = db.syncOperationDao().getById(op2Id)
+            val successorAfter = db.syncOperationDao().getById(SCOPE, op2Id)
             assertNotNull(successorAfter)
             assertFalse(successorAfter.isBlocked)
             assertEquals(op1Id, successorAfter.predecessorOperationId)
@@ -203,18 +222,19 @@ class RecurringTransactionV2AckTest {
                 ),
             )
             val opId = queue.enqueueRecurringTransactionV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.DELETE,
-                payloadJson = """{"id":"rec-3","user_id":"usr-1","amount_minor":50000,"currency":"TRY","type":"expense","category_id":"cat-1","payment_method":"CREDIT_CARD","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","created_at":"2026-08-25T17:00:00Z","deleted_at":"2026-08-25T17:05:00Z","version":2}""",
+                payloadJson = """{"id":"rec-3","user_id":"$USER_ID","amount_minor":50000,"currency":"TRY","type":"expense","category_id":"cat-1","payment_method":"CREDIT_CARD","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","created_at":"2026-08-25T17:00:00Z","deleted_at":"2026-08-25T17:05:00Z","version":2}""",
             )
 
-            val claimed = queue.claimOperation(opId)
+            val claimed = queue.claimOperation(SCOPE, opId)
             assertNotNull(claimed)
             assertEquals("IN_FLIGHT", claimed.statusCode)
 
             val remoteDto = RecurringTransactionDto(
                 id = "rec-3",
-                userId = "usr-1",
+                userId = USER_ID,
                 workspaceId = null,
                 amountMinor = 50000L,
                 currency = "TRY",
@@ -235,13 +255,14 @@ class RecurringTransactionV2AckTest {
             )
 
             val ackResult = db.localMutationDao().ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = opId,
                 result = OutboxExecutionResult.RecurringTransactionApplied(remoteDto),
                 nowEpochMillis = 2000L,
             )
             assertTrue(ackResult)
 
-            assertNull(db.syncOperationDao().getById(opId))
+            assertNull(db.syncOperationDao().getById(SCOPE, opId))
             val stored = db.recurringTransactionDao().getAnyById("rec-3")
             assertNotNull(stored)
             assertNotNull(stored.sync.deletedAtEpochMillis)
@@ -272,23 +293,25 @@ class RecurringTransactionV2AckTest {
                 ),
             )
             val opId = queue.enqueueRecurringTransactionV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.DELETE,
-                payloadJson = """{"id":"rec-4","user_id":"usr-1","amount_minor":50000,"currency":"TRY","type":"expense","category_id":"cat-1","payment_method":"CREDIT_CARD","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","created_at":"2026-08-25T17:00:00Z","deleted_at":"2026-08-25T17:05:00Z","version":2}""",
+                payloadJson = """{"id":"rec-4","user_id":"$USER_ID","amount_minor":50000,"currency":"TRY","type":"expense","category_id":"cat-1","payment_method":"CREDIT_CARD","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","created_at":"2026-08-25T17:00:00Z","deleted_at":"2026-08-25T17:05:00Z","version":2}""",
             )
 
-            val claimed = queue.claimOperation(opId)
+            val claimed = queue.claimOperation(SCOPE, opId)
             assertNotNull(claimed)
             assertEquals("IN_FLIGHT", claimed.statusCode)
 
             val ackResult = db.localMutationDao().ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = opId,
                 result = OutboxExecutionResult.MissingDeleteAcknowledged,
                 nowEpochMillis = 2000L,
             )
             assertTrue(ackResult)
 
-            assertNull(db.syncOperationDao().getById(opId))
+            assertNull(db.syncOperationDao().getById(SCOPE, opId))
             val stored = db.recurringTransactionDao().getAnyById("rec-4")
             assertNotNull(stored)
             assertNotNull(stored.sync.deletedAtEpochMillis)
@@ -319,9 +342,9 @@ class RecurringTransactionV2AckTest {
 
     private fun categoryEntity(id: String, name: String) = CategoryEntity(
         id = id,
-        ownerId = "usr-1",
+        ownerId = USER_ID,
         workspaceId = null,
-        scopeKey = "user:usr-1",
+        scopeKey = "user:$USER_ID",
         name = name,
         normalizedName = name.lowercase(),
         slug = name.lowercase(),
@@ -348,7 +371,7 @@ class RecurringTransactionV2AckTest {
         syncStatus: String = "PENDING_CREATE",
     ) = RecurringTransactionEntity(
         id = id,
-        ownerId = "usr-1",
+        ownerId = USER_ID,
         workspaceId = null,
         amountMinor = amountMinor,
         currencyCode = "TRY",

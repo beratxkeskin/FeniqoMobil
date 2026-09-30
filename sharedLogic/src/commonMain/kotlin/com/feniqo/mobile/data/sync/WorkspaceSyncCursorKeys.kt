@@ -18,11 +18,15 @@ object WorkspaceSyncCursorKeys {
     const val WORKSPACE_BOOTSTRAP_COMPLETED_ENTITY_ID = "COMPLETED"
     const val WORKSPACE_MEMBER_PREFIX = "WORKSPACE_MEMBER:"
 
-    fun bootstrapCompleteEntity(nowEpochMillis: Long): SyncCursorEntity = SyncCursorEntity(
-        entityTypeCode = WORKSPACE_BOOTSTRAP_COMPLETE,
-        updatedAtEpochMillis = nowEpochMillis,
-        entityId = WORKSPACE_BOOTSTRAP_COMPLETED_ENTITY_ID,
-    )
+    fun bootstrapCompleteEntity(syncScopeKey: String, nowEpochMillis: Long): SyncCursorEntity {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        return SyncCursorEntity(
+            syncScopeKey = syncScopeKey,
+            entityTypeCode = WORKSPACE_BOOTSTRAP_COMPLETE,
+            updatedAtEpochMillis = nowEpochMillis,
+            entityId = WORKSPACE_BOOTSTRAP_COMPLETED_ENTITY_ID,
+        )
+    }
 
     fun isBootstrapCompleteMarker(entity: SyncCursorEntity): Boolean =
         entity.entityTypeCode == WORKSPACE_BOOTSTRAP_COMPLETE &&
@@ -40,11 +44,13 @@ object WorkspaceSyncCursorKeys {
         return wsId.takeIf { it.isNotEmpty() }
     }
 
-    fun workspaceCursorToEntity(cursor: RemoteSyncCursor): SyncCursorEntity {
+    fun workspaceCursorToEntity(syncScopeKey: String, cursor: RemoteSyncCursor): SyncCursorEntity {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         require(cursor.entityId != WORKSPACE_BOOTSTRAP_COMPLETED_ENTITY_ID) {
             "Gerçek workspace cursor ID'si marker sabiti ile eşleşemez."
         }
         return SyncCursorEntity(
+            syncScopeKey = syncScopeKey,
             entityTypeCode = WORKSPACE_ENTITY_TYPE,
             updatedAtEpochMillis = Instant.parse(cursor.updatedAt).toEpochMilliseconds(),
             entityId = cursor.entityId,
@@ -64,11 +70,15 @@ object WorkspaceSyncCursorKeys {
         )
     }
 
-    fun workspaceMemberCursorToEntity(cursor: WorkspaceMemberSyncCursor): SyncCursorEntity = SyncCursorEntity(
-        entityTypeCode = workspaceMemberEntityType(cursor.workspaceId),
-        updatedAtEpochMillis = Instant.parse(cursor.updatedAt).toEpochMilliseconds(),
-        entityId = cursor.userId,
-    )
+    fun workspaceMemberCursorToEntity(syncScopeKey: String, cursor: WorkspaceMemberSyncCursor): SyncCursorEntity {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        return SyncCursorEntity(
+            syncScopeKey = syncScopeKey,
+            entityTypeCode = workspaceMemberEntityType(cursor.workspaceId),
+            updatedAtEpochMillis = Instant.parse(cursor.updatedAt).toEpochMilliseconds(),
+            entityId = cursor.userId,
+        )
+    }
 
     fun workspaceMemberEntityToCursor(entity: SyncCursorEntity): WorkspaceMemberSyncCursor? {
         val wsId = parseWorkspaceIdFromMemberEntityType(entity.entityTypeCode) ?: return null

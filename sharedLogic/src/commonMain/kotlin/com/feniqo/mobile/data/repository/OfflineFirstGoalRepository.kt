@@ -9,6 +9,7 @@ import com.feniqo.mobile.data.mapper.toEntity
 import com.feniqo.mobile.data.mapper.toPendingDelete
 import com.feniqo.mobile.data.mapper.toPendingUpdate
 import com.feniqo.mobile.data.remote.mapper.toDto
+import com.feniqo.mobile.data.sync.SyncScopeKey
 import com.feniqo.mobile.domain.model.AddGoalContributionCommand
 import com.feniqo.mobile.domain.model.AppError
 import com.feniqo.mobile.domain.model.CreateGoalCommand
@@ -117,7 +118,9 @@ class OfflineFirstGoalRepository(
             )
 
             val queue = requireNotNull(offlineWriteQueue) { "OfflineWriteQueue is required for writes" }
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
             queue.enqueueGoalV2(
+                syncScopeKey = syncScopeKey,
                 entity = goal.toEntity(newSyncMetadata(now)),
                 type = OutboxOperationType.CREATE,
                 payloadJson = json.encodeToString(goal.toDto()),
@@ -151,7 +154,9 @@ class OfflineFirstGoalRepository(
             val updatedEntity = updatedGoal.toEntity(existingEntity.sync.toPendingUpdate(now))
 
             val queue = requireNotNull(offlineWriteQueue) { "OfflineWriteQueue is required for writes" }
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
             queue.enqueueGoalV2(
+                syncScopeKey = syncScopeKey,
                 entity = updatedEntity,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = json.encodeToString(updatedGoal.toDto()),
@@ -204,7 +209,9 @@ class OfflineFirstGoalRepository(
             val updatedGoalEntity = updatedGoal.toEntity(parentGoalEntity.sync.toPendingUpdate(now))
 
             val queue = requireNotNull(offlineWriteQueue) { "OfflineWriteQueue is required for writes" }
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
             queue.enqueueGoalContributionV2(
+                syncScopeKey = syncScopeKey,
                 entity = contrib.toEntity(newSyncMetadata(now)),
                 updatedGoal = updatedGoalEntity,
                 payloadJson = json.encodeToString(contrib.toDto()),
@@ -232,7 +239,9 @@ class OfflineFirstGoalRepository(
             val deletedEntity = existingEntity.copy(sync = existingEntity.sync.toPendingDelete(now))
 
             val queue = requireNotNull(offlineWriteQueue) { "OfflineWriteQueue is required for writes" }
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
             queue.enqueueGoalV2(
+                syncScopeKey = syncScopeKey,
                 entity = deletedEntity,
                 type = OutboxOperationType.DELETE,
                 payloadJson = json.encodeToString(existingEntity.toDomain().toDto()),

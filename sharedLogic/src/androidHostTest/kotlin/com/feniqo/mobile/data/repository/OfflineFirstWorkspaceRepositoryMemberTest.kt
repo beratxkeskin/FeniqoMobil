@@ -390,7 +390,7 @@ class OfflineFirstWorkspaceRepositoryMemberTest {
             assertEquals("PENDING_UPDATE", stored.sync.syncStatus)
 
             // Outbox kontrolü
-            val pendingOps = database.syncOperationDao().getReadyOperations(nowEpochMillis = Long.MAX_VALUE, limit = 10)
+            val pendingOps = database.syncOperationDao().getReadyOperations(syncScopeKey = "USER:${ws.ownerId}", nowEpochMillis = Long.MAX_VALUE, limit = 10)
             assertEquals(1, pendingOps.size)
             val op = pendingOps.first()
             assertEquals("WORKSPACE_MEMBER", op.entityTypeCode)
@@ -480,7 +480,7 @@ class OfflineFirstWorkspaceRepositoryMemberTest {
             assertEquals("cannot_leave_as_owner_requires_transfer", error.code)
 
             // Hiçbir outbox ve üyelik mutasyonu olmamalı
-            assertTrue(database.syncOperationDao().getReadyOperations(nowEpochMillis = Long.MAX_VALUE, limit = 10).isEmpty())
+            assertTrue(database.syncOperationDao().getReadyOperations(syncScopeKey = "USER:${ws.ownerId}", nowEpochMillis = Long.MAX_VALUE, limit = 10).isEmpty())
             val storedOwner = database.workspaceDao().getMember(ws.id, ws.ownerId)
             assertNotNull(storedOwner)
             assertNull(storedOwner.sync.deletedAtEpochMillis)
@@ -551,7 +551,7 @@ class OfflineFirstWorkspaceRepositoryMemberTest {
             assertNull(storedWs.sync.deletedAtEpochMillis)
 
             // 4. DELETE outbox kaydı oluşmalı
-            val pendingOps = database.syncOperationDao().getReadyOperations(nowEpochMillis = Long.MAX_VALUE, limit = 10)
+            val pendingOps = database.syncOperationDao().getReadyOperations(syncScopeKey = "USER:$actorId", nowEpochMillis = Long.MAX_VALUE, limit = 10)
             assertEquals(1, pendingOps.size)
             val op = pendingOps.first()
             assertEquals("WORKSPACE_MEMBER", op.entityTypeCode)
@@ -634,7 +634,7 @@ class OfflineFirstWorkspaceRepositoryMemberTest {
             assertEquals(wsId, storedOwnerProfile.activeWorkspaceId)
 
             // 3. DELETE outbox kaydı oluşmalı
-            val pendingOps = database.syncOperationDao().getReadyOperations(nowEpochMillis = Long.MAX_VALUE, limit = 10)
+            val pendingOps = database.syncOperationDao().getReadyOperations(syncScopeKey = "USER:$ownerId", nowEpochMillis = Long.MAX_VALUE, limit = 10)
             assertEquals(1, pendingOps.size)
             val op = pendingOps.first()
             assertEquals("WORKSPACE_MEMBER", op.entityTypeCode)
@@ -673,7 +673,7 @@ class OfflineFirstWorkspaceRepositoryMemberTest {
             assertEquals(AppError.Authentication("actor_not_permitted"), result.error)
 
             // Hiçbir outbox işlemi oluşturulmamalı
-            val pendingOps = database.syncOperationDao().getReadyOperations(nowEpochMillis = Long.MAX_VALUE, limit = 10)
+            val pendingOps = database.syncOperationDao().getReadyOperations(syncScopeKey = "USER:$editorId", nowEpochMillis = Long.MAX_VALUE, limit = 10)
             assertTrue(pendingOps.isEmpty())
         } finally {
             database.close()
@@ -766,7 +766,7 @@ class OfflineFirstWorkspaceRepositoryMemberTest {
             assertEquals(AppError.Validation("local_member_version_unavailable"), result.error)
 
             // Hiçbir outbox kaydı oluşmamalı
-            val pendingOps = database.syncOperationDao().getReadyOperations(nowEpochMillis = Long.MAX_VALUE, limit = 10)
+            val pendingOps = database.syncOperationDao().getReadyOperations(syncScopeKey = "USER:$ownerId", nowEpochMillis = Long.MAX_VALUE, limit = 10)
             assertTrue(pendingOps.isEmpty())
         } finally {
             database.close()

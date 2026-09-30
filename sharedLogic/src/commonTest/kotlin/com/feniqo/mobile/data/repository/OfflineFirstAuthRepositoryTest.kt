@@ -7,6 +7,7 @@ import com.feniqo.mobile.data.mapper.newSyncMetadata
 import com.feniqo.mobile.data.remote.auth.AuthRemoteDataSource
 import com.feniqo.mobile.data.remote.auth.RemoteAuthSession
 import com.feniqo.mobile.data.remote.dto.ProfileDto
+import com.feniqo.mobile.data.sync.SyncScopeKey
 import com.feniqo.mobile.domain.model.AppError
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.SyncStatus
@@ -23,10 +24,15 @@ import kotlinx.coroutines.test.runTest
 
 class OfflineFirstAuthRepositoryTest {
 
+    private companion object {
+        const val USER_ID = "11111111-1111-4111-8111-111111111111"
+        val SCOPE = SyncScopeKey.user(USER_ID).rawValue
+    }
+
     @Test
     fun update_name_queues_profile_update_instead_of_direct_dao_write() = runTest {
         val remote = FakeAuthRemoteDataSource().apply {
-            session.value = RemoteAuthSession("user-1", "user@example.com", 1_800_000_000)
+            session.value = RemoteAuthSession(USER_ID, "user@example.com", 1_800_000_000)
         }
         val profiles = FakeProfileDao()
         profiles.upsert(profileRow())
@@ -35,7 +41,8 @@ class OfflineFirstAuthRepositoryTest {
         var payload = ""
         val repository = OfflineFirstAuthRepository(
             remote, profiles,
-            enqueueProfileUpdate = { entity, type, json ->
+            enqueueProfileUpdate = { scope, entity, type, json ->
+                assertEquals(SCOPE, scope)
                 queued = entity
                 operation = type
                 payload = json
@@ -50,26 +57,27 @@ class OfflineFirstAuthRepositoryTest {
         assertEquals(3L, queued?.sync?.baseVersion)
         assertEquals(OutboxOperationType.UPDATE, operation)
         assertEquals(true, payload.contains("Deniz Yılmaz"))
-        assertEquals("Deniz Yılmaz", profiles.observeById("user-1").first()?.fullName)
+        assertEquals("Deniz Yılmaz", profiles.observeById(USER_ID).first()?.fullName)
     }
 
     @Test
     fun update_name_bootstraps_missing_local_profile_from_remote_before_queuing() = runTest {
         val remote = FakeAuthRemoteDataSource().apply {
-            session.value = RemoteAuthSession("user-1", "user@example.com", 1_800_000_000)
+            session.value = RemoteAuthSession(USER_ID, "user@example.com", 1_800_000_000)
         }
         val profiles = FakeProfileDao()
         var queued: UserProfileEntity? = null
         val repository = OfflineFirstAuthRepository(
             remote, profiles,
             fetchRemoteProfile = { id ->
-                assertEquals("user-1", id)
+                assertEquals(USER_ID, id)
                 ProfileDto(
                     id = id, email = "user@example.com", fullName = null,
                     createdAt = "2026-09-20T10:00:00Z", updatedAt = "2026-09-20T10:00:00Z", version = 4,
                 )
             },
-            enqueueProfileUpdate = { entity, type, _ ->
+            enqueueProfileUpdate = { scope, entity, type, _ ->
+                assertEquals(SCOPE, scope)
                 assertEquals(OutboxOperationType.UPDATE, type)
                 queued = entity
                 profiles.upsert(entity)
@@ -85,23 +93,23 @@ class OfflineFirstAuthRepositoryTest {
     @Test
     fun update_name_does_not_claim_success_when_profile_cannot_be_loaded() = runTest {
         val remote = FakeAuthRemoteDataSource().apply {
-            session.value = RemoteAuthSession("user-1", "user@example.com", 1_800_000_000)
+            session.value = RemoteAuthSession(USER_ID, "user@example.com", 1_800_000_000)
         }
         val profiles = FakeProfileDao()
         var enqueued = false
         val repository = OfflineFirstAuthRepository(
             remote, profiles,
             fetchRemoteProfile = { null },
-            enqueueProfileUpdate = { _, _, _ -> enqueued = true },
+            enqueueProfileUpdate = { _, _, _, _ -> enqueued = true },
         )
 
         assertIs<RepositoryResult.Failure>(repository.updateFullName("Deniz Yılmaz"))
         assertEquals(false, enqueued)
-        assertEquals(null, profiles.observeById("user-1").first())
+        assertEquals(null, profiles.observeById(USER_ID).first())
     }
 
     private fun profileRow() = UserProfileEntity(
-        id = "user-1", email = "user@example.com", fullName = null,
+        id = USER_ID, email = "user@example.com", fullName = null,
         currencyCode = "TRY", themeCode = "SYSTEM", languageCode = "TR",
         activeWorkspaceId = null, createdAtEpochMillis = 1_000L,
         sync = newSyncMetadata(1_000L, SyncStatus.SYNCED).copy(version = 3, baseVersion = 3),
@@ -111,7 +119,7 @@ class OfflineFirstAuthRepositoryTest {
     fun maps_remote_session_without_exposing_supabase_types() = runTest {
         val remote = FakeAuthRemoteDataSource().apply {
             session.value = RemoteAuthSession(
-                userId = "user-1",
+                userId = USER_ID,
                 email = "user@example.com",
                 expiresAtEpochSeconds = 1_800_000_000,
             )
@@ -120,7 +128,7 @@ class OfflineFirstAuthRepositoryTest {
 
         val session = repository.observeSession().first()
 
-        assertEquals("user-1", session?.userId?.value)
+        assertEquals(USER_ID, session?.userId?.value)
         assertEquals("user@example.com", session?.email)
         assertEquals(1_800_000_000, session?.expiresAt?.epochSeconds)
     }
@@ -174,6 +182,32 @@ class OfflineFirstAuthRepositoryTest {
     }
 
     @Test
+    fun successful_sign_out_cancels_unique_sync_work_without_clearing_local_sync_data() = runTest {
+        val remote = FakeAuthRemoteDataSource().apply {
+            session.value = RemoteAuthSession(
+                userId = "11111111-1111-4111-8111-111111111111",
+                email = "user@example.com",
+                expiresAtEpochSeconds = 1_800_000_000,
+            )
+        }
+        val profiles = FakeProfileDao()
+        val initialProfile = profileRow()
+        profiles.upsert(initialProfile)
+
+        val scheduler = FakeBackgroundSyncScheduler()
+        val repository = OfflineFirstAuthRepository(remote, profiles, scheduler)
+
+        val result = repository.signOut()
+
+        assertIs<RepositoryResult.Success<Unit>>(result)
+        // Background work iptal edilir
+        assertEquals(1, scheduler.cancelSyncCalls)
+        // Çıkış yapıldığında offline-first yerel veriler Room'dan silinmez, korunur
+        val localProfile = profiles.observeById("11111111-1111-4111-8111-111111111111").first()
+        assertEquals(initialProfile, localProfile)
+    }
+
+    @Test
     fun changePassword_without_active_session_returns_session_expired_without_remote_call() = runTest {
         val remote = FakeAuthRemoteDataSource()
         val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
@@ -189,7 +223,7 @@ class OfflineFirstAuthRepositoryTest {
     fun changePassword_with_active_session_passes_email_and_passwords_to_remote() = runTest {
         val remote = FakeAuthRemoteDataSource().apply {
             session.value = RemoteAuthSession(
-                userId = "user-1",
+                userId = "11111111-1111-4111-8111-111111111111",
                 email = "user@example.com",
                 expiresAtEpochSeconds = 1_800_000_000,
             )
@@ -209,7 +243,7 @@ class OfflineFirstAuthRepositoryTest {
     fun changePassword_remote_failure_maps_to_safe_domain_error() = runTest {
         val remote = FakeAuthRemoteDataSource().apply {
             session.value = RemoteAuthSession(
-                userId = "user-1",
+                userId = "11111111-1111-4111-8111-111111111111",
                 email = "user@example.com",
                 expiresAtEpochSeconds = 1_800_000_000,
             )
@@ -227,7 +261,7 @@ class OfflineFirstAuthRepositoryTest {
     fun changePassword_rethrows_cancellation_exception() = runTest {
         val remote = FakeAuthRemoteDataSource().apply {
             session.value = RemoteAuthSession(
-                userId = "user-1",
+                userId = "11111111-1111-4111-8111-111111111111",
                 email = "user@example.com",
                 expiresAtEpochSeconds = 1_800_000_000,
             )
@@ -244,7 +278,7 @@ class OfflineFirstAuthRepositoryTest {
     fun handleAuthDeepLink_validRecoveryToken_importsTokenAndSetsVerifiedRecoveryState() = runTest {
         val remote = FakeAuthRemoteDataSource().apply {
             session.value = RemoteAuthSession(
-                userId = "user-1",
+                userId = "11111111-1111-4111-8111-111111111111",
                 email = "recovered@feniqo.com",
                 expiresAtEpochSeconds = 1_800_000_000,
             )
@@ -286,7 +320,7 @@ class OfflineFirstAuthRepositoryTest {
     fun handleAuthDeepLink_pkceCode_exchangesCodeAndSetsVerifiedRecoveryState() = runTest {
         val remote = FakeAuthRemoteDataSource().apply {
             session.value = RemoteAuthSession(
-                userId = "user-1",
+                userId = "11111111-1111-4111-8111-111111111111",
                 email = "pkce@feniqo.com",
                 expiresAtEpochSeconds = 1_800_000_000,
             )
@@ -337,7 +371,7 @@ class OfflineFirstAuthRepositoryTest {
     fun resetPassword_whenRecoveryVerified_updatesPasswordClearsRecoveryAndSignsOut() = runTest {
         val remote = FakeAuthRemoteDataSource().apply {
             session.value = RemoteAuthSession(
-                userId = "user-1",
+                userId = "11111111-1111-4111-8111-111111111111",
                 email = "user@feniqo.com",
                 expiresAtEpochSeconds = 1_800_000_000,
             )

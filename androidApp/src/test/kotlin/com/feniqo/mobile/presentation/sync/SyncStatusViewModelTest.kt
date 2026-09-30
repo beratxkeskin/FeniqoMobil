@@ -594,4 +594,36 @@ class SyncStatusViewModelTest {
         assertNull(viewModel.uiState.value.activeConflictDialog)
         assertFalse(viewModel.uiState.value.isConflictDialogVisible)
     }
+
+    @Test
+    fun overview_quarantine_flag_maps_to_sync_status_ui_state() = runTest {
+        subscribeState()
+        fakeSyncRepository.overviewState.value = SyncOverview(
+            phase = SyncPhase.IDLE,
+            pendingOperationCount = 0,
+            failedOperationCount = 0,
+            conflictCount = 0,
+            lastSuccessfulSyncAt = null,
+            lastError = null,
+            hasLegacyQuarantinedData = true,
+        )
+
+        assertTrue(viewModel.uiState.value.hasLegacyQuarantinedData)
+    }
+
+    @Test
+    fun false_quarantine_flag_maps_to_false_ui_state() = runTest {
+        subscribeState()
+        fakeSyncRepository.overviewState.value = SyncOverview(
+            phase = SyncPhase.IDLE,
+            pendingOperationCount = 0,
+            failedOperationCount = 0,
+            conflictCount = 0,
+            lastSuccessfulSyncAt = null,
+            lastError = null,
+            hasLegacyQuarantinedData = false,
+        )
+
+        assertFalse(viewModel.uiState.value.hasLegacyQuarantinedData)
+    }
 }

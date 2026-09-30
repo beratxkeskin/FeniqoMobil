@@ -61,8 +61,8 @@ object RepositoryModule {
         profileDao = profileDao,
         syncScheduler = syncScheduler,
         fetchRemoteProfile = coreRemoteDataSource.get()::fetchProfile,
-        enqueueProfileUpdate = { entity, type, payload ->
-            queue.enqueueProfileV2(entity, type, payload)
+        enqueueProfileUpdate = { syncScopeKey, entity, type, payload ->
+            queue.enqueueProfileV2(syncScopeKey, entity, type, payload)
         },
     )
 

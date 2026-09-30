@@ -16,8 +16,43 @@
 
 ## 2. Room şeması
 
-Güncel Room şema sürümü **19**'dur. Export edilen şemalar
+Güncel Room şema sürümü **22**'dir. Export edilen şemalar
 `sharedLogic/schemas/com.feniqo.mobile.data.local.database.FeniqoDatabase/` altında commit edilir.
+
+### Room v21 -> v22 Kullanıcı-Scope İzolasyonu ve Outbox/Cursor/Conflict Kalıcılık Sözleşmesi
+
+Room v22 (`ANDROID_MIGRATION_21_22`), oturum değişimlerinde outbox, cursor ve conflict verilerinin farklı kullanıcılar arasında izole edilmesi için kalıcı şema temelini kurar:
+- **`sync_operations.sync_scope_key`:** Her outbox işlemine `sync_scope_key` sütunu eklenir. İndeksler `(sync_scope_key, status_code, is_blocked, next_attempt_at_epoch_ms, created_at_epoch_ms, operation_id)`, `(sync_scope_key, entity_type_code, entity_id)` ve `(sync_scope_key, predecessor_operation_id)` bileşimleriyle kullanıcı kapsamlı sorguları destekler.
+- **`sync_cursors` Composite Primary Key:** Birincil anahtar `(sync_scope_key, entity_type_code)` olarak genişletilmiştir. Bu sayede farklı kullanıcıların (USER:A ve USER:B) aynı entity tipi için bağımsız cursor kayıtları v22 şemasında birlikte bulunabilir.
+- **`sync_conflicts` Composite Primary Key & İndeks:** Birincil anahtar `(sync_scope_key, entity_type_code, entity_id)` olarak genişletilmiş ve `(sync_scope_key, detected_at_epoch_ms)` indeksi eklenmiştir. Farklı kullanıcıların aynı entity için conflict snapshot'ları silinmeden bir arada saklanabilir.
+- **Kapsam Formatı ve `USER:<canonical_uuid>`:** Normal kullanıcı kapsamı `USER:<canonical-user-uuid>` biçimindedir. Canonical küçük harf UUID doğrulaması fail-closed çalışır.
+- **`LEGACY_UNRESOLVED` Karantinası:** Actor otoritesi kesin kanıtlanamayan veya workspace kapsamında olan operasyonlar silinmez; fail-closed biçimde `LEGACY_UNRESOLVED` karantina anahtarıyla korunur. Karantina kayıtları aktif oturumun runtime enqueue, claim, retry, recovery ve outbox execution akışlarından kesin olarak dışlanır; aktif kullanıcıya körlemesine sahiplendirilmez ve otomatik olarak silinmez.
+- **Kayıpsız Geriye Dönük Uyumluluk:** Workspace/kişisel ayrımında veya actor otoritesi kanıtlanamayan hiçbir outbox, cursor veya conflict satırı silinmez. Payload JSON değerleri byte-for-byte korunur; payload içeriği actor otoritesi olarak kabul edilmez.
+- **Güvenli UI Bilgilendirmesi:** Karantinaya alınan eski veri varlığı kullanıcıya yalnız genel bir bilgilendirme kartı olarak gösterilir (`hasLegacyQuarantinedData`). Exact sayaç, kayıt ID, entity türü veya payload gösterilmez; kart üzerinde uzaktan mutasyon veya sahiplenme aksiyonu bulunmaz.
+
+### Room v20 -> v21 UUID Canonicalization ve Geriye Uyumluluk Karar Sözleşmesi
+
+Room v21 (`ANDROID_MIGRATION_20_21`), eski 32-karakter compact hex UUID'leri güvenli ve kayıpsız biçimde 36-karakter canonical UUID biçimine dönüştürür:
+- **Foreign Key Bütünlüğü:** Migration süresince `PRAGMA defer_foreign_keys = ON` kullanılır ve tüm PK/FK dönüşümleri tamamlandıktan sonra `PRAGMA foreign_key_check` çalıştırılır. İhlal tespit edilirse açıklayıcı `IllegalStateException` fırlatılır.
+- **Fail-Closed Preflight:** Mutation öncesinde entity PK, FK, composite PK (`transaction_tags`, `recurring_transaction_occurrences`), unique index (`budgets`, `subscription_payments`) ve reminder target stable_key çakışmaları taranır. Olası çakışmada veritabanı değiştirilmeden işlem durdurulur ve atomik rollback sağlanır.
+- **V1 Outbox Dokunulmazlığı:** V1 outbox operasyonlarında `payload_json` değerine dokunulmaz, parse/re-encode edilmez. Yalnız yerel entity PK/FK grafiği ve `sync_operations.entity_id` canonicalize edilir.
+- **V2 Outbox Karar Tablosu:** Yalnız allowlist (`CATEGORY`, `TRANSACTION`, `BUDGET`, `RECURRING_TRANSACTION`, `SUBSCRIPTION`, `ASSET`, `GOAL`, `GOAL_CONTRIBUTION`, `DEBT`, `DEBT_PAYMENT`) kapsamındaki V2 operasyonlarında:
+  - (a) `entity_id` compact + payload top-level `id` aynı compact UUID -> her ikisi canonicalize edilir.
+  - (b) `entity_id` compact + payload `id` aynı UUID'nin canonical biçimi -> yalnız `entity_id` güncellenir; payload ham stringi byte-for-byte korunur.
+  - (c) Normalized `entity_id` ve payload `id` farklı, payload `id` eksik veya geçersiz -> fail-closed `IllegalStateException`.
+  - (d) `entity_id` ve payload `id` zaten canonical/eşleşiyor -> payload ham stringi byte-for-byte korunur.
+  - (e) `entity_id` canonical + payload `id` aynı UUID'nin compact biçimi -> yalnız top-level `payload.id` canonicalize edilir.
+  - Bütün V2 durumlarında outbox metadata (`operation_id`, `predecessor_operation_id`, `status_code`, `attempt_count`, `base_version`, `error_classification`, `created_at_epoch_ms`, `updated_at_epoch_ms`, `next_attempt_at_epoch_ms`) korunur.
+- **Abonelik Hatırlatıcı Makbuzları (`subscription_payment_reminder_receipts`):**
+  - `subscription_id` yalnız `UuidHelper.isLegacyCompactHex(subId)` true ise canonicalize edilir.
+  - `stable_key` yalnız doğrulanmış prefix sözleşmesiyle (`oldKey.startsWith(subId)`) dönüştürülür (`canonicalSubId + oldKey.substring(subId.length)`); suffix (`_`, `#`, `:`) byte-for-byte korunur.
+  - Compact `subscription_id` taşıyan satırın `stable_key` değeri bu ID ile başlamıyorsa fail-closed `IllegalStateException` fırlatılır ve işlem rollback edilir.
+  - Canonical, geçersiz veya UUID dışı metinler byte-for-byte korunur.
+  - Preflight collision kontrolü de hedef canonical `stable_key` üzerinde çalışır; hedef çakışmasında fail-closed davranılır ve kayıt silinmez.
+- **Çakışma Eşdeğerliği (`sync_conflicts`):**
+  - Allowlist kapsamındaki entity'lerin compact ID'leri canonicalize edilirken semantik `JsonElement` ağacı ve wrapper yapıları (`GOAL_CONTRIBUTION`, `DEBT_PAYMENT`) korunur.
+  - Local/remote snapshot'lar `EquivalentConflictResolver.isEquivalent(...)` ile doğrulanabilirliğini korur.
+
 
 ### İş verisi tabloları
 
@@ -108,21 +143,26 @@ Her yerel mutation, entity ile aynı Room transaction'ında `sync_operations` sa
 
 Outbox alanları:
 
-- kararlı `operation_id`;
+- `sync_scope_key`: Oturum sahibi actor'ü (`USER:<authenticatedUserId>`) veya fail-closed karantina kapsamı (`LEGACY_UNRESOLVED`);
+- kararlı 32-hex `operation_id`;
 - `entity_type_code` ve `entity_id`;
 - `CREATE`, `UPDATE` veya `DELETE` operasyonu;
 - `base_version`;
-- durum, deneme sayısı ve güvenli son hata;
+- `predecessor_operation_id`, `is_blocked` ve `protocol_version` (V2 ardıl/öncül zincir disiplini);
+- durum (`PENDING`, `IN_FLIGHT`, `FAILED`, `CONFLICT`), deneme sayısı ve güvenli son hata;
+- `error_classification` (`DEFINITIVE_REJECTION`, `AMBIGUOUS_RESULT`);
 - sonraki deneme ve oluşturulma/güncellenme zamanları.
 
 Kurallar:
 
-1. Operasyonlar oluşturulma sırasıyla işlenir.
-2. Aynı operasyonun tekrarı idempotent olmalıdır.
-3. Başarılı operasyon kuyruktan kaldırılır.
-4. Geçici hata retry/backoff üretir.
-5. Conflict otomatik overwrite veya sonsuz retry üretmez.
-6. Uygulama kapanması `IN_FLIGHT` operasyonunu kalıcı olarak kilitlememelidir.
+1. **Actor İzolasyonu:** Outbox işlemleri `sync_scope_key` bazında izole edilir; Kullanıcı A asla Kullanıcı B'nin outbox operasyonlarını okuyamaz, claim edemez, silemez veya retry edemez.
+2. **Karantina:** Kesin actor kanıtı bulunmayan veya oturum dışı kalan operasyonlar silinmez, fail-closed `LEGACY_UNRESOLVED` karantinasında korunur.
+3. Operasyonlar oluşturulma sırasıyla işlenir.
+4. Aynı operasyonun tekrarı idempotent olmalıdır.
+5. Başarılı operasyon kuyruktan kaldırılır.
+6. Geçici hata retry/backoff üretir.
+7. Conflict otomatik overwrite veya sonsuz retry üretmez.
+8. Uygulama kapanması `IN_FLIGHT` operasyonunu kalıcı olarak kilitlememelidir.
 
 ## 8. Supabase V1 şeması
 

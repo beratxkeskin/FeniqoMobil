@@ -104,4 +104,26 @@ class WorkManagerSyncSchedulerTest {
         val afterCancel = workManager.getWorkInfosForUniqueWork(WorkManagerSyncScheduler.UNIQUE_WORK_NAME).get()
         assertTrue(afterCancel.all { it.state == WorkInfo.State.CANCELLED })
     }
+
+    @Test
+    fun `cancel then new user initial schedule creates fresh work`() {
+        scheduler.scheduleInitialSync()
+        val initialInfos = workManager.getWorkInfosForUniqueWork(WorkManagerSyncScheduler.UNIQUE_WORK_NAME).get()
+        assertEquals(1, initialInfos.size)
+        val initialId = initialInfos.first().id
+        assertEquals(WorkInfo.State.ENQUEUED, initialInfos.first().state)
+
+        // Oturum kapatıldığında veya değiştiğinde work iptal edilir
+        scheduler.cancelSyncWork()
+        val cancelledInfos = workManager.getWorkInfosForUniqueWork(WorkManagerSyncScheduler.UNIQUE_WORK_NAME).get()
+        assertTrue(cancelledInfos.all { it.state == WorkInfo.State.CANCELLED })
+
+        // Yeni kullanıcı oturum açtığında initial sync yeniden planlanır
+        scheduler.scheduleInitialSync()
+        val freshInfos = workManager.getWorkInfosForUniqueWork(WorkManagerSyncScheduler.UNIQUE_WORK_NAME).get()
+        val freshWork = freshInfos.firstOrNull { it.id != initialId && it.state == WorkInfo.State.ENQUEUED }
+        assertNotNull(freshWork)
+        assertEquals(WorkInfo.State.ENQUEUED, freshWork!!.state)
+        assertTrue(freshWork.tags.contains(WorkManagerSyncScheduler.TAG_FENIQO_SYNC))
+    }
 }

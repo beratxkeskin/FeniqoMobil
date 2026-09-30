@@ -37,6 +37,10 @@ import kotlin.test.assertTrue
 @RunWith(RobolectricTestRunner::class)
 class WorkspaceOutboxProcessorTest {
 
+    private companion object {
+        const val SCOPE = "USER:11111111-1111-4111-8111-111111111111"
+    }
+
     private fun inMemoryDatabase(): FeniqoDatabase {
         return Room.inMemoryDatabaseBuilder<FeniqoDatabase>(
             context = ApplicationProvider.getApplicationContext(),
@@ -193,6 +197,7 @@ class WorkspaceOutboxProcessorTest {
             )
 
             val enqueueResult = mutationDao.mutateWorkspaceV2(
+                syncScopeKey = SCOPE,
                 entity = workspace,
                 members = listOf(ownerMember),
                 type = OutboxOperationType.CREATE,
@@ -231,14 +236,14 @@ class WorkspaceOutboxProcessorTest {
             val executor = ProtocolAwareOutboxOperationExecutor(v1Executor, v2Executor)
             val processor = OutboxProcessor(RoomOutboxQueue(queue), executor)
 
-            val result = processor.processReadyOperations()
+            val result = processor.processReadyOperations(SCOPE, assertSessionCurrent = {})
 
             assertEquals(1, result.succeededCount)
             assertNull(result.failedOperationId)
             assertNull(result.conflictOperationId)
 
             // 1. Outbox silindi mi?
-            assertNull(operationDao.getById(enqueueResult.operationId))
+            assertNull(operationDao.getById(SCOPE, enqueueResult.operationId))
 
             // 2. Workspace SYNCED oldu mu?
             val stored = workspaceDao.getWorkspaceById(wsId)
@@ -284,6 +289,7 @@ class WorkspaceOutboxProcessorTest {
                 includeCreatedAtInCreate = true,
             )
             val createResult = mutationDao.mutateWorkspaceV2(
+                syncScopeKey = SCOPE,
                 entity = initialWorkspace,
                 members = listOf(ownerMember),
                 type = OutboxOperationType.CREATE,
@@ -331,13 +337,13 @@ class WorkspaceOutboxProcessorTest {
 
             // Processor CREATE işlemini asenkron claim edip writer'ı çağıracak
             val asyncProcess = async {
-                processor.processReadyOperations(limit = 1)
+                processor.processReadyOperations(syncScopeKey = SCOPE, assertSessionCurrent = {}, limit = 1)
             }
 
             // Writer çağrılana kadar bekle (bu sırada işlem Room içinde IN_FLIGHT durumundadır)
             calledSignal.await()
 
-            val inFlightOp = operationDao.getById(createResult.operationId)
+            val inFlightOp = operationDao.getById(SCOPE, createResult.operationId)
             assertNotNull(inFlightOp)
             assertEquals("IN_FLIGHT", inFlightOp.statusCode)
 
@@ -360,6 +366,7 @@ class WorkspaceOutboxProcessorTest {
                 }
             """.trimIndent()
             val updateResult = mutationDao.mutateWorkspaceV2(
+                syncScopeKey = SCOPE,
                 entity = updatedWorkspace,
                 members = emptyList(),
                 type = OutboxOperationType.UPDATE,
@@ -369,7 +376,7 @@ class WorkspaceOutboxProcessorTest {
             )
 
             // Successor başlangıçta blocked olmalı
-            val successorBefore = operationDao.getById(updateResult.operationId)
+            val successorBefore = operationDao.getById(SCOPE, updateResult.operationId)
             assertNotNull(successorBefore)
             assertTrue(successorBefore.isBlocked)
 
@@ -379,10 +386,10 @@ class WorkspaceOutboxProcessorTest {
             assertEquals(1, createProcessResult.succeededCount)
 
             // Predecessor CREATE silindi mi?
-            assertNull(operationDao.getById(createResult.operationId))
+            assertNull(operationDao.getById(SCOPE, createResult.operationId))
 
             // Successor unblock ve rebase edildi mi?
-            val successorAfter = operationDao.getById(updateResult.operationId)
+            val successorAfter = operationDao.getById(SCOPE, updateResult.operationId)
             assertNotNull(successorAfter)
             assertFalse(successorAfter.isBlocked)
             assertEquals(1L, successorAfter.baseVersion)
@@ -407,11 +414,11 @@ class WorkspaceOutboxProcessorTest {
             writer.onWriteWorkspaceCalled = null
             writer.writeWorkspaceGate = null
 
-            val updateProcessResult = processor.processReadyOperations(limit = 1)
+            val updateProcessResult = processor.processReadyOperations(syncScopeKey = SCOPE, assertSessionCurrent = {}, limit = 1)
             assertEquals(1, updateProcessResult.succeededCount)
 
             // Successor da tamamlanıp silindi mi?
-            assertNull(operationDao.getById(updateResult.operationId))
+            assertNull(operationDao.getById(SCOPE, updateResult.operationId))
 
             val finalWorkspace = workspaceDao.getWorkspaceById(wsId)
             assertNotNull(finalWorkspace)
@@ -448,6 +455,7 @@ class WorkspaceOutboxProcessorTest {
 
             val deletePayload = """{"id": "$wsId"}"""
             val deleteResult = mutationDao.mutateWorkspaceV2(
+                syncScopeKey = SCOPE,
                 entity = syncedWorkspace.copy(
                     sync = syncedWorkspace.sync.copy(
                         syncStatus = "PENDING_DELETE",
@@ -479,13 +487,13 @@ class WorkspaceOutboxProcessorTest {
             val executor = ProtocolAwareOutboxOperationExecutor(v1Executor, v2Executor)
             val processor = OutboxProcessor(RoomOutboxQueue(queue), executor)
 
-            val result = processor.processReadyOperations()
+            val result = processor.processReadyOperations(SCOPE, assertSessionCurrent = {})
 
             assertEquals(1, result.succeededCount)
             assertNull(result.failedOperationId)
 
             // Outbox silindi mi?
-            assertNull(operationDao.getById(deleteResult.operationId))
+            assertNull(operationDao.getById(SCOPE, deleteResult.operationId))
 
             // Yerel tombstone SYNCED oldu mu?
             val stored = workspaceDao.getWorkspaceById(wsId)
@@ -522,6 +530,7 @@ class WorkspaceOutboxProcessorTest {
             )
 
             val createResult = mutationDao.mutateWorkspaceV2(
+                syncScopeKey = SCOPE,
                 entity = workspace,
                 members = listOf(ownerMember),
                 type = OutboxOperationType.CREATE,
@@ -547,14 +556,14 @@ class WorkspaceOutboxProcessorTest {
             val executor = ProtocolAwareOutboxOperationExecutor(v1Executor, v2Executor)
             val processor = OutboxProcessor(RoomOutboxQueue(queue), executor)
 
-            val result = processor.processReadyOperations()
+            val result = processor.processReadyOperations(SCOPE, assertSessionCurrent = {})
 
             assertEquals(0, result.succeededCount)
             assertEquals(createResult.operationId, result.failedOperationId)
             assertNotNull(result.lastError)
 
             // Outbox silinmemeli, FAILED olarak işaretlenmeli
-            val op = operationDao.getById(createResult.operationId)
+            val op = operationDao.getById(SCOPE, createResult.operationId)
             assertNotNull(op)
             assertEquals("FAILED", op.statusCode)
             assertEquals(1, op.attemptCount)
@@ -603,6 +612,7 @@ class WorkspaceOutboxProcessorTest {
                 }
             """.trimIndent()
             val updateResult = mutationDao.mutateWorkspaceV2(
+                syncScopeKey = SCOPE,
                 entity = syncedWorkspace.copy(
                     name = "Yeni Değiştirilmiş Ad",
                     sync = syncedWorkspace.sync.copy(
@@ -634,14 +644,14 @@ class WorkspaceOutboxProcessorTest {
             val executor = ProtocolAwareOutboxOperationExecutor(v1Executor, v2Executor)
             val processor = OutboxProcessor(RoomOutboxQueue(queue), executor)
 
-            val result = processor.processReadyOperations()
+            val result = processor.processReadyOperations(SCOPE, assertSessionCurrent = {})
 
             assertEquals(0, result.succeededCount)
             assertEquals(updateResult.operationId, result.failedOperationId)
             assertNotNull(result.lastError)
 
             // Outbox silinmemeli, FAILED olarak işaretlenmeli
-            val op = operationDao.getById(updateResult.operationId)
+            val op = operationDao.getById(SCOPE, updateResult.operationId)
             assertNotNull(op)
             assertEquals("FAILED", op.statusCode)
             assertEquals(1, op.attemptCount)

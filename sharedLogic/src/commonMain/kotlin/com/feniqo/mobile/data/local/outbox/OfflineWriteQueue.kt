@@ -30,6 +30,7 @@ import com.feniqo.mobile.domain.model.SyncStatus
 import com.feniqo.mobile.domain.repository.SyncEntityType
 
 import com.feniqo.mobile.domain.sync.BackgroundSyncScheduler
+import com.feniqo.mobile.data.sync.SyncScopeKey
 import kotlinx.coroutines.flow.Flow
 import kotlin.math.min
 import kotlin.random.Random
@@ -65,51 +66,66 @@ class OfflineWriteQueue(
     private val nowEpochMillisProvider: () -> Long = { Clock.System.now().toEpochMilliseconds() },
     private val operationIdFactory: () -> String = ::newOperationId,
 ) {
-    fun observePendingCount(): Flow<Int> = operationDao.observePendingCount()
-    fun observeFailedCount(): Flow<Int> = operationDao.observeFailedCount()
+    fun observePendingCount(syncScopeKey: String): Flow<Int> {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        return operationDao.observePendingCount(syncScopeKey)
+    }
 
-    suspend fun enqueueProfile(entity: UserProfileEntity, type: OutboxOperationType): String =
-        enqueue(entity.id, SyncEntityType.PROFILE, entity.sync, type) { operation ->
+    fun observeFailedCount(syncScopeKey: String): Flow<Int> {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        return operationDao.observeFailedCount(syncScopeKey)
+    }
+
+    fun observeLegacyQuarantineOperationCount(): Flow<Int> =
+        operationDao.observeLegacyQuarantineOperationCount()
+
+    suspend fun enqueueProfile(syncScopeKey: String, entity: UserProfileEntity, type: OutboxOperationType): String =
+        enqueue(syncScopeKey, entity.id, SyncEntityType.PROFILE, entity.sync, type) { operation ->
             mutationDao.upsertProfileAndEnqueue(entity, operation)
         }
 
     suspend fun enqueueWorkspace(
+        syncScopeKey: String,
         entity: WorkspaceEntity,
         members: List<WorkspaceMemberEntity>,
         type: OutboxOperationType,
-    ): String = enqueue(entity.id, SyncEntityType.WORKSPACE, entity.sync, type) { operation ->
+    ): String = enqueue(syncScopeKey, entity.id, SyncEntityType.WORKSPACE, entity.sync, type) { operation ->
         mutationDao.upsertWorkspaceAndEnqueue(entity, members, operation)
     }
 
-    suspend fun enqueueCategory(entity: CategoryEntity, type: OutboxOperationType): String =
-        enqueue(entity.id, SyncEntityType.CATEGORY, entity.sync, type) { operation ->
+    suspend fun enqueueCategory(syncScopeKey: String, entity: CategoryEntity, type: OutboxOperationType): String =
+        enqueue(syncScopeKey, entity.id, SyncEntityType.CATEGORY, entity.sync, type) { operation ->
             mutationDao.upsertCategoryAndEnqueue(entity, operation)
         }
 
-    suspend fun enqueueBudget(entity: BudgetEntity, type: OutboxOperationType): String =
-        enqueue(entity.id, SyncEntityType.BUDGET, entity.sync, type) { operation ->
+    suspend fun enqueueBudget(syncScopeKey: String, entity: BudgetEntity, type: OutboxOperationType): String =
+        enqueue(syncScopeKey, entity.id, SyncEntityType.BUDGET, entity.sync, type) { operation ->
             mutationDao.upsertBudgetAndEnqueue(entity, operation)
         }
 
     suspend fun enqueueTransaction(
+        syncScopeKey: String,
         entity: TransactionEntity,
         tags: List<TagEntity>,
         tagLinks: List<TransactionTagCrossRef>,
         type: OutboxOperationType,
-    ): String = enqueue(entity.id, SyncEntityType.TRANSACTION, entity.sync, type) { operation ->
+    ): String = enqueue(syncScopeKey, entity.id, SyncEntityType.TRANSACTION, entity.sync, type) { operation ->
         mutationDao.upsertTransactionAndEnqueue(entity, tags, tagLinks, operation)
     }
 
     suspend fun enqueueTransactionKeepingTags(
+        syncScopeKey: String,
         entity: TransactionEntity,
         type: OutboxOperationType,
-    ): String = enqueue(entity.id, SyncEntityType.TRANSACTION, entity.sync, type) { operation ->
+    ): String = enqueue(syncScopeKey, entity.id, SyncEntityType.TRANSACTION, entity.sync, type) { operation ->
         mutationDao.upsertTransactionKeepingTagsAndEnqueue(entity, operation)
     }
 
     suspend fun enqueueTransactionCreates(
+        syncScopeKey: String,
         inputs: List<TransactionCreateInput>,
     ): List<String> {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         require(inputs.isNotEmpty()) { "İşlem listesi boş olamaz." }
 
         val entityIds = inputs.map { it.entity.id }
@@ -144,6 +160,7 @@ class OfflineWriteQueue(
         val now = nowEpochMillisProvider()
         val units = inputs.zip(operationIds).map { (input, opId) ->
             val operation = SyncOperationEntity(
+                syncScopeKey = syncScopeKey,
                 operationId = opId,
                 entityTypeCode = SyncEntityType.TRANSACTION.name,
                 entityId = input.entity.id,
@@ -170,8 +187,10 @@ class OfflineWriteQueue(
     }
 
     suspend fun enqueueTransactionDeletions(
+        syncScopeKey: String,
         entities: List<TransactionEntity>,
     ): List<String> {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         require(entities.isNotEmpty()) { "Silinecek transaction listesi boş olamaz." }
 
         val entityIds = entities.map { it.id }
@@ -207,6 +226,7 @@ class OfflineWriteQueue(
         val now = nowEpochMillisProvider()
         val units = entities.mapIndexed { index, entity ->
             val operation = SyncOperationEntity(
+                syncScopeKey = syncScopeKey,
                 operationId = operationIds[index],
                 entityTypeCode = SyncEntityType.TRANSACTION.name,
                 entityId = entity.id,
@@ -230,29 +250,33 @@ class OfflineWriteQueue(
         return operationIds
     }
 
-    suspend fun getReadyOperations(limit: Int = DEFAULT_BATCH_SIZE): List<SyncOperationEntity> {
+    suspend fun getReadyOperations(syncScopeKey: String, limit: Int = DEFAULT_BATCH_SIZE): List<SyncOperationEntity> {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         require(limit in 1..MAXIMUM_BATCH_SIZE) { "Outbox batch boyutu 1-$MAXIMUM_BATCH_SIZE aralığında olmalıdır." }
         val now = nowEpochMillisProvider()
         operationDao.recoverStaleInFlight(
+            syncScopeKey = syncScopeKey,
             staleBeforeEpochMillis = now - IN_FLIGHT_LEASE_MILLIS,
             nowEpochMillis = now,
             lastError = INTERRUPTED_ERROR,
         )
-        return operationDao.getReadyOperations(now, limit)
+        return operationDao.getReadyOperations(syncScopeKey, now, limit)
     }
 
-    suspend fun claimNextReadyOperation(): SyncOperationEntity? {
+    suspend fun claimNextReadyOperation(syncScopeKey: String): SyncOperationEntity? {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         val now = nowEpochMillisProvider()
         operationDao.recoverStaleInFlight(
+            syncScopeKey = syncScopeKey,
             staleBeforeEpochMillis = now - IN_FLIGHT_LEASE_MILLIS,
             nowEpochMillis = now,
             lastError = INTERRUPTED_ERROR,
         )
-        val readyOperations = operationDao.getReadyOperations(now, 1)
+        val readyOperations = operationDao.getReadyOperations(syncScopeKey, now, 1)
         if (readyOperations.isEmpty()) return null
 
         val candidate = readyOperations.first()
-        val claimed = operationDao.claimOperation(candidate.operationId, now)
+        val claimed = operationDao.claimOperation(syncScopeKey, candidate.operationId, now)
         if (claimed != 1) return null
 
         return candidate.copy(
@@ -262,56 +286,82 @@ class OfflineWriteQueue(
         )
     }
 
-    suspend fun claimOperation(operationId: String): SyncOperationEntity? {
+    suspend fun claimOperation(syncScopeKey: String, operationId: String): SyncOperationEntity? {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         val now = nowEpochMillisProvider()
-        val claimed = operationDao.claimOperation(operationId, now)
+        val claimed = operationDao.claimOperation(syncScopeKey, operationId, now)
         if (claimed != 1) return null
-        return operationDao.getById(operationId)
+        return operationDao.getById(syncScopeKey, operationId)
     }
 
-    suspend fun markInFlight(operationId: String): Boolean =
-        operationDao.claimOperation(operationId, nowEpochMillisProvider()) == 1
+    suspend fun markInFlight(syncScopeKey: String, operationId: String): Boolean {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        return operationDao.claimOperation(syncScopeKey, operationId, nowEpochMillisProvider()) == 1
+    }
 
-    suspend fun markSucceeded(operationId: String): Boolean =
-        operationDao.deleteCompleted(operationId) == 1
+    suspend fun markSucceeded(syncScopeKey: String, operationId: String): Boolean {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        return operationDao.deleteCompleted(syncScopeKey, operationId) == 1
+    }
 
     suspend fun ackV2Execution(
+        syncScopeKey: String,
         operationId: String,
         result: com.feniqo.mobile.data.sync.OutboxExecutionResult,
-    ): Boolean = mutationDao.ackV2Execution(
-        operationId = operationId,
-        result = result,
-        nowEpochMillis = nowEpochMillisProvider(),
-    )
+    ): Boolean {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        return mutationDao.ackV2Execution(
+            syncScopeKey = syncScopeKey,
+            operationId = operationId,
+            result = result,
+            nowEpochMillis = nowEpochMillisProvider(),
+        )
+    }
 
     suspend fun recordV2Conflict(
+        syncScopeKey: String,
         conflict: com.feniqo.mobile.data.local.entity.SyncConflictEntity,
-    ): Boolean = mutationDao.recordV2Conflict(
-        conflict = conflict,
-        nowEpochMillis = nowEpochMillisProvider(),
-    )
+    ): Boolean {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(conflict.syncScopeKey == syncScopeKey) {
+            "Conflict scope (${conflict.syncScopeKey}) aktif kullanıcı scope'u ($syncScopeKey) ile uyuşmuyor."
+        }
+        return mutationDao.recordV2Conflict(
+            syncScopeKey = syncScopeKey,
+            conflict = conflict,
+            nowEpochMillis = nowEpochMillisProvider(),
+        )
+    }
 
     suspend fun resolvePredecessorSuccessor(
+        syncScopeKey: String,
         predecessorOperationId: String,
         appliedVersion: Long,
-    ): Boolean = mutationDao.resolvePredecessorSuccessor(
-        predecessorOperationId = predecessorOperationId,
-        appliedVersion = appliedVersion,
-        nowEpochMillis = nowEpochMillisProvider(),
-    )
+    ): Boolean {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        return mutationDao.resolvePredecessorSuccessor(
+            syncScopeKey = syncScopeKey,
+            predecessorOperationId = predecessorOperationId,
+            appliedVersion = appliedVersion,
+            nowEpochMillis = nowEpochMillisProvider(),
+        )
+    }
 
     suspend fun recordFailure(
+        syncScopeKey: String,
         operationId: String,
         errorMessage: String,
         errorClassification: String? = null,
     ): Boolean {
-        val operation = operationDao.getById(operationId) ?: return false
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        val operation = operationDao.getById(syncScopeKey, operationId) ?: return false
         val attemptCount = operation.attemptCount.coerceAtLeast(1)
         val now = nowEpochMillisProvider()
         val nextAttemptAt = SyncRetryPolicy.nextAttemptAt(now, attemptCount)
         val safeError = errorMessage.trim().ifEmpty { UNKNOWN_ERROR }.take(MAXIMUM_ERROR_LENGTH)
 
         return operationDao.markFailed(
+            syncScopeKey = syncScopeKey,
             operationId = operationId,
             lastError = safeError,
             errorClassification = errorClassification,
@@ -320,21 +370,28 @@ class OfflineWriteQueue(
         ) == 1
     }
 
-    suspend fun markConflict(operationId: String, errorMessage: String): Boolean {
+    suspend fun markConflict(syncScopeKey: String, operationId: String, errorMessage: String): Boolean {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         val safeError = errorMessage.trim().ifEmpty { CONFLICT_ERROR }.take(MAXIMUM_ERROR_LENGTH)
-        return operationDao.markConflict(operationId, safeError, nowEpochMillisProvider()) == 1
+        return operationDao.markConflict(syncScopeKey, operationId, safeError, nowEpochMillisProvider()) == 1
     }
 
-    suspend fun retryAllFailed(): Int = operationDao.retryAllFailed(nowEpochMillisProvider())
+    suspend fun retryAllFailed(syncScopeKey: String): Int {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        return operationDao.retryAllFailed(syncScopeKey, nowEpochMillisProvider())
+    }
 
     suspend fun enqueueProfileV2(
+        syncScopeKey: String,
         entity: UserProfileEntity,
         type: OutboxOperationType,
         payloadJson: String,
     ): String {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         require(type != OutboxOperationType.DELETE) { "Profil silme işlemi desteklenmemektedir." }
         validateMutation(entity.sync, type)
         val result = mutationDao.mutateProfileV2(
+            syncScopeKey = syncScopeKey,
             entity = entity,
             type = type,
             payloadJson = payloadJson,
@@ -348,12 +405,15 @@ class OfflineWriteQueue(
     }
 
     suspend fun enqueueCategoryV2(
+        syncScopeKey: String,
         entity: CategoryEntity,
         type: OutboxOperationType,
         payloadJson: String,
     ): String {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         validateMutation(entity.sync, type)
         val result = mutationDao.mutateCategoryV2(
+            syncScopeKey = syncScopeKey,
             entity = entity,
             type = type,
             payloadJson = payloadJson,
@@ -367,12 +427,15 @@ class OfflineWriteQueue(
     }
 
     suspend fun enqueueBudgetV2(
+        syncScopeKey: String,
         entity: BudgetEntity,
         type: OutboxOperationType,
         payloadJson: String,
     ): String {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         validateMutation(entity.sync, type)
         val result = mutationDao.mutateBudgetV2(
+            syncScopeKey = syncScopeKey,
             entity = entity,
             type = type,
             payloadJson = payloadJson,
@@ -386,12 +449,15 @@ class OfflineWriteQueue(
     }
 
     suspend fun enqueueRecurringTransactionV2(
+        syncScopeKey: String,
         entity: RecurringTransactionEntity,
         type: OutboxOperationType,
         payloadJson: String,
     ): String {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         validateMutation(entity.sync, type)
         val result = mutationDao.mutateRecurringTransactionV2(
+            syncScopeKey = syncScopeKey,
             entity = entity,
             type = type,
             payloadJson = payloadJson,
@@ -405,12 +471,15 @@ class OfflineWriteQueue(
     }
 
     suspend fun enqueueSubscriptionV2(
+        syncScopeKey: String,
         entity: SubscriptionEntity,
         type: OutboxOperationType,
         payloadJson: String,
     ): String {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         validateMutation(entity.sync, type)
         val result = mutationDao.mutateSubscriptionV2(
+            syncScopeKey = syncScopeKey,
             entity = entity,
             type = type,
             payloadJson = payloadJson,
@@ -424,13 +493,16 @@ class OfflineWriteQueue(
     }
 
     suspend fun enqueueSubscriptionWithPriceHistoryV2(
+        syncScopeKey: String,
         entity: SubscriptionEntity,
         priceHistory: SubscriptionPriceHistoryEntity,
         type: OutboxOperationType,
         payloadJson: String,
     ): String {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         validateMutation(entity.sync, type)
         val result = mutationDao.mutateSubscriptionWithPriceHistoryV2(
+            syncScopeKey = syncScopeKey,
             entity = entity,
             priceHistory = priceHistory,
             type = type,
@@ -445,13 +517,16 @@ class OfflineWriteQueue(
     }
 
     suspend fun enqueueSubscriptionWithPaymentV2(
+        syncScopeKey: String,
         entity: SubscriptionEntity,
         payment: SubscriptionPaymentEntity,
         type: OutboxOperationType,
         payloadJson: String,
     ): String {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         validateMutation(entity.sync, type)
         val result = mutationDao.mutateSubscriptionWithPaymentV2(
+            syncScopeKey = syncScopeKey,
             entity = entity,
             payment = payment,
             type = type,
@@ -466,12 +541,15 @@ class OfflineWriteQueue(
     }
 
     suspend fun enqueueAssetV2(
+        syncScopeKey: String,
         entity: AssetEntity,
         type: OutboxOperationType,
         payloadJson: String,
     ): String {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         validateMutation(entity.sync, type)
         val result = mutationDao.mutateAssetV2(
+            syncScopeKey = syncScopeKey,
             entity = entity,
             type = type,
             payloadJson = payloadJson,
@@ -485,12 +563,15 @@ class OfflineWriteQueue(
     }
 
     suspend fun enqueueGoalV2(
+        syncScopeKey: String,
         entity: GoalEntity,
         type: OutboxOperationType,
         payloadJson: String,
     ): String {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         validateMutation(entity.sync, type)
         val result = mutationDao.mutateGoalV2(
+            syncScopeKey = syncScopeKey,
             entity = entity,
             type = type,
             payloadJson = payloadJson,
@@ -504,12 +585,15 @@ class OfflineWriteQueue(
     }
 
     suspend fun enqueueGoalContributionV2(
+        syncScopeKey: String,
         entity: GoalContributionEntity,
         updatedGoal: GoalEntity,
         payloadJson: String,
     ): String {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         validateMutation(entity.sync, OutboxOperationType.CREATE)
         val result = mutationDao.mutateGoalContributionV2(
+            syncScopeKey = syncScopeKey,
             entity = entity,
             updatedGoal = updatedGoal,
             payloadJson = payloadJson,
@@ -523,12 +607,15 @@ class OfflineWriteQueue(
     }
 
     suspend fun enqueueDebtV2(
+        syncScopeKey: String,
         entity: DebtEntity,
         type: OutboxOperationType,
         payloadJson: String,
     ): String {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         validateMutation(entity.sync, type)
         val result = mutationDao.mutateDebtV2(
+            syncScopeKey = syncScopeKey,
             entity = entity,
             type = type,
             payloadJson = payloadJson,
@@ -542,12 +629,15 @@ class OfflineWriteQueue(
     }
 
     suspend fun enqueueDebtPaymentV2(
+        syncScopeKey: String,
         entity: DebtPaymentEntity,
         updatedDebt: DebtEntity,
         payloadJson: String,
     ): String {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         validateMutation(entity.sync, OutboxOperationType.CREATE)
         val result = mutationDao.mutateDebtPaymentV2(
+            syncScopeKey = syncScopeKey,
             entity = entity,
             updatedDebt = updatedDebt,
             payloadJson = payloadJson,
@@ -563,8 +653,10 @@ class OfflineWriteQueue(
 
 
     suspend fun enqueueBudgetsV2(
+        syncScopeKey: String,
         inputs: List<com.feniqo.mobile.data.local.dao.BudgetMutationInputV2>,
     ): List<com.feniqo.mobile.data.local.dao.V2EnqueueResult> {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         if (inputs.isEmpty()) return emptyList()
 
         val entityIds = inputs.map { it.entity.id }
@@ -579,6 +671,7 @@ class OfflineWriteQueue(
         }
 
         val results = mutationDao.mutateBudgetsV2(
+            syncScopeKey = syncScopeKey,
             inputs = inputs,
             operationIdFactory = operationIdFactory,
             nowEpochMillis = nowEpochMillisProvider(),
@@ -593,14 +686,17 @@ class OfflineWriteQueue(
     }
 
     suspend fun enqueueTransactionV2(
+        syncScopeKey: String,
         entity: TransactionEntity,
         tags: List<TagEntity>,
         tagLinks: List<TransactionTagCrossRef>,
         type: OutboxOperationType,
         payloadJson: String,
     ): String {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         validateMutation(entity.sync, type)
         val result = mutationDao.mutateTransactionV2(
+            syncScopeKey = syncScopeKey,
             entity = entity,
             tags = tags,
             tagLinks = tagLinks,
@@ -616,12 +712,15 @@ class OfflineWriteQueue(
     }
 
     suspend fun enqueueTransactionKeepingTagsV2(
+        syncScopeKey: String,
         entity: TransactionEntity,
         type: OutboxOperationType,
         payloadJson: String,
     ): String {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         validateMutation(entity.sync, type)
         val result = mutationDao.mutateTransactionKeepingTagsV2(
+            syncScopeKey = syncScopeKey,
             entity = entity,
             type = type,
             payloadJson = payloadJson,
@@ -635,12 +734,14 @@ class OfflineWriteQueue(
     }
 
     suspend fun enqueueRecurringTransactionOccurrenceV2(
+        syncScopeKey: String,
         recurringTransactionId: String,
         expectedPreviousLastGeneratedDate: String?,
         dueDate: String,
         entity: TransactionEntity,
         payloadJson: String,
     ): com.feniqo.mobile.data.local.dao.GenerateRecurringOccurrenceResult {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         require(payloadJson.isNotBlank()) { "Tekrar işlem outbox payloadJson boş olamaz." }
         validateMutation(entity.sync, OutboxOperationType.CREATE)
 
@@ -649,6 +750,7 @@ class OfflineWriteQueue(
         com.feniqo.mobile.data.local.dao.validateOperationId(opId)
 
         val outboxOp = SyncOperationEntity(
+            syncScopeKey = syncScopeKey,
             operationId = opId,
             entityTypeCode = "TRANSACTION",
             entityId = entity.id,
@@ -684,8 +786,10 @@ class OfflineWriteQueue(
     }
 
     suspend fun enqueueTransactionCreatesV2(
+        syncScopeKey: String,
         inputs: List<com.feniqo.mobile.data.local.dao.TransactionCreateInputV2>,
     ): List<String> {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         require(inputs.isNotEmpty()) { "İşlem listesi boş olamaz." }
 
         val entityIds = inputs.map { it.entity.id }
@@ -718,6 +822,7 @@ class OfflineWriteQueue(
         }
 
         val operationIds = mutationDao.mutateTransactionCreatesV2(
+            syncScopeKey = syncScopeKey,
             inputs = inputs,
             operationIdFactory = operationIdFactory,
             nowEpochMillis = nowEpochMillisProvider(),
@@ -727,9 +832,11 @@ class OfflineWriteQueue(
     }
 
     suspend fun enqueuePersonalBackupV1(
+        syncScopeKey: String,
         categoryInputs: List<com.feniqo.mobile.data.local.dao.BackupCategoryCreateInputV1>,
         transactionInputs: List<com.feniqo.mobile.data.local.dao.TransactionCreateInputV2>,
     ): List<String> {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         require(categoryInputs.isNotEmpty() || transactionInputs.isNotEmpty()) { "Yedek boş olamaz." }
         categoryInputs.forEach {
             validateMutation(it.entity.sync, OutboxOperationType.CREATE)
@@ -741,6 +848,7 @@ class OfflineWriteQueue(
             require(it.entity.workspaceId == null && it.payloadJson.isNotBlank())
         }
         val operationIds = mutationDao.importPersonalBackupV1(
+            syncScopeKey = syncScopeKey,
             categoryInputs = categoryInputs,
             transactionInputs = transactionInputs,
             operationIdFactory = operationIdFactory,
@@ -751,8 +859,10 @@ class OfflineWriteQueue(
     }
 
     suspend fun enqueueTransactionDeletionsV2(
+        syncScopeKey: String,
         inputs: List<com.feniqo.mobile.data.local.dao.TransactionDeleteInputV2>,
     ): List<String> {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         require(inputs.isNotEmpty()) { "Silinecek transaction listesi boş olamaz." }
 
         val entityIds = inputs.map { it.entity.id }
@@ -774,6 +884,7 @@ class OfflineWriteQueue(
         }
 
         val operationIds = mutationDao.mutateTransactionDeletionsV2(
+            syncScopeKey = syncScopeKey,
             inputs = inputs,
             operationIdFactory = operationIdFactory,
             nowEpochMillis = nowEpochMillisProvider(),
@@ -783,12 +894,14 @@ class OfflineWriteQueue(
     }
 
     private suspend fun enqueue(
+        syncScopeKey: String,
         entityId: String,
         entityType: SyncEntityType,
         sync: SyncMetadata,
         type: OutboxOperationType,
         writer: suspend (SyncOperationEntity) -> Unit,
     ): String {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         validateMutation(sync, type)
         val now = nowEpochMillisProvider()
         val operationId = operationIdFactory()
@@ -796,6 +909,7 @@ class OfflineWriteQueue(
 
         writer(
             SyncOperationEntity(
+                syncScopeKey = syncScopeKey,
                 operationId = operationId,
                 entityTypeCode = entityType.name,
                 entityId = entityId,

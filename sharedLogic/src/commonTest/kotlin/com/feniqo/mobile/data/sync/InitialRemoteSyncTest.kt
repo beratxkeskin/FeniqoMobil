@@ -46,7 +46,7 @@ class InitialRemoteSyncTest {
         val dao = RecordingRemoteSyncDao()
         val sync = InitialRemoteSync(FakeCoreRemote(), dao) { RECEIVED_AT }
 
-        val result = sync.pullFor(EntityId(USER_ID))
+        val result = sync.pullFor(EntityId(USER_ID), "USER:$USER_ID")
 
         assertEquals(2, result.categoryCount)
         assertEquals(2, result.transactionCount)
@@ -97,8 +97,8 @@ class InitialRemoteSyncTest {
         override suspend fun getWorkspaceMemberRow(workspaceId: String, userId: String): com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity? = null
         override suspend fun getWorkspaceMemberRows(workspaceId: String): List<com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity> = emptyList()
         override suspend fun getAllKnownLiveWorkspaceIds(): List<String> = emptyList()
-        override suspend fun getFirstOutboxOperationId(entityTypeCode: String, entityId: String): String? = null
-        override suspend fun countOutboxRows(entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun getFirstOutboxOperationId(syncScopeKey: String, entityTypeCode: String, entityId: String): String? = null
+        override suspend fun countOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
         override suspend fun upsertProfileRow(entity: UserProfileEntity) { profile = entity }
         override suspend fun upsertWorkspaceRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceEntity>) = Unit
         override suspend fun upsertWorkspaceMemberRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity>) = Unit
@@ -122,7 +122,7 @@ class InitialRemoteSyncTest {
         override suspend fun upsertDebtPaymentRows(entities: List<com.feniqo.mobile.data.local.entity.DebtPaymentEntity>) = Unit
         override suspend fun upsertConflictRow(conflict: SyncConflictEntity) = error("Test kapsamı dışı")
         override suspend fun upsertCursorRows(cursors: List<SyncCursorEntity>) { this.cursors = cursors }
-        override suspend fun deleteConflictRow(entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun deleteConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
         override suspend fun markProfileConflict(entityId: String, error: String): Int = 0
         override suspend fun markCategoryConflict(entityId: String, error: String): Int = 0
         override suspend fun markTransactionConflict(entityId: String, error: String): Int = 0
@@ -132,21 +132,21 @@ class InitialRemoteSyncTest {
         override suspend fun markGoalContributionConflict(entityId: String, error: String): Int = 0
         override suspend fun markDebtConflict(entityId: String, error: String): Int = 0
         override suspend fun markDebtPaymentConflict(entityId: String, error: String): Int = 0
-        override suspend fun deleteOutboxRows(entityTypeCode: String, entityId: String): Int = 0
-        override suspend fun deleteOtherOutboxRows(entityTypeCode: String, entityId: String, keptOperationId: String): Int = 0
-        override suspend fun resetConflictOperation(operationId: String, operationTypeCode: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun deleteOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun deleteOtherOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String, keptOperationId: String): Int = 0
+        override suspend fun resetConflictOperation(syncScopeKey: String, operationId: String, operationTypeCode: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseProfileForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseCategoryForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseRecurringTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseSubscriptionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getActiveWorkspaceTailOperation(workspaceId: String): com.feniqo.mobile.data.local.entity.SyncOperationEntity? = null
+        override suspend fun getActiveWorkspaceTailOperation(syncScopeKey: String, workspaceId: String): com.feniqo.mobile.data.local.entity.SyncOperationEntity? = null
         override suspend fun markWorkspaceConflict(entityId: String, error: String): Int = 0
-        override suspend fun getAllWorkspaceOperations(workspaceId: String): List<com.feniqo.mobile.data.local.entity.SyncOperationEntity> = emptyList()
-        override suspend fun deleteSpecificWorkspaceOperations(workspaceId: String, operationIds: List<String>): Int = 0
+        override suspend fun getAllWorkspaceOperations(syncScopeKey: String, workspaceId: String): List<com.feniqo.mobile.data.local.entity.SyncOperationEntity> = emptyList()
+        override suspend fun deleteSpecificWorkspaceOperations(syncScopeKey: String, workspaceId: String, operationIds: List<String>): Int = 0
         override suspend fun rebaseWorkspaceForRetry(workspaceId: String, syncStatus: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun resetWorkspaceConflictOperation(operationId: String, operationTypeCode: String, payloadJson: String?, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getConflictRow(entityTypeCode: String, entityId: String): SyncConflictEntity? = null
+        override suspend fun resetWorkspaceConflictOperation(syncScopeKey: String, operationId: String, operationTypeCode: String, payloadJson: String?, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun getConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): SyncConflictEntity? = null
     }
 
 
@@ -219,7 +219,7 @@ class InitialRemoteSyncTest {
     }
 
     private companion object {
-        const val USER_ID = "user-1"
+        const val USER_ID = "11111111-1111-4111-8111-111111111111"
         const val CATEGORY_1 = "category-1"
         const val CATEGORY_2 = "category-2"
         const val RECURRING_1 = "recurring-1"

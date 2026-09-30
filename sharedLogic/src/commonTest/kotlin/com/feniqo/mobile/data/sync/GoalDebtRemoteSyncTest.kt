@@ -58,6 +58,8 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class GoalDebtRemoteSyncTest {
+    private val USER_ID = "11111111-1111-4111-8111-111111111111"
+    private val USER_SCOPE = "USER:$USER_ID"
 
     private class FakeRemoteSyncDao : RemoteSyncDao {
         val goals = mutableMapOf<String, GoalEntity>()
@@ -81,8 +83,8 @@ class GoalDebtRemoteSyncTest {
         override suspend fun getWorkspaceMemberRow(workspaceId: String, userId: String): WorkspaceMemberEntity? = null
         override suspend fun getWorkspaceMemberRows(workspaceId: String): List<WorkspaceMemberEntity> = emptyList()
         override suspend fun getAllKnownLiveWorkspaceIds(): List<String> = emptyList()
-        override suspend fun getFirstOutboxOperationId(entityTypeCode: String, entityId: String): String? = null
-        override suspend fun countOutboxRows(entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun getFirstOutboxOperationId(syncScopeKey: String, entityTypeCode: String, entityId: String): String? = null
+        override suspend fun countOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
 
         override suspend fun upsertProfileRow(entity: UserProfileEntity) {}
         override suspend fun upsertWorkspaceRows(entities: List<WorkspaceEntity>) {}
@@ -117,7 +119,7 @@ class GoalDebtRemoteSyncTest {
             cursors.forEach { this.cursors[it.entityTypeCode] = it }
         }
 
-        override suspend fun deleteConflictRow(entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun deleteConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
         override suspend fun markProfileConflict(entityId: String, error: String): Int = 1
         override suspend fun markCategoryConflict(entityId: String, error: String): Int = 1
         override suspend fun markTransactionConflict(entityId: String, error: String): Int = 1
@@ -127,37 +129,41 @@ class GoalDebtRemoteSyncTest {
         override suspend fun markGoalContributionConflict(entityId: String, error: String): Int = 1
         override suspend fun markDebtConflict(entityId: String, error: String): Int = 1
         override suspend fun markDebtPaymentConflict(entityId: String, error: String): Int = 1
-        override suspend fun deleteOutboxRows(entityTypeCode: String, entityId: String): Int = 0
-        override suspend fun deleteOtherOutboxRows(entityTypeCode: String, entityId: String, keptOperationId: String): Int = 0
-        override suspend fun resetConflictOperation(operationId: String, operationTypeCode: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun deleteOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun deleteOtherOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String, keptOperationId: String): Int = 0
+        override suspend fun resetConflictOperation(syncScopeKey: String, operationId: String, operationTypeCode: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseProfileForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseCategoryForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseRecurringTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseSubscriptionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getActiveWorkspaceTailOperation(workspaceId: String): com.feniqo.mobile.data.local.entity.SyncOperationEntity? = null
+        override suspend fun getActiveWorkspaceTailOperation(syncScopeKey: String, workspaceId: String): com.feniqo.mobile.data.local.entity.SyncOperationEntity? = null
         override suspend fun markWorkspaceConflict(entityId: String, error: String): Int = 0
-        override suspend fun getAllWorkspaceOperations(workspaceId: String): List<com.feniqo.mobile.data.local.entity.SyncOperationEntity> = emptyList()
-        override suspend fun deleteSpecificWorkspaceOperations(workspaceId: String, operationIds: List<String>): Int = 0
+        override suspend fun getAllWorkspaceOperations(syncScopeKey: String, workspaceId: String): List<com.feniqo.mobile.data.local.entity.SyncOperationEntity> = emptyList()
+        override suspend fun deleteSpecificWorkspaceOperations(syncScopeKey: String, workspaceId: String, operationIds: List<String>): Int = 0
         override suspend fun rebaseWorkspaceForRetry(workspaceId: String, syncStatus: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun resetWorkspaceConflictOperation(operationId: String, operationTypeCode: String, payloadJson: String?, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getConflictRow(entityTypeCode: String, entityId: String): SyncConflictEntity? = null
+        override suspend fun resetWorkspaceConflictOperation(syncScopeKey: String, operationId: String, operationTypeCode: String, payloadJson: String?, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun getConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): SyncConflictEntity? = null
     }
 
     private class FakeSyncStateDao(private val cursors: MutableMap<String, SyncCursorEntity>) : SyncStateDao {
-        override suspend fun getCursor(entityTypeCode: String): SyncCursorEntity? = cursors[entityTypeCode]
-        override suspend fun getWorkspaceMemberCursors(): List<SyncCursorEntity> =
+        override suspend fun getCursor(syncScopeKey: String, entityTypeCode: String): SyncCursorEntity? = cursors[entityTypeCode]
+        override suspend fun getWorkspaceMemberCursors(syncScopeKey: String): List<SyncCursorEntity> =
             cursors.filterKeys { it.startsWith("WORKSPACE_MEMBER:") }.values.toList()
-        override suspend fun getConflict(entityId: String): SyncConflictEntity? = null
-        override suspend fun getConflict(entityTypeCode: String, entityId: String): SyncConflictEntity? = null
-        override suspend fun getConflictsByEntityType(entityTypeCode: String): List<SyncConflictEntity> = emptyList()
-        override suspend fun getAllConflicts(): List<SyncConflictEntity> = emptyList()
+        override suspend fun getConflict(syncScopeKey: String, entityId: String): SyncConflictEntity? = null
+        override suspend fun getConflict(syncScopeKey: String, entityTypeCode: String, entityId: String): SyncConflictEntity? = null
+        override suspend fun getConflictsByEntityType(syncScopeKey: String, entityTypeCode: String): List<SyncConflictEntity> = emptyList()
+        override suspend fun getAllConflicts(syncScopeKey: String): List<SyncConflictEntity> = emptyList()
         override suspend fun upsertCursor(cursor: SyncCursorEntity) { cursors[cursor.entityTypeCode] = cursor }
-        override fun observeConflicts(): Flow<List<SyncConflictEntity>> = flowOf(emptyList())
-        override fun observeConflictCount(): Flow<Int> = flowOf(0)
-        override suspend fun getConflictCount(): Int = 0
+        override fun observeConflicts(syncScopeKey: String): Flow<List<SyncConflictEntity>> = flowOf(emptyList())
+        override fun observeConflictCount(syncScopeKey: String): Flow<Int> = flowOf(0)
+        override suspend fun getConflictCount(syncScopeKey: String): Int = 0
         override suspend fun upsertConflict(conflict: SyncConflictEntity) {}
-        override suspend fun deleteConflict(entityTypeCode: String, entityId: String): Int = 0
+        override fun observeLegacyQuarantineCursorCount(): Flow<Int> = flowOf(0)
+        override suspend fun getLegacyQuarantineCursorCount(): Int = 0
+        override fun observeLegacyQuarantineConflictCount(): Flow<Int> = flowOf(0)
+        override suspend fun getLegacyQuarantineConflictCount(): Int = 0
+        override suspend fun deleteConflict(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
         override fun observeLastSuccessfulSyncAt(userId: String): Flow<Long?> = flowOf(null)
         override suspend fun getUserState(userId: String): SyncUserStateEntity? = null
         override suspend fun upsertUserState(state: SyncUserStateEntity) {}
@@ -259,7 +265,7 @@ class GoalDebtRemoteSyncTest {
         val dao = FakeRemoteSyncDao()
         val sync = InitialRemoteSync(remote, dao) { 1000L }
 
-        val result = sync.pullFor(EntityId("user-1"))
+        val result = sync.pullFor(EntityId(USER_ID), USER_SCOPE)
         assertEquals(1, result.goalCount)
         assertEquals(1, result.goalContributionCount)
         assertEquals(1, result.debtCount)
@@ -298,7 +304,7 @@ class GoalDebtRemoteSyncTest {
         val sync = InitialRemoteSync(remote, dao) { 1000L }
 
         assertFailsWith<IllegalStateException> {
-            sync.pullFor(EntityId("user-1"))
+            sync.pullFor(EntityId(USER_ID), USER_SCOPE)
         }
 
         // Nothing was written and cursor was not advanced
@@ -328,7 +334,7 @@ class GoalDebtRemoteSyncTest {
         val sync = IncrementalRemoteSync(remote, dao, syncStateDao) { 1000L }
 
         assertFailsWith<IllegalStateException> {
-            sync.pullFor(EntityId("user-1"))
+            sync.pullFor(EntityId(USER_ID), USER_SCOPE)
         }
 
         // Batch rejected
@@ -342,7 +348,7 @@ class GoalDebtRemoteSyncTest {
         // Pre-insert parent goal and debt
         dao.goals["g-1"] = GoalEntity(
             id = "g-1",
-            ownerId = "user-1",
+            ownerId = USER_ID,
             workspaceId = null,
             name = "Hedef",
             targetAmountMinor = 100_000L,
@@ -364,7 +370,7 @@ class GoalDebtRemoteSyncTest {
         )
         dao.debts["d-1"] = DebtEntity(
             id = "d-1",
-            ownerId = "user-1",
+            ownerId = USER_ID,
             workspaceId = null,
             title = "Borç",
             amountMinor = 50_000L,
@@ -415,7 +421,7 @@ class GoalDebtRemoteSyncTest {
         val syncStateDao = FakeSyncStateDao(dao.cursors)
         val sync = IncrementalRemoteSync(remote, dao, syncStateDao) { 2000L }
 
-        val result = sync.pullFor(EntityId("user-1"))
+        val result = sync.pullFor(EntityId(USER_ID), USER_SCOPE)
         assertEquals(3, result.appliedCount)
 
         assertEquals(0, result.conflictCount)
@@ -428,7 +434,7 @@ class GoalDebtRemoteSyncTest {
         val dao = FakeRemoteSyncDao()
         dao.goals["g-1"] = GoalEntity(
             id = "g-1",
-            ownerId = "user-1",
+            ownerId = USER_ID,
             workspaceId = null,
             name = "Hedef",
             targetAmountMinor = 100_000L,
@@ -481,7 +487,7 @@ class GoalDebtRemoteSyncTest {
         val sync = IncrementalRemoteSync(remote, dao, syncStateDao) { 2000L }
 
         assertFailsWith<IllegalStateException> {
-            sync.pullFor(EntityId("user-1"))
+            sync.pullFor(EntityId(USER_ID), USER_SCOPE)
         }
 
         // Entire batch rejected: valid child not written, cursor not advanced
@@ -496,7 +502,7 @@ class GoalDebtRemoteSyncTest {
         val dao = FakeRemoteSyncDao()
         dao.debts["d-1"] = DebtEntity(
             id = "d-1",
-            ownerId = "user-1",
+            ownerId = USER_ID,
             workspaceId = null,
             title = "Borç",
             amountMinor = 50_000L,
@@ -545,7 +551,7 @@ class GoalDebtRemoteSyncTest {
         val sync = IncrementalRemoteSync(remote, dao, syncStateDao) { 2000L }
 
         assertFailsWith<IllegalStateException> {
-            sync.pullFor(EntityId("user-1"))
+            sync.pullFor(EntityId(USER_ID), USER_SCOPE)
         }
 
         // Entire batch rejected: valid payment not written, cursor not advanced

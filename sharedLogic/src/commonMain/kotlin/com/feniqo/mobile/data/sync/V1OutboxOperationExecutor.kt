@@ -48,10 +48,11 @@ class V1OutboxOperationExecutor(
         val dto = local.toDomain().toDto()
         when (val result = writer.writeProfile(local.sync.writeOperation(), local.sync.baseVersion, dto)) {
             is ConditionalRemoteWriteResult.Applied -> remoteSyncDao.applyProfileWrite(
+                operation.syncScopeKey,
                 result.record.toDomain().toEntity(result.record.syncedMetadata()),
             )
             is ConditionalRemoteWriteResult.Conflict -> {
-                remoteSyncDao.recordProfileConflict(operation.conflict(local.sync, dto, result.remoteRecord))
+                remoteSyncDao.recordProfileConflict(operation.syncScopeKey, operation.conflict(local.sync, dto, result.remoteRecord))
                 throw OutboxConflictException(RemoteSyncDao.CONFLICT_ERROR)
             }
             ConditionalRemoteWriteResult.NotFound -> error("Profil koşullu yazma sırasında bulunamadı.")
@@ -65,17 +66,18 @@ class V1OutboxOperationExecutor(
         val dto = local.toDomain().toDto().copy(slug = local.slug)
         when (val result = writer.writeCategory(local.sync.writeOperation(), local.sync.baseVersion, dto)) {
             is ConditionalRemoteWriteResult.Applied -> remoteSyncDao.applyCategoryWrite(
+                operation.syncScopeKey,
                 result.record.toDomain().toEntity(result.record.syncedMetadata(), slug = result.record.slug),
             )
             is ConditionalRemoteWriteResult.Conflict -> {
-                remoteSyncDao.recordCategoryConflict(operation.conflict(local.sync, dto, result.remoteRecord))
+                remoteSyncDao.recordCategoryConflict(operation.syncScopeKey, operation.conflict(local.sync, dto, result.remoteRecord))
                 throw OutboxConflictException(RemoteSyncDao.CONFLICT_ERROR)
             }
             ConditionalRemoteWriteResult.NotFound -> {
                 if (local.sync.deletedAtEpochMillis == null) {
                     error("Kategori koşullu yazma sırasında bulunamadı.")
                 }
-                remoteSyncDao.applyCategoryWrite(local.copy(sync = local.sync.acknowledgedMissingDelete()))
+                remoteSyncDao.applyCategoryWrite(operation.syncScopeKey, local.copy(sync = local.sync.acknowledgedMissingDelete()))
             }
         }
     }
@@ -87,17 +89,18 @@ class V1OutboxOperationExecutor(
         val dto = local.toDomain().toDto()
         when (val result = writer.writeTransaction(local.sync.writeOperation(), local.sync.baseVersion, dto)) {
             is ConditionalRemoteWriteResult.Applied -> remoteSyncDao.applyTransactionWrite(
+                operation.syncScopeKey,
                 result.record.toDomain().toEntity(result.record.syncedMetadata()),
             )
             is ConditionalRemoteWriteResult.Conflict -> {
-                remoteSyncDao.recordTransactionConflict(operation.conflict(local.sync, dto, result.remoteRecord))
+                remoteSyncDao.recordTransactionConflict(operation.syncScopeKey, operation.conflict(local.sync, dto, result.remoteRecord))
                 throw OutboxConflictException(RemoteSyncDao.CONFLICT_ERROR)
             }
             ConditionalRemoteWriteResult.NotFound -> {
                 if (local.sync.deletedAtEpochMillis == null) {
                     error("İşlem koşullu yazma sırasında bulunamadı.")
                 }
-                remoteSyncDao.applyTransactionWrite(local.copy(sync = local.sync.acknowledgedMissingDelete()))
+                remoteSyncDao.applyTransactionWrite(operation.syncScopeKey, local.copy(sync = local.sync.acknowledgedMissingDelete()))
             }
         }
     }
@@ -120,6 +123,7 @@ class V1OutboxOperationExecutor(
         local: T,
         remote: T,
     ): SyncConflictEntity = SyncConflictEntity(
+        syncScopeKey = syncScopeKey,
         entityTypeCode = entityTypeCode,
         entityId = entityId,
         operationId = operationId,

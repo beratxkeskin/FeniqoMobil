@@ -24,7 +24,8 @@ class DemoAuthRepository(
             val now = System.currentTimeMillis()
             val profile = UserProfile(USER_ID, "demo@example.invalid", "Deniz Demo", Currency.TRY,
                 ThemePreference.SYSTEM, AppLanguage.TR, null, Instant.fromEpochMilliseconds(now))
-            queue.enqueueProfile(profile.toEntity(newSyncMetadata(now)), OutboxOperationType.CREATE)
+            val syncScopeKey = com.feniqo.mobile.data.sync.SyncScopeKey.user(USER_ID.value).rawValue
+            queue.enqueueProfile(syncScopeKey, profile.toEntity(newSyncMetadata(now)), OutboxOperationType.CREATE)
         }
         session.value = AuthSession(USER_ID, "demo@example.invalid", Instant.parse("2099-01-01T00:00:00Z"))
     }
@@ -42,7 +43,8 @@ class DemoAuthRepository(
     override suspend fun updateFullName(fullName: String?): RepositoryResult<Unit> {
         val existing = profiles.observeById(USER_ID.value).first() ?: return unsupported()
         val updated = existing.toDomain().copy(fullName = fullName)
-        queue.enqueueProfile(updated.toEntity(existing.sync.toPendingUpdate(System.currentTimeMillis())),
+        val syncScopeKey = com.feniqo.mobile.data.sync.SyncScopeKey.user(USER_ID.value).rawValue
+        queue.enqueueProfile(syncScopeKey, updated.toEntity(existing.sync.toPendingUpdate(System.currentTimeMillis())),
             OutboxOperationType.UPDATE)
         return RepositoryResult.Success(Unit)
     }

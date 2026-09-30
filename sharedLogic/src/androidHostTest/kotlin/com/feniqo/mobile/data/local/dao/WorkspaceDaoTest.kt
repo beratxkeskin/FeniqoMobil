@@ -372,7 +372,9 @@ class WorkspaceDaoTest {
             mutationDao.upsertWorkspaceInvitationRow(inv)
 
             // 2. Outbox kaydı ekle (IN_FLIGHT)
+            val scope = "USER:11111111-1111-4111-8111-111111111111"
             val op = SyncOperationEntity(
+                syncScopeKey = scope,
                 operationId = "00000000000000000000000000000010",
                 entityTypeCode = "WORKSPACE_INVITATION",
                 entityId = "inv-ack-1",
@@ -407,6 +409,7 @@ class WorkspaceDaoTest {
 
             // 4. ACK işlemini yürüt
             val acked = mutationDao.ackWorkspaceInvitationWriteV2(
+                syncScopeKey = scope,
                 operationId = "00000000000000000000000000000010",
                 record = remoteDto,
                 nowEpochMillis = 3000L,
@@ -422,7 +425,7 @@ class WorkspaceDaoTest {
                 "ACK sonrası yerel token_hash korunmalıdır, sunucu cevabı ile null'a ezilmemelidir."
             )
             assertEquals("SYNCED", updatedInv.sync.syncStatus)
-            assertNull(mutationDao.getOutboxById("00000000000000000000000000000010"))
+            assertNull(mutationDao.getOutboxById(scope, "00000000000000000000000000000010"))
         } finally {
             database.close()
         }

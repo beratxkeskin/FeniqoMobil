@@ -18,6 +18,7 @@ import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
 import com.feniqo.mobile.data.local.entity.SyncConflictEntity
 import com.feniqo.mobile.data.local.entity.SyncCursorEntity
 import com.feniqo.mobile.data.local.entity.SyncOperationEntity
+import com.feniqo.mobile.data.sync.SyncScopeKey
 import com.feniqo.mobile.domain.model.SyncStatus
 import com.feniqo.mobile.domain.model.WorkspaceRole
 
@@ -68,17 +69,18 @@ interface RemoteSyncDao {
     @Query(
         """
         SELECT operation_id FROM sync_operations
-        WHERE entity_type_code = :entityTypeCode AND entity_id = :entityId
+        WHERE sync_scope_key = :syncScopeKey AND entity_type_code = :entityTypeCode AND entity_id = :entityId
         ORDER BY created_at_epoch_ms, operation_id
         LIMIT 1
         """,
     )
-    suspend fun getFirstOutboxOperationId(entityTypeCode: String, entityId: String): String?
+    suspend fun getFirstOutboxOperationId(syncScopeKey: String, entityTypeCode: String, entityId: String): String?
 
     @Query(
         """
         SELECT * FROM sync_operations
-        WHERE entity_type_code = 'WORKSPACE'
+        WHERE sync_scope_key = :syncScopeKey
+          AND entity_type_code = 'WORKSPACE'
           AND entity_id = :workspaceId
           AND protocol_version = 2
           AND status_code IN ('PENDING', 'IN_FLIGHT', 'FAILED', 'CONFLICT')
@@ -86,27 +88,29 @@ interface RemoteSyncDao {
         LIMIT 1
         """,
     )
-    suspend fun getActiveWorkspaceTailOperation(workspaceId: String): SyncOperationEntity?
+    suspend fun getActiveWorkspaceTailOperation(syncScopeKey: String, workspaceId: String): SyncOperationEntity?
 
     @Query(
         """
         SELECT * FROM sync_operations
-        WHERE entity_type_code = 'WORKSPACE'
+        WHERE sync_scope_key = :syncScopeKey
+          AND entity_type_code = 'WORKSPACE'
           AND entity_id = :workspaceId
         ORDER BY created_at_epoch_ms ASC, operation_id ASC
         """,
     )
-    suspend fun getAllWorkspaceOperations(workspaceId: String): List<SyncOperationEntity>
+    suspend fun getAllWorkspaceOperations(syncScopeKey: String, workspaceId: String): List<SyncOperationEntity>
 
     @Query(
         """
         DELETE FROM sync_operations
-        WHERE entity_type_code = 'WORKSPACE'
+        WHERE sync_scope_key = :syncScopeKey
+          AND entity_type_code = 'WORKSPACE'
           AND entity_id = :workspaceId
           AND operation_id IN (:operationIds)
         """,
     )
-    suspend fun deleteSpecificWorkspaceOperations(workspaceId: String, operationIds: List<String>): Int
+    suspend fun deleteSpecificWorkspaceOperations(syncScopeKey: String, workspaceId: String, operationIds: List<String>): Int
 
     @Query(
         """
@@ -139,10 +143,11 @@ interface RemoteSyncDao {
             last_error = NULL,
             next_attempt_at_epoch_ms = :nowEpochMillis,
             updated_at_epoch_ms = :nowEpochMillis
-        WHERE operation_id = :operationId
+        WHERE sync_scope_key = :syncScopeKey AND operation_id = :operationId
         """,
     )
     suspend fun resetWorkspaceConflictOperation(
+        syncScopeKey: String,
         operationId: String,
         operationTypeCode: String,
         payloadJson: String?,
@@ -150,11 +155,11 @@ interface RemoteSyncDao {
         nowEpochMillis: Long,
     ): Int
 
-    @Query("SELECT * FROM sync_conflicts WHERE entity_type_code = :entityTypeCode AND entity_id = :entityId LIMIT 1")
-    suspend fun getConflictRow(entityTypeCode: String, entityId: String): SyncConflictEntity?
+    @Query("SELECT * FROM sync_conflicts WHERE sync_scope_key = :syncScopeKey AND entity_type_code = :entityTypeCode AND entity_id = :entityId LIMIT 1")
+    suspend fun getConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): SyncConflictEntity?
 
-    @Query("SELECT COUNT(*) FROM sync_operations WHERE entity_type_code = :entityTypeCode AND entity_id = :entityId")
-    suspend fun countOutboxRows(entityTypeCode: String, entityId: String): Int
+    @Query("SELECT COUNT(*) FROM sync_operations WHERE sync_scope_key = :syncScopeKey AND entity_type_code = :entityTypeCode AND entity_id = :entityId")
+    suspend fun countOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String): Int
 
     @Query("UPDATE workspaces SET sync_status = 'CONFLICT', last_sync_error = :error WHERE id = :entityId")
     suspend fun markWorkspaceConflict(entityId: String, error: String): Int
@@ -248,8 +253,8 @@ interface RemoteSyncDao {
     @Upsert
     suspend fun upsertCursorRows(cursors: List<SyncCursorEntity>)
 
-    @Query("DELETE FROM sync_conflicts WHERE entity_type_code = :entityTypeCode AND entity_id = :entityId")
-    suspend fun deleteConflictRow(entityTypeCode: String, entityId: String): Int
+    @Query("DELETE FROM sync_conflicts WHERE sync_scope_key = :syncScopeKey AND entity_type_code = :entityTypeCode AND entity_id = :entityId")
+    suspend fun deleteConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): Int
 
     @Query("UPDATE profiles SET sync_status = 'CONFLICT', last_sync_error = :error WHERE id = :entityId")
     suspend fun markProfileConflict(entityId: String, error: String): Int
@@ -282,18 +287,24 @@ interface RemoteSyncDao {
 
 
 
-    @Query("DELETE FROM sync_operations WHERE entity_type_code = :entityTypeCode AND entity_id = :entityId")
-    suspend fun deleteOutboxRows(entityTypeCode: String, entityId: String): Int
+    @Query("DELETE FROM sync_operations WHERE sync_scope_key = :syncScopeKey AND entity_type_code = :entityTypeCode AND entity_id = :entityId")
+    suspend fun deleteOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String): Int
 
     @Query(
         """
         DELETE FROM sync_operations
-        WHERE entity_type_code = :entityTypeCode
+        WHERE sync_scope_key = :syncScopeKey
+          AND entity_type_code = :entityTypeCode
           AND entity_id = :entityId
           AND operation_id <> :keptOperationId
         """,
     )
-    suspend fun deleteOtherOutboxRows(entityTypeCode: String, entityId: String, keptOperationId: String): Int
+    suspend fun deleteOtherOutboxRows(
+        syncScopeKey: String,
+        entityTypeCode: String,
+        entityId: String,
+        keptOperationId: String,
+    ): Int
 
     @Query(
         """
@@ -305,10 +316,11 @@ interface RemoteSyncDao {
             last_error = NULL,
             next_attempt_at_epoch_ms = :nowEpochMillis,
             updated_at_epoch_ms = :nowEpochMillis
-        WHERE operation_id = :operationId
+        WHERE sync_scope_key = :syncScopeKey AND operation_id = :operationId
         """,
     )
     suspend fun resetConflictOperation(
+        syncScopeKey: String,
         operationId: String,
         operationTypeCode: String,
         remoteVersion: Long,
@@ -370,55 +382,67 @@ interface RemoteSyncDao {
     suspend fun rebaseSubscriptionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int
 
     @Transaction
-    suspend fun applyProfileWrite(entity: UserProfileEntity) {
+    suspend fun applyProfileWrite(syncScopeKey: String, entity: UserProfileEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         upsertProfileRow(entity)
-        deleteConflictRow("PROFILE", entity.id)
+        deleteConflictRow(syncScopeKey, "PROFILE", entity.id)
     }
 
     @Transaction
-    suspend fun resolveProfileKeepRemote(entity: UserProfileEntity) {
+    suspend fun resolveProfileKeepRemote(syncScopeKey: String, entity: UserProfileEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         upsertProfileRow(entity)
-        deleteOutboxRows("PROFILE", entity.id)
-        deleteConflictRow("PROFILE", entity.id)
+        deleteOutboxRows(syncScopeKey, "PROFILE", entity.id)
+        deleteConflictRow(syncScopeKey, "PROFILE", entity.id)
     }
 
     @Transaction
-    suspend fun resolveCategoryKeepRemote(entity: CategoryEntity) {
+    suspend fun resolveCategoryKeepRemote(syncScopeKey: String, entity: CategoryEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         upsertCategoryRows(listOf(entity))
-        deleteOutboxRows("CATEGORY", entity.id)
-        deleteConflictRow("CATEGORY", entity.id)
+        deleteOutboxRows(syncScopeKey, "CATEGORY", entity.id)
+        deleteConflictRow(syncScopeKey, "CATEGORY", entity.id)
     }
 
     @Transaction
-    suspend fun resolveTransactionKeepRemote(entity: TransactionEntity) {
+    suspend fun resolveTransactionKeepRemote(syncScopeKey: String, entity: TransactionEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         upsertTransactionRows(listOf(entity))
-        deleteOutboxRows("TRANSACTION", entity.id)
-        deleteConflictRow("TRANSACTION", entity.id)
+        deleteOutboxRows(syncScopeKey, "TRANSACTION", entity.id)
+        deleteConflictRow(syncScopeKey, "TRANSACTION", entity.id)
     }
 
     @Transaction
-    suspend fun resolveRecurringTransactionKeepRemote(entity: RecurringTransactionEntity) {
+    suspend fun resolveRecurringTransactionKeepRemote(syncScopeKey: String, entity: RecurringTransactionEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         upsertRecurringTransactionRows(listOf(entity))
-        deleteOutboxRows("RECURRING_TRANSACTION", entity.id)
-        deleteConflictRow("RECURRING_TRANSACTION", entity.id)
+        deleteOutboxRows(syncScopeKey, "RECURRING_TRANSACTION", entity.id)
+        deleteConflictRow(syncScopeKey, "RECURRING_TRANSACTION", entity.id)
     }
 
     @Transaction
-    suspend fun resolveSubscriptionKeepRemote(entity: SubscriptionEntity) {
+    suspend fun resolveSubscriptionKeepRemote(syncScopeKey: String, entity: SubscriptionEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         upsertSubscriptionRows(listOf(entity))
-        deleteOutboxRows("SUBSCRIPTION", entity.id)
-        deleteConflictRow("SUBSCRIPTION", entity.id)
+        deleteOutboxRows(syncScopeKey, "SUBSCRIPTION", entity.id)
+        deleteConflictRow(syncScopeKey, "SUBSCRIPTION", entity.id)
     }
 
     @Transaction
     suspend fun resolveKeepLocal(
+        syncScopeKey: String,
         conflict: SyncConflictEntity,
         operationTypeCode: String,
         nowEpochMillis: Long,
     ) {
-        deleteOtherOutboxRows(conflict.entityTypeCode, conflict.entityId, conflict.operationId)
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(conflict.syncScopeKey == syncScopeKey) {
+            "Conflict scope mismatch: conflict=${conflict.syncScopeKey}, actor=$syncScopeKey"
+        }
+        deleteOtherOutboxRows(syncScopeKey, conflict.entityTypeCode, conflict.entityId, conflict.operationId)
         check(
             resetConflictOperation(
+                syncScopeKey = syncScopeKey,
                 operationId = conflict.operationId,
                 operationTypeCode = operationTypeCode,
                 remoteVersion = conflict.remoteVersion,
@@ -435,17 +459,19 @@ interface RemoteSyncDao {
             else -> error("Desteklenmeyen conflict entity türü: ${conflict.entityTypeCode}")
         }
         check(updated == 1) { "Çakışmanın yerel kaydı bulunamadı." }
-        deleteConflictRow(conflict.entityTypeCode, conflict.entityId)
+        deleteConflictRow(syncScopeKey, conflict.entityTypeCode, conflict.entityId)
     }
 
     @Transaction
     suspend fun resolveWorkspaceKeepRemote(
+        syncScopeKey: String,
         precondition: WorkspaceResolutionPrecondition,
         remoteEntity: WorkspaceEntity,
     ) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         val workspaceId = precondition.expectedConflict.entityId
 
-        val liveConflict = getConflictRow("WORKSPACE", workspaceId)
+        val liveConflict = getConflictRow(syncScopeKey, "WORKSPACE", workspaceId)
             ?: throw WorkspaceConflictStaleResolutionException("Çakışma satırı canlı veritabanında bulunamadı: $workspaceId")
         val expConflict = precondition.expectedConflict
         if (liveConflict.operationId != expConflict.operationId ||
@@ -474,7 +500,7 @@ interface RemoteSyncDao {
             throw WorkspaceConflictStaleResolutionException("Workspace yerel durumu snapshot ile uyuşmuyor: $workspaceId")
         }
 
-        val liveOps = getAllWorkspaceOperations(workspaceId)
+        val liveOps = getAllWorkspaceOperations(syncScopeKey, workspaceId)
         if (liveOps.size != precondition.expectedOperations.size) {
             throw WorkspaceConflictStaleResolutionException(
                 "Workspace outbox satır sayısı uyuşmuyor: beklenen ${precondition.expectedOperations.size}, canlı ${liveOps.size}",
@@ -510,26 +536,28 @@ interface RemoteSyncDao {
 
         if (precondition.expectedOperations.isNotEmpty()) {
             val allIds = precondition.expectedOperations.map { it.operationId }
-            val deleted = deleteSpecificWorkspaceOperations(workspaceId, allIds)
+            val deleted = deleteSpecificWorkspaceOperations(syncScopeKey, workspaceId, allIds)
             check(deleted == allIds.size) {
                 "Silinen outbox satır sayısı ($deleted) beklenenle (${allIds.size}) eşleşmiyor."
             }
         }
 
-        deleteConflictRow("WORKSPACE", workspaceId)
+        deleteConflictRow(syncScopeKey, "WORKSPACE", workspaceId)
     }
 
     @Transaction
     suspend fun resolveWorkspaceKeepLocal(
+        syncScopeKey: String,
         precondition: WorkspaceResolutionPrecondition,
         retainedOperationId: String,
         targetOperationTypeCode: String,
         targetPayloadJson: String?,
         nowEpochMillis: Long,
     ) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         val workspaceId = precondition.expectedConflict.entityId
 
-        val liveConflict = getConflictRow("WORKSPACE", workspaceId)
+        val liveConflict = getConflictRow(syncScopeKey, "WORKSPACE", workspaceId)
             ?: throw WorkspaceConflictStaleResolutionException("Çakışma satırı canlı veritabanında bulunamadı: $workspaceId")
         val expConflict = precondition.expectedConflict
         if (liveConflict.operationId != expConflict.operationId ||
@@ -558,7 +586,7 @@ interface RemoteSyncDao {
             throw WorkspaceConflictStaleResolutionException("Workspace yerel durumu snapshot ile uyuşmuyor: $workspaceId")
         }
 
-        val liveOps = getAllWorkspaceOperations(workspaceId)
+        val liveOps = getAllWorkspaceOperations(syncScopeKey, workspaceId)
         if (liveOps.size != precondition.expectedOperations.size) {
             throw WorkspaceConflictStaleResolutionException(
                 "Workspace outbox satır sayısı uyuşmuyor: beklenen ${precondition.expectedOperations.size}, canlı ${liveOps.size}",
@@ -614,13 +642,14 @@ interface RemoteSyncDao {
             .filter { it != liveTail.operationId }
 
         if (nonTailIds.isNotEmpty()) {
-            val deleted = deleteSpecificWorkspaceOperations(workspaceId, nonTailIds)
+            val deleted = deleteSpecificWorkspaceOperations(syncScopeKey, workspaceId, nonTailIds)
             check(deleted == nonTailIds.size) {
                 "Silinen predecessor satır sayısı ($deleted) beklenenle (${nonTailIds.size}) eşleşmiyor."
             }
         }
 
         val resetCount = resetWorkspaceConflictOperation(
+            syncScopeKey = syncScopeKey,
             operationId = liveTail.operationId,
             operationTypeCode = targetOperationTypeCode,
             payloadJson = targetPayloadJson,
@@ -638,233 +667,351 @@ interface RemoteSyncDao {
         )
         check(rebaseCount == 1) { "Workspace ($workspaceId) rebase edilemedi." }
 
-        deleteConflictRow("WORKSPACE", workspaceId)
+        deleteConflictRow(syncScopeKey, "WORKSPACE", workspaceId)
     }
 
     @Transaction
-    suspend fun applyProfilePull(entity: UserProfileEntity, cursor: SyncCursorEntity) {
+    suspend fun applyProfilePull(syncScopeKey: String, entity: UserProfileEntity, cursor: SyncCursorEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(cursor.syncScopeKey == syncScopeKey) {
+            "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+        }
         upsertProfileRow(entity)
-        deleteConflictRow("PROFILE", entity.id)
+        deleteConflictRow(syncScopeKey, "PROFILE", entity.id)
         upsertCursorRows(listOf(cursor))
     }
 
     @Transaction
-    suspend fun applyCategoryPull(entity: CategoryEntity, cursor: SyncCursorEntity) {
+    suspend fun applyCategoryPull(syncScopeKey: String, entity: CategoryEntity, cursor: SyncCursorEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(cursor.syncScopeKey == syncScopeKey) {
+            "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+        }
         upsertCategoryRows(listOf(entity))
-        deleteConflictRow("CATEGORY", entity.id)
+        deleteConflictRow(syncScopeKey, "CATEGORY", entity.id)
         upsertCursorRows(listOf(cursor))
     }
 
     @Transaction
-    suspend fun applyTransactionPull(entity: TransactionEntity, cursor: SyncCursorEntity) {
+    suspend fun applyTransactionPull(syncScopeKey: String, entity: TransactionEntity, cursor: SyncCursorEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(cursor.syncScopeKey == syncScopeKey) {
+            "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+        }
         upsertTransactionRows(listOf(entity))
-        deleteConflictRow("TRANSACTION", entity.id)
+        deleteConflictRow(syncScopeKey, "TRANSACTION", entity.id)
         upsertCursorRows(listOf(cursor))
     }
 
     @Transaction
-    suspend fun applyRecurringTransactionPull(entity: RecurringTransactionEntity, cursor: SyncCursorEntity) {
+    suspend fun applyRecurringTransactionPull(syncScopeKey: String, entity: RecurringTransactionEntity, cursor: SyncCursorEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(cursor.syncScopeKey == syncScopeKey) {
+            "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+        }
         upsertRecurringTransactionRows(listOf(entity))
-        deleteConflictRow("RECURRING_TRANSACTION", entity.id)
+        deleteConflictRow(syncScopeKey, "RECURRING_TRANSACTION", entity.id)
         upsertCursorRows(listOf(cursor))
     }
 
     @Transaction
-    suspend fun applySubscriptionPull(entity: SubscriptionEntity, cursor: SyncCursorEntity) {
+    suspend fun applySubscriptionPull(syncScopeKey: String, entity: SubscriptionEntity, cursor: SyncCursorEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(cursor.syncScopeKey == syncScopeKey) {
+            "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+        }
         upsertSubscriptionRows(listOf(entity))
-        deleteConflictRow("SUBSCRIPTION", entity.id)
+        deleteConflictRow(syncScopeKey, "SUBSCRIPTION", entity.id)
         upsertCursorRows(listOf(cursor))
     }
 
-
     @Transaction
-    suspend fun applyGoalPull(entity: GoalEntity, cursor: SyncCursorEntity) {
+    suspend fun applyGoalPull(syncScopeKey: String, entity: GoalEntity, cursor: SyncCursorEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(cursor.syncScopeKey == syncScopeKey) {
+            "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+        }
         upsertGoalRows(listOf(entity))
-        deleteConflictRow("GOAL", entity.id)
+        deleteConflictRow(syncScopeKey, "GOAL", entity.id)
         upsertCursorRows(listOf(cursor))
     }
 
     @Transaction
-    suspend fun applyGoalContributionPull(entity: GoalContributionEntity, cursor: SyncCursorEntity) {
+    suspend fun applyGoalContributionPull(syncScopeKey: String, entity: GoalContributionEntity, cursor: SyncCursorEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(cursor.syncScopeKey == syncScopeKey) {
+            "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+        }
         upsertGoalContributionRows(listOf(entity))
-        deleteConflictRow("GOAL_CONTRIBUTION", entity.id)
+        deleteConflictRow(syncScopeKey, "GOAL_CONTRIBUTION", entity.id)
         upsertCursorRows(listOf(cursor))
     }
 
     @Transaction
-    suspend fun applyDebtPull(entity: DebtEntity, cursor: SyncCursorEntity) {
+    suspend fun applyDebtPull(syncScopeKey: String, entity: DebtEntity, cursor: SyncCursorEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(cursor.syncScopeKey == syncScopeKey) {
+            "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+        }
         upsertDebtRows(listOf(entity))
-        deleteConflictRow("DEBT", entity.id)
+        deleteConflictRow(syncScopeKey, "DEBT", entity.id)
         upsertCursorRows(listOf(cursor))
     }
 
     @Transaction
-    suspend fun applyDebtPaymentPull(entity: DebtPaymentEntity, cursor: SyncCursorEntity) {
+    suspend fun applyDebtPaymentPull(syncScopeKey: String, entity: DebtPaymentEntity, cursor: SyncCursorEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(cursor.syncScopeKey == syncScopeKey) {
+            "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+        }
         upsertDebtPaymentRows(listOf(entity))
-        deleteConflictRow("DEBT_PAYMENT", entity.id)
+        deleteConflictRow(syncScopeKey, "DEBT_PAYMENT", entity.id)
+        upsertCursorRows(listOf(cursor))
+    }
+
+
+    @Transaction
+    suspend fun advancePullCursor(syncScopeKey: String, cursor: SyncCursorEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(cursor.syncScopeKey == syncScopeKey) {
+            "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+        }
         upsertCursorRows(listOf(cursor))
     }
 
     @Transaction
-    suspend fun advancePullCursor(cursor: SyncCursorEntity) {
-        upsertCursorRows(listOf(cursor))
-    }
-
-    @Transaction
-    suspend fun applyCategoryWrite(entity: CategoryEntity) {
+    suspend fun applyCategoryWrite(syncScopeKey: String, entity: CategoryEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         upsertCategoryRows(listOf(entity))
-        deleteConflictRow("CATEGORY", entity.id)
+        deleteConflictRow(syncScopeKey, "CATEGORY", entity.id)
     }
 
     @Transaction
-    suspend fun applyTransactionWrite(entity: TransactionEntity) {
+    suspend fun applyTransactionWrite(syncScopeKey: String, entity: TransactionEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         upsertTransactionRows(listOf(entity))
-        deleteConflictRow("TRANSACTION", entity.id)
+        deleteConflictRow(syncScopeKey, "TRANSACTION", entity.id)
     }
 
     @Transaction
-    suspend fun applyRecurringTransactionWrite(entity: RecurringTransactionEntity) {
+    suspend fun applyRecurringTransactionWrite(syncScopeKey: String, entity: RecurringTransactionEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         upsertRecurringTransactionRows(listOf(entity))
-        deleteConflictRow("RECURRING_TRANSACTION", entity.id)
+        deleteConflictRow(syncScopeKey, "RECURRING_TRANSACTION", entity.id)
     }
 
     @Transaction
-    suspend fun applySubscriptionWrite(entity: SubscriptionEntity) {
+    suspend fun applySubscriptionWrite(syncScopeKey: String, entity: SubscriptionEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         upsertSubscriptionRows(listOf(entity))
-        deleteConflictRow("SUBSCRIPTION", entity.id)
+        deleteConflictRow(syncScopeKey, "SUBSCRIPTION", entity.id)
     }
 
-
     @Transaction
-    suspend fun applyGoalWrite(entity: GoalEntity) {
+    suspend fun applyGoalWrite(syncScopeKey: String, entity: GoalEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         upsertGoalRows(listOf(entity))
-        deleteConflictRow("GOAL", entity.id)
+        deleteConflictRow(syncScopeKey, "GOAL", entity.id)
     }
 
     @Transaction
-    suspend fun applyGoalContributionWrite(entity: GoalContributionEntity) {
+    suspend fun applyGoalContributionWrite(syncScopeKey: String, entity: GoalContributionEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         upsertGoalContributionRows(listOf(entity))
-        deleteConflictRow("GOAL_CONTRIBUTION", entity.id)
+        deleteConflictRow(syncScopeKey, "GOAL_CONTRIBUTION", entity.id)
     }
 
     @Transaction
-    suspend fun applyDebtWrite(entity: DebtEntity) {
+    suspend fun applyDebtWrite(syncScopeKey: String, entity: DebtEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         upsertDebtRows(listOf(entity))
-        deleteConflictRow("DEBT", entity.id)
+        deleteConflictRow(syncScopeKey, "DEBT", entity.id)
     }
 
     @Transaction
-    suspend fun applyDebtPaymentWrite(entity: DebtPaymentEntity) {
+    suspend fun applyDebtPaymentWrite(syncScopeKey: String, entity: DebtPaymentEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
         upsertDebtPaymentRows(listOf(entity))
-        deleteConflictRow("DEBT_PAYMENT", entity.id)
+        deleteConflictRow(syncScopeKey, "DEBT_PAYMENT", entity.id)
     }
 
     @Transaction
-    suspend fun recordProfileConflict(conflict: SyncConflictEntity) {
+    suspend fun recordProfileConflict(syncScopeKey: String, conflict: SyncConflictEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(conflict.syncScopeKey == syncScopeKey) {
+            "Conflict scope mismatch: conflict=${conflict.syncScopeKey}, actor=$syncScopeKey"
+        }
         upsertConflictRow(conflict)
         check(markProfileConflict(conflict.entityId, CONFLICT_ERROR) == 1)
     }
 
     @Transaction
-    suspend fun recordProfilePullConflict(conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
-        recordProfileConflict(conflict)
+    suspend fun recordProfilePullConflict(syncScopeKey: String, conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(cursor.syncScopeKey == syncScopeKey) {
+            "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+        }
+        recordProfileConflict(syncScopeKey, conflict)
         upsertCursorRows(listOf(cursor))
     }
 
     @Transaction
-    suspend fun recordCategoryConflict(conflict: SyncConflictEntity) {
+    suspend fun recordCategoryConflict(syncScopeKey: String, conflict: SyncConflictEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(conflict.syncScopeKey == syncScopeKey) {
+            "Conflict scope mismatch: conflict=${conflict.syncScopeKey}, actor=$syncScopeKey"
+        }
         upsertConflictRow(conflict)
         check(markCategoryConflict(conflict.entityId, CONFLICT_ERROR) == 1)
     }
 
     @Transaction
-    suspend fun recordCategoryPullConflict(conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
-        recordCategoryConflict(conflict)
+    suspend fun recordCategoryPullConflict(syncScopeKey: String, conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(cursor.syncScopeKey == syncScopeKey) {
+            "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+        }
+        recordCategoryConflict(syncScopeKey, conflict)
         upsertCursorRows(listOf(cursor))
     }
 
     @Transaction
-    suspend fun recordTransactionConflict(conflict: SyncConflictEntity) {
+    suspend fun recordTransactionConflict(syncScopeKey: String, conflict: SyncConflictEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(conflict.syncScopeKey == syncScopeKey) {
+            "Conflict scope mismatch: conflict=${conflict.syncScopeKey}, actor=$syncScopeKey"
+        }
         upsertConflictRow(conflict)
         check(markTransactionConflict(conflict.entityId, CONFLICT_ERROR) == 1)
     }
 
     @Transaction
-    suspend fun recordTransactionPullConflict(conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
-        recordTransactionConflict(conflict)
+    suspend fun recordTransactionPullConflict(syncScopeKey: String, conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(cursor.syncScopeKey == syncScopeKey) {
+            "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+        }
+        recordTransactionConflict(syncScopeKey, conflict)
         upsertCursorRows(listOf(cursor))
     }
 
     @Transaction
-    suspend fun recordRecurringTransactionConflict(conflict: SyncConflictEntity) {
+    suspend fun recordRecurringTransactionConflict(syncScopeKey: String, conflict: SyncConflictEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(conflict.syncScopeKey == syncScopeKey) {
+            "Conflict scope mismatch: conflict=${conflict.syncScopeKey}, actor=$syncScopeKey"
+        }
         upsertConflictRow(conflict)
         check(markRecurringTransactionConflict(conflict.entityId, CONFLICT_ERROR) == 1)
     }
 
     @Transaction
-    suspend fun recordRecurringTransactionPullConflict(conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
-        recordRecurringTransactionConflict(conflict)
+    suspend fun recordRecurringTransactionPullConflict(syncScopeKey: String, conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(cursor.syncScopeKey == syncScopeKey) {
+            "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+        }
+        recordRecurringTransactionConflict(syncScopeKey, conflict)
         upsertCursorRows(listOf(cursor))
     }
 
     @Transaction
-    suspend fun recordSubscriptionConflict(conflict: SyncConflictEntity) {
+    suspend fun recordSubscriptionConflict(syncScopeKey: String, conflict: SyncConflictEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(conflict.syncScopeKey == syncScopeKey) {
+            "Conflict scope mismatch: conflict=${conflict.syncScopeKey}, actor=$syncScopeKey"
+        }
         upsertConflictRow(conflict)
         check(markSubscriptionConflict(conflict.entityId, CONFLICT_ERROR) == 1)
     }
 
     @Transaction
-    suspend fun recordSubscriptionPullConflict(conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
-        recordSubscriptionConflict(conflict)
+    suspend fun recordSubscriptionPullConflict(syncScopeKey: String, conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(cursor.syncScopeKey == syncScopeKey) {
+            "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+        }
+        recordSubscriptionConflict(syncScopeKey, conflict)
         upsertCursorRows(listOf(cursor))
     }
 
-
     @Transaction
-    suspend fun recordGoalConflict(conflict: SyncConflictEntity) {
+    suspend fun recordGoalConflict(syncScopeKey: String, conflict: SyncConflictEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(conflict.syncScopeKey == syncScopeKey) {
+            "Conflict scope mismatch: conflict=${conflict.syncScopeKey}, actor=$syncScopeKey"
+        }
         upsertConflictRow(conflict)
         check(markGoalConflict(conflict.entityId, CONFLICT_ERROR) == 1)
     }
 
     @Transaction
-    suspend fun recordGoalPullConflict(conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
-        recordGoalConflict(conflict)
+    suspend fun recordGoalPullConflict(syncScopeKey: String, conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(cursor.syncScopeKey == syncScopeKey) {
+            "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+        }
+        recordGoalConflict(syncScopeKey, conflict)
         upsertCursorRows(listOf(cursor))
     }
 
     @Transaction
-    suspend fun recordGoalContributionConflict(conflict: SyncConflictEntity) {
+    suspend fun recordGoalContributionConflict(syncScopeKey: String, conflict: SyncConflictEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(conflict.syncScopeKey == syncScopeKey) {
+            "Conflict scope mismatch: conflict=${conflict.syncScopeKey}, actor=$syncScopeKey"
+        }
         upsertConflictRow(conflict)
         check(markGoalContributionConflict(conflict.entityId, CONFLICT_ERROR) == 1)
     }
 
     @Transaction
-    suspend fun recordGoalContributionPullConflict(conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
-        recordGoalContributionConflict(conflict)
+    suspend fun recordGoalContributionPullConflict(syncScopeKey: String, conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(cursor.syncScopeKey == syncScopeKey) {
+            "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+        }
+        recordGoalContributionConflict(syncScopeKey, conflict)
         upsertCursorRows(listOf(cursor))
     }
 
     @Transaction
-    suspend fun recordDebtConflict(conflict: SyncConflictEntity) {
+    suspend fun recordDebtConflict(syncScopeKey: String, conflict: SyncConflictEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(conflict.syncScopeKey == syncScopeKey) {
+            "Conflict scope mismatch: conflict=${conflict.syncScopeKey}, actor=$syncScopeKey"
+        }
         upsertConflictRow(conflict)
         check(markDebtConflict(conflict.entityId, CONFLICT_ERROR) == 1)
     }
 
     @Transaction
-    suspend fun recordDebtPullConflict(conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
-        recordDebtConflict(conflict)
+    suspend fun recordDebtPullConflict(syncScopeKey: String, conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(cursor.syncScopeKey == syncScopeKey) {
+            "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+        }
+        recordDebtConflict(syncScopeKey, conflict)
         upsertCursorRows(listOf(cursor))
     }
 
     @Transaction
-    suspend fun recordDebtPaymentConflict(conflict: SyncConflictEntity) {
+    suspend fun recordDebtPaymentConflict(syncScopeKey: String, conflict: SyncConflictEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(conflict.syncScopeKey == syncScopeKey) {
+            "Conflict scope mismatch: conflict=${conflict.syncScopeKey}, actor=$syncScopeKey"
+        }
         upsertConflictRow(conflict)
         check(markDebtPaymentConflict(conflict.entityId, CONFLICT_ERROR) == 1)
     }
 
     @Transaction
-    suspend fun recordDebtPaymentPullConflict(conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
-        recordDebtPaymentConflict(conflict)
+    suspend fun recordDebtPaymentPullConflict(syncScopeKey: String, conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(cursor.syncScopeKey == syncScopeKey) {
+            "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+        }
+        recordDebtPaymentConflict(syncScopeKey, conflict)
         upsertCursorRows(listOf(cursor))
     }
 
@@ -875,6 +1022,7 @@ interface RemoteSyncDao {
      */
     @Transaction
     suspend fun applyInitialSnapshot(
+        syncScopeKey: String,
         profile: UserProfileEntity,
         categories: List<CategoryEntity>,
         transactions: List<TransactionEntity>,
@@ -886,6 +1034,12 @@ interface RemoteSyncDao {
         debts: List<DebtEntity> = emptyList(),
         debtPayments: List<DebtPaymentEntity> = emptyList(),
     ) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        for (cursor in cursors) {
+            require(cursor.syncScopeKey == syncScopeKey) {
+                "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+            }
+        }
         val existingProfile = getProfileRow(profile.id)
         if (existingProfile == null || existingProfile.sync.syncStatus == "SYNCED") {
             upsertProfileRow(profile)
@@ -947,13 +1101,27 @@ interface RemoteSyncDao {
      * Snapshot içindeki member satırlarının workspace_id değeri, snapshot'taki veya veritabanındaki
      * geçerli bir workspace ile eşleşmelidir. Eşleşmeyen yetim member bulunursa fail-closed reddedilir
      * ve transaction rollback edilir.
-     * Outbox üretilmez, mevcut outbox satırları korunur. Tombstone satırları normal snapshot olarak uygulanır.
      */
     @Transaction
     suspend fun applyWorkspaceSnapshot(
+        syncScopeKey: String,
         workspaces: List<WorkspaceEntity>,
         members: List<WorkspaceMemberEntity>,
         cursors: List<SyncCursorEntity> = emptyList(),
+    ) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        for (cursor in cursors) {
+            require(cursor.syncScopeKey == syncScopeKey) {
+                "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+            }
+        }
+        applyWorkspaceSnapshotInternal(workspaces, members, cursors)
+    }
+
+    private suspend fun applyWorkspaceSnapshotInternal(
+        workspaces: List<WorkspaceEntity>,
+        members: List<WorkspaceMemberEntity>,
+        cursors: List<SyncCursorEntity>,
     ) {
         if (members.isNotEmpty()) {
             val snapshotWorkspaceIds = workspaces.mapTo(mutableSetOf()) { it.id }
@@ -1084,7 +1252,19 @@ interface RemoteSyncDao {
      * [WorkspaceSyncStalePlanException] fırlatılarak transaction rollback edilir.
      */
     @Transaction
-    suspend fun applyWorkspaceIncrementalPlan(plan: WorkspaceIncrementalPlan) {
+    suspend fun applyWorkspaceIncrementalPlan(syncScopeKey: String, plan: WorkspaceIncrementalPlan) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        for (item in plan.conflictItems) {
+            require(item.conflict.syncScopeKey == syncScopeKey) {
+                "Workspace conflict scope mismatch: conflict=${item.conflict.syncScopeKey}, actor=$syncScopeKey"
+            }
+        }
+        for (cursor in plan.cursorsToPersist) {
+            require(cursor.syncScopeKey == syncScopeKey) {
+                "Workspace cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+            }
+        }
+
         // 1. Kümelerin karşılıklı dışlayıcılığı ve duplicate kontrolü
         val applyIds = plan.applyItems.map { it.entity.id }
         val conflictIds = plan.conflictItems.map { it.conflict.entityId }
@@ -1097,13 +1277,13 @@ interface RemoteSyncDao {
 
         // 2. Precondition doğrulaması (tüm öğeler için transaction-içi kontrol)
         for (item in plan.applyItems) {
-            verifyWorkspacePrecondition(item.entity.id, item.precondition)
+            verifyWorkspacePrecondition(syncScopeKey, item.entity.id, item.precondition)
         }
         for (item in plan.conflictItems) {
-            verifyWorkspacePrecondition(item.conflict.entityId, item.precondition)
+            verifyWorkspacePrecondition(syncScopeKey, item.conflict.entityId, item.precondition)
         }
         for (item in plan.preserveItems) {
-            verifyWorkspacePrecondition(item.workspaceId, item.precondition)
+            verifyWorkspacePrecondition(syncScopeKey, item.workspaceId, item.precondition)
         }
 
         // 3. Atomik yazma (tüm precondition'lar başarıyla geçtikten sonra)
@@ -1148,9 +1328,13 @@ interface RemoteSyncDao {
         }
     }
 
-    private suspend fun verifyWorkspacePrecondition(workspaceId: String, precondition: WorkspacePrecondition) {
+    private suspend fun verifyWorkspacePrecondition(
+        syncScopeKey: String,
+        workspaceId: String,
+        precondition: WorkspacePrecondition,
+    ) {
         val localWs = getWorkspaceRow(workspaceId)
-        val localOp = getActiveWorkspaceTailOperation(workspaceId)
+        val localOp = getActiveWorkspaceTailOperation(syncScopeKey, workspaceId)
 
         if (precondition.expectedPresence) {
             if (localWs == null) {

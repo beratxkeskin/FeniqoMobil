@@ -47,7 +47,7 @@ class OfflineWriteQueueTest {
             TransactionCreateInput(createTransactionEntity("t3")),
         )
 
-        val opIds = queue.enqueueTransactionCreates(inputs)
+        val opIds = queue.enqueueTransactionCreates("USER:11111111-1111-4111-8111-111111111111",inputs)
 
         assertEquals(listOf("op-1", "op-2", "op-3"), opIds)
         assertEquals(1, fakeMutationDao.batchCalls.size)
@@ -72,7 +72,7 @@ class OfflineWriteQueueTest {
         )
 
         assertFailsWith<IllegalArgumentException> {
-            queue.enqueueTransactionCreates(inputs)
+            queue.enqueueTransactionCreates("USER:11111111-1111-4111-8111-111111111111",inputs)
         }
 
         assertEquals(0, fakeMutationDao.batchCalls.size)
@@ -90,7 +90,7 @@ class OfflineWriteQueueTest {
         )
 
         assertFailsWith<IllegalArgumentException> {
-            queue.enqueueTransactionCreates(emptyList())
+            queue.enqueueTransactionCreates("USER:11111111-1111-4111-8111-111111111111",emptyList())
         }
 
         assertEquals(0, fakeMutationDao.batchCalls.size)
@@ -111,7 +111,7 @@ class OfflineWriteQueueTest {
         val inputs = listOf(TransactionCreateInput(createTransactionEntity("t1", sync = invalidSync)))
 
         assertFailsWith<IllegalArgumentException> {
-            queue.enqueueTransactionCreates(inputs)
+            queue.enqueueTransactionCreates("USER:11111111-1111-4111-8111-111111111111",inputs)
         }
 
         assertEquals(0, fakeMutationDao.batchCalls.size)
@@ -132,7 +132,7 @@ class OfflineWriteQueueTest {
         val inputs = listOf(TransactionCreateInput(createTransactionEntity("t1", sync = invalidSync)))
 
         assertFailsWith<IllegalArgumentException> {
-            queue.enqueueTransactionCreates(inputs)
+            queue.enqueueTransactionCreates("USER:11111111-1111-4111-8111-111111111111",inputs)
         }
 
         assertEquals(0, fakeMutationDao.batchCalls.size)
@@ -153,7 +153,7 @@ class OfflineWriteQueueTest {
         val inputs = listOf(TransactionCreateInput(createTransactionEntity("t1", sync = invalidSync)))
 
         assertFailsWith<IllegalArgumentException> {
-            queue.enqueueTransactionCreates(inputs)
+            queue.enqueueTransactionCreates("USER:11111111-1111-4111-8111-111111111111",inputs)
         }
 
         assertEquals(0, fakeMutationDao.batchCalls.size)
@@ -174,7 +174,7 @@ class OfflineWriteQueueTest {
         val inputs = listOf(TransactionCreateInput(createTransactionEntity("t1", sync = invalidSync)))
 
         assertFailsWith<IllegalArgumentException> {
-            queue.enqueueTransactionCreates(inputs)
+            queue.enqueueTransactionCreates("USER:11111111-1111-4111-8111-111111111111",inputs)
         }
 
         assertEquals(0, fakeMutationDao.batchCalls.size)
@@ -199,7 +199,7 @@ class OfflineWriteQueueTest {
         )
 
         assertFailsWith<IllegalArgumentException> {
-            queue.enqueueTransactionCreates(inputs)
+            queue.enqueueTransactionCreates("USER:11111111-1111-4111-8111-111111111111",inputs)
         }
 
         assertEquals(0, fakeMutationDao.batchCalls.size)
@@ -223,7 +223,7 @@ class OfflineWriteQueueTest {
         )
 
         assertFailsWith<IllegalArgumentException> {
-            queue.enqueueTransactionCreates(inputs)
+            queue.enqueueTransactionCreates("USER:11111111-1111-4111-8111-111111111111",inputs)
         }
 
         assertEquals(0, fakeMutationDao.batchCalls.size)
@@ -247,7 +247,7 @@ class OfflineWriteQueueTest {
         val inputs = listOf(TransactionCreateInput(createTransactionEntity("t1")))
 
         assertFailsWith<IllegalStateException> {
-            queue.enqueueTransactionCreates(inputs)
+            queue.enqueueTransactionCreates("USER:11111111-1111-4111-8111-111111111111",inputs)
         }
 
         assertEquals(0, fakeScheduler.scheduleCount)
@@ -278,7 +278,7 @@ class OfflineWriteQueueTest {
             createTransactionEntity("t3", sync3),
         )
 
-        val opIds = queue.enqueueTransactionDeletions(entities)
+        val opIds = queue.enqueueTransactionDeletions("USER:11111111-1111-4111-8111-111111111111",entities)
 
         assertEquals(listOf("op-del-1", "op-del-2", "op-del-3"), opIds)
         assertEquals(1, fakeMutationDao.batchDeleteCalls.size)
@@ -311,7 +311,7 @@ class OfflineWriteQueueTest {
         )
 
         assertFailsWith<IllegalArgumentException> {
-            queue.enqueueTransactionDeletions(emptyList())
+            queue.enqueueTransactionDeletions("USER:11111111-1111-4111-8111-111111111111",emptyList())
         }
 
         assertEquals(0, fakeMutationDao.batchDeleteCalls.size)
@@ -335,7 +335,7 @@ class OfflineWriteQueueTest {
         )
 
         assertFailsWith<IllegalArgumentException> {
-            queue.enqueueTransactionDeletions(entities)
+            queue.enqueueTransactionDeletions("USER:11111111-1111-4111-8111-111111111111",entities)
         }
 
         assertEquals(0, fakeMutationDao.batchDeleteCalls.size)
@@ -356,7 +356,7 @@ class OfflineWriteQueueTest {
         val entities = listOf(createTransactionEntity("t1", sync))
 
         assertFailsWith<IllegalArgumentException> {
-            queue.enqueueTransactionDeletions(entities)
+            queue.enqueueTransactionDeletions("USER:11111111-1111-4111-8111-111111111111",entities)
         }
 
         assertEquals(0, fakeMutationDao.batchDeleteCalls.size)
@@ -377,7 +377,7 @@ class OfflineWriteQueueTest {
         val entities = listOf(createTransactionEntity("t1", sync))
 
         assertFailsWith<IllegalArgumentException> {
-            queue.enqueueTransactionDeletions(entities)
+            queue.enqueueTransactionDeletions("USER:11111111-1111-4111-8111-111111111111",entities)
         }
 
         assertEquals(0, fakeMutationDao.batchDeleteCalls.size)
@@ -396,12 +396,12 @@ class OfflineWriteQueueTest {
 
         val negVersionSync = newSyncMetadata(1000L).copy(syncStatus = SyncStatus.PENDING_DELETE.name, version = -1L, baseVersion = 1L, deletedAtEpochMillis = 1000L)
         assertFailsWith<IllegalArgumentException> {
-            queue.enqueueTransactionDeletions(listOf(createTransactionEntity("t1", negVersionSync)))
+            queue.enqueueTransactionDeletions("USER:11111111-1111-4111-8111-111111111111",listOf(createTransactionEntity("t1", negVersionSync)))
         }
 
         val negBaseVersionSync = newSyncMetadata(1000L).copy(syncStatus = SyncStatus.PENDING_DELETE.name, version = 1L, baseVersion = -1L, deletedAtEpochMillis = 1000L)
         assertFailsWith<IllegalArgumentException> {
-            queue.enqueueTransactionDeletions(listOf(createTransactionEntity("t2", negBaseVersionSync)))
+            queue.enqueueTransactionDeletions("USER:11111111-1111-4111-8111-111111111111",listOf(createTransactionEntity("t2", negBaseVersionSync)))
         }
 
         assertEquals(0, fakeMutationDao.batchDeleteCalls.size)
@@ -420,7 +420,7 @@ class OfflineWriteQueueTest {
 
         val sync = newSyncMetadata(1000L).copy(syncStatus = SyncStatus.PENDING_DELETE.name, version = 1L, baseVersion = null, deletedAtEpochMillis = 1000L)
         assertFailsWith<IllegalArgumentException> {
-            queue.enqueueTransactionDeletions(listOf(createTransactionEntity("t1", sync)))
+            queue.enqueueTransactionDeletions("USER:11111111-1111-4111-8111-111111111111",listOf(createTransactionEntity("t1", sync)))
         }
 
         assertEquals(0, fakeMutationDao.batchDeleteCalls.size)
@@ -445,7 +445,7 @@ class OfflineWriteQueueTest {
         )
 
         assertFailsWith<IllegalArgumentException> {
-            queue.enqueueTransactionDeletions(entities)
+            queue.enqueueTransactionDeletions("USER:11111111-1111-4111-8111-111111111111",entities)
         }
         assertEquals(0, fakeMutationDao.batchDeleteCalls.size)
         assertEquals(0, fakeScheduler.scheduleCount)
@@ -467,8 +467,59 @@ class OfflineWriteQueueTest {
 
         val sync = newSyncMetadata(1000L).copy(syncStatus = SyncStatus.PENDING_DELETE.name, version = 1L, baseVersion = 1L, deletedAtEpochMillis = 1000L)
         assertFailsWith<IllegalStateException> {
-            queue.enqueueTransactionDeletions(listOf(createTransactionEntity("tx-failing-2", sync)))
+            queue.enqueueTransactionDeletions("USER:11111111-1111-4111-8111-111111111111",listOf(createTransactionEntity("tx-failing-2", sync)))
         }
+        assertEquals(0, fakeScheduler.scheduleCount)
+    }
+
+    // 9. OfflineWriteQueue, LEGACY_UNRESOLVED ile enqueue yapmaz
+    @Test
+    fun enqueue_withLegacyUnresolvedScope_rejectsAndDoesNotCallDaoOrScheduler() = runTest {
+        val fakeMutationDao = FakeLocalMutationDao()
+        val fakeScheduler = FakeBackgroundSyncScheduler()
+        val queue = OfflineWriteQueue(
+            mutationDao = fakeMutationDao,
+            operationDao = FakeSyncOperationDao(),
+            syncScheduler = fakeScheduler,
+        )
+
+        val inputs = listOf(TransactionCreateInput(createTransactionEntity("t1")))
+
+        assertFailsWith<IllegalArgumentException> {
+            queue.enqueueTransactionCreates("LEGACY_UNRESOLVED", inputs)
+        }
+
+        assertFailsWith<IllegalArgumentException> {
+            queue.enqueueTransactionDeletions("LEGACY_UNRESOLVED", listOf(createTransactionEntity("t1")))
+        }
+
+        assertEquals(0, fakeMutationDao.batchCalls.size)
+        assertEquals(0, fakeMutationDao.batchDeleteCalls.size)
+        assertEquals(0, fakeScheduler.scheduleCount)
+    }
+
+    @Test
+    fun enqueue_withCompactUserScope_rejectsAndDoesNotCallDaoOrScheduler() = runTest {
+        val fakeMutationDao = FakeLocalMutationDao()
+        val fakeScheduler = FakeBackgroundSyncScheduler()
+        val queue = OfflineWriteQueue(
+            mutationDao = fakeMutationDao,
+            operationDao = FakeSyncOperationDao(),
+            syncScheduler = fakeScheduler,
+        )
+
+        val inputs = listOf(TransactionCreateInput(createTransactionEntity("t1")))
+
+        assertFailsWith<IllegalArgumentException> {
+            queue.enqueueTransactionCreates("USER:11111111111141118111111111111111", inputs)
+        }
+
+        assertFailsWith<IllegalArgumentException> {
+            queue.enqueueTransactionDeletions("USER:11111111111141118111111111111111", listOf(createTransactionEntity("t1")))
+        }
+
+        assertEquals(0, fakeMutationDao.batchCalls.size)
+        assertEquals(0, fakeMutationDao.batchDeleteCalls.size)
         assertEquals(0, fakeScheduler.scheduleCount)
     }
 
@@ -522,16 +573,16 @@ private open class FakeLocalMutationDao : LocalMutationDao {
     override suspend fun deleteCategoryRow(id: String): Int = 0
     override suspend fun deleteBudgetRow(id: String): Int = 0
     override suspend fun deleteTransactionRow(id: String): Int = 0
-    override suspend fun deleteOutboxRow(operationId: String): Int = 0
-    override suspend fun getOutboxById(operationId: String): SyncOperationEntity? = null
-    override suspend fun getSuccessors(predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
-    override suspend fun getActiveTailCandidates(entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
-    override suspend fun coalescePendingPayload(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
-    override suspend fun convertToPendingDelete(operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 0
-    override suspend fun convertPendingDeleteToUpdate(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
-    override suspend fun unblockSuccessor(operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+    override suspend fun deleteOutboxRow(syncScopeKey: String, operationId: String): Int = 0
+    override suspend fun getOutboxById(syncScopeKey: String, operationId: String): SyncOperationEntity? = null
+    override suspend fun getSuccessors(syncScopeKey: String, predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
+    override suspend fun getActiveTailCandidates(syncScopeKey: String, entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
+    override suspend fun coalescePendingPayload(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
+    override suspend fun convertToPendingDelete(syncScopeKey: String, operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 0
+    override suspend fun convertPendingDeleteToUpdate(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
+    override suspend fun unblockSuccessor(syncScopeKey: String, operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
     override suspend fun insertOutboxRow(operation: SyncOperationEntity) {}
-    override suspend fun deleteConflictRow(entityTypeCode: String, entityId: String): Int = 0
+    override suspend fun deleteConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
     override suspend fun rebaseProfileVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
     override suspend fun rebaseCategoryVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
     override suspend fun rebaseTransactionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
@@ -585,16 +636,16 @@ private open class FakeLocalMutationDao : LocalMutationDao {
     override suspend fun markDebtSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
     override suspend fun tombstoneGoalContributionsForDeletedGoal(goalId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int = 0
     override suspend fun tombstoneDebtPaymentsForDeletedDebt(debtId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int = 0
-    override suspend fun getActiveGoalAggregateTailCandidates(goalId: String): List<SyncOperationEntity> = emptyList()
-    override suspend fun getActiveDebtAggregateTailCandidates(debtId: String): List<SyncOperationEntity> = emptyList()
-    override suspend fun countPendingGoalAggregateOperations(goalId: String, operationId: String): Int = 0
-    override suspend fun countPendingDebtAggregateOperations(debtId: String, operationId: String): Int = 0
+    override suspend fun getActiveGoalAggregateTailCandidates(syncScopeKey: String, goalId: String): List<SyncOperationEntity> = emptyList()
+    override suspend fun getActiveDebtAggregateTailCandidates(syncScopeKey: String, debtId: String): List<SyncOperationEntity> = emptyList()
+    override suspend fun countPendingGoalAggregateOperations(syncScopeKey: String, goalId: String, operationId: String): Int = 0
+    override suspend fun countPendingDebtAggregateOperations(syncScopeKey: String, debtId: String, operationId: String): Int = 0
     override suspend fun setGoalSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
     override suspend fun setGoalContributionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
     override suspend fun setDebtSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
     override suspend fun setDebtPaymentSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
     override suspend fun upsertConflictRow(entity: com.feniqo.mobile.data.local.entity.SyncConflictEntity) {}
-    override suspend fun setOutboxStatusConflict(operationId: String, nowEpochMillis: Long): Int = 1
+    override suspend fun setOutboxStatusConflict(syncScopeKey: String, operationId: String, nowEpochMillis: Long): Int = 1
     override suspend fun setProfileSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
     override suspend fun setCategorySyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
     override suspend fun setTransactionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
@@ -612,23 +663,25 @@ private open class FakeLocalMutationDao : LocalMutationDao {
 }
 
 private class FakeSyncOperationDao : SyncOperationDao {
-    override fun observePendingCount(): Flow<Int> = flowOf(0)
-    override fun observeFailedCount(): Flow<Int> = flowOf(0)
-    override suspend fun getReadyOperations(nowEpochMillis: Long, limit: Int) = emptyList<SyncOperationEntity>()
-    override suspend fun getById(operationId: String): SyncOperationEntity? = null
+    override fun observePendingCount(syncScopeKey: String): Flow<Int> = flowOf(0)
+    override fun observeFailedCount(syncScopeKey: String): Flow<Int> = flowOf(0)
+    override suspend fun getReadyOperations(syncScopeKey: String, nowEpochMillis: Long, limit: Int) = emptyList<SyncOperationEntity>()
+    override suspend fun getById(syncScopeKey: String, operationId: String): SyncOperationEntity? = null
     override suspend fun insert(operation: SyncOperationEntity) {}
-    override suspend fun claimOperation(operationId: String, nowEpochMillis: Long): Int = 1
-    override suspend fun markFailed(operationId: String, lastError: String, errorClassification: String?, nextAttemptAtEpochMillis: Long, nowEpochMillis: Long): Int = 1
-    override suspend fun markConflict(operationId: String, lastError: String, nowEpochMillis: Long): Int = 1
-    override suspend fun recoverStaleInFlight(staleBeforeEpochMillis: Long, nowEpochMillis: Long, lastError: String): Int = 0
-    override suspend fun retryAllFailed(nowEpochMillis: Long): Int = 0
-    override suspend fun deleteCompleted(operationId: String): Int = 1
-    override suspend fun deleteForEntity(entityTypeCode: String, entityId: String): Int = 0
-    override suspend fun getSuccessors(predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
-    override suspend fun unblockSuccessor(operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 1
-    override suspend fun getActiveTailCandidates(entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
-    override suspend fun coalescePendingPayload(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 1
-    override suspend fun convertToPendingDelete(operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 1
+    override suspend fun claimOperation(syncScopeKey: String, operationId: String, nowEpochMillis: Long): Int = 1
+    override suspend fun markFailed(syncScopeKey: String, operationId: String, lastError: String, errorClassification: String?, nextAttemptAtEpochMillis: Long, nowEpochMillis: Long): Int = 1
+    override suspend fun markConflict(syncScopeKey: String, operationId: String, lastError: String, nowEpochMillis: Long): Int = 1
+    override suspend fun recoverStaleInFlight(syncScopeKey: String, staleBeforeEpochMillis: Long, nowEpochMillis: Long, lastError: String): Int = 0
+    override suspend fun retryAllFailed(syncScopeKey: String, nowEpochMillis: Long): Int = 0
+    override suspend fun deleteCompleted(syncScopeKey: String, operationId: String): Int = 1
+    override suspend fun deleteForEntity(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
+    override suspend fun getSuccessors(syncScopeKey: String, predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
+    override suspend fun unblockSuccessor(syncScopeKey: String, operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 1
+    override suspend fun getActiveTailCandidates(syncScopeKey: String, entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
+    override suspend fun coalescePendingPayload(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 1
+    override suspend fun convertToPendingDelete(syncScopeKey: String, operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 1
+    override fun observeLegacyQuarantineOperationCount(): Flow<Int> = flowOf(0)
+    override suspend fun getLegacyQuarantineOperationCount(): Int = 0
 }
 
 private class FakeBackgroundSyncScheduler : BackgroundSyncScheduler {

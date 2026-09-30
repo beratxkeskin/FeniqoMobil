@@ -52,7 +52,7 @@ class IncrementalRemoteSyncTest {
         val remote = FakeRemote(category = remoteCategory(version = 2))
 
         val result = IncrementalRemoteSync(remote, dao, FakeSyncStateDao(cursors)) { RECEIVED_AT }
-            .pullFor(EntityId(USER_ID))
+            .pullFor(EntityId(USER_ID), USER_SCOPE)
 
         assertEquals(STORED_UPDATED_AT, remote.receivedCategoryCursor?.updatedAt)
         assertEquals(STORED_ID, remote.receivedCategoryCursor?.entityId)
@@ -77,7 +77,7 @@ class IncrementalRemoteSyncTest {
         val remote = FakeRemote(category = remoteCategory(version = 2, workspaceId = workspaceId.value))
 
         val result = IncrementalRemoteSync(remote, dao, FakeSyncStateDao(cursors)) { RECEIVED_AT }
-            .pullWorkspaceFinance(workspaceId)
+            .pullWorkspaceFinance(workspaceId, USER_SCOPE)
 
         assertEquals(RemoteWorkspaceScope.Workspace(workspaceId), remote.receivedCategoryScope)
         assertEquals(STORED_UPDATED_AT, remote.receivedCategoryCursor?.updatedAt)
@@ -99,7 +99,7 @@ class IncrementalRemoteSyncTest {
             remoteSyncDao = dao,
             syncStateDao = FakeSyncStateDao(cursors),
             nowEpochMillisProvider = { RECEIVED_AT },
-        ).pullFor(EntityId(USER_ID))
+        ).pullFor(EntityId(USER_ID), USER_SCOPE)
 
         assertEquals(0, result.appliedCount)
         assertEquals(1, result.conflictCount)
@@ -120,7 +120,7 @@ class IncrementalRemoteSyncTest {
         val remote = FakeRemote(recurring = remoteRecurring(version = 2))
 
         val result = IncrementalRemoteSync(remote, dao, FakeSyncStateDao(cursors)) { RECEIVED_AT }
-            .pullFor(EntityId(USER_ID))
+            .pullFor(EntityId(USER_ID), USER_SCOPE)
 
         assertEquals(STORED_UPDATED_AT, remote.receivedRecurringCursor?.updatedAt)
         assertEquals(STORED_ID, remote.receivedRecurringCursor?.entityId)
@@ -143,7 +143,7 @@ class IncrementalRemoteSyncTest {
             remoteSyncDao = dao,
             syncStateDao = FakeSyncStateDao(cursors),
             nowEpochMillisProvider = { RECEIVED_AT },
-        ).pullFor(EntityId(USER_ID))
+        ).pullFor(EntityId(USER_ID), USER_SCOPE)
 
         assertEquals(0, result.appliedCount)
         assertEquals(1, result.conflictCount)
@@ -171,7 +171,7 @@ class IncrementalRemoteSyncTest {
             remoteSyncDao = dao,
             syncStateDao = FakeSyncStateDao(cursors),
             nowEpochMillisProvider = { RECEIVED_AT },
-        ).pullFor(EntityId(USER_ID))
+        ).pullFor(EntityId(USER_ID), USER_SCOPE)
 
         assertEquals(0, result.appliedCount)
         assertEquals(0, result.conflictCount)
@@ -188,7 +188,7 @@ class IncrementalRemoteSyncTest {
         val remote = FakeRemote(recurring = remoteRecurring(version = 4, deletedAt = REMOTE_UPDATED_AT))
 
         val result = IncrementalRemoteSync(remote, dao, FakeSyncStateDao(cursors)) { RECEIVED_AT }
-            .pullFor(EntityId(USER_ID))
+            .pullFor(EntityId(USER_ID), USER_SCOPE)
 
         assertEquals(1, result.appliedCount)
         assertEquals(0, result.conflictCount)
@@ -204,7 +204,7 @@ class IncrementalRemoteSyncTest {
         val remote = FakeRemote(subscription = remoteSubscription(version = 2))
 
         val result = IncrementalRemoteSync(remote, dao, FakeSyncStateDao(cursors)) { RECEIVED_AT }
-            .pullFor(EntityId(USER_ID))
+            .pullFor(EntityId(USER_ID), USER_SCOPE)
 
         assertEquals(STORED_UPDATED_AT, remote.receivedSubscriptionCursor?.updatedAt)
         assertEquals(STORED_ID, remote.receivedSubscriptionCursor?.entityId)
@@ -227,7 +227,7 @@ class IncrementalRemoteSyncTest {
             remoteSyncDao = dao,
             syncStateDao = FakeSyncStateDao(cursors),
             nowEpochMillisProvider = { RECEIVED_AT },
-        ).pullFor(EntityId(USER_ID))
+        ).pullFor(EntityId(USER_ID), USER_SCOPE)
 
         assertEquals(0, result.appliedCount)
         assertEquals(1, result.conflictCount)
@@ -255,7 +255,7 @@ class IncrementalRemoteSyncTest {
             remoteSyncDao = dao,
             syncStateDao = FakeSyncStateDao(cursors),
             nowEpochMillisProvider = { RECEIVED_AT },
-        ).pullFor(EntityId(USER_ID))
+        ).pullFor(EntityId(USER_ID), USER_SCOPE)
 
         assertEquals(0, result.appliedCount)
         assertEquals(0, result.conflictCount)
@@ -272,7 +272,7 @@ class IncrementalRemoteSyncTest {
         val remote = FakeRemote(subscription = remoteSubscription(version = 4, deletedAt = REMOTE_UPDATED_AT))
 
         val result = IncrementalRemoteSync(remote, dao, FakeSyncStateDao(cursors)) { RECEIVED_AT }
-            .pullFor(EntityId(USER_ID))
+            .pullFor(EntityId(USER_ID), USER_SCOPE)
 
         assertEquals(1, result.appliedCount)
         assertEquals(0, result.conflictCount)
@@ -289,7 +289,7 @@ class IncrementalRemoteSyncTest {
 
         assertFailsWith<IllegalArgumentException> {
             IncrementalRemoteSync(remote, dao, FakeSyncStateDao(cursors)) { RECEIVED_AT }
-                .pullFor(EntityId(USER_ID))
+                .pullFor(EntityId(USER_ID), USER_SCOPE)
         }
     }
 
@@ -302,10 +302,12 @@ class IncrementalRemoteSyncTest {
         var receivedCategoryScope: RemoteWorkspaceScope? = null
         var receivedRecurringCursor: com.feniqo.mobile.data.remote.core.RemoteSyncCursor? = null
         var receivedSubscriptionCursor: com.feniqo.mobile.data.remote.core.RemoteSyncCursor? = null
+        var remoteCallCount = 0
 
-        override suspend fun fetchProfile(userId: String): ProfileDto? = null
+        override suspend fun fetchProfile(userId: String): ProfileDto? { remoteCallCount++; return null }
 
         override suspend fun fetchCategories(query: CategoryRemoteQuery): RemotePage<CategoryDto> {
+            remoteCallCount++
             receivedCategoryCursor = query.updatedAfter
             receivedCategoryScope = query.workspaceScope
             val items = if (category != null && query.page.pageIndex == 0) listOf(category) else emptyList()
@@ -313,12 +315,14 @@ class IncrementalRemoteSyncTest {
         }
 
         override suspend fun fetchRecurringTransactions(query: RecurringTransactionRemoteQuery): RemotePage<RecurringTransactionDto> {
+            remoteCallCount++
             receivedRecurringCursor = query.updatedAfter
             val items = if (recurring != null && query.page.pageIndex == 0) listOf(recurring) else emptyList()
             return RemotePage(items, query.page, totalCount = items.size.toLong())
         }
 
         override suspend fun fetchSubscriptions(query: SubscriptionRemoteQuery): RemotePage<SubscriptionDto> {
+            remoteCallCount++
             receivedSubscriptionCursor = query.updatedAfter
             val items = if (subscription != null && query.page.pageIndex == 0) listOf(subscription) else emptyList()
             return RemotePage(items, query.page, totalCount = items.size.toLong())
@@ -349,19 +353,24 @@ class IncrementalRemoteSyncTest {
     private class FakeSyncStateDao(
         private val cursors: MutableMap<String, SyncCursorEntity>,
     ) : SyncStateDao {
-        override suspend fun getCursor(entityTypeCode: String): SyncCursorEntity? = cursors[entityTypeCode]
-        override suspend fun getWorkspaceMemberCursors(): List<SyncCursorEntity> =
+        var daoCallCount = 0
+        override suspend fun getCursor(syncScopeKey: String, entityTypeCode: String): SyncCursorEntity? { daoCallCount++; return cursors[entityTypeCode] }
+        override suspend fun getWorkspaceMemberCursors(syncScopeKey: String): List<SyncCursorEntity> =
             cursors.filterKeys { it.startsWith("WORKSPACE_MEMBER:") }.values.toList()
-        override suspend fun getConflict(entityId: String): SyncConflictEntity? = null
-        override suspend fun getConflict(entityTypeCode: String, entityId: String): SyncConflictEntity? = null
-        override suspend fun getConflictsByEntityType(entityTypeCode: String): List<SyncConflictEntity> = emptyList()
-        override suspend fun getAllConflicts(): List<SyncConflictEntity> = emptyList()
+        override suspend fun getConflict(syncScopeKey: String, entityId: String): SyncConflictEntity? = null
+        override suspend fun getConflict(syncScopeKey: String, entityTypeCode: String, entityId: String): SyncConflictEntity? = null
+        override suspend fun getConflictsByEntityType(syncScopeKey: String, entityTypeCode: String): List<SyncConflictEntity> = emptyList()
+        override suspend fun getAllConflicts(syncScopeKey: String): List<SyncConflictEntity> = emptyList()
         override suspend fun upsertCursor(cursor: SyncCursorEntity) { cursors[cursor.entityTypeCode] = cursor }
-        override fun observeConflicts(): Flow<List<SyncConflictEntity>> = flowOf(emptyList())
-        override fun observeConflictCount(): Flow<Int> = flowOf(0)
-        override suspend fun getConflictCount(): Int = 0
+        override fun observeConflicts(syncScopeKey: String): Flow<List<SyncConflictEntity>> = flowOf(emptyList())
+        override fun observeConflictCount(syncScopeKey: String): Flow<Int> = flowOf(0)
+        override suspend fun getConflictCount(syncScopeKey: String): Int = 0
         override suspend fun upsertConflict(conflict: SyncConflictEntity) = Unit
-        override suspend fun deleteConflict(entityTypeCode: String, entityId: String): Int = 0
+        override fun observeLegacyQuarantineCursorCount(): Flow<Int> = flowOf(0)
+        override suspend fun getLegacyQuarantineCursorCount(): Int = 0
+        override fun observeLegacyQuarantineConflictCount(): Flow<Int> = flowOf(0)
+        override suspend fun getLegacyQuarantineConflictCount(): Int = 0
+        override suspend fun deleteConflict(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
         override fun observeLastSuccessfulSyncAt(userId: String): Flow<Long?> = flowOf(null)
         override suspend fun getUserState(userId: String): com.feniqo.mobile.data.local.entity.SyncUserStateEntity? = null
         override suspend fun upsertUserState(state: com.feniqo.mobile.data.local.entity.SyncUserStateEntity) = Unit
@@ -374,6 +383,7 @@ class IncrementalRemoteSyncTest {
         private val cursors: MutableMap<String, SyncCursorEntity>,
     ) : RemoteSyncDao {
         var conflict: SyncConflictEntity? = null
+        var daoCallCount = 0
 
         override suspend fun getProfileRow(id: String): UserProfileEntity? = null
         override suspend fun getCategoryRow(id: String): CategoryEntity? = category?.takeIf { it.id == id }
@@ -388,9 +398,11 @@ class IncrementalRemoteSyncTest {
         override suspend fun getWorkspaceMemberRow(workspaceId: String, userId: String): com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity? = null
         override suspend fun getWorkspaceMemberRows(workspaceId: String): List<com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity> = emptyList()
         override suspend fun getAllKnownLiveWorkspaceIds(): List<String> = emptyList()
-        override suspend fun getFirstOutboxOperationId(entityTypeCode: String, entityId: String): String? =
-            if (category?.id == entityId || recurring?.id == entityId || subscription?.id == entityId) "operation-1" else null
-        override suspend fun countOutboxRows(entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun getFirstOutboxOperationId(syncScopeKey: String, entityTypeCode: String, entityId: String): String? {
+            daoCallCount++
+            return if (category?.id == entityId || recurring?.id == entityId || subscription?.id == entityId) "operation-1" else null
+        }
+        override suspend fun countOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
         override suspend fun upsertProfileRow(entity: UserProfileEntity) = Unit
         override suspend fun upsertWorkspaceRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceEntity>) = Unit
         override suspend fun upsertWorkspaceMemberRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity>) = Unit
@@ -407,7 +419,7 @@ class IncrementalRemoteSyncTest {
         override suspend fun upsertCursorRows(cursors: List<SyncCursorEntity>) {
             cursors.forEach { this.cursors[it.entityTypeCode] = it }
         }
-        override suspend fun deleteConflictRow(entityTypeCode: String, entityId: String): Int {
+        override suspend fun deleteConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): Int {
             conflict = null
             return 1
         }
@@ -429,21 +441,21 @@ class IncrementalRemoteSyncTest {
         override suspend fun markGoalContributionConflict(entityId: String, error: String): Int = 0
         override suspend fun markDebtConflict(entityId: String, error: String): Int = 0
         override suspend fun markDebtPaymentConflict(entityId: String, error: String): Int = 0
-        override suspend fun deleteOutboxRows(entityTypeCode: String, entityId: String): Int = 0
-        override suspend fun deleteOtherOutboxRows(entityTypeCode: String, entityId: String, keptOperationId: String): Int = 0
-        override suspend fun resetConflictOperation(operationId: String, operationTypeCode: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun deleteOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun deleteOtherOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String, keptOperationId: String): Int = 0
+        override suspend fun resetConflictOperation(syncScopeKey: String, operationId: String, operationTypeCode: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseProfileForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseCategoryForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseRecurringTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseSubscriptionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getActiveWorkspaceTailOperation(workspaceId: String): com.feniqo.mobile.data.local.entity.SyncOperationEntity? = null
+        override suspend fun getActiveWorkspaceTailOperation(syncScopeKey: String, workspaceId: String): com.feniqo.mobile.data.local.entity.SyncOperationEntity? = null
         override suspend fun markWorkspaceConflict(entityId: String, error: String): Int = 0
-        override suspend fun getAllWorkspaceOperations(workspaceId: String): List<com.feniqo.mobile.data.local.entity.SyncOperationEntity> = emptyList()
-        override suspend fun deleteSpecificWorkspaceOperations(workspaceId: String, operationIds: List<String>): Int = 0
+        override suspend fun getAllWorkspaceOperations(syncScopeKey: String, workspaceId: String): List<com.feniqo.mobile.data.local.entity.SyncOperationEntity> = emptyList()
+        override suspend fun deleteSpecificWorkspaceOperations(syncScopeKey: String, workspaceId: String, operationIds: List<String>): Int = 0
         override suspend fun rebaseWorkspaceForRetry(workspaceId: String, syncStatus: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun resetWorkspaceConflictOperation(operationId: String, operationTypeCode: String, payloadJson: String?, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getConflictRow(entityTypeCode: String, entityId: String): SyncConflictEntity? = null
+        override suspend fun resetWorkspaceConflictOperation(syncScopeKey: String, operationId: String, operationTypeCode: String, payloadJson: String?, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun getConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): SyncConflictEntity? = null
     }
 
 
@@ -453,6 +465,7 @@ class IncrementalRemoteSyncTest {
         const val SUBSCRIPTION = "SUBSCRIPTION"
         const val CATEGORY_ID = "category-1"
         const val USER_ID = "20000000-0000-0000-0000-000000000001"
+        val USER_SCOPE = "USER:$USER_ID"
         const val STORED_ID = "10000000-0000-0000-0000-000000000001"
         const val REMOTE_ID = "10000000-0000-0000-0000-000000000002"
         const val STORED_UPDATED_AT = "2026-08-14T09:00:00Z"
@@ -461,18 +474,21 @@ class IncrementalRemoteSyncTest {
         const val RECEIVED_AT = 1_765_707_200_000L
 
         fun storedCategoryCursor() = SyncCursorEntity(
+            syncScopeKey = USER_SCOPE,
             entityTypeCode = CATEGORY,
             updatedAtEpochMillis = Instant.parse(STORED_UPDATED_AT).toEpochMilliseconds(),
             entityId = STORED_ID,
         )
 
         fun storedRecurringCursor() = SyncCursorEntity(
+            syncScopeKey = USER_SCOPE,
             entityTypeCode = RECURRING_TRANSACTION,
             updatedAtEpochMillis = Instant.parse(STORED_UPDATED_AT).toEpochMilliseconds(),
             entityId = STORED_ID,
         )
 
         fun storedSubscriptionCursor() = SyncCursorEntity(
+            syncScopeKey = USER_SCOPE,
             entityTypeCode = SUBSCRIPTION,
             updatedAtEpochMillis = Instant.parse(STORED_UPDATED_AT).toEpochMilliseconds(),
             entityId = STORED_ID,
@@ -603,5 +619,60 @@ class IncrementalRemoteSyncTest {
                 lastSyncError = null,
             ),
         )
+    }
+
+    @Test
+    fun pullFor_rejects_mismatched_userId_and_scope_before_remote_or_dao_access() = runTest {
+        val remote = FakeRemote()
+        val syncDao = RecordingRemoteSyncDao(cursors = mutableMapOf())
+        val stateDao = FakeSyncStateDao(mutableMapOf())
+        val sync = IncrementalRemoteSync(remote, syncDao, stateDao) { RECEIVED_AT }
+
+        val userA = "11111111-1111-4111-8111-111111111111"
+        val scopeB = "USER:22222222-2222-4222-8222-222222222222"
+
+        assertFailsWith<IllegalArgumentException> {
+            sync.pullFor(EntityId(userA), scopeB)
+        }
+
+        assertEquals(0, remote.remoteCallCount)
+        assertEquals(0, syncDao.daoCallCount)
+        assertEquals(0, stateDao.daoCallCount)
+    }
+
+    @Test
+    fun pullFor_rejects_invalid_userId_without_constructing_malformed_scope() = runTest {
+        val remote = FakeRemote()
+        val syncDao = RecordingRemoteSyncDao(cursors = mutableMapOf())
+        val stateDao = FakeSyncStateDao(mutableMapOf())
+        val sync = IncrementalRemoteSync(remote, syncDao, stateDao) { RECEIVED_AT }
+
+        assertFailsWith<IllegalArgumentException> {
+            sync.pullFor(EntityId("not-a-uuid"), "USER:not-a-uuid")
+        }
+
+        assertEquals(0, remote.remoteCallCount)
+        assertEquals(0, syncDao.daoCallCount)
+        assertEquals(0, stateDao.daoCallCount)
+    }
+
+    @Test
+    fun pullWorkspaceFinance_rejects_legacy_or_noncanonical_scope_before_remote_access() = runTest {
+        val remote = FakeRemote()
+        val syncDao = RecordingRemoteSyncDao(cursors = mutableMapOf())
+        val stateDao = FakeSyncStateDao(mutableMapOf())
+        val sync = IncrementalRemoteSync(remote, syncDao, stateDao) { RECEIVED_AT }
+        val wsId = EntityId("550e8400-e29b-41d4-a716-446655440000")
+
+        assertFailsWith<IllegalArgumentException> {
+            sync.pullWorkspaceFinance(wsId, "LEGACY_UNRESOLVED")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            sync.pullWorkspaceFinance(wsId, "USER:not-a-uuid")
+        }
+
+        assertEquals(0, remote.remoteCallCount)
+        assertEquals(0, syncDao.daoCallCount)
+        assertEquals(0, stateDao.daoCallCount)
     }
 }

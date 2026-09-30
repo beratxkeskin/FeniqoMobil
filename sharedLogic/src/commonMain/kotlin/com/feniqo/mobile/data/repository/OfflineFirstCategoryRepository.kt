@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
 import com.feniqo.mobile.data.remote.mapper.toDto
+import com.feniqo.mobile.data.sync.SyncScopeKey
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -111,8 +112,10 @@ class OfflineFirstCategoryRepository(
             val entity = scopedCategory.toEntity(sync)
             val dto = scopedCategory.toDto().copy(slug = entity.slug)
             val payloadJson = json.encodeToString(dto)
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
 
             offlineWriteQueue.enqueueCategoryV2(
+                syncScopeKey = syncScopeKey,
                 entity = entity,
                 type = OutboxOperationType.CREATE,
                 payloadJson = payloadJson,
@@ -156,8 +159,10 @@ class OfflineFirstCategoryRepository(
             } else {
                 OutboxOperationType.UPDATE
             }
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
 
             offlineWriteQueue.enqueueCategoryV2(
+                syncScopeKey = syncScopeKey,
                 entity = updatedEntity,
                 type = outboxType,
                 payloadJson = payloadJson,
@@ -190,8 +195,10 @@ class OfflineFirstCategoryRepository(
             val deletedEntity = existing.copy(sync = deletedSync)
             val dto = existing.toDomain().toDto().copy(slug = existing.slug)
             val payloadJson = json.encodeToString(dto)
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
 
             offlineWriteQueue.enqueueCategoryV2(
+                syncScopeKey = syncScopeKey,
                 entity = deletedEntity,
                 type = OutboxOperationType.DELETE,
                 payloadJson = payloadJson,

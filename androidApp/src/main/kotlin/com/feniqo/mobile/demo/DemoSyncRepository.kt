@@ -10,9 +10,18 @@ import kotlinx.coroutines.flow.map
 
 /** Demo yazıları Room/outbox'ta kalır; başarıyla buluta gönderilmiş gibi gösterilmez. */
 class DemoSyncRepository(private val queue: OfflineWriteQueue) : SyncRepository {
-    override fun observeOverview(): Flow<SyncOverview> = queue.observePendingCount().map {
-        SyncOverview(SyncPhase.OFFLINE, it, 0, 0, null, null)
-    }
+    override fun observeOverview(): Flow<SyncOverview> =
+        queue.observePendingCount(com.feniqo.mobile.data.sync.SyncScopeKey.user(DemoAuthRepository.USER_ID.value).rawValue).map {
+            SyncOverview(
+                phase = SyncPhase.OFFLINE,
+                pendingOperationCount = it,
+                failedOperationCount = 0,
+                conflictCount = 0,
+                lastSuccessfulSyncAt = null,
+                lastError = null,
+                hasLegacyQuarantinedData = false,
+            )
+        }
     override fun observeConflicts(): Flow<List<SyncConflict>> = flowOf(emptyList())
     override suspend fun requestSync(): RepositoryResult<Unit> = unavailable()
     override suspend fun retryFailedOperations(): RepositoryResult<Unit> = unavailable()

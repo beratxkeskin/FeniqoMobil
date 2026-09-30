@@ -7,6 +7,7 @@ import androidx.room.Upsert
 import com.feniqo.mobile.data.local.entity.AssetEntity
 import com.feniqo.mobile.data.local.entity.SyncConflictEntity
 import com.feniqo.mobile.data.local.entity.SyncCursorEntity
+import com.feniqo.mobile.data.sync.SyncScopeKey
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -30,8 +31,8 @@ interface AssetDao {
     @Upsert
     suspend fun upsert(asset: AssetEntity)
 
-    @Query("DELETE FROM sync_conflicts WHERE entity_type_code = 'ASSET' AND entity_id = :id")
-    suspend fun deleteConflict(id: String): Int
+    @Query("DELETE FROM sync_conflicts WHERE sync_scope_key = :syncScopeKey AND entity_type_code = 'ASSET' AND entity_id = :id")
+    suspend fun deleteConflict(syncScopeKey: String, id: String): Int
 
     @Upsert
     suspend fun upsertConflict(conflict: SyncConflictEntity)
@@ -43,21 +44,38 @@ interface AssetDao {
     suspend fun markConflict(id: String): Int
 
     @Transaction
-    suspend fun applyPull(asset: AssetEntity, cursor: SyncCursorEntity) {
+    suspend fun applyPull(syncScopeKey: String, asset: AssetEntity, cursor: SyncCursorEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(cursor.syncScopeKey == syncScopeKey) {
+            "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+        }
         upsert(asset)
-        deleteConflict(asset.id)
+        deleteConflict(syncScopeKey, asset.id)
         upsertCursor(cursor)
     }
 
     @Transaction
-    suspend fun recordPullConflict(conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
+    suspend fun recordPullConflict(syncScopeKey: String, conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        require(conflict.syncScopeKey == syncScopeKey) {
+            "Conflict scope mismatch: conflict=${conflict.syncScopeKey}, actor=$syncScopeKey"
+        }
+        require(cursor.syncScopeKey == syncScopeKey) {
+            "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+        }
         upsertConflict(conflict)
         check(markConflict(conflict.entityId) == 1)
         upsertCursor(cursor)
     }
 
     @Transaction
-    suspend fun applyInitialSnapshot(assets: List<AssetEntity>, cursor: SyncCursorEntity?) {
+    suspend fun applyInitialSnapshot(syncScopeKey: String, assets: List<AssetEntity>, cursor: SyncCursorEntity?) {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        if (cursor != null) {
+            require(cursor.syncScopeKey == syncScopeKey) {
+                "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
+            }
+        }
         assets.forEach { upsert(it) }
         if (cursor != null) upsertCursor(cursor)
     }

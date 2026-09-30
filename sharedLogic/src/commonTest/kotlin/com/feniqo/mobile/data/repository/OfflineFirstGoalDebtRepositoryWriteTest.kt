@@ -164,16 +164,16 @@ class OfflineFirstGoalDebtRepositoryWriteTest {
         override suspend fun deleteCategoryRow(id: String): Int = 0
         override suspend fun deleteBudgetRow(id: String): Int = 0
         override suspend fun deleteTransactionRow(id: String): Int = 0
-        override suspend fun deleteOutboxRow(operationId: String): Int = 0
-        override suspend fun getOutboxById(operationId: String): SyncOperationEntity? = null
-        override suspend fun getSuccessors(predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun getActiveTailCandidates(entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun coalescePendingPayload(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
-        override suspend fun convertToPendingDelete(operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 0
-        override suspend fun convertPendingDeleteToUpdate(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
-        override suspend fun unblockSuccessor(operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun deleteOutboxRow(syncScopeKey: String, operationId: String): Int = 0
+        override suspend fun getOutboxById(syncScopeKey: String, operationId: String): SyncOperationEntity? = null
+        override suspend fun getSuccessors(syncScopeKey: String, predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun getActiveTailCandidates(syncScopeKey: String, entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun coalescePendingPayload(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
+        override suspend fun convertToPendingDelete(syncScopeKey: String, operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 0
+        override suspend fun convertPendingDeleteToUpdate(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
+        override suspend fun unblockSuccessor(syncScopeKey: String, operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun insertOutboxRow(operation: SyncOperationEntity) = Unit
-        override suspend fun deleteConflictRow(entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun deleteConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
         override suspend fun rebaseProfileVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseCategoryVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseTransactionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
@@ -227,22 +227,23 @@ class OfflineFirstGoalDebtRepositoryWriteTest {
         override suspend fun markDebtSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
         override suspend fun tombstoneGoalContributionsForDeletedGoal(goalId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int = 0
         override suspend fun tombstoneDebtPaymentsForDeletedDebt(debtId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getActiveGoalAggregateTailCandidates(goalId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun getActiveDebtAggregateTailCandidates(debtId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun countPendingGoalAggregateOperations(goalId: String, operationId: String): Int = 0
-        override suspend fun countPendingDebtAggregateOperations(debtId: String, operationId: String): Int = 0
+        override suspend fun getActiveGoalAggregateTailCandidates(syncScopeKey: String, goalId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun getActiveDebtAggregateTailCandidates(syncScopeKey: String, debtId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun countPendingGoalAggregateOperations(syncScopeKey: String, goalId: String, operationId: String): Int = 0
+        override suspend fun countPendingDebtAggregateOperations(syncScopeKey: String, debtId: String, operationId: String): Int = 0
         override suspend fun setGoalSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setGoalContributionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setDebtSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setDebtPaymentSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun upsertConflictRow(entity: SyncConflictEntity) = Unit
-        override suspend fun setOutboxStatusConflict(operationId: String, nowEpochMillis: Long): Int = 1
+        override suspend fun setOutboxStatusConflict(syncScopeKey: String, operationId: String, nowEpochMillis: Long): Int = 1
         override suspend fun setProfileSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setCategorySyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setTransactionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setBudgetSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
 
         override suspend fun mutateGoalV2(
+            syncScopeKey: String,
             entity: GoalEntity,
             type: OutboxOperationType,
             payloadJson: String,
@@ -257,6 +258,7 @@ class OfflineFirstGoalDebtRepositoryWriteTest {
         }
 
         override suspend fun mutateGoalContributionV2(
+            syncScopeKey: String,
             entity: GoalContributionEntity,
             updatedGoal: GoalEntity,
             payloadJson: String,
@@ -271,6 +273,7 @@ class OfflineFirstGoalDebtRepositoryWriteTest {
         }
 
         override suspend fun mutateDebtV2(
+            syncScopeKey: String,
             entity: DebtEntity,
             type: OutboxOperationType,
             payloadJson: String,
@@ -285,6 +288,7 @@ class OfflineFirstGoalDebtRepositoryWriteTest {
         }
 
         override suspend fun mutateDebtPaymentV2(
+            syncScopeKey: String,
             entity: DebtPaymentEntity,
             updatedDebt: DebtEntity,
             payloadJson: String,
@@ -300,23 +304,25 @@ class OfflineFirstGoalDebtRepositoryWriteTest {
     }
 
     private class FakeSyncOperationDao : SyncOperationDao {
-        override fun observePendingCount(): Flow<Int> = flowOf(0)
-        override fun observeFailedCount(): Flow<Int> = flowOf(0)
-        override suspend fun getReadyOperations(nowEpochMillis: Long, limit: Int) = emptyList<SyncOperationEntity>()
-        override suspend fun getById(operationId: String): SyncOperationEntity? = null
+        override fun observePendingCount(syncScopeKey: String): Flow<Int> = flowOf(0)
+        override fun observeFailedCount(syncScopeKey: String): Flow<Int> = flowOf(0)
+        override suspend fun getReadyOperations(syncScopeKey: String, nowEpochMillis: Long, limit: Int) = emptyList<SyncOperationEntity>()
+        override suspend fun getById(syncScopeKey: String, operationId: String): SyncOperationEntity? = null
         override suspend fun insert(operation: SyncOperationEntity) {}
-        override suspend fun claimOperation(operationId: String, nowEpochMillis: Long): Int = 1
-        override suspend fun markFailed(operationId: String, lastError: String, errorClassification: String?, nextAttemptAtEpochMillis: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun markConflict(operationId: String, lastError: String, nowEpochMillis: Long): Int = 1
-        override suspend fun recoverStaleInFlight(staleBeforeEpochMillis: Long, nowEpochMillis: Long, lastError: String): Int = 0
-        override suspend fun retryAllFailed(nowEpochMillis: Long): Int = 0
-        override suspend fun deleteCompleted(operationId: String): Int = 1
-        override suspend fun deleteForEntity(entityTypeCode: String, entityId: String): Int = 0
-        override suspend fun getSuccessors(predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun unblockSuccessor(operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun getActiveTailCandidates(entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun coalescePendingPayload(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 1
-        override suspend fun convertToPendingDelete(operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 1
+        override suspend fun claimOperation(syncScopeKey: String, operationId: String, nowEpochMillis: Long): Int = 1
+        override suspend fun markFailed(syncScopeKey: String, operationId: String, lastError: String, errorClassification: String?, nextAttemptAtEpochMillis: Long, nowEpochMillis: Long): Int = 1
+        override suspend fun markConflict(syncScopeKey: String, operationId: String, lastError: String, nowEpochMillis: Long): Int = 1
+        override suspend fun recoverStaleInFlight(syncScopeKey: String, staleBeforeEpochMillis: Long, nowEpochMillis: Long, lastError: String): Int = 0
+        override suspend fun retryAllFailed(syncScopeKey: String, nowEpochMillis: Long): Int = 0
+        override suspend fun deleteCompleted(syncScopeKey: String, operationId: String): Int = 1
+        override suspend fun deleteForEntity(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun getSuccessors(syncScopeKey: String, predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun unblockSuccessor(syncScopeKey: String, operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 1
+        override suspend fun getActiveTailCandidates(syncScopeKey: String, entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun coalescePendingPayload(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 1
+        override suspend fun convertToPendingDelete(syncScopeKey: String, operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 1
+        override fun observeLegacyQuarantineOperationCount(): Flow<Int> = flowOf(0)
+        override suspend fun getLegacyQuarantineOperationCount(): Int = 0
     }
 
     private val defaultSync = SyncMetadata(
@@ -330,7 +336,7 @@ class OfflineFirstGoalDebtRepositoryWriteTest {
     )
 
     private val testSession = AuthSession(
-        userId = EntityId("user-1"),
+        userId = EntityId("11111111-1111-4111-8111-111111111111"),
         email = "user@example.com",
         expiresAt = Instant.fromEpochMilliseconds(2000L),
     )
@@ -373,7 +379,7 @@ class OfflineFirstGoalDebtRepositoryWriteTest {
         val dao = FakeGoalDao()
         dao.goals["g-1"] = GoalEntity(
             id = "g-1",
-            ownerId = "user-1",
+            ownerId = "11111111-1111-4111-8111-111111111111",
             workspaceId = null,
             name = "Yeni Araba",
             targetAmountMinor = 300_000L,
@@ -549,7 +555,7 @@ class OfflineFirstGoalDebtRepositoryWriteTest {
         // 3. Başka workspace'e (ws-2) ait goal'e katkı eklemeyi dene -> fail-closed
         goalDao.goals["g-ws-2"] = GoalEntity(
             id = "g-ws-2",
-            ownerId = "user-1",
+            ownerId = "11111111-1111-4111-8111-111111111111",
             workspaceId = "ws-2",
             name = "Başka Workspace Hedefi",
             targetAmountMinor = 500_000L,
@@ -632,7 +638,7 @@ class OfflineFirstGoalDebtRepositoryWriteTest {
         // 3. Başka workspace'e (ws-2) ait debt'e ödeme eklemeyi dene -> fail-closed
         debtDao.debts["d-ws-2"] = DebtEntity(
             id = "d-ws-2",
-            ownerId = "user-1",
+            ownerId = "11111111-1111-4111-8111-111111111111",
             workspaceId = "ws-2",
             title = "Başka Borç",
             amountMinor = 1_000_000L,

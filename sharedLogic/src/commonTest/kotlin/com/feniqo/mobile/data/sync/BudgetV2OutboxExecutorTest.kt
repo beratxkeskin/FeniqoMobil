@@ -96,7 +96,7 @@ class BudgetV2OutboxExecutorTest {
         val writer = RecordingBudgetWriter()
         val executor = V2OutboxOperationExecutor(writer) { 1000L }
 
-        val snapshotJson = budgetSnapshotJson(id = "different-budget-id", version = null)
+        val snapshotJson = budgetSnapshotJson(id = "99999999-9999-4999-8999-999999999999", version = null)
         val op = budgetOperation(
             operationType = "CREATE",
             baseVersion = null,
@@ -215,9 +215,9 @@ class BudgetV2OutboxExecutorTest {
 
     private companion object {
         const val OP_ID = "0123456789abcdef0123456789abcdef"
-        const val BUDGET_ID = "bgt-12345678-abcd-1234-abcd-123456789abc"
+        const val BUDGET_ID = "11111111-1111-4111-8111-111111111111"
         const val USER_ID = "fdbd49aa-640a-4ec5-9f1a-f348a949034c"
-        const val CATEGORY_ID = "cat-12345678-abcd-1234-abcd-123456789abc"
+        const val CATEGORY_ID = "22222222-2222-4222-8222-222222222222"
         const val MONTH = "2026-08"
         const val CREATED_AT = "2026-08-25T17:00:00Z"
 
@@ -258,6 +258,7 @@ class BudgetV2OutboxExecutorTest {
             baseVersion: Long? = null,
             payloadJson: String? = null,
         ) = SyncOperationEntity(
+            syncScopeKey = "USER:test-user",
             operationId = OP_ID,
             entityTypeCode = "BUDGET",
             entityId = BUDGET_ID,

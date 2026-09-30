@@ -97,11 +97,11 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun observeTransactions_switchesOwnerWhenSessionChanges() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val dao = FakeTransactionDao(
             listOf(
-                sampleTransactionEntity(id = "t1", ownerId = "user-1"),
-                sampleTransactionEntity(id = "t2", ownerId = "user-2"),
+                sampleTransactionEntity(id = "t1", ownerId = "11111111-1111-4111-8111-111111111111"),
+                sampleTransactionEntity(id = "t2", ownerId = "22222222-2222-4222-8222-222222222222"),
             ),
         )
         val queue = FakeOfflineWriteQueueHolder()
@@ -112,7 +112,7 @@ class OfflineFirstTransactionRepositoryTest {
         assertEquals("t1", list1.first().id.value)
 
         // Session changes to user-2
-        authRepo.sessionFlow.value = AuthSession(EntityId("user-2"), "u2@feniqo.com", NOW)
+        authRepo.sessionFlow.value = AuthSession(EntityId("22222222-2222-4222-8222-222222222222"), "u2@feniqo.com", NOW)
         val list2 = repository.observeTransactions().first()
         assertEquals(1, list2.size)
         assertEquals("t2", list2.first().id.value)
@@ -120,9 +120,9 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun observeTransaction_doesNotExposeOtherOwnerData() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val dao = FakeTransactionDao(
-            listOf(sampleTransactionEntity(id = "t2", ownerId = "user-2")),
+            listOf(sampleTransactionEntity(id = "t2", ownerId = "22222222-2222-4222-8222-222222222222")),
         )
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(authRepo, dao, queue.queue)
@@ -145,7 +145,7 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun observeTransactions_passesAllFilterParametersToDao() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val dao = FakeTransactionDao()
         val queue = FakeOfflineWriteQueueHolder()
         val scope = TestActiveWorkspaceScope(EntityId("ws-1"))
@@ -162,7 +162,7 @@ class OfflineFirstTransactionRepositoryTest {
 
         repository.observeTransactions(filter).first()
 
-        assertEquals("user-1", dao.lastOwnerId)
+        assertEquals("11111111-1111-4111-8111-111111111111", dao.lastOwnerId)
         assertEquals("ws-1", dao.lastWorkspaceId)
         assertEquals("2026-08-01", dao.lastStartDate)
         assertEquals("2026-08-10", dao.lastEndDate)
@@ -174,12 +174,12 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun observeTransactions_inSharedWorkspace_includesOtherMembersRows() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val dao = FakeTransactionDao(
             listOf(
-                sampleTransactionEntity(id = "mine", ownerId = "user-1", workspaceId = "ws-1"),
-                sampleTransactionEntity(id = "member", ownerId = "user-2", workspaceId = "ws-1"),
-                sampleTransactionEntity(id = "other-space", ownerId = "user-2", workspaceId = "ws-2"),
+                sampleTransactionEntity(id = "mine", ownerId = "11111111-1111-4111-8111-111111111111", workspaceId = "ws-1"),
+                sampleTransactionEntity(id = "member", ownerId = "22222222-2222-4222-8222-222222222222", workspaceId = "ws-1"),
+                sampleTransactionEntity(id = "other-space", ownerId = "22222222-2222-4222-8222-222222222222", workspaceId = "ws-2"),
             ),
         )
         val repository = createRepository(
@@ -196,7 +196,7 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun create_enqueuesPendingCreateWithVersion0AndNullBaseVersion() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val dao = FakeTransactionDao()
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(
@@ -206,7 +206,7 @@ class OfflineFirstTransactionRepositoryTest {
             nowEpochMillisProvider = { 10_000L },
         )
 
-        val trx = sampleTransaction(id = "t-new", ownerId = "user-1")
+        val trx = sampleTransaction(id = "t-new", ownerId = "11111111-1111-4111-8111-111111111111")
         val result = repository.create(trx)
 
         assertIs<RepositoryResult.Success<EntityId>>(result)
@@ -223,7 +223,7 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun update_preservesRemoteVersionAndSetsPendingUpdate() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val existingSync = SyncMetadata(
             syncStatus = SyncStatus.SYNCED.name,
             updatedAtEpochMillis = 5_000L,
@@ -233,7 +233,7 @@ class OfflineFirstTransactionRepositoryTest {
             baseVersion = 4L,
             lastSyncError = null,
         )
-        val existingEntity = sampleTransactionEntity(id = "t-remote", ownerId = "user-1", sync = existingSync)
+        val existingEntity = sampleTransactionEntity(id = "t-remote", ownerId = "11111111-1111-4111-8111-111111111111", sync = existingSync)
         val dao = FakeTransactionDao(listOf(existingEntity))
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(
@@ -243,7 +243,7 @@ class OfflineFirstTransactionRepositoryTest {
             nowEpochMillisProvider = { 15_000L },
         )
 
-        val updatedTrx = sampleTransaction(id = "t-remote", ownerId = "user-1", description = "Yeni Açıklama")
+        val updatedTrx = sampleTransaction(id = "t-remote", ownerId = "11111111-1111-4111-8111-111111111111", description = "Yeni Açıklama")
         val result = repository.update(updatedTrx)
 
         assertIs<RepositoryResult.Success<Unit>>(result)
@@ -259,9 +259,9 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun update_onUnsyncedRecord_preservesPendingCreateAndNullBaseVersion() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val existingSync = newSyncMetadata(5_000L) // PENDING_CREATE, version=0, baseVersion=null
-        val existingEntity = sampleTransactionEntity(id = "t-local", ownerId = "user-1", sync = existingSync)
+        val existingEntity = sampleTransactionEntity(id = "t-local", ownerId = "11111111-1111-4111-8111-111111111111", sync = existingSync)
         val dao = FakeTransactionDao(listOf(existingEntity))
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(
@@ -271,7 +271,7 @@ class OfflineFirstTransactionRepositoryTest {
             nowEpochMillisProvider = { 15_000L },
         )
 
-        val updatedTrx = sampleTransaction(id = "t-local", ownerId = "user-1", description = "Düzenlenmiş")
+        val updatedTrx = sampleTransaction(id = "t-local", ownerId = "11111111-1111-4111-8111-111111111111", description = "Düzenlenmiş")
         val result = repository.update(updatedTrx)
 
         assertIs<RepositoryResult.Success<Unit>>(result)
@@ -284,7 +284,7 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun softDelete_setsPendingDeleteAndDeletedAtTimestamp() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val existingSync = SyncMetadata(
             syncStatus = SyncStatus.SYNCED.name,
             updatedAtEpochMillis = 5_000L,
@@ -294,7 +294,7 @@ class OfflineFirstTransactionRepositoryTest {
             baseVersion = 3L,
             lastSyncError = null,
         )
-        val existingEntity = sampleTransactionEntity(id = "t-del", ownerId = "user-1", sync = existingSync)
+        val existingEntity = sampleTransactionEntity(id = "t-del", ownerId = "11111111-1111-4111-8111-111111111111", sync = existingSync)
         val dao = FakeTransactionDao(listOf(existingEntity))
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(
@@ -317,11 +317,11 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun create_sharedExpense_withValidSplit_enqueuesOutboxPayloadWithSplitFields() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val dao = FakeTransactionDao()
         val queue = FakeOfflineWriteQueueHolder()
         val wsDao = FakeWorkspaceDao(
-            activeMemberUserIdsByWorkspace = mapOf("ws-1" to listOf("user-1", "user-2", "user-3")),
+            activeMemberUserIdsByWorkspace = mapOf("ws-1" to listOf("11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222", "33333333-3333-4333-8333-333333333333")),
         )
         val repository = createRepository(
             authRepo,
@@ -334,7 +334,7 @@ class OfflineFirstTransactionRepositoryTest {
 
         val trx = Transaction(
             id = EntityId("t-shared"),
-            ownerId = EntityId("user-1"),
+            ownerId = EntityId("11111111-1111-4111-8111-111111111111"),
             workspaceId = null, // scoped by activeWorkspaceScope to ws-1
             amount = Money(3000L, Currency.TRY),
             type = TransactionType.EXPENSE,
@@ -345,8 +345,8 @@ class OfflineFirstTransactionRepositoryTest {
             receiptPath = null,
             installment = null,
             createdAt = NOW,
-            paidByUserId = EntityId("user-2"),
-            participantUserIds = listOf(EntityId("user-1"), EntityId("user-2"), EntityId("user-3")),
+            paidByUserId = EntityId("22222222-2222-4222-8222-222222222222"),
+            participantUserIds = listOf(EntityId("11111111-1111-4111-8111-111111111111"), EntityId("22222222-2222-4222-8222-222222222222"), EntityId("33333333-3333-4333-8333-333333333333")),
         )
 
         val result = repository.create(trx)
@@ -355,21 +355,21 @@ class OfflineFirstTransactionRepositoryTest {
         val enqueued = queue.lastEnqueuedTransaction
         assertEquals("t-shared", enqueued?.id)
         assertEquals("ws-1", enqueued?.workspaceId)
-        assertEquals("user-2", enqueued?.paidByUserId)
-        assertEquals("""["user-1","user-2","user-3"]""", enqueued?.participantUserIdsJson)
+        assertEquals("22222222-2222-4222-8222-222222222222", enqueued?.paidByUserId)
+        assertEquals("""["11111111-1111-4111-8111-111111111111","22222222-2222-4222-8222-222222222222","33333333-3333-4333-8333-333333333333"]""", enqueued?.participantUserIdsJson)
 
         val payloadJson = queue.lastInsertedOperation?.payloadJson
-        assertTrue(payloadJson != null && payloadJson.contains(""""paid_by_user_id":"user-2""""))
-        assertTrue(payloadJson != null && payloadJson.contains(""""participant_user_ids":["user-1","user-2","user-3"]"""))
+        assertTrue(payloadJson != null && payloadJson.contains(""""paid_by_user_id":"22222222-2222-4222-8222-222222222222""""))
+        assertTrue(payloadJson != null && payloadJson.contains(""""participant_user_ids":["11111111-1111-4111-8111-111111111111","22222222-2222-4222-8222-222222222222","33333333-3333-4333-8333-333333333333"]"""))
     }
 
     @Test
     fun create_customSplitExpense_preservesCustomSplitFieldsOnLocalEntity() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val dao = FakeTransactionDao()
         val queue = FakeOfflineWriteQueueHolder()
         val wsDao = FakeWorkspaceDao(
-            activeMemberUserIdsByWorkspace = mapOf("ws-1" to listOf("user-1", "user-2")),
+            activeMemberUserIdsByWorkspace = mapOf("ws-1" to listOf("11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222")),
         )
         val repository = createRepository(
             authRepo,
@@ -382,7 +382,7 @@ class OfflineFirstTransactionRepositoryTest {
 
         val trx = Transaction(
             id = EntityId("t-custom"),
-            ownerId = EntityId("user-1"),
+            ownerId = EntityId("11111111-1111-4111-8111-111111111111"),
             workspaceId = null,
             amount = Money(10_000L, Currency.TRY),
             type = TransactionType.EXPENSE,
@@ -393,12 +393,12 @@ class OfflineFirstTransactionRepositoryTest {
             receiptPath = null,
             installment = null,
             createdAt = NOW,
-            paidByUserId = EntityId("user-1"),
-            participantUserIds = listOf(EntityId("user-1"), EntityId("user-2")),
+            paidByUserId = EntityId("11111111-1111-4111-8111-111111111111"),
+            participantUserIds = listOf(EntityId("11111111-1111-4111-8111-111111111111"), EntityId("22222222-2222-4222-8222-222222222222")),
             splitMode = TransactionSplitMode.CUSTOM,
             participantShares = listOf(
-                TransactionParticipantShare(EntityId("user-2"), 4_000L),
-                TransactionParticipantShare(EntityId("user-1"), 6_000L),
+                TransactionParticipantShare(EntityId("22222222-2222-4222-8222-222222222222"), 4_000L),
+                TransactionParticipantShare(EntityId("11111111-1111-4111-8111-111111111111"), 6_000L),
             ),
         )
 
@@ -409,14 +409,14 @@ class OfflineFirstTransactionRepositoryTest {
         assertNotNull(enqueued)
         assertEquals("CUSTOM", enqueued.splitMode)
         assertEquals(
-            """[{"userId":"user-1","amountMinor":6000},{"userId":"user-2","amountMinor":4000}]""",
+            """[{"userId":"11111111-1111-4111-8111-111111111111","amountMinor":6000},{"userId":"22222222-2222-4222-8222-222222222222","amountMinor":4000}]""",
             enqueued.participantSharesJson,
         )
     }
 
     @Test
     fun create_personalExpense_normalizesSplitToOwner() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val dao = FakeTransactionDao()
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(
@@ -428,7 +428,7 @@ class OfflineFirstTransactionRepositoryTest {
 
         val trx = Transaction(
             id = EntityId("t-personal"),
-            ownerId = EntityId("user-1"),
+            ownerId = EntityId("11111111-1111-4111-8111-111111111111"),
             workspaceId = null,
             amount = Money(1500L, Currency.TRY),
             type = TransactionType.EXPENSE,
@@ -439,25 +439,25 @@ class OfflineFirstTransactionRepositoryTest {
             receiptPath = null,
             installment = null,
             createdAt = NOW,
-            paidByUserId = EntityId("user-1"),
-            participantUserIds = listOf(EntityId("user-1")),
+            paidByUserId = EntityId("11111111-1111-4111-8111-111111111111"),
+            participantUserIds = listOf(EntityId("11111111-1111-4111-8111-111111111111")),
         )
 
         val result = repository.create(trx)
         assertIs<RepositoryResult.Success<EntityId>>(result)
 
         val enqueued = queue.lastEnqueuedTransaction
-        assertEquals("user-1", enqueued?.paidByUserId)
-        assertEquals("""["user-1"]""", enqueued?.participantUserIdsJson)
+        assertEquals("11111111-1111-4111-8111-111111111111", enqueued?.paidByUserId)
+        assertEquals("""["11111111-1111-4111-8111-111111111111"]""", enqueued?.participantUserIdsJson)
     }
 
     @Test
     fun create_income_normalizesSplitToOwner() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val dao = FakeTransactionDao()
         val queue = FakeOfflineWriteQueueHolder()
         val wsDao = FakeWorkspaceDao(
-            activeMemberUserIdsByWorkspace = mapOf("ws-1" to listOf("user-1", "user-2")),
+            activeMemberUserIdsByWorkspace = mapOf("ws-1" to listOf("11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222")),
         )
         val repository = createRepository(
             authRepo,
@@ -470,7 +470,7 @@ class OfflineFirstTransactionRepositoryTest {
 
         val trx = Transaction(
             id = EntityId("t-income"),
-            ownerId = EntityId("user-1"),
+            ownerId = EntityId("11111111-1111-4111-8111-111111111111"),
             workspaceId = null,
             amount = Money(50000L, Currency.TRY),
             type = TransactionType.INCOME,
@@ -481,25 +481,25 @@ class OfflineFirstTransactionRepositoryTest {
             receiptPath = null,
             installment = null,
             createdAt = NOW,
-            paidByUserId = EntityId("user-1"),
-            participantUserIds = listOf(EntityId("user-1")),
+            paidByUserId = EntityId("11111111-1111-4111-8111-111111111111"),
+            participantUserIds = listOf(EntityId("11111111-1111-4111-8111-111111111111")),
         )
 
         val result = repository.create(trx)
         assertIs<RepositoryResult.Success<EntityId>>(result)
 
         val enqueued = queue.lastEnqueuedTransaction
-        assertEquals("user-1", enqueued?.paidByUserId)
-        assertEquals("""["user-1"]""", enqueued?.participantUserIdsJson)
+        assertEquals("11111111-1111-4111-8111-111111111111", enqueued?.paidByUserId)
+        assertEquals("""["11111111-1111-4111-8111-111111111111"]""", enqueued?.participantUserIdsJson)
     }
 
     @Test
     fun create_sharedExpense_withNonMemberPayer_returnsValidationError() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val dao = FakeTransactionDao()
         val queue = FakeOfflineWriteQueueHolder()
         val wsDao = FakeWorkspaceDao(
-            activeMemberUserIdsByWorkspace = mapOf("ws-1" to listOf("user-1", "user-2")),
+            activeMemberUserIdsByWorkspace = mapOf("ws-1" to listOf("11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222")),
         )
         val repository = createRepository(
             authRepo,
@@ -512,7 +512,7 @@ class OfflineFirstTransactionRepositoryTest {
 
         val trx = Transaction(
             id = EntityId("t-inv-payer"),
-            ownerId = EntityId("user-1"),
+            ownerId = EntityId("11111111-1111-4111-8111-111111111111"),
             workspaceId = null,
             amount = Money(3000L, Currency.TRY),
             type = TransactionType.EXPENSE,
@@ -523,8 +523,8 @@ class OfflineFirstTransactionRepositoryTest {
             receiptPath = null,
             installment = null,
             createdAt = NOW,
-            paidByUserId = EntityId("user-999"), // non-member
-            participantUserIds = listOf(EntityId("user-1"), EntityId("user-999")),
+            paidByUserId = EntityId("99999999-9999-4999-8999-999999999999"), // non-member
+            participantUserIds = listOf(EntityId("11111111-1111-4111-8111-111111111111"), EntityId("99999999-9999-4999-8999-999999999999")),
         )
 
         val result = repository.create(trx)
@@ -535,11 +535,11 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun create_sharedExpense_withNonMemberParticipant_returnsValidationError() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val dao = FakeTransactionDao()
         val queue = FakeOfflineWriteQueueHolder()
         val wsDao = FakeWorkspaceDao(
-            activeMemberUserIdsByWorkspace = mapOf("ws-1" to listOf("user-1", "user-2")),
+            activeMemberUserIdsByWorkspace = mapOf("ws-1" to listOf("11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222")),
         )
         val repository = createRepository(
             authRepo,
@@ -552,7 +552,7 @@ class OfflineFirstTransactionRepositoryTest {
 
         val trx = Transaction(
             id = EntityId("t-inv-part"),
-            ownerId = EntityId("user-1"),
+            ownerId = EntityId("11111111-1111-4111-8111-111111111111"),
             workspaceId = null,
             amount = Money(3000L, Currency.TRY),
             type = TransactionType.EXPENSE,
@@ -563,8 +563,8 @@ class OfflineFirstTransactionRepositoryTest {
             receiptPath = null,
             installment = null,
             createdAt = NOW,
-            paidByUserId = EntityId("user-1"),
-            participantUserIds = listOf(EntityId("user-1"), EntityId("user-999")),
+            paidByUserId = EntityId("11111111-1111-4111-8111-111111111111"),
+            participantUserIds = listOf(EntityId("11111111-1111-4111-8111-111111111111"), EntityId("99999999-9999-4999-8999-999999999999")),
         )
 
         val result = repository.create(trx)
@@ -575,7 +575,7 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun update_sharedExpense_withValidSplit_updatesEntityAndEnqueuesSplitPayload() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val existingSync = SyncMetadata(
             syncStatus = SyncStatus.SYNCED.name,
             updatedAtEpochMillis = 5_000L,
@@ -585,12 +585,12 @@ class OfflineFirstTransactionRepositoryTest {
             baseVersion = 2L,
             lastSyncError = null,
         )
-        val existingEntity = sampleTransactionEntity(id = "t-shared-up", ownerId = "user-1", sync = existingSync, workspaceId = "ws-1")
-            .copy(paidByUserId = "user-1", participantUserIdsJson = """["user-1"]""")
+        val existingEntity = sampleTransactionEntity(id = "t-shared-up", ownerId = "11111111-1111-4111-8111-111111111111", sync = existingSync, workspaceId = "ws-1")
+            .copy(paidByUserId = "11111111-1111-4111-8111-111111111111", participantUserIdsJson = """["11111111-1111-4111-8111-111111111111"]""")
         val dao = FakeTransactionDao(listOf(existingEntity))
         val queue = FakeOfflineWriteQueueHolder()
         val wsDao = FakeWorkspaceDao(
-            activeMemberUserIdsByWorkspace = mapOf("ws-1" to listOf("user-1", "user-2")),
+            activeMemberUserIdsByWorkspace = mapOf("ws-1" to listOf("11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222")),
         )
         val repository = createRepository(
             authRepo,
@@ -603,7 +603,7 @@ class OfflineFirstTransactionRepositoryTest {
 
         val updatedTrx = Transaction(
             id = EntityId("t-shared-up"),
-            ownerId = EntityId("user-1"),
+            ownerId = EntityId("11111111-1111-4111-8111-111111111111"),
             workspaceId = EntityId("ws-1"),
             amount = Money(4000L, Currency.TRY),
             type = TransactionType.EXPENSE,
@@ -614,25 +614,25 @@ class OfflineFirstTransactionRepositoryTest {
             receiptPath = null,
             installment = null,
             createdAt = NOW,
-            paidByUserId = EntityId("user-2"),
-            participantUserIds = listOf(EntityId("user-1"), EntityId("user-2")),
+            paidByUserId = EntityId("22222222-2222-4222-8222-222222222222"),
+            participantUserIds = listOf(EntityId("11111111-1111-4111-8111-111111111111"), EntityId("22222222-2222-4222-8222-222222222222")),
         )
 
         val result = repository.update(updatedTrx)
         assertIs<RepositoryResult.Success<Unit>>(result)
 
         val enqueued = queue.lastEnqueuedTransaction
-        assertEquals("user-2", enqueued?.paidByUserId)
-        assertEquals("""["user-1","user-2"]""", enqueued?.participantUserIdsJson)
+        assertEquals("22222222-2222-4222-8222-222222222222", enqueued?.paidByUserId)
+        assertEquals("""["11111111-1111-4111-8111-111111111111","22222222-2222-4222-8222-222222222222"]""", enqueued?.participantUserIdsJson)
 
         val payloadJson = queue.lastInsertedOperation?.payloadJson
-        assertTrue(payloadJson != null && payloadJson.contains(""""paid_by_user_id":"user-2""""))
-        assertTrue(payloadJson != null && payloadJson.contains(""""participant_user_ids":["user-1","user-2"]"""))
+        assertTrue(payloadJson != null && payloadJson.contains(""""paid_by_user_id":"22222222-2222-4222-8222-222222222222""""))
+        assertTrue(payloadJson != null && payloadJson.contains(""""participant_user_ids":["11111111-1111-4111-8111-111111111111","22222222-2222-4222-8222-222222222222"]"""))
     }
 
     @Test
     fun update_customSplitExpense_preservesCustomSplitFieldsOnLocalEntity() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val existingSync = SyncMetadata(
             syncStatus = SyncStatus.SYNCED.name,
             updatedAtEpochMillis = 5_000L,
@@ -642,11 +642,11 @@ class OfflineFirstTransactionRepositoryTest {
             baseVersion = 2L,
             lastSyncError = null,
         )
-        val existingEntity = sampleTransactionEntity(id = "t-cust-up", ownerId = "user-1", sync = existingSync, workspaceId = "ws-1")
+        val existingEntity = sampleTransactionEntity(id = "t-cust-up", ownerId = "11111111-1111-4111-8111-111111111111", sync = existingSync, workspaceId = "ws-1")
         val dao = FakeTransactionDao(listOf(existingEntity))
         val queue = FakeOfflineWriteQueueHolder()
         val wsDao = FakeWorkspaceDao(
-            activeMemberUserIdsByWorkspace = mapOf("ws-1" to listOf("user-1", "user-2")),
+            activeMemberUserIdsByWorkspace = mapOf("ws-1" to listOf("11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222")),
         )
         val repository = createRepository(
             authRepo,
@@ -659,7 +659,7 @@ class OfflineFirstTransactionRepositoryTest {
 
         val updatedTrx = Transaction(
             id = EntityId("t-cust-up"),
-            ownerId = EntityId("user-1"),
+            ownerId = EntityId("11111111-1111-4111-8111-111111111111"),
             workspaceId = EntityId("ws-1"),
             amount = Money(8000L, Currency.TRY),
             type = TransactionType.EXPENSE,
@@ -670,12 +670,12 @@ class OfflineFirstTransactionRepositoryTest {
             receiptPath = null,
             installment = null,
             createdAt = NOW,
-            paidByUserId = EntityId("user-1"),
-            participantUserIds = listOf(EntityId("user-1"), EntityId("user-2")),
+            paidByUserId = EntityId("11111111-1111-4111-8111-111111111111"),
+            participantUserIds = listOf(EntityId("11111111-1111-4111-8111-111111111111"), EntityId("22222222-2222-4222-8222-222222222222")),
             splitMode = TransactionSplitMode.CUSTOM,
             participantShares = listOf(
-                TransactionParticipantShare(EntityId("user-2"), 3_000L),
-                TransactionParticipantShare(EntityId("user-1"), 5_000L),
+                TransactionParticipantShare(EntityId("22222222-2222-4222-8222-222222222222"), 3_000L),
+                TransactionParticipantShare(EntityId("11111111-1111-4111-8111-111111111111"), 5_000L),
             ),
         )
 
@@ -686,14 +686,14 @@ class OfflineFirstTransactionRepositoryTest {
         assertNotNull(enqueued)
         assertEquals("CUSTOM", enqueued.splitMode)
         assertEquals(
-            """[{"userId":"user-1","amountMinor":5000},{"userId":"user-2","amountMinor":3000}]""",
+            """[{"userId":"11111111-1111-4111-8111-111111111111","amountMinor":5000},{"userId":"22222222-2222-4222-8222-222222222222","amountMinor":3000}]""",
             enqueued.participantSharesJson,
         )
     }
 
     @Test
     fun update_personalExpense_normalizesSplitToOwner() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val existingSync = SyncMetadata(
             syncStatus = SyncStatus.SYNCED.name,
             updatedAtEpochMillis = 5_000L,
@@ -703,7 +703,7 @@ class OfflineFirstTransactionRepositoryTest {
             baseVersion = 1L,
             lastSyncError = null,
         )
-        val existingEntity = sampleTransactionEntity(id = "t-pers-up", ownerId = "user-1", sync = existingSync)
+        val existingEntity = sampleTransactionEntity(id = "t-pers-up", ownerId = "11111111-1111-4111-8111-111111111111", sync = existingSync)
         val dao = FakeTransactionDao(listOf(existingEntity))
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(
@@ -715,7 +715,7 @@ class OfflineFirstTransactionRepositoryTest {
 
         val updatedTrx = Transaction(
             id = EntityId("t-pers-up"),
-            ownerId = EntityId("user-1"),
+            ownerId = EntityId("11111111-1111-4111-8111-111111111111"),
             workspaceId = null,
             amount = Money(2000L, Currency.TRY),
             type = TransactionType.EXPENSE,
@@ -726,21 +726,21 @@ class OfflineFirstTransactionRepositoryTest {
             receiptPath = null,
             installment = null,
             createdAt = NOW,
-            paidByUserId = EntityId("user-1"),
-            participantUserIds = listOf(EntityId("user-1")),
+            paidByUserId = EntityId("11111111-1111-4111-8111-111111111111"),
+            participantUserIds = listOf(EntityId("11111111-1111-4111-8111-111111111111")),
         )
 
         val result = repository.update(updatedTrx)
         assertIs<RepositoryResult.Success<Unit>>(result)
 
         val enqueued = queue.lastEnqueuedTransaction
-        assertEquals("user-1", enqueued?.paidByUserId)
-        assertEquals("""["user-1"]""", enqueued?.participantUserIdsJson)
+        assertEquals("11111111-1111-4111-8111-111111111111", enqueued?.paidByUserId)
+        assertEquals("""["11111111-1111-4111-8111-111111111111"]""", enqueued?.participantUserIdsJson)
     }
 
     @Test
     fun softDelete_preservesSplitInformation() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "u1@feniqo.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
         val existingSync = SyncMetadata(
             syncStatus = SyncStatus.SYNCED.name,
             updatedAtEpochMillis = 5_000L,
@@ -750,8 +750,8 @@ class OfflineFirstTransactionRepositoryTest {
             baseVersion = 3L,
             lastSyncError = null,
         )
-        val existingEntity = sampleTransactionEntity(id = "t-del-split", ownerId = "user-1", sync = existingSync, workspaceId = "ws-1")
-            .copy(paidByUserId = "user-2", participantUserIdsJson = """["user-1","user-2"]""")
+        val existingEntity = sampleTransactionEntity(id = "t-del-split", ownerId = "11111111-1111-4111-8111-111111111111", sync = existingSync, workspaceId = "ws-1")
+            .copy(paidByUserId = "22222222-2222-4222-8222-222222222222", participantUserIdsJson = """["11111111-1111-4111-8111-111111111111","22222222-2222-4222-8222-222222222222"]""")
         val dao = FakeTransactionDao(listOf(existingEntity))
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(
@@ -767,8 +767,8 @@ class OfflineFirstTransactionRepositoryTest {
 
         val enqueued = queue.lastEnqueuedTransaction
         assertEquals(SyncStatus.PENDING_DELETE.name, enqueued?.sync?.syncStatus)
-        assertEquals("user-2", enqueued?.paidByUserId)
-        assertEquals("""["user-1","user-2"]""", enqueued?.participantUserIdsJson)
+        assertEquals("22222222-2222-4222-8222-222222222222", enqueued?.paidByUserId)
+        assertEquals("""["11111111-1111-4111-8111-111111111111","22222222-2222-4222-8222-222222222222"]""", enqueued?.participantUserIdsJson)
     }
 
     @Test
@@ -788,7 +788,7 @@ class OfflineFirstTransactionRepositoryTest {
         val repository = createRepository(authRepo, dao, queue.queue)
 
         assertFailsWith<CancellationException> {
-            repository.create(sampleTransaction("t1", "u1"))
+            repository.create(sampleTransaction("t1", "11111111-1111-4111-8111-111111111111"))
         }
     }
 
@@ -809,7 +809,7 @@ class OfflineFirstTransactionRepositoryTest {
         val repository = createRepository(authRepo, dao, queue.queue)
 
         assertFailsWith<AssertionError> {
-            repository.create(sampleTransaction("t1", "u1"))
+            repository.create(sampleTransaction("t1", "11111111-1111-4111-8111-111111111111"))
         }
     }
 
@@ -821,8 +821,8 @@ class OfflineFirstTransactionRepositoryTest {
         val repository = createRepository(authRepo, dao, queue.queue)
 
         val transactions = listOf(
-            sampleInstallmentTransaction("t1", "u1", "grp-1", 1, 2),
-            sampleInstallmentTransaction("t2", "u1", "grp-1", 2, 2),
+            sampleInstallmentTransaction("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 2),
+            sampleInstallmentTransaction("t2", "11111111-1111-4111-8111-111111111111", "grp-1", 2, 2),
         )
         val result = repository.createInstallmentGroup(transactions)
         val failure = assertIs<RepositoryResult.Failure>(result)
@@ -832,17 +832,17 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun createInstallmentGroup_withListSize1Or61_returnsOutOfRangeError() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
         val dao = FakeTransactionDao()
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(authRepo, dao, queue.queue)
 
-        val size1 = listOf(sampleInstallmentTransaction("t1", "u1", "grp-1", 1, 1))
+        val size1 = listOf(sampleInstallmentTransaction("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 1))
         val result1 = repository.createInstallmentGroup(size1)
         val failure1 = assertIs<RepositoryResult.Failure>(result1)
         assertEquals("installment_count_out_of_range", assertIs<AppError.Validation>(failure1.error).code)
 
-        val size61 = (1..61).map { sampleInstallmentTransaction("t$it", "u1", "grp-1", it, 61) }
+        val size61 = (1..61).map { sampleInstallmentTransaction("t$it", "11111111-1111-4111-8111-111111111111", "grp-1", it, 61) }
         val result61 = repository.createInstallmentGroup(size61)
         val failure61 = assertIs<RepositoryResult.Failure>(result61)
         assertEquals("installment_count_out_of_range", assertIs<AppError.Validation>(failure61.error).code)
@@ -850,14 +850,14 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun createInstallmentGroup_withOwnerMismatch_returnsAuthError() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
         val dao = FakeTransactionDao()
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(authRepo, dao, queue.queue)
 
         val transactions = listOf(
-            sampleInstallmentTransaction("t1", "u1", "grp-1", 1, 2),
-            sampleInstallmentTransaction("t2", "other-user", "grp-1", 2, 2),
+            sampleInstallmentTransaction("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 2),
+            sampleInstallmentTransaction("t2", "33333333-3333-4333-8333-333333333333", "grp-1", 2, 2),
         )
         val result = repository.createInstallmentGroup(transactions)
         val failure = assertIs<RepositoryResult.Failure>(result)
@@ -866,14 +866,14 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun createInstallmentGroup_withDuplicateTransactionId_returnsDuplicateIdError() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
         val dao = FakeTransactionDao()
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(authRepo, dao, queue.queue)
 
         val transactions = listOf(
-            sampleInstallmentTransaction("t1", "u1", "grp-1", 1, 2),
-            sampleInstallmentTransaction("t1", "u1", "grp-1", 2, 2), // Duplicate ID
+            sampleInstallmentTransaction("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 2),
+            sampleInstallmentTransaction("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 2, 2), // Duplicate ID
         )
         val result = repository.createInstallmentGroup(transactions)
         val failure = assertIs<RepositoryResult.Failure>(result)
@@ -882,14 +882,14 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun createInstallmentGroup_withNullInstallment_returnsInstallmentInfoRequiredError() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
         val dao = FakeTransactionDao()
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(authRepo, dao, queue.queue)
 
         val transactions = listOf(
-            sampleInstallmentTransaction("t1", "u1", "grp-1", 1, 2),
-            sampleTransaction("t2", "u1"), // installment == null
+            sampleInstallmentTransaction("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 2),
+            sampleTransaction("t2", "11111111-1111-4111-8111-111111111111"), // installment == null
         )
         val result = repository.createInstallmentGroup(transactions)
         val failure = assertIs<RepositoryResult.Failure>(result)
@@ -898,14 +898,14 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun createInstallmentGroup_withDifferentGroupIds_returnsGroupMismatchError() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
         val dao = FakeTransactionDao()
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(authRepo, dao, queue.queue)
 
         val transactions = listOf(
-            sampleInstallmentTransaction("t1", "u1", "grp-1", 1, 2),
-            sampleInstallmentTransaction("t2", "u1", "grp-2", 2, 2),
+            sampleInstallmentTransaction("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 2),
+            sampleInstallmentTransaction("t2", "11111111-1111-4111-8111-111111111111", "grp-2", 2, 2),
         )
         val result = repository.createInstallmentGroup(transactions)
         val failure = assertIs<RepositoryResult.Failure>(result)
@@ -914,14 +914,14 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun createInstallmentGroup_withWrongTotal_returnsTotalMismatchError() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
         val dao = FakeTransactionDao()
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(authRepo, dao, queue.queue)
 
         val transactions = listOf(
-            sampleInstallmentTransaction("t1", "u1", "grp-1", 1, 3), // Total 3 ama liste 2
-            sampleInstallmentTransaction("t2", "u1", "grp-1", 2, 3),
+            sampleInstallmentTransaction("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 3), // Total 3 ama liste 2
+            sampleInstallmentTransaction("t2", "11111111-1111-4111-8111-111111111111", "grp-1", 2, 3),
         )
         val result = repository.createInstallmentGroup(transactions)
         val failure = assertIs<RepositoryResult.Failure>(result)
@@ -930,14 +930,14 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun createInstallmentGroup_withInvalidNumbers_returnsNumbersInvalidError() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
         val dao = FakeTransactionDao()
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(authRepo, dao, queue.queue)
 
         val duplicateNumbers = listOf(
-            sampleInstallmentTransaction("t1", "u1", "grp-1", 1, 2),
-            sampleInstallmentTransaction("t2", "u1", "grp-1", 1, 2), // 1 tekrar etti
+            sampleInstallmentTransaction("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 2),
+            sampleInstallmentTransaction("t2", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 2), // 1 tekrar etti
         )
         val result = repository.createInstallmentGroup(duplicateNumbers)
         val failure = assertIs<RepositoryResult.Failure>(result)
@@ -946,23 +946,23 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun createInstallmentGroup_withDifferentCurrencyTypeCategoryPaymentOrWorkspace_returnsMismatchError() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
         val dao = FakeTransactionDao()
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(authRepo, dao, queue.queue)
 
         // Farklı para birimi
         val diffCurrency = listOf(
-            sampleInstallmentTransaction("t1", "u1", "grp-1", 1, 2, currency = Currency.TRY),
-            sampleInstallmentTransaction("t2", "u1", "grp-1", 2, 2, currency = Currency.USD),
+            sampleInstallmentTransaction("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 2, currency = Currency.TRY),
+            sampleInstallmentTransaction("t2", "11111111-1111-4111-8111-111111111111", "grp-1", 2, 2, currency = Currency.USD),
         )
         val resCurr = repository.createInstallmentGroup(diffCurrency)
         assertEquals("installment_currency_mismatch", assertIs<AppError.Validation>(assertIs<RepositoryResult.Failure>(resCurr).error).code)
 
         // Farklı kategori
         val diffCat = listOf(
-            sampleInstallmentTransaction("t1", "u1", "grp-1", 1, 2, categoryId = "cat-1"),
-            sampleInstallmentTransaction("t2", "u1", "grp-1", 2, 2, categoryId = "cat-2"),
+            sampleInstallmentTransaction("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 2, categoryId = "cat-1"),
+            sampleInstallmentTransaction("t2", "11111111-1111-4111-8111-111111111111", "grp-1", 2, 2, categoryId = "cat-2"),
         )
         val resCat = repository.createInstallmentGroup(diffCat)
         assertEquals("installment_category_mismatch", assertIs<AppError.Validation>(assertIs<RepositoryResult.Failure>(resCat).error).code)
@@ -970,7 +970,7 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun createInstallmentGroup_withValid3Installments_succeedsAndReturnsGroupId() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
         val dao = FakeTransactionDao()
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(
@@ -981,9 +981,9 @@ class OfflineFirstTransactionRepositoryTest {
         )
 
         val transactions = listOf(
-            sampleInstallmentTransaction("t1", "u1", "grp-1", 1, 3, amountMinor = 333L, date = LocalDate(2026, 8, 21)),
-            sampleInstallmentTransaction("t2", "u1", "grp-1", 2, 3, amountMinor = 333L, date = LocalDate(2026, 9, 21)),
-            sampleInstallmentTransaction("t3", "u1", "grp-1", 3, 3, amountMinor = 334L, date = LocalDate(2026, 10, 21)),
+            sampleInstallmentTransaction("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 3, amountMinor = 333L, date = LocalDate(2026, 8, 21)),
+            sampleInstallmentTransaction("t2", "11111111-1111-4111-8111-111111111111", "grp-1", 2, 3, amountMinor = 333L, date = LocalDate(2026, 9, 21)),
+            sampleInstallmentTransaction("t3", "11111111-1111-4111-8111-111111111111", "grp-1", 3, 3, amountMinor = 334L, date = LocalDate(2026, 10, 21)),
         )
 
         val result = repository.createInstallmentGroup(transactions)
@@ -1020,8 +1020,8 @@ class OfflineFirstTransactionRepositoryTest {
         val repoCancel = createRepository(authRepoCancel, dao, queue.queue)
 
         val transactions = listOf(
-            sampleInstallmentTransaction("t1", "u1", "grp-1", 1, 2),
-            sampleInstallmentTransaction("t2", "u1", "grp-1", 2, 2),
+            sampleInstallmentTransaction("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 2),
+            sampleInstallmentTransaction("t2", "11111111-1111-4111-8111-111111111111", "grp-1", 2, 2),
         )
 
         assertFailsWith<CancellationException> {
@@ -1048,7 +1048,7 @@ class OfflineFirstTransactionRepositoryTest {
     @Test
     fun observeInstallmentGroup_withoutSession_emitsEmptyList() = runTest {
         val authRepo = FakeAuthRepository(null)
-        val dao = FakeTransactionDao(listOf(sampleInstallmentTransactionEntity("t1", "u1", "grp-1", 1, 2)))
+        val dao = FakeTransactionDao(listOf(sampleInstallmentTransactionEntity("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 2)))
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(authRepo, dao, queue.queue)
 
@@ -1058,11 +1058,11 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun observeInstallmentGroup_withSession_emitsOwnerInstallmentsSortedByNumber() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
         val dao = FakeTransactionDao(
             listOf(
-                sampleInstallmentTransactionEntity("t2", "u1", "grp-1", 2, 2),
-                sampleInstallmentTransactionEntity("t1", "u1", "grp-1", 1, 2),
+                sampleInstallmentTransactionEntity("t2", "11111111-1111-4111-8111-111111111111", "grp-1", 2, 2),
+                sampleInstallmentTransactionEntity("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 2),
             ),
         )
         val queue = FakeOfflineWriteQueueHolder()
@@ -1078,11 +1078,11 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun observeInstallmentGroup_doesNotEmitOtherUsersInstallments() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
         val dao = FakeTransactionDao(
             listOf(
-                sampleInstallmentTransactionEntity("t1", "u1", "grp-1", 1, 2),
-                sampleInstallmentTransactionEntity("t2", "other-user", "grp-1", 2, 2),
+                sampleInstallmentTransactionEntity("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 2),
+                sampleInstallmentTransactionEntity("t2", "33333333-3333-4333-8333-333333333333", "grp-1", 2, 2),
             ),
         )
         val queue = FakeOfflineWriteQueueHolder()
@@ -1095,11 +1095,11 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun observeInstallmentGroup_whenSessionChanges_switchesToNewOwner() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "u1@test.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@test.com", NOW))
         val dao = FakeTransactionDao(
             listOf(
-                sampleInstallmentTransactionEntity("t1", "u1", "grp-1", 1, 1),
-                sampleInstallmentTransactionEntity("t2", "u2", "grp-1", 1, 1),
+                sampleInstallmentTransactionEntity("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 1),
+                sampleInstallmentTransactionEntity("t2", "22222222-2222-4222-8222-222222222222", "grp-1", 1, 1),
             ),
         )
         val queue = FakeOfflineWriteQueueHolder()
@@ -1108,7 +1108,7 @@ class OfflineFirstTransactionRepositoryTest {
         val flow = repository.observeInstallmentGroup(EntityId("grp-1"))
         assertEquals("t1", flow.first().first().id.value)
 
-        authRepo.sessionFlow.value = AuthSession(EntityId("u2"), "u2@test.com", NOW)
+        authRepo.sessionFlow.value = AuthSession(EntityId("22222222-2222-4222-8222-222222222222"), "u2@test.com", NOW)
         assertEquals("t2", flow.first().first().id.value)
     }
 
@@ -1126,7 +1126,7 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun softDeleteInstallments_withEmptySet_returnsEmptyError() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
         val dao = FakeTransactionDao()
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(authRepo, dao, queue.queue)
@@ -1138,11 +1138,11 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun softDeleteInstallments_withMissingOrOtherOwnerId_returnsNotFoundError() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
         val dao = FakeTransactionDao(
             listOf(
-                sampleInstallmentTransactionEntity("t1", "u1", "grp-1", 1, 2),
-                sampleInstallmentTransactionEntity("t2", "other-user", "grp-1", 2, 2), // other user
+                sampleInstallmentTransactionEntity("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 2),
+                sampleInstallmentTransactionEntity("t2", "33333333-3333-4333-8333-333333333333", "grp-1", 2, 2), // other user
             ),
         )
         val queue = FakeOfflineWriteQueueHolder()
@@ -1155,10 +1155,10 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun softDeleteInstallments_withNonInstallmentTransaction_returnsInstallmentInfoRequiredError() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
         val dao = FakeTransactionDao(
             listOf(
-                sampleTransactionEntity("t1", "u1"), // installment == null
+                sampleTransactionEntity("t1", "11111111-1111-4111-8111-111111111111"), // installment == null
             ),
         )
         val queue = FakeOfflineWriteQueueHolder()
@@ -1172,8 +1172,8 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun softDeleteInstallments_withGroupIdPresentAndNumberNull_returnsInstallmentInfoRequiredError() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
-        val entity = sampleInstallmentTransactionEntity("t1", "u1", "grp-1", 1, 3).copy(installmentNumber = null)
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
+        val entity = sampleInstallmentTransactionEntity("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 3).copy(installmentNumber = null)
         val dao = FakeTransactionDao(listOf(entity))
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(authRepo, dao, queue.queue)
@@ -1186,8 +1186,8 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun softDeleteInstallments_withGroupIdPresentAndTotalNull_returnsInstallmentInfoRequiredError() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
-        val entity = sampleInstallmentTransactionEntity("t1", "u1", "grp-1", 1, 3).copy(totalInstallments = null)
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
+        val entity = sampleInstallmentTransactionEntity("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 3).copy(totalInstallments = null)
         val dao = FakeTransactionDao(listOf(entity))
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(authRepo, dao, queue.queue)
@@ -1200,8 +1200,8 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun softDeleteInstallments_withGroupIdNullAndNumberTotalPresent_returnsInstallmentInfoRequiredError() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
-        val entity = sampleInstallmentTransactionEntity("t1", "u1", "grp-1", 1, 3).copy(installmentGroupId = null)
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
+        val entity = sampleInstallmentTransactionEntity("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 3).copy(installmentGroupId = null)
         val dao = FakeTransactionDao(listOf(entity))
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(authRepo, dao, queue.queue)
@@ -1214,8 +1214,8 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun softDeleteInstallments_withNumberZero_returnsInstallmentInfoRequiredError() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
-        val entity = sampleInstallmentTransactionEntity("t1", "u1", "grp-1", 1, 3).copy(installmentNumber = 0)
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
+        val entity = sampleInstallmentTransactionEntity("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 3).copy(installmentNumber = 0)
         val dao = FakeTransactionDao(listOf(entity))
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(authRepo, dao, queue.queue)
@@ -1228,8 +1228,8 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun softDeleteInstallments_withNumberGreaterThanTotal_returnsInstallmentInfoRequiredError() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
-        val entity = sampleInstallmentTransactionEntity("t1", "u1", "grp-1", 1, 3).copy(installmentNumber = 4, totalInstallments = 3)
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
+        val entity = sampleInstallmentTransactionEntity("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 3).copy(installmentNumber = 4, totalInstallments = 3)
         val dao = FakeTransactionDao(listOf(entity))
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(authRepo, dao, queue.queue)
@@ -1242,8 +1242,8 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun softDeleteInstallments_withTotalOne_returnsInstallmentInfoRequiredError() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
-        val entity = sampleInstallmentTransactionEntity("t1", "u1", "grp-1", 1, 1)
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
+        val entity = sampleInstallmentTransactionEntity("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 1)
         val dao = FakeTransactionDao(listOf(entity))
         val queue = FakeOfflineWriteQueueHolder()
         val repository = createRepository(authRepo, dao, queue.queue)
@@ -1256,11 +1256,11 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun softDeleteInstallments_withDifferentGroupIds_returnsGroupMismatchError() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
         val dao = FakeTransactionDao(
             listOf(
-                sampleInstallmentTransactionEntity("t1", "u1", "grp-1", 1, 2),
-                sampleInstallmentTransactionEntity("t2", "u1", "grp-2", 2, 2),
+                sampleInstallmentTransactionEntity("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 2),
+                sampleInstallmentTransactionEntity("t2", "11111111-1111-4111-8111-111111111111", "grp-2", 2, 2),
             ),
         )
         val queue = FakeOfflineWriteQueueHolder()
@@ -1274,11 +1274,11 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun softDeleteInstallments_withDifferentTotalInSameGroup_returnsTotalMismatchError() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
         val dao = FakeTransactionDao(
             listOf(
-                sampleInstallmentTransactionEntity("t1", "u1", "grp-1", 1, 3),
-                sampleInstallmentTransactionEntity("t2", "u1", "grp-1", 2, 4), // Total 4 vs 3
+                sampleInstallmentTransactionEntity("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 3),
+                sampleInstallmentTransactionEntity("t2", "11111111-1111-4111-8111-111111111111", "grp-1", 2, 4), // Total 4 vs 3
             ),
         )
         val queue = FakeOfflineWriteQueueHolder()
@@ -1292,13 +1292,13 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun softDeleteInstallments_withValidSubset_softDeletesAtomically() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
         val dao = FakeTransactionDao(
             listOf(
-                sampleInstallmentTransactionEntity("t1", "u1", "grp-1", 1, 4),
-                sampleInstallmentTransactionEntity("t2", "u1", "grp-1", 2, 4),
-                sampleInstallmentTransactionEntity("t3", "u1", "grp-1", 3, 4),
-                sampleInstallmentTransactionEntity("t4", "u1", "grp-1", 4, 4),
+                sampleInstallmentTransactionEntity("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 4),
+                sampleInstallmentTransactionEntity("t2", "11111111-1111-4111-8111-111111111111", "grp-1", 2, 4),
+                sampleInstallmentTransactionEntity("t3", "11111111-1111-4111-8111-111111111111", "grp-1", 3, 4),
+                sampleInstallmentTransactionEntity("t4", "11111111-1111-4111-8111-111111111111", "grp-1", 4, 4),
             ),
         )
         val queue = FakeOfflineWriteQueueHolder()
@@ -1324,10 +1324,10 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun softDeleteInstallments_withValidSingleId_softDeletesAtomically() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
         val dao = FakeTransactionDao(
             listOf(
-                sampleInstallmentTransactionEntity("t1", "u1", "grp-1", 1, 2, sync = newSyncMetadata(1000L).copy(syncStatus = "SYNCED", version = 3L, baseVersion = 3L)),
+                sampleInstallmentTransactionEntity("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 2, sync = newSyncMetadata(1000L).copy(syncStatus = "SYNCED", version = 3L, baseVersion = 3L)),
             ),
         )
         val queue = FakeOfflineWriteQueueHolder()
@@ -1354,12 +1354,12 @@ class OfflineFirstTransactionRepositoryTest {
 
     @Test
     fun softDeleteInstallments_withValidMultipleIds_softDeletesAtomicallyPreservingTagsAndVersion() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("u1"), "test@test.com", NOW))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "test@test.com", NOW))
         val dao = FakeTransactionDao(
             listOf(
-                sampleInstallmentTransactionEntity("t1", "u1", "grp-1", 1, 3, sync = newSyncMetadata(1000L).copy(syncStatus = "SYNCED", version = 1L, baseVersion = 1L)),
-                sampleInstallmentTransactionEntity("t2", "u1", "grp-1", 2, 3, sync = newSyncMetadata(1000L).copy(syncStatus = "SYNCED", version = 2L, baseVersion = 2L)),
-                sampleInstallmentTransactionEntity("t3", "u1", "grp-1", 3, 3, sync = newSyncMetadata(1000L).copy(syncStatus = "PENDING_CREATE", version = 0L, baseVersion = null)),
+                sampleInstallmentTransactionEntity("t1", "11111111-1111-4111-8111-111111111111", "grp-1", 1, 3, sync = newSyncMetadata(1000L).copy(syncStatus = "SYNCED", version = 1L, baseVersion = 1L)),
+                sampleInstallmentTransactionEntity("t2", "11111111-1111-4111-8111-111111111111", "grp-1", 2, 3, sync = newSyncMetadata(1000L).copy(syncStatus = "SYNCED", version = 2L, baseVersion = 2L)),
+                sampleInstallmentTransactionEntity("t3", "11111111-1111-4111-8111-111111111111", "grp-1", 3, 3, sync = newSyncMetadata(1000L).copy(syncStatus = "PENDING_CREATE", version = 0L, baseVersion = null)),
             ),
         )
         val queue = FakeOfflineWriteQueueHolder()
@@ -1622,18 +1622,18 @@ private class FakeOfflineWriteQueueHolder {
         override suspend fun deleteCategoryRow(id: String): Int = 0
         override suspend fun deleteBudgetRow(id: String): Int = 0
         override suspend fun deleteTransactionRow(id: String): Int = 0
-        override suspend fun deleteOutboxRow(operationId: String): Int = 0
-        override suspend fun getOutboxById(operationId: String): SyncOperationEntity? = null
-        override suspend fun getSuccessors(predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun getActiveTailCandidates(entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun coalescePendingPayload(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
-        override suspend fun convertToPendingDelete(operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 0
-        override suspend fun convertPendingDeleteToUpdate(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
-        override suspend fun unblockSuccessor(operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun deleteOutboxRow(syncScopeKey: String, operationId: String): Int = 0
+        override suspend fun getOutboxById(syncScopeKey: String, operationId: String): SyncOperationEntity? = null
+        override suspend fun getSuccessors(syncScopeKey: String, predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun getActiveTailCandidates(syncScopeKey: String, entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun coalescePendingPayload(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
+        override suspend fun convertToPendingDelete(syncScopeKey: String, operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 0
+        override suspend fun convertPendingDeleteToUpdate(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
+        override suspend fun unblockSuccessor(syncScopeKey: String, operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun insertOutboxRow(operation: SyncOperationEntity) {
             lastInsertedOperation = operation
         }
-        override suspend fun deleteConflictRow(entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun deleteConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
         override suspend fun rebaseProfileVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseCategoryVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseTransactionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
@@ -1687,16 +1687,16 @@ private class FakeOfflineWriteQueueHolder {
         override suspend fun markDebtSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
         override suspend fun tombstoneGoalContributionsForDeletedGoal(goalId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int = 0
         override suspend fun tombstoneDebtPaymentsForDeletedDebt(debtId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getActiveGoalAggregateTailCandidates(goalId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun getActiveDebtAggregateTailCandidates(debtId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun countPendingGoalAggregateOperations(goalId: String, operationId: String): Int = 0
-        override suspend fun countPendingDebtAggregateOperations(debtId: String, operationId: String): Int = 0
+        override suspend fun getActiveGoalAggregateTailCandidates(syncScopeKey: String, goalId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun getActiveDebtAggregateTailCandidates(syncScopeKey: String, debtId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun countPendingGoalAggregateOperations(syncScopeKey: String, goalId: String, operationId: String): Int = 0
+        override suspend fun countPendingDebtAggregateOperations(syncScopeKey: String, debtId: String, operationId: String): Int = 0
         override suspend fun setGoalSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setGoalContributionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setDebtSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setDebtPaymentSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun upsertConflictRow(entity: com.feniqo.mobile.data.local.entity.SyncConflictEntity) {}
-        override suspend fun setOutboxStatusConflict(operationId: String, nowEpochMillis: Long): Int = 1
+        override suspend fun setOutboxStatusConflict(syncScopeKey: String, operationId: String, nowEpochMillis: Long): Int = 1
         override suspend fun setProfileSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setCategorySyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setTransactionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
@@ -1716,6 +1716,7 @@ private class FakeOfflineWriteQueueHolder {
             lastBatchDeleteUnits = units
         }
         override suspend fun mutateTransactionCreatesV2(
+            syncScopeKey: String,
             inputs: List<com.feniqo.mobile.data.local.dao.TransactionCreateInputV2>,
             operationIdFactory: () -> String,
             nowEpochMillis: Long,
@@ -1725,6 +1726,7 @@ private class FakeOfflineWriteQueueHolder {
                 val opId = operationIdFactory()
                 val op = SyncOperationEntity(
                     operationId = opId,
+                    syncScopeKey = syncScopeKey,
                     entityTypeCode = "TRANSACTION",
                     entityId = input.entity.id,
                     operationTypeCode = "CREATE",
@@ -1751,6 +1753,7 @@ private class FakeOfflineWriteQueueHolder {
             return legacyUnits.map { it.operation.operationId }
         }
         override suspend fun mutateTransactionDeletionsV2(
+            syncScopeKey: String,
             inputs: List<com.feniqo.mobile.data.local.dao.TransactionDeleteInputV2>,
             operationIdFactory: () -> String,
             nowEpochMillis: Long,
@@ -1760,6 +1763,7 @@ private class FakeOfflineWriteQueueHolder {
                 val opId = operationIdFactory()
                 val op = SyncOperationEntity(
                     operationId = opId,
+                    syncScopeKey = syncScopeKey,
                     entityTypeCode = "TRANSACTION",
                     entityId = input.entity.id,
                     operationTypeCode = "DELETE",
@@ -1786,25 +1790,27 @@ private class FakeOfflineWriteQueueHolder {
     }
 
     val operationDao = object : SyncOperationDao {
-        override fun observePendingCount(): Flow<Int> = flowOf(0)
-        override fun observeFailedCount(): Flow<Int> = flowOf(0)
-        override suspend fun getReadyOperations(nowEpochMillis: Long, limit: Int) = emptyList<SyncOperationEntity>()
-        override suspend fun getById(operationId: String): SyncOperationEntity? = null
+        override fun observePendingCount(syncScopeKey: String): Flow<Int> = flowOf(0)
+        override fun observeFailedCount(syncScopeKey: String): Flow<Int> = flowOf(0)
+        override suspend fun getReadyOperations(syncScopeKey: String, nowEpochMillis: Long, limit: Int) = emptyList<SyncOperationEntity>()
+        override suspend fun getById(syncScopeKey: String, operationId: String): SyncOperationEntity? = null
         override suspend fun insert(operation: SyncOperationEntity) {
             lastInsertedOperation = operation
         }
-        override suspend fun claimOperation(operationId: String, nowEpochMillis: Long): Int = 1
-        override suspend fun markFailed(operationId: String, lastError: String, errorClassification: String?, nextAttemptAtEpochMillis: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun markConflict(operationId: String, lastError: String, nowEpochMillis: Long): Int = 1
-        override suspend fun recoverStaleInFlight(staleBeforeEpochMillis: Long, nowEpochMillis: Long, lastError: String): Int = 0
-        override suspend fun retryAllFailed(nowEpochMillis: Long): Int = 0
-        override suspend fun deleteCompleted(operationId: String): Int = 1
-        override suspend fun deleteForEntity(entityTypeCode: String, entityId: String): Int = 0
-        override suspend fun getSuccessors(predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun unblockSuccessor(operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun getActiveTailCandidates(entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun coalescePendingPayload(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 1
-        override suspend fun convertToPendingDelete(operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 1
+        override suspend fun claimOperation(syncScopeKey: String, operationId: String, nowEpochMillis: Long): Int = 1
+        override suspend fun markFailed(syncScopeKey: String, operationId: String, lastError: String, errorClassification: String?, nextAttemptAtEpochMillis: Long, nowEpochMillis: Long): Int = 1
+        override suspend fun markConflict(syncScopeKey: String, operationId: String, lastError: String, nowEpochMillis: Long): Int = 1
+        override suspend fun recoverStaleInFlight(syncScopeKey: String, staleBeforeEpochMillis: Long, nowEpochMillis: Long, lastError: String): Int = 0
+        override suspend fun retryAllFailed(syncScopeKey: String, nowEpochMillis: Long): Int = 0
+        override suspend fun deleteCompleted(syncScopeKey: String, operationId: String): Int = 1
+        override suspend fun deleteForEntity(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun getSuccessors(syncScopeKey: String, predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun unblockSuccessor(syncScopeKey: String, operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 1
+        override suspend fun getActiveTailCandidates(syncScopeKey: String, entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun coalescePendingPayload(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 1
+        override suspend fun convertToPendingDelete(syncScopeKey: String, operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 1
+        override fun observeLegacyQuarantineOperationCount(): Flow<Int> = flowOf(0)
+        override suspend fun getLegacyQuarantineOperationCount(): Int = 0
     }
 
     var opCounter = 0

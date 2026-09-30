@@ -36,6 +36,10 @@ class SubscriptionOfflineWriteQueueTest {
         override fun cancelSyncWork() {}
     }
 
+    private companion object {
+        const val SCOPE = "USER:11111111-1111-4111-8111-111111111111"
+    }
+
     @Test
     fun create_entity_and_v2_outbox_added_atomically() = runTest {
         val db = inMemoryDatabase()
@@ -46,6 +50,7 @@ class SubscriptionOfflineWriteQueueTest {
             val entity = subscriptionEntity("sub-1", categoryId = "cat-1", amountMinor = 5999L, syncStatus = SyncStatus.PENDING_CREATE)
 
             val opId = queue.enqueueSubscriptionV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"name":"Spotify","amountMinor":5999,"currency":"TRY","categoryId":"cat-1","frequency":"MONTHLY","interval":1,"startDate":"2026-08-01","nextRenewalDate":"2026-09-01","isActive":true}""",
@@ -59,7 +64,7 @@ class SubscriptionOfflineWriteQueueTest {
             assertEquals("cat-1", stored.categoryId)
 
             // Protocol version 2 outbox satırı oluştu
-            val op = db.syncOperationDao().getById(opId)
+            val op = db.syncOperationDao().getById(SCOPE, opId)
             assertNotNull(op)
             assertEquals("SUBSCRIPTION", op.entityTypeCode)
             assertEquals("sub-1", op.entityId)
@@ -88,6 +93,7 @@ class SubscriptionOfflineWriteQueueTest {
 
             val payload = """{"name":"iCloud","amountMinor":12900,"currency":"TRY","categoryId":null,"frequency":"MONTHLY","interval":1,"startDate":"2026-08-01","nextRenewalDate":"2026-09-01","isActive":true}"""
             val opId = queue.enqueueSubscriptionV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.CREATE,
                 payloadJson = payload,
@@ -97,12 +103,11 @@ class SubscriptionOfflineWriteQueueTest {
             assertNotNull(stored)
             assertNull(stored.categoryId)
 
-            val op = db.syncOperationDao().getById(opId)
+            val op = db.syncOperationDao().getById(SCOPE, opId)
             assertNotNull(op)
             assertEquals(payload, op.payloadJson)
             assertTrue(op.payloadJson?.contains(""""categoryId":null""") == true)
         } finally {
-
             db.close()
         }
     }
@@ -117,6 +122,7 @@ class SubscriptionOfflineWriteQueueTest {
             val entity = subscriptionEntity("sub-2", categoryId = "cat-1", amountMinor = 5999L, syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1 = queue.enqueueSubscriptionV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"name":"Spotify","amountMinor":5999}""",
@@ -128,6 +134,7 @@ class SubscriptionOfflineWriteQueueTest {
                 sync = entity.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name),
             )
             val op2 = queue.enqueueSubscriptionV2(
+                syncScopeKey = SCOPE,
                 entity = updatedEntity,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"name":"Spotify Duo","amountMinor":7999}""",
@@ -140,7 +147,7 @@ class SubscriptionOfflineWriteQueueTest {
             assertEquals("Spotify Duo", stored.name)
             assertEquals(7999L, stored.amountMinor)
 
-            val storedOp = db.syncOperationDao().getById(op1)
+            val storedOp = db.syncOperationDao().getById(SCOPE, op1)
             assertNotNull(storedOp)
             assertEquals("CREATE", storedOp.operationTypeCode)
             assertEquals("""{"name":"Spotify Duo","amountMinor":7999}""", storedOp.payloadJson)
@@ -162,6 +169,7 @@ class SubscriptionOfflineWriteQueueTest {
             val entity = subscriptionEntity("sub-3", categoryId = "cat-1", amountMinor = 5999L, syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1 = queue.enqueueSubscriptionV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"name":"Spotify","amountMinor":5999}""",
@@ -175,6 +183,7 @@ class SubscriptionOfflineWriteQueueTest {
                 ),
             )
             val op2 = queue.enqueueSubscriptionV2(
+                syncScopeKey = SCOPE,
                 entity = delEntity,
                 type = OutboxOperationType.DELETE,
                 payloadJson = "{}",
@@ -189,8 +198,8 @@ class SubscriptionOfflineWriteQueueTest {
             cursor.close()
 
             // Outbox kaydı silinir
-            assertNull(db.syncOperationDao().getById(op1))
-            assertEquals(0, db.syncOperationDao().observePendingCount().first())
+            assertNull(db.syncOperationDao().getById(SCOPE, op1))
+            assertEquals(0, db.syncOperationDao().observePendingCount(SCOPE).first())
 
             // Hard delete durumunda scheduler çağrılmaz (sayaç hala 1 olmalı)
             assertEquals(1, scheduler.scheduleCount)
@@ -209,12 +218,13 @@ class SubscriptionOfflineWriteQueueTest {
             val entity = subscriptionEntity("sub-4", categoryId = "cat-1", amountMinor = 5999L, syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1 = queue.enqueueSubscriptionV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"name":"Spotify","amountMinor":5999}""",
             )
 
-            val claimed = queue.claimOperation(op1)
+            val claimed = queue.claimOperation(SCOPE, op1)
             assertNotNull(claimed)
             assertEquals("IN_FLIGHT", claimed.statusCode)
 
@@ -223,12 +233,13 @@ class SubscriptionOfflineWriteQueueTest {
                 sync = entity.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name),
             )
             val op2 = queue.enqueueSubscriptionV2(
+                syncScopeKey = SCOPE,
                 entity = updatedEntity,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"name":"Spotify Family","amountMinor":8999}""",
             )
 
-            val successor = db.syncOperationDao().getById(op2)
+            val successor = db.syncOperationDao().getById(SCOPE, op2)
             assertNotNull(successor)
             assertEquals("UPDATE", successor.operationTypeCode)
             assertTrue(successor.isBlocked)
@@ -250,13 +261,14 @@ class SubscriptionOfflineWriteQueueTest {
             val entity = subscriptionEntity("sub-chain", categoryId = "cat-1", amountMinor = 5999L, syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1 = queue.enqueueSubscriptionV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"name":"Netflix","amountMinor":5999}""",
             )
 
             // op1 claim edilir (IN_FLIGHT)
-            val claimed1 = queue.claimOperation(op1)
+            val claimed1 = queue.claimOperation(SCOPE, op1)
             assertNotNull(claimed1)
             assertEquals("IN_FLIGHT", claimed1.statusCode)
 
@@ -266,21 +278,22 @@ class SubscriptionOfflineWriteQueueTest {
                 sync = entity.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name),
             )
             val op2 = queue.enqueueSubscriptionV2(
+                syncScopeKey = SCOPE,
                 entity = updatedEntity,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"name":"Netflix HD","amountMinor":9999}""",
             )
 
-            val successor1 = db.syncOperationDao().getById(op2)
+            val successor1 = db.syncOperationDao().getById(SCOPE, op2)
             assertNotNull(successor1)
             assertEquals("UPDATE", successor1.operationTypeCode)
             assertTrue(successor1.isBlocked)
             assertEquals(op1, successor1.predecessorOperationId)
 
             // op2 unblock edilir ve claim edilir (IN_FLIGHT)
-            val unblockCount = db.syncOperationDao().unblockSuccessor(op2, op1, appliedVersion = 1L, nowEpochMillis = 2000L)
+            val unblockCount = db.syncOperationDao().unblockSuccessor(SCOPE, op2, op1, appliedVersion = 1L, nowEpochMillis = 2000L)
             assertEquals(1, unblockCount)
-            val claimed2 = queue.claimOperation(op2)
+            val claimed2 = queue.claimOperation(SCOPE, op2)
             assertNotNull(claimed2)
             assertEquals("IN_FLIGHT", claimed2.statusCode)
 
@@ -292,12 +305,13 @@ class SubscriptionOfflineWriteQueueTest {
                 ),
             )
             val op3 = queue.enqueueSubscriptionV2(
+                syncScopeKey = SCOPE,
                 entity = delEntity,
                 type = OutboxOperationType.DELETE,
                 payloadJson = "{}",
             )
 
-            val successor2 = db.syncOperationDao().getById(op3)
+            val successor2 = db.syncOperationDao().getById(SCOPE, op3)
             assertNotNull(successor2)
             assertEquals("DELETE", successor2.operationTypeCode)
             assertTrue(successor2.isBlocked)
@@ -305,7 +319,7 @@ class SubscriptionOfflineWriteQueueTest {
             assertNull(successor2.baseVersion)
 
             // Tek aktif kuyruk sonu (tail) op3 olmalıdır
-            val tails = db.localMutationDao().getActiveTailCandidates("SUBSCRIPTION", "sub-chain")
+            val tails = db.localMutationDao().getActiveTailCandidates(SCOPE, "SUBSCRIPTION", "sub-chain")
             assertEquals(1, tails.size)
             assertEquals(op3, tails.first().operationId)
         } finally {
@@ -329,6 +343,7 @@ class SubscriptionOfflineWriteQueueTest {
 
             assertFailsWith<IllegalArgumentException> {
                 queue.enqueueSubscriptionV2(
+                    syncScopeKey = SCOPE,
                     entity = entity,
                     type = OutboxOperationType.CREATE,
                     payloadJson = """{"name":"Failing"}""",
@@ -337,7 +352,7 @@ class SubscriptionOfflineWriteQueueTest {
 
             // Hiçbir kayıt Room'a veya Outbox'a yazılmamalı
             assertNull(db.subscriptionDao().getById("sub-fail-id"))
-            assertEquals(0, db.syncOperationDao().observePendingCount().first())
+            assertEquals(0, db.syncOperationDao().observePendingCount(SCOPE).first())
             assertEquals(0, scheduler.scheduleCount)
         } finally {
             db.close()

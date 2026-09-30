@@ -5,20 +5,23 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
+import com.feniqo.mobile.data.sync.SyncScopeKey
+
 /** Sunucuya gönderilmeyi bekleyen, kalıcı ve sıralı yerel yazma işlemi. */
 @Entity(
     tableName = "sync_operations",
     indices = [
-        Index(value = ["status_code", "next_attempt_at_epoch_ms", "created_at_epoch_ms"]),
-        Index(value = ["entity_type_code", "entity_id"]),
-        Index(value = ["created_at_epoch_ms"]),
-        Index(value = ["predecessor_operation_id"]),
+        Index(value = ["sync_scope_key", "status_code", "is_blocked", "next_attempt_at_epoch_ms", "created_at_epoch_ms", "operation_id"]),
+        Index(value = ["sync_scope_key", "entity_type_code", "entity_id"]),
+        Index(value = ["sync_scope_key", "predecessor_operation_id"]),
     ],
 )
 data class SyncOperationEntity(
     @PrimaryKey
     @ColumnInfo(name = "operation_id")
     val operationId: String,
+    @ColumnInfo(name = "sync_scope_key")
+    val syncScopeKey: String,
     @ColumnInfo(name = "entity_type_code")
     val entityTypeCode: String,
     @ColumnInfo(name = "entity_id")

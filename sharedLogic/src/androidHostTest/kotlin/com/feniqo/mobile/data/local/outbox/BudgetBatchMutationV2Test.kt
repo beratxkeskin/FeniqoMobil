@@ -26,6 +26,8 @@ import kotlin.test.assertNull
 @RunWith(RobolectricTestRunner::class)
 class BudgetBatchMutationV2Test {
 
+    private val SCOPE = "USER:11111111-1111-4111-8111-111111111111"
+
     private class FakeBackgroundSyncScheduler : BackgroundSyncScheduler {
         var scheduleCount = 0
         override fun scheduleInitialSync() {}
@@ -52,7 +54,7 @@ class BudgetBatchMutationV2Test {
                 BudgetMutationInputV2(entity = b2, type = OutboxOperationType.CREATE, payloadJson = """{"limitMinor":200000}"""),
             )
 
-            val results = queue.enqueueBudgetsV2(inputs)
+            val results = queue.enqueueBudgetsV2(SCOPE, inputs)
             assertEquals(2, results.size)
             assertEquals(V2EnqueueDecision.INSERTED, results[0].decision)
             assertEquals(V2EnqueueDecision.INSERTED, results[1].decision)
@@ -62,8 +64,8 @@ class BudgetBatchMutationV2Test {
             assertNotNull(db.budgetDao().observeById("b-batch-2").first())
 
             // Her iki outbox satırı da yazılmış
-            assertNotNull(db.syncOperationDao().getById(results[0].operationId))
-            assertNotNull(db.syncOperationDao().getById(results[1].operationId))
+            assertNotNull(db.syncOperationDao().getById(SCOPE, results[0].operationId))
+            assertNotNull(db.syncOperationDao().getById(SCOPE, results[1].operationId))
 
             // Scheduler yalnız bir kez çağrıldı
             assertEquals(1, scheduler.scheduleCount)
@@ -104,13 +106,13 @@ class BudgetBatchMutationV2Test {
             )
 
             assertFailsWith<IllegalStateException> {
-                queue.enqueueBudgetsV2(inputs)
+                queue.enqueueBudgetsV2(SCOPE, inputs)
             }
 
             // Transaction rollback: İlk bütçe entity'si de outbox'ı da Room'a yazılmamış olmalı
             assertNull(db.budgetDao().observeById("b-rb-1").first())
             assertNull(db.budgetDao().observeById("b-rb-2").first())
-            assertEquals(0, db.syncOperationDao().observePendingCount().first())
+            assertEquals(0, db.syncOperationDao().observePendingCount(SCOPE).first())
 
             // Başarısız işlemde scheduler çağrılmamalı
             assertEquals(0, scheduler.scheduleCount)
@@ -136,11 +138,11 @@ class BudgetBatchMutationV2Test {
             )
 
             assertFailsWith<IllegalArgumentException> {
-                queue.enqueueBudgetsV2(inputs)
+                queue.enqueueBudgetsV2(SCOPE, inputs)
             }
 
             assertNull(db.budgetDao().observeById("b-dup").first())
-            assertEquals(0, db.syncOperationDao().observePendingCount().first())
+            assertEquals(0, db.syncOperationDao().observePendingCount(SCOPE).first())
             assertEquals(0, scheduler.scheduleCount)
         } finally {
             db.close()
@@ -163,7 +165,7 @@ class BudgetBatchMutationV2Test {
                 BudgetMutationInputV2(entity = budgetEntity("b-s3", "cat-3"), type = OutboxOperationType.CREATE, payloadJson = "{}"),
             )
 
-            val results = queue.enqueueBudgetsV2(inputs)
+            val results = queue.enqueueBudgetsV2(SCOPE, inputs)
             assertEquals(3, results.size)
             assertEquals(1, scheduler.scheduleCount)
         } finally {
@@ -178,7 +180,7 @@ class BudgetBatchMutationV2Test {
             val scheduler = FakeBackgroundSyncScheduler()
             val queue = createQueue(db, scheduler)
 
-            val results = queue.enqueueBudgetsV2(emptyList())
+            val results = queue.enqueueBudgetsV2(SCOPE, emptyList())
             assertEquals(0, results.size)
             assertEquals(0, scheduler.scheduleCount)
         } finally {

@@ -13,6 +13,7 @@ import com.feniqo.mobile.data.local.outbox.OfflineWriteQueue
 import com.feniqo.mobile.data.local.outbox.OutboxOperationType
 import com.feniqo.mobile.data.remote.dto.SubscriptionDto
 import com.feniqo.mobile.data.sync.OutboxExecutionResult
+import com.feniqo.mobile.data.sync.SyncScopeKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import org.junit.runner.RunWith
@@ -28,6 +29,9 @@ import kotlin.test.assertTrue
 @RunWith(RobolectricTestRunner::class)
 class SubscriptionV2AckTest {
 
+    private val USER_ID = "11111111-1111-4111-8111-111111111111"
+    private val SCOPE = SyncScopeKey.user(USER_ID).rawValue
+
     @Test
     fun subscription_v2_ack_without_successor_applies_remote_record_and_removes_outbox_and_conflict() = runTest {
         val db = inMemoryDatabase()
@@ -37,24 +41,35 @@ class SubscriptionV2AckTest {
 
             val entity = subscriptionEntity("sub-1", "cat-1", 5999L)
             val opId = queue.enqueueSubscriptionV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.CREATE,
-                payloadJson = """{"id":"sub-1","user_id":"usr-1","workspace_id":null,"name":"Spotify","amount_minor":5999,"currency":"TRY","category_id":"cat-1","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","end_date":null,"next_renewal_date":"2026-09-01","is_active":true,"created_at":"2026-08-25T17:00:00Z","updated_at":null,"deleted_at":null,"version":null}""",
+                payloadJson = """{"id":"sub-1","user_id":"$USER_ID","workspace_id":null,"name":"Spotify","amount_minor":5999,"currency":"TRY","category_id":"cat-1","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","end_date":null,"next_renewal_date":"2026-09-01","is_active":true,"created_at":"2026-08-25T17:00:00Z","updated_at":null,"deleted_at":null,"version":null}""",
             )
 
             // Claim op -> IN_FLIGHT
-            val claimed = queue.claimOperation(opId)
+            val claimed = queue.claimOperation(SCOPE, opId)
             assertNotNull(claimed)
             assertEquals("IN_FLIGHT", claimed.statusCode)
 
             // Insert dummy conflict row to verify it gets cleaned
             db.syncStateDao().upsertConflict(
-                SyncConflictEntity("SUBSCRIPTION", "sub-1", opId, 0L, 1L, "{}", "{}", 1000L),
+                SyncConflictEntity(
+                    syncScopeKey = SCOPE,
+                    entityTypeCode = "SUBSCRIPTION",
+                    entityId = "sub-1",
+                    operationId = opId,
+                    localVersion = 0L,
+                    remoteVersion = 1L,
+                    localPayloadJson = "{}",
+                    remotePayloadJson = "{}",
+                    detectedAtEpochMillis = 1000L,
+                ),
             )
 
             val remoteDto = SubscriptionDto(
                 id = "sub-1",
-                userId = "usr-1",
+                userId = USER_ID,
                 workspaceId = null,
                 name = "Spotify Premium",
                 amountMinor = 6499L,
@@ -73,6 +88,7 @@ class SubscriptionV2AckTest {
             )
 
             val ackResult = db.localMutationDao().ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = opId,
                 result = OutboxExecutionResult.SubscriptionApplied(remoteDto),
                 nowEpochMillis = 1000L,
@@ -80,8 +96,8 @@ class SubscriptionV2AckTest {
             assertTrue(ackResult)
 
             // Verify: outbox removed, conflict removed, entity updated with remote values and SYNCED
-            assertNull(db.syncOperationDao().getById(opId))
-            assertNull(db.syncStateDao().getConflict("SUBSCRIPTION", "sub-1"))
+            assertNull(db.syncOperationDao().getById(SCOPE, opId))
+            assertNull(db.syncStateDao().getConflict(SCOPE, "SUBSCRIPTION", "sub-1"))
             val stored = db.subscriptionDao().getById("sub-1")
             assertNotNull(stored)
             assertEquals(6499L, stored.amountMinor)
@@ -103,13 +119,14 @@ class SubscriptionV2AckTest {
 
             val initial = subscriptionEntity("sub-2", "cat-1", 5999L)
             val op1Id = queue.enqueueSubscriptionV2(
+                syncScopeKey = SCOPE,
                 entity = initial,
                 type = OutboxOperationType.CREATE,
-                payloadJson = """{"id":"sub-2","user_id":"usr-1","workspace_id":null,"name":"Spotify","amount_minor":5999,"currency":"TRY","category_id":"cat-1","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","end_date":null,"next_renewal_date":"2026-09-01","is_active":true,"created_at":"2026-08-25T17:00:00Z","updated_at":null,"deleted_at":null,"version":null}""",
+                payloadJson = """{"id":"sub-2","user_id":"$USER_ID","workspace_id":null,"name":"Spotify","amount_minor":5999,"currency":"TRY","category_id":"cat-1","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","end_date":null,"next_renewal_date":"2026-09-01","is_active":true,"created_at":"2026-08-25T17:00:00Z","updated_at":null,"deleted_at":null,"version":null}""",
             )
 
             // Claim op1 -> IN_FLIGHT
-            val claimed = queue.claimOperation(op1Id)
+            val claimed = queue.claimOperation(SCOPE, op1Id)
             assertNotNull(claimed)
             assertEquals("IN_FLIGHT", claimed.statusCode)
 
@@ -120,12 +137,13 @@ class SubscriptionV2AckTest {
                 sync = initial.sync.copy(syncStatus = "PENDING_UPDATE"),
             )
             val op2Id = queue.enqueueSubscriptionV2(
+                syncScopeKey = SCOPE,
                 entity = updated,
                 type = OutboxOperationType.UPDATE,
-                payloadJson = """{"id":"sub-2","user_id":"usr-1","workspace_id":null,"name":"Spotify Family","amount_minor":8999,"currency":"TRY","category_id":"cat-1","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","end_date":null,"next_renewal_date":"2026-09-01","is_active":true,"created_at":"2026-08-25T17:00:00Z","updated_at":null,"deleted_at":null,"version":1}""",
+                payloadJson = """{"id":"sub-2","user_id":"$USER_ID","workspace_id":null,"name":"Spotify Family","amount_minor":8999,"currency":"TRY","category_id":"cat-1","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","end_date":null,"next_renewal_date":"2026-09-01","is_active":true,"created_at":"2026-08-25T17:00:00Z","updated_at":null,"deleted_at":null,"version":1}""",
             )
 
-            val successorBefore = db.syncOperationDao().getById(op2Id)
+            val successorBefore = db.syncOperationDao().getById(SCOPE, op2Id)
             assertNotNull(successorBefore)
             assertTrue(successorBefore.isBlocked)
             assertEquals(op1Id, successorBefore.predecessorOperationId)
@@ -133,7 +151,7 @@ class SubscriptionV2AckTest {
             // ACK op1 with appliedVersion = 1L
             val remoteDto = SubscriptionDto(
                 id = "sub-2",
-                userId = "usr-1",
+                userId = USER_ID,
                 workspaceId = null,
                 name = "Spotify",
                 amountMinor = 5999L,
@@ -152,6 +170,7 @@ class SubscriptionV2AckTest {
             )
 
             val ackResult = db.localMutationDao().ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = op1Id,
                 result = OutboxExecutionResult.SubscriptionApplied(remoteDto),
                 nowEpochMillis = 1000L,
@@ -159,9 +178,9 @@ class SubscriptionV2AckTest {
             assertTrue(ackResult)
 
             // Verify op1 deleted, op2 unblocked with baseVersion = 1L, entity keeps local updated values
-            assertNull(db.syncOperationDao().getById(op1Id))
+            assertNull(db.syncOperationDao().getById(SCOPE, op1Id))
 
-            val successorAfter = db.syncOperationDao().getById(op2Id)
+            val successorAfter = db.syncOperationDao().getById(SCOPE, op2Id)
             assertNotNull(successorAfter)
             assertFalse(successorAfter.isBlocked)
             assertEquals(1L, successorAfter.baseVersion)
@@ -197,18 +216,19 @@ class SubscriptionV2AckTest {
                 ),
             )
             val opId = queue.enqueueSubscriptionV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.DELETE,
-                payloadJson = """{"id":"sub-3","user_id":"usr-1","workspace_id":null,"name":"Spotify","amount_minor":5999,"currency":"TRY","category_id":"cat-1","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","end_date":null,"next_renewal_date":"2026-09-01","is_active":true,"created_at":"2026-08-25T17:00:00Z","deleted_at":"2026-08-25T17:05:00Z","version":2}""",
+                payloadJson = """{"id":"sub-3","user_id":"$USER_ID","workspace_id":null,"name":"Spotify","amount_minor":5999,"currency":"TRY","category_id":"cat-1","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","end_date":null,"next_renewal_date":"2026-09-01","is_active":true,"created_at":"2026-08-25T17:00:00Z","deleted_at":"2026-08-25T17:05:00Z","version":2}""",
             )
 
-            val claimed = queue.claimOperation(opId)
+            val claimed = queue.claimOperation(SCOPE, opId)
             assertNotNull(claimed)
             assertEquals("IN_FLIGHT", claimed.statusCode)
 
             val remoteDto = SubscriptionDto(
                 id = "sub-3",
-                userId = "usr-1",
+                userId = USER_ID,
                 workspaceId = null,
                 name = "Spotify",
                 amountMinor = 5999L,
@@ -227,13 +247,14 @@ class SubscriptionV2AckTest {
             )
 
             val ackResult = db.localMutationDao().ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = opId,
                 result = OutboxExecutionResult.SubscriptionApplied(remoteDto),
                 nowEpochMillis = 2000L,
             )
             assertTrue(ackResult)
 
-            assertNull(db.syncOperationDao().getById(opId))
+            assertNull(db.syncOperationDao().getById(SCOPE, opId))
             val stored = db.subscriptionDao().getAnyById("sub-3")
             assertNotNull(stored)
             assertNotNull(stored.sync.deletedAtEpochMillis)
@@ -264,23 +285,25 @@ class SubscriptionV2AckTest {
                 ),
             )
             val opId = queue.enqueueSubscriptionV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.DELETE,
-                payloadJson = """{"id":"sub-4","user_id":"usr-1","workspace_id":null,"name":"Spotify","amount_minor":5999,"currency":"TRY","category_id":"cat-1","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","end_date":null,"next_renewal_date":"2026-09-01","is_active":true,"created_at":"2026-08-25T17:00:00Z","deleted_at":"2026-08-25T17:05:00Z","version":2}""",
+                payloadJson = """{"id":"sub-4","user_id":"$USER_ID","workspace_id":null,"name":"Spotify","amount_minor":5999,"currency":"TRY","category_id":"cat-1","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","end_date":null,"next_renewal_date":"2026-09-01","is_active":true,"created_at":"2026-08-25T17:00:00Z","deleted_at":"2026-08-25T17:05:00Z","version":2}""",
             )
 
-            val claimed = queue.claimOperation(opId)
+            val claimed = queue.claimOperation(SCOPE, opId)
             assertNotNull(claimed)
             assertEquals("IN_FLIGHT", claimed.statusCode)
 
             val ackResult = db.localMutationDao().ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = opId,
                 result = OutboxExecutionResult.MissingDeleteAcknowledged,
                 nowEpochMillis = 2000L,
             )
             assertTrue(ackResult)
 
-            assertNull(db.syncOperationDao().getById(opId))
+            assertNull(db.syncOperationDao().getById(SCOPE, opId))
             val stored = db.subscriptionDao().getAnyById("sub-4")
             assertNotNull(stored)
             assertNotNull(stored.sync.deletedAtEpochMillis)
@@ -299,15 +322,16 @@ class SubscriptionV2AckTest {
 
             val entity = subscriptionEntity("sub-5", "cat-1", 5999L)
             val opId = queue.enqueueSubscriptionV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.CREATE,
-                payloadJson = """{"id":"sub-5","user_id":"usr-1","workspace_id":null,"name":"Spotify","amount_minor":5999,"currency":"TRY","category_id":"cat-1","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","end_date":null,"next_renewal_date":"2026-09-01","is_active":true,"created_at":"2026-08-25T17:00:00Z","version":null}""",
+                payloadJson = """{"id":"sub-5","user_id":"$USER_ID","workspace_id":null,"name":"Spotify","amount_minor":5999,"currency":"TRY","category_id":"cat-1","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","end_date":null,"next_renewal_date":"2026-09-01","is_active":true,"created_at":"2026-08-25T17:00:00Z","version":null}""",
             )
-            queue.claimOperation(opId)
+            queue.claimOperation(SCOPE, opId)
 
             val invalidDto = SubscriptionDto(
                 id = "sub-5",
-                userId = "usr-1",
+                userId = USER_ID,
                 workspaceId = null,
                 name = "Spotify",
                 amountMinor = 5999L,
@@ -327,6 +351,7 @@ class SubscriptionV2AckTest {
 
             assertFailsWith<IllegalArgumentException> {
                 db.localMutationDao().ackV2Execution(
+                    syncScopeKey = SCOPE,
                     operationId = opId,
                     result = OutboxExecutionResult.SubscriptionApplied(invalidDto),
                     nowEpochMillis = 1000L,
@@ -334,7 +359,7 @@ class SubscriptionV2AckTest {
             }
 
             // Atomic rollback: outbox remains IN_FLIGHT
-            val op = db.syncOperationDao().getById(opId)
+            val op = db.syncOperationDao().getById(SCOPE, opId)
             assertNotNull(op)
             assertEquals("IN_FLIGHT", op.statusCode)
         } finally {
@@ -351,15 +376,16 @@ class SubscriptionV2AckTest {
 
             val entity = subscriptionEntity("sub-6", "cat-1", 5999L)
             val opId = queue.enqueueSubscriptionV2(
+                syncScopeKey = SCOPE,
                 entity = entity,
                 type = OutboxOperationType.CREATE,
-                payloadJson = """{"id":"sub-6","user_id":"usr-1","workspace_id":null,"name":"Spotify","amount_minor":5999,"currency":"TRY","category_id":"cat-1","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","version":null}""",
+                payloadJson = """{"id":"sub-6","user_id":"$USER_ID","workspace_id":null,"name":"Spotify","amount_minor":5999,"currency":"TRY","category_id":"cat-1","frequency":"MONTHLY","interval":1,"start_date":"2026-08-01","version":null}""",
             )
-            queue.claimOperation(opId)
+            queue.claimOperation(SCOPE, opId)
 
             val mismatchedDto = SubscriptionDto(
                 id = "different-sub-id",
-                userId = "usr-1",
+                userId = USER_ID,
                 workspaceId = null,
                 name = "Spotify",
                 amountMinor = 5999L,
@@ -379,6 +405,7 @@ class SubscriptionV2AckTest {
 
             assertFailsWith<IllegalStateException> {
                 db.localMutationDao().ackV2Execution(
+                    syncScopeKey = SCOPE,
                     operationId = opId,
                     result = OutboxExecutionResult.SubscriptionApplied(mismatchedDto),
                     nowEpochMillis = 1000L,
@@ -409,9 +436,9 @@ class SubscriptionV2AckTest {
 
     private fun categoryEntity(id: String, name: String) = CategoryEntity(
         id = id,
-        ownerId = "usr-1",
+        ownerId = USER_ID,
         workspaceId = null,
-        scopeKey = "user:usr-1",
+        scopeKey = "user:$USER_ID",
         name = name,
         normalizedName = name.lowercase(),
         slug = name.lowercase(),
@@ -438,7 +465,7 @@ class SubscriptionV2AckTest {
         syncStatus: String = "PENDING_CREATE",
     ) = SubscriptionEntity(
         id = id,
-        ownerId = "usr-1",
+        ownerId = USER_ID,
         workspaceId = null,
         name = "Spotify",
         amountMinor = amountMinor,

@@ -55,6 +55,11 @@ import kotlin.test.assertTrue
 
 class WorkspaceInitialRemoteSyncTest {
 
+    private companion object {
+        const val TEST_USER_ID = "00000000-0000-4000-8000-000000000001"
+        val TEST_SCOPE = com.feniqo.mobile.data.sync.SyncScopeKey.forUser(TEST_USER_ID)
+    }
+
     private fun sampleWorkspaceDto(
         id: String = "ws-1",
         name: String = "Ana Bütçe",
@@ -106,6 +111,7 @@ class WorkspaceInitialRemoteSyncTest {
         var applyCallCount = 0
 
         override suspend fun applyWorkspaceSnapshot(
+            syncScopeKey: String,
             workspaces: List<WorkspaceEntity>,
             members: List<WorkspaceMemberEntity>,
             cursors: List<SyncCursorEntity>,
@@ -129,8 +135,8 @@ class WorkspaceInitialRemoteSyncTest {
         override suspend fun getWorkspaceMemberRow(workspaceId: String, userId: String): WorkspaceMemberEntity? = null
         override suspend fun getWorkspaceMemberRows(workspaceId: String): List<WorkspaceMemberEntity> = emptyList()
         override suspend fun getAllKnownLiveWorkspaceIds(): List<String> = emptyList()
-        override suspend fun getFirstOutboxOperationId(entityTypeCode: String, entityId: String): String? = null
-        override suspend fun countOutboxRows(entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun getFirstOutboxOperationId(syncScopeKey: String, entityTypeCode: String, entityId: String): String? = null
+        override suspend fun countOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
         override suspend fun upsertProfileRow(entity: UserProfileEntity) = Unit
         override suspend fun upsertWorkspaceRows(entities: List<WorkspaceEntity>) = Unit
         override suspend fun upsertWorkspaceMemberRows(entities: List<WorkspaceMemberEntity>) = Unit
@@ -145,7 +151,7 @@ class WorkspaceInitialRemoteSyncTest {
         override suspend fun upsertDebtPaymentRows(entities: List<DebtPaymentEntity>) = Unit
         override suspend fun upsertConflictRow(conflict: SyncConflictEntity) = Unit
         override suspend fun upsertCursorRows(cursors: List<SyncCursorEntity>) = Unit
-        override suspend fun deleteConflictRow(entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun deleteConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
         override suspend fun markProfileConflict(entityId: String, error: String): Int = 0
         override suspend fun markCategoryConflict(entityId: String, error: String): Int = 0
         override suspend fun markTransactionConflict(entityId: String, error: String): Int = 0
@@ -155,21 +161,21 @@ class WorkspaceInitialRemoteSyncTest {
         override suspend fun markGoalContributionConflict(entityId: String, error: String): Int = 0
         override suspend fun markDebtConflict(entityId: String, error: String): Int = 0
         override suspend fun markDebtPaymentConflict(entityId: String, error: String): Int = 0
-        override suspend fun deleteOutboxRows(entityTypeCode: String, entityId: String): Int = 0
-        override suspend fun deleteOtherOutboxRows(entityTypeCode: String, entityId: String, keptOperationId: String): Int = 0
-        override suspend fun resetConflictOperation(operationId: String, operationTypeCode: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun deleteOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun deleteOtherOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String, keptOperationId: String): Int = 0
+        override suspend fun resetConflictOperation(syncScopeKey: String, operationId: String, operationTypeCode: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseProfileForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseCategoryForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseRecurringTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseSubscriptionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getActiveWorkspaceTailOperation(workspaceId: String): com.feniqo.mobile.data.local.entity.SyncOperationEntity? = null
+        override suspend fun getActiveWorkspaceTailOperation(syncScopeKey: String, workspaceId: String): com.feniqo.mobile.data.local.entity.SyncOperationEntity? = null
         override suspend fun markWorkspaceConflict(entityId: String, error: String): Int = 0
-        override suspend fun getAllWorkspaceOperations(workspaceId: String): List<com.feniqo.mobile.data.local.entity.SyncOperationEntity> = emptyList()
-        override suspend fun deleteSpecificWorkspaceOperations(workspaceId: String, operationIds: List<String>): Int = 0
+        override suspend fun getAllWorkspaceOperations(syncScopeKey: String, workspaceId: String): List<com.feniqo.mobile.data.local.entity.SyncOperationEntity> = emptyList()
+        override suspend fun deleteSpecificWorkspaceOperations(syncScopeKey: String, workspaceId: String, operationIds: List<String>): Int = 0
         override suspend fun rebaseWorkspaceForRetry(workspaceId: String, syncStatus: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun resetWorkspaceConflictOperation(operationId: String, operationTypeCode: String, payloadJson: String?, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getConflictRow(entityTypeCode: String, entityId: String): SyncConflictEntity? = null
+        override suspend fun resetWorkspaceConflictOperation(syncScopeKey: String, operationId: String, operationTypeCode: String, payloadJson: String?, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun getConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): SyncConflictEntity? = null
     }
 
     private class FakeCoreRemoteDataSource(
@@ -249,7 +255,7 @@ class WorkspaceInitialRemoteSyncTest {
         val dao = RecordingRemoteSyncDao()
         val coordinator = WorkspaceInitialRemoteSync(remote, dao) { 5_000L }
 
-        val result = coordinator.pull()
+        val result = coordinator.pull(TEST_SCOPE)
 
         assertEquals(2, result.workspaceCount)
         assertEquals(3, result.memberCount)
@@ -306,7 +312,7 @@ class WorkspaceInitialRemoteSyncTest {
         val dao = RecordingRemoteSyncDao()
         val coordinator = WorkspaceInitialRemoteSync(remote, dao) { 5_500L }
 
-        val result = coordinator.pull()
+        val result = coordinator.pull(TEST_SCOPE)
 
         assertEquals(0, result.workspaceCount)
         assertEquals(0, result.memberCount)
@@ -337,7 +343,7 @@ class WorkspaceInitialRemoteSyncTest {
         val coordinator = WorkspaceInitialRemoteSync(remote, dao) { 5_600L }
 
         assertFailsWith<IllegalStateException> {
-            coordinator.pull()
+            coordinator.pull(TEST_SCOPE)
         }
 
         assertEquals(0, dao.applyCallCount)
@@ -365,7 +371,7 @@ class WorkspaceInitialRemoteSyncTest {
         val dao = RecordingRemoteSyncDao()
         val coordinator = WorkspaceInitialRemoteSync(remote, dao) { 6_000L }
 
-        val result = coordinator.pull()
+        val result = coordinator.pull(TEST_SCOPE)
 
         assertEquals(1, result.workspaceCount)
         assertEquals(1, result.memberCount)
@@ -384,7 +390,7 @@ class WorkspaceInitialRemoteSyncTest {
         val coordinator = WorkspaceInitialRemoteSync(remote, dao) { 7_000L }
 
         assertFailsWith<IllegalStateException> {
-            coordinator.pull()
+            coordinator.pull(TEST_SCOPE)
         }
 
         assertEquals(0, dao.applyCallCount)
@@ -405,7 +411,7 @@ class WorkspaceInitialRemoteSyncTest {
         val coordinator = WorkspaceInitialRemoteSync(remote, dao) { 7_500L }
 
         assertFailsWith<IllegalStateException> {
-            coordinator.pull()
+            coordinator.pull(TEST_SCOPE)
         }
 
         assertEquals(0, dao.applyCallCount)
@@ -431,7 +437,7 @@ class WorkspaceInitialRemoteSyncTest {
         val coordinator = WorkspaceInitialRemoteSync(remote, dao) { 8_000L }
 
         assertFailsWith<RemoteMappingException> {
-            coordinator.pull()
+            coordinator.pull(TEST_SCOPE)
         }
 
         assertEquals(0, dao.applyCallCount)

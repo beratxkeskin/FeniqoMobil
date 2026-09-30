@@ -39,11 +39,12 @@ class WorkspaceIncrementalRemoteSync(
      * Kalıcı `SyncStateDao` cursor'larını okur, incremental remote pull gerçekleştirir ve
      * güncellenmiş cursor'ları snapshot ile atomik olarak kaydeder.
      */
-    suspend fun pull(): WorkspaceIncrementalSyncResult {
-        val storedWorkspaceCursorEntity = syncStateDao.getCursor(WorkspaceSyncCursorKeys.WORKSPACE_ENTITY_TYPE)
+    suspend fun pull(syncScopeKey: String): WorkspaceIncrementalSyncResult {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        val storedWorkspaceCursorEntity = syncStateDao.getCursor(syncScopeKey, WorkspaceSyncCursorKeys.WORKSPACE_ENTITY_TYPE)
         val initialWorkspaceCursor = storedWorkspaceCursorEntity?.let(WorkspaceSyncCursorKeys::workspaceEntityToCursor)
 
-        val storedMemberCursorEntities = syncStateDao.getWorkspaceMemberCursors()
+        val storedMemberCursorEntities = syncStateDao.getWorkspaceMemberCursors(syncScopeKey)
         val initialMemberCursors = storedMemberCursorEntities.mapNotNull { entity ->
             WorkspaceSyncCursorKeys.workspaceMemberEntityToCursor(entity)?.let { cursor ->
                 cursor.workspaceId to cursor
@@ -51,25 +52,29 @@ class WorkspaceIncrementalRemoteSync(
         }.toMap()
 
         return pullInternal(
+            syncScopeKey = syncScopeKey,
             workspaceCursor = initialWorkspaceCursor,
             memberCursors = initialMemberCursors,
             persistCursors = true,
         )
     }
 
-    /**
-     * Açık cursor'lar ile çekme yapan yardımcı fonksiyon (test ve iç kullanım için).
-     */
     suspend fun pull(
+        syncScopeKey: String,
         workspaceCursor: RemoteSyncCursor?,
         memberCursors: Map<String, WorkspaceMemberSyncCursor> = emptyMap(),
-    ): WorkspaceIncrementalSyncResult = pullInternal(
-        workspaceCursor = workspaceCursor,
-        memberCursors = memberCursors,
-        persistCursors = true,
-    )
+    ): WorkspaceIncrementalSyncResult {
+        SyncScopeKey.requireUserScope(syncScopeKey)
+        return pullInternal(
+            syncScopeKey = syncScopeKey,
+            workspaceCursor = workspaceCursor,
+            memberCursors = memberCursors,
+            persistCursors = true,
+        )
+    }
 
     private suspend fun pullInternal(
+        syncScopeKey: String,
         workspaceCursor: RemoteSyncCursor?,
         memberCursors: Map<String, WorkspaceMemberSyncCursor>,
         persistCursors: Boolean,
@@ -124,10 +129,10 @@ class WorkspaceIncrementalRemoteSync(
         val cursorEntitiesToPersist = if (persistCursors) {
             val cursors = mutableListOf<SyncCursorEntity>()
             if (nextWorkspaceCursor != null) {
-                cursors += WorkspaceSyncCursorKeys.workspaceCursorToEntity(nextWorkspaceCursor)
+                cursors += WorkspaceSyncCursorKeys.workspaceCursorToEntity(syncScopeKey, nextWorkspaceCursor)
             }
             for ((_, memberCursor) in nextMemberCursors) {
-                cursors += WorkspaceSyncCursorKeys.workspaceMemberCursorToEntity(memberCursor)
+                cursors += WorkspaceSyncCursorKeys.workspaceMemberCursorToEntity(syncScopeKey, memberCursor)
             }
             cursors
         } else {
@@ -141,7 +146,7 @@ class WorkspaceIncrementalRemoteSync(
 
         for (dto in workspaceDtos) {
             val localWs = remoteSyncDao.getWorkspaceRow(dto.id)
-            val localOp = remoteSyncDao.getActiveWorkspaceTailOperation(dto.id)
+            val localOp = remoteSyncDao.getActiveWorkspaceTailOperation(syncScopeKey, dto.id)
 
             if (localWs == null) {
                 // Yerelde yok -> APPLY
@@ -199,6 +204,7 @@ class WorkspaceIncrementalRemoteSync(
                 if (dto.version > baseVersion) {
                     // CONFLICT
                     val conflictEntity = com.feniqo.mobile.data.local.entity.SyncConflictEntity(
+                        syncScopeKey = syncScopeKey,
                         entityTypeCode = "WORKSPACE",
                         entityId = dto.id,
                         operationId = tailOp.operationId,
@@ -231,7 +237,7 @@ class WorkspaceIncrementalRemoteSync(
         )
 
         // 6. Planı tek atomik transaction olarak Room SSOT'a uygula
-        remoteSyncDao.applyWorkspaceIncrementalPlan(plan)
+        remoteSyncDao.applyWorkspaceIncrementalPlan(syncScopeKey, plan)
 
         return WorkspaceIncrementalSyncResult(
             appliedWorkspacesCount = applyItems.size,

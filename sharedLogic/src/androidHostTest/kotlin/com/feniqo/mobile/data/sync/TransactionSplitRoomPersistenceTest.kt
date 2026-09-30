@@ -159,6 +159,7 @@ class TransactionSplitRoomPersistenceTest {
             )
 
             val opId = queue.enqueueTransaction(
+                syncScopeKey = SCOPE,
                 entity = txEntity,
                 tags = emptyList(),
                 tagLinks = emptyList(),
@@ -183,7 +184,7 @@ class TransactionSplitRoomPersistenceTest {
             assertEquals(4_000L, restored.participantShares[1].amountMinor)
 
             // Verify outbox operation in Room
-            val outboxOp = db.syncOperationDao().getById(opId)
+            val outboxOp = db.syncOperationDao().getById(SCOPE, opId)
             assertNotNull(outboxOp)
             assertEquals("TRANSACTION", outboxOp.entityTypeCode)
             assertEquals(TX_ID, outboxOp.entityId)
@@ -219,6 +220,7 @@ class TransactionSplitRoomPersistenceTest {
                 tags = emptyList(),
                 tagLinks = emptyList(),
                 operation = SyncOperationEntity(
+                    syncScopeKey = SCOPE,
                     operationId = OP_ID,
                     entityTypeCode = "TRANSACTION",
                     entityId = TX_ID,
@@ -257,6 +259,7 @@ class TransactionSplitRoomPersistenceTest {
             )
 
             val ackResult = db.localMutationDao().ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = OP_ID,
                 result = OutboxExecutionResult.TransactionApplied(remoteDto),
                 nowEpochMillis = 2000L,
@@ -264,7 +267,7 @@ class TransactionSplitRoomPersistenceTest {
             assertTrue(ackResult)
 
             // Outbox row should be deleted
-            assertNull(db.syncOperationDao().getById(OP_ID))
+            assertNull(db.syncOperationDao().getById(SCOPE, OP_ID))
 
             // Room entity must be updated to SYNCED with remote custom shares
             val updatedEntity = db.transactionDao().getByIdAndOwner(TX_ID, USER_ID)
@@ -317,7 +320,7 @@ class TransactionSplitRoomPersistenceTest {
                 nowEpochMillisProvider = { 3000L },
             )
 
-            val result = sync.pullFor(EntityId(USER_ID))
+            val result = sync.pullFor(EntityId(USER_ID), SCOPE)
             assertEquals(2, result.appliedCount, "Profil + Transaction uygulandı")
             assertEquals(1, result.receivedTransactionCount)
             assertEquals(0, result.conflictCount)
@@ -335,7 +338,7 @@ class TransactionSplitRoomPersistenceTest {
             assertEquals(6_000L, domain.participantShares.first { it.userId == EntityId(USER_ID) }.amountMinor)
 
             // Cursor check
-            val cursor = db.syncStateDao().getCursor("TRANSACTION")
+            val cursor = db.syncStateDao().getCursor(SCOPE, "TRANSACTION")
             assertNotNull(cursor)
             assertEquals(TX_ID, cursor.entityId)
         } finally {
@@ -374,6 +377,7 @@ class TransactionSplitRoomPersistenceTest {
                 tags = emptyList(),
                 tagLinks = emptyList(),
                 operation = SyncOperationEntity(
+                    syncScopeKey = SCOPE,
                     operationId = OP_ID,
                     entityTypeCode = "TRANSACTION",
                     entityId = TX_ID,
@@ -416,7 +420,7 @@ class TransactionSplitRoomPersistenceTest {
                 nowEpochMillisProvider = { 3000L },
             )
 
-            val result = sync.pullFor(EntityId(USER_ID))
+            val result = sync.pullFor(EntityId(USER_ID), SCOPE)
             assertEquals(1, result.appliedCount, "Profil uygulandı; transaction çakışmada kaldı")
             assertEquals(1, result.receivedTransactionCount)
             assertEquals(1, result.conflictCount)
@@ -427,7 +431,7 @@ class TransactionSplitRoomPersistenceTest {
             assertEquals("CONFLICT", stored.sync.syncStatus)
 
             // Conflict snapshot in Room
-            val conflict = db.syncStateDao().getConflict("TRANSACTION", TX_ID)
+            val conflict = db.syncStateDao().getConflict(SCOPE, "TRANSACTION", TX_ID)
             assertNotNull(conflict)
             assertEquals(1L, conflict.localVersion)
             assertEquals(2L, conflict.remoteVersion)
@@ -486,11 +490,11 @@ class TransactionSplitRoomPersistenceTest {
 
             // Should throw RemoteMappingException
             assertFailsWith<RemoteMappingException> {
-                sync.pullFor(EntityId(USER_ID))
+                sync.pullFor(EntityId(USER_ID), SCOPE)
             }
 
             // Verify cursor was NOT advanced
-            val cursor = db.syncStateDao().getCursor("TRANSACTION")
+            val cursor = db.syncStateDao().getCursor(SCOPE, "TRANSACTION")
             assertNull(cursor, "Bozuk kayıt nedeniyle imleç (cursor) ilerletilmemelidir.")
 
             // Verify corrupt transaction was NOT written to Room
@@ -540,5 +544,6 @@ class TransactionSplitRoomPersistenceTest {
         const val TX_ID = "33333333-3333-3333-3333-333333333333"
         const val CATEGORY_ID = "44444444-4444-4444-4444-444444444444"
         const val OP_ID = "55555555555555555555555555555555"
+        const val SCOPE = "USER:$USER_ID"
     }
 }

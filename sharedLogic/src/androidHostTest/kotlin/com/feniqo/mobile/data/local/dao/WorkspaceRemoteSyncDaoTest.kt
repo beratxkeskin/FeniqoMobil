@@ -88,11 +88,16 @@ class WorkspaceRemoteSyncDaoTest {
         ),
     )
 
+    private val OWNER_ID = "00000000-0000-4000-8000-000000000001"
+    private val TEST_SCOPE = "USER:$OWNER_ID"
+
     private fun sampleOutboxOperation(
         operationId: String = "op-1",
+        syncScopeKey: String = TEST_SCOPE,
         entityTypeCode: String = "WORKSPACE",
         entityId: String = "ws-existing-pending",
     ): SyncOperationEntity = SyncOperationEntity(
+        syncScopeKey = syncScopeKey,
         operationId = operationId,
         entityTypeCode = entityTypeCode,
         entityId = entityId,
@@ -119,6 +124,7 @@ class WorkspaceRemoteSyncDaoTest {
         val editorMember = sampleMember(workspaceId = "ws-10", userId = "editor-2", roleCode = "EDITOR")
 
         syncDao.applyWorkspaceSnapshot(
+            syncScopeKey = TEST_SCOPE,
             workspaces = listOf(workspace),
             members = listOf(ownerMember, editorMember),
         )
@@ -160,6 +166,7 @@ class WorkspaceRemoteSyncDaoTest {
         )
 
         syncDao.applyWorkspaceSnapshot(
+            syncScopeKey = TEST_SCOPE,
             workspaces = listOf(deletedWs),
             members = listOf(deletedMember),
         )
@@ -188,6 +195,7 @@ class WorkspaceRemoteSyncDaoTest {
 
         assertFailsWith<IllegalArgumentException> {
             syncDao.applyWorkspaceSnapshot(
+                syncScopeKey = TEST_SCOPE,
                 workspaces = listOf(validWs),
                 members = listOf(orphanMember),
             )
@@ -216,26 +224,27 @@ class WorkspaceRemoteSyncDaoTest {
         syncOperationDao.insert(initialOutbox)
 
         // Snapshot öncesi outbox satır sayısının tam olarak 1 olduğunu doğrula
-        val preCount = syncDao.countOutboxRows("WORKSPACE", "ws-snap-1")
+        val preCount = syncDao.countOutboxRows(TEST_SCOPE, "WORKSPACE", "ws-snap-1")
         assertEquals(1, preCount)
 
         val workspace = sampleWorkspace(id = "ws-snap-1", ownerId = "user-1")
         val member = sampleMember(workspaceId = "ws-snap-1", userId = "user-1", roleCode = "OWNER")
 
         syncDao.applyWorkspaceSnapshot(
+            syncScopeKey = TEST_SCOPE,
             workspaces = listOf(workspace),
             members = listOf(member),
         )
 
         // 2. Snapshot sonrası outbox satır sayısının KESİNLİKLE 1 kaldığını (yeni satır eklenmediğini) doğrula
-        val postCount = syncDao.countOutboxRows("WORKSPACE", "ws-snap-1")
+        val postCount = syncDao.countOutboxRows(TEST_SCOPE, "WORKSPACE", "ws-snap-1")
         assertEquals(1, postCount)
 
         // 3. Mevcut outbox kaydının aynı entityId için bozulmadan ve mutasyona uğramadan korunduğunu doğrula
-        val firstOutboxIdForWs = syncDao.getFirstOutboxOperationId("WORKSPACE", "ws-snap-1")
+        val firstOutboxIdForWs = syncDao.getFirstOutboxOperationId(TEST_SCOPE, "WORKSPACE", "ws-snap-1")
         assertEquals("op-outbox-1", firstOutboxIdForWs)
 
-        val remainingOutbox = syncOperationDao.getById("op-outbox-1")
+        val remainingOutbox = syncOperationDao.getById(TEST_SCOPE, "op-outbox-1")
         assertNotNull(remainingOutbox)
         assertEquals("op-outbox-1", remainingOutbox.operationId)
         assertEquals("WORKSPACE", remainingOutbox.entityTypeCode)
@@ -263,28 +272,31 @@ class WorkspaceRemoteSyncDaoTest {
         val member = sampleMember(workspaceId = "ws-100", userId = "owner-1", roleCode = "OWNER")
 
         val wsCursor = com.feniqo.mobile.data.local.entity.SyncCursorEntity(
+            syncScopeKey = TEST_SCOPE,
             entityTypeCode = "WORKSPACE",
             updatedAtEpochMillis = 5000L,
             entityId = "ws-100",
         )
         val memberCursor = com.feniqo.mobile.data.local.entity.SyncCursorEntity(
+            syncScopeKey = TEST_SCOPE,
             entityTypeCode = "WORKSPACE_MEMBER:ws-100",
             updatedAtEpochMillis = 5000L,
             entityId = "owner-1",
         )
 
         syncDao.applyWorkspaceSnapshot(
+            syncScopeKey = TEST_SCOPE,
             workspaces = listOf(workspace),
             members = listOf(member),
             cursors = listOf(wsCursor, memberCursor),
         )
 
-        val persistedWsCursor = syncStateDao.getCursor("WORKSPACE")
+        val persistedWsCursor = syncStateDao.getCursor(TEST_SCOPE, "WORKSPACE")
         assertNotNull(persistedWsCursor)
         assertEquals("ws-100", persistedWsCursor.entityId)
         assertEquals(5000L, persistedWsCursor.updatedAtEpochMillis)
 
-        val memberCursors = syncStateDao.getWorkspaceMemberCursors()
+        val memberCursors = syncStateDao.getWorkspaceMemberCursors(TEST_SCOPE)
         assertEquals(1, memberCursors.size)
         assertEquals("WORKSPACE_MEMBER:ws-100", memberCursors[0].entityTypeCode)
         assertEquals("owner-1", memberCursors[0].entityId)
@@ -302,6 +314,7 @@ class WorkspaceRemoteSyncDaoTest {
         val orphanMember = sampleMember(workspaceId = "ws-missing", userId = "user-1", roleCode = "EDITOR")
 
         val wsCursor = com.feniqo.mobile.data.local.entity.SyncCursorEntity(
+            syncScopeKey = TEST_SCOPE,
             entityTypeCode = "WORKSPACE",
             updatedAtEpochMillis = 6000L,
             entityId = "ws-valid-1",
@@ -309,6 +322,7 @@ class WorkspaceRemoteSyncDaoTest {
 
         assertFailsWith<IllegalArgumentException> {
             syncDao.applyWorkspaceSnapshot(
+                syncScopeKey = TEST_SCOPE,
                 workspaces = listOf(validWs),
                 members = listOf(orphanMember),
                 cursors = listOf(wsCursor),
@@ -317,8 +331,8 @@ class WorkspaceRemoteSyncDaoTest {
 
         // Entire transaction rolled back: no workspace and no cursor written
         assertNull(syncDao.getWorkspaceRow("ws-valid-1"))
-        assertNull(syncStateDao.getCursor("WORKSPACE"))
-        assertEquals(0, syncStateDao.getWorkspaceMemberCursors().size)
+        assertNull(syncStateDao.getCursor(TEST_SCOPE, "WORKSPACE"))
+        assertEquals(0, syncStateDao.getWorkspaceMemberCursors(TEST_SCOPE).size)
 
         db.close()
     }
@@ -337,6 +351,7 @@ class WorkspaceRemoteSyncDaoTest {
         val memberDel = sampleMember(workspaceId = "ws-deleted", userId = "owner-1")
 
         syncDao.applyWorkspaceSnapshot(
+            syncScopeKey = TEST_SCOPE,
             workspaces = listOf(liveWsB, liveWsA, deletedWs),
             members = listOf(memberB, memberA, memberDel),
         )
@@ -373,7 +388,7 @@ class WorkspaceRemoteSyncDaoTest {
         )
 
         assertFailsWith<WorkspaceSyncStalePlanException> {
-            syncDao.applyWorkspaceIncrementalPlan(plan)
+            syncDao.applyWorkspaceIncrementalPlan(TEST_SCOPE, plan)
         }
 
         // Workspace must be unmodified (rollback)
@@ -411,6 +426,7 @@ class WorkspaceRemoteSyncDaoTest {
         )
 
         val conflict = com.feniqo.mobile.data.local.entity.SyncConflictEntity(
+            syncScopeKey = TEST_SCOPE,
             entityTypeCode = "WORKSPACE",
             entityId = "ws-1",
             operationId = "op-stale",
@@ -426,14 +442,14 @@ class WorkspaceRemoteSyncDaoTest {
         )
 
         assertFailsWith<WorkspaceSyncStalePlanException> {
-            syncDao.applyWorkspaceIncrementalPlan(plan)
+            syncDao.applyWorkspaceIncrementalPlan(TEST_SCOPE, plan)
         }
 
         // Conflict kaydedilmemeli ve workspace CONFLICT durumuna geçmemeli
         val persisted = syncDao.getWorkspaceRow("ws-1")
         assertNotNull(persisted)
         assertEquals("PENDING_UPDATE", persisted.sync.syncStatus)
-        assertEquals(0, db.syncStateDao().getAllConflicts().size)
+        assertEquals(0, db.syncStateDao().getAllConflicts(TEST_SCOPE).size)
 
         db.close()
     }
@@ -446,6 +462,7 @@ class WorkspaceRemoteSyncDaoTest {
         val precondition = WorkspacePrecondition(expectedPresence = false)
         val ws = sampleWorkspace(id = "ws-dup")
         val conflict = com.feniqo.mobile.data.local.entity.SyncConflictEntity(
+            syncScopeKey = TEST_SCOPE,
             entityTypeCode = "WORKSPACE",
             entityId = "ws-dup",
             operationId = "op-1",
@@ -462,7 +479,7 @@ class WorkspaceRemoteSyncDaoTest {
         )
 
         assertFailsWith<IllegalArgumentException> {
-            syncDao.applyWorkspaceIncrementalPlan(plan)
+            syncDao.applyWorkspaceIncrementalPlan(TEST_SCOPE, plan)
         }
 
         db.close()
@@ -507,6 +524,7 @@ class WorkspaceRemoteSyncDaoTest {
         val appliedWs = sampleWorkspace(id = "ws-applied", name = "Newly Applied", syncStatus = "SYNCED", version = 2L)
 
         val conflictEntity = com.feniqo.mobile.data.local.entity.SyncConflictEntity(
+            syncScopeKey = TEST_SCOPE,
             entityTypeCode = "WORKSPACE",
             entityId = "ws-conflict",
             operationId = "op-conflict",
@@ -520,6 +538,7 @@ class WorkspaceRemoteSyncDaoTest {
         val member = sampleMember(workspaceId = "ws-conflict", userId = "user-member", roleCode = "VIEWER")
 
         val wsCursor = com.feniqo.mobile.data.local.entity.SyncCursorEntity(
+            syncScopeKey = TEST_SCOPE,
             entityTypeCode = "WORKSPACE",
             updatedAtEpochMillis = 5000L,
             entityId = "ws-applied",
@@ -532,7 +551,7 @@ class WorkspaceRemoteSyncDaoTest {
             cursorsToPersist = listOf(wsCursor),
         )
 
-        syncDao.applyWorkspaceIncrementalPlan(plan)
+        syncDao.applyWorkspaceIncrementalPlan(TEST_SCOPE, plan)
 
         // Workspace apply doğrulandı
         val persistedApplied = syncDao.getWorkspaceRow("ws-applied")
@@ -544,7 +563,7 @@ class WorkspaceRemoteSyncDaoTest {
         assertNotNull(persistedConflictWs)
         assertEquals("CONFLICT", persistedConflictWs.sync.syncStatus)
 
-        val persistedConflict = syncStateDao.getConflict("ws-conflict")
+        val persistedConflict = syncStateDao.getConflict(TEST_SCOPE, "ws-conflict")
         assertNotNull(persistedConflict)
         assertEquals("op-conflict", persistedConflict.operationId)
 
@@ -554,7 +573,7 @@ class WorkspaceRemoteSyncDaoTest {
         assertEquals("VIEWER", persistedMember.roleCode)
 
         // Cursor doğrulandı
-        val persistedCursor = syncStateDao.getCursor("WORKSPACE")
+        val persistedCursor = syncStateDao.getCursor(TEST_SCOPE, "WORKSPACE")
         assertNotNull(persistedCursor)
         assertEquals("ws-applied", persistedCursor.entityId)
         assertEquals(5000L, persistedCursor.updatedAtEpochMillis)
@@ -573,6 +592,7 @@ class WorkspaceRemoteSyncDaoTest {
         syncDao.upsertWorkspaceRows(listOf(localWs))
 
         val conflict = SyncConflictEntity(
+            syncScopeKey = TEST_SCOPE,
             entityTypeCode = "WORKSPACE",
             entityId = "ws-res-1",
             operationId = "op-res-1",
@@ -597,7 +617,7 @@ class WorkspaceRemoteSyncDaoTest {
             expectedOperations = listOf(outboxOp.toSnapshot()),
         )
 
-        syncDao.resolveWorkspaceKeepRemote(precondition, remoteEntity)
+        syncDao.resolveWorkspaceKeepRemote(TEST_SCOPE, precondition, remoteEntity)
 
         // Remote entity yazıldı
         val persisted = syncDao.getWorkspaceRow("ws-res-1")
@@ -607,8 +627,8 @@ class WorkspaceRemoteSyncDaoTest {
         assertEquals(3L, persisted.sync.version)
 
         // Outbox ve conflict temizlendi
-        assertEquals(0, syncDao.getAllWorkspaceOperations("ws-res-1").size)
-        assertNull(syncStateDao.getConflict("ws-res-1"))
+        assertEquals(0, syncDao.getAllWorkspaceOperations(TEST_SCOPE, "ws-res-1").size)
+        assertNull(syncStateDao.getConflict(TEST_SCOPE, "ws-res-1"))
 
         db.close()
     }
@@ -624,6 +644,7 @@ class WorkspaceRemoteSyncDaoTest {
         syncDao.upsertWorkspaceRows(listOf(localWs))
 
         val conflict = SyncConflictEntity(
+            syncScopeKey = TEST_SCOPE,
             entityTypeCode = "WORKSPACE",
             entityId = "ws-res-2",
             operationId = "op-res-2a",
@@ -649,12 +670,12 @@ class WorkspaceRemoteSyncDaoTest {
         val remoteEntity = sampleWorkspace(id = "ws-res-2", name = "Remote", syncStatus = "SYNCED", version = 2L)
 
         assertFailsWith<WorkspaceConflictStaleResolutionException> {
-            syncDao.resolveWorkspaceKeepRemote(precondition, remoteEntity)
+            syncDao.resolveWorkspaceKeepRemote(TEST_SCOPE, precondition, remoteEntity)
         }
 
         // Rollback: hiçbir operasyon silinmedi, çakışma duruyor
-        assertEquals(2, syncDao.getAllWorkspaceOperations("ws-res-2").size)
-        assertNotNull(syncStateDao.getConflict("ws-res-2"))
+        assertEquals(2, syncDao.getAllWorkspaceOperations(TEST_SCOPE, "ws-res-2").size)
+        assertNotNull(syncStateDao.getConflict(TEST_SCOPE, "ws-res-2"))
         assertEquals("CONFLICT", syncDao.getWorkspaceRow("ws-res-2")?.sync?.syncStatus)
 
         db.close()
@@ -671,6 +692,7 @@ class WorkspaceRemoteSyncDaoTest {
         syncDao.upsertWorkspaceRows(listOf(localWs))
 
         val conflict = SyncConflictEntity(
+            syncScopeKey = TEST_SCOPE,
             entityTypeCode = "WORKSPACE",
             entityId = "ws-res-3",
             operationId = "op-create",
@@ -702,6 +724,7 @@ class WorkspaceRemoteSyncDaoTest {
         val canonicalUpdatePayload = """{"id":"ws-res-3","name":"Canonical Update"}"""
 
         syncDao.resolveWorkspaceKeepLocal(
+            syncScopeKey = TEST_SCOPE,
             precondition = precondition,
             retainedOperationId = "op-create",
             targetOperationTypeCode = "UPDATE",
@@ -710,7 +733,7 @@ class WorkspaceRemoteSyncDaoTest {
         )
 
         // op-create UPDATE'e dönüştü, canonicalUpdatePayload aldı, unblocked
-        val remainingOps = syncDao.getAllWorkspaceOperations("ws-res-3")
+        val remainingOps = syncDao.getAllWorkspaceOperations(TEST_SCOPE, "ws-res-3")
         assertEquals(1, remainingOps.size)
         val retained = remainingOps.first()
         assertEquals("op-create", retained.operationId)
@@ -733,7 +756,7 @@ class WorkspaceRemoteSyncDaoTest {
         assertNull(persistedWs.sync.lastSyncError)
 
         // Conflict silindi
-        assertNull(syncStateDao.getConflict("ws-res-3"))
+        assertNull(syncStateDao.getConflict(TEST_SCOPE, "ws-res-3"))
 
         db.close()
     }
@@ -749,6 +772,7 @@ class WorkspaceRemoteSyncDaoTest {
         syncDao.upsertWorkspaceRows(listOf(localWs))
 
         val conflict = SyncConflictEntity(
+            syncScopeKey = TEST_SCOPE,
             entityTypeCode = "WORKSPACE",
             entityId = "ws-multi",
             operationId = "op-tail",
@@ -788,6 +812,7 @@ class WorkspaceRemoteSyncDaoTest {
         )
 
         syncDao.resolveWorkspaceKeepLocal(
+            syncScopeKey = TEST_SCOPE,
             precondition = precondition,
             retainedOperationId = "op-tail",
             targetOperationTypeCode = "UPDATE",
@@ -796,7 +821,7 @@ class WorkspaceRemoteSyncDaoTest {
         )
 
         // op-root silindi, op-tail korundu
-        val remainingOps = syncDao.getAllWorkspaceOperations("ws-multi")
+        val remainingOps = syncDao.getAllWorkspaceOperations(TEST_SCOPE, "ws-multi")
         assertEquals(1, remainingOps.size)
         val retained = remainingOps.first()
         assertEquals("op-tail", retained.operationId)
@@ -837,6 +862,7 @@ class WorkspaceRemoteSyncDaoTest {
         syncDao.upsertWorkspaceRows(listOf(localWs))
 
         val conflict = SyncConflictEntity(
+            syncScopeKey = TEST_SCOPE,
             entityTypeCode = "WORKSPACE",
             entityId = "ws-res-4",
             operationId = "op-del",
@@ -866,6 +892,7 @@ class WorkspaceRemoteSyncDaoTest {
         )
 
         syncDao.resolveWorkspaceKeepLocal(
+            syncScopeKey = TEST_SCOPE,
             precondition = precondition,
             retainedOperationId = "op-del",
             targetOperationTypeCode = "DELETE",
@@ -881,7 +908,7 @@ class WorkspaceRemoteSyncDaoTest {
         assertEquals(6L, persistedWs.sync.baseVersion)
 
         // Operation baseVersion güncellendi, payload byte-for-byte korundu
-        val remainingOps = syncDao.getAllWorkspaceOperations("ws-res-4")
+        val remainingOps = syncDao.getAllWorkspaceOperations(TEST_SCOPE, "ws-res-4")
         assertEquals(1, remainingOps.size)
         assertEquals("""{"id":"ws-res-4"}""", remainingOps.first().payloadJson)
         assertEquals(6L, remainingOps.first().baseVersion)
@@ -889,7 +916,7 @@ class WorkspaceRemoteSyncDaoTest {
         assertEquals(persistedWs.sync.baseVersion, remainingOps.first().baseVersion)
         assertEquals(remainingOps.first().baseVersion, conflict.remoteVersion)
 
-        assertNull(syncStateDao.getConflict("ws-res-4"))
+        assertNull(syncStateDao.getConflict(TEST_SCOPE, "ws-res-4"))
 
         db.close()
     }
@@ -904,6 +931,7 @@ class WorkspaceRemoteSyncDaoTest {
         syncDao.upsertWorkspaceRows(listOf(localWs))
 
         val conflict = SyncConflictEntity(
+            syncScopeKey = TEST_SCOPE,
             entityTypeCode = "WORKSPACE",
             entityId = "ws-res-5",
             operationId = "op-root",
@@ -932,6 +960,7 @@ class WorkspaceRemoteSyncDaoTest {
         // Retaining opRoot instead of opTail (not tail!)
         assertFailsWith<WorkspaceConflictStaleResolutionException> {
             syncDao.resolveWorkspaceKeepLocal(
+                syncScopeKey = TEST_SCOPE,
                 precondition = precondition,
                 retainedOperationId = "op-root",
                 targetOperationTypeCode = "UPDATE",
@@ -940,7 +969,7 @@ class WorkspaceRemoteSyncDaoTest {
             )
         }
 
-        assertEquals(2, syncDao.getAllWorkspaceOperations("ws-res-5").size)
+        assertEquals(2, syncDao.getAllWorkspaceOperations(TEST_SCOPE, "ws-res-5").size)
         db.close()
     }
 
@@ -990,6 +1019,7 @@ class WorkspaceRemoteSyncDaoTest {
         syncDao.upsertWorkspaceRows(listOf(initialWs))
 
         val conflict = SyncConflictEntity(
+            syncScopeKey = TEST_SCOPE,
             entityTypeCode = "WORKSPACE",
             entityId = "ws-res-6",
             operationId = "op-1",
@@ -1016,6 +1046,7 @@ class WorkspaceRemoteSyncDaoTest {
 
         assertFailsWith<WorkspaceConflictStaleResolutionException> {
             syncDao.resolveWorkspaceKeepLocal(
+                syncScopeKey = TEST_SCOPE,
                 precondition = plannedPrecondition,
                 retainedOperationId = "op-1",
                 targetOperationTypeCode = "UPDATE",
@@ -1039,6 +1070,7 @@ class WorkspaceRemoteSyncDaoTest {
 
         // Conflict op-1 için oluşturulmuş
         val conflict = SyncConflictEntity(
+            syncScopeKey = TEST_SCOPE,
             entityTypeCode = "WORKSPACE",
             entityId = "ws-tail-check-1",
             operationId = "op-1",
@@ -1066,6 +1098,7 @@ class WorkspaceRemoteSyncDaoTest {
 
         assertFailsWith<WorkspaceConflictStaleResolutionException> {
             syncDao.resolveWorkspaceKeepRemote(
+                syncScopeKey = TEST_SCOPE,
                 precondition = precondition,
                 remoteEntity = sampleWorkspace(id = "ws-tail-check-1", name = "Remote"),
             )
@@ -1075,8 +1108,8 @@ class WorkspaceRemoteSyncDaoTest {
         val wsAfter = syncDao.getWorkspaceRow("ws-tail-check-1")
         assertNotNull(wsAfter)
         assertEquals("CONFLICT", wsAfter.sync.syncStatus)
-        assertEquals(2, syncDao.getAllWorkspaceOperations("ws-tail-check-1").size)
-        assertNotNull(syncStateDao.getConflict("ws-tail-check-1"))
+        assertEquals(2, syncDao.getAllWorkspaceOperations(TEST_SCOPE, "ws-tail-check-1").size)
+        assertNotNull(syncStateDao.getConflict(TEST_SCOPE, "ws-tail-check-1"))
 
         db.close()
     }
@@ -1093,6 +1126,7 @@ class WorkspaceRemoteSyncDaoTest {
 
         // Conflict op-1 için oluşturulmuş
         val conflict = SyncConflictEntity(
+            syncScopeKey = TEST_SCOPE,
             entityTypeCode = "WORKSPACE",
             entityId = "ws-tail-check-2",
             operationId = "op-1",
@@ -1120,6 +1154,7 @@ class WorkspaceRemoteSyncDaoTest {
 
         assertFailsWith<WorkspaceConflictStaleResolutionException> {
             syncDao.resolveWorkspaceKeepLocal(
+                syncScopeKey = TEST_SCOPE,
                 precondition = precondition,
                 retainedOperationId = "op-2",
                 targetOperationTypeCode = "UPDATE",
@@ -1132,8 +1167,8 @@ class WorkspaceRemoteSyncDaoTest {
         val wsAfter = syncDao.getWorkspaceRow("ws-tail-check-2")
         assertNotNull(wsAfter)
         assertEquals("CONFLICT", wsAfter.sync.syncStatus)
-        assertEquals(2, syncDao.getAllWorkspaceOperations("ws-tail-check-2").size)
-        assertNotNull(syncStateDao.getConflict("ws-tail-check-2"))
+        assertEquals(2, syncDao.getAllWorkspaceOperations(TEST_SCOPE, "ws-tail-check-2").size)
+        assertNotNull(syncStateDao.getConflict(TEST_SCOPE, "ws-tail-check-2"))
 
         db.close()
     }
@@ -1309,7 +1344,11 @@ class WorkspaceRemoteSyncDaoTest {
         )
 
         // Snapshot ile tombstoned üye içeri alınıyor
-        syncDao.applyWorkspaceSnapshot(workspaces = listOf(ws), members = listOf(tombstonedMember))
+        syncDao.applyWorkspaceSnapshot(
+            syncScopeKey = TEST_SCOPE,
+            workspaces = listOf(ws),
+            members = listOf(tombstonedMember),
+        )
 
         // Profilin active_workspace_id alanı null olmalı, ancak workspace verisi silinmemeli
         val profileAfterSnap = profileDao.observeById("user-removed").first()
@@ -1328,7 +1367,7 @@ class WorkspaceRemoteSyncDaoTest {
             memberRows = listOf(tombstonedMember.copy(sync = tombstonedMember.sync.copy(version = 3L))),
             cursorsToPersist = emptyList(),
         )
-        syncDao.applyWorkspaceIncrementalPlan(incrementalPlan)
+        syncDao.applyWorkspaceIncrementalPlan(TEST_SCOPE, incrementalPlan)
 
         val profileAfterInc = profileDao.observeById("user-removed").first()
         assertNotNull(profileAfterInc)

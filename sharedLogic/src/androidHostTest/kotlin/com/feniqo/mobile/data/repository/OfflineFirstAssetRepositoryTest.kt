@@ -44,16 +44,16 @@ class OfflineFirstAssetRepositoryTest {
             val created = assertIs<RepositoryResult.Success<EntityId>>(repository.create(validCreate()))
             assertEquals(ASSET_ID, created.value.value)
             assertEquals("Altın", repository.observeAssets().first().single().name)
-            assertEquals(1, db.syncOperationDao().observePendingCount().first())
+            assertEquals(1, db.syncOperationDao().observePendingCount(SCOPE).first())
 
             assertIs<RepositoryResult.Success<Unit>>(repository.update(validUpdate(created.value)))
             assertEquals("Altın Birikimi", repository.observeAsset(created.value).first()?.name)
-            assertEquals(1, db.syncOperationDao().observePendingCount().first(), "Pending CREATE güncellemeyi coalesce etmelidir")
+            assertEquals(1, db.syncOperationDao().observePendingCount(SCOPE).first(), "Pending CREATE güncellemeyi coalesce etmelidir")
 
             assertIs<RepositoryResult.Failure>(repository(db, SessionAuth(OTHER_USER)).update(validUpdate(created.value)))
             assertIs<RepositoryResult.Success<Unit>>(repository.softDelete(created.value))
             assertNull(repository.observeAsset(created.value).first())
-            assertEquals(0, db.syncOperationDao().observePendingCount().first(), "Pending CREATE silinince entity ve outbox hard-delete edilmelidir")
+            assertEquals(0, db.syncOperationDao().observePendingCount(SCOPE).first(), "Pending CREATE silinince entity ve outbox hard-delete edilmelidir")
         } finally {
             db.close()
         }
@@ -70,7 +70,7 @@ class OfflineFirstAssetRepositoryTest {
             val repository = repository(db, SessionAuth(USER_ID))
             val invalid = assertIs<RepositoryResult.Failure>(repository.create(validCreate().copy(name = " ")))
             assertIs<AppError.Validation>(invalid.error)
-            assertEquals(0, db.syncOperationDao().observePendingCount().first())
+            assertEquals(0, db.syncOperationDao().observePendingCount(SCOPE).first())
             assertEquals(emptyList(), repository.observeAssets().first())
         } finally {
             db.close()
@@ -133,6 +133,7 @@ class OfflineFirstAssetRepositoryTest {
 
     private companion object {
         const val USER_ID = "11111111-1111-1111-1111-111111111111"
+        const val SCOPE = "USER:$USER_ID"
         const val OTHER_USER = "22222222-2222-2222-2222-222222222222"
         const val ASSET_ID = "33333333-3333-3333-3333-333333333333"
         const val NOW = 1_800_000_000_000L

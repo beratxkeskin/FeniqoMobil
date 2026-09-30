@@ -69,6 +69,9 @@ import kotlin.test.assertTrue
 @RunWith(RobolectricTestRunner::class)
 class WorkspaceConflictLifecycleTest {
 
+    private val USER_ID = "11111111-1111-4111-8111-111111111111"
+    private val SCOPE = "USER:$USER_ID"
+
     private fun inMemoryDatabase(): FeniqoDatabase {
         return Room.inMemoryDatabaseBuilder<FeniqoDatabase>(
             context = ApplicationProvider.getApplicationContext(),
@@ -81,7 +84,7 @@ class WorkspaceConflictLifecycleTest {
 
     private fun sampleWorkspace(
         id: String,
-        ownerId: String = "user-1",
+        ownerId: String = USER_ID,
         name: String = "Test WS",
         typeCode: String = "personal",
         currencyCode: String = "TRY",
@@ -112,7 +115,7 @@ class WorkspaceConflictLifecycleTest {
 
     private fun sampleOwnerMember(
         workspaceId: String,
-        userId: String = "user-1",
+        userId: String = USER_ID,
         syncStatus: String = "SYNCED",
         version: Long = 1L,
     ): WorkspaceMemberEntity = WorkspaceMemberEntity(
@@ -216,7 +219,7 @@ class WorkspaceConflictLifecycleTest {
     }
 
     private val userSession = AuthSession(
-        userId = EntityId("user-1"),
+        userId = EntityId(USER_ID),
         email = "user-1@example.com",
         expiresAt = Instant.fromEpochMilliseconds(100_000L),
     )
@@ -235,11 +238,13 @@ class WorkspaceConflictLifecycleTest {
             val initialWs = sampleWorkspace(id = wsId, name = "Yerel Başlangıç", version = 1L, baseVersion = 1L)
             val ownerMember = sampleOwnerMember(workspaceId = wsId)
             syncDao.applyWorkspaceSnapshot(
+                syncScopeKey = SCOPE,
                 workspaces = listOf(initialWs),
                 members = listOf(ownerMember),
                 cursors = listOf(
                     WorkspaceSyncCursorKeys.workspaceMemberCursorToEntity(
-                        WorkspaceMemberSyncCursor(updatedAt = "2026-03-01T10:00:00Z", workspaceId = wsId, userId = "user-1"),
+                        SCOPE,
+                        WorkspaceMemberSyncCursor(updatedAt = "2026-03-01T10:00:00Z", workspaceId = wsId, userId = USER_ID),
                     ),
                 ),
             )
@@ -254,6 +259,7 @@ class WorkspaceConflictLifecycleTest {
             )
             val updatePayload = WorkspacePayloadCodec.encode(localUpdatedWs, OutboxOperationType.UPDATE)
             mutationDao.mutateWorkspaceV2(
+                syncScopeKey = SCOPE,
                 entity = localUpdatedWs,
                 members = emptyList(),
                 type = OutboxOperationType.UPDATE,
@@ -261,14 +267,14 @@ class WorkspaceConflictLifecycleTest {
                 operationIdFactory = ::testOpIdFactory,
                 nowEpochMillis = 2000L,
             )
-            assertEquals(1, syncDao.getAllWorkspaceOperations(wsId).size)
+            assertEquals(1, syncDao.getAllWorkspaceOperations(SCOPE, wsId).size)
 
             // 2. Inbound pull: Daha yeni remote kayıt (version = 4 > baseVersion = 1)
             val remoteDto = WorkspaceDto(
                 id = wsId,
                 name = "Sunucu Güncel Başlık",
                 normalizedName = "sunucu güncel başlık",
-                ownerId = "user-1",
+                ownerId = USER_ID,
                 typeCode = "personal",
                 currencyCode = "TRY",
                 description = "Uzak açıklama",
@@ -289,14 +295,14 @@ class WorkspaceConflictLifecycleTest {
                 nowEpochMillisProvider = { 3000L },
             )
 
-            val pullResult = workspaceIncrementalSync.pull()
+            val pullResult = workspaceIncrementalSync.pull(SCOPE)
             assertEquals(1, pullResult.conflictCount)
 
             // Room'da çakışma oluştuğunu doğrula
             val wsInConflict = workspaceDao.getWorkspaceById(wsId)
             assertNotNull(wsInConflict)
             assertEquals("CONFLICT", wsInConflict.sync.syncStatus)
-            val conflictRow = syncStateDao.getConflict(wsId)
+            val conflictRow = syncStateDao.getConflict(SCOPE, wsId)
             assertNotNull(conflictRow)
             assertEquals(4L, conflictRow.remoteVersion)
 
@@ -343,11 +349,11 @@ class WorkspaceConflictLifecycleTest {
             assertEquals(4L, resolvedWs.sync.version)
             assertNull(resolvedWs.sync.baseVersion)
 
-            assertNull(syncStateDao.getConflict(wsId))
-            assertEquals(0, syncDao.getAllWorkspaceOperations(wsId).size)
+            assertNull(syncStateDao.getConflict(SCOPE, wsId))
+            assertEquals(0, syncDao.getAllWorkspaceOperations(SCOPE, wsId).size)
 
             // 4. Sonraki outbox turunda Workspace writer çağrılmamalı
-            val outboxRun = outboxProcessor.processReadyOperations()
+            val outboxRun = outboxProcessor.processReadyOperations(SCOPE, assertSessionCurrent = {})
             assertEquals(0, outboxRun.succeededCount)
             assertEquals(0, writer.callCount)
             assertNull(writer.lastOperationId)
@@ -370,11 +376,13 @@ class WorkspaceConflictLifecycleTest {
             val initialWs = sampleWorkspace(id = wsId, name = "Eski Başlık", version = 2L, baseVersion = 2L)
             val ownerMember = sampleOwnerMember(workspaceId = wsId)
             syncDao.applyWorkspaceSnapshot(
+                syncScopeKey = SCOPE,
                 workspaces = listOf(initialWs),
                 members = listOf(ownerMember),
                 cursors = listOf(
                     WorkspaceSyncCursorKeys.workspaceMemberCursorToEntity(
-                        WorkspaceMemberSyncCursor(updatedAt = "2026-03-01T10:00:00Z", workspaceId = wsId, userId = "user-1"),
+                        SCOPE,
+                        WorkspaceMemberSyncCursor(updatedAt = "2026-03-01T10:00:00Z", workspaceId = wsId, userId = USER_ID),
                     ),
                 ),
             )
@@ -389,6 +397,7 @@ class WorkspaceConflictLifecycleTest {
             )
             val updatePayload = WorkspacePayloadCodec.encode(localUpdatedWs, OutboxOperationType.UPDATE)
             val enqueueResult = mutationDao.mutateWorkspaceV2(
+                syncScopeKey = SCOPE,
                 entity = localUpdatedWs,
                 members = emptyList(),
                 type = OutboxOperationType.UPDATE,
@@ -403,7 +412,7 @@ class WorkspaceConflictLifecycleTest {
                 id = wsId,
                 name = "Sunucu Çakışan Başlık",
                 normalizedName = "sunucu çakışan başlık",
-                ownerId = "user-1",
+                ownerId = USER_ID,
                 typeCode = "personal",
                 currencyCode = "TRY",
                 description = null,
@@ -424,7 +433,7 @@ class WorkspaceConflictLifecycleTest {
                 nowEpochMillisProvider = { 3000L },
             )
 
-            val pullResult = workspaceIncrementalSync.pull()
+            val pullResult = workspaceIncrementalSync.pull(SCOPE)
             assertEquals(1, pullResult.conflictCount)
             val wsInConflict = workspaceDao.getWorkspaceById(wsId)
             assertNotNull(wsInConflict)
@@ -472,7 +481,7 @@ class WorkspaceConflictLifecycleTest {
             assertEquals(5L, rebasedWs.sync.version)
             assertEquals(5L, rebasedWs.sync.baseVersion)
 
-            val ops = syncDao.getAllWorkspaceOperations(wsId)
+            val ops = syncDao.getAllWorkspaceOperations(SCOPE, wsId)
             assertEquals(1, ops.size)
             val rebasedOp = ops.first()
             assertEquals(opId, rebasedOp.operationId)
@@ -483,7 +492,7 @@ class WorkspaceConflictLifecycleTest {
             assertEquals(5L, rebasedOp.baseVersion)
             assertEquals(rebasedWs.sync.version, rebasedOp.baseVersion)
 
-            assertNull(syncStateDao.getConflict(wsId))
+            assertNull(syncStateDao.getConflict(SCOPE, wsId))
 
             // 4. Sonraki OutboxProcessor turu: Writer APPLIED döner
             val appliedServerDto = remoteDto.copy(
@@ -493,7 +502,7 @@ class WorkspaceConflictLifecycleTest {
             )
             writer.workspaceResult = ConditionalRemoteWriteResult.Applied(appliedServerDto)
 
-            val outboxResult = outboxProcessor.processReadyOperations()
+            val outboxResult = outboxProcessor.processReadyOperations(SCOPE, assertSessionCurrent = {})
             assertEquals(1, outboxResult.succeededCount)
             assertEquals(1, writer.callCount)
             assertEquals(RemoteWriteOperation.UPDATE, writer.lastOperation)
@@ -507,8 +516,8 @@ class WorkspaceConflictLifecycleTest {
             assertNull(finalWs.sync.baseVersion)
             assertEquals("Yerel Kazanan Başlık", finalWs.name)
 
-            assertEquals(0, syncDao.getAllWorkspaceOperations(wsId).size)
-            assertNull(syncStateDao.getConflict(wsId))
+            assertEquals(0, syncDao.getAllWorkspaceOperations(SCOPE, wsId).size)
+            assertNull(syncStateDao.getConflict(SCOPE, wsId))
         } finally {
             db.close()
         }
@@ -528,11 +537,13 @@ class WorkspaceConflictLifecycleTest {
             val initialWs = sampleWorkspace(id = wsId, name = "Silinecek WS", version = 3L, baseVersion = 3L)
             val ownerMember = sampleOwnerMember(workspaceId = wsId)
             syncDao.applyWorkspaceSnapshot(
+                syncScopeKey = SCOPE,
                 workspaces = listOf(initialWs),
                 members = listOf(ownerMember),
                 cursors = listOf(
                     WorkspaceSyncCursorKeys.workspaceMemberCursorToEntity(
-                        WorkspaceMemberSyncCursor(updatedAt = "2026-03-01T10:00:00Z", workspaceId = wsId, userId = "user-1"),
+                        SCOPE,
+                        WorkspaceMemberSyncCursor(updatedAt = "2026-03-01T10:00:00Z", workspaceId = wsId, userId = USER_ID),
                     ),
                 ),
             )
@@ -547,6 +558,7 @@ class WorkspaceConflictLifecycleTest {
             )
             val deletePayload = WorkspacePayloadCodec.encode(localDeletedWs, OutboxOperationType.DELETE)
             val enqueueResult = mutationDao.mutateWorkspaceV2(
+                syncScopeKey = SCOPE,
                 entity = localDeletedWs,
                 members = emptyList(),
                 type = OutboxOperationType.DELETE,
@@ -561,7 +573,7 @@ class WorkspaceConflictLifecycleTest {
                 id = wsId,
                 name = "Uzakta Yeniden İsimlendirildi",
                 normalizedName = "uzakta yeniden isimlendirildi",
-                ownerId = "user-1",
+                ownerId = USER_ID,
                 typeCode = "personal",
                 currencyCode = "TRY",
                 description = null,
@@ -582,7 +594,7 @@ class WorkspaceConflictLifecycleTest {
                 nowEpochMillisProvider = { 3000L },
             )
 
-            val pullResult = workspaceIncrementalSync.pull()
+            val pullResult = workspaceIncrementalSync.pull(SCOPE)
             assertEquals(1, pullResult.conflictCount)
             val wsInConflict = workspaceDao.getWorkspaceById(wsId)
             assertNotNull(wsInConflict)
@@ -630,7 +642,7 @@ class WorkspaceConflictLifecycleTest {
             assertEquals(7L, rebasedWs.sync.version)
             assertEquals(7L, rebasedWs.sync.baseVersion)
 
-            val ops = syncDao.getAllWorkspaceOperations(wsId)
+            val ops = syncDao.getAllWorkspaceOperations(SCOPE, wsId)
             assertEquals(1, ops.size)
             val rebasedOp = ops.first()
             assertEquals(delOpId, rebasedOp.operationId)
@@ -641,7 +653,7 @@ class WorkspaceConflictLifecycleTest {
             // 4. Sonraki OutboxProcessor turu: DELETE işleminin NotFound (MissingDeleteAcknowledged) dönüşü
             writer.workspaceResult = ConditionalRemoteWriteResult.NotFound
 
-            val outboxResult = outboxProcessor.processReadyOperations()
+            val outboxResult = outboxProcessor.processReadyOperations(SCOPE, assertSessionCurrent = {})
             assertEquals(1, outboxResult.succeededCount)
             assertEquals(1, writer.callCount)
             assertEquals(RemoteWriteOperation.DELETE, writer.lastOperation)
@@ -653,8 +665,8 @@ class WorkspaceConflictLifecycleTest {
             assertEquals("SYNCED", finalWs.sync.syncStatus)
             assertNotNull(finalWs.sync.deletedAtEpochMillis)
 
-            assertEquals(0, syncDao.getAllWorkspaceOperations(wsId).size)
-            assertNull(syncStateDao.getConflict(wsId))
+            assertEquals(0, syncDao.getAllWorkspaceOperations(SCOPE, wsId).size)
+            assertNull(syncStateDao.getConflict(SCOPE, wsId))
         } finally {
             db.close()
         }
@@ -674,11 +686,13 @@ class WorkspaceConflictLifecycleTest {
             val initialWs = sampleWorkspace(id = wsId, name = "Orijinal Başlık", version = 1L, baseVersion = 1L)
             val ownerMember = sampleOwnerMember(workspaceId = wsId)
             syncDao.applyWorkspaceSnapshot(
+                syncScopeKey = SCOPE,
                 workspaces = listOf(initialWs),
                 members = listOf(ownerMember),
                 cursors = listOf(
                     WorkspaceSyncCursorKeys.workspaceMemberCursorToEntity(
-                        WorkspaceMemberSyncCursor(updatedAt = "2026-03-01T10:00:00Z", workspaceId = wsId, userId = "user-1"),
+                        SCOPE,
+                        WorkspaceMemberSyncCursor(updatedAt = "2026-03-01T10:00:00Z", workspaceId = wsId, userId = USER_ID),
                     ),
                 ),
             )
@@ -693,6 +707,7 @@ class WorkspaceConflictLifecycleTest {
             )
             val updatePayload1 = WorkspacePayloadCodec.encode(localUpdatedWs1, OutboxOperationType.UPDATE)
             val enqueue1 = mutationDao.mutateWorkspaceV2(
+                syncScopeKey = SCOPE,
                 entity = localUpdatedWs1,
                 members = emptyList(),
                 type = OutboxOperationType.UPDATE,
@@ -707,7 +722,7 @@ class WorkspaceConflictLifecycleTest {
                 id = wsId,
                 name = "Sunucu Başlık",
                 normalizedName = "sunucu başlık",
-                ownerId = "user-1",
+                ownerId = USER_ID,
                 typeCode = "personal",
                 currencyCode = "TRY",
                 description = null,
@@ -728,14 +743,14 @@ class WorkspaceConflictLifecycleTest {
                 nowEpochMillisProvider = { 3000L },
             )
 
-            val pullResult = workspaceIncrementalSync.pull()
+            val pullResult = workspaceIncrementalSync.pull(SCOPE)
             assertEquals(1, pullResult.conflictCount)
-            val conflict = syncStateDao.getConflict(wsId)
+            val conflict = syncStateDao.getConflict(SCOPE, wsId)
             assertNotNull(conflict)
             assertEquals(opId1, conflict.operationId)
 
             // Conflict durumunda op1 outbox durumu CONFLICT olarak güncellenir
-            opDao.markConflict(opId1, "Inbound conflict detected", 3000L)
+            opDao.markConflict(SCOPE, opId1, "Inbound conflict detected", 3000L)
 
             // 3. Kullanıcı çözmeden ÖNCE yeni bir yerel mutasyon ekler (Successor op-2 kuyruğa girer)
             val localUpdatedWs2 = localUpdatedWs1.copy(
@@ -747,6 +762,7 @@ class WorkspaceConflictLifecycleTest {
             )
             val updatePayload2 = WorkspacePayloadCodec.encode(localUpdatedWs2, OutboxOperationType.UPDATE)
             val enqueue2 = mutationDao.mutateWorkspaceV2(
+                syncScopeKey = SCOPE,
                 entity = localUpdatedWs2,
                 members = emptyList(),
                 type = OutboxOperationType.UPDATE,
@@ -757,7 +773,7 @@ class WorkspaceConflictLifecycleTest {
             val opId2 = enqueue2.operationId
 
             // Zincirde 2 operasyon olduğunu doğrula (op1 -> op2)
-            val ops = syncDao.getAllWorkspaceOperations(wsId)
+            val ops = syncDao.getAllWorkspaceOperations(SCOPE, wsId)
             assertEquals(2, ops.size)
             assertEquals(opId1, ops[0].operationId)
             assertEquals(opId2, ops[1].operationId)
@@ -810,20 +826,20 @@ class WorkspaceConflictLifecycleTest {
             val wsStillInConflict = workspaceDao.getWorkspaceById(wsId)
             assertNotNull(wsStillInConflict)
             assertEquals("PENDING_UPDATE", wsStillInConflict.sync.syncStatus)
-            assertNotNull(syncStateDao.getConflict(wsId))
-            val opsAfter = syncDao.getAllWorkspaceOperations(wsId)
+            assertNotNull(syncStateDao.getConflict(SCOPE, wsId))
+            val opsAfter = syncDao.getAllWorkspaceOperations(SCOPE, wsId)
             assertEquals(2, opsAfter.size)
             assertEquals(opId1, opsAfter[0].operationId)
             assertEquals(opId2, opsAfter[1].operationId)
 
             // 5. Outbox processor eski veya yeni hiçbir operasyonu işlememeli veya silmemeli
-            val processorResult = outboxProcessor.processReadyOperations()
+            val processorResult = outboxProcessor.processReadyOperations(SCOPE, assertSessionCurrent = {})
             assertEquals(0, processorResult.succeededCount)
             assertEquals(0, writer.callCount)
             assertNull(writer.lastOperationId)
 
             // İki operasyon da outbox'ta durmalı
-            assertEquals(2, syncDao.getAllWorkspaceOperations(wsId).size)
+            assertEquals(2, syncDao.getAllWorkspaceOperations(SCOPE, wsId).size)
         } finally {
             db.close()
         }

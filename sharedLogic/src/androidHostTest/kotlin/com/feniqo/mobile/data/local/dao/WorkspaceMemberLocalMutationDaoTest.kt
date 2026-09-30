@@ -12,6 +12,7 @@ import com.feniqo.mobile.data.local.outbox.OutboxOperationType
 import com.feniqo.mobile.data.remote.codec.WorkspaceMembershipPayloadCodec
 import com.feniqo.mobile.data.remote.dto.WorkspaceMemberDto
 import com.feniqo.mobile.data.sync.OutboxExecutionResult
+import com.feniqo.mobile.data.sync.SyncScopeKey
 import com.feniqo.mobile.data.util.WorkspaceMemberEntityId
 import com.feniqo.mobile.domain.model.AppLanguage
 import com.feniqo.mobile.domain.model.Currency
@@ -31,6 +32,9 @@ import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 class WorkspaceMemberLocalMutationDaoTest {
+
+    private val USER_ID = "11111111-1111-4111-8111-111111111111"
+    private val SCOPE = SyncScopeKey.user(USER_ID).rawValue
 
     private fun inMemoryDatabase(): FeniqoDatabase {
         return Room.inMemoryDatabaseBuilder<FeniqoDatabase>(
@@ -140,6 +144,7 @@ class WorkspaceMemberLocalMutationDaoTest {
             )
 
             val result = mutationDao.mutateWorkspaceMemberRoleV2(
+                syncScopeKey = SCOPE,
                 entity = updatedMember,
                 payloadJson = payloadJson,
                 operationIdFactory = ::testOperationId,
@@ -155,7 +160,7 @@ class WorkspaceMemberLocalMutationDaoTest {
             assertEquals(SyncStatus.PENDING_UPDATE.name, stored.sync.syncStatus)
 
             // Outbox kontrolü
-            val op = operationDao.getById(result.operationId)
+            val op = operationDao.getById(SCOPE, result.operationId)
             assertNotNull(op)
             assertEquals("WORKSPACE_MEMBER", op.entityTypeCode)
             assertEquals(WorkspaceMemberEntityId.encode(ws.id, member.userId), op.entityId)
@@ -192,6 +197,7 @@ class WorkspaceMemberLocalMutationDaoTest {
             )
             assertFailsWith<IllegalArgumentException> {
                 mutationDao.mutateWorkspaceMemberRoleV2(
+                    syncScopeKey = SCOPE,
                     entity = updatedMember,
                     payloadJson = "   ",
                     operationIdFactory = ::testOperationId,
@@ -205,6 +211,7 @@ class WorkspaceMemberLocalMutationDaoTest {
             )
             assertFailsWith<IllegalArgumentException> {
                 mutationDao.mutateWorkspaceMemberRoleV2(
+                    syncScopeKey = SCOPE,
                     entity = zeroVersionMember,
                     payloadJson = """{"workspace_id":"${ws.id}","user_id":"${member.userId}","role_code":"VIEWER"}""",
                     operationIdFactory = ::testOperationId,
@@ -217,7 +224,7 @@ class WorkspaceMemberLocalMutationDaoTest {
             assertNotNull(stored)
             assertEquals("EDITOR", stored.roleCode)
             assertEquals("SYNCED", stored.sync.syncStatus)
-            assertTrue(operationDao.getReadyOperations(Long.MAX_VALUE, 10).isEmpty())
+            assertTrue(operationDao.getReadyOperations(SCOPE, Long.MAX_VALUE, 10).isEmpty())
         } finally {
             database.close()
         }
@@ -242,6 +249,7 @@ class WorkspaceMemberLocalMutationDaoTest {
                 sync = member.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name, baseVersion = 2L),
             )
             val result1 = mutationDao.mutateWorkspaceMemberRoleV2(
+                syncScopeKey = SCOPE,
                 entity = op1Member,
                 payloadJson = payload1,
                 operationIdFactory = ::testOperationId,
@@ -256,6 +264,7 @@ class WorkspaceMemberLocalMutationDaoTest {
                 sync = member.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name, baseVersion = 2L),
             )
             val result2 = mutationDao.mutateWorkspaceMemberRoleV2(
+                syncScopeKey = SCOPE,
                 entity = op2Member,
                 payloadJson = payload2,
                 operationIdFactory = ::testOperationId,
@@ -265,7 +274,7 @@ class WorkspaceMemberLocalMutationDaoTest {
             assertEquals(result1.operationId, result2.operationId)
 
             // Şimdi kuyruktaki ilk işlemi IN_FLIGHT yapalım
-            operationDao.claimOperation(result1.operationId, 4000L)
+            operationDao.claimOperation(SCOPE, result1.operationId, 4000L)
 
             // IN_FLIGHT kuyruk varken yeni UPDATE -> INSERTED successor (isBlocked = true)
             val payload3 = WorkspaceMembershipPayloadCodec.encodeMemberRoleChange(ws.id, member.userId, "VIEWER")
@@ -274,6 +283,7 @@ class WorkspaceMemberLocalMutationDaoTest {
                 sync = member.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name, baseVersion = 2L),
             )
             val result3 = mutationDao.mutateWorkspaceMemberRoleV2(
+                syncScopeKey = SCOPE,
                 entity = op3Member,
                 payloadJson = payload3,
                 operationIdFactory = ::testOperationId,
@@ -281,7 +291,7 @@ class WorkspaceMemberLocalMutationDaoTest {
             )
             assertEquals(V2EnqueueDecision.INSERTED, result3.decision)
 
-            val successor = operationDao.getById(result3.operationId)
+            val successor = operationDao.getById(SCOPE, result3.operationId)
             assertNotNull(successor)
             assertTrue(successor.isBlocked)
             assertEquals(result1.operationId, successor.predecessorOperationId)
@@ -327,6 +337,7 @@ class WorkspaceMemberLocalMutationDaoTest {
             )
 
             val result = mutationDao.mutateWorkspaceMemberLeaveV2(
+                syncScopeKey = SCOPE,
                 entity = tombstonedMember,
                 activeProfileId = memberUserId,
                 payloadJson = payloadJson,
@@ -358,7 +369,7 @@ class WorkspaceMemberLocalMutationDaoTest {
             assertNull(storedWorkspace.sync.deletedAtEpochMillis)
 
             // 5. Outbox kaydı kontrolü
-            val op = operationDao.getById(result.operationId)
+            val op = operationDao.getById(SCOPE, result.operationId)
             assertNotNull(op)
             assertEquals("WORKSPACE_MEMBER", op.entityTypeCode)
             assertEquals(WorkspaceMemberEntityId.encode(ws.id, memberUserId), op.entityId)
@@ -388,6 +399,7 @@ class WorkspaceMemberLocalMutationDaoTest {
                 sync = member.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name, baseVersion = 2L),
             )
             val enqueueResult = mutationDao.mutateWorkspaceMemberRoleV2(
+                syncScopeKey = SCOPE,
                 entity = updatedMember,
                 payloadJson = payloadJson,
                 operationIdFactory = ::testOperationId,
@@ -395,7 +407,7 @@ class WorkspaceMemberLocalMutationDaoTest {
             )
 
             // Mark IN_FLIGHT
-            operationDao.claimOperation(enqueueResult.operationId, 2500L)
+            operationDao.claimOperation(SCOPE, enqueueResult.operationId, 2500L)
 
             // Server ACK
             val remoteMemberDto = WorkspaceMemberDto(
@@ -408,6 +420,7 @@ class WorkspaceMemberLocalMutationDaoTest {
                 version = 3L,
             )
             val ackSuccess = mutationDao.ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = enqueueResult.operationId,
                 result = OutboxExecutionResult.WorkspaceMemberApplied(remoteMemberDto),
                 nowEpochMillis = 3000L,
@@ -415,7 +428,7 @@ class WorkspaceMemberLocalMutationDaoTest {
             assertTrue(ackSuccess)
 
             // Outbox silinmeli
-            assertNull(operationDao.getById(enqueueResult.operationId))
+            assertNull(operationDao.getById(SCOPE, enqueueResult.operationId))
 
             // Room entity SYNCED ve version 3 olmalı
             val stored = workspaceDao.getMember(ws.id, member.userId)
@@ -451,6 +464,7 @@ class WorkspaceMemberLocalMutationDaoTest {
                 ),
             )
             val enqueueResult = mutationDao.mutateWorkspaceMemberLeaveV2(
+                syncScopeKey = SCOPE,
                 entity = tombstoned,
                 activeProfileId = member.userId,
                 payloadJson = payloadJson,
@@ -458,7 +472,7 @@ class WorkspaceMemberLocalMutationDaoTest {
                 nowEpochMillis = 2000L,
             )
 
-            operationDao.claimOperation(enqueueResult.operationId, 2500L)
+            operationDao.claimOperation(SCOPE, enqueueResult.operationId, 2500L)
 
             val remoteDeleteDto = WorkspaceMemberDto(
                 workspaceId = ws.id,
@@ -470,13 +484,14 @@ class WorkspaceMemberLocalMutationDaoTest {
                 version = 3L,
             )
             val ackSuccess = mutationDao.ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = enqueueResult.operationId,
                 result = OutboxExecutionResult.WorkspaceMemberApplied(remoteDeleteDto),
                 nowEpochMillis = 3000L,
             )
             assertTrue(ackSuccess)
 
-            assertNull(operationDao.getById(enqueueResult.operationId))
+            assertNull(operationDao.getById(SCOPE, enqueueResult.operationId))
 
             val stored = workspaceDao.getMember(ws.id, member.userId)
             assertNotNull(stored)
@@ -510,6 +525,7 @@ class WorkspaceMemberLocalMutationDaoTest {
                 ),
             )
             val enqueueResult = mutationDao.mutateWorkspaceMemberLeaveV2(
+                syncScopeKey = SCOPE,
                 entity = tombstoned,
                 activeProfileId = member.userId,
                 payloadJson = payloadJson,
@@ -517,17 +533,18 @@ class WorkspaceMemberLocalMutationDaoTest {
                 nowEpochMillis = 2000L,
             )
 
-            operationDao.claimOperation(enqueueResult.operationId, 2500L)
+            operationDao.claimOperation(SCOPE, enqueueResult.operationId, 2500L)
 
             // Server returned NOT_FOUND -> MissingDeleteAcknowledged
             val ackSuccess = mutationDao.ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = enqueueResult.operationId,
                 result = OutboxExecutionResult.MissingDeleteAcknowledged,
                 nowEpochMillis = 3000L,
             )
             assertTrue(ackSuccess)
 
-            assertNull(operationDao.getById(enqueueResult.operationId))
+            assertNull(operationDao.getById(SCOPE, enqueueResult.operationId))
 
             val stored = workspaceDao.getMember(ws.id, member.userId)
             assertNotNull(stored)
@@ -557,13 +574,14 @@ class WorkspaceMemberLocalMutationDaoTest {
                 sync = member.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name, baseVersion = 2L),
             )
             val result1 = mutationDao.mutateWorkspaceMemberRoleV2(
+                syncScopeKey = SCOPE,
                 entity = op1Member,
                 payloadJson = payload1,
                 operationIdFactory = ::testOperationId,
                 nowEpochMillis = 2000L,
             )
 
-            operationDao.claimOperation(result1.operationId, 2500L)
+            operationDao.claimOperation(SCOPE, result1.operationId, 2500L)
 
             val payload2 = WorkspaceMembershipPayloadCodec.encodeMemberRoleChange(ws.id, member.userId, "EDITOR")
             val op2Member = member.copy(
@@ -571,12 +589,13 @@ class WorkspaceMemberLocalMutationDaoTest {
                 sync = member.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name, baseVersion = 2L),
             )
             val result2 = mutationDao.mutateWorkspaceMemberRoleV2(
+                syncScopeKey = SCOPE,
                 entity = op2Member,
                 payloadJson = payload2,
                 operationIdFactory = ::testOperationId,
                 nowEpochMillis = 3000L,
             )
-            val successor = operationDao.getById(result2.operationId)
+            val successor = operationDao.getById(SCOPE, result2.operationId)
             assertNotNull(successor)
             assertTrue(successor.isBlocked)
 
@@ -591,12 +610,13 @@ class WorkspaceMemberLocalMutationDaoTest {
                 version = 3L,
             )
             mutationDao.ackV2Execution(
+                syncScopeKey = SCOPE,
                 operationId = result1.operationId,
                 result = OutboxExecutionResult.WorkspaceMemberApplied(remoteMemberDto),
                 nowEpochMillis = 3500L,
             )
 
-            val unblockedSuccessor = operationDao.getById(result2.operationId)
+            val unblockedSuccessor = operationDao.getById(SCOPE, result2.operationId)
             assertNotNull(unblockedSuccessor)
             assertFalse(unblockedSuccessor.isBlocked)
             assertEquals(3L, unblockedSuccessor.baseVersion)
@@ -635,6 +655,7 @@ class WorkspaceMemberLocalMutationDaoTest {
             )
 
             val result = mutationDao.mutateWorkspaceMemberRemovalV2(
+                syncScopeKey = SCOPE,
                 entity = tombstoned,
                 payloadJson = payload,
                 operationIdFactory = ::testOperationId,
@@ -655,7 +676,7 @@ class WorkspaceMemberLocalMutationDaoTest {
             assertEquals(ws.id, storedOwnerProfile.activeWorkspaceId)
 
             // 3. Outbox kaydı kontrolü
-            val op = operationDao.getById(result.operationId)
+            val op = operationDao.getById(SCOPE, result.operationId)
             assertNotNull(op)
             assertEquals("WORKSPACE_MEMBER", op.entityTypeCode)
             assertEquals(OutboxOperationType.DELETE.name, op.operationTypeCode)

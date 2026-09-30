@@ -27,6 +27,10 @@ import kotlin.test.assertTrue
 @RunWith(RobolectricTestRunner::class)
 class OfflineWriteQueueCoalescingTest {
 
+    private companion object {
+        const val SCOPE = "USER:11111111-1111-4111-8111-111111111111"
+    }
+
     @Test
     fun real_entity_and_outbox_coalescing_of_untried_pending_create_and_update() = runTest {
         val db = inMemoryDatabase()
@@ -36,6 +40,7 @@ class OfflineWriteQueueCoalescingTest {
             val initialCategory = categoryEntity(id = entityId, name = "Market", syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1 = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = initialCategory,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"name":"Market"}""",
@@ -53,6 +58,7 @@ class OfflineWriteQueueCoalescingTest {
                 sync = initialCategory.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name),
             )
             val op2 = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = updatedCategory,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"name":"Süpermarket"}""",
@@ -66,7 +72,7 @@ class OfflineWriteQueueCoalescingTest {
             assertEquals("Süpermarket", cat2.name)
 
             // Verify outbox row updated in Room
-            val stored = db.syncOperationDao().getById(op1)
+            val stored = db.syncOperationDao().getById(SCOPE, op1)
             assertNotNull(stored)
             assertEquals("""{"name":"Süpermarket"}""", stored.payloadJson)
             assertEquals(OutboxOperationType.CREATE.name, stored.operationTypeCode)
@@ -86,13 +92,14 @@ class OfflineWriteQueueCoalescingTest {
             val initialCategory = categoryEntity(id = entityId, name = "Giyim", syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1 = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = initialCategory,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"name":"Giyim"}""",
             )
 
             assertNotNull(db.categoryDao().observeById(entityId).first())
-            assertNotNull(db.syncOperationDao().getById(op1))
+            assertNotNull(db.syncOperationDao().getById(SCOPE, op1))
 
             // Enqueue DELETE on untried CREATE
             val delCategory = initialCategory.copy(
@@ -102,6 +109,7 @@ class OfflineWriteQueueCoalescingTest {
                 ),
             )
             val delOpId = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = delCategory,
                 type = OutboxOperationType.DELETE,
                 payloadJson = """{}""",
@@ -116,8 +124,8 @@ class OfflineWriteQueueCoalescingTest {
             cursor.close()
 
             // Verify outbox row completely deleted
-            assertNull(db.syncOperationDao().getById(op1), "Outbox row must be deleted")
-            assertEquals(0, db.syncOperationDao().observePendingCount().first())
+            assertNull(db.syncOperationDao().getById(SCOPE, op1), "Outbox row must be deleted")
+            assertEquals(0, db.syncOperationDao().observePendingCount(SCOPE).first())
         } finally {
             db.close()
         }
@@ -137,6 +145,7 @@ class OfflineWriteQueueCoalescingTest {
             val transaction = transactionEntity(id = txId, categoryId = category.id, syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1 = queue.enqueueTransactionV2(
+                syncScopeKey = SCOPE,
                 entity = transaction,
                 tags = listOf(tag),
                 tagLinks = listOf(tagLink),
@@ -145,7 +154,7 @@ class OfflineWriteQueueCoalescingTest {
             )
 
             assertNotNull(db.transactionDao().getByIdAndOwner(txId, "user-1"))
-            assertEquals(1, db.syncOperationDao().observePendingCount().first())
+            assertEquals(1, db.syncOperationDao().observePendingCount(SCOPE).first())
 
             // Hard delete
             val delTransaction = transaction.copy(
@@ -155,6 +164,7 @@ class OfflineWriteQueueCoalescingTest {
                 ),
             )
             val delOpId = queue.enqueueTransactionKeepingTagsV2(
+                syncScopeKey = SCOPE,
                 entity = delTransaction,
                 type = OutboxOperationType.DELETE,
                 payloadJson = """{}""",
@@ -169,7 +179,7 @@ class OfflineWriteQueueCoalescingTest {
             assertEquals(0, linkCursor.getInt(0), "Transaction tag link must be removed")
             linkCursor.close()
 
-            assertNull(db.syncOperationDao().getById(op1))
+            assertNull(db.syncOperationDao().getById(SCOPE, op1))
         } finally {
             db.close()
         }
@@ -184,13 +194,14 @@ class OfflineWriteQueueCoalescingTest {
             val category = categoryEntity(id = entityId, name = "Market", syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = category,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"name":"Market"}""",
             )
 
             // Claim op1 (makes it IN_FLIGHT, attempt=1)
-            val claimed = queue.claimNextReadyOperation()
+            val claimed = queue.claimNextReadyOperation(SCOPE)
             assertNotNull(claimed)
             assertEquals(op1Id, claimed.operationId)
             assertEquals(1, claimed.attemptCount)
@@ -202,6 +213,7 @@ class OfflineWriteQueueCoalescingTest {
                 sync = category.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name),
             )
             val op2Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = updatedCategory,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"name":"Süpermarket"}""",
@@ -209,7 +221,7 @@ class OfflineWriteQueueCoalescingTest {
 
             assertTrue(op1Id != op2Id, "Successor must have unique operation ID")
 
-            val op2 = db.syncOperationDao().getById(op2Id)
+            val op2 = db.syncOperationDao().getById(SCOPE, op2Id)
             assertNotNull(op2)
             assertTrue(op2.isBlocked, "Successor must be blocked pending predecessor resolution")
             assertEquals(op1Id, op2.predecessorOperationId)
@@ -220,7 +232,7 @@ class OfflineWriteQueueCoalescingTest {
             assertEquals("Süpermarket", db.categoryDao().observeById(entityId).first()?.name)
 
             // Verify getReadyOperations does NOT return blocked successor
-            val ready = queue.getReadyOperations()
+            val ready = queue.getReadyOperations(SCOPE)
             assertEquals(0, ready.size, "Blocked successor should not be ready")
         } finally {
             db.close()
@@ -236,17 +248,19 @@ class OfflineWriteQueueCoalescingTest {
             val category = categoryEntity(id = entityId, name = "Market", syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = category,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"name":"Market"}""",
             )
 
             // Claim op1
-            queue.claimNextReadyOperation()
+            queue.claimNextReadyOperation(SCOPE)
 
             // Enqueue UPDATE -> becomes Op2 (blocked successor)
             val updated1 = category.copy(name = "Süpermarket", sync = category.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name))
             val op2Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = updated1,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"name":"Süpermarket"}""",
@@ -255,6 +269,7 @@ class OfflineWriteQueueCoalescingTest {
             // Enqueue 2nd UPDATE -> must coalesce into Op2, NOT create Op3!
             val updated2 = category.copy(name = "Mega Market", sync = category.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name))
             val op3Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = updated2,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"name":"Mega Market"}""",
@@ -262,7 +277,7 @@ class OfflineWriteQueueCoalescingTest {
 
             assertEquals(op2Id, op3Id, "Subsequent mutation must coalesce into single tail successor")
 
-            val op2 = db.syncOperationDao().getById(op2Id)
+            val op2 = db.syncOperationDao().getById(SCOPE, op2Id)
             assertNotNull(op2)
             assertEquals("""{"name":"Mega Market"}""", op2.payloadJson)
             assertEquals(op1Id, op2.predecessorOperationId)
@@ -284,15 +299,17 @@ class OfflineWriteQueueCoalescingTest {
             val category = categoryEntity(id = entityId, name = "Market", syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = category,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"name":"Market"}""",
             )
 
-            queue.claimNextReadyOperation()
+            queue.claimNextReadyOperation(SCOPE)
 
             val updated1 = category.copy(name = "Süpermarket", sync = category.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name))
             val op2Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = updated1,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"name":"Süpermarket"}""",
@@ -306,6 +323,7 @@ class OfflineWriteQueueCoalescingTest {
                 ),
             )
             val op3Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = delCategory,
                 type = OutboxOperationType.DELETE,
                 payloadJson = """{}""",
@@ -313,7 +331,7 @@ class OfflineWriteQueueCoalescingTest {
 
             assertEquals(op2Id, op3Id)
 
-            val op2 = db.syncOperationDao().getById(op2Id)
+            val op2 = db.syncOperationDao().getById(SCOPE, op2Id)
             assertNotNull(op2)
             assertEquals(OutboxOperationType.DELETE.name, op2.operationTypeCode)
             assertTrue(op2.isBlocked)
@@ -335,25 +353,27 @@ class OfflineWriteQueueCoalescingTest {
             val category = categoryEntity(id = entityId, name = "Market", syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = category,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"name":"Market"}""",
             )
 
-            queue.claimNextReadyOperation()
+            queue.claimNextReadyOperation(SCOPE)
 
             val updated = category.copy(name = "Süpermarket", sync = category.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name))
             val op2Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = updated,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"name":"Süpermarket"}""",
             )
 
             // Resolve op1
-            queue.resolvePredecessorSuccessor(op1Id, appliedVersion = 2L)
+            queue.resolvePredecessorSuccessor(SCOPE, op1Id, appliedVersion = 2L)
 
             // Claim op2 (now IN_FLIGHT, attempt=1)
-            val claimed2 = queue.claimNextReadyOperation()
+            val claimed2 = queue.claimNextReadyOperation(SCOPE)
             assertNotNull(claimed2)
             assertEquals(op2Id, claimed2.operationId)
 
@@ -367,13 +387,14 @@ class OfflineWriteQueueCoalescingTest {
                 ),
             )
             val op3Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = delCategory,
                 type = OutboxOperationType.DELETE,
                 payloadJson = """{}""",
             )
 
             assertTrue(op2Id != op3Id)
-            val op3 = db.syncOperationDao().getById(op3Id)
+            val op3 = db.syncOperationDao().getById(SCOPE, op3Id)
             assertNotNull(op3)
             assertEquals(OutboxOperationType.DELETE.name, op3.operationTypeCode)
             assertTrue(op3.isBlocked)
@@ -393,6 +414,7 @@ class OfflineWriteQueueCoalescingTest {
             // Insert legacy V1 operation
             db.syncOperationDao().insert(
                 com.feniqo.mobile.data.local.entity.SyncOperationEntity(
+                    syncScopeKey = SCOPE,
                     operationId = "legacy-op-8",
                     entityTypeCode = "CATEGORY",
                     entityId = entityId,
@@ -413,18 +435,19 @@ class OfflineWriteQueueCoalescingTest {
 
             val updatedCategory = categoryEntity(id = entityId, name = "Giyim", syncStatus = SyncStatus.PENDING_UPDATE)
             val v2OpId = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = updatedCategory,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"name":"Giyim"}""",
             )
 
             assertTrue("legacy-op-8" != v2OpId, "Legacy V1 operation must NOT be coalesced into V2")
-            val legacyOp = db.syncOperationDao().getById("legacy-op-8")
+            val legacyOp = db.syncOperationDao().getById(SCOPE, "legacy-op-8")
             assertNotNull(legacyOp)
             assertEquals(1, legacyOp.protocolVersion)
             assertNull(legacyOp.payloadJson)
 
-            val v2Op = db.syncOperationDao().getById(v2OpId)
+            val v2Op = db.syncOperationDao().getById(SCOPE, v2OpId)
             assertNotNull(v2Op)
             assertEquals(2, v2Op.protocolVersion)
             assertEquals("legacy-op-8", v2Op.predecessorOperationId)
@@ -444,6 +467,7 @@ class OfflineWriteQueueCoalescingTest {
             // Manually insert 2 uncompleted leaf operations without predecessors referencing each other
             db.syncOperationDao().insert(
                 com.feniqo.mobile.data.local.entity.SyncOperationEntity(
+                    syncScopeKey = SCOPE,
                     operationId = "tail-1",
                     entityTypeCode = "CATEGORY",
                     entityId = entityId,
@@ -463,6 +487,7 @@ class OfflineWriteQueueCoalescingTest {
             )
             db.syncOperationDao().insert(
                 com.feniqo.mobile.data.local.entity.SyncOperationEntity(
+                    syncScopeKey = SCOPE,
                     operationId = "tail-2",
                     entityTypeCode = "CATEGORY",
                     entityId = entityId,
@@ -484,6 +509,7 @@ class OfflineWriteQueueCoalescingTest {
             val updatedCategory = categoryEntity(id = entityId, name = "Giyim", syncStatus = SyncStatus.PENDING_UPDATE)
             assertFailsWith<IllegalStateException> {
                 queue.enqueueCategoryV2(
+                    syncScopeKey = SCOPE,
                     entity = updatedCategory,
                     type = OutboxOperationType.UPDATE,
                     payloadJson = """{"name":"Giyim"}""",
@@ -503,15 +529,17 @@ class OfflineWriteQueueCoalescingTest {
             val category = categoryEntity(id = entityId, name = "Market", syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = category,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"name":"Market"}""",
             )
 
-            queue.claimNextReadyOperation()
+            queue.claimNextReadyOperation(SCOPE)
 
             val updated = category.copy(name = "Süpermarket", sync = category.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name))
             val op2Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = updated,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"name":"Süpermarket"}""",
@@ -519,15 +547,15 @@ class OfflineWriteQueueCoalescingTest {
 
             // Test 1: Resolve non-existent predecessor throws exception
             assertFailsWith<IllegalArgumentException> {
-                queue.resolvePredecessorSuccessor("non-existent-op", 2L)
+                queue.resolvePredecessorSuccessor(SCOPE, "non-existent-op", 2L)
             }
 
             // Test 2: Successful atomic resolve
-            val resolved = queue.resolvePredecessorSuccessor(op1Id, appliedVersion = 2L)
+            val resolved = queue.resolvePredecessorSuccessor(SCOPE, op1Id, appliedVersion = 2L)
             assertTrue(resolved)
 
-            assertNull(db.syncOperationDao().getById(op1Id))
-            val op2 = db.syncOperationDao().getById(op2Id)
+            assertNull(db.syncOperationDao().getById(SCOPE, op1Id))
+            val op2 = db.syncOperationDao().getById(SCOPE, op2Id)
             assertNotNull(op2)
             assertFalse(op2.isBlocked)
             assertEquals(2L, op2.baseVersion)
@@ -546,16 +574,17 @@ class OfflineWriteQueueCoalescingTest {
             val category = categoryEntity(id = entityId, name = "Market", syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = category,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"name":"Market"}""",
             )
 
             // Initial attempt = 0
-            assertEquals(0, db.syncOperationDao().getById(op1Id)?.attemptCount)
+            assertEquals(0, db.syncOperationDao().getById(SCOPE, op1Id)?.attemptCount)
 
             // 1st Claim -> attempt = 1, status = IN_FLIGHT
-            val claimed = queue.claimNextReadyOperation()
+            val claimed = queue.claimNextReadyOperation(SCOPE)
             assertNotNull(claimed)
             assertEquals(1, claimed.attemptCount)
             assertEquals(OutboxStatus.IN_FLIGHT.name, claimed.statusCode)
@@ -563,21 +592,22 @@ class OfflineWriteQueueCoalescingTest {
             // Stale recovery after timeout -> status = FAILED, attempt MUST STILL BE 1
             currentTime = 2000L
             db.syncOperationDao().recoverStaleInFlight(
+                syncScopeKey = SCOPE,
                 staleBeforeEpochMillis = 2000L,
                 nowEpochMillis = 2000L,
                 lastError = "Stale timeout",
             )
-            val recovered = db.syncOperationDao().getById(op1Id)
+            val recovered = db.syncOperationDao().getById(SCOPE, op1Id)
             assertNotNull(recovered)
             assertEquals(OutboxStatus.FAILED.name, recovered.statusCode)
             assertEquals(1, recovered.attemptCount, "Stale recovery must NOT increment attempt count")
 
             // Reset next_attempt to allow immediate retry
             currentTime = 3000L
-            db.syncOperationDao().retryAllFailed(3000L)
+            db.syncOperationDao().retryAllFailed(SCOPE, 3000L)
 
             // 2nd Claim on retry -> attempt = 2
-            val reClaimed = queue.claimNextReadyOperation()
+            val reClaimed = queue.claimNextReadyOperation(SCOPE)
             assertNotNull(reClaimed)
             assertEquals(2, reClaimed.attemptCount, "Re-claiming failed retry must increment attempt to 2")
             assertEquals(OutboxStatus.IN_FLIGHT.name, reClaimed.statusCode)
@@ -595,26 +625,28 @@ class OfflineWriteQueueCoalescingTest {
             val category = categoryEntity(id = entityId, name = "Market", syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = category,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"name":"Market"}""",
             )
 
             // 1st claim wins
-            val firstClaim = db.syncOperationDao().claimOperation(op1Id, 1000L)
+            val firstClaim = db.syncOperationDao().claimOperation(SCOPE, op1Id, 1000L)
             assertEquals(1, firstClaim)
 
             // 2nd concurrent claim on same op returns 0 (atomic failure)
-            val secondClaim = db.syncOperationDao().claimOperation(op1Id, 1000L)
+            val secondClaim = db.syncOperationDao().claimOperation(SCOPE, op1Id, 1000L)
             assertEquals(0, secondClaim)
 
             // Blocked op cannot be claimed
             val op2Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = category.copy(sync = category.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name)),
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"name":"Süpermarket"}""",
             )
-            val blockedClaim = db.syncOperationDao().claimOperation(op2Id, 1000L)
+            val blockedClaim = db.syncOperationDao().claimOperation(SCOPE, op2Id, 1000L)
             assertEquals(0, blockedClaim, "Blocked operation cannot be claimed")
         } finally {
             db.close()
@@ -630,22 +662,23 @@ class OfflineWriteQueueCoalescingTest {
             val category = categoryEntity(id = entityId, name = "Market", syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = category,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"name":"Market"}""",
             )
 
             // Claim operation -> attempt = 1, status = IN_FLIGHT
-            val claimed = queue.claimNextReadyOperation()
+            val claimed = queue.claimNextReadyOperation(SCOPE)
             assertNotNull(claimed)
             assertEquals(1, claimed.attemptCount)
             assertEquals(OutboxStatus.IN_FLIGHT.name, claimed.statusCode)
 
             // Record failure
-            val recorded = queue.recordFailure(op1Id, "network timeout")
+            val recorded = queue.recordFailure(SCOPE, op1Id, "network timeout")
             assertTrue(recorded)
 
-            val failedOp = db.syncOperationDao().getById(op1Id)
+            val failedOp = db.syncOperationDao().getById(SCOPE, op1Id)
             assertNotNull(failedOp)
             assertEquals(OutboxStatus.FAILED.name, failedOp.statusCode)
             assertEquals(1, failedOp.attemptCount, "recordFailure must NOT increment or overwrite attempt count")
@@ -664,23 +697,25 @@ class OfflineWriteQueueCoalescingTest {
             val category = categoryEntity(id = entityId, name = "Market", syncStatus = SyncStatus.PENDING_CREATE)
 
             val op1Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = category,
                 type = OutboxOperationType.CREATE,
                 payloadJson = """{"name":"Market"}""",
             )
 
             // Claim op1 -> IN_FLIGHT, attempt = 1
-            queue.claimNextReadyOperation()
+            queue.claimNextReadyOperation(SCOPE)
 
             val updated = category.copy(name = "Süpermarket", sync = category.sync.copy(syncStatus = SyncStatus.PENDING_UPDATE.name))
             val op2Id = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
                 entity = updated,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = """{"name":"Süpermarket"}""",
             )
 
             // Corrupt successor in DB: change attempt_count to 1 so integrity check fails
-            val op2 = db.syncOperationDao().getById(op2Id)
+            val op2 = db.syncOperationDao().getById(SCOPE, op2Id)
             assertNotNull(op2)
             db.openHelper.writableDatabase.execSQL(
                 "UPDATE sync_operations SET attempt_count = 1 WHERE operation_id = '$op2Id'",
@@ -688,16 +723,16 @@ class OfflineWriteQueueCoalescingTest {
 
             // Resolve must fail
             assertFailsWith<IllegalStateException> {
-                queue.resolvePredecessorSuccessor(op1Id, 2L)
+                queue.resolvePredecessorSuccessor(SCOPE, op1Id, 2L)
             }
 
             // Verify rollback: op1 is STILL present in Room DB with status IN_FLIGHT
-            val rolledBackPredecessor = db.syncOperationDao().getById(op1Id)
+            val rolledBackPredecessor = db.syncOperationDao().getById(SCOPE, op1Id)
             assertNotNull(rolledBackPredecessor, "Predecessor must NOT be deleted due to transaction rollback")
             assertEquals(OutboxStatus.IN_FLIGHT.name, rolledBackPredecessor.statusCode)
 
             // Successor is still blocked
-            val rolledBackSuccessor = db.syncOperationDao().getById(op2Id)
+            val rolledBackSuccessor = db.syncOperationDao().getById(SCOPE, op2Id)
             assertNotNull(rolledBackSuccessor)
             assertTrue(rolledBackSuccessor.isBlocked)
         } finally {
@@ -723,7 +758,7 @@ class OfflineWriteQueueCoalescingTest {
             )
 
             val error = assertFailsWith<IllegalArgumentException> {
-                queue.enqueueProfileV2(profile, OutboxOperationType.DELETE, "{}")
+                queue.enqueueProfileV2(syncScopeKey = SCOPE, entity = profile, type = OutboxOperationType.DELETE, payloadJson = "{}")
             }
             assertTrue(error.message?.contains("Profil silme işlemi desteklenmemektedir") == true)
         } finally {
@@ -744,6 +779,7 @@ class OfflineWriteQueueCoalescingTest {
             val category = categoryEntity(id = "cat-c-15", name = "Market", syncStatus = SyncStatus.PENDING_CREATE)
             val error = assertFailsWith<IllegalArgumentException> {
                 invalidQueue.enqueueCategoryV2(
+                    syncScopeKey = SCOPE,
                     entity = category,
                     type = OutboxOperationType.CREATE,
                     payloadJson = """{"name":"Market"}""",

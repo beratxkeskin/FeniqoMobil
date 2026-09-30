@@ -54,7 +54,8 @@ object RemoteModule {
     @Singleton
     fun provideAuthRemoteDataSource(
         client: SupabaseClient,
-    ): AuthRemoteDataSource = SupabaseAuthRemoteDataSource(client)
+        sessionManager: SessionManager,
+    ): AuthRemoteDataSource = SupabaseAuthRemoteDataSource(client, sessionManager)
 
     @Provides
     @Singleton

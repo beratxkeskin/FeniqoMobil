@@ -44,7 +44,7 @@ class OfflineFirstAuthRepository(
     private val profileDao: ProfileDao,
     private val syncScheduler: com.feniqo.mobile.domain.sync.BackgroundSyncScheduler? = null,
     private val fetchRemoteProfile: (suspend (String) -> ProfileDto?)? = null,
-    private val enqueueProfileUpdate: (suspend (UserProfileEntity, OutboxOperationType, String) -> Unit)? = null,
+    private val enqueueProfileUpdate: (suspend (String, UserProfileEntity, OutboxOperationType, String) -> Unit)? = null,
     private val nowEpochMillisProvider: () -> Long = { kotlin.time.Clock.System.now().toEpochMilliseconds() },
 ) : AuthRepository {
 
@@ -132,8 +132,9 @@ class OfflineFirstAuthRepository(
         }
         val updated = current.copy(fullName = normalized, sync = current.sync.toPendingUpdate(nowEpochMillisProvider()))
         val payload = Json.encodeToString(updated.toDomain().toDto())
+        val syncScopeKey = com.feniqo.mobile.data.sync.SyncScopeKey.user(session.userId).rawValue
         val enqueue = enqueueProfileUpdate ?: error("profile_write_unavailable")
-        enqueue(updated, OutboxOperationType.UPDATE, payload)
+        enqueue(syncScopeKey, updated, OutboxOperationType.UPDATE, payload)
     }
 
     override suspend fun changePassword(

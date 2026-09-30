@@ -129,8 +129,9 @@ class DemoDataRepository @Inject constructor(
         val users = listOf(DemoAuthRepository.USER_ID, EntityId("de000000-0000-4000-8000-000000000002"),
             EntityId("de000000-0000-4000-8000-000000000003"))
         val now = System.currentTimeMillis()
+        val syncScopeKey = com.feniqo.mobile.data.sync.SyncScopeKey.user(DemoAuthRepository.USER_ID.value).rawValue
         // Uzak davet taklidi yapılmaz; fixture üyeleri de aynı atomik Room/outbox sınırından yazılır.
-        queue.enqueueWorkspace(workspace.toEntity(newSyncMetadata(now)), users.mapIndexed { i, user ->
+        queue.enqueueWorkspace(syncScopeKey, workspace.toEntity(newSyncMetadata(now)), users.mapIndexed { i, user ->
             WorkspaceMember(id, user, if (i == 0) WorkspaceRole.OWNER else WorkspaceRole.EDITOR,
                 workspace.createdAt).toEntity(newSyncMetadata(now))
         }, OutboxOperationType.UPDATE)

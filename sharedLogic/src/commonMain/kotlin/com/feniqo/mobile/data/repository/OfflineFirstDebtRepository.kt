@@ -9,6 +9,7 @@ import com.feniqo.mobile.data.mapper.toEntity
 import com.feniqo.mobile.data.mapper.toPendingDelete
 import com.feniqo.mobile.data.mapper.toPendingUpdate
 import com.feniqo.mobile.data.remote.mapper.toDto
+import com.feniqo.mobile.data.sync.SyncScopeKey
 import com.feniqo.mobile.domain.model.AddDebtPaymentCommand
 import com.feniqo.mobile.domain.model.AppError
 import com.feniqo.mobile.domain.model.CreateDebtCommand
@@ -116,7 +117,9 @@ class OfflineFirstDebtRepository(
             )
 
             val queue = requireNotNull(offlineWriteQueue) { "OfflineWriteQueue is required for writes" }
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
             queue.enqueueDebtV2(
+                syncScopeKey = syncScopeKey,
                 entity = debt.toEntity(newSyncMetadata(now)),
                 type = OutboxOperationType.CREATE,
                 payloadJson = json.encodeToString(debt.toDto()),
@@ -151,7 +154,9 @@ class OfflineFirstDebtRepository(
             val updatedEntity = updatedDebt.toEntity(existingEntity.sync.toPendingUpdate(now))
 
             val queue = requireNotNull(offlineWriteQueue) { "OfflineWriteQueue is required for writes" }
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
             queue.enqueueDebtV2(
+                syncScopeKey = syncScopeKey,
                 entity = updatedEntity,
                 type = OutboxOperationType.UPDATE,
                 payloadJson = json.encodeToString(updatedDebt.toDto()),
@@ -200,7 +205,9 @@ class OfflineFirstDebtRepository(
             val updatedDebtEntity = updatedDebt.toEntity(parentDebtEntity.sync.toPendingUpdate(now))
 
             val queue = requireNotNull(offlineWriteQueue) { "OfflineWriteQueue is required for writes" }
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
             queue.enqueueDebtPaymentV2(
+                syncScopeKey = syncScopeKey,
                 entity = payment.toEntity(newSyncMetadata(now)),
                 updatedDebt = updatedDebtEntity,
                 payloadJson = json.encodeToString(payment.toDto()),
@@ -228,7 +235,9 @@ class OfflineFirstDebtRepository(
             val deletedEntity = existingEntity.copy(sync = existingEntity.sync.toPendingDelete(now))
 
             val queue = requireNotNull(offlineWriteQueue) { "OfflineWriteQueue is required for writes" }
+            val syncScopeKey = SyncScopeKey.user(session.userId.value).rawValue
             queue.enqueueDebtV2(
+                syncScopeKey = syncScopeKey,
                 entity = deletedEntity,
                 type = OutboxOperationType.DELETE,
                 payloadJson = json.encodeToString(existingEntity.toDomain().toDto()),

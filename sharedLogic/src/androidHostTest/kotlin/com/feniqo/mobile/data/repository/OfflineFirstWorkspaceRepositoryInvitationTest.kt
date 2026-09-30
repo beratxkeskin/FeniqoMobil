@@ -46,7 +46,7 @@ class OfflineFirstWorkspaceRepositoryInvitationTest {
 
     private class FakeAuthRepository(
         session: AuthSession? = AuthSession(
-            userId = EntityId("user-owner"),
+            userId = EntityId("11111111-1111-4111-8111-111111111111"),
             email = "owner@example.com",
             expiresAt = Instant.fromEpochMilliseconds(2000000000000L),
         ),
@@ -57,7 +57,7 @@ class OfflineFirstWorkspaceRepositoryInvitationTest {
         override fun observeCurrentProfile(): Flow<UserProfile?> = MutableStateFlow(null)
         override suspend fun signIn(email: String, password: String): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
         override suspend fun signUp(email: String, password: String, fullName: String?): RepositoryResult<EntityId> =
-            RepositoryResult.Success(EntityId("user-owner"))
+            RepositoryResult.Success(EntityId("11111111-1111-4111-8111-111111111111"))
         override suspend fun refreshSession(): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
         override suspend fun signOut(): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
 
@@ -92,7 +92,7 @@ class OfflineFirstWorkspaceRepositoryInvitationTest {
     private suspend fun seedWorkspace(
         database: FeniqoDatabase,
         workspaceId: String = "11111111-1111-1111-1111-111111111111",
-        ownerId: String = "user-owner",
+        ownerId: String = "11111111-1111-4111-8111-111111111111",
         deletedAt: Long? = null,
     ) {
         val ws = WorkspaceEntity(
@@ -157,7 +157,7 @@ class OfflineFirstWorkspaceRepositoryInvitationTest {
 
             val invitations = database.workspaceDao().observeInvitations("11111111-1111-1111-1111-111111111111").first()
             assertTrue(invitations.isEmpty())
-            val operations = database.syncOperationDao().getReadyOperations(fixedNow, 10)
+            val operations = database.syncOperationDao().getReadyOperations("USER:11111111-1111-4111-8111-111111111111", fixedNow, 10)
             assertTrue(operations.isEmpty())
         } finally {
             database.close()
@@ -179,7 +179,7 @@ class OfflineFirstWorkspaceRepositoryInvitationTest {
 
             val invitations = database.workspaceDao().observeInvitations("00000000-dead-beef-0000-000000000000").first()
             assertTrue(invitations.isEmpty())
-            val operations = database.syncOperationDao().getReadyOperations(fixedNow, 10)
+            val operations = database.syncOperationDao().getReadyOperations("USER:11111111-1111-4111-8111-111111111111", fixedNow, 10)
             assertTrue(operations.isEmpty())
         } finally {
             database.close()
@@ -204,7 +204,7 @@ class OfflineFirstWorkspaceRepositoryInvitationTest {
 
             val invitations = database.workspaceDao().observeInvitations(wsId).first()
             assertTrue(invitations.isEmpty())
-            val operations = database.syncOperationDao().getReadyOperations(fixedNow, 10)
+            val operations = database.syncOperationDao().getReadyOperations("USER:11111111-1111-4111-8111-111111111111", fixedNow, 10)
             assertTrue(operations.isEmpty())
         } finally {
             database.close()
@@ -216,9 +216,9 @@ class OfflineFirstWorkspaceRepositoryInvitationTest {
         val database = inMemoryDatabase()
         try {
             val wsId = "11111111-1111-1111-1111-111111111111"
-            seedWorkspace(database, workspaceId = wsId, ownerId = "user-owner")
-            seedMember(database, workspaceId = wsId, userId = "user-editor", role = WorkspaceRole.EDITOR)
-            seedMember(database, workspaceId = wsId, userId = "user-viewer", role = WorkspaceRole.VIEWER)
+            seedWorkspace(database, workspaceId = wsId, ownerId = "11111111-1111-4111-8111-111111111111")
+            seedMember(database, workspaceId = wsId, userId = "33333333-3333-4333-8333-333333333333", role = WorkspaceRole.EDITOR)
+            seedMember(database, workspaceId = wsId, userId = "44444444-4444-4444-8444-444444444444", role = WorkspaceRole.VIEWER)
 
             val authRepo = FakeAuthRepository()
             val repo = createRepository(database, authRepo)
@@ -226,7 +226,7 @@ class OfflineFirstWorkspaceRepositoryInvitationTest {
             // Case 1: Editor tries to create invite
             authRepo.setSession(
                 AuthSession(
-                    userId = EntityId("user-editor"),
+                    userId = EntityId("33333333-3333-4333-8333-333333333333"),
                     email = "editor@example.com",
                     expiresAt = Instant.fromEpochMilliseconds(2000000000000L),
                 ),
@@ -239,7 +239,7 @@ class OfflineFirstWorkspaceRepositoryInvitationTest {
             // Case 2: Viewer tries to create invite
             authRepo.setSession(
                 AuthSession(
-                    userId = EntityId("user-viewer"),
+                    userId = EntityId("44444444-4444-4444-8444-444444444444"),
                     email = "viewer@example.com",
                     expiresAt = Instant.fromEpochMilliseconds(2000000000000L),
                 ),
@@ -252,7 +252,7 @@ class OfflineFirstWorkspaceRepositoryInvitationTest {
             // Case 3: Completely external user tries to create invite
             authRepo.setSession(
                 AuthSession(
-                    userId = EntityId("user-stranger"),
+                    userId = EntityId("22222222-2222-4222-8222-222222222222"),
                     email = "stranger@example.com",
                     expiresAt = Instant.fromEpochMilliseconds(2000000000000L),
                 ),
@@ -265,7 +265,7 @@ class OfflineFirstWorkspaceRepositoryInvitationTest {
             // Verify no invitations or outbox written
             val invitations = database.workspaceDao().observeInvitations(wsId).first()
             assertTrue(invitations.isEmpty())
-            val operations = database.syncOperationDao().getReadyOperations(fixedNow, 10)
+            val operations = database.syncOperationDao().getReadyOperations("USER:22222222-2222-4222-8222-222222222222", fixedNow, 10)
             assertTrue(operations.isEmpty())
         } finally {
             database.close()
@@ -277,7 +277,7 @@ class OfflineFirstWorkspaceRepositoryInvitationTest {
         val database = inMemoryDatabase()
         try {
             val wsId = "11111111-1111-1111-1111-111111111111"
-            seedWorkspace(database, workspaceId = wsId, ownerId = "user-owner")
+            seedWorkspace(database, workspaceId = wsId, ownerId = "11111111-1111-4111-8111-111111111111")
 
             val authRepo = FakeAuthRepository()
             val repo = createRepository(database, authRepo)
@@ -306,7 +306,7 @@ class OfflineFirstWorkspaceRepositoryInvitationTest {
             assertFalse(storedInvitation.toString().contains(rawToken), "Room entity içinde raw token geçemez.")
 
             // 4. Outbox doğrulaması: payload yalnız token_hash taşır, raw token kesinlikle içermez
-            val operations = database.syncOperationDao().getReadyOperations(fixedNow, 10)
+            val operations = database.syncOperationDao().getReadyOperations("USER:11111111-1111-4111-8111-111111111111", fixedNow, 10)
             assertEquals(1, operations.size)
             val op = operations.first()
             assertEquals("WORKSPACE_INVITATION", op.entityTypeCode)
@@ -329,7 +329,7 @@ class OfflineFirstWorkspaceRepositoryInvitationTest {
         val database = inMemoryDatabase()
         try {
             val wsId = "11111111-1111-1111-1111-111111111111"
-            seedWorkspace(database, workspaceId = wsId, ownerId = "user-owner")
+            seedWorkspace(database, workspaceId = wsId, ownerId = "11111111-1111-4111-8111-111111111111")
 
             val authRepo = FakeAuthRepository()
             val repo = createRepository(database, authRepo)
@@ -353,7 +353,7 @@ class OfflineFirstWorkspaceRepositoryInvitationTest {
             assertEquals(expectedExpiryMillis, inv.expiresAtEpochMillis)
 
             // Outbox payload allowlist doğrulaması
-            val operations = database.syncOperationDao().getReadyOperations(fixedNow, 10)
+            val operations = database.syncOperationDao().getReadyOperations("USER:11111111-1111-4111-8111-111111111111", fixedNow, 10)
             val op = operations.single()
             val payload = op.payloadJson!!
             assertTrue(payload.contains("\"role_code\":\"EDITOR\""))
@@ -370,7 +370,7 @@ class OfflineFirstWorkspaceRepositoryInvitationTest {
         val database = inMemoryDatabase()
         try {
             val wsId = "11111111-1111-1111-1111-111111111111"
-            seedWorkspace(database, workspaceId = wsId, ownerId = "user-owner")
+            seedWorkspace(database, workspaceId = wsId, ownerId = "11111111-1111-4111-8111-111111111111")
 
             val authRepo = FakeAuthRepository()
             // Geçersiz operationId üreten factory -> validateOperationId require hatası atar ve transaction rollback olur
@@ -384,7 +384,7 @@ class OfflineFirstWorkspaceRepositoryInvitationTest {
             val invitations = database.workspaceDao().observeInvitations(wsId).first()
             assertTrue(invitations.isEmpty(), "Rollback sonrası davet Room'da kalmamalı.")
 
-            val operations = database.syncOperationDao().getReadyOperations(fixedNow, 10)
+            val operations = database.syncOperationDao().getReadyOperations("USER:11111111-1111-4111-8111-111111111111", fixedNow, 10)
             assertTrue(operations.isEmpty(), "Rollback sonrası outbox kaydı kalmamalı.")
         } finally {
             database.close()
@@ -396,7 +396,7 @@ class OfflineFirstWorkspaceRepositoryInvitationTest {
         val database = inMemoryDatabase()
         try {
             val wsId = "11111111-1111-1111-1111-111111111111"
-            seedWorkspace(database, workspaceId = wsId, ownerId = "user-owner")
+            seedWorkspace(database, workspaceId = wsId, ownerId = "11111111-1111-4111-8111-111111111111")
 
             val authRepo = FakeAuthRepository()
             val repo = createRepository(database, authRepo)
@@ -407,17 +407,17 @@ class OfflineFirstWorkspaceRepositoryInvitationTest {
             val tokenHash = WorkspaceInvitationCrypto.hashInvitationToken(rawToken)
 
             val inv = database.workspaceDao().observeInvitations(wsId).first().single()
-            val op = database.syncOperationDao().getReadyOperations(fixedNow, 10).single()
+            val op = database.syncOperationDao().getReadyOperations("USER:11111111-1111-4111-8111-111111111111", fixedNow, 10).single()
 
             // Sunucuya gönderilip IN_FLIGHT'a alındığını claimOperation ile simüle et
-            val claimed = database.syncOperationDao().claimOperation(op.operationId, fixedNow)
+            val claimed = database.syncOperationDao().claimOperation("USER:11111111-1111-4111-8111-111111111111", op.operationId, fixedNow)
             assertEquals(1, claimed)
 
             // Uzak sunucudan dönen DTO (sunucu asla token_hash dönmez)
             val remoteDto = WorkspaceInvitationDto(
                 id = inv.id,
                 workspaceId = wsId,
-                inviterId = "user-owner",
+                inviterId = "11111111-1111-4111-8111-111111111111",
                 roleCode = "EDITOR",
                 createdAt = Instant.fromEpochMilliseconds(fixedNow).toString(),
                 expiresAt = Instant.fromEpochMilliseconds(fixedNow + 7 * 24 * 3600 * 1000L).toString(),
@@ -428,6 +428,7 @@ class OfflineFirstWorkspaceRepositoryInvitationTest {
             )
 
             val acked = database.localMutationDao().ackWorkspaceInvitationWriteV2(
+                syncScopeKey = "USER:11111111-1111-4111-8111-111111111111",
                 operationId = op.operationId,
                 record = remoteDto,
                 nowEpochMillis = fixedNow + 1000L,
@@ -435,7 +436,7 @@ class OfflineFirstWorkspaceRepositoryInvitationTest {
             assertTrue(acked)
 
             // Outbox silindi mi?
-            assertNull(database.localMutationDao().getOutboxById(op.operationId))
+            assertNull(database.localMutationDao().getOutboxById("USER:11111111-1111-4111-8111-111111111111", op.operationId))
 
             // Yereldeki token_hash korundu mu ve metadata güncellendi mi?
             val updatedInv = database.localMutationDao().getWorkspaceInvitationById(inv.id)

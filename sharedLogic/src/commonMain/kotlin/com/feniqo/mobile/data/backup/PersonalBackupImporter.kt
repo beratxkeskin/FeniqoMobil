@@ -6,6 +6,7 @@ import com.feniqo.mobile.data.local.outbox.OfflineWriteQueue
 import com.feniqo.mobile.data.mapper.newSyncMetadata
 import com.feniqo.mobile.data.mapper.toEntity
 import com.feniqo.mobile.data.remote.mapper.toDto
+import com.feniqo.mobile.data.sync.SyncScopeKey
 import com.feniqo.mobile.data.repository.ActiveWorkspaceScope
 import com.feniqo.mobile.domain.model.Category
 import com.feniqo.mobile.domain.model.CategoryColor
@@ -99,16 +100,27 @@ class DefaultPersonalBackupImporter(
             is BackupDecodeResult.Invalid -> return BackupImportResult.Failure(decoded.reason)
             is BackupDecodeResult.Valid -> decoded.backup
         }
-        val session = authRepository.observeSession().first()
+        val initialSession = authRepository.observeSession().first()
             ?: return BackupImportResult.Failure("auth_session_required")
-        if (activeWorkspaceScope.current(session.userId) != null) {
+        val actorUserId = initialSession.userId
+        val canonicalSyncScopeKey = SyncScopeKey.user(actorUserId.value).rawValue
+
+        if (activeWorkspaceScope.current(actorUserId) != null) {
             return BackupImportResult.Failure("backup_personal_scope_required")
         }
         return try {
-            val plan = planner.plan(backup, session.userId)
+            val plan = planner.plan(backup, actorUserId)
             if (plan.categories.isEmpty() && plan.transactions.isEmpty()) return BackupImportResult.Success(0, 0)
+
+            // enqueuePersonalBackupV1 çağrısından hemen önce aktif session'ı yeniden doğrula
+            val currentSession = authRepository.observeSession().first()
+            if (currentSession == null || currentSession.userId != actorUserId) {
+                return BackupImportResult.Failure("auth_session_changed")
+            }
+
             val sync = newSyncMetadata(nowEpochMillis())
             writeQueue.enqueuePersonalBackupV1(
+                syncScopeKey = canonicalSyncScopeKey,
                 categoryInputs = plan.categories.map {
                     BackupCategoryCreateInputV1(it.toEntity(sync), json.encodeToString(it.toDto()))
                 },

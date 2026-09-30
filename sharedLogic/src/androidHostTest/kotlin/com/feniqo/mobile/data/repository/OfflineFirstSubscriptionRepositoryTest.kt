@@ -60,6 +60,11 @@ import kotlinx.serialization.json.jsonPrimitive
 
 class OfflineFirstSubscriptionRepositoryTest {
 
+    private companion object {
+        const val USER_ID = "11111111-1111-4111-8111-111111111111"
+        const val OTHER_USER_ID = "22222222-2222-4222-8222-222222222222"
+    }
+
     private val json = Json {
         encodeDefaults = true
         explicitNulls = true
@@ -172,16 +177,16 @@ class OfflineFirstSubscriptionRepositoryTest {
         override suspend fun insertOutboxRow(operation: SyncOperationEntity) {
             enqueuedOutbox.add(operation)
         }
-        override suspend fun deleteOutboxRow(operationId: String): Int = 0
-        override suspend fun getOutboxById(operationId: String): SyncOperationEntity? =
-            enqueuedOutbox.find { it.operationId == operationId }
-        override suspend fun getSuccessors(predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun getActiveTailCandidates(entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun coalescePendingPayload(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
-        override suspend fun convertToPendingDelete(operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 0
-        override suspend fun convertPendingDeleteToUpdate(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
-        override suspend fun unblockSuccessor(operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun deleteConflictRow(entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun deleteOutboxRow(syncScopeKey: String, operationId: String): Int = 0
+        override suspend fun getOutboxById(syncScopeKey: String, operationId: String): SyncOperationEntity? =
+            enqueuedOutbox.find { it.syncScopeKey == syncScopeKey && it.operationId == operationId }
+        override suspend fun getSuccessors(syncScopeKey: String, predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun getActiveTailCandidates(syncScopeKey: String, entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun coalescePendingPayload(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
+        override suspend fun convertToPendingDelete(syncScopeKey: String, operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 0
+        override suspend fun convertPendingDeleteToUpdate(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
+        override suspend fun unblockSuccessor(syncScopeKey: String, operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun deleteConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
         override suspend fun rebaseProfileVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseCategoryVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseTransactionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
@@ -236,16 +241,16 @@ class OfflineFirstSubscriptionRepositoryTest {
         override suspend fun markDebtSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
         override suspend fun tombstoneGoalContributionsForDeletedGoal(goalId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int = 0
         override suspend fun tombstoneDebtPaymentsForDeletedDebt(debtId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getActiveGoalAggregateTailCandidates(goalId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun getActiveDebtAggregateTailCandidates(debtId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun countPendingGoalAggregateOperations(goalId: String, operationId: String): Int = 0
-        override suspend fun countPendingDebtAggregateOperations(debtId: String, operationId: String): Int = 0
+        override suspend fun getActiveGoalAggregateTailCandidates(syncScopeKey: String, goalId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun getActiveDebtAggregateTailCandidates(syncScopeKey: String, debtId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun countPendingGoalAggregateOperations(syncScopeKey: String, goalId: String, operationId: String): Int = 0
+        override suspend fun countPendingDebtAggregateOperations(syncScopeKey: String, debtId: String, operationId: String): Int = 0
         override suspend fun setGoalSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setGoalContributionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setDebtSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setDebtPaymentSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun upsertConflictRow(entity: SyncConflictEntity) {}
-        override suspend fun setOutboxStatusConflict(operationId: String, nowEpochMillis: Long): Int = 1
+        override suspend fun setOutboxStatusConflict(syncScopeKey: String, operationId: String, nowEpochMillis: Long): Int = 1
         override suspend fun setProfileSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setCategorySyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setTransactionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
@@ -255,6 +260,7 @@ class OfflineFirstSubscriptionRepositoryTest {
         override suspend fun upsertSubscriptionPaymentRow(entity: com.feniqo.mobile.data.local.entity.SubscriptionPaymentEntity) = Unit
 
         override suspend fun mutateSubscriptionWithPriceHistoryV2(
+            syncScopeKey: String,
             entity: SubscriptionEntity,
             priceHistory: com.feniqo.mobile.data.local.entity.SubscriptionPriceHistoryEntity,
             type: com.feniqo.mobile.data.local.outbox.OutboxOperationType,
@@ -263,10 +269,11 @@ class OfflineFirstSubscriptionRepositoryTest {
             nowEpochMillis: Long,
         ): com.feniqo.mobile.data.local.dao.V2EnqueueResult {
             upsertSubscriptionPriceHistoryRow(priceHistory)
-            return mutateSubscriptionV2(entity, type, payloadJson, operationIdFactory, nowEpochMillis)
+            return mutateSubscriptionV2(syncScopeKey, entity, type, payloadJson, operationIdFactory, nowEpochMillis)
         }
 
         override suspend fun mutateSubscriptionWithPaymentV2(
+            syncScopeKey: String,
             entity: SubscriptionEntity,
             payment: com.feniqo.mobile.data.local.entity.SubscriptionPaymentEntity,
             type: com.feniqo.mobile.data.local.outbox.OutboxOperationType,
@@ -275,7 +282,7 @@ class OfflineFirstSubscriptionRepositoryTest {
             nowEpochMillis: Long,
         ): com.feniqo.mobile.data.local.dao.V2EnqueueResult {
             upsertSubscriptionPaymentRow(payment)
-            return mutateSubscriptionV2(entity, type, payloadJson, operationIdFactory, nowEpochMillis)
+            return mutateSubscriptionV2(syncScopeKey, entity, type, payloadJson, operationIdFactory, nowEpochMillis)
         }
 
         override suspend fun upsertTransactionKeepingTagsAndEnqueue(entity: TransactionEntity, operation: SyncOperationEntity) {}
@@ -293,23 +300,25 @@ class OfflineFirstSubscriptionRepositoryTest {
     }
 
     private class FakeSyncOperationDao : SyncOperationDao {
-        override fun observePendingCount(): Flow<Int> = flowOf(0)
-        override fun observeFailedCount(): Flow<Int> = flowOf(0)
-        override suspend fun getReadyOperations(nowEpochMillis: Long, limit: Int) = emptyList<SyncOperationEntity>()
-        override suspend fun getById(operationId: String): SyncOperationEntity? = null
+        override fun observePendingCount(syncScopeKey: String): Flow<Int> = flowOf(0)
+        override fun observeFailedCount(syncScopeKey: String): Flow<Int> = flowOf(0)
+        override suspend fun getReadyOperations(syncScopeKey: String, nowEpochMillis: Long, limit: Int) = emptyList<SyncOperationEntity>()
+        override suspend fun getById(syncScopeKey: String, operationId: String): SyncOperationEntity? = null
         override suspend fun insert(operation: SyncOperationEntity) {}
-        override suspend fun claimOperation(operationId: String, nowEpochMillis: Long): Int = 1
-        override suspend fun markFailed(operationId: String, lastError: String, errorClassification: String?, nextAttemptAtEpochMillis: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun markConflict(operationId: String, lastError: String, nowEpochMillis: Long): Int = 1
-        override suspend fun recoverStaleInFlight(staleBeforeEpochMillis: Long, nowEpochMillis: Long, lastError: String): Int = 0
-        override suspend fun retryAllFailed(nowEpochMillis: Long): Int = 0
-        override suspend fun deleteCompleted(operationId: String): Int = 1
-        override suspend fun deleteForEntity(entityTypeCode: String, entityId: String): Int = 0
-        override suspend fun getSuccessors(predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun unblockSuccessor(operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun getActiveTailCandidates(entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun coalescePendingPayload(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 1
-        override suspend fun convertToPendingDelete(operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 1
+        override suspend fun claimOperation(syncScopeKey: String, operationId: String, nowEpochMillis: Long): Int = 1
+        override suspend fun markFailed(syncScopeKey: String, operationId: String, lastError: String, errorClassification: String?, nextAttemptAtEpochMillis: Long, nowEpochMillis: Long): Int = 1
+        override suspend fun markConflict(syncScopeKey: String, operationId: String, lastError: String, nowEpochMillis: Long): Int = 1
+        override suspend fun recoverStaleInFlight(syncScopeKey: String, staleBeforeEpochMillis: Long, nowEpochMillis: Long, lastError: String): Int = 0
+        override suspend fun retryAllFailed(syncScopeKey: String, nowEpochMillis: Long): Int = 0
+        override suspend fun deleteCompleted(syncScopeKey: String, operationId: String): Int = 1
+        override suspend fun deleteForEntity(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun getSuccessors(syncScopeKey: String, predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun unblockSuccessor(syncScopeKey: String, operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 1
+        override suspend fun getActiveTailCandidates(syncScopeKey: String, entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun coalescePendingPayload(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 1
+        override suspend fun convertToPendingDelete(syncScopeKey: String, operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 1
+        override fun observeLegacyQuarantineOperationCount(): Flow<Int> = flowOf(0)
+        override suspend fun getLegacyQuarantineOperationCount(): Int = 0
     }
 
     private class SequentialEntityIdGenerator : EntityIdGenerator {
@@ -318,7 +327,7 @@ class OfflineFirstSubscriptionRepositoryTest {
     }
 
     private fun createFixture(
-        sessionUserId: String = "usr-1",
+        sessionUserId: String = USER_ID,
     ): Pair<OfflineFirstSubscriptionRepository, TestContext> {
         val authRepo = FakeAuthRepository(AuthSession(EntityId(sessionUserId), "user@test.com", nowInstant))
         val categoryDao = FakeCategoryDao()
@@ -359,7 +368,7 @@ class OfflineFirstSubscriptionRepositoryTest {
         val scheduler: FakeBackgroundSyncScheduler,
     )
 
-    private fun expenseCategory(id: String, ownerId: String = "usr-1", isDefault: Boolean = false) = CategoryEntity(
+    private fun expenseCategory(id: String, ownerId: String = USER_ID, isDefault: Boolean = false) = CategoryEntity(
         id = id,
         ownerId = if (isDefault) null else ownerId,
         workspaceId = null,
@@ -436,7 +445,7 @@ class OfflineFirstSubscriptionRepositoryTest {
         val entity = context.subscriptionDao.subscriptions[createdId]
         assertNotNull(entity)
         assertEquals("Spotify Premium", entity.name)
-        assertEquals("usr-1", entity.ownerId)
+        assertEquals("11111111-1111-4111-8111-111111111111", entity.ownerId)
         assertNull(entity.workspaceId)
         assertEquals(6499L, entity.amountMinor)
         assertEquals("TRY", entity.currencyCode)
@@ -458,7 +467,7 @@ class OfflineFirstSubscriptionRepositoryTest {
 
         val payload = json.parseToJsonElement(checkNotNull(op.payloadJson)).jsonObject
         assertEquals("sub-1", payload["id"]?.jsonPrimitive?.content)
-        assertEquals("usr-1", payload["user_id"]?.jsonPrimitive?.content)
+        assertEquals("11111111-1111-4111-8111-111111111111", payload["user_id"]?.jsonPrimitive?.content)
         assertEquals("Spotify Premium", payload["name"]?.jsonPrimitive?.content)
         assertEquals(6499L, payload["amount_minor"]?.jsonPrimitive?.content?.toLong())
         assertEquals("TRY", payload["currency"]?.jsonPrimitive?.content)
@@ -585,7 +594,7 @@ class OfflineFirstSubscriptionRepositoryTest {
 
         // 4. Other user category
         context.categoryDao.upsert(
-            expenseCategory("other-cat", ownerId = "other-user"),
+            expenseCategory("other-cat", ownerId = OTHER_USER_ID),
         )
         val otherRes = repo.create(
             CreateSubscriptionCommand(
@@ -608,7 +617,7 @@ class OfflineFirstSubscriptionRepositoryTest {
 
         val existingEntity = SubscriptionEntity(
             id = "sub-1",
-            ownerId = "usr-1",
+            ownerId = "11111111-1111-4111-8111-111111111111",
             workspaceId = null,
             name = "Spotify",
             amountMinor = 5999L,
@@ -645,7 +654,7 @@ class OfflineFirstSubscriptionRepositoryTest {
         assertEquals("YEARLY", updatedEntity.frequencyCode)
         assertEquals("2028-08-01", updatedEntity.endDate)
         // Immutable & preserved fields
-        assertEquals("usr-1", updatedEntity.ownerId)
+        assertEquals("11111111-1111-4111-8111-111111111111", updatedEntity.ownerId)
         assertNull(updatedEntity.workspaceId)
         assertEquals(1000L, updatedEntity.createdAtEpochMillis)
         assertEquals("2026-09-01", updatedEntity.nextRenewalDate)
@@ -664,7 +673,7 @@ class OfflineFirstSubscriptionRepositoryTest {
         val (repo, context) = createFixture()
         val existingEntity = SubscriptionEntity(
             id = "sub-1",
-            ownerId = "usr-1",
+            ownerId = "11111111-1111-4111-8111-111111111111",
             workspaceId = null,
             name = "Spotify",
             amountMinor = 5999L,
@@ -706,7 +715,7 @@ class OfflineFirstSubscriptionRepositoryTest {
         val (repo, context) = createFixture()
         val existingEntity = SubscriptionEntity(
             id = "sub-1",
-            ownerId = "usr-1",
+            ownerId = "11111111-1111-4111-8111-111111111111",
             workspaceId = null,
             name = "Spotify",
             amountMinor = 5999L,
@@ -758,7 +767,7 @@ class OfflineFirstSubscriptionRepositoryTest {
         context.subscriptionDao.upsert(
             SubscriptionEntity(
                 id = "deleted-id",
-                ownerId = "usr-1",
+                ownerId = "11111111-1111-4111-8111-111111111111",
                 workspaceId = null,
                 name = "Spotify",
                 amountMinor = 5999L,
@@ -782,7 +791,7 @@ class OfflineFirstSubscriptionRepositoryTest {
         context.subscriptionDao.upsert(
             SubscriptionEntity(
                 id = "foreign-id",
-                ownerId = "other-usr",
+                ownerId = OTHER_USER_ID,
                 workspaceId = null,
                 name = "Spotify",
                 amountMinor = 5999L,
@@ -806,7 +815,7 @@ class OfflineFirstSubscriptionRepositoryTest {
         context.subscriptionDao.upsert(
             SubscriptionEntity(
                 id = "workspace-id",
-                ownerId = "usr-1",
+                ownerId = "11111111-1111-4111-8111-111111111111",
                 workspaceId = "ws-1",
                 name = "Spotify",
                 amountMinor = 5999L,
@@ -841,7 +850,7 @@ class OfflineFirstSubscriptionRepositoryTest {
 
         val personal = SubscriptionEntity(
             id = "sub-1",
-            ownerId = "usr-1",
+            ownerId = "11111111-1111-4111-8111-111111111111",
             workspaceId = null,
             name = "Personal Sub",
             amountMinor = 5999L,
@@ -856,7 +865,7 @@ class OfflineFirstSubscriptionRepositoryTest {
             createdAtEpochMillis = 1000L,
             sync = defaultSync,
         )
-        val foreign = personal.copy(id = "sub-2", ownerId = "other-user")
+        val foreign = personal.copy(id = "sub-2", ownerId = OTHER_USER_ID)
         val workspace = personal.copy(id = "sub-3", workspaceId = "ws-1")
         val deleted = personal.copy(id = "sub-4", sync = defaultSync.copy(deletedAtEpochMillis = nowEpoch))
 
@@ -894,7 +903,7 @@ class OfflineFirstSubscriptionRepositoryTest {
         val (repo, context) = createFixture()
         val existingEntity = SubscriptionEntity(
             id = "sub-1",
-            ownerId = "usr-1",
+            ownerId = "11111111-1111-4111-8111-111111111111",
             workspaceId = null,
             name = "Netflix",
             amountMinor = 14999L,
@@ -939,7 +948,7 @@ class OfflineFirstSubscriptionRepositoryTest {
         val (repo, context) = createFixture()
         val existingEntity = SubscriptionEntity(
             id = "sub-1",
-            ownerId = "usr-1",
+            ownerId = "11111111-1111-4111-8111-111111111111",
             workspaceId = null,
             name = "Gym Membership",
             amountMinor = 50000L,
@@ -982,7 +991,7 @@ class OfflineFirstSubscriptionRepositoryTest {
         val (repo, context) = createFixture()
         val existingEntity = SubscriptionEntity(
             id = "sub-1",
-            ownerId = "usr-1",
+            ownerId = "11111111-1111-4111-8111-111111111111",
             workspaceId = null,
             name = "Hosting",
             amountMinor = 20000L,
@@ -1017,7 +1026,7 @@ class OfflineFirstSubscriptionRepositoryTest {
         val (repo, context) = createFixture()
         val existingEntity = SubscriptionEntity(
             id = "sub-1",
-            ownerId = "usr-1",
+            ownerId = "11111111-1111-4111-8111-111111111111",
             workspaceId = null,
             name = "Inactive Sub",
             amountMinor = 1000L,
@@ -1055,7 +1064,7 @@ class OfflineFirstSubscriptionRepositoryTest {
         context.subscriptionDao.upsert(
             SubscriptionEntity(
                 id = "other-user-sub",
-                ownerId = "other-usr",
+                ownerId = OTHER_USER_ID,
                 workspaceId = null,
                 name = "Other Sub",
                 amountMinor = 1000L,
@@ -1079,7 +1088,7 @@ class OfflineFirstSubscriptionRepositoryTest {
         context.subscriptionDao.upsert(
             SubscriptionEntity(
                 id = "workspace-sub",
-                ownerId = "usr-1",
+                ownerId = "11111111-1111-4111-8111-111111111111",
                 workspaceId = "ws-1",
                 name = "Workspace Sub",
                 amountMinor = 1000L,
@@ -1103,7 +1112,7 @@ class OfflineFirstSubscriptionRepositoryTest {
         context.subscriptionDao.upsert(
             SubscriptionEntity(
                 id = "deleted-sub",
-                ownerId = "usr-1",
+                ownerId = "11111111-1111-4111-8111-111111111111",
                 workspaceId = null,
                 name = "Deleted Sub",
                 amountMinor = 1000L,
@@ -1146,7 +1155,7 @@ class OfflineFirstSubscriptionRepositoryTest {
         context.subscriptionDao.upsert(
             SubscriptionEntity(
                 id = "sub-1",
-                ownerId = "usr-1",
+                ownerId = "11111111-1111-4111-8111-111111111111",
                 workspaceId = null,
                 name = "Spotify",
                 amountMinor = 5999L,
@@ -1198,7 +1207,7 @@ class OfflineFirstSubscriptionRepositoryTest {
 
     private fun subscriptionEntity(
         id: String = "sub-1",
-        ownerId: String = "user-1",
+        ownerId: String = "11111111-1111-4111-8111-111111111111",
         workspaceId: String? = null,
         categoryId: String? = null,
         amountMinor: Long = 5999L,
@@ -1222,10 +1231,10 @@ class OfflineFirstSubscriptionRepositoryTest {
 
     @Test
     fun activeWorkspaceScope_isolatesObserveAndEnforcesScopedWrites() = runTest {
-        val authRepo = FakeAuthRepository(AuthSession(EntityId("user-1"), "token", nowInstant))
+        val authRepo = FakeAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "token", nowInstant))
         val categoryDao = FakeCategoryDao().apply {
             upsert(
-                expenseCategory("cat-ws-1", ownerId = "user-1").copy(
+                expenseCategory("cat-ws-1", ownerId = "11111111-1111-4111-8111-111111111111").copy(
                     workspaceId = "ws-1",
                     scopeKey = "workspace:ws-1",
                 ),

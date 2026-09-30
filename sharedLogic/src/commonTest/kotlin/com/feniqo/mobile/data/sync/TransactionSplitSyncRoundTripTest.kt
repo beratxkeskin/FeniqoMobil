@@ -145,7 +145,7 @@ class TransactionSplitSyncRoundTripTest {
         )
 
         val result = IncrementalRemoteSync(remote, dao, FakeSyncStateDao(cursors)) { RECEIVED_AT }
-            .pullFor(EntityId(USER_ID))
+            .pullFor(EntityId(USER_ID), USER_SCOPE)
 
         assertEquals(1, result.appliedCount)
         assertEquals(0, result.conflictCount)
@@ -173,7 +173,7 @@ class TransactionSplitSyncRoundTripTest {
         )
 
         val result = IncrementalRemoteSync(remote, dao, FakeSyncStateDao(cursors)) { RECEIVED_AT }
-            .pullFor(EntityId(USER_ID))
+            .pullFor(EntityId(USER_ID), USER_SCOPE)
 
         assertEquals(0, result.appliedCount)
         assertEquals(1, result.conflictCount)
@@ -261,9 +261,9 @@ class TransactionSplitSyncRoundTripTest {
         override suspend fun getWorkspaceMemberRow(workspaceId: String, userId: String): WorkspaceMemberEntity? = null
         override suspend fun getWorkspaceMemberRows(workspaceId: String): List<WorkspaceMemberEntity> = emptyList()
         override suspend fun getAllKnownLiveWorkspaceIds(): List<String> = emptyList()
-        override suspend fun getFirstOutboxOperationId(entityTypeCode: String, entityId: String): String? =
+        override suspend fun getFirstOutboxOperationId(syncScopeKey: String, entityTypeCode: String, entityId: String): String? =
             if (transaction?.id == entityId) OP_ID else null
-        override suspend fun countOutboxRows(entityTypeCode: String, entityId: String): Int = if (transaction?.id == entityId) 1 else 0
+        override suspend fun countOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = if (transaction?.id == entityId) 1 else 0
         override suspend fun upsertProfileRow(entity: UserProfileEntity) = Unit
         override suspend fun upsertWorkspaceRows(entities: List<WorkspaceEntity>) = Unit
         override suspend fun upsertWorkspaceMemberRows(entities: List<WorkspaceMemberEntity>) = Unit
@@ -284,7 +284,7 @@ class TransactionSplitSyncRoundTripTest {
         override suspend fun upsertCursorRows(cursors: List<SyncCursorEntity>) {
             cursors.forEach { this.cursors[it.entityTypeCode] = it }
         }
-        override suspend fun deleteConflictRow(entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun deleteConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
         override suspend fun markProfileConflict(entityId: String, error: String): Int = 1
         override suspend fun markCategoryConflict(entityId: String, error: String): Int = 1
         override suspend fun markTransactionConflict(entityId: String, error: String): Int {
@@ -297,40 +297,44 @@ class TransactionSplitSyncRoundTripTest {
         override suspend fun markGoalContributionConflict(entityId: String, error: String): Int = 1
         override suspend fun markDebtConflict(entityId: String, error: String): Int = 1
         override suspend fun markDebtPaymentConflict(entityId: String, error: String): Int = 1
-        override suspend fun deleteOutboxRows(entityTypeCode: String, entityId: String): Int = 0
-        override suspend fun deleteOtherOutboxRows(entityTypeCode: String, entityId: String, keptOperationId: String): Int = 0
-        override suspend fun resetConflictOperation(operationId: String, operationTypeCode: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
+        override suspend fun deleteOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun deleteOtherOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String, keptOperationId: String): Int = 0
+        override suspend fun resetConflictOperation(syncScopeKey: String, operationId: String, operationTypeCode: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
         override suspend fun rebaseProfileForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
         override suspend fun rebaseCategoryForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
         override suspend fun rebaseTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
         override suspend fun rebaseRecurringTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
         override suspend fun rebaseSubscriptionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun getActiveWorkspaceTailOperation(workspaceId: String): SyncOperationEntity? = null
+        override suspend fun getActiveWorkspaceTailOperation(syncScopeKey: String, workspaceId: String): SyncOperationEntity? = null
         override suspend fun markWorkspaceConflict(entityId: String, error: String): Int = 1
-        override suspend fun getAllWorkspaceOperations(workspaceId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun deleteSpecificWorkspaceOperations(workspaceId: String, operationIds: List<String>): Int = 0
+        override suspend fun getAllWorkspaceOperations(syncScopeKey: String, workspaceId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun deleteSpecificWorkspaceOperations(syncScopeKey: String, workspaceId: String, operationIds: List<String>): Int = 0
         override suspend fun rebaseWorkspaceForRetry(workspaceId: String, syncStatus: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun resetWorkspaceConflictOperation(operationId: String, operationTypeCode: String, payloadJson: String?, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getConflictRow(entityTypeCode: String, entityId: String): SyncConflictEntity? = null
+        override suspend fun resetWorkspaceConflictOperation(syncScopeKey: String, operationId: String, operationTypeCode: String, payloadJson: String?, remoteVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun getConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): SyncConflictEntity? = null
     }
 
     private class FakeSyncStateDao(
         private val cursors: MutableMap<String, SyncCursorEntity>,
     ) : SyncStateDao {
-        override suspend fun getCursor(entityTypeCode: String): SyncCursorEntity? = cursors[entityTypeCode]
-        override suspend fun getWorkspaceMemberCursors(): List<SyncCursorEntity> = emptyList()
-        override suspend fun getConflict(entityId: String): SyncConflictEntity? = null
-        override suspend fun getConflict(entityTypeCode: String, entityId: String): SyncConflictEntity? = null
-        override suspend fun getConflictsByEntityType(entityTypeCode: String): List<SyncConflictEntity> = emptyList()
-        override suspend fun getAllConflicts(): List<SyncConflictEntity> = emptyList()
+        override suspend fun getCursor(syncScopeKey: String, entityTypeCode: String): SyncCursorEntity? = cursors[entityTypeCode]
+        override suspend fun getWorkspaceMemberCursors(syncScopeKey: String): List<SyncCursorEntity> = emptyList()
+        override suspend fun getConflict(syncScopeKey: String, entityId: String): SyncConflictEntity? = null
+        override suspend fun getConflict(syncScopeKey: String, entityTypeCode: String, entityId: String): SyncConflictEntity? = null
+        override suspend fun getConflictsByEntityType(syncScopeKey: String, entityTypeCode: String): List<SyncConflictEntity> = emptyList()
+        override suspend fun getAllConflicts(syncScopeKey: String): List<SyncConflictEntity> = emptyList()
         override suspend fun upsertCursor(cursor: SyncCursorEntity) {
             cursors[cursor.entityTypeCode] = cursor
         }
-        override suspend fun deleteConflict(entityTypeCode: String, entityId: String): Int = 0
-        override fun observeConflicts(): Flow<List<SyncConflictEntity>> = flowOf(emptyList())
-        override fun observeConflictCount(): Flow<Int> = flowOf(0)
-        override suspend fun getConflictCount(): Int = 0
+        override suspend fun deleteConflict(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
+        override fun observeConflicts(syncScopeKey: String): Flow<List<SyncConflictEntity>> = flowOf(emptyList())
+        override fun observeConflictCount(syncScopeKey: String): Flow<Int> = flowOf(0)
+        override suspend fun getConflictCount(syncScopeKey: String): Int = 0
         override suspend fun upsertConflict(conflict: SyncConflictEntity) = Unit
+        override fun observeLegacyQuarantineCursorCount(): Flow<Int> = flowOf(0)
+        override suspend fun getLegacyQuarantineCursorCount(): Int = 0
+        override fun observeLegacyQuarantineConflictCount(): Flow<Int> = flowOf(0)
+        override suspend fun getLegacyQuarantineConflictCount(): Int = 0
         override fun observeLastSuccessfulSyncAt(userId: String): Flow<Long?> = flowOf(null)
         override suspend fun getUserState(userId: String): com.feniqo.mobile.data.local.entity.SyncUserStateEntity? = null
         override suspend fun upsertUserState(state: com.feniqo.mobile.data.local.entity.SyncUserStateEntity) = Unit
@@ -369,9 +373,10 @@ class TransactionSplitSyncRoundTripTest {
 
     private companion object {
         const val OP_ID = "0123456789abcdef0123456789abcdef"
-        const val TX_ID = "tx-12345678-abcd-1234-abcd-123456789abc"
+        const val TX_ID = "11111111-1111-4111-8111-111111111111"
         const val USER_ID = "fdbd49aa-640a-4ec5-9f1a-f348a949034c"
-        const val CATEGORY_ID = "cat-12345678-abcd-1234-abcd-123456789abc"
+        const val USER_SCOPE = "USER:$USER_ID"
+        const val CATEGORY_ID = "22222222-2222-4222-8222-222222222222"
         const val CREATED_AT = "2026-08-25T17:00:00Z"
         const val STORED_UPDATED_AT = "2026-08-25T16:00:00Z"
         const val STORED_ID = "stored-tx-id"
@@ -379,6 +384,7 @@ class TransactionSplitSyncRoundTripTest {
         const val RECEIVED_AT = 1756141200000L
 
         fun storedTransactionCursor() = SyncCursorEntity(
+            syncScopeKey = USER_SCOPE,
             entityTypeCode = TRANSACTION_CURSOR_KEY,
             updatedAtEpochMillis = Instant.parse(STORED_UPDATED_AT).toEpochMilliseconds(),
             entityId = STORED_ID,
@@ -477,6 +483,7 @@ class TransactionSplitSyncRoundTripTest {
             baseVersion: Long? = null,
             payloadJson: String? = null,
         ) = SyncOperationEntity(
+            syncScopeKey = USER_SCOPE,
             operationId = OP_ID,
             entityTypeCode = "TRANSACTION",
             entityId = TX_ID,

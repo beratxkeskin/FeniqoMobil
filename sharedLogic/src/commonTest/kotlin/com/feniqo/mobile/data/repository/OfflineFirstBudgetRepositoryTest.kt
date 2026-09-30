@@ -54,7 +54,12 @@ import kotlin.test.assertTrue
 
 class OfflineFirstBudgetRepositoryTest {
 
-    private val userSession = AuthSession(EntityId("user-1"), "user1@feniqo.com", Instant.fromEpochMilliseconds(1000L))
+    private companion object {
+        const val USER_ID = "11111111-1111-4111-8111-111111111111"
+        const val OTHER_USER_ID = "22222222-2222-4222-8222-222222222222"
+    }
+
+    private val userSession = AuthSession(EntityId(USER_ID), "user1@feniqo.com", Instant.fromEpochMilliseconds(1000L))
 
     @Test
     fun observe_and_crud_without_session_returns_empty_or_auth_failure() = runTest {
@@ -92,9 +97,9 @@ class OfflineFirstBudgetRepositoryTest {
 
     @Test
     fun observe_filters_to_only_session_user_personal_budgets() = runTest {
-        val myPersonalBudget = sampleBudgetEntity(id = "b-mine", ownerId = "user-1", workspaceId = null)
-        val otherUserBudget = sampleBudgetEntity(id = "b-other", ownerId = "user-2", workspaceId = null)
-        val myWorkspaceBudget = sampleBudgetEntity(id = "b-ws", ownerId = "user-1", workspaceId = "ws-1")
+        val myPersonalBudget = sampleBudgetEntity(id = "b-mine", ownerId = USER_ID, workspaceId = null)
+        val otherUserBudget = sampleBudgetEntity(id = "b-other", ownerId = OTHER_USER_ID, workspaceId = null)
+        val myWorkspaceBudget = sampleBudgetEntity(id = "b-ws", ownerId = USER_ID, workspaceId = "ws-1")
 
         val authRepo = FakeBudgetAuthRepository(userSession)
         val budgetDao = FakeBudgetDao(listOf(myPersonalBudget, otherUserBudget, myWorkspaceBudget))
@@ -125,7 +130,7 @@ class OfflineFirstBudgetRepositoryTest {
     @Test
     fun observe_with_workspace_id_returns_empty_list() = runTest {
         val authRepo = FakeBudgetAuthRepository(userSession)
-        val budgetDao = FakeBudgetDao(listOf(sampleBudgetEntity("b-ws", ownerId = "user-1", workspaceId = "ws-1")))
+        val budgetDao = FakeBudgetDao(listOf(sampleBudgetEntity("b-ws", ownerId = "11111111-1111-4111-8111-111111111111", workspaceId = "ws-1")))
         val categoryDao = FakeBudgetCategoryDao()
         val queue = FakeBudgetOfflineWriteQueueHolder()
         val repository = OfflineFirstBudgetRepository(
@@ -143,7 +148,7 @@ class OfflineFirstBudgetRepositoryTest {
     fun create_new_budget_produces_correct_owner_workspace_id_createdAt_pending_create_and_create_payload() = runTest {
         val authRepo = FakeBudgetAuthRepository(userSession)
         val budgetDao = FakeBudgetDao()
-        val category = sampleCategoryEntity("c-1", ownerId = "user-1", typeCode = "EXPENSE")
+        val category = sampleCategoryEntity("c-1", ownerId = "11111111-1111-4111-8111-111111111111", typeCode = "EXPENSE")
         val categoryDao = FakeBudgetCategoryDao(listOf(category))
         val queue = FakeBudgetOfflineWriteQueueHolder()
         val customIdGenerator = EntityIdGenerator { EntityId("generated-b1") }
@@ -171,9 +176,9 @@ class OfflineFirstBudgetRepositoryTest {
         val enqueued = queue.lastEnqueuedBudget
         assertNotNull(enqueued)
         assertEquals("generated-b1", enqueued.id)
-        assertEquals("user-1", enqueued.ownerId)
+        assertEquals(USER_ID, enqueued.ownerId)
         assertNull(enqueued.workspaceId)
-        assertEquals("user:user-1", enqueued.scopeKey)
+        assertEquals("user:$USER_ID", enqueued.scopeKey)
         assertEquals("c-1", enqueued.categoryId)
         assertEquals("2026-08", enqueued.month)
         assertEquals(250_000L, enqueued.limitMinor)
@@ -185,10 +190,10 @@ class OfflineFirstBudgetRepositoryTest {
 
     @Test
     fun create_when_active_duplicate_exists_returns_conflict_without_calling_queue() = runTest {
-        val existingActive = sampleBudgetEntity("b-active", ownerId = "user-1", categoryId = "c-1", month = "2026-08")
+        val existingActive = sampleBudgetEntity("b-active", ownerId = "11111111-1111-4111-8111-111111111111", categoryId = "c-1", month = "2026-08")
         val authRepo = FakeBudgetAuthRepository(userSession)
         val budgetDao = FakeBudgetDao(listOf(existingActive))
-        val category = sampleCategoryEntity("c-1", ownerId = "user-1", typeCode = "EXPENSE")
+        val category = sampleCategoryEntity("c-1", ownerId = "11111111-1111-4111-8111-111111111111", typeCode = "EXPENSE")
         val categoryDao = FakeBudgetCategoryDao(listOf(category))
         val queue = FakeBudgetOfflineWriteQueueHolder()
 
@@ -217,7 +222,7 @@ class OfflineFirstBudgetRepositoryTest {
     fun create_when_server_known_soft_deleted_exists_reactivates_as_update_preserving_id() = runTest {
         val serverKnownDeleted = sampleBudgetEntity(
             id = "b-deleted-server",
-            ownerId = "user-1",
+            ownerId = "11111111-1111-4111-8111-111111111111",
             categoryId = "c-1",
             month = "2026-08",
             createdAt = 1000L,
@@ -230,7 +235,7 @@ class OfflineFirstBudgetRepositoryTest {
         )
         val authRepo = FakeBudgetAuthRepository(userSession)
         val budgetDao = FakeBudgetDao(listOf(serverKnownDeleted))
-        val category = sampleCategoryEntity("c-1", ownerId = "user-1", typeCode = "EXPENSE")
+        val category = sampleCategoryEntity("c-1", ownerId = "11111111-1111-4111-8111-111111111111", typeCode = "EXPENSE")
         val categoryDao = FakeBudgetCategoryDao(listOf(category))
         val queue = FakeBudgetOfflineWriteQueueHolder()
 
@@ -268,7 +273,7 @@ class OfflineFirstBudgetRepositoryTest {
     fun create_when_local_only_soft_deleted_exists_reactivates_as_create_preserving_id() = runTest {
         val localDeleted = sampleBudgetEntity(
             id = "b-deleted-local",
-            ownerId = "user-1",
+            ownerId = "11111111-1111-4111-8111-111111111111",
             categoryId = "c-1",
             month = "2026-08",
             createdAt = 1000L,
@@ -281,7 +286,7 @@ class OfflineFirstBudgetRepositoryTest {
         )
         val authRepo = FakeBudgetAuthRepository(userSession)
         val budgetDao = FakeBudgetDao(listOf(localDeleted))
-        val category = sampleCategoryEntity("c-1", ownerId = "user-1", typeCode = "EXPENSE")
+        val category = sampleCategoryEntity("c-1", ownerId = "11111111-1111-4111-8111-111111111111", typeCode = "EXPENSE")
         val categoryDao = FakeBudgetCategoryDao(listOf(category))
         val queue = FakeBudgetOfflineWriteQueueHolder()
 
@@ -319,7 +324,7 @@ class OfflineFirstBudgetRepositoryTest {
     fun create_when_category_is_income_fails_with_must_be_expense() = runTest {
         val authRepo = FakeBudgetAuthRepository(userSession)
         val budgetDao = FakeBudgetDao()
-        val incomeCat = sampleCategoryEntity("c-income", ownerId = "user-1", typeCode = "INCOME")
+        val incomeCat = sampleCategoryEntity("c-income", ownerId = "11111111-1111-4111-8111-111111111111", typeCode = "INCOME")
         val categoryDao = FakeBudgetCategoryDao(listOf(incomeCat))
         val queue = FakeBudgetOfflineWriteQueueHolder()
 
@@ -343,8 +348,8 @@ class OfflineFirstBudgetRepositoryTest {
     fun create_when_category_belongs_to_other_owner_or_workspace_fails() = runTest {
         val authRepo = FakeBudgetAuthRepository(userSession)
         val budgetDao = FakeBudgetDao()
-        val otherOwnerCat = sampleCategoryEntity("c-other", ownerId = "user-2", typeCode = "EXPENSE")
-        val wsCat = sampleCategoryEntity("c-ws", ownerId = "user-1", workspaceId = "ws-1", typeCode = "EXPENSE")
+        val otherOwnerCat = sampleCategoryEntity("c-other", ownerId = OTHER_USER_ID, typeCode = "EXPENSE")
+        val wsCat = sampleCategoryEntity("c-ws", ownerId = USER_ID, workspaceId = "ws-1", typeCode = "EXPENSE")
         val categoryDao = FakeBudgetCategoryDao(listOf(otherOwnerCat, wsCat))
         val queue = FakeBudgetOfflineWriteQueueHolder()
 
@@ -366,7 +371,7 @@ class OfflineFirstBudgetRepositoryTest {
     fun update_updates_only_limit_currency_and_enqueues_update() = runTest {
         val existing = sampleBudgetEntity(
             id = "b-1",
-            ownerId = "user-1",
+            ownerId = "11111111-1111-4111-8111-111111111111",
             categoryId = "c-1",
             month = "2026-08",
             limitMinor = 100_000L,
@@ -392,7 +397,7 @@ class OfflineFirstBudgetRepositoryTest {
         val enqueued = queue.lastEnqueuedBudget
         assertNotNull(enqueued)
         assertEquals("b-1", enqueued.id)
-        assertEquals("user-1", enqueued.ownerId)
+        assertEquals("11111111-1111-4111-8111-111111111111", enqueued.ownerId)
         assertNull(enqueued.workspaceId)
         assertEquals("c-1", enqueued.categoryId)
         assertEquals("2026-08", enqueued.month)
@@ -405,8 +410,8 @@ class OfflineFirstBudgetRepositoryTest {
 
     @Test
     fun update_or_delete_non_existent_or_other_owner_budget_fails_with_not_found() = runTest {
-        val otherBudget = sampleBudgetEntity(id = "b-other", ownerId = "user-2")
-        val wsBudget = sampleBudgetEntity(id = "b-ws", ownerId = "user-1", workspaceId = "ws-1")
+        val otherBudget = sampleBudgetEntity(id = "b-other", ownerId = OTHER_USER_ID)
+        val wsBudget = sampleBudgetEntity(id = "b-ws", ownerId = USER_ID, workspaceId = "ws-1")
 
         val authRepo = FakeBudgetAuthRepository(userSession)
         val budgetDao = FakeBudgetDao(listOf(otherBudget, wsBudget))
@@ -444,7 +449,7 @@ class OfflineFirstBudgetRepositoryTest {
     fun soft_delete_enqueues_tombstone_metadata_and_delete_payload() = runTest {
         val existing = sampleBudgetEntity(
             id = "b-del",
-            ownerId = "user-1",
+            ownerId = "11111111-1111-4111-8111-111111111111",
             categoryId = "c-1",
             month = "2026-08",
             limitMinor = 100_000L,
@@ -479,7 +484,7 @@ class OfflineFirstBudgetRepositoryTest {
     fun queue_or_storage_exception_is_mapped_to_safe_repository_error() = runTest {
         val authRepo = FakeBudgetAuthRepository(userSession)
         val budgetDao = FakeBudgetDao()
-        val categoryDao = FakeBudgetCategoryDao(listOf(sampleCategoryEntity("c-1", ownerId = "user-1", typeCode = "EXPENSE")))
+        val categoryDao = FakeBudgetCategoryDao(listOf(sampleCategoryEntity("c-1", ownerId = "11111111-1111-4111-8111-111111111111", typeCode = "EXPENSE")))
         val queue = FakeBudgetOfflineWriteQueueHolder(shouldThrow = IllegalStateException("queue_failed"))
 
         val repository = OfflineFirstBudgetRepository(
@@ -498,7 +503,7 @@ class OfflineFirstBudgetRepositoryTest {
     fun cancellation_exception_is_rethrown() = runTest {
         val authRepo = FakeBudgetAuthRepository(userSession)
         val budgetDao = FakeBudgetDao()
-        val categoryDao = FakeBudgetCategoryDao(listOf(sampleCategoryEntity("c-1", ownerId = "user-1", typeCode = "EXPENSE")))
+        val categoryDao = FakeBudgetCategoryDao(listOf(sampleCategoryEntity("c-1", ownerId = "11111111-1111-4111-8111-111111111111", typeCode = "EXPENSE")))
         val queue = FakeBudgetOfflineWriteQueueHolder(shouldThrow = CancellationException("coroutine_cancelled"))
 
         val repository = OfflineFirstBudgetRepository(
@@ -537,7 +542,7 @@ class OfflineFirstBudgetRepositoryTest {
 
     private fun sampleBudgetEntity(
         id: String,
-        ownerId: String = "user-1",
+        ownerId: String = USER_ID,
         workspaceId: String? = null,
         categoryId: String = "c-1",
         month: String = "2026-08",
@@ -664,16 +669,16 @@ private class FakeBudgetOfflineWriteQueueHolder(
         override suspend fun deleteCategoryRow(id: String): Int = 0
         override suspend fun deleteBudgetRow(id: String): Int = 0
         override suspend fun deleteTransactionRow(id: String): Int = 0
-        override suspend fun deleteOutboxRow(operationId: String): Int = 0
-        override suspend fun getOutboxById(operationId: String): SyncOperationEntity? = null
-        override suspend fun getSuccessors(predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun getActiveTailCandidates(entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun coalescePendingPayload(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
-        override suspend fun convertToPendingDelete(operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 0
-        override suspend fun convertPendingDeleteToUpdate(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
-        override suspend fun unblockSuccessor(operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
+        override suspend fun deleteOutboxRow(syncScopeKey: String, operationId: String): Int = 0
+        override suspend fun getOutboxById(syncScopeKey: String, operationId: String): SyncOperationEntity? = null
+        override suspend fun getSuccessors(syncScopeKey: String, predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun getActiveTailCandidates(syncScopeKey: String, entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun coalescePendingPayload(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
+        override suspend fun convertToPendingDelete(syncScopeKey: String, operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 0
+        override suspend fun convertPendingDeleteToUpdate(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
+        override suspend fun unblockSuccessor(syncScopeKey: String, operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun insertOutboxRow(operation: SyncOperationEntity) {}
-        override suspend fun deleteConflictRow(entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun deleteConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
         override suspend fun rebaseProfileVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseCategoryVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
         override suspend fun rebaseTransactionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
@@ -727,16 +732,16 @@ private class FakeBudgetOfflineWriteQueueHolder(
         override suspend fun markDebtSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
         override suspend fun tombstoneGoalContributionsForDeletedGoal(goalId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int = 0
         override suspend fun tombstoneDebtPaymentsForDeletedDebt(debtId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getActiveGoalAggregateTailCandidates(goalId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun getActiveDebtAggregateTailCandidates(debtId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun countPendingGoalAggregateOperations(goalId: String, operationId: String): Int = 0
-        override suspend fun countPendingDebtAggregateOperations(debtId: String, operationId: String): Int = 0
+        override suspend fun getActiveGoalAggregateTailCandidates(syncScopeKey: String, goalId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun getActiveDebtAggregateTailCandidates(syncScopeKey: String, debtId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun countPendingGoalAggregateOperations(syncScopeKey: String, goalId: String, operationId: String): Int = 0
+        override suspend fun countPendingDebtAggregateOperations(syncScopeKey: String, debtId: String, operationId: String): Int = 0
         override suspend fun setGoalSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setGoalContributionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setDebtSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setDebtPaymentSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun upsertConflictRow(entity: SyncConflictEntity) {}
-        override suspend fun setOutboxStatusConflict(operationId: String, nowEpochMillis: Long): Int = 1
+        override suspend fun setOutboxStatusConflict(syncScopeKey: String, operationId: String, nowEpochMillis: Long): Int = 1
         override suspend fun setProfileSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setCategorySyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
         override suspend fun setTransactionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
@@ -744,6 +749,7 @@ private class FakeBudgetOfflineWriteQueueHolder(
 
         override suspend fun upsertTransactionKeepingTagsAndEnqueue(entity: TransactionEntity, operation: SyncOperationEntity) {}
         override suspend fun mutateBudgetV2(
+            syncScopeKey: String,
             entity: BudgetEntity,
             type: OutboxOperationType,
             payloadJson: String,
@@ -758,23 +764,25 @@ private class FakeBudgetOfflineWriteQueueHolder(
     }
 
     val operationDao = object : SyncOperationDao {
-        override fun observePendingCount(): Flow<Int> = flowOf(0)
-        override fun observeFailedCount(): Flow<Int> = flowOf(0)
-        override suspend fun getReadyOperations(nowEpochMillis: Long, limit: Int) = emptyList<SyncOperationEntity>()
-        override suspend fun getById(operationId: String): SyncOperationEntity? = null
+        override fun observePendingCount(syncScopeKey: String): Flow<Int> = flowOf(0)
+        override fun observeFailedCount(syncScopeKey: String): Flow<Int> = flowOf(0)
+        override suspend fun getReadyOperations(syncScopeKey: String, nowEpochMillis: Long, limit: Int) = emptyList<SyncOperationEntity>()
+        override suspend fun getById(syncScopeKey: String, operationId: String): SyncOperationEntity? = null
         override suspend fun insert(operation: SyncOperationEntity) {}
-        override suspend fun claimOperation(operationId: String, nowEpochMillis: Long): Int = 1
-        override suspend fun markFailed(operationId: String, lastError: String, errorClassification: String?, nextAttemptAtEpochMillis: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun markConflict(operationId: String, lastError: String, nowEpochMillis: Long): Int = 1
-        override suspend fun recoverStaleInFlight(staleBeforeEpochMillis: Long, nowEpochMillis: Long, lastError: String): Int = 0
-        override suspend fun retryAllFailed(nowEpochMillis: Long): Int = 0
-        override suspend fun deleteCompleted(operationId: String): Int = 1
-        override suspend fun deleteForEntity(entityTypeCode: String, entityId: String): Int = 0
-        override suspend fun getSuccessors(predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun unblockSuccessor(operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun getActiveTailCandidates(entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun coalescePendingPayload(operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 1
-        override suspend fun convertToPendingDelete(operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 1
+        override suspend fun claimOperation(syncScopeKey: String, operationId: String, nowEpochMillis: Long): Int = 1
+        override suspend fun markFailed(syncScopeKey: String, operationId: String, lastError: String, errorClassification: String?, nextAttemptAtEpochMillis: Long, nowEpochMillis: Long): Int = 1
+        override suspend fun markConflict(syncScopeKey: String, operationId: String, lastError: String, nowEpochMillis: Long): Int = 1
+        override suspend fun recoverStaleInFlight(syncScopeKey: String, staleBeforeEpochMillis: Long, nowEpochMillis: Long, lastError: String): Int = 0
+        override suspend fun retryAllFailed(syncScopeKey: String, nowEpochMillis: Long): Int = 0
+        override suspend fun deleteCompleted(syncScopeKey: String, operationId: String): Int = 1
+        override suspend fun deleteForEntity(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
+        override suspend fun getSuccessors(syncScopeKey: String, predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun unblockSuccessor(syncScopeKey: String, operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 1
+        override suspend fun getActiveTailCandidates(syncScopeKey: String, entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
+        override suspend fun coalescePendingPayload(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 1
+        override suspend fun convertToPendingDelete(syncScopeKey: String, operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 1
+        override fun observeLegacyQuarantineOperationCount(): Flow<Int> = flowOf(0)
+        override suspend fun getLegacyQuarantineOperationCount(): Int = 0
     }
 
     val queue = OfflineWriteQueue(

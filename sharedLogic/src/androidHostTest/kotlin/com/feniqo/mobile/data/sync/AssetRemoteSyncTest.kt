@@ -30,13 +30,13 @@ class AssetRemoteSyncTest {
         val db = database()
         try {
             val remote = AssetRemote(assetDto(version = 3))
-            val result = InitialRemoteSync(remote, db.remoteSyncDao(), { RECEIVED_AT }, db.assetDao()).pullFor(EntityId(USER_ID))
+            val result = InitialRemoteSync(remote, db.remoteSyncDao(), { RECEIVED_AT }, db.assetDao()).pullFor(EntityId(USER_ID), "USER:$USER_ID")
 
             assertEquals(1, result.assetCount)
             val stored = assertNotNull(db.assetDao().getAnyById(ASSET_ID))
             assertEquals("SYNCED", stored.sync.syncStatus)
             assertEquals(3, stored.sync.version)
-            assertEquals(ASSET_ID, db.syncStateDao().getCursor("ASSET")?.entityId)
+            assertEquals(ASSET_ID, db.syncStateDao().getCursor("USER:$USER_ID", "ASSET")?.entityId)
         } finally { db.close() }
     }
 
@@ -48,23 +48,24 @@ class AssetRemoteSyncTest {
             db.assetDao().upsert(local)
             OfflineWriteQueue(db.localMutationDao(), db.syncOperationDao(), nowEpochMillisProvider = { RECEIVED_AT })
                 .enqueueAssetV2(
-                    local.copy(name = "Yerel düzenleme", sync = local.sync.copy(syncStatus = "PENDING_UPDATE", baseVersion = 1)),
-                    OutboxOperationType.UPDATE,
-                    Json.encodeToString(assetDto(version = 1).copy(name = "Yerel düzenleme")),
+                    syncScopeKey = "USER:$USER_ID",
+                    entity = local.copy(name = "Yerel düzenleme", sync = local.sync.copy(syncStatus = "PENDING_UPDATE", baseVersion = 1)),
+                    type = OutboxOperationType.UPDATE,
+                    payloadJson = Json.encodeToString(assetDto(version = 1).copy(name = "Yerel düzenleme")),
                 )
 
             val result = IncrementalRemoteSync(
                 AssetRemote(assetDto(version = 2).copy(name = "Uzak değişiklik")),
                 db.remoteSyncDao(), db.syncStateDao(), { RECEIVED_AT + 1 }, db.assetDao(),
-            ).pullFor(EntityId(USER_ID))
+            ).pullFor(EntityId(USER_ID), "USER:$USER_ID")
 
             assertEquals(1, result.appliedCount, "Aynı turdaki profil pull'u uygulanır; Asset conflict olarak korunur")
             assertEquals(1, result.conflictCount)
             assertEquals(1, result.receivedAssetCount)
             assertEquals("Yerel düzenleme", db.assetDao().getAnyById(ASSET_ID)?.name)
             assertEquals("CONFLICT", db.assetDao().getAnyById(ASSET_ID)?.sync?.syncStatus)
-            assertNotNull(db.syncStateDao().getConflict("ASSET", ASSET_ID))
-            assertEquals(ASSET_ID, db.syncStateDao().getCursor("ASSET")?.entityId)
+            assertNotNull(db.syncStateDao().getConflict("USER:$USER_ID", "ASSET", ASSET_ID))
+            assertEquals(ASSET_ID, db.syncStateDao().getCursor("USER:$USER_ID", "ASSET")?.entityId)
         } finally { db.close() }
     }
 
