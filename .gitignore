@@ -17,3 +17,8 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
+
+# Yerel tanı ve test koşucusu çıktıları
+**/__pycache__/
+*.py[cod]
+/dump*.xml

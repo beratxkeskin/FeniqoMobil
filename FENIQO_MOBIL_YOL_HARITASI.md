@@ -1,5 +1,91 @@
 # FeniqoMobil — Uçtan Uca Geliştirme Yol Haritası
 
+### Gerçek İki Cihazlı Çekirdek V1 Kabulü (2026-09-29)
+
+Staging ref `rxfaiynkhaxrksosxvxp` üzerinde iki bağımsız Android 17 / API 37 emülatörü (`Feniqo_V1_A` ve `Feniqo_V1_B`) ile gerçek Room → outbox → Supabase RPC → ACK → incremental pull → ikinci cihaz Room zinciri tamamlandı. Production'a dokunulmadı; mobil veya kanıt üretiminde service-role kullanılmadı.
+
+| Senaryo | Durum | Güncel kabul özeti |
+|---|---|---|
+| S1 | **GEÇTİ** | Çevrimdışı kategori, gider ve gelir Room + outbox'a atomik yazıldı; remote absence doğrulandı. |
+| S2 | **GEÇTİ** | Force-stop/cold-start sonrasında entity, operation ID ve payload kalıcı kaldı; duplicate oluşmadı. |
+| S3 | **GEÇTİ** | Ağ dönüşü, ACK metadata, staging kayıtları, ikinci sync ve idempotency kanıtlandı. |
+| S4 | **GEÇTİ** | Bağımsız Device B initial pull ve çift yönlü incremental recovery Room üzerinden doğrulandı. |
+| S5 | **GEÇTİ** | Soft-delete/tombstone, DELETE replay ve iki cihaz restart sonrası zombie olmaması doğrulandı. |
+| S6 KEEP_LOCAL | **GEÇTİ** | Gerçek stale baseVersion conflict, iki kopya, güvenli successor mutation ve iki cihaz yakınsaması doğrulandı. |
+| S6 KEEP_REMOTE | **GEÇTİ** | Gerçek stale baseVersion conflict, kullanıcı kararıyla remote uygulama ve iki cihaz yakınsaması doğrulandı. |
+| S7 | **GEÇTİ** | Görünen ad header + profil + restart + ikinci cihazda doğrulandı; splash kanıt olarak kullanılmadı. |
+| S8 | **GEÇTİ** | Dört giriş noktası, gerçek transaction ID/back-stack, tekil remote sync, 3 taksit ve `THIS_AND_FOLLOWING` iki cihaz tombstone sonucu doğrulandı. |
+
+Kanıtlar: `artifacts/v1-acceptance/2026-09-28/S1`–`S5`, `artifacts/v1-acceptance/2026-09-29/S6`–`S8`. Ön koşul regresyon kapısı 1680 sharedLogic + 698 androidApp + 313 sharedUI testinde 0 failure/0 error/0 skipped; `assembleDebug` ve iOS simulator compile başarılıydı. S8 tanısal APK hedefli `:androidApp:assembleDebugAndroidTest` ile derlendi. Test hesapları silinmedi ve staging-only olarak korunuyor. S8'e ait beş kesin transaction ID'si normal kullanıcı/RLS `sync_write_v2 DELETE` akışıyla soft-delete edildi; remote aktif kayıt sayısı 0, iki cihaz cleanup pull sonucu 0 aktif / 3 tombstone ve 0 outbox oldu. Yerel DPAPI kimlik dosyası kaldırıldı. Commit/push yapılmadı.
+
+### Supabase Staging ve Production Kabulü (2026-09-27)
+
+- [x] **Staging Ortamı Tam Kabulü (FeniqoMobil-Staging / rxfaiynkhaxrksosxvxp):** 32 migration'ın tamamı (20260814000000 -> 20260927000100) uygulandı; RLS güvenlik sözleşmesi, davet güvenlik sözleşmesi, `sync_write_v2` RPC sözleşmesi, para/web-mobil uyumluluk testi ve iki gerçek Auth kullanıcısıyla uçtan uca PostgREST/RPC izolasyon kabulü başarıyla geçti (0 test artığı).
+- [x] **Production Salt-Okunur Denetimi (FeniqoMobil-Production / qgmymavltjnmfuzvfxiq):** Salt-okunur metadata denetimi tamamlandı; remote migration history 0, public uygulama tablosu/fonksiyon/trigger/policy 0; realtime üye tablosu, storage bucket ve edge fonksiyonu boş (yeni/boş proje kanıtlandı, hiçbir mutation uygulanmadı).
+- [x] **Production Deployment Runbook ve Onay Paketi:** [docs/PRODUCTION_SUPABASE_DEPLOYMENT_RUNBOOK.md](docs/PRODUCTION_SUPABASE_DEPLOYMENT_RUNBOOK.md) güncellendi (Kesin 32 migration analiz matrisi, durdurma koşulları, yedek kapısı `DOĞRULANDI — APPLICATION-SCOPE SCHEMA-ONLY LOGICAL BACKUP`, metadata post-check listesi, rollout adımları).
+- [x] **Production application-scope schema backup ve local restore doğrulaması:** `pre-migration-2026-09-27` application-scope schema-only logical backup alındı (874 bayt, SHA-256: `C484AE65A76CDC82CDB96C07F2C10A9E1810ECF5981F8D6EDE6E3E6DFBADB4E7`, secret taraması temiz); yerel PostgreSQL 18.3 disposable DB üzerinde restore testi başarıyla çalıştırıldı (post-check 0 nesne, residual DB 0, lock residual 0; Auth kullanıcı sayısı 0 doğrulandı; Supabase Free Plan nedeniyle platform/PITR yedeği değildir, public şema dışını içermez).
+- [x] **Production Hazırlık ve Operasyonel Onay:** Sorumlu ataması, bakım penceresi ve proje sahibinin nihai açık mutation onayı tamamlandı.
+- [x] **Production Migration Uygulaması ve Post-Check Doğrulaması (Backend: PRODUCTION UYGULANDI VE DOĞRULANDI):** 32 onaylanan migration sırayla uygulandı; migration history 32/32 (son timestamp `20260927000100`); 19/19 public tablo mevcut ve tamamında RLS açık; 19 PK, 0 geçersiz index, 0 doğrulanmamış constraint; 16/16 server metadata trigger etkin; kritik trigger ve RPC imza/güvenlik kontrolleri geçti; `workspace_invitations.token_hash` authenticated ve anon için kapalı; anon/PUBLIC mutation grant sayısı 0; realtime üyeleri yalnız 3 tablo (`categories`, `profiles`, `transactions`); kategoriler 27 aktif varsayılan + 2 tombstone; para null/negatif/drift sayısı 0; storage bucket ve edge function 0; son dry-run `upToDate=true`; CLI bağlantısı derhal staging ref `rxfaiynkhaxrksosxvxp` değerine geri döndürüldü; üretim üzerinde test kullanıcısı/negatif test çalıştırılmadı.
+- [ ] **Mobil ve Web Production Rollout:** Canlı istemciler production veritabanına henüz yönlendirilmemiştir; mobil release build, mağaza dağıtımı ve canlı web uyumluluk adımları beklenmektedir.
+
+### P0 UUID ve Outbox Regresyonu Sözleşmesi (2026-09-23)
+
+- [x] **P0 Dilim 2A — Authenticated Actor Scoped Outbox Enqueue ve `sync_operations` DAO İzolasyonu (2026-09-24):**
+  - Tüm repository'ler (`OfflineFirstTransactionRepository`, `OfflineFirstCategoryRepository`, `OfflineFirstBudgetRepository`, `OfflineFirstWorkspaceRepository`, `OfflineFirstAssetRepository`, `OfflineFirstGoalRepository`, `OfflineFirstDebtRepository`, `OfflineFirstRecurringTransactionRepository`, `OfflineFirstSubscriptionRepository`, `OfflineFirstAuthRepository`), `OfflineWriteQueue`, `LocalMutationDao` ve `SyncOperationDao` üzerinde ilk parametre olarak `syncScopeKey: String` zorunlu kılındı.
+  - Outbox kuyruğuna yazılan her operasyon oturum sahibi authenticated actor (`USER:<authenticatedUserId>`) ile scope'landı; default `LEGACY_UNRESOLVED` parametresi tamamen kaldırıldı.
+  - Actor izolasyonu: Kullanıcı A hiçbir şekilde Kullanıcı B'nin outbox operasyonlarını claim edemez, silemez, retry edemez veya gözlemleyemez (`UserScopedSyncOperationDaoTest` 16 senaryo ile %100 kanıtlandı). Yalnız runtime doğrulamasından geçen test fixture'ları canonical test UUID'lerine dönüştürüldü; compact ve malformed USER scope anahtarları fail-closed olarak reddedildi.
+  - Test paketi: `:sharedLogic:testAndroidHostTest` testlerinin tamamı (0 failure, 0 skipped), `:androidApp:assembleDebug` ve `:sharedLogic:compileKotlinIosSimulatorArm64` %100 başarıyla geçti.
+
+- [x] **P0 Dilim 2B — Legacy Quarantine Runtime İzolasyonu, Güvenli UI Uyarısı ve Demo Doğrulaması (2026-09-26):**
+  - `LEGACY_UNRESOLVED` kayıtları fail-closed karantina altında korunur; hiçbir outbox/cursor/conflict satırı silinmez veya aktif kullanıcıya otomatik sahiplendirilmez.
+  - Runtime ready, claim, retry, recovery ve outbox execution akışları karantina verilerini kesin olarak dışlar.
+  - `SyncStatusScreen` üzerinde `hasLegacyQuarantinedData` true olduğunda bağımsız, erişilebilir (`LegacyQuarantineWarningCard`) uyarısı gösterilir; exact sayaç, kullanıcı kimliği, entity tipi, operation ID veya payload sızdırmaz; üzerinde hiçbir "yeniden dene/sahiplen/kurtar/sil" aksiyonu barındırmaz; bağlantı, bekleyen işlem ve çakışma kartlarıyla birlikte bir arada yaşar.
+  - Demo repository açıkça canonical demo kullanıcı scope'unu (`USER:de000000-0000-4000-8000-000000000001`) kullanır ve `hasLegacyQuarantinedData = false` üretir.
+  - Hedefli testler: `LegacySyncQuarantineRuntimeTest` (9 test), `SyncStatusViewModelTest` (24 test), `SyncStatusScreenComposeTest` (4 test), `DemoSyncRepositoryTest` (2 test) %100 başarıyla geçti.
+
+- [x] **P0 Dilim 1 — Room v22 Kullanıcı-Scope Temeli ve v21→v22 Kayıpsız Migration (2026-09-24):**
+  - Room v22 şeması (`22.json`) ve migration'ı (`ANDROID_MIGRATION_21_22`) uygulandı; `sync_operations`, `sync_cursors` ve `sync_conflicts` tablolarına `sync_scope_key` eklendi.
+  - Geriye dönük kayıpsız backfill karar tablosu: PROFILE ve kanıtlanmış kişisel kayıtlar `USER:<canonical_uuid>` scope'una alındı; kanıtsız ve workspace operasyonları fail-closed olarak `LEGACY_UNRESOLVED` karantinasında korundu.
+  - `UserScopeIsolationMigrationTest` (14 test, 0 failure) ile satır sayıları, payload byte-for-byte dokunulmazlığı ve scope izolasyonu Robolectric üzerinde doğrulandı.
+
+- [x] **Dilim 1 — Entity Kimlik Sözleşmesi, Yeni UUID Üretimi ve Room v21 Geriye Uyumluluğu:**
+  - `RandomUuidEntityIdGenerator` ve `UuidHelper` (`classify`, `isCanonicalUuid`, `isLegacyCompactHex`, `compactToCanonicalUuid`, `canonicalize`, `toCanonicalOrNull`) ile canonical UUID standardı belirlendi.
+  - Room v21 şeması (`21.json`) ve migration'ı (`ANDROID_MIGRATION_20_21`) uygulandı.
+  - `PRAGMA defer_foreign_keys = ON` ve sonda `PRAGMA foreign_key_check` ile FK bütünlüğü sağlandı.
+  - Preflight collision kontrolleri (entity PK, FK, composite PK, unique index'ler, reminder target key'leri, allowlist) fail-closed ve atomik rollback ile korundu.
+  - V1 outbox payload'ı korunarak yalnız entity PK/FK ve entity_id dönüştürüldü; V2 outbox karar tablosu (branch a, b, c, d, e) ve metadata koruması uygulandı.
+  - `subscription_payment_reminder_receipts` tablosunda compact `subscription_id` taşıyan geçerli `stable_key` satırlarında compact prefix canonical prefix'e dönüştürülür; prefix sonrasındaki `_`, `#` veya `:` suffix byte-for-byte korunur; compact `subscription_id` ile başlamayan `stable_key` fail-closed rollback üretir; `subscription_id` canonical veya UUID dışıysa satır değiştirilmez.
+  - `sync_conflicts` decodable `TransactionDto` ve `CategoryDto` ile `EquivalentConflictResolver.isEquivalent` doğrulaması ve wrapper alanlarının korunması kanıtlandı.
+  - Gerçek atomik rollback, composite PK (`transaction_tags`) ve unique index (`budgets`) collision testleri eklendi.
+- [x] **Dilim 2 — OutboxProcessor Hata Sınıflandırması Toparlanması ve Testleri:**
+  - `OutboxProcessorTest` A, B, C, D testleri üretim sözleşmesine uygun canonical UUID ve 32-hex `operation_id` fixture'larıyla güncellendi; pre-flight (malformed payload ve ID uyuşmazlığı -> writer 0 çağrı, `DefinitiveOutboxFailureException`, `DEFINITIVE_REJECTION`) ve remote-call-sonrası (`SerializationException` ve genel `IllegalArgumentException` -> writer 1 çağrı, `AMBIGUOUS_RESULT`) sınırları kesin olarak doğrulandı. Üretim kodu değişmeden hedefli `OutboxProcessorTest` (21 test) ve tam `:sharedLogic:testAndroidHostTest` paketi (1525 test, 0 failure, 0 skipped) başarıyla geçti.
+- [x] **Dilim 3A — Hesap Değişiminde Fail-Closed Kullanıcı Sınırı ve Outbox Veri Bütünlüğü:**
+  - `OfflineFirstSyncRepository` `requestSync` ve `retryFailedOperations` için `runSyncLocked` refactor'ı uygulandı; aktif oturum ile `PROFILE` cursor kimliği uyuşmadığında fail-closed `AppError.Authentication("sync.local_data_owner_mismatch")` fırlatması ve hiçbir remote çağrı yapmaması sağlandı.
+  - Farklı hesap durumunda `requestSync` ve `retryFailedOperations` akışlarından otomatik `clearAllOperations()` ve `clearAllCursors()` çağrıları kaldırıldı; outbox mutasyonları ve cursor'lar geri döndürülemez veri kaybına karşı eksiksiz korundu. Mevcut DAO/wrapper API deklarasyonları kullanıcı değişikliği olarak korunmuştur.
+  - `retryFailedOperations` hesap uyuşmazlığında eski kullanıcının operasyonlarını kesinlikle mutate etmez; tek mutex ile deadlock riski olmadan seri işlenir.
+  - Hedefli `OfflineFirstSyncRepositoryTest` (31 test, 0 failure), tam `:sharedLogic:testAndroidHostTest` paketi (1529 test, 0 failure, 0 skipped) ve `:sharedLogic:compileKotlinIosSimulatorArm64` %100 başarıyla geçti.
+- [ ] **P0 Regresyon Kabulü ve Doğrulama Durumu (Otomatik Host/Unit Kapıları Tamamlandı, Enstrümantasyon & Yerel DB Kapıları Açık — 2026-09-26):**
+  - Dilim 1 (Room v21 UUID Canonicalization), Dilim 2 (Hata Sınıflandırması), Dilim 3A (Hesap Değişiminde Fail-Closed Koruma), Dilim 1/2 (Room v22 Kullanıcı-Scope Temeli & Kayıpsız Migration), Dilim 2A (Outbox Enqueue & DAO İzolasyonu), Dilim 2B (Karantina Runtime & Güvenli UI), Backup/Import Actor Scope ve Session Yarışı tam kapsamıyla uygulandı ve doğrulandı.
+  - Statik güvenlik denetimi eksiksiz tamamlandı: Sıfır global outbox/cursor/conflict silme, sıfır destructive migration, tam scope izolasyonu, session cancellation koruması.
+  - **Otomatik Host / Unit Regresyon Kapısı (TAMAMLANDI):**
+    - `:sharedLogic:testAndroidHostTest`: 154 XML dosyası (suite), 1680 test, 0 failure, 0 error, 0 skipped (%100 BAŞARILI, PowerShell XML analiziyle doğrulandı).
+    - `:androidApp:testDebugUnitTest`: 69 XML dosyası (suite), 698 test, 0 failure, 0 error, 0 skipped (%100 BAŞARILI, PowerShell XML analiziyle doğrulandı).
+    - `:sharedUI:testAndroidHostTest`: 45 XML dosyası (suite), 313 test, 0 failure, 0 error, 0 skipped (%100 BAŞARILI, PowerShell XML analiziyle doğrulandı).
+    - Toplam: 268 XML dosyası, 2691 test, 0 failure, 0 error, 0 skipped.
+    - `:androidApp:assembleDebug`: Başarıyla üretildi (exit code 0).
+    - `:sharedLogic:compileKotlinIosSimulatorArm64`: Başarıyla derlendi (exit code 0).
+    - Node contract testi (`node --test supabase/functions/market-prices/core.test.mjs`): 8/8 test başarıyla geçti.
+    - Android Lint analizi (`:androidApp:lintRelease`): 0 error, 75 warning, 1 hint ile tamamlandı.
+    - Release Bundle (`:androidApp:bundleRelease`): Başarıyla üretildi (`androidApp/build/outputs/bundle/release/androidApp-release.aab`); jarsigner ile unsigned olduğu doğrulandı (keystore/imzalama CI/CD aşamasına bırakıldı).
+  - **Android Instrumentation / Cihaz Kapısı (AÇIK — cihaz/emülatör yok):**
+    - `adb devices` listesi boş olduğu için fiziksel veya sanal cihaz üzerinde `connectedDebugAndroidTest` çalıştırılmadı; cihaz üstü kabul adımları açık tutulmaktadır.
+  - **Yerel PostgreSQL Migration Contract Kapısı (AÇIK — gerekli yerel ortam yok):**
+    - Bu ortamda python/psql/PostgreSQL/Docker/Supabase CLI bulunmadığından (`py` komutu "No installed Python found" döndüğünden) izole yerel veritabanı migration contract testleri bu kabul koşusunda çalıştırılmadı; açık tutulmaktadır.
+  - **Kabul Kapsamı ve Ortam Güvenliği:**
+    - Koşulsuz "5/5 PASS", "%100 proje doğrulaması" veya koşulsuz "P0 genel kabulü tamamlandı" gibi harici kapıları gizleyen ifadeler düzeltilmiş; otomatik host/unit kapılarının tamamlandığı, harici ortam ve cihaz gerektiren kapıların ise açık olduğu netleştirilmiştir.
+    - Supabase production ve staging ortamlarına kesinlikle dokunulmadı; hiçbir migration/SQL veya veri mutasyonu uygulanmadı.
+    - Git commit veya push yapılmadı; working tree ve kullanıcı değişiklikleri korundu.
+
 ### V1 Çekirdek Kabul Doğrulaması, Hata Sınıflandırması Toparlanması ve Staging Migration (2026-09-21)
 
 - [x] **Room v20 Şeması ve Hata Sınıflandırması:** `sync_operations` tablosuna `error_classification` sütunu (`DEFINITIVE_REJECTION`, `AMBIGUOUS_RESULT`) eklendi; Room v19→v20 ileri migration'ı (`ANDROID_MIGRATION_19_20`), schema JSON (`20.json`) ve migration testi eklendi. NULL error_classification (eski Room v19 FAILED kayıtları) hiçbir zaman kesin ret sayılmaz.
@@ -10,7 +96,7 @@
 - [x] **Fail-Closed Kategori Seed Migration ve 16 SQL Kabul Senaryosu:** `20260921000100_seed_extended_canonical_categories.sql` fail-closed hale getirildi (17 eski kanonik kategori sözleşmesinin tam alan ve sahiplik doğrulaması, 1120 ve 1121'in kanıtlanarak tombstone edilmesi, 12 yeni kanonik kategori eklenmesi, 2 legacy kaydın tombstone edilmesi, net aktif +10 değişim ve 27 aktif kanonik kategori [9 gelir, 18 gider] tam alan/fazlalık/eksiklik post-check doğrulaması). İzole yerel PostgreSQL template veritabanları üzerinde doğrudan migration dosyasının tam metnini çalıştıran 16 gerçek SQL kabul senaryosu ve varyantı (7 legacy sözleşme varyantı [name, type, color, icon, user_id, workspace_id, aktif tombstone], 2 kanonik UUID sahiplik çakışması varyantı [user_id, workspace_id], idempotent 2. çalıştırma dar invariant ve version koruma testleri, atomik rollback ve fixture kalıcılığı güvencesi) `supabase/tests/run_extended_categories_seed_contract_test.py` ile %100 geçti.
 - [ ] **Staging Migration Uygulaması:** Staging'e henüz UYGULANMADI (Codex ve kullanıcı açık onayı bekleniyor); Staging migration geçmişi doğrulanmadı/AÇIK.
 - [x] **Production Güvenliği:** Production Supabase'e kesinlikle dokunulmadı; hiçbir migration/SQL veya veri mutasyonu uygulanmadı.
-- [ ] **Cihaz A ve İki Cihaz Eşitlemesi:** Cihaz A aktif kullanımda olduğu için ADB müdahalesi yapılmadı; iki cihazlı eşitleme adımları AÇIK tutulmaktadır.
+- [x] **Cihaz A ve İki Cihaz Eşitlemesi:** 2026-09-29 tarihinde iki bağımsız Android 17 / API 37 emülatörüyle S1–S8 kabulü tamamlandı; ayrıntı belgenin başındaki güncel kabul tablosundadır.
 
 #### Çekirdek V1 Kabul Senaryoları Özgün Durum Tablosu (S1–S8)
 
@@ -30,7 +116,7 @@
 - [x] Mevcut yerel profilde ad değişikliğini Room ve V2 outbox işlemine atomik olarak kaydet.
 - [x] Yerel profil eksikse oturum sahibinin uzak profilini doğrulayıp Room'a al; profil alınamazsa sahte başarı gösterme.
 - [x] Repository, gerçek Room DAO ve SettingsViewModel hedefli testlerini; Android APK ve iOS ortak kod derlemesini doğrula.
-- [ ] Oturumlu cihazda adı kaydetme, ekranlar arası güncellenme ve ikinci cihazda eşitleme kabulünü yap.
+- [x] Oturumlu cihazda adı kaydetme, ekranlar arası güncellenme ve ikinci cihazda eşitleme kabulünü yap. (S7, 2026-09-29)
 
 İlerleme: Önceki `updateFullName` yerel profil bulunmadığında hata veriyor, bulunduğunda da yalnız Room'a yazıp eşitleme kuyruğunu atlıyordu. Yeni akış eksik profili güvenli biçimde getirir ve ad değişikliğini V2 outbox ile kaydeder. Ağ veya uzak profil erişilemezse kayıt başarıyla tamamlanmış gibi sunulmaz. Supabase staging/production verisi değiştirilmedi.
 
@@ -38,7 +124,7 @@
 
 - [x] Otomatik doğrulama: başarı ekranını kapatırken geçici geçmişi saklamama; Ana Sayfa dönüşünde eski alt akışı geri yüklememe; diğer sekmelerin durumunu koruma.
 - [x] Otomatik doğrulama: taksit oluşturma sonucunda grup ve ilk işlem kimliğini ayrı taşıma; başarı ekranına kaydedilmiş ilk işlem kimliğini gönderme.
-- [ ] Cihaz kabulü: Ana Sayfa/İşlemler/Bütçe/Daha Fazla üzerinden tek ve taksitli kayıt ekle → başarıyı kapat → Ana Sayfa → sekmeler → geri; ayrıca başarıdan yeni işlem ve işlem görüntüleme akışları.
+- [x] Cihaz kabulü: Ana Sayfa/İşlemler/Bütçe/Daha Fazla üzerinden tek ve taksitli kayıt ekle → başarıyı kapat → Ana Sayfa → sekmeler → geri; ayrıca başarıdan yeni işlem ve işlem görüntüleme akışları. (S8, 2026-09-29)
 
 İlerleme: ortak `CreatedInstallmentGroup` sonucu grup ve işlem kimliğinin karışmasını önler; repository'nin grup kimliği sözleşmesi korunur. Ana Sayfa ve raporlardan eve dönüş aynı navigasyon eylemini kullanır. NavHostController regresyonları ve form/use-case testleri eklendi. `:androidApp:testDebugUnitTest` hedefli 71 test (MainNavigationActionsTest, TransactionSuccessViewModelTest, TransactionFormViewModelTest), `:sharedLogic:testAndroidHostTest` 1465 test, `:androidApp:assembleDebug` ve `:sharedLogic:compileKotlinIosSimulatorArm64` başarılıdır. İlk navigasyon testindeki eksik ViewModelStore test kurulumu düzeltildi; son çalıştırmada hata veya atlanan test yoktur. Supabase/staging/production değişikliği yoktur.
 
