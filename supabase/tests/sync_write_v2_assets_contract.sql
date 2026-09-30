@@ -1,19 +1,20 @@
 begin;
 
+-- Test-scoped auth fixture'ları: Deterministik UUID'ler ile transaction içinde oluşturulur, rollback ile otomatik temizlenir
+insert into auth.users (id, email, created_at)
+values
+    ('a0000000-0000-4000-8000-000000000001', 'asset_fixture_owner@feniqo.local', timezone('utc', now())),
+    ('a0000000-0000-4000-8000-000000000002', 'asset_fixture_other@feniqo.local', timezone('utc', now()));
+
 do $$
 declare
-    v_owner_id uuid;
-    v_other_user_id uuid;
+    v_owner_id uuid := 'a0000000-0000-4000-8000-000000000001'::uuid;
+    v_other_user_id uuid := 'a0000000-0000-4000-8000-000000000002'::uuid;
     v_asset_id uuid := extensions.gen_random_uuid();
     v_result jsonb;
     v_error_caught boolean := false;
     v_visible_count integer;
 begin
-    select id into v_owner_id from auth.users where email = 'asset-local-1@example.invalid';
-    select id into v_other_user_id from auth.users where email = 'asset-local-2@example.invalid';
-    if v_owner_id is null or v_other_user_id is null then
-        raise exception 'Asset contract kullanıcı fixture kayıtları bulunamadı.';
-    end if;
 
     perform set_config('request.jwt.claim.sub', v_owner_id::text, true);
     v_result := public.sync_write_v2(

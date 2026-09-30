@@ -1,6 +1,6 @@
 # FeniqoMobil — Supabase V1 Güvenlik ve Migration Planı
 
-> **Durum:** Tasarım tamamlandı; SQL uygulaması henüz yapılmadı  
+> **Durum:** Staging 32/32 doğrulandı; FeniqoMobil-Production (qgmymavltjnmfuzvfxiq) üzerine 32/32 migration uygulandı ve salt-okunur post-check geçti; backend PRODUCTION UYGULANDI VE DOĞRULANDI; mobil/web rollout yapılmadı. Operasyonel runbook: `docs/PRODUCTION_SUPABASE_DEPLOYMENT_RUNBOOK.md`<br>
 > **Kapsam:** V1 kişisel profil, kategori, işlem ve offline senkronizasyon  
 > **Referans:** `docs/WEB_REFERANS_ENVANTERI.md`
 
