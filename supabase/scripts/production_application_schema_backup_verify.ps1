@@ -68,10 +68,10 @@ $dbCreated         = $false
 # 2. GÜVENLİK VE NATIVE ÇAĞRI YARDIMCILARI
 # ---------------------------------------------------------------------------
 
-function Invoke-NativeWithPassword {
+function Invoke-NativeWithCredential {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$false)] [System.Security.SecureString]$SecurePassword,
+        [Parameter(Mandatory=$false)] [System.Security.SecureString]$CredentialSecret,
         [Parameter(Mandatory=$true)]  [string]$FilePath,
         [Parameter(Mandatory=$true)]  [string[]]$ArgumentList,
         [Parameter(Mandatory=$false)] [hashtable]$EnvironmentVariables = @{}
@@ -80,9 +80,13 @@ function Invoke-NativeWithPassword {
     $bstr = [System.IntPtr]::Zero
     $oldEnv = @{}
     try {
-        if ($null -ne $SecurePassword -and $SecurePassword.Length -gt 0) {
-            $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecurePassword)
-            $env:PGPASSWORD = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+        if ($null -ne $CredentialSecret -and $CredentialSecret.Length -gt 0) {
+            $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($CredentialSecret)
+            [System.Environment]::SetEnvironmentVariable(
+                "PGPASSWORD",
+                [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr),
+                "Process"
+            )
         }
         foreach ($k in $EnvironmentVariables.Keys) {
             $oldEnv[$k] = [System.Environment]::GetEnvironmentVariable($k, 'Process')
@@ -99,7 +103,7 @@ function Invoke-NativeWithPassword {
             Lines    = @($output)
         }
     } finally {
-        $env:PGPASSWORD = $null
+        [System.Environment]::SetEnvironmentVariable("PGPASSWORD", $null, "Process")
         foreach ($k in $EnvironmentVariables.Keys) {
             [System.Environment]::SetEnvironmentVariable($k, $oldEnv[$k], 'Process')
         }
@@ -110,24 +114,24 @@ function Invoke-NativeWithPassword {
     }
 }
 
-function Test-FileContainsSecurePassword {
+function Test-FileContainsCredentialSecret {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)] [string]$FilePath,
-        [Parameter(Mandatory=$true)] [System.Security.SecureString]$SecurePassword
+        [Parameter(Mandatory=$true)] [System.Security.SecureString]$CredentialSecret
     )
 
     if (-not (Test-Path -LiteralPath $FilePath)) {
         return $false
     }
-    if ($null -eq $SecurePassword -or $SecurePassword.Length -eq 0) {
+    if ($null -eq $CredentialSecret -or $CredentialSecret.Length -eq 0) {
         return $false
     }
 
     $bstr = [System.IntPtr]::Zero
     $found = $false
     try {
-        $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecurePassword)
+        $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($CredentialSecret)
         $plain = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
         if (-not [string]::IsNullOrEmpty($plain)) {
             $content = Get-Content -LiteralPath $FilePath -Raw
@@ -198,13 +202,13 @@ if ($confirmTarget -cne "EVET") {
 # ---------------------------------------------------------------------------
 Write-Host ""
 Write-Host "[1/6] Kimlik Bilgileri Alınıyor..." -ForegroundColor Yellow
-$secProdPass = Read-Host -Prompt "Production PostgreSQL Parolası (db.$PROD_PROJECT_REF.supabase.co)" -AsSecureString
-if (-not $secProdPass -or $secProdPass.Length -eq 0) {
+$prodCredentialSecret = Read-Host -Prompt "Production PostgreSQL Parolası (db.$PROD_PROJECT_REF.supabase.co)" -AsSecureString
+if (-not $prodCredentialSecret -or $prodCredentialSecret.Length -eq 0) {
     Write-Error "[HATA] Production veritabanı parolası boş olamaz."
     exit 1
 }
 
-$secLocalPass = Read-Host -Prompt "Yerel (127.0.0.1) PostgreSQL Parolası (Yerel kullanıcı için parola yoksa doğrudan Enter'a basınız)" -AsSecureString
+$localCredentialSecret = Read-Host -Prompt "Yerel (127.0.0.1) PostgreSQL Parolası (Yerel kullanıcı için parola yoksa doğrudan Enter'a basınız)" -AsSecureString
 
 # ---------------------------------------------------------------------------
 # 5. BACKUP DİZİNİ VE EXCLUSIVE LOCK OLUŞTURMA (PAROLALAR ALINDIKTAN HEMEN SONRA)
@@ -262,8 +266,8 @@ try {
         throw "Dinleyen postgres süreci (PID: $($localConn.OwningProcess), Parent PID: $parentPid) 'postgresql-x64-18' servisi (PID: $($cimSvc.ProcessId)) ile eşleşmiyor."
     }
 
-    $localVersionRes = Invoke-NativeWithPassword `
-        -SecurePassword $secLocalPass `
+    $localVersionRes = Invoke-NativeWithCredential `
+        -CredentialSecret $localCredentialSecret `
         -FilePath $PSQL_BIN `
         -ArgumentList @("-X", "-w", "-q", "-t", "-A", "-U", $LOCAL_USER, "-h", $LOCAL_HOST, "-p", $LOCAL_PORT.ToString(), "-d", $LOCAL_DEFAULT_DB, "-c", "SELECT version();")
 
@@ -299,8 +303,8 @@ SELECT json_build_object(
 ROLLBACK;
 "@
 
-    $preflightRes = Invoke-NativeWithPassword `
-        -SecurePassword $secProdPass `
+    $preflightRes = Invoke-NativeWithCredential `
+        -CredentialSecret $prodCredentialSecret `
         -FilePath $PSQL_BIN `
         -ArgumentList @("-X", "-w", "-q", "-t", "-A", "-h", $PROD_HOST, "-p", $PROD_PORT.ToString(), "-U", $PROD_USER, "-d", $PROD_DB, "-v", "ON_ERROR_STOP=1", "-c", $preflightSql) `
         -EnvironmentVariables @{ "PGSSLMODE" = "require" }
@@ -325,8 +329,8 @@ SET LOCAL lock_timeout = '2s';
 SELECT count(*) FROM supabase_migrations.schema_migrations;
 ROLLBACK;
 "@
-        $countRes = Invoke-NativeWithPassword `
-            -SecurePassword $secProdPass `
+        $countRes = Invoke-NativeWithCredential `
+            -CredentialSecret $prodCredentialSecret `
             -FilePath $PSQL_BIN `
             -ArgumentList @("-X", "-w", "-q", "-t", "-A", "-h", $PROD_HOST, "-p", $PROD_PORT.ToString(), "-U", $PROD_USER, "-d", $PROD_DB, "-v", "ON_ERROR_STOP=1", "-c", $countSql) `
             -EnvironmentVariables @{ "PGSSLMODE" = "require" }
@@ -394,8 +398,8 @@ ROLLBACK;
 
     $dumpArgs += @("-f", $partialBackupFile)
 
-    $dumpRes = Invoke-NativeWithPassword `
-        -SecurePassword $secProdPass `
+    $dumpRes = Invoke-NativeWithCredential `
+        -CredentialSecret $prodCredentialSecret `
         -FilePath $PG_DUMP_BIN `
         -ArgumentList $dumpArgs `
         -EnvironmentVariables @{ "PGSSLMODE" = "require" }
@@ -423,9 +427,9 @@ ROLLBACK;
     Write-Host ""
     Write-Host "[5/6] Yedek Dosyası Güvenlik ve Gizlilik Taramasından Geçiriliyor..." -ForegroundColor Yellow
 
-    # 1. Parola kontrolü (Test-FileContainsSecurePassword)
-    $passFoundInDump = Test-FileContainsSecurePassword -FilePath $partialBackupFile -SecurePassword $secProdPass
-    if ($passFoundInDump) {
+    # 1. Parola kontrolü (Test-FileContainsCredentialSecret)
+    $credentialSecretFoundInDump = Test-FileContainsCredentialSecret -FilePath $partialBackupFile -CredentialSecret $prodCredentialSecret
+    if ($credentialSecretFoundInDump) {
         throw "[KRİTİK GÜVENLİK İHLALİ] Veritabanı parolası yedek dosyası içinde tespit edildi!"
     }
     Write-Host "  -> Parola sızıntı denetimi: TEMİZ (Parola dump dosyasında yer almıyor)" -ForegroundColor Green
@@ -460,8 +464,8 @@ ROLLBACK;
 
     try {
         Write-Host "  -> Tek kullanımlık test veritabanı oluşturuluyor: $disposableDb"
-        $createRes = Invoke-NativeWithPassword `
-            -SecurePassword $secLocalPass `
+        $createRes = Invoke-NativeWithCredential `
+            -CredentialSecret $localCredentialSecret `
             -FilePath $PSQL_BIN `
             -ArgumentList @("-X", "-w", "-U", $LOCAL_USER, "-h", $LOCAL_HOST, "-p", $LOCAL_PORT.ToString(), "-d", $LOCAL_DEFAULT_DB, "-v", "ON_ERROR_STOP=1", "-c", "CREATE DATABASE $disposableDb;")
 
@@ -474,8 +478,8 @@ ROLLBACK;
         $hasCreateSchemaPublic = ($dumpContent -match '(?i)CREATE\s+SCHEMA\s+(?:IF\s+NOT\s+EXISTS\s+)?public\b')
         if ($hasCreateSchemaPublic) {
             Write-Host "  -> Dump dosyası 'CREATE SCHEMA public' içeriyor. Test DB ($disposableDb) varsayılan public şeması kaldırılıyor..."
-            $dropSchemaRes = Invoke-NativeWithPassword `
-                -SecurePassword $secLocalPass `
+            $dropSchemaRes = Invoke-NativeWithCredential `
+                -CredentialSecret $localCredentialSecret `
                 -FilePath $PSQL_BIN `
                 -ArgumentList @("-X", "-w", "-v", "ON_ERROR_STOP=1", "-U", $LOCAL_USER, "-h", $LOCAL_HOST, "-p", $LOCAL_PORT.ToString(), "-d", $disposableDb, "-c", "DROP SCHEMA public CASCADE;")
             if ($dropSchemaRes.ExitCode -ne 0) {
@@ -486,8 +490,8 @@ ROLLBACK;
         }
 
         Write-Host "  -> Yedek partial dosyası test veritabanına restore ediliyor..."
-        $restoreRes = Invoke-NativeWithPassword `
-            -SecurePassword $secLocalPass `
+        $restoreRes = Invoke-NativeWithCredential `
+            -CredentialSecret $localCredentialSecret `
             -FilePath $PSQL_BIN `
             -ArgumentList @("-X", "-w", "-v", "ON_ERROR_STOP=1", "-U", $LOCAL_USER, "-h", $LOCAL_HOST, "-p", $LOCAL_PORT.ToString(), "-d", $disposableDb, "-f", $partialBackupFile)
 
@@ -509,8 +513,8 @@ SELECT json_build_object(
 )::text;
 "@
 
-        $restoreCheckRes = Invoke-NativeWithPassword `
-            -SecurePassword $secLocalPass `
+        $restoreCheckRes = Invoke-NativeWithCredential `
+            -CredentialSecret $localCredentialSecret `
             -FilePath $PSQL_BIN `
             -ArgumentList @("-X", "-w", "-q", "-t", "-A", "-U", $LOCAL_USER, "-h", $LOCAL_HOST, "-p", $LOCAL_PORT.ToString(), "-d", $disposableDb, "-v", "ON_ERROR_STOP=1", "-c", $restoreCheckSql)
 
@@ -528,8 +532,8 @@ SELECT json_build_object(
         $restoreMigrationRows = 0
         if ($restoreCheckJson.migration_table_exists -eq $true) {
             $restoreCountSql = "SELECT count(*) FROM supabase_migrations.schema_migrations;"
-            $restoreCountRes = Invoke-NativeWithPassword `
-                -SecurePassword $secLocalPass `
+            $restoreCountRes = Invoke-NativeWithCredential `
+                -CredentialSecret $localCredentialSecret `
                 -FilePath $PSQL_BIN `
                 -ArgumentList @("-X", "-w", "-q", "-t", "-A", "-U", $LOCAL_USER, "-h", $LOCAL_HOST, "-p", $LOCAL_PORT.ToString(), "-d", $disposableDb, "-v", "ON_ERROR_STOP=1", "-c", $restoreCountSql)
 
@@ -584,8 +588,8 @@ SELECT json_build_object(
                     throw "[GÜVENLİK HATA] Geçersiz disposable DB adı tespit edildi: '$disposableDb'"
                 }
 
-                $dropRes = Invoke-NativeWithPassword `
-                    -SecurePassword $secLocalPass `
+                $dropRes = Invoke-NativeWithCredential `
+                    -CredentialSecret $localCredentialSecret `
                     -FilePath $PSQL_BIN `
                     -ArgumentList @("-X", "-w", "-U", $LOCAL_USER, "-h", $LOCAL_HOST, "-p", $LOCAL_PORT.ToString(), "-d", $LOCAL_DEFAULT_DB, "-c", "DROP DATABASE IF EXISTS $disposableDb WITH (FORCE);")
 
@@ -593,8 +597,8 @@ SELECT json_build_object(
                     throw "[KRİTİK HATA] DROP DATABASE komutu başarısız oldu (Exit code: $($dropRes.ExitCode))."
                 }
 
-                $dbCountRes = Invoke-NativeWithPassword `
-                    -SecurePassword $secLocalPass `
+                $dbCountRes = Invoke-NativeWithCredential `
+                    -CredentialSecret $localCredentialSecret `
                     -FilePath $PSQL_BIN `
                     -ArgumentList @("-X", "-w", "-q", "-t", "-A", "-U", $LOCAL_USER, "-h", $LOCAL_HOST, "-p", $LOCAL_PORT.ToString(), "-d", $LOCAL_DEFAULT_DB, "-c", "SELECT count(*) FROM pg_database WHERE datname = '$disposableDb';")
 
@@ -790,6 +794,6 @@ Durum                    : VERIFIED_SUCCESSFUL
         Remove-Item -LiteralPath $LOCK_FILE -Force -ErrorAction SilentlyContinue
     }
 
-    $env:PGPASSWORD = $null
+    [System.Environment]::SetEnvironmentVariable("PGPASSWORD", $null, "Process")
     [System.GC]::Collect()
 }
