@@ -1,6 +1,5 @@
 package com.feniqo.mobile.presentation.budget
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -17,6 +16,7 @@ import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.YearMonth
 import com.feniqo.mobile.presentation.category.CategoryDisplayModel
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
 import com.feniqo.mobile.presentation.screen.BudgetFormScreen
@@ -59,6 +59,7 @@ fun BudgetFormScreenRoute(
             ),
         )
     }
+    var initialDraft by remember { mutableStateOf(draft) }
 
     var isEditSeedApplied by remember { mutableStateOf(false) }
 
@@ -69,7 +70,7 @@ fun BudgetFormScreenRoute(
     LaunchedEffect(effectiveEditLoadState) {
         if (effectiveEditLoadState is BudgetEditLoadState.Ready && !isEditSeedApplied) {
             val seed = effectiveEditLoadState.seed
-            draft = draft.copy(
+            val seededDraft = draft.copy(
                 budgetId = seed.budgetId,
                 selectedCategoryId = seed.categoryId,
                 selectedMonth = seed.month,
@@ -77,6 +78,8 @@ fun BudgetFormScreenRoute(
                 currency = seed.currency,
                 currentSpentMinor = seed.spentMinor,
             )
+            draft = seededDraft
+            initialDraft = seededDraft
             isEditSeedApplied = true
         }
     }
@@ -92,10 +95,11 @@ fun BudgetFormScreenRoute(
         }
     }
 
-    // 1. Gönderim sırasında sistem geri hareketini engelleme
-    BackHandler(enabled = uiState.mutationState.isSubmitting) {
-        // Form submit edilirken yanlışlıkla geri çıkılmasını önler
-    }
+    val requestExit = rememberGuardedFormExit(
+        isSubmitting = uiState.mutationState.isSubmitting,
+        hasUnsavedChanges = !draft.hasSameEditableValuesAs(initialDraft),
+        onNavigateBack = onNavigateBack,
+    )
 
     // 2. ViewModel tek seferlik olaylarını toplama
     LaunchedEffect(viewModel.events) {
@@ -131,6 +135,7 @@ fun BudgetFormScreenRoute(
                     description = "Düzenlemek istediğiniz bütçe bulunamadı veya silinmiş.",
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
+                    actionLabel = "Geri dön",
                 )
             }
         }
@@ -144,6 +149,7 @@ fun BudgetFormScreenRoute(
                     description = effectiveEditLoadState.message.toDisplayText(),
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
+                    actionLabel = "Geri dön",
                 )
             }
         }
@@ -157,7 +163,7 @@ fun BudgetFormScreenRoute(
 
             BudgetFormScreen(
                 state = formUiState,
-                onBack = onNavigateBack,
+                onBack = requestExit,
                 onCategorySelected = { categoryId ->
                     if (formUiState.isCategoryEditable) {
                         draft = draft.copy(selectedCategoryId = categoryId)
@@ -188,3 +194,10 @@ fun BudgetFormScreenRoute(
         }
     }
 }
+
+private fun BudgetFormDraft.hasSameEditableValuesAs(other: BudgetFormDraft): Boolean =
+    budgetId == other.budgetId &&
+        selectedCategoryId == other.selectedCategoryId &&
+        selectedMonth == other.selectedMonth &&
+        limitInput == other.limitInput &&
+        currency == other.currency

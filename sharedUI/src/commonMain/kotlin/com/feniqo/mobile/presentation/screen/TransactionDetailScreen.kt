@@ -67,9 +67,6 @@ fun TransactionDetailScreen(
                 Button(onClick = onResolveConflict, modifier = Modifier.fillMaxWidth()) { Text("Çakışmayı çöz") }
             }
             if (item.canEdit) {
-                OutlinedButton(onClick = onEdit, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
-                    Text(if (item.hasReceipt) "Makbuz bilgileri" else "Makbuzdan bilgi oku")
-                }
                 Button(onClick = onEdit, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
                     shape = RoundedCornerShape(14.dp)) { Text("İşlemi düzenle") }
             }

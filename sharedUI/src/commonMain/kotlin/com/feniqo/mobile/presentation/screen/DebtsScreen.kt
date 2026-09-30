@@ -71,7 +71,7 @@ fun DebtsScreen(
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = FeniqoWarmStoneBackground,
+        containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -100,7 +100,7 @@ fun DebtsScreen(
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Geri",
-                                    tint = FeniqoTextPrimary,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
                             Spacer(modifier = Modifier.width(4.dp))
@@ -113,7 +113,7 @@ fun DebtsScreen(
                                 fontSize = 22.sp,
                                 letterSpacing = (-0.3).sp,
                             ),
-                            color = FeniqoTextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
 
@@ -147,7 +147,7 @@ fun DebtsScreen(
                 Text(
                     text = "Kime ne kadar borcunuz olduğunu ve kimden alacağınız olduğunu takip edin.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = FeniqoTextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.sp,
                 )
             }

@@ -167,6 +167,7 @@ data class DebtPaymentFormUiState(
     val input: DebtPaymentFormInput = DebtPaymentFormInput(),
     val errors: DebtPaymentFormInputErrors = DebtPaymentFormInputErrors(),
     val isSubmitting: Boolean = false,
+    val hasUnsavedChanges: Boolean = false,
 )
 
 sealed interface DebtPaymentFormUiEvent {

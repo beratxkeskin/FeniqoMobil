@@ -73,7 +73,7 @@ fun DebtSnowballPlanScreen(
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = FeniqoWarmStoneBackground,
+        containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -95,7 +95,7 @@ fun DebtSnowballPlanScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Geri",
-                        tint = FeniqoTextPrimary,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
@@ -107,12 +107,12 @@ fun DebtSnowballPlanScreen(
                             fontSize = 20.sp,
                             letterSpacing = (-0.3).sp,
                         ),
-                        color = FeniqoTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         text = "Küçük borçlardan başlayarak borçlarını kapat.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = FeniqoTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp,
                     )
                 }
@@ -130,7 +130,7 @@ fun DebtSnowballPlanScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
                 ) {
                     Column(
@@ -141,7 +141,7 @@ fun DebtSnowballPlanScreen(
                             text = "Simülasyon para birimi",
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium,
-                            color = FeniqoTextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 12.sp,
                         )
 
@@ -188,7 +188,7 @@ fun DebtSnowballPlanScreen(
                                 Text(
                                     text = state.selectedCurrency.symbol(),
                                     fontWeight = FontWeight.Bold,
-                                    color = FeniqoTextSecondary,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(end = 12.dp),
                                 )
                             },
@@ -214,7 +214,7 @@ fun DebtSnowballPlanScreen(
                         Text(
                             text = "${state.eligibleDebtsCount} uygun borç bulundu.",
                             fontSize = 12.sp,
-                            color = FeniqoTextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
 
                         // Planı Hesapla Butonu
@@ -361,7 +361,7 @@ fun DebtSnowballPlanScreen(
                         text = "Kapanma sırası",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = FeniqoTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 15.sp,
                     )
 
@@ -370,7 +370,7 @@ fun DebtSnowballPlanScreen(
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color.White),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                                 border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
                             ) {
                                 Row(
@@ -401,12 +401,12 @@ fun DebtSnowballPlanScreen(
                                             text = item.debtTitle,
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Bold,
-                                            color = FeniqoTextPrimary,
+                                            color = MaterialTheme.colorScheme.onSurface,
                                         )
                                         Text(
                                             text = item.initialRemainingFormatted,
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = FeniqoTextSecondary,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             fontSize = 12.sp,
                                         )
                                     }
@@ -427,7 +427,7 @@ fun DebtSnowballPlanScreen(
                         text = "Aylık dağılım",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = FeniqoTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 15.sp,
                     )
 
@@ -436,7 +436,7 @@ fun DebtSnowballPlanScreen(
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color.White),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                                 border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
                             ) {
                                 Row(
@@ -472,13 +472,13 @@ fun DebtSnowballPlanScreen(
                                                 text = "${alloc.month}. ay • ${alloc.debtTitle}",
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 fontWeight = FontWeight.SemiBold,
-                                                color = FeniqoTextPrimary,
+                                                color = MaterialTheme.colorScheme.onSurface,
                                                 fontSize = 13.sp,
                                             )
                                             Text(
                                                 text = "Kalan: ${alloc.remainingBalanceFormatted}",
                                                 style = MaterialTheme.typography.labelSmall,
-                                                color = FeniqoTextSecondary,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 fontSize = 11.sp,
                                             )
                                         }
@@ -488,7 +488,7 @@ fun DebtSnowballPlanScreen(
                                         Text(
                                             text = "Ödeme",
                                             fontSize = 10.sp,
-                                            color = FeniqoTextSecondary,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                         Text(
                                             text = alloc.allocatedFormatted,

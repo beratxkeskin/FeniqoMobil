@@ -1,6 +1,5 @@
 package com.feniqo.mobile.presentation.debt
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -22,6 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
 import com.feniqo.mobile.presentation.component.DebtDeleteDialog
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
@@ -65,9 +65,11 @@ fun DebtFormScreenRoute(
         }
     }
 
-    BackHandler(enabled = !uiState.isSubmitting) {
-        onNavigateBack()
-    }
+    val requestExit = rememberGuardedFormExit(
+        isSubmitting = uiState.isSubmitting,
+        hasUnsavedChanges = uiState.hasUnsavedChanges,
+        onNavigateBack = onNavigateBack,
+    )
 
     val effectiveLoadState = resolveEffectiveDebtEditLoadState(initialDebtId, editLoadState)
 
@@ -88,6 +90,7 @@ fun DebtFormScreenRoute(
                     description = "Düzenlemek istediğiniz borç / alacak kaydı mevcut değil veya silinmiş.",
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
+                    actionLabel = "Geri dön",
                 )
             }
             is DebtEditLoadState.Error -> {
@@ -109,7 +112,7 @@ fun DebtFormScreenRoute(
                     errors = uiState.errors,
                     isSubmitting = uiState.isSubmitting,
                     isEditMode = uiState.input.isEditMode,
-                    onBack = onNavigateBack,
+                    onBack = requestExit,
                     onTitleChange = { title -> viewModel.updateInput { it.copy(titleInput = title) } },
                     onAmountChange = { amount -> viewModel.updateInput { it.copy(amountInput = amount) } },
                     onCurrencyChange = { currency -> viewModel.updateInput { it.copy(currency = currency) } },

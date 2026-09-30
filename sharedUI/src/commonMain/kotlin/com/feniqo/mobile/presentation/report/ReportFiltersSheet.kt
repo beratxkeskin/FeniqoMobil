@@ -96,7 +96,7 @@ fun ReportFiltersSheetContent(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
     ) {
         Column(
@@ -112,7 +112,7 @@ fun ReportFiltersSheetContent(
                     .width(36.dp)
                     .height(4.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(Color(0xFFE5E7EB)),
+                    .background(MaterialTheme.colorScheme.outlineVariant),
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -129,7 +129,7 @@ fun ReportFiltersSheetContent(
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
                     ),
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 IconButton(
@@ -151,7 +151,7 @@ fun ReportFiltersSheetContent(
             Text(
                 text = "Dönem",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = FeniqoTextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(modifier = Modifier.height(10.dp))
             Row(
@@ -193,7 +193,7 @@ fun ReportFiltersSheetContent(
             Text(
                 text = "İşlem türü",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = FeniqoTextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(modifier = Modifier.height(10.dp))
             Row(
@@ -226,7 +226,7 @@ fun ReportFiltersSheetContent(
             Text(
                 text = "Para birimi",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = FeniqoTextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(modifier = Modifier.height(10.dp))
             Row(
@@ -249,7 +249,7 @@ fun ReportFiltersSheetContent(
             Text(
                 text = "Kategoriler",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = FeniqoTextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(modifier = Modifier.height(10.dp))
             Surface(
@@ -259,7 +259,7 @@ fun ReportFiltersSheetContent(
                     .clickable(role = Role.Button, onClick = onSelectCategory),
                 shape = RoundedCornerShape(14.dp),
                 color = Color(0xFFF9FAFB),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
@@ -299,7 +299,7 @@ fun ReportFiltersSheetContent(
                         Text(
                             text = draftFilter.selectedCategoryName ?: "Tüm kategoriler",
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                            color = FeniqoTextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
 
@@ -307,7 +307,7 @@ fun ReportFiltersSheetContent(
                         text = "›",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Light,
-                        color = Color(0xFF9CA3AF),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -363,7 +363,7 @@ fun ReportFiltersSheetContent(
                         .weight(1f)
                         .height(50.dp),
                     shape = RoundedCornerShape(14.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD1D5DB)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Text(
                         text = "Temizle",
@@ -409,7 +409,7 @@ private fun FilterSelectionChip(
 ) {
     val backgroundColor = if (isSelected) Color(0xFF1E3A2F) else Color(0xFFF9FAFB)
     val textColor = if (isSelected) Color.White else Color(0xFF374151)
-    val borderColor = if (isSelected) Color(0xFF1E3A2F) else Color(0xFFE5E7EB)
+    val borderColor = if (isSelected) Color(0xFF1E3A2F) else MaterialTheme.colorScheme.outlineVariant
 
     Surface(
         modifier = modifier
@@ -452,7 +452,7 @@ fun ReportPeriodPickerSheetContent(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
     ) {
         Column(
@@ -466,7 +466,7 @@ fun ReportPeriodPickerSheetContent(
                     .width(36.dp)
                     .height(4.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(Color(0xFFE5E7EB)),
+                    .background(MaterialTheme.colorScheme.outlineVariant),
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -482,7 +482,7 @@ fun ReportPeriodPickerSheetContent(
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
                     ),
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 IconButton(
@@ -512,7 +512,7 @@ fun ReportPeriodPickerSheetContent(
                     onClick = { onSelectPreset(preset) },
                     shape = RoundedCornerShape(12.dp),
                     color = if (isSelected) Color(0xFFE8F1EC) else Color.Transparent,
-                    border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                    border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp),
@@ -529,13 +529,13 @@ fun ReportPeriodPickerSheetContent(
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                             ),
-                            color = if (isSelected) Color(0xFF2D5A43) else FeniqoTextPrimary,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                         )
                         if (isSelected) {
                             Icon(
                                 imageVector = Icons.Outlined.Check,
                                 contentDescription = null,
-                                tint = Color(0xFF2D5A43),
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp),
                             )
                         }

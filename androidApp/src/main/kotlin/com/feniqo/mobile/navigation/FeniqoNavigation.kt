@@ -511,6 +511,7 @@ fun MainNavHost(
         onResolveConflictDecision = onResolveConflictDecision,
         onDismissConflictDialog = onDismissConflictDialog,
         showNavigationChrome = !isDetailForm,
+        showGlobalSyncStatus = shouldShowGlobalSyncStatus(isDetailForm, isProfile),
         modifier = modifier,
     ) {
         NavHost(
@@ -528,7 +529,7 @@ fun MainNavHost(
                         navController.navigateToSection(TopLevelDestination.TRANSACTIONS)
                     },
                     onTransactionClick = { transactionId ->
-                        navController.navigate(TransactionFormRoute(transactionId.value)) {
+                        navController.navigate(TransactionsRoute(selectedTransactionId = transactionId.value)) {
                             launchSingleTop = true
                         }
                     },
@@ -546,8 +547,10 @@ fun MainNavHost(
                     },
                 )
             }
-            composable<TransactionsRoute> {
+            composable<TransactionsRoute> { backStackEntry ->
+                val route = backStackEntry.toRoute<TransactionsRoute>()
                 TransactionsScreenRoute(
+                    initialSelectedTransactionId = parseOptionalTransactionId(route.selectedTransactionId),
                     onAddTransaction = {
                         navController.navigate(TransactionFormRoute(null)) {
                             launchSingleTop = true
@@ -599,7 +602,7 @@ fun MainNavHost(
                         }
                     },
                     onViewTransaction = { id ->
-                        navController.navigate(TransactionFormRoute(transactionId = id.value)) {
+                        navController.navigate(TransactionsRoute(selectedTransactionId = id.value)) {
                             popUpTo<TransactionSuccessRoute> { inclusive = true }
                             launchSingleTop = true
                         }
@@ -1611,6 +1614,11 @@ fun MainNavHost(
         )
     }
 }
+
+internal fun shouldShowGlobalSyncStatus(
+    isDetailForm: Boolean,
+    isProfile: Boolean,
+): Boolean = !isDetailForm && !isProfile
 
 private fun AutoLockTimeout.profileLabel(): String = when (this) {
     AutoLockTimeout.IMMEDIATELY -> "Anında"

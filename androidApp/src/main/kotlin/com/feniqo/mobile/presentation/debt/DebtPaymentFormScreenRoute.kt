@@ -1,6 +1,5 @@
 package com.feniqo.mobile.presentation.debt
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -21,6 +20,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
 import com.feniqo.mobile.presentation.goal.GoalDebtFormRouteHelper
@@ -63,9 +63,11 @@ fun DebtPaymentFormScreenRoute(
         }
     }
 
-    BackHandler(enabled = !uiState.isSubmitting) {
-        onNavigateBack()
-    }
+    val requestExit = rememberGuardedFormExit(
+        isSubmitting = uiState.isSubmitting,
+        hasUnsavedChanges = uiState.hasUnsavedChanges,
+        onNavigateBack = onNavigateBack,
+    )
 
     val effectiveLoadState = resolveEffectiveDebtPaymentParentLoadState(parentDebtId, parentLoadState)
 
@@ -86,6 +88,7 @@ fun DebtPaymentFormScreenRoute(
                     description = "Ödeme eklemek istediğiniz borç / alacak kaydı mevcut değil veya silinmiş.",
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
+                    actionLabel = "Geri dön",
                 )
             }
             is DebtPaymentParentLoadState.Error -> {
@@ -109,7 +112,7 @@ fun DebtPaymentFormScreenRoute(
                     input = uiState.input,
                     errors = uiState.errors,
                     isSubmitting = uiState.isSubmitting,
-                    onBack = onNavigateBack,
+                    onBack = requestExit,
                     onAmountChange = { amount -> viewModel.updateInput { it.copy(amountInput = amount) } },
                     onPaidOnClick = { showDatePicker = true },
                     onSubmit = { viewModel.submit() },

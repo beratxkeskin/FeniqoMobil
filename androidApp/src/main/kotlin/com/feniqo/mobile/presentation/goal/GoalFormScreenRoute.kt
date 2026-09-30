@@ -1,6 +1,5 @@
 package com.feniqo.mobile.presentation.goal
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -22,6 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.GoalDeleteDialog
 import com.feniqo.mobile.presentation.component.LoadingContent
@@ -65,9 +65,11 @@ fun GoalFormScreenRoute(
         }
     }
 
-    BackHandler(enabled = !uiState.isSubmitting) {
-        onNavigateBack()
-    }
+    val requestExit = rememberGuardedFormExit(
+        isSubmitting = uiState.isSubmitting,
+        hasUnsavedChanges = uiState.hasUnsavedChanges,
+        onNavigateBack = onNavigateBack,
+    )
 
     val effectiveLoadState = resolveEffectiveGoalEditLoadState(initialGoalId, editLoadState)
 
@@ -88,6 +90,7 @@ fun GoalFormScreenRoute(
                     description = "Düzenlemek istediğiniz hedef mevcut değil veya silinmiş.",
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
+                    actionLabel = "Geri dön",
                 )
             }
             is GoalEditLoadState.Error -> {
@@ -109,7 +112,7 @@ fun GoalFormScreenRoute(
                     errors = uiState.errors,
                     isSubmitting = uiState.isSubmitting,
                     isEditMode = uiState.input.isEditMode,
-                    onBack = onNavigateBack,
+                    onBack = requestExit,
                     onNameChange = { name -> viewModel.updateInput { it.copy(nameInput = name) } },
                     onTargetAmountChange = { amount -> viewModel.updateInput { it.copy(targetAmountInput = amount) } },
                     onCurrencyChange = { currency -> viewModel.updateInput { it.copy(currency = currency) } },

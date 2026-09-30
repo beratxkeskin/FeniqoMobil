@@ -73,7 +73,7 @@ fun RecurringTransactionsScreen(
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = FeniqoWarmStoneBackground,
+        containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -96,7 +96,7 @@ fun RecurringTransactionsScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                             contentDescription = "Geri Dön",
-                            tint = FeniqoTextPrimary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(18.dp),
                         )
                         Spacer(modifier = Modifier.width(4.dp))
@@ -106,7 +106,7 @@ fun RecurringTransactionsScreen(
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium,
                             ),
-                            color = FeniqoTextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
@@ -171,7 +171,7 @@ fun RecurringTransactionsScreen(
                                         fontWeight = FontWeight.Bold,
                                         lineHeight = 34.sp,
                                     ),
-                                    color = FeniqoTextPrimary,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
 
                                 Spacer(modifier = Modifier.height(10.dp))
@@ -196,7 +196,7 @@ fun RecurringTransactionsScreen(
                                         fontSize = 17.sp,
                                         fontWeight = FontWeight.Bold,
                                     ),
-                                    color = FeniqoTextPrimary,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.padding(top = 4.dp),
                                 )
                             }
@@ -221,7 +221,7 @@ fun RecurringTransactionsScreen(
                                         fontSize = 17.sp,
                                         fontWeight = FontWeight.Bold,
                                     ),
-                                    color = FeniqoTextPrimary,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.padding(top = 8.dp),
                                 )
                             }
@@ -274,14 +274,14 @@ fun RecurringTransactionsScreen(
                                     Icon(
                                         imageVector = Icons.Outlined.Info,
                                         contentDescription = null,
-                                        tint = FeniqoTextSecondary,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(14.dp),
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = "Banka hesabından para çekilmez.",
                                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                                        color = FeniqoTextSecondary,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             }
@@ -319,7 +319,7 @@ private fun RecurringListEmptyState(
                     fontWeight = FontWeight.Bold,
                     lineHeight = 34.sp,
                 ),
-                color = FeniqoTextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -355,7 +355,7 @@ private fun RecurringListEmptyState(
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
             ),
-            color = FeniqoTextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -366,7 +366,7 @@ private fun RecurringListEmptyState(
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
             ),
-            color = FeniqoTextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
 
@@ -401,14 +401,14 @@ private fun RecurringListEmptyState(
             Icon(
                 imageVector = Icons.Outlined.Info,
                 contentDescription = null,
-                tint = FeniqoTextSecondary,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(14.dp),
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = "Banka hesabından para çekilmez.",
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                color = FeniqoTextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
@@ -431,7 +431,7 @@ private fun RecurringListErrorState(
     ) {
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             border = BorderStroke(1.dp, Color(0xFFFEE2E2)),
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -469,12 +469,12 @@ private fun RecurringListErrorState(
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold,
                             ),
-                            color = FeniqoTextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
                             text = "Lütfen daha sonra tekrar deneyin.",
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                            color = FeniqoTextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -486,7 +486,7 @@ private fun RecurringListErrorState(
                     shape = RoundedCornerShape(10.dp),
                     border = BorderStroke(1.dp, Color(0xFFCBD5E1)),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = FeniqoTextPrimary,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
                     ),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                 ) {
@@ -521,7 +521,7 @@ private fun RecurringListLoadingState(
                     .fillMaxWidth()
                     .height(84.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, Color(0xFFF1F5F9)),
             ) {
                 Row(

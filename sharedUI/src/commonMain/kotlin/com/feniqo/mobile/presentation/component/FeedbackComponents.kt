@@ -3,6 +3,8 @@ package com.feniqo.mobile.presentation.component
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -15,6 +17,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 
 /** Ağ veya veritabanı bekleme durumunda kullanılan ortak görünüm. */
@@ -26,7 +30,12 @@ fun LoadingContent(modifier: Modifier = Modifier, message: String = "Yükleniyor
         verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Large, Alignment.CenterVertically),
     ) {
         CircularProgressIndicator()
-        Text(message)
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -38,12 +47,25 @@ fun EmptyState(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier.wrapContentSize(Alignment.Center),
+        modifier = modifier
+            .wrapContentSize(Alignment.Center)
+            .padding(FeniqoSpacing.Large)
+            .widthIn(max = 480.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
     ) {
-        Text(title, style = MaterialTheme.typography.titleLarge)
-        Text(description, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -54,15 +76,29 @@ fun ErrorState(
     description: String,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    actionLabel: String = "Tekrar dene",
 ) {
     Column(
-        modifier = modifier.wrapContentSize(Alignment.Center),
+        modifier = modifier
+            .wrapContentSize(Alignment.Center)
+            .padding(FeniqoSpacing.Large)
+            .widthIn(max = 480.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Large),
     ) {
-        Text(title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.error)
-        Text(description, style = MaterialTheme.typography.bodyMedium)
-        Button(onClick = onRetry) { Text("Tekrar dene") }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.error,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Button(onClick = onRetry) { Text(actionLabel) }
     }
 }
 

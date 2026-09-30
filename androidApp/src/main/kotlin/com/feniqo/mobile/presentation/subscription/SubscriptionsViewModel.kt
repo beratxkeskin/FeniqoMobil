@@ -342,9 +342,11 @@ class SubscriptionsViewModel @Inject constructor(
         if (_mutationState.value.isSubmitting || activeMutationJob != null) return
         _mutationState.update { it.copy(isSubmitting = true) }
         activeMutationJob = viewModelScope.launch {
+            var mutationSucceeded = false
             try {
                 when (createSubscriptionUseCase(command)) {
                     is RepositoryResult.Success -> {
+                        mutationSucceeded = true
                         _events.send(SubscriptionUiEvent.MutationSuccess(FinanceUiMessage.SUBSCRIPTION_SAVED))
                     }
                     is RepositoryResult.Failure -> {
@@ -356,7 +358,7 @@ class SubscriptionsViewModel @Inject constructor(
             } catch (_: Exception) {
                 _events.send(SubscriptionUiEvent.ShowMessage(FinanceUiMessage.GENERIC_ERROR))
             } finally {
-                _mutationState.update { it.copy(isSubmitting = false) }
+                if (!mutationSucceeded) _mutationState.update { it.copy(isSubmitting = false) }
                 activeMutationJob = null
             }
         }
@@ -366,9 +368,11 @@ class SubscriptionsViewModel @Inject constructor(
         if (_mutationState.value.isSubmitting || activeMutationJob != null) return
         _mutationState.update { it.copy(isSubmitting = true) }
         activeMutationJob = viewModelScope.launch {
+            var mutationSucceeded = false
             try {
                 when (updateSubscriptionUseCase(command)) {
                     is RepositoryResult.Success -> {
+                        mutationSucceeded = true
                         _events.send(SubscriptionUiEvent.MutationSuccess(FinanceUiMessage.SUBSCRIPTION_SAVED))
                     }
                     is RepositoryResult.Failure -> {
@@ -380,7 +384,7 @@ class SubscriptionsViewModel @Inject constructor(
             } catch (_: Exception) {
                 _events.send(SubscriptionUiEvent.ShowMessage(FinanceUiMessage.GENERIC_ERROR))
             } finally {
-                _mutationState.update { it.copy(isSubmitting = false) }
+                if (!mutationSucceeded) _mutationState.update { it.copy(isSubmitting = false) }
                 activeMutationJob = null
             }
         }

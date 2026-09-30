@@ -50,7 +50,11 @@ data class TransactionsRoute(
     val categoryId: String? = null,
     val startDate: String? = null,
     val endDate: String? = null,
+    val selectedTransactionId: String? = null,
 ) : FeniqoRoute
+
+fun parseOptionalTransactionId(rawId: String?): com.feniqo.mobile.domain.model.EntityId? =
+    rawId?.trim()?.takeIf(String::isNotEmpty)?.let { com.feniqo.mobile.domain.model.EntityId(it) }
 
 /**
  * Bütçe detayından seçili kategori ve bütçe ayının başlangıç/bitiş tarihleriyle

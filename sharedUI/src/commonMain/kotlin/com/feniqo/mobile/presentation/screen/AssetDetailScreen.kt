@@ -82,7 +82,7 @@ fun AssetDetailScreen(
                     DropdownMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false },
-                        containerColor = Color.White,
+                        containerColor = MaterialTheme.colorScheme.surface,
                     ) {
                         DropdownMenuItem(
                             text = {
@@ -220,6 +220,7 @@ fun AssetDetailScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
+                    actionLabel = "Geri dön",
                 )
             }
             else -> {
@@ -352,7 +353,7 @@ fun AssetDetailScreen(
                         Card(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                             border = CardDefaults.outlinedCardBorder(),
                         ) {
                             Column(
@@ -386,7 +387,7 @@ fun AssetDetailScreen(
                         Card(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                             border = CardDefaults.outlinedCardBorder(),
                         ) {
                             Column(
@@ -439,7 +440,7 @@ fun AssetDetailScreen(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         border = CardDefaults.outlinedCardBorder(),
                     ) {
                         Column(
@@ -555,7 +556,7 @@ fun AssetDetailScreen(
                             .fillMaxWidth()
                             .clickable { showSourceInfoDialog = true },
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         border = CardDefaults.outlinedCardBorder(),
                     ) {
                         Row(

@@ -533,7 +533,11 @@ class CategoryFormViewModelTest {
         assertEquals("#10B981", created?.color?.hex)
         assertEquals("trending-up", created?.icon?.key)
         assertEquals(CategoryFormEvent.NavigateBack, receivedEvent)
-        assertFalse(viewModel.uiState.value.isSubmitting)
+        assertTrue(viewModel.uiState.value.isSubmitting)
+
+        viewModel.onSubmit()
+        advanceUntilIdle()
+        assertEquals(1, catRepo.createInvocationCount)
 
         eventJob.cancel()
     }
@@ -590,7 +594,7 @@ class CategoryFormViewModelTest {
         advanceUntilIdle()
 
         assertEquals(1, catRepo.createInvocationCount)
-        assertFalse(viewModel.uiState.value.isSubmitting)
+        assertTrue(viewModel.uiState.value.isSubmitting)
     }
 
     @Test
@@ -631,7 +635,7 @@ class CategoryFormViewModelTest {
         assertEquals("#10B981", updated?.color?.hex)
         assertEquals(TransactionType.EXPENSE, updated?.type)
         assertEquals(CategoryFormEvent.NavigateBack, receivedEvent)
-        assertFalse(viewModel.uiState.value.isSubmitting)
+        assertTrue(viewModel.uiState.value.isSubmitting)
 
         eventJob.cancel()
     }
@@ -726,7 +730,7 @@ class CategoryFormViewModelTest {
 
         assertEquals(2, catRepo.createInvocationCount)
         assertEquals(CategoryFormEvent.NavigateBack, receivedEvent)
-        assertFalse(viewModel.uiState.value.isSubmitting)
+        assertTrue(viewModel.uiState.value.isSubmitting)
 
         eventJob.cancel()
     }
@@ -757,6 +761,7 @@ class CategoryFormViewModelTest {
 
         assertEquals(2, catRepo.createInvocationCount)
         assertEquals(CategoryFormEvent.NavigateBack, receivedEvent)
+        assertTrue(viewModel.uiState.value.isSubmitting)
 
         eventJob.cancel()
     }

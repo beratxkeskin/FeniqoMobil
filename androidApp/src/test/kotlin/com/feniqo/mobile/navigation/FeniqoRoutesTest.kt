@@ -2,12 +2,21 @@ package com.feniqo.mobile.navigation
 
 import com.feniqo.mobile.domain.model.YearMonth
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FeniqoRoutesTest {
+    @Test
+    fun globalSyncStatus_isHiddenOnProfileAndDetailScreens() {
+        assertFalse(shouldShowGlobalSyncStatus(isDetailForm = true, isProfile = false))
+        assertFalse(shouldShowGlobalSyncStatus(isDetailForm = true, isProfile = true))
+        assertFalse(shouldShowGlobalSyncStatus(isDetailForm = false, isProfile = true))
+        assertTrue(shouldShowGlobalSyncStatus(isDetailForm = false, isProfile = false))
+    }
+
 
     @Test
     fun topLevelDestinations_containsExactlyFourUniqueEntries() {
@@ -180,6 +189,7 @@ class FeniqoRoutesTest {
         assertNull(defaultRoute.categoryId)
         assertNull(defaultRoute.startDate)
         assertNull(defaultRoute.endDate)
+        assertNull(defaultRoute.selectedTransactionId)
 
         val filteredRoute = TransactionsRoute(
             categoryId = "cat-food",
@@ -189,6 +199,14 @@ class FeniqoRoutesTest {
         assertEquals("cat-food", filteredRoute.categoryId)
         assertEquals("2026-09-01", filteredRoute.startDate)
         assertEquals("2026-09-30", filteredRoute.endDate)
+
+        val detailRoute = TransactionsRoute(selectedTransactionId = "transaction-1")
+        assertEquals("transaction-1", detailRoute.selectedTransactionId)
+        assertEquals(
+            com.feniqo.mobile.domain.model.EntityId("transaction-1"),
+            parseOptionalTransactionId(detailRoute.selectedTransactionId),
+        )
+        assertNull(parseOptionalTransactionId("  "))
     }
 
     @Test

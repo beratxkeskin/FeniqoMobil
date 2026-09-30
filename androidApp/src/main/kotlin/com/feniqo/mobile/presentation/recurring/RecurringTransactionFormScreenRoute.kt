@@ -1,6 +1,5 @@
 package com.feniqo.mobile.presentation.recurring
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -28,6 +27,7 @@ import com.feniqo.mobile.domain.model.CategoryColor
 import com.feniqo.mobile.domain.model.CategoryIcon
 import com.feniqo.mobile.presentation.category.CategoryDisplayModel
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
 import com.feniqo.mobile.presentation.component.RecurringTransactionDeleteDialog
@@ -199,6 +199,7 @@ fun RecurringTransactionFormScreenRoute(
             RecurringTransactionFormInput(recurringTransactionId = initialRecurringTransactionId),
         )
     }
+    var initialInput by remember { mutableStateOf(input) }
     var isActive by remember { mutableStateOf(true) }
     var errors by remember { mutableStateOf(RecurringTransactionFormInputErrors()) }
     var isEditSeedApplied by remember { mutableStateOf(false) }
@@ -226,16 +227,19 @@ fun RecurringTransactionFormScreenRoute(
 
     LaunchedEffect(effectiveEditLoadState) {
         if (effectiveEditLoadState is RecurringTransactionEditLoadState.Ready && !isEditSeedApplied) {
-            input = RecurringTransactionFormInput.fromDraft(effectiveEditLoadState.draft)
+            val seededInput = RecurringTransactionFormInput.fromDraft(effectiveEditLoadState.draft)
+            input = seededInput
+            initialInput = seededInput
             isActive = effectiveEditLoadState.isActive
             isEditSeedApplied = true
         }
     }
 
-    // 1. Gönderim sırasında sistem geri hareketini engelleme
-    BackHandler(enabled = uiState.mutationState.isSubmitting) {
-        // Form submit edilirken yanlışlıkla geri çıkılmasını önler
-    }
+    val requestExit = rememberGuardedFormExit(
+        isSubmitting = uiState.mutationState.isSubmitting,
+        hasUnsavedChanges = input != initialInput,
+        onNavigateBack = onNavigateBack,
+    )
 
     // 2. ViewModel tek seferlik olaylarını toplama
     LaunchedEffect(viewModel.events) {
@@ -270,6 +274,7 @@ fun RecurringTransactionFormScreenRoute(
                     description = "Düzenlemek istediğiniz tekrarlayan işlem bulunamadı veya silinmiş.",
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
+                    actionLabel = "Geri dön",
                 )
             }
         }
@@ -283,6 +288,7 @@ fun RecurringTransactionFormScreenRoute(
                     description = effectiveEditLoadState.message.toDisplayText(),
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
+                    actionLabel = "Geri dön",
                 )
             }
         }
@@ -298,7 +304,7 @@ fun RecurringTransactionFormScreenRoute(
                 mutationState = uiState.mutationState,
                 isEditMode = input.isEditMode,
                 isActive = isActive,
-                onBack = onNavigateBack,
+                onBack = requestExit,
                 onSetActive = { targetActive ->
                     RecurringTransactionFormRouteHelper.computeSetActiveIntent(
                         currentRecurringTransactionId = input.recurringTransactionId,

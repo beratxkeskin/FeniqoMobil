@@ -44,6 +44,7 @@ class DebtPaymentFormViewModel @Inject constructor(
             input = DebtPaymentFormInput(paidOn = currentDateProvider.today()),
         ),
     )
+    private var initialInput: DebtPaymentFormInput = _uiState.value.input
     val uiState: StateFlow<DebtPaymentFormUiState> = _uiState.asStateFlow()
 
     private val _events = Channel<DebtPaymentFormUiEvent>(Channel.BUFFERED)
@@ -116,6 +117,7 @@ class DebtPaymentFormViewModel @Inject constructor(
             current.copy(
                 input = updated,
                 errors = DebtPaymentFormInputErrors(),
+                hasUnsavedChanges = updated != initialInput,
             )
         }
     }
@@ -139,10 +141,12 @@ class DebtPaymentFormViewModel @Inject constructor(
             is DebtPaymentFormNormalizationResult.Success -> {
                 _uiState.update { it.copy(isSubmitting = true, errors = DebtPaymentFormInputErrors()) }
                 viewModelScope.launch {
+                    var mutationSucceeded = false
                     try {
                         val result = addDebtPaymentUseCase(draftResult.command)
                         when (result) {
                             is RepositoryResult.Success -> {
+                                mutationSucceeded = true
                                 _events.send(DebtPaymentFormUiEvent.MutationSuccess(FinanceUiMessage.DEBT_PAYMENT_ADDED))
                             }
                             is RepositoryResult.Failure -> {
@@ -154,7 +158,7 @@ class DebtPaymentFormViewModel @Inject constructor(
                     } catch (_: Exception) {
                         _events.send(DebtPaymentFormUiEvent.ShowMessage(FinanceUiMessage.GENERIC_ERROR))
                     } finally {
-                        _uiState.update { it.copy(isSubmitting = false) }
+                        if (!mutationSucceeded) _uiState.update { it.copy(isSubmitting = false) }
                     }
                 }
 

@@ -203,9 +203,11 @@ class RecurringTransactionsViewModel @Inject constructor(
         if (_mutationState.value.isSubmitting || activeMutationJob != null) return
         _mutationState.update { it.copy(isSubmitting = true) }
         activeMutationJob = viewModelScope.launch {
+            var mutationSucceeded = false
             try {
                 when (createRecurringTransactionUseCase(command)) {
                     is RepositoryResult.Success -> {
+                        mutationSucceeded = true
                         _events.send(RecurringTransactionUiEvent.MutationSuccess(FinanceUiMessage.TRANSACTION_SAVED))
                     }
                     is RepositoryResult.Failure -> {
@@ -217,7 +219,7 @@ class RecurringTransactionsViewModel @Inject constructor(
             } catch (_: Exception) {
                 _events.send(RecurringTransactionUiEvent.ShowMessage(FinanceUiMessage.GENERIC_ERROR))
             } finally {
-                _mutationState.update { it.copy(isSubmitting = false) }
+                if (!mutationSucceeded) _mutationState.update { it.copy(isSubmitting = false) }
                 activeMutationJob = null
             }
         }
@@ -227,9 +229,11 @@ class RecurringTransactionsViewModel @Inject constructor(
         if (_mutationState.value.isSubmitting || activeMutationJob != null) return
         _mutationState.update { it.copy(isSubmitting = true) }
         activeMutationJob = viewModelScope.launch {
+            var mutationSucceeded = false
             try {
                 when (updateRecurringTransactionUseCase(command)) {
                     is RepositoryResult.Success -> {
+                        mutationSucceeded = true
                         _events.send(RecurringTransactionUiEvent.MutationSuccess(FinanceUiMessage.TRANSACTION_SAVED))
                     }
                     is RepositoryResult.Failure -> {
@@ -241,7 +245,7 @@ class RecurringTransactionsViewModel @Inject constructor(
             } catch (_: Exception) {
                 _events.send(RecurringTransactionUiEvent.ShowMessage(FinanceUiMessage.GENERIC_ERROR))
             } finally {
-                _mutationState.update { it.copy(isSubmitting = false) }
+                if (!mutationSucceeded) _mutationState.update { it.copy(isSubmitting = false) }
                 activeMutationJob = null
             }
         }

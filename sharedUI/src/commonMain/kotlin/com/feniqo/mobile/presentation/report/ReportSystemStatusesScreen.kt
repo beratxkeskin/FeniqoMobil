@@ -40,7 +40,7 @@ fun ReportSystemStatusesScreen(
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             Row(
                 modifier = Modifier
@@ -52,7 +52,7 @@ fun ReportSystemStatusesScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                         contentDescription = "Geri",
-                        tint = FeniqoTextPrimary,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
@@ -62,7 +62,7 @@ fun ReportSystemStatusesScreen(
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
                     ),
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
         },

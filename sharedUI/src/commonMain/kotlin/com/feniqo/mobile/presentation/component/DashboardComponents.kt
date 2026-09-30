@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -97,7 +98,7 @@ fun DashboardHeader(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.5).sp,
                 ),
-                color = FeniqoSageGreen,
+                color = MaterialTheme.colorScheme.primary,
             )
 
             // Profil Avatarı: 42dp yuvarlak, adaçayı zemin ve kullanıcı baş harfi
@@ -112,7 +113,7 @@ fun DashboardHeader(
                     )
                     .semantics { contentDescription = "Profil ve hesap" },
                 shape = CircleShape,
-                color = Color(0xFFE8F1EC),
+                color = MaterialTheme.colorScheme.secondaryContainer,
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     val initialLetter = userName.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "U"
@@ -120,7 +121,7 @@ fun DashboardHeader(
                         text = initialLetter,
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = FeniqoSageGreen,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
                         ),
                     )
                 }
@@ -134,7 +135,7 @@ fun DashboardHeader(
             text = "Merhaba, $userName",
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontSize = 15.sp,
-                color = Color(0xFF64748B),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             ),
         )
 
@@ -146,7 +147,7 @@ fun DashboardHeader(
                 fontSize = 26.sp,
                 letterSpacing = (-0.3).sp,
             ),
-            color = Color(0xFF0F172A),
+            color = MaterialTheme.colorScheme.onSurface,
         )
 
         Spacer(modifier = Modifier.height(2.dp))
@@ -159,8 +160,8 @@ fun DashboardHeader(
         ) {
             Surface(
                 shape = RoundedCornerShape(16.dp),
-                color = Color(0xFFF1F5F9),
-                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -171,7 +172,7 @@ fun DashboardHeader(
                         imageVector = Icons.Outlined.Person,
                         contentDescription = null,
                         modifier = Modifier.size(15.dp),
-                        tint = Color(0xFF334155),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
                         text = activeWorkspaceName?.takeIf { it.isNotBlank() } ?: "Kişisel",
@@ -179,7 +180,7 @@ fun DashboardHeader(
                             fontWeight = FontWeight.Medium,
                             fontSize = 13.sp,
                         ),
-                        color = Color(0xFF334155),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -188,7 +189,7 @@ fun DashboardHeader(
                 text = formattedMonth,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Medium,
-                    color = Color(0xFF475569),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
             )
         }
@@ -207,6 +208,8 @@ fun GraphiteSummaryCard(
     summaryCurrencyCode: String,
     modifier: Modifier = Modifier,
 ) {
+    val useCompactSummaryTiles = LocalDensity.current.fontScale >= 1.3f
+
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -304,11 +307,14 @@ fun GraphiteSummaryCard(
                         color = Color.White.copy(alpha = 0.08f),
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                            modifier = Modifier.padding(
+                                horizontal = if (useCompactSummaryTiles) 8.dp else 12.dp,
+                                vertical = 10.dp,
+                            ),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(if (useCompactSummaryTiles) 6.dp else 10.dp),
                         ) {
-                            Box(
+                            if (!useCompactSummaryTiles) Box(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .background(Color.White.copy(alpha = 0.12f), CircleShape),
@@ -363,11 +369,14 @@ fun GraphiteSummaryCard(
                         color = Color.White.copy(alpha = 0.08f),
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                            modifier = Modifier.padding(
+                                horizontal = if (useCompactSummaryTiles) 8.dp else 12.dp,
+                                vertical = 10.dp,
+                            ),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(if (useCompactSummaryTiles) 6.dp else 10.dp),
                         ) {
-                            Box(
+                            if (!useCompactSummaryTiles) Box(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .background(Color.White.copy(alpha = 0.12f), CircleShape),
@@ -452,7 +461,7 @@ fun SavingsRateSection(
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
                 ),
-                color = Color(0xFF0F172A),
+                color = MaterialTheme.colorScheme.onSurface,
             )
 
             Text(
@@ -461,7 +470,7 @@ fun SavingsRateSection(
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                 ).merge(FeniqoTabularNumberStyle),
-                color = Color(0xFF0F172A),
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
 
@@ -471,20 +480,20 @@ fun SavingsRateSection(
                 .fillMaxWidth()
                 .height(6.dp)
                 .clip(RoundedCornerShape(3.dp))
-                .background(Color(0xFFE2E8F0)),
+                .background(MaterialTheme.colorScheme.outlineVariant),
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
                     .fillMaxWidth(fraction = progressRatio)
-                    .background(FeniqoSageGreen, RoundedCornerShape(3.dp)),
+                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(3.dp)),
             )
         }
 
         Text(
             text = "Aylık gelire göre",
             style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-            color = Color(0xFF64748B),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -509,13 +518,13 @@ fun HomeBudgetsSection(
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
             ),
-            color = Color(0xFF0F172A),
+            color = MaterialTheme.colorScheme.onSurface,
         )
 
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         ) {
             Column(
@@ -527,7 +536,7 @@ fun HomeBudgetsSection(
                 if (items.isEmpty()) {
                     Surface(
                         shape = RoundedCornerShape(14.dp),
-                        color = Color(0xFFF8FAF9),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable(onClick = onViewAllBudgets),
@@ -542,12 +551,12 @@ fun HomeBudgetsSection(
                             Text(
                                 text = "Bu ay için henüz bütçe belirlenmedi",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF64748B),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Text(
                                 text = "+ Bütçe Ekle",
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                color = FeniqoSageGreen,
+                                color = MaterialTheme.colorScheme.primary,
                             )
                         }
                     }
@@ -609,7 +618,7 @@ private fun HomeBudgetItemRow(
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                     ),
-                    color = Color(0xFF0F172A),
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -641,7 +650,7 @@ private fun HomeBudgetItemRow(
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 13.sp,
                 ).merge(FeniqoTabularNumberStyle),
-                color = Color(0xFF0F172A),
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
 
@@ -656,7 +665,7 @@ private fun HomeBudgetItemRow(
                     .weight(1f)
                     .height(6.dp)
                     .clip(RoundedCornerShape(3.dp))
-                    .background(Color(0xFFE2E8F0)),
+                    .background(MaterialTheme.colorScheme.outlineVariant),
             ) {
                 Box(
                     modifier = Modifier
@@ -670,7 +679,7 @@ private fun HomeBudgetItemRow(
                 text = "%${(budget.progressRatio * 100).toInt()}",
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontSize = 11.sp,
-                    color = Color(0xFF64748B),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 ).merge(FeniqoTabularNumberStyle),
             )
         }
@@ -707,13 +716,13 @@ fun HomeRecentTransactionsSection(
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
                 ),
-                color = Color(0xFF0F172A),
+                color = MaterialTheme.colorScheme.onSurface,
             )
 
             Text(
                 text = "Tümü",
                 style = MaterialTheme.typography.labelLarge.copy(
-                    color = FeniqoSageGreen,
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
                 ),
@@ -727,7 +736,7 @@ fun HomeRecentTransactionsSection(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         ) {
             Column(
@@ -739,7 +748,7 @@ fun HomeRecentTransactionsSection(
                 if (recentTransactions.isEmpty()) {
                     Surface(
                         shape = RoundedCornerShape(14.dp),
-                        color = Color(0xFFF8FAF9),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable(onClick = onAddTransaction),
@@ -754,12 +763,12 @@ fun HomeRecentTransactionsSection(
                             Text(
                                 text = "Henüz bu aya ait işlem bulunmuyor",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF64748B),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Text(
                                 text = "+ İlk İşlemini Ekle",
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                color = FeniqoSageGreen,
+                                color = MaterialTheme.colorScheme.primary,
                             )
                         }
                     }
@@ -791,7 +800,7 @@ private fun HomeTransactionItemRow(
 
     // Onaylı Renk Kuralı: Giderler okunaklı kırmızı, gelirler yeşil
     val isExpense = trx.type == TransactionType.EXPENSE
-    val amountColor = if (isExpense) Color(0xFFDC2626) else Color(0xFF16A34A)
+    val amountColor = if (isExpense) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
 
     // Eksi veya artı işaretini güvenle hazırla
     val formattedDisplayAmount = if (isExpense) {
@@ -957,7 +966,7 @@ fun HomeUpcomingPaymentsSection(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         ) {
             Column(
@@ -1033,7 +1042,7 @@ private fun HomeUpcomingBillRow(
                     text = bill.monthShort.ifBlank { "AY" },
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 9.sp,
+                        fontSize = 11.sp,
                     ),
                     color = Color(0xFF475569),
                 )
@@ -1121,7 +1130,7 @@ fun HomeSavingsGoalSection(
                 .fillMaxWidth()
                 .clickable(onClick = onGoalClick),
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         ) {
             Row(
@@ -1229,7 +1238,7 @@ fun HomeMoneyScoreSection(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         ) {
             Column(
@@ -1349,7 +1358,7 @@ fun CurrencyScopeNoticeCard(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
         Row(

@@ -77,6 +77,7 @@ class BudgetViewModelTest {
         var copyResult: RepositoryResult<CopyBudgetsResult> = RepositoryResult.Success(CopyBudgetsResult(2))
 
         var lastCreateCommand: CreateBudgetCommand? = null
+        var createCallCount: Int = 0
         var lastUpdateCommand: UpdateBudgetCommand? = null
         var lastDeleteId: EntityId? = null
         var lastCopyCommand: CopyBudgetsCommand? = null
@@ -100,6 +101,7 @@ class BudgetViewModelTest {
         }
 
         override suspend fun create(command: CreateBudgetCommand): RepositoryResult<EntityId> {
+            createCallCount++
             shouldThrowOnCreate?.let { throw it }
             lastCreateCommand = command
             return createResult
@@ -318,7 +320,7 @@ class BudgetViewModelTest {
     }
 
     @Test
-    fun createBudget_success_emitsEventAndClearsSubmitting() = runTest {
+    fun createBudget_success_staysLockedUntilNavigationAndRejectsSecondSubmit() = runTest {
         val catId = EntityId("cat-expense")
         val expenseCategory = Category(
             id = catId,
@@ -352,6 +354,16 @@ class BudgetViewModelTest {
         )
         advanceUntilIdle()
 
+        viewModel.processIntent(
+            BudgetIntent.CreateBudget(
+                categoryId = catId,
+                month = YearMonth("2026-08"),
+                limitInput = "1500,00",
+                currency = Currency.TRY,
+            ),
+        )
+        advanceUntilIdle()
+
         assertNotNull(fakeBudgetRepo.lastCreateCommand)
         assertEquals(catId, fakeBudgetRepo.lastCreateCommand?.categoryId)
         assertEquals(YearMonth("2026-08"), fakeBudgetRepo.lastCreateCommand?.month)
@@ -361,7 +373,8 @@ class BudgetViewModelTest {
         assertTrue(events[0] is BudgetUiEvent.MutationSuccess)
         assertEquals(FinanceUiMessage.BUDGET_SAVED, (events[0] as BudgetUiEvent.MutationSuccess).message)
 
-        assertFalse(viewModel.uiState.value.mutationState.isSubmitting)
+        assertEquals(1, fakeBudgetRepo.createCallCount)
+        assertTrue(viewModel.uiState.value.mutationState.isSubmitting)
         assertNull(viewModel.uiState.value.mutationState.categoryError)
         assertNull(viewModel.uiState.value.mutationState.amountError)
 
@@ -508,6 +521,7 @@ class BudgetViewModelTest {
         assertEquals(1, events.size)
         assertTrue(events[0] is BudgetUiEvent.MutationSuccess)
         assertEquals(FinanceUiMessage.BUDGET_SAVED, (events[0] as BudgetUiEvent.MutationSuccess).message)
+        assertTrue(viewModel.uiState.value.mutationState.isSubmitting)
 
         eventJob.cancel()
         uiStateJob.cancel()

@@ -31,6 +31,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
@@ -53,14 +54,8 @@ import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.EntityId
 
 // Tasarım Sistemi Renkleri
-private val ColorWarmBg = Color(0xFFF7F5F0)
 private val ColorSageGreen = Color(0xFF2D5A43)
-private val ColorLightSage = Color(0xFFE8EFEA)
-private val ColorDarkGraphite = Color(0xFF303536)
 private val ColorRefinedRed = Color(0xFFC04D43)
-private val ColorLightRed = Color(0xFFFDECEB)
-private val ColorMutedGray = Color(0xFF888E90)
-private val ColorCardSurface = Color(0xFFFFFFFF)
 
 // ==========================================
 // EKRAN 09: NAKİT AKIŞI RAPORU
@@ -83,7 +78,7 @@ fun CashFlowReportScreen(
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = ColorWarmBg,
+        color = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier
@@ -101,14 +96,14 @@ fun CashFlowReportScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Geri",
-                        tint = ColorDarkGraphite,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
                     text = "Nakit Akışı",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = ColorDarkGraphite,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
 
@@ -140,7 +135,7 @@ fun CashFlowReportScreen(
                                         text = label,
                                         fontSize = 13.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) Color.White else ColorDarkGraphite,
+                                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
                                     )
                                 }
                             }
@@ -152,14 +147,14 @@ fun CashFlowReportScreen(
                 item {
                     ReportCard(
                         modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = ColorCardSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surface,
                         cornerRadius = 20.dp,
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(
                                 text = "Dönem Nakit Akışı",
                                 fontSize = 13.sp,
-                                color = ColorMutedGray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Medium,
                             )
                             Spacer(modifier = Modifier.height(4.dp))
@@ -176,7 +171,7 @@ fun CashFlowReportScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 Column {
-                                    Text("Toplam Gelir", fontSize = 12.sp, color = ColorMutedGray)
+                                    Text("Toplam Gelir", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = totalIncomeFormatted,
@@ -186,7 +181,7 @@ fun CashFlowReportScreen(
                                     )
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text("Toplam Gider", fontSize = 12.sp, color = ColorMutedGray)
+                                    Text("Toplam Gider", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = totalExpenseFormatted,
@@ -205,7 +200,7 @@ fun CashFlowReportScreen(
                     item {
                         ReportCard(
                             modifier = Modifier.fillMaxWidth(),
-                            backgroundColor = ColorCardSurface,
+                            backgroundColor = MaterialTheme.colorScheme.surface,
                             cornerRadius = 20.dp,
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
@@ -213,7 +208,7 @@ fun CashFlowReportScreen(
                                     text = "Gelir ve Gider Dengesi",
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = ColorDarkGraphite,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 BidirectionalCashFlowChart(
@@ -233,11 +228,11 @@ fun CashFlowReportScreen(
                     ) {
                         ReportCard(
                             modifier = Modifier.weight(1f),
-                            backgroundColor = ColorCardSurface,
+                            backgroundColor = MaterialTheme.colorScheme.surface,
                             cornerRadius = 16.dp,
                         ) {
                             Column(modifier = Modifier.padding(14.dp)) {
-                                Text("Aylık Ort. Gelir", fontSize = 11.sp, color = ColorMutedGray)
+                                Text("Aylık Ort. Gelir", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = averageIncomeFormatted,
@@ -246,17 +241,17 @@ fun CashFlowReportScreen(
                                     color = ColorSageGreen,
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text("En Güçlü: $strongestMonthLabel", fontSize = 11.sp, color = ColorDarkGraphite)
+                                Text("En Güçlü: $strongestMonthLabel", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
                             }
                         }
 
                         ReportCard(
                             modifier = Modifier.weight(1f),
-                            backgroundColor = ColorCardSurface,
+                            backgroundColor = MaterialTheme.colorScheme.surface,
                             cornerRadius = 16.dp,
                         ) {
                             Column(modifier = Modifier.padding(14.dp)) {
-                                Text("Aylık Ort. Gider", fontSize = 11.sp, color = ColorMutedGray)
+                                Text("Aylık Ort. Gider", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = averageExpenseFormatted,
@@ -265,7 +260,7 @@ fun CashFlowReportScreen(
                                     color = ColorRefinedRed,
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text("En Zayıf: $weakestMonthLabel", fontSize = 11.sp, color = ColorDarkGraphite)
+                                Text("En Zayıf: $weakestMonthLabel", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
                             }
                         }
                     }
@@ -277,7 +272,7 @@ fun CashFlowReportScreen(
                         text = "Aylık Dağılım",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ColorDarkGraphite,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(top = 8.dp),
                     )
                 }
@@ -285,7 +280,7 @@ fun CashFlowReportScreen(
                 items(monthlyPoints) { month ->
                     ReportCard(
                         modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = ColorCardSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surface,
                         cornerRadius = 14.dp,
                     ) {
                         Row(
@@ -300,7 +295,7 @@ fun CashFlowReportScreen(
                                     text = month.monthLabel,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = ColorDarkGraphite,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -330,7 +325,7 @@ fun CashFlowReportScreen(
                                 Text(
                                     text = if (month.isNetPositive) "Net Fazla" else "Net Açık",
                                     fontSize = 11.sp,
-                                    color = ColorMutedGray,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -367,7 +362,7 @@ fun PeriodComparisonReportScreen(
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = ColorWarmBg,
+        color = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier
@@ -387,14 +382,14 @@ fun PeriodComparisonReportScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Geri",
-                            tint = ColorDarkGraphite,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     Text(
                         text = "Dönem Karşılaştırma",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ColorDarkGraphite,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
 
@@ -403,7 +398,7 @@ fun PeriodComparisonReportScreen(
                         .padding(end = 8.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .clickable { onSelectPeriodClick() },
-                    color = ColorLightSage,
+                    color = MaterialTheme.colorScheme.secondaryContainer,
                     shape = RoundedCornerShape(10.dp),
                 ) {
                     Row(
@@ -439,7 +434,7 @@ fun PeriodComparisonReportScreen(
                         text = "$currentPeriodLabel  vs  $previousPeriodLabel",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
-                        color = ColorMutedGray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp),
                     )
                 }
@@ -448,14 +443,14 @@ fun PeriodComparisonReportScreen(
                 item {
                     ReportCard(
                         modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = ColorCardSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surface,
                         cornerRadius = 20.dp,
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(
                                 text = "Net Fark Değişimi",
                                 fontSize = 13.sp,
-                                color = ColorMutedGray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Medium,
                             )
                             Spacer(modifier = Modifier.height(4.dp))
@@ -470,7 +465,7 @@ fun PeriodComparisonReportScreen(
                                     color = if (isNetImproved) ColorSageGreen else ColorRefinedRed,
                                 )
                                 Surface(
-                                    color = if (isNetImproved) ColorLightSage else ColorLightRed,
+                                    color = if (isNetImproved) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.errorContainer,
                                     shape = RoundedCornerShape(8.dp),
                                 ) {
                                     Row(
@@ -500,12 +495,12 @@ fun PeriodComparisonReportScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 Column {
-                                    Text(currentPeriodLabel, fontSize = 11.sp, color = ColorMutedGray)
-                                    Text(currentNetFormatted, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ColorDarkGraphite)
+                                    Text(currentPeriodLabel, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(currentNetFormatted, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text(previousPeriodLabel, fontSize = 11.sp, color = ColorMutedGray)
-                                    Text(previousNetFormatted, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ColorDarkGraphite)
+                                    Text(previousPeriodLabel, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(previousNetFormatted, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                 }
                             }
                         }
@@ -520,37 +515,37 @@ fun PeriodComparisonReportScreen(
                     ) {
                         ReportCard(
                             modifier = Modifier.weight(1f),
-                            backgroundColor = ColorCardSurface,
+                            backgroundColor = MaterialTheme.colorScheme.surface,
                             cornerRadius = 14.dp,
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
-                                Text("Gelir Değişimi", fontSize = 11.sp, color = ColorMutedGray)
+                                Text("Gelir Değişimi", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(incomeDeltaFormatted, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = ColorDarkGraphite)
+                                Text(incomeDeltaFormatted, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                             }
                         }
 
                         ReportCard(
                             modifier = Modifier.weight(1f),
-                            backgroundColor = ColorCardSurface,
+                            backgroundColor = MaterialTheme.colorScheme.surface,
                             cornerRadius = 14.dp,
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
-                                Text("Gider Değişimi", fontSize = 11.sp, color = ColorMutedGray)
+                                Text("Gider Değişimi", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(expenseDeltaFormatted, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = ColorDarkGraphite)
+                                Text(expenseDeltaFormatted, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                             }
                         }
 
                         ReportCard(
                             modifier = Modifier.weight(1f),
-                            backgroundColor = ColorCardSurface,
+                            backgroundColor = MaterialTheme.colorScheme.surface,
                             cornerRadius = 14.dp,
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
-                                Text("Tasarruf", fontSize = 11.sp, color = ColorMutedGray)
+                                Text("Tasarruf", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(savingsRateDeltaFormatted, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = ColorDarkGraphite)
+                                Text(savingsRateDeltaFormatted, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                             }
                         }
                     }
@@ -562,7 +557,7 @@ fun PeriodComparisonReportScreen(
                         text = "Kategori Bazında Değişimler",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ColorDarkGraphite,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(top = 8.dp),
                     )
                 }
@@ -573,7 +568,7 @@ fun PeriodComparisonReportScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onCategoryClick(item) },
-                        backgroundColor = ColorCardSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surface,
                         cornerRadius = 14.dp,
                     ) {
                         Row(
@@ -588,13 +583,13 @@ fun PeriodComparisonReportScreen(
                                     text = item.name,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = ColorDarkGraphite,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = "${item.previousFormatted} → ${item.currentFormatted}",
                                     fontSize = 12.sp,
-                                    color = ColorMutedGray,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
 
@@ -619,7 +614,7 @@ fun PeriodComparisonReportScreen(
                                 Icon(
                                     imageVector = Icons.Default.ChevronRight,
                                     contentDescription = null,
-                                    tint = ColorMutedGray,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(18.dp),
                                 )
                             }
@@ -654,7 +649,7 @@ fun ComparisonDetailScreen(
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = ColorWarmBg,
+        color = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier
@@ -671,14 +666,14 @@ fun ComparisonDetailScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Geri",
-                        tint = ColorDarkGraphite,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
                     text = "$categoryName Değişimi",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = ColorDarkGraphite,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
 
@@ -691,7 +686,7 @@ fun ComparisonDetailScreen(
                 item {
                     ReportCard(
                         modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = ColorCardSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surface,
                         cornerRadius = 20.dp,
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
@@ -705,7 +700,7 @@ fun ComparisonDetailScreen(
                             Text(
                                 text = "Fark: $deltaAmountFormatted ($percentageFormatted)",
                                 fontSize = 14.sp,
-                                color = ColorDarkGraphite,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontWeight = FontWeight.Medium,
                             )
                             Spacer(modifier = Modifier.height(16.dp))
@@ -715,12 +710,12 @@ fun ComparisonDetailScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 Column {
-                                    Text(period2Label, fontSize = 12.sp, color = ColorMutedGray)
-                                    Text(period2AmountFormatted, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = ColorDarkGraphite)
+                                    Text(period2Label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(period2AmountFormatted, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text(period1Label, fontSize = 12.sp, color = ColorMutedGray)
-                                    Text(period1AmountFormatted, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = ColorDarkGraphite)
+                                    Text(period1Label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(period1AmountFormatted, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                 }
                             }
                         }
@@ -732,7 +727,7 @@ fun ComparisonDetailScreen(
                         text = "Etkileyen İşlemler",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ColorDarkGraphite,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(top = 8.dp),
                     )
                 }
@@ -740,7 +735,7 @@ fun ComparisonDetailScreen(
                 items(transactions) { tx ->
                     ReportCard(
                         modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = ColorCardSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surface,
                         cornerRadius = 14.dp,
                     ) {
                         Row(
@@ -755,20 +750,20 @@ fun ComparisonDetailScreen(
                                     text = tx.title,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = ColorDarkGraphite,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = tx.dateFormatted,
                                     fontSize = 12.sp,
-                                    color = ColorMutedGray,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                             Text(
                                 text = (if (tx.isExpense) "-" else "+") + tx.amountFormatted,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (tx.isExpense) ColorDarkGraphite else ColorSageGreen,
+                                color = if (tx.isExpense) MaterialTheme.colorScheme.onSurface else ColorSageGreen,
                             )
                         }
                     }
@@ -805,7 +800,7 @@ fun SelectComparisonPeriodSheet(
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
-        containerColor = ColorWarmBg,
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier,
     ) {
         Column(
@@ -817,7 +812,7 @@ fun SelectComparisonPeriodSheet(
                 text = "Karşılaştırma Dönemi Seç",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = ColorDarkGraphite,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -829,7 +824,7 @@ fun SelectComparisonPeriodSheet(
                         .padding(vertical = 4.dp)
                         .clip(RoundedCornerShape(14.dp))
                         .clickable { selectedOption = key },
-                    color = if (isSelected) ColorLightSage else Color.White,
+                    color = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.White,
                     shape = RoundedCornerShape(14.dp),
                 ) {
                     Row(
@@ -843,14 +838,14 @@ fun SelectComparisonPeriodSheet(
                             text = label,
                             fontSize = 14.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) ColorSageGreen else ColorDarkGraphite,
+                            color = if (isSelected) ColorSageGreen else MaterialTheme.colorScheme.onSurface,
                         )
                         RadioButton(
                             selected = isSelected,
                             onClick = { selectedOption = key },
                             colors = RadioButtonDefaults.colors(
                                 selectedColor = ColorSageGreen,
-                                unselectedColor = ColorMutedGray,
+                                unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             ),
                         )
                     }

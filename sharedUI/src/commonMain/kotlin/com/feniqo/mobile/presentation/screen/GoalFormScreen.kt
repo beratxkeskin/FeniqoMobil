@@ -76,7 +76,7 @@ fun GoalFormScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = FeniqoWarmStoneBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
@@ -84,7 +84,7 @@ fun GoalFormScreen(
                         text = if (isEditMode) "Hedefi düzenle" else "Yeni hedef",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = FeniqoTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 },
                 navigationIcon = {
@@ -92,7 +92,7 @@ fun GoalFormScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Geri",
-                            tint = FeniqoTextPrimary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 },
@@ -119,13 +119,13 @@ fun GoalFormScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = FeniqoWarmStoneBackground,
+                    containerColor = MaterialTheme.colorScheme.background,
                 ),
             )
         },
         bottomBar = {
             Surface(
-                color = FeniqoWarmStoneBackground,
+                color = MaterialTheme.colorScheme.background,
                 shadowElevation = 4.dp,
             ) {
                 Box(
@@ -181,12 +181,12 @@ fun GoalFormScreen(
                         text = if (isEditMode) "Hedefini güncelle" else "Yeni bir hedef oluştur",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
-                        color = FeniqoTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         text = if (isEditMode) "Hedef detaylarını düzenleyebilirsin." else "Hayallerin için plan yap, adım adım ilerle.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = FeniqoTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -198,7 +198,7 @@ fun GoalFormScreen(
                         text = "Hedef adı",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = FeniqoTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     OutlinedTextField(
                         value = input.nameInput,
@@ -248,7 +248,7 @@ fun GoalFormScreen(
                             text = "Hedef tutar",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = FeniqoTextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                         OutlinedTextField(
                             value = input.targetAmountInput,
@@ -294,7 +294,7 @@ fun GoalFormScreen(
                             text = "Para birimi",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = FeniqoTextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
 
                         Surface(
@@ -322,12 +322,12 @@ fun GoalFormScreen(
                                     text = input.currency.code,
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = if (isEditMode) FeniqoTextSecondary else FeniqoTextPrimary,
+                                    color = if (isEditMode) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                                 )
                                 Icon(
                                     imageVector = Icons.Outlined.KeyboardArrowDown,
                                     contentDescription = "Para birimi seç",
-                                    tint = if (isEditMode) Color(0xFF94A3B8) else FeniqoTextSecondary,
+                                    tint = if (isEditMode) Color(0xFF94A3B8) else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(20.dp),
                                 )
                             }
@@ -337,7 +337,7 @@ fun GoalFormScreen(
                             Text(
                                 text = "ⓘ Para birimi değiştirilemez.",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = FeniqoTextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 2.dp),
                             )
                         }
@@ -353,7 +353,7 @@ fun GoalFormScreen(
                             text = "Başlangıç birikimi (isteğe bağlı)",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = FeniqoTextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                         OutlinedTextField(
                             value = input.initialAmountInput,
@@ -397,7 +397,7 @@ fun GoalFormScreen(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         border = BorderStroke(1.dp, FeniqoGoalCardBorder),
                     ) {
                         Row(
@@ -430,13 +430,13 @@ fun GoalFormScreen(
                                     Text(
                                         text = "Mevcut birikim",
                                         style = MaterialTheme.typography.labelMedium,
-                                        color = FeniqoTextSecondary,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                     Text(
                                         text = currentAmount?.let { MoneyFormatter.format(it) } ?: "₺0",
                                         style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold,
-                                        color = FeniqoTextPrimary,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                     )
                                 }
                             }
@@ -467,7 +467,7 @@ fun GoalFormScreen(
                         text = "Hedef tarihi",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = FeniqoTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
 
                     Surface(
@@ -501,7 +501,7 @@ fun GoalFormScreen(
                                 Icon(
                                     imageVector = Icons.Outlined.CalendarToday,
                                     contentDescription = null,
-                                    tint = FeniqoTextSecondary,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(20.dp),
                                 )
                                 Text(
@@ -512,14 +512,14 @@ fun GoalFormScreen(
                                     },
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.Medium,
-                                    color = if (input.targetDate != null) FeniqoTextPrimary else FeniqoTextSecondary,
+                                    color = if (input.targetDate != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
 
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                 contentDescription = "Tarih seç",
-                                tint = FeniqoTextSecondary,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(20.dp),
                             )
                         }
@@ -543,7 +543,7 @@ fun GoalFormScreen(
                         text = "Hedef rengi",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = FeniqoTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
 
                     Row(
@@ -594,7 +594,7 @@ fun GoalFormScreen(
                         text = "Hareket Geçmişi",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = FeniqoTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
 
@@ -603,7 +603,7 @@ fun GoalFormScreen(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         border = BorderStroke(1.dp, FeniqoGoalCardBorder),
                     ) {
                         Row(
@@ -633,13 +633,13 @@ fun GoalFormScreen(
                                 Text(
                                     text = item.formattedDate,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = FeniqoTextSecondary,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Text(
                                     text = item.note?.takeIf { it.isNotBlank() } ?: if (isAdd) "Birikim eklendi" else "Para çıkarıldı",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium,
-                                    color = FeniqoTextPrimary,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )

@@ -149,7 +149,7 @@ fun NoReportsEmptyView(
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
             ),
-            color = FeniqoTextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
         )
 
@@ -158,7 +158,7 @@ fun NoReportsEmptyView(
         Text(
             text = "İşlem ekledikçe gelir, gider ve kategori analizlerin burada oluşur.",
             style = MaterialTheme.typography.bodyMedium,
-            color = FeniqoTextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
@@ -194,7 +194,7 @@ fun NoReportsEmptyView(
             Text(
                 text = "Ana sayfaya dön",
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                color = FeniqoTextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
@@ -328,7 +328,7 @@ fun NoFilteredResultsView(
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
             ),
-            color = FeniqoTextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
         )
 
@@ -337,7 +337,7 @@ fun NoFilteredResultsView(
         Text(
             text = "Seçtiğin dönem ve filtrelerle eşleşen\nişlem bulunamadı.",
             style = MaterialTheme.typography.bodyMedium,
-            color = FeniqoTextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 24.dp),
         )
@@ -385,7 +385,7 @@ fun NoFilteredResultsView(
                     .fillMaxWidth()
                     .height(52.dp),
                 shape = RoundedCornerShape(14.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD1D5DB)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
                 Row(
                     horizontalArrangement = Arrangement.Center,
@@ -428,7 +428,7 @@ private fun FilterChipRemovable(
         modifier = modifier.clip(RoundedCornerShape(12.dp)),
         color = Color(0xFFF3F4F6),
         shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Row(
             modifier = Modifier.padding(start = 10.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
@@ -475,7 +475,7 @@ private fun FilterChipRemovable(
             Text(
                 text = chip.label,
                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
-                color = Color(0xFF1F2937),
+                color = MaterialTheme.colorScheme.onSurface,
             )
 
             // 'x' butonu
@@ -490,7 +490,7 @@ private fun FilterChipRemovable(
                     text = "×",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF6B7280),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -507,8 +507,8 @@ fun ReportLoadingCard(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+        color = MaterialTheme.colorScheme.surface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -524,13 +524,13 @@ fun ReportLoadingCard(
                 Text(
                     text = "Rapor hazırlanıyor",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = "Raporun hazırlanması birkaç saniye sürebilir. Lütfen bekleyin.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = FeniqoTextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -557,8 +557,8 @@ fun ReportOfflineStatusSection(
                 .clip(RoundedCornerShape(16.dp))
                 .clickable(role = Role.Button, onClick = onNavigateToSyncStatus),
             shape = RoundedCornerShape(16.dp),
-            color = Color.White,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+            color = MaterialTheme.colorScheme.surface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {
             Row(
                 modifier = Modifier.padding(16.dp),
@@ -598,7 +598,7 @@ fun ReportOfflineStatusSection(
                     Text(
                         text = "Çevrimdışısın",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = FeniqoTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     val pendingText = if (pendingCount > 0) {
@@ -609,7 +609,7 @@ fun ReportOfflineStatusSection(
                     Text(
                         text = pendingText,
                         style = MaterialTheme.typography.bodySmall,
-                        color = FeniqoTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
@@ -617,7 +617,7 @@ fun ReportOfflineStatusSection(
                     text = "›",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Light,
-                    color = Color(0xFF9CA3AF),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -672,7 +672,7 @@ fun ReportErrorCard(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFCA5A5)),
     ) {
         Row(
@@ -706,15 +706,15 @@ fun ReportErrorCard(
                 Text(
                     text = errorMessage ?: "Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar dene.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = FeniqoTextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
             OutlinedButton(
                 onClick = onRetry,
                 shape = RoundedCornerShape(10.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD1D5DB)),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF1F2937)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
             ) {
                 Text(

@@ -68,6 +68,7 @@ fun FeniqoAppShell(
     onResolveConflictDecision: (ConflictResolution) -> Unit = {},
     onDismissConflictDialog: () -> Unit = {},
     showNavigationChrome: Boolean = true,
+    showGlobalSyncStatus: Boolean = showNavigationChrome,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -162,7 +163,7 @@ fun FeniqoAppShell(
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
-            if (showNavigationChrome) {
+            if (showGlobalSyncStatus) {
                 SyncStatusIndicator(
                     uiState = syncStatus,
                     onManualSync = onManualSync,

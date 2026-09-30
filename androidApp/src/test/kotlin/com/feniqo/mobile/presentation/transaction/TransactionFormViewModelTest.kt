@@ -235,6 +235,14 @@ class TransactionFormViewModelTest {
     }
 
     @Test
+    fun createMode_receiptOcrEntry_isDisabledUntilProductAcceptance() = runTest {
+        val viewModel = createViewModel(TransactionFormRoute())
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isReceiptFeatureAvailable)
+    }
+
+    @Test
     fun receiptOcrDraft_isAppliedOnlyAfterExplicitUserConfirmation() = runTest {
         val viewModel = createViewModel(TransactionFormRoute())
         advanceUntilIdle()
@@ -1079,18 +1087,24 @@ class TransactionFormViewModelTest {
         assertEquals(wsCustom, trxRepo.lastUpdatedTransaction?.workspaceId)
         assertEquals(receipt, trxRepo.lastUpdatedTransaction?.receiptPath)
         assertEquals(1, events.size)
-        viewModel.onReceiptRemoved()
-        viewModel.submit()
+
+        val removeReceiptViewModel = createViewModel(TransactionFormRoute("trx-3"))
+        val removeReceiptCollectJob = launch(UnconfinedTestDispatcher()) {
+            removeReceiptViewModel.uiState.collect { }
+        }
+        advanceUntilIdle()
+        removeReceiptViewModel.onReceiptRemoved()
+        removeReceiptViewModel.submit()
         advanceUntilIdle()
         assertNull(trxRepo.lastUpdatedTransaction?.receiptPath)
-        assertEquals(2, events.size)
 
         collectJob.cancel()
         eventJob.cancel()
+        removeReceiptCollectJob.cancel()
     }
 
     @Test
-    fun submit_doubleSubmit_executesOnlyOnce() = runTest {
+    fun submit_afterImmediateSuccess_staysLockedUntilNavigationAndExecutesOnlyOnce() = runTest {
         catRepo.activeCategoriesFlow.value = listOf(sampleActiveExpenseCategory)
         val viewModel = createViewModel(TransactionFormRoute(null))
 
@@ -1102,16 +1116,18 @@ class TransactionFormViewModelTest {
         viewModel.onTitleChanged("Market")
 
         viewModel.submit()
-        viewModel.submit() // second rapid submit
+        advanceUntilIdle()
+        viewModel.submit() // navigation gerçekleşmeden gelen ikinci dokunuş
         advanceUntilIdle()
 
         assertEquals(1, trxRepo.transactionsFlow.value.size)
+        assertTrue(viewModel.uiState.value.isSubmitting)
 
         collectJob.cancel()
     }
 
     @Test
-    fun submit_cancellation_cleansUpSubmittingState_andAllowsSubsequentSubmit() = runTest {
+    fun submit_failure_cleansUpSubmittingState_andAllowsSubsequentSubmit() = runTest {
         catRepo.activeCategoriesFlow.value = listOf(sampleActiveExpenseCategory)
         val viewModel = createViewModel(TransactionFormRoute(null))
 
@@ -1121,12 +1137,19 @@ class TransactionFormViewModelTest {
         viewModel.onAmountChanged("100")
         viewModel.onCategoryChanged(EntityId("cat-market"))
         viewModel.onTitleChanged("Market")
+
+        trxRepo.shouldFailWith = AppError.Storage("disk_full")
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isSubmitting)
 
         trxRepo.shouldFailWith = null
         viewModel.submit()
         advanceUntilIdle()
 
-        assertFalse(viewModel.uiState.value.isSubmitting)
+        assertEquals(1, trxRepo.transactionsFlow.value.size)
+        assertTrue(viewModel.uiState.value.isSubmitting)
 
         collectJob.cancel()
     }

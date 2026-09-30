@@ -1,12 +1,12 @@
 package com.feniqo.mobile.presentation.category
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
 import com.feniqo.mobile.presentation.screen.CategoryFormScreen
 
 /**
@@ -21,10 +21,11 @@ fun CategoryFormScreenRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // 1. Gönderim sırasında sistem geri hareketini engelleme
-    BackHandler(enabled = state.isSubmitting) {
-        // Form submit edilirken kazara sistem geri hareketini engeller
-    }
+    val requestExit = rememberGuardedFormExit(
+        isSubmitting = state.isSubmitting,
+        hasUnsavedChanges = state.hasUnsavedChanges,
+        onNavigateBack = onBack,
+    )
 
     // 2. ViewModel tek seferlik olaylarını toplama
     LaunchedEffect(viewModel.events) {
@@ -38,7 +39,7 @@ fun CategoryFormScreenRoute(
     // 3. Stateless Form Ekranı
     CategoryFormScreen(
         state = state,
-        onBack = onBack,
+        onBack = requestExit,
         onNameChanged = viewModel::onNameChanged,
         onTypeChanged = viewModel::onTypeChanged,
         onColorChanged = viewModel::onColorChanged,

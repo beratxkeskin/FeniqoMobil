@@ -50,7 +50,7 @@ fun GoalsScreen(
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = FeniqoWarmStoneBackground,
+        color = MaterialTheme.colorScheme.background,
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
@@ -128,7 +128,7 @@ fun GoalsScreen(
                                     text = "İçgörüler",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = FeniqoTextPrimary,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.padding(top = 4.dp),
                                 )
                             }
@@ -148,7 +148,7 @@ fun GoalsScreen(
             if (!state.isLoading && state.observationError == null && !state.isEmpty) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = FeniqoWarmStoneBackground,
+                    color = MaterialTheme.colorScheme.background,
                     shadowElevation = 4.dp,
                 ) {
                     Box(
@@ -207,7 +207,7 @@ private fun GoalsTopBar(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Geri",
-                    tint = FeniqoTextPrimary,
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
             Spacer(Modifier.width(4.dp))
@@ -218,7 +218,7 @@ private fun GoalsTopBar(
                 text = "Hedefler",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
-                color = FeniqoTextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             if (!workspaceName.isNullOrBlank()) {
                 ActiveWorkspaceIndicator(workspaceName = workspaceName, isCompact = true)

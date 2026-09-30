@@ -46,6 +46,7 @@ class DebtFormViewModel @Inject constructor(
             ),
         ),
     )
+    private var initialInput: DebtFormInput = _uiState.value.input
     val uiState: StateFlow<DebtFormUiState> = _uiState.asStateFlow()
 
     private val _editLoadState = MutableStateFlow<DebtEditLoadState>(DebtEditLoadState.Idle)
@@ -96,26 +97,29 @@ class DebtFormViewModel @Inject constructor(
                                 type = debt.type,
                                 progressRatio = progressRatio,
                             )
-                            _editLoadState.value = DebtEditLoadState.Ready(
-                                draft = draft,
-                                status = balance.status,
+                            val loadedInput = DebtFormInput(
+                                debtId = debt.id,
+                                titleInput = debt.title,
+                                amountInput = formatMoneyToInput(debt.amount),
+                                currency = debt.amount.currency,
+                                type = debt.type,
+                                dueDate = debt.dueDate,
+                                descriptionInput = debt.description ?: "",
                             )
+                            initialInput = loadedInput
                             _uiState.update { state ->
                                 state.copy(
-                                    input = DebtFormInput(
-                                        debtId = debt.id,
-                                        titleInput = debt.title,
-                                        amountInput = formatMoneyToInput(debt.amount),
-                                        currency = debt.amount.currency,
-                                        type = debt.type,
-                                        dueDate = debt.dueDate,
-                                        descriptionInput = debt.description ?: "",
-                                    ),
+                                    input = loadedInput,
                                     errors = DebtFormInputErrors(),
+                                    hasUnsavedChanges = false,
                                     paymentsHistory = history,
                                     balanceSummary = summary,
                                 )
                             }
+                            _editLoadState.value = DebtEditLoadState.Ready(
+                                draft = draft,
+                                status = balance.status,
+                            )
                         } else {
                             _editLoadState.value = DebtEditLoadState.NotFound
                             _uiState.update { it.copy(paymentsHistory = emptyList(), balanceSummary = null) }
@@ -161,12 +165,14 @@ class DebtFormViewModel @Inject constructor(
             val updated = transform(state.input)
             val lockedCurrency = if (state.input.isEditMode) state.input.currency else updated.currency
             val lockedDebtId = state.input.debtId
-            state.copy(
-                input = updated.copy(
+            val protectedInput = updated.copy(
                     debtId = lockedDebtId,
                     currency = lockedCurrency,
-                ),
+                )
+            state.copy(
+                input = protectedInput,
                 errors = DebtFormInputErrors(), // Reset errors on user modification
+                hasUnsavedChanges = protectedInput != initialInput,
             )
         }
     }
@@ -182,6 +188,7 @@ class DebtFormViewModel @Inject constructor(
                 val draft = normResult.draft
                 _uiState.update { it.copy(isSubmitting = true) }
                 activeSubmitJob = viewModelScope.launch {
+                    var mutationSucceeded = false
                     try {
                         val result = if (draft.isCreateMode) {
                             createDebtUseCase(draft.toCreateCommand())
@@ -191,6 +198,7 @@ class DebtFormViewModel @Inject constructor(
 
                         when (result) {
                             is RepositoryResult.Success -> {
+                                mutationSucceeded = true
                                 _events.send(DebtFormUiEvent.MutationSuccess(FinanceUiMessage.DEBT_SAVED))
                             }
                             is RepositoryResult.Failure -> {
@@ -202,7 +210,7 @@ class DebtFormViewModel @Inject constructor(
                     } catch (_: Exception) {
                         _events.send(DebtFormUiEvent.ShowMessage(FinanceUiMessage.GENERIC_ERROR))
                     } finally {
-                        _uiState.update { it.copy(isSubmitting = false) }
+                        if (!mutationSucceeded) _uiState.update { it.copy(isSubmitting = false) }
                         activeSubmitJob = null
                     }
                 }

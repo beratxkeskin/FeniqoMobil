@@ -96,7 +96,7 @@ fun DebtPaymentFormScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = FeniqoWarmStoneBackground,
+        containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -119,7 +119,7 @@ fun DebtPaymentFormScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Geri",
-                        tint = FeniqoTextPrimary,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
@@ -130,7 +130,7 @@ fun DebtPaymentFormScreen(
                         fontSize = 20.sp,
                         letterSpacing = (-0.3).sp,
                     ),
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
 
@@ -147,7 +147,7 @@ fun DebtPaymentFormScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
                 ) {
                     Row(
@@ -178,13 +178,13 @@ fun DebtPaymentFormScreen(
                                 text = parentDebt.title,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = FeniqoTextPrimary,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = if (isDebt) "Borç" else "Alacak",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = FeniqoTextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -289,7 +289,7 @@ fun DebtPaymentFormScreen(
                                 text = parentDebt.amount.currency.code,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
-                                color = FeniqoTextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(end = 12.dp),
                             )
                         },
@@ -381,7 +381,7 @@ fun DebtPaymentFormScreen(
                                 onClick = onPaidOnClick,
                             ),
                         shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         border = BorderStroke(
                             1.dp,
                             if (errors.dateError != null) Color(0xFFDC2626) else Color(0xFFE5E7EB),
@@ -398,14 +398,14 @@ fun DebtPaymentFormScreen(
                                 Text(
                                     text = if (isDebt) "Ödeme Tarihi *" else "Tahsilat Tarihi *",
                                     fontSize = 11.sp,
-                                    color = FeniqoTextSecondary,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = input.paidOn?.let { DateFormatter.formatReadableDate(it) } ?: "Tarih seçin",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Medium,
-                                    color = if (input.paidOn != null) FeniqoTextPrimary else Color(0xFF9CA3AF),
+                                    color = if (input.paidOn != null) MaterialTheme.colorScheme.onSurface else Color(0xFF9CA3AF),
                                 )
                             }
                             Icon(

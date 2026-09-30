@@ -51,11 +51,11 @@ fun GoalDetailScreen(
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = FeniqoWarmStoneBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             if (state.detail != null) {
                 Surface(
-                    color = FeniqoWarmStoneBackground,
+                    color = MaterialTheme.colorScheme.background,
                     shadowElevation = 6.dp,
                 ) {
                     Box(
@@ -102,6 +102,7 @@ fun GoalDetailScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
+                actionLabel = "Geri dön",
             )
             state.observationError != null && state.detail == null -> ErrorState(
                 title = "Hedef Yüklenemedi",
@@ -156,7 +157,7 @@ private fun DetailContent(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Geri",
-                        tint = FeniqoTextPrimary,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
 
@@ -165,14 +166,14 @@ private fun DetailContent(
                         Icon(
                             imageVector = Icons.Outlined.MoreVert,
                             contentDescription = "Hedef menüsü",
-                            tint = FeniqoTextPrimary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     DropdownMenu(
                         expanded = menuExpanded,
                         onDismissRequest = { menuExpanded = false },
                         shape = RoundedCornerShape(14.dp),
-                        containerColor = Color.White,
+                        containerColor = MaterialTheme.colorScheme.surface,
                     ) {
                         DropdownMenuItem(
                             text = { Text("Hedefi düzenle", fontWeight = FontWeight.Medium) },
@@ -180,7 +181,7 @@ private fun DetailContent(
                                 menuExpanded = false
                                 onEdit()
                             },
-                            leadingIcon = { Icon(Icons.Outlined.Edit, contentDescription = null, tint = FeniqoTextPrimary) },
+                            leadingIcon = { Icon(Icons.Outlined.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface) },
                         )
                         HorizontalDivider(color = FeniqoGoalCardBorder)
                         DropdownMenuItem(
@@ -225,7 +226,7 @@ private fun DetailContent(
                         text = d.goal.name,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = FeniqoTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Center,
                     )
                     Surface(
@@ -268,7 +269,7 @@ private fun DetailContent(
                             text = d.goal.name,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = FeniqoTextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -302,7 +303,7 @@ private fun DetailContent(
                     .fillMaxWidth()
                     .clickable(role = Role.Button, onClick = onEdit),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, FeniqoGoalCardBorder),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
             ) {
@@ -322,7 +323,7 @@ private fun DetailContent(
                         Icon(
                             imageVector = Icons.Outlined.CalendarMonth,
                             contentDescription = null,
-                            tint = FeniqoTextPrimary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(20.dp),
                         )
                     }
@@ -333,20 +334,20 @@ private fun DetailContent(
                         Text(
                             text = "Hedef tarihi",
                             style = MaterialTheme.typography.bodySmall,
-                            color = FeniqoTextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
                             text = DateFormatter.formatReadableDate(d.goal.targetDate),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = FeniqoTextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
 
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = null,
-                        tint = FeniqoTextSecondary,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -378,7 +379,7 @@ private fun DetailContent(
                         Icon(
                             imageVector = Icons.Outlined.ArrowUpward,
                             contentDescription = null,
-                            tint = FeniqoTextPrimary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(18.dp),
                         )
                         Spacer(Modifier.width(8.dp))
@@ -386,7 +387,7 @@ private fun DetailContent(
                             text = "Para çıkar",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = FeniqoTextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
@@ -410,7 +411,7 @@ private fun DetailContent(
                         Icon(
                             imageVector = Icons.Outlined.Edit,
                             contentDescription = null,
-                            tint = FeniqoTextPrimary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(18.dp),
                         )
                         Spacer(Modifier.width(8.dp))
@@ -418,7 +419,7 @@ private fun DetailContent(
                             text = "Düzenle",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = FeniqoTextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
@@ -436,7 +437,7 @@ private fun DetailContent(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, FeniqoGoalCardBorder),
                 ) {
                     Row(
@@ -465,12 +466,12 @@ private fun DetailContent(
                                 text = "Feniqo İçgörü",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = FeniqoTextPrimary,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
                                 text = insightText,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = FeniqoTextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -483,7 +484,7 @@ private fun DetailContent(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, FeniqoGoalCardBorder),
             ) {
                 Column(
@@ -502,7 +503,7 @@ private fun DetailContent(
                             text = "Hareketler",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = FeniqoTextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
 
                         if (d.recentContributions.size > 3) {
@@ -514,7 +515,7 @@ private fun DetailContent(
                                     text = if (contributionsExpanded) "Daralt" else "Tümünü gör >",
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = FeniqoTextSecondary,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -524,7 +525,7 @@ private fun DetailContent(
                         Text(
                             text = "Henüz bir hareket kaydı bulunmuyor.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = FeniqoTextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 8.dp),
                         )
                     } else {
@@ -658,7 +659,7 @@ private fun DetailChartCard(d: GoalDetailDisplayModel) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, FeniqoGoalCardBorder),
     ) {
         Column(
@@ -677,14 +678,14 @@ private fun DetailChartCard(d: GoalDetailDisplayModel) {
                     text = "Birikim ilerlemesi",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 Text(
                     text = "Hedef: ${d.formattedTarget}",
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Medium,
-                    color = FeniqoTextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -699,7 +700,7 @@ private fun DetailChartCard(d: GoalDetailDisplayModel) {
                     Text(
                         text = "Henüz ilerleme hareketi yok.\nPara eklediğinde gelişimini burada görebilirsin.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = FeniqoTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                     )
                 }
@@ -726,17 +727,17 @@ private fun DetailChartCard(d: GoalDetailDisplayModel) {
                         Text(
                             text = MoneyFormatter.format(Money(maxVal, d.goal.targetAmount.currency)).take(7),
                             style = MaterialTheme.typography.labelSmall,
-                            color = FeniqoTextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
                             text = MoneyFormatter.format(Money(midVal, d.goal.targetAmount.currency)).take(7),
                             style = MaterialTheme.typography.labelSmall,
-                            color = FeniqoTextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
                             text = "0",
                             style = MaterialTheme.typography.labelSmall,
-                            color = FeniqoTextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
 
@@ -810,20 +811,20 @@ private fun DetailChartCard(d: GoalDetailDisplayModel) {
                             Text(
                                 text = "${points.first().date.day} ${formatShortMonth(points.first().date.monthNumber)}",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = FeniqoTextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             if (points.size > 2) {
                                 val midPoint = points[points.size / 2]
                                 Text(
                                     text = "${midPoint.date.day} ${formatShortMonth(midPoint.date.monthNumber)}",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = FeniqoTextSecondary,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                             Text(
                                 text = "${points.last().date.day} ${formatShortMonth(points.last().date.monthNumber)}",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = FeniqoTextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -871,13 +872,13 @@ private fun MovementRow(c: GoalContribution) {
             Text(
                 text = DateFormatter.formatReadableDate(c.occurredOn),
                 style = MaterialTheme.typography.bodySmall,
-                color = FeniqoTextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
-                color = FeniqoTextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

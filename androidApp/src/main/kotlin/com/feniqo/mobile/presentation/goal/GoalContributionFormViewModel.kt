@@ -38,6 +38,7 @@ class GoalContributionFormViewModel @Inject constructor(
             input = GoalContributionFormInput(occurredOn = currentDateProvider.today()),
         ),
     )
+    private var initialInput: GoalContributionFormInput = _uiState.value.input
     val uiState: StateFlow<GoalContributionFormUiState> = _uiState.asStateFlow()
 
     private val _events = Channel<GoalContributionFormUiEvent>(Channel.BUFFERED)
@@ -97,8 +98,15 @@ class GoalContributionFormViewModel @Inject constructor(
             current.copy(
                 input = updated,
                 errors = GoalContributionFormInputErrors(),
+                hasUnsavedChanges = updated != initialInput,
             )
         }
+    }
+
+    fun setInitialDirection(direction: com.feniqo.mobile.domain.model.GoalContributionDirection) {
+        val seeded = _uiState.value.input.copy(direction = direction)
+        initialInput = seeded
+        _uiState.update { it.copy(input = seeded, hasUnsavedChanges = false) }
     }
 
     fun submit() {
@@ -120,10 +128,12 @@ class GoalContributionFormViewModel @Inject constructor(
             is GoalContributionFormNormalizationResult.Success -> {
                 _uiState.update { it.copy(isSubmitting = true, errors = GoalContributionFormInputErrors()) }
                 viewModelScope.launch {
+                    var mutationSucceeded = false
                     try {
                         val result = addGoalContributionUseCase(draftResult.command)
                         when (result) {
                             is RepositoryResult.Success -> {
+                                mutationSucceeded = true
                                 _events.send(GoalContributionFormUiEvent.MutationSuccess(FinanceUiMessage.GOAL_CONTRIBUTION_ADDED))
                             }
                             is RepositoryResult.Failure -> {
@@ -135,7 +145,7 @@ class GoalContributionFormViewModel @Inject constructor(
                     } catch (_: Exception) {
                         _events.send(GoalContributionFormUiEvent.ShowMessage(FinanceUiMessage.GENERIC_ERROR))
                     } finally {
-                        _uiState.update { it.copy(isSubmitting = false) }
+                        if (!mutationSucceeded) _uiState.update { it.copy(isSubmitting = false) }
                     }
                 }
 

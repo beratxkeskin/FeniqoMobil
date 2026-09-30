@@ -80,7 +80,7 @@ fun PeriodSummaryScreen(
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = Color(0xFFF7F5F0),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             Row(
                 modifier = Modifier
@@ -92,13 +92,13 @@ fun PeriodSummaryScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                         contentDescription = "Geri",
-                        tint = Color(0xFF303536),
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
                     text = "Dönem özeti",
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, fontSize = 20.sp),
-                    color = Color(0xFF303536),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
         },
@@ -115,8 +115,8 @@ fun PeriodSummaryScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    color = Color.White,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -127,19 +127,19 @@ fun PeriodSummaryScreen(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
                                 contentDescription = "Önceki Ay",
-                                tint = Color(0xFF303536),
+                                tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
                         Text(
                             text = "${ReportSummaryFormatter.monthName(currentMonth.month)} ${currentMonth.year}",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = Color(0xFF303536),
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                         IconButton(onClick = onNextMonth) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                                 contentDescription = "Sonraki Ay",
-                                tint = Color(0xFF303536),
+                                tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
                     }
@@ -151,27 +151,27 @@ fun PeriodSummaryScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
-                    color = Color.White,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Column {
-                            Text(text = "Gelir", style = MaterialTheme.typography.bodySmall, color = Color(0xFF6B7280))
+                            Text(text = "Gelir", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(text = incomeFormatted, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF2D5A43))
+                            Text(text = incomeFormatted, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.primary)
                         }
                         Column {
-                            Text(text = "Gider", style = MaterialTheme.typography.bodySmall, color = Color(0xFF6B7280))
+                            Text(text = "Gider", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(text = expenseFormatted, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFFDC2626))
                         }
                         Column {
-                            Text(text = "Net", style = MaterialTheme.typography.bodySmall, color = Color(0xFF6B7280))
+                            Text(text = "Net", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(text = netFormatted, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = if (isNetPositive) Color(0xFF2D5A43) else Color(0xFFDC2626))
+                            Text(text = netFormatted, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = if (isNetPositive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
                         }
                     }
                 }
@@ -182,8 +182,8 @@ fun PeriodSummaryScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
-                    color = Color.White,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
@@ -191,15 +191,15 @@ fun PeriodSummaryScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(text = "Gelir ve gider (haftalık)", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF303536))
+                            Text(text = "Gelir ve gider (haftalık)", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF2D5A43)))
-                                    Text(text = "Gelir", fontSize = 11.sp, color = Color(0xFF6B7280))
+                                    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
+                                    Text(text = "Gelir", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFDC2626)))
-                                    Text(text = "Gider", fontSize = 11.sp, color = Color(0xFF6B7280))
+                                    Text(text = "Gider", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         }
@@ -214,11 +214,11 @@ fun PeriodSummaryScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
-                    color = Color.White,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Text(text = "Temel göstergeler", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF303536))
+                        Text(text = "Temel göstergeler", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
 
                         IndicatorRow(
                             iconVector = Icons.Outlined.Percent,
@@ -248,11 +248,11 @@ fun PeriodSummaryScreen(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(18.dp),
-                        color = Color.White,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(text = "En çok harcama yapılan kategoriler", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF303536))
+                            Text(text = "En çok harcama yapılan kategoriler", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
 
                             topCategories.take(3).forEachIndexed { index, item ->
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -267,14 +267,14 @@ fun PeriodSummaryScreen(
                                                 color = Color(0xFFF3F4F6),
                                             ) {
                                                 Box(contentAlignment = Alignment.Center) {
-                                                    Text(text = (index + 1).toString(), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF303536))
+                                                    Text(text = (index + 1).toString(), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                                 }
                                             }
-                                            Text(text = item.name, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), color = Color(0xFF303536))
+                                            Text(text = item.name, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface)
                                         }
                                         Column(horizontalAlignment = Alignment.End) {
-                                            Text(text = item.amountFormatted, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF303536))
-                                            Text(text = item.sharePercentageFormatted, style = MaterialTheme.typography.labelSmall, color = Color(0xFF6B7280))
+                                            Text(text = item.amountFormatted, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                                            Text(text = item.sharePercentageFormatted, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         }
                                     }
                                     LinearProgressIndicator(
@@ -296,11 +296,11 @@ fun PeriodSummaryScreen(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(18.dp),
-                        color = Color.White,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text(text = "Kategori dağılımı", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF303536))
+                            Text(text = "Kategori dağılımı", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
                             Spacer(modifier = Modifier.height(12.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -313,8 +313,8 @@ fun PeriodSummaryScreen(
                                     donutSlices.take(5).forEachIndexed { i, (name, ratio) ->
                                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                             Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(colors.getOrElse(i) { Color(0xFF2D5A43) }))
-                                            Text(text = name, style = MaterialTheme.typography.bodySmall, color = Color(0xFF303536), modifier = Modifier.width(75.dp))
-                                            Text(text = "%${(ratio * 100).toInt()}", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = Color(0xFF6B7280))
+                                            Text(text = name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.width(75.dp))
+                                            Text(text = "%${(ratio * 100).toInt()}", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         }
                                     }
                                 }
@@ -328,36 +328,36 @@ fun PeriodSummaryScreen(
             if (financialRhythm != null) {
                 item("rhythm_section") {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Surface(modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp), color = Color.White, border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB))) {
+                        Surface(modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surface, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Icon(
                                         imageVector = Icons.Outlined.CalendarToday,
                                         contentDescription = null,
                                         modifier = Modifier.size(14.dp),
-                                        tint = Color(0xFF6B7280),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
-                                    Text(text = "En yoğun gün", style = MaterialTheme.typography.labelSmall, color = Color(0xFF6B7280))
+                                    Text(text = "En yoğun gün", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(text = financialRhythm.busiestDayName, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF303536))
-                                Text(text = "Bu ayın en fazla harcama günü", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = Color(0xFF9CA3AF))
+                                Text(text = financialRhythm.busiestDayName, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                                Text(text = "Bu ayın en fazla harcama günü", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
-                        Surface(modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp), color = Color.White, border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB))) {
+                        Surface(modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surface, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Icon(
                                         imageVector = Icons.Outlined.BarChart,
                                         contentDescription = null,
                                         modifier = Modifier.size(14.dp),
-                                        tint = Color(0xFF6B7280),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
-                                    Text(text = "En düşük hafta", style = MaterialTheme.typography.labelSmall, color = Color(0xFF6B7280))
+                                    Text(text = "En düşük hafta", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(text = financialRhythm.lowestExpenseWeekLabel, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF303536))
-                                Text(text = "En az harcama yapılan hafta", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = Color(0xFF9CA3AF))
+                                Text(text = financialRhythm.lowestExpenseWeekLabel, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                                Text(text = "En az harcama yapılan hafta", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -392,8 +392,8 @@ fun PeriodSummaryScreen(
                     Surface(
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable(role = Role.Button, onClick = onNavigateToCategoryBreakdown),
                         shape = RoundedCornerShape(14.dp),
-                        color = Color.White,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -401,15 +401,15 @@ fun PeriodSummaryScreen(
                                     imageVector = Icons.Outlined.PieChart,
                                     contentDescription = null,
                                     modifier = Modifier.size(18.dp),
-                                    tint = Color(0xFF303536),
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                 )
-                                Text(text = "Tüm kategoriler", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = Color(0xFF303536))
+                                Text(text = "Tüm kategoriler", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
                             }
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
-                                tint = Color(0xFF9CA3AF),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -417,8 +417,8 @@ fun PeriodSummaryScreen(
                     Surface(
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable(role = Role.Button, onClick = onNavigateToPeriodComparison),
                         shape = RoundedCornerShape(14.dp),
-                        color = Color.White,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -426,15 +426,15 @@ fun PeriodSummaryScreen(
                                     imageVector = Icons.Outlined.CompareArrows,
                                     contentDescription = null,
                                     modifier = Modifier.size(18.dp),
-                                    tint = Color(0xFF303536),
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                 )
-                                Text(text = "Dönemi karşılaştır", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = Color(0xFF303536))
+                                Text(text = "Dönemi karşılaştır", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
                             }
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
-                                tint = Color(0xFF9CA3AF),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -465,16 +465,16 @@ private fun IndicatorRow(
                         imageVector = iconVector,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
-                        tint = Color(0xFF303536),
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
             Column {
-                Text(text = title, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF303536))
-                Text(text = subtitle, style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = Color(0xFF6B7280))
+                Text(text = title, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                Text(text = subtitle, style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        Text(text = value, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold), color = Color(0xFF303536))
+        Text(text = value, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
     }
 }
 
@@ -497,7 +497,7 @@ fun AllReportsHubScreen(
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = Color(0xFFF7F5F0),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             Row(
                 modifier = Modifier
@@ -509,13 +509,13 @@ fun AllReportsHubScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                         contentDescription = "Geri",
-                        tint = Color(0xFF303536),
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
                     text = "Tüm raporlar",
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, fontSize = 20.sp),
-                    color = Color(0xFF303536),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
         },
@@ -605,8 +605,8 @@ private fun ReportHubCard(
             .clip(RoundedCornerShape(16.dp))
             .clickable(role = Role.Button, onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+        color = MaterialTheme.colorScheme.surface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -628,7 +628,7 @@ private fun ReportHubCard(
                             imageVector = icon,
                             contentDescription = null,
                             modifier = Modifier.size(22.dp),
-                            tint = Color(0xFF303536),
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
@@ -637,13 +637,13 @@ private fun ReportHubCard(
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
-                        color = Color(0xFF303536),
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                        color = Color(0xFF6B7280),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -652,7 +652,7 @@ private fun ReportHubCard(
                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
-                tint = Color(0xFF9CA3AF),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

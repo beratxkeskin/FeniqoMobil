@@ -276,6 +276,7 @@ data class DebtFormUiState(
     val input: DebtFormInput = DebtFormInput(),
     val errors: DebtFormInputErrors = DebtFormInputErrors(),
     val isSubmitting: Boolean = false,
+    val hasUnsavedChanges: Boolean = false,
     val pendingDeleteConfirmation: Boolean = false,
     val activeWorkspaceName: String? = null,
     val paymentsHistory: List<DebtPaymentHistoryItemUiModel> = emptyList(),

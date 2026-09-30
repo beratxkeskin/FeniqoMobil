@@ -301,13 +301,13 @@ fun DebtsGraphiteSummaryCard(
                     Icon(
                         imageVector = Icons.Outlined.Info,
                         contentDescription = null,
-                        tint = FeniqoTextSecondary,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp),
                     )
                     Text(
                         text = "${summary.excludedCurrenciesCount} kayıt farklı para biriminde (${summary.excludedCurrencies.joinToString { it.name }}) olduğu için bu toplama dahil edilmedi.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = FeniqoTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp,
                     )
                 }
@@ -551,7 +551,7 @@ fun UpcomingPaymentsSection(
             .clip(RoundedCornerShape(FeniqoRadius.Large)),
         shape = RoundedCornerShape(FeniqoRadius.Large),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
         ),
         border = BorderStroke(1.dp, Color(0xFFECE7DE)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -706,14 +706,14 @@ private fun UpcomingPaymentItemRow(
             Text(
                 text = "Yaklaşan vade • ${item.formattedShortDueDate}",
                 style = MaterialTheme.typography.bodySmall,
-                color = FeniqoTextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
             )
             Text(
                 text = item.title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = FeniqoTextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 14.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -727,7 +727,7 @@ private fun UpcomingPaymentItemRow(
             text = item.formattedRemainingAmount,
             style = MaterialTheme.typography.titleMedium.merge(FeniqoTabularNumberStyle),
             fontWeight = FontWeight.Bold,
-            color = FeniqoTextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 15.sp,
         )
 
@@ -765,7 +765,7 @@ fun DebtGroupedSectionCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(FeniqoRadius.Large)),
         shape = RoundedCornerShape(FeniqoRadius.Large),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, Color(0xFFECE7DE)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
@@ -932,7 +932,7 @@ fun DebtGroupedItemRow(
                 text = item.title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = FeniqoTextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 15.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -947,7 +947,7 @@ fun DebtGroupedItemRow(
             Text(
                 text = subtext,
                 style = MaterialTheme.typography.bodySmall,
-                color = if (item.isSettled) FeniqoTrendGreen else FeniqoTextSecondary,
+                color = if (item.isSettled) FeniqoTrendGreen else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -969,7 +969,7 @@ fun DebtGroupedItemRow(
                 Text(
                     text = item.formattedShortDueDate,
                     style = MaterialTheme.typography.bodySmall,
-                    color = FeniqoTextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.sp,
                 )
             }
@@ -1004,7 +1004,7 @@ fun WarmDebtListItem(
                 contentDescription = "${item.title}, ${item.typeLabel}, Kalan: ${item.formattedRemainingAmount}, Vade: ${item.formattedDueDate}, Durum: ${item.formattedDueStatus}"
             },
         shape = RoundedCornerShape(FeniqoRadius.Medium),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, Color(0xFFEDE7DE)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
@@ -1260,13 +1260,13 @@ fun DebtDeleteDialog(
             contentDescription = "Borç alacak silme onay diyaloğu"
         },
         shape = RoundedCornerShape(16.dp),
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.surface,
         title = {
             Text(
                 text = "Kaydı silmek istiyor musun?",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = FeniqoTextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 18.sp,
             )
         },
@@ -1279,7 +1279,7 @@ fun DebtDeleteDialog(
             Text(
                 text = descriptionText,
                 style = MaterialTheme.typography.bodyMedium,
-                color = FeniqoTextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 14.sp,
             )
         },
@@ -1313,7 +1313,7 @@ fun DebtDeleteDialog(
                 border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
                 modifier = Modifier.height(44.dp),
             ) {
-                Text("Vazgeç", color = FeniqoTextPrimary, fontWeight = FontWeight.Medium)
+                Text("Vazgeç", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium)
             }
         },
     )
@@ -1335,7 +1335,7 @@ fun DebtSnowballEntryCard(
             .clickable(role = Role.Button, onClick = onClick)
             .semantics { contentDescription = "Borç kapatma planı" },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, Color(0xFFECE7DE)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
@@ -1369,13 +1369,13 @@ fun DebtSnowballEntryCard(
                     text = "Borç kapatma planı",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 15.sp,
                 )
                 Text(
                     text = "Borçlarını daha hızlı kapatmak için bir plan oluştur.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = FeniqoTextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.sp,
                 )
             }
@@ -1412,7 +1412,7 @@ fun DebtDatePickerSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         dragHandle = {
             Surface(
@@ -1442,7 +1442,7 @@ fun DebtDatePickerSheet(
                     text = title,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 18.sp,
                 )
 
@@ -1468,7 +1468,7 @@ fun DebtDatePickerSheet(
                 title = null,
                 headline = null,
                 colors = DatePickerDefaults.colors(
-                    containerColor = Color.White,
+                    containerColor = MaterialTheme.colorScheme.surface,
                     selectedDayContainerColor = FeniqoSageGreen,
                     todayDateBorderColor = FeniqoSageGreen,
                     selectedDayContentColor = Color.White,
@@ -1492,7 +1492,7 @@ fun DebtDatePickerSheet(
                     text = DateFormatter.formatReadableDate(currentLocalDate),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 16.sp,
                 )
 
@@ -1533,7 +1533,7 @@ fun DebtCurrencyPickerSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         dragHandle = {
             Surface(
@@ -1564,7 +1564,7 @@ fun DebtCurrencyPickerSheet(
                     text = "Para birimi seç",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 18.sp,
                 )
                 IconButton(
@@ -1650,13 +1650,13 @@ fun DebtCurrencyPickerSheet(
                                 text = currency.name,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = FeniqoTextPrimary,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontSize = 15.sp,
                             )
                             Text(
                                 text = name,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = FeniqoTextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 13.sp,
                             )
                         }
@@ -1665,7 +1665,7 @@ fun DebtCurrencyPickerSheet(
                             text = symbol,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = if (isSelected) FeniqoSageGreen else FeniqoTextSecondary,
+                            color = if (isSelected) FeniqoSageGreen else MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 18.sp,
                         )
                     }
@@ -1712,7 +1712,7 @@ fun DebtEmptyState(
             text = "Henüz kayıt yok",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            color = FeniqoTextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 20.sp,
         )
 
@@ -1721,7 +1721,7 @@ fun DebtEmptyState(
         Text(
             text = "Borçlarını ve alacaklarını tek yerde takip et.",
             style = MaterialTheme.typography.bodyMedium,
-            color = FeniqoTextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 14.sp,
         )
 

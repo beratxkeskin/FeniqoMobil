@@ -163,6 +163,7 @@ data class GoalContributionFormUiState(
     val input: GoalContributionFormInput = GoalContributionFormInput(),
     val errors: GoalContributionFormInputErrors = GoalContributionFormInputErrors(),
     val isSubmitting: Boolean = false,
+    val hasUnsavedChanges: Boolean = false,
 )
 
 sealed interface GoalContributionFormUiEvent {

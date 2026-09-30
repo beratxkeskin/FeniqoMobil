@@ -855,7 +855,7 @@ fun SubscriptionMonthlyPaymentsChart(
                                 Text(
                                     text = bar.formattedAmount,
                                     style = MaterialTheme.typography.labelSmall,
-                                    fontSize = 9.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF424242),
                                     maxLines = 1,

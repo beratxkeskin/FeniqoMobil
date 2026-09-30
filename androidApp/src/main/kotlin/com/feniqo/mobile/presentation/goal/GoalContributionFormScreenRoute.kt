@@ -1,6 +1,5 @@
 package com.feniqo.mobile.presentation.goal
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -22,6 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.GoalContributionDirection
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
 import com.feniqo.mobile.presentation.screen.GoalContributionFormScreen
@@ -44,7 +44,7 @@ fun GoalContributionFormScreenRoute(
 
     LaunchedEffect(parentGoalId, hasInvalidRouteId, initialDirectionCode) {
         val direction = runCatching { initialDirectionCode?.let(GoalContributionDirection::valueOf) }.getOrNull()
-        if (direction != null) viewModel.updateInput { it.copy(direction = direction) }
+        if (direction != null) viewModel.setInitialDirection(direction)
         if (hasInvalidRouteId) {
             viewModel.setParentLoadInvalidId()
         } else if (parentGoalId != null) {
@@ -66,9 +66,11 @@ fun GoalContributionFormScreenRoute(
         }
     }
 
-    BackHandler(enabled = !uiState.isSubmitting) {
-        onNavigateBack()
-    }
+    val requestExit = rememberGuardedFormExit(
+        isSubmitting = uiState.isSubmitting,
+        hasUnsavedChanges = uiState.hasUnsavedChanges,
+        onNavigateBack = onNavigateBack,
+    )
 
     val effectiveLoadState = resolveEffectiveGoalContributionParentLoadState(parentGoalId, parentLoadState)
 
@@ -89,6 +91,7 @@ fun GoalContributionFormScreenRoute(
                     description = "Hareket eklemek istediğiniz hedef mevcut değil veya silinmiş.",
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
+                    actionLabel = "Geri dön",
                 )
             }
             is GoalContributionParentLoadState.Error -> {
@@ -109,7 +112,7 @@ fun GoalContributionFormScreenRoute(
                     input = uiState.input,
                     errors = uiState.errors,
                     isSubmitting = uiState.isSubmitting,
-                    onBack = onNavigateBack,
+                    onBack = requestExit,
                     onAmountChange = { amount -> viewModel.updateInput { it.copy(amountInput = amount) } },
                     onDirectionChange = { dir -> viewModel.updateInput { it.copy(direction = dir) } },
                     onDateClick = { showDatePicker = true },

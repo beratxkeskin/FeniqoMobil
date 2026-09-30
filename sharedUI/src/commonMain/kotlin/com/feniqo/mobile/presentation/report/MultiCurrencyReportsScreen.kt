@@ -64,7 +64,7 @@ fun MultiCurrencyReportsScreen(
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             Row(
                 modifier = Modifier
@@ -76,7 +76,7 @@ fun MultiCurrencyReportsScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                         contentDescription = "Geri",
-                        tint = FeniqoTextPrimary,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
@@ -86,7 +86,7 @@ fun MultiCurrencyReportsScreen(
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
                     ),
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
         },
@@ -130,13 +130,13 @@ fun MultiCurrencyReportsScreen(
                             Text(
                                 text = "Farklı para birimleri birleştirilmez.",
                                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                color = FeniqoTextPrimary,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = "Kur dönüşümü yapılmaz. Her para birimi ayrı gösterilir.",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = FeniqoTextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -164,7 +164,7 @@ fun MultiCurrencyReportsScreen(
                                 color = if (isSelected) Color(0xFF1E3A2F) else Color(0xFFF3F4F6),
                                 border = androidx.compose.foundation.BorderStroke(
                                     1.dp,
-                                    if (isSelected) Color(0xFF1E3A2F) else Color(0xFFE5E7EB)
+                                    if (isSelected) Color(0xFF1E3A2F) else MaterialTheme.colorScheme.outlineVariant
                                 ),
                             ) {
                                 Box(
@@ -189,8 +189,8 @@ fun MultiCurrencyReportsScreen(
                             .clip(RoundedCornerShape(10.dp))
                             .clickable(role = Role.Button, onClick = onOpenFilterSheet),
                         shape = RoundedCornerShape(10.dp),
-                        color = Color.White,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD1D5DB)),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
@@ -240,8 +240,8 @@ private fun CurrencyReportCard(
             .clip(RoundedCornerShape(16.dp))
             .clickable(role = Role.Button, onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+        color = MaterialTheme.colorScheme.surface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -281,7 +281,7 @@ private fun CurrencyReportCard(
                     Text(
                         text = item.title,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = FeniqoTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
 
@@ -289,7 +289,7 @@ private fun CurrencyReportCard(
                     imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
-                    tint = Color(0xFF9CA3AF),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -303,7 +303,7 @@ private fun CurrencyReportCard(
                     Text(
                         text = "Gelir",
                         style = MaterialTheme.typography.bodySmall,
-                        color = FeniqoTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
@@ -312,7 +312,7 @@ private fun CurrencyReportCard(
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp,
                         ),
-                        color = FeniqoTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
 
@@ -320,7 +320,7 @@ private fun CurrencyReportCard(
                     Text(
                         text = "Gider",
                         style = MaterialTheme.typography.bodySmall,
-                        color = FeniqoTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
@@ -337,7 +337,7 @@ private fun CurrencyReportCard(
                     Text(
                         text = "Fark",
                         style = MaterialTheme.typography.bodySmall,
-                        color = FeniqoTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(

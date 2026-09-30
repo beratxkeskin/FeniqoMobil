@@ -109,12 +109,12 @@ fun ReportsScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = Color(0xFFF7F5F0), // Sıcak kırık beyaz
+        containerColor = MaterialTheme.colorScheme.background, // Sıcak kırık beyaz
         topBar = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFFF7F5F0)),
+                    .background(MaterialTheme.colorScheme.background),
             ) {
                 Row(
                     modifier = Modifier
@@ -126,7 +126,7 @@ fun ReportsScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                             contentDescription = "Geri dön",
-                            tint = Color(0xFF303536),
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
 
@@ -136,7 +136,7 @@ fun ReportsScreen(
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp,
                         ),
-                        color = Color(0xFF303536),
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(start = 4.dp),
                     )
 
@@ -147,9 +147,9 @@ fun ReportsScreen(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
                             .clickable { isPeriodSheetOpen = true },
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.surface,
                         shape = RoundedCornerShape(20.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -160,19 +160,19 @@ fun ReportsScreen(
                                 imageVector = Icons.Outlined.CalendarMonth,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
-                                tint = Color(0xFF303536),
+                                tint = MaterialTheme.colorScheme.onSurface,
                             )
                             val presetText = ReportSummaryFormatter.formatPeriodPreset(state.filterState.periodPreset)
                             Text(
                                 text = presetText,
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                                color = Color(0xFF303536),
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Icon(
                                 imageVector = Icons.Default.KeyboardArrowDown,
                                 contentDescription = "Dönem seç",
                                 modifier = Modifier.size(16.dp),
-                                tint = Color(0xFF6B7280),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -187,7 +187,7 @@ fun ReportsScreen(
                         Icon(
                             imageVector = Icons.Outlined.Tune,
                             contentDescription = "Filtreleri aç",
-                            tint = Color(0xFF2D5A43),
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(22.dp),
                         )
                     }
@@ -264,9 +264,9 @@ fun ReportsScreen(
                                     content.activeFilters.forEach { chip ->
                                         Surface(
                                             modifier = Modifier.clip(RoundedCornerShape(10.dp)),
-                                            color = Color.White,
+                                            color = MaterialTheme.colorScheme.surface,
                                             shape = RoundedCornerShape(10.dp),
-                                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                         ) {
                                             Row(
                                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -276,13 +276,13 @@ fun ReportsScreen(
                                                 Text(
                                                     text = chip.label,
                                                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                                                    color = Color(0xFF1F2937),
+                                                    color = MaterialTheme.colorScheme.onSurface,
                                                 )
                                                 Text(
                                                     text = "×",
                                                     fontSize = 14.sp,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = Color(0xFF6B7280),
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                     modifier = Modifier.clickable { onRemoveFilterChip(chip) },
                                                 )
                                             }
@@ -300,7 +300,7 @@ fun ReportsScreen(
                                     .clip(RoundedCornerShape(20.dp))
                                     .clickable(role = Role.Button, onClick = onNavigateToPeriodSummary),
                                 shape = RoundedCornerShape(20.dp),
-                                color = Color(0xFF303536),
+                                color = Color(0xFF273130),
                             ) {
                                 Box(modifier = Modifier.fillMaxWidth()) {
                                     // Dekoratif kavisler
@@ -362,7 +362,7 @@ fun ReportsScreen(
                                 MetricCard(
                                     title = "Gelir",
                                     value = content.incomeFormatted,
-                                    valueColor = Color(0xFF2D5A43),
+                                    valueColor = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.weight(1f),
                                 )
                                 MetricCard(
@@ -374,7 +374,7 @@ fun ReportsScreen(
                                 MetricCard(
                                     title = "Tasarruf oranı",
                                     value = content.savingsRateFormatted,
-                                    valueColor = Color(0xFF2D5A43),
+                                    valueColor = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.weight(1f),
                                 )
                             }
@@ -386,8 +386,8 @@ fun ReportsScreen(
                                 Surface(
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(18.dp),
-                                    color = Color.White,
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                 ) {
                                     Column(modifier = Modifier.padding(16.dp)) {
                                         Row(
@@ -401,16 +401,16 @@ fun ReportsScreen(
                                                     fontWeight = FontWeight.Bold,
                                                     fontSize = 15.sp,
                                                 ),
-                                                color = Color(0xFF303536),
+                                                color = MaterialTheme.colorScheme.onSurface,
                                             )
                                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF2D5A43)))
-                                                    Text(text = "Gelir", fontSize = 11.sp, color = Color(0xFF6B7280))
+                                                    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
+                                                    Text(text = "Gelir", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                                 }
                                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                                     Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFDC2626)))
-                                                    Text(text = "Gider", fontSize = 11.sp, color = Color(0xFF6B7280))
+                                                    Text(text = "Gider", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                                 }
                                             }
                                         }
@@ -434,7 +434,7 @@ fun ReportsScreen(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp,
                                 ),
-                                color = Color(0xFF303536),
+                                color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.padding(top = 4.dp),
                             )
                         }
@@ -491,8 +491,8 @@ fun ReportsScreen(
                                         .clip(RoundedCornerShape(16.dp))
                                         .clickable(role = Role.Button, onClick = onNavigateToCategoryBreakdown),
                                     shape = RoundedCornerShape(16.dp),
-                                    color = Color.White,
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                 ) {
                                     Row(
                                         modifier = Modifier.padding(16.dp),
@@ -512,7 +512,7 @@ fun ReportsScreen(
                                                     Icon(
                                                 imageVector = Icons.Outlined.BarChart,
                                                 contentDescription = null,
-                                                tint = Color(0xFF2D5A43),
+                                                tint = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.size(20.dp),
                                             )
                                                 }
@@ -522,13 +522,13 @@ fun ReportsScreen(
                                                 Text(
                                                     text = "En yüksek gider: ${content.topCategory.name}",
                                                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                                    color = Color(0xFF303536),
+                                                    color = MaterialTheme.colorScheme.onSurface,
                                                 )
                                                 Spacer(modifier = Modifier.height(2.dp))
                                                 Text(
                                                     text = "Bu ay en fazla harcamanız bu kategoride.",
                                                     style = MaterialTheme.typography.bodySmall,
-                                                    color = Color(0xFF6B7280),
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 )
                                             }
                                         }
@@ -540,9 +540,9 @@ fun ReportsScreen(
                                             Text(
                                                 text = content.topCategory.amountFormatted,
                                                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                                color = Color(0xFF303536),
+                                                color = MaterialTheme.colorScheme.onSurface,
                                             )
-                                            Text(text = "›", fontSize = 20.sp, color = Color(0xFF9CA3AF))
+                                            Text(text = "›", fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         }
                                     }
                                 }
@@ -555,14 +555,14 @@ fun ReportsScreen(
                                 Surface(
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(18.dp),
-                                    color = Color.White,
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                 ) {
                                     Column(modifier = Modifier.padding(16.dp)) {
                                         Text(
                                             text = "Kategori dağılımı",
                                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                            color = Color(0xFF303536),
+                                            color = MaterialTheme.colorScheme.onSurface,
                                         )
 
                                         Spacer(modifier = Modifier.height(12.dp))
@@ -602,13 +602,13 @@ fun ReportsScreen(
                                                         Text(
                                                             text = item.name,
                                                             style = MaterialTheme.typography.bodySmall,
-                                                            color = Color(0xFF303536),
+                                                            color = MaterialTheme.colorScheme.onSurface,
                                                             modifier = Modifier.width(80.dp),
                                                         )
                                                         Text(
                                                             text = item.sharePercentageFormatted,
                                                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                                            color = Color(0xFF6B7280),
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                         )
                                                     }
                                                 }
@@ -629,44 +629,44 @@ fun ReportsScreen(
                                     Surface(
                                         modifier = Modifier.weight(1f),
                                         shape = RoundedCornerShape(14.dp),
-                                        color = Color.White,
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                                        color = MaterialTheme.colorScheme.surface,
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                     ) {
                                          Column(modifier = Modifier.padding(12.dp)) {
                                              Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                                  Icon(
                                                      imageVector = Icons.Outlined.CalendarToday,
                                                      contentDescription = null,
-                                                     tint = Color(0xFF6B7280),
+                                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                                      modifier = Modifier.size(13.dp),
                                                  )
-                                                 Text(text = "En yoğun gün", style = MaterialTheme.typography.labelSmall, color = Color(0xFF6B7280))
+                                                 Text(text = "En yoğun gün", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                              }
                                              Spacer(modifier = Modifier.height(4.dp))
-                                             Text(text = content.financialRhythm.busiestDayName, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF303536))
-                                             Text(text = "En çok harcama yapılan gün", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = Color(0xFF9CA3AF))
+                                             Text(text = content.financialRhythm.busiestDayName, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                                             Text(text = "En çok harcama yapılan gün", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                          }
                                      }
 
                                      Surface(
                                          modifier = Modifier.weight(1f),
                                          shape = RoundedCornerShape(14.dp),
-                                         color = Color.White,
-                                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                                         color = MaterialTheme.colorScheme.surface,
+                                         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                      ) {
                                          Column(modifier = Modifier.padding(12.dp)) {
                                              Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                                  Icon(
                                                      imageVector = Icons.Outlined.BarChart,
                                                      contentDescription = null,
-                                                     tint = Color(0xFF6B7280),
+                                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                                      modifier = Modifier.size(13.dp),
                                                  )
-                                                 Text(text = "En düşük hafta", style = MaterialTheme.typography.labelSmall, color = Color(0xFF6B7280))
+                                                 Text(text = "En düşük hafta", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                              }
                                              Spacer(modifier = Modifier.height(4.dp))
-                                             Text(text = content.financialRhythm.lowestExpenseWeekLabel, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF303536))
-                                             Text(text = "En az harcama yapılan hafta", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = Color(0xFF9CA3AF))
+                                             Text(text = content.financialRhythm.lowestExpenseWeekLabel, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                                             Text(text = "En az harcama yapılan hafta", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                          }
                                      }
                                  }
@@ -759,8 +759,8 @@ fun ReportsScreen(
                                         .clip(RoundedCornerShape(16.dp))
                                         .clickable(role = Role.Button, onClick = onNavigateToMultiCurrency),
                                     shape = RoundedCornerShape(16.dp),
-                                    color = Color.White,
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                 ) {
                                     Row(
                                         modifier = Modifier.padding(16.dp),
@@ -771,13 +771,13 @@ fun ReportsScreen(
                                             Text(
                                                 text = "Çoklu para birimi",
                                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                                color = Color(0xFF303536),
+                                                color = MaterialTheme.colorScheme.onSurface,
                                             )
                                             Spacer(modifier = Modifier.height(2.dp))
                                             Text(
                                                 text = "${content.multiCurrencySummaries.size} farklı para biriminde işlem kaydı var.",
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = Color(0xFF6B7280),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         }
 
@@ -785,7 +785,7 @@ fun ReportsScreen(
                                             text = "›",
                                             fontSize = 24.sp,
                                             fontWeight = FontWeight.Light,
-                                            color = Color(0xFF9CA3AF),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                 }
@@ -806,7 +806,7 @@ fun ReportsScreen(
         ModalBottomSheet(
             onDismissRequest = { isFilterSheetOpen = false },
             sheetState = sheetState,
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             dragHandle = null,
         ) {
             ReportFiltersSheetContent(
@@ -839,7 +839,7 @@ fun ReportsScreen(
         ModalBottomSheet(
             onDismissRequest = { isPeriodSheetOpen = false },
             sheetState = periodSheetState,
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
         ) {
             ReportPeriodPickerSheetContent(
                 currentPreset = state.filterState.periodPreset,
@@ -878,14 +878,14 @@ private fun QuickReportTile(
             .clip(RoundedCornerShape(14.dp))
             .clickable(role = Role.Button, onClick = onClick),
         shape = RoundedCornerShape(14.dp),
-        color = Color.White,
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+        color = MaterialTheme.colorScheme.surface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = Color(0xFF2D5A43),
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(22.dp),
             )
             Spacer(modifier = Modifier.height(6.dp))
@@ -895,13 +895,13 @@ private fun QuickReportTile(
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
                 ),
-                color = Color(0xFF303536),
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                color = Color(0xFF6B7280),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -917,8 +917,8 @@ private fun MetricCard(
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(14.dp),
-        color = Color.White,
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+        color = MaterialTheme.colorScheme.surface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -926,7 +926,7 @@ private fun MetricCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF6B7280),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(

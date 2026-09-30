@@ -77,9 +77,9 @@ fun CategoryBreakdownReportScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = Color(0xFFF7F5F0),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            Column(modifier = Modifier.fillMaxWidth().background(Color(0xFFF7F5F0))) {
+            Column(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -88,13 +88,13 @@ fun CategoryBreakdownReportScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                             contentDescription = "Geri",
-                            tint = Color(0xFF303536),
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     Text(
                         text = "Kategori dağılımı",
                         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, fontSize = 20.sp),
-                        color = Color(0xFF303536),
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
 
@@ -106,8 +106,8 @@ fun CategoryBreakdownReportScreen(
                         .clip(RoundedCornerShape(12.dp))
                         .clickable { onChangePeriod() },
                     shape = RoundedCornerShape(12.dp),
-                    color = Color.White,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -119,15 +119,15 @@ fun CategoryBreakdownReportScreen(
                                 imageVector = Icons.Outlined.CalendarMonth,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
-                                tint = Color(0xFF6B7280),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            Text(text = periodLabel, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), color = Color(0xFF303536))
+                            Text(text = periodLabel, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface)
                         }
                         Icon(
                             imageVector = Icons.Outlined.KeyboardArrowDown,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp),
-                            tint = Color(0xFF6B7280),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -140,7 +140,7 @@ fun CategoryBreakdownReportScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFFE5E7EB))
+                        .background(MaterialTheme.colorScheme.outlineVariant)
                         .padding(3.dp),
                 ) {
                     val activeBg = Color(0xFF2D5A43)
@@ -192,7 +192,7 @@ fun CategoryBreakdownReportScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
-                    color = Color(0xFF303536),
+                    color = Color(0xFF273130),
                 ) {
                     Row(
                         modifier = Modifier.padding(20.dp),
@@ -247,8 +247,8 @@ fun CategoryBreakdownReportScreen(
                         .clip(RoundedCornerShape(16.dp))
                         .clickable(role = Role.Button) { onSelectCategory(item.categoryId, item.name) },
                     shape = RoundedCornerShape(16.dp),
-                    color = Color.White,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
@@ -269,13 +269,13 @@ fun CategoryBreakdownReportScreen(
                                 Text(
                                     text = item.name,
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
-                                    color = Color(0xFF303536),
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = "${item.transactionCount} işlem • ${item.sharePercentageFormatted}",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color(0xFF6B7280),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -289,7 +289,7 @@ fun CategoryBreakdownReportScreen(
                                 ),
                                 color = if (isExpense) Color(0xFFDC2626) else Color(0xFF2D5A43),
                             )
-                            Text(text = "›", fontSize = 20.sp, color = Color(0xFF9CA3AF))
+                            Text(text = "›", fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -322,7 +322,7 @@ fun CategoryDetailReportScreen(
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = Color(0xFFF7F5F0),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp),
@@ -332,23 +332,23 @@ fun CategoryDetailReportScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                         contentDescription = "Geri",
-                        tint = Color(0xFF303536),
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Column {
                     Text(
                         text = categoryName,
                         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, fontSize = 20.sp),
-                        color = Color(0xFF303536),
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
-                    Text(text = categoryDescription, style = MaterialTheme.typography.bodySmall, color = Color(0xFF6B7280))
+                    Text(text = categoryDescription, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         },
         bottomBar = {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.surface,
                 shadowElevation = 8.dp,
             ) {
                 Box(modifier = Modifier.padding(16.dp)) {
@@ -376,7 +376,7 @@ fun CategoryDetailReportScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
-                    color = Color(0xFF303536),
+                    color = Color(0xFF273130),
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Text(text = "Toplam harcama", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF94A3B8))
@@ -401,11 +401,11 @@ fun CategoryDetailReportScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
-                    color = Color.White,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(text = "Haftalık harcama trendi", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF303536))
+                        Text(text = "Haftalık harcama trendi", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
                         Spacer(modifier = Modifier.height(14.dp))
                         WeeklyDualBarChart(weeklyData = weeklyData)
                     }
@@ -418,8 +418,8 @@ fun CategoryDetailReportScreen(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        color = Color.White,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Row(
                             modifier = Modifier.padding(16.dp),
@@ -432,7 +432,7 @@ fun CategoryDetailReportScreen(
                                 modifier = Modifier.size(22.dp),
                                 tint = Color(0xFFDC2626),
                             )
-                            Text(text = previousMonthComparisonText, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF303536))
+                            Text(text = previousMonthComparisonText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
                         }
                     }
                 }
@@ -441,15 +441,15 @@ fun CategoryDetailReportScreen(
             // İş Yeri Kırılımı (Merchant breakdown)
             if (merchantBreakdown.isNotEmpty()) {
                 item("merchant_title") {
-                    Text(text = "İş yeri kırılımı", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF303536))
+                    Text(text = "İş yeri kırılımı", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
                 }
 
                 items(merchantBreakdown) { (merchant, info) ->
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                        color = Color.White,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Row(
                             modifier = Modifier.padding(14.dp),
@@ -463,13 +463,13 @@ fun CategoryDetailReportScreen(
                                             imageVector = Icons.Outlined.Storefront,
                                             contentDescription = null,
                                             modifier = Modifier.size(18.dp),
-                                            tint = Color(0xFF303536),
+                                            tint = MaterialTheme.colorScheme.onSurface,
                                         )
                                     }
                                 }
                                 Column {
-                                    Text(text = merchant, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = Color(0xFF303536))
-                                    Text(text = info.second, style = MaterialTheme.typography.bodySmall, color = Color(0xFF6B7280))
+                                    Text(text = merchant, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                                    Text(text = info.second, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                             Text(text = info.first, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = Color(0xFFDC2626))

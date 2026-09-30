@@ -76,7 +76,7 @@ fun GoalContributionFormScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = FeniqoWarmStoneBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
@@ -84,7 +84,7 @@ fun GoalContributionFormScreen(
                         text = "Hedef hareketi",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = FeniqoTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 },
                 navigationIcon = {
@@ -92,18 +92,18 @@ fun GoalContributionFormScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Geri",
-                            tint = FeniqoTextPrimary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = FeniqoWarmStoneBackground,
+                    containerColor = MaterialTheme.colorScheme.background,
                 ),
             )
         },
         bottomBar = {
             Surface(
-                color = FeniqoWarmStoneBackground,
+                color = MaterialTheme.colorScheme.background,
                 shadowElevation = 4.dp,
             ) {
                 Box(
@@ -173,7 +173,7 @@ fun GoalContributionFormScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(CircleShape)
-                            .background(Color.White),
+                            .background(MaterialTheme.colorScheme.surface),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
@@ -191,7 +191,7 @@ fun GoalContributionFormScreen(
                             text = parentGoal.name,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = FeniqoTextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
 
                         Spacer(Modifier.height(2.dp))
@@ -199,7 +199,7 @@ fun GoalContributionFormScreen(
                         Text(
                             text = "$formattedCurrent / $formattedTarget",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = FeniqoTextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
 
                         Spacer(Modifier.height(6.dp))
@@ -222,7 +222,7 @@ fun GoalContributionFormScreen(
                                 text = "%$progressPercent",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = FeniqoTextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -252,7 +252,7 @@ fun GoalContributionFormScreen(
                             text = "Para ekle",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
-                            color = if (isAdd) Color.White else FeniqoTextSecondary,
+                            color = if (isAdd) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -275,7 +275,7 @@ fun GoalContributionFormScreen(
                             text = "Para çıkar",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
-                            color = if (isRemove) Color.White else FeniqoTextSecondary,
+                            color = if (isRemove) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -287,11 +287,11 @@ fun GoalContributionFormScreen(
                     text = "Tutar",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 val isAmountError = errors.amountError != null
-                val amountTextColor = if (isRemove) FeniqoGoalExpenseRed else FeniqoTextPrimary
+                val amountTextColor = if (isRemove) FeniqoGoalExpenseRed else MaterialTheme.colorScheme.onSurface
                 val borderColor = when {
                     isAmountError -> Color(0xFFEF4444)
                     isRemove -> Color(0xFFFCA5A5)
@@ -342,7 +342,7 @@ fun GoalContributionFormScreen(
                     Text(
                         text = "Maksimum çekilebilir: $formattedCurrent",
                         style = MaterialTheme.typography.bodySmall,
-                        color = FeniqoTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 } else if (errors.amountError != null) {
                     Text(
@@ -359,13 +359,13 @@ fun GoalContributionFormScreen(
                     Text(
                         text = "Maksimum çekilebilir: $formattedCurrent",
                         style = MaterialTheme.typography.bodySmall,
-                        color = FeniqoTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 } else {
                     Text(
                         text = "${parentGoal.targetAmount.currency.code} • Hedefin para birimi",
                         style = MaterialTheme.typography.bodySmall,
-                        color = FeniqoTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -376,7 +376,7 @@ fun GoalContributionFormScreen(
                     text = "Tarih",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 Surface(
@@ -410,21 +410,21 @@ fun GoalContributionFormScreen(
                             Icon(
                                 imageVector = Icons.Outlined.CalendarToday,
                                 contentDescription = null,
-                                tint = FeniqoTextSecondary,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(20.dp),
                             )
                             Text(
                                 text = input.occurredOn?.let { DateFormatter.formatReadableDate(it) } ?: "Tarih seçin",
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium,
-                                color = if (input.occurredOn != null) FeniqoTextPrimary else FeniqoTextSecondary,
+                                color = if (input.occurredOn != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
 
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = "Tarih seç",
-                            tint = FeniqoTextSecondary,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp),
                         )
                     }
@@ -446,7 +446,7 @@ fun GoalContributionFormScreen(
                     text = "Not (isteğe bağlı)",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 OutlinedTextField(
@@ -487,13 +487,13 @@ fun GoalContributionFormScreen(
                 Icon(
                     imageVector = Icons.Outlined.Info,
                     contentDescription = null,
-                    tint = FeniqoTextSecondary,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(18.dp),
                 )
                 Text(
                     text = "Bu kayıt hedef birikiminizi günceller.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = FeniqoTextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 

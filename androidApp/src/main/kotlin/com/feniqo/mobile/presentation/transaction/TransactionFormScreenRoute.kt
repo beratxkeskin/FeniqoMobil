@@ -126,7 +126,11 @@ fun TransactionFormScreenRoute(
         onBack = handleBackPress,
         onDismissMessage = viewModel::consumeMessage,
         onAddCategory = onAddCategory,
-        onAttachReceipt = { showSourceDialog = true },
+        onAttachReceipt = {
+            if (RECEIPT_OCR_USER_ENTRY_ENABLED) {
+                showSourceDialog = true
+            }
+        },
         onRemoveReceipt = viewModel::onReceiptRemoved,
         onPaidByUserSelected = viewModel::onPaidByUserSelected,
         onParticipantToggled = viewModel::onParticipantToggled,
@@ -134,7 +138,7 @@ fun TransactionFormScreenRoute(
         modifier = modifier,
     )
 
-    if (showSourceDialog) {
+    if (RECEIPT_OCR_USER_ENTRY_ENABLED && showSourceDialog) {
         AlertDialog(
             onDismissRequest = { showSourceDialog = false },
             title = { Text("Makbuz Tara") },

@@ -1,6 +1,5 @@
 package com.feniqo.mobile.presentation.asset
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -10,6 +9,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
 import com.feniqo.mobile.presentation.screen.AssetFormScreen
@@ -43,20 +43,30 @@ fun AssetFormScreenRoute(
         }
     }
 
-    BackHandler(enabled = !state.isSubmitting, onBack = onNavigateBack)
+    val requestExit = rememberGuardedFormExit(
+        isSubmitting = state.isSubmitting,
+        hasUnsavedChanges = state.hasUnsavedChanges,
+        onNavigateBack = onNavigateBack,
+    )
 
     Surface(modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when {
             initialAssetId != null && loadState == AssetEditLoadState.Loading ->
                 LoadingContent(message = "Varlık yükleniyor...", modifier = Modifier.fillMaxSize())
             hasInvalidRouteId || loadState == AssetEditLoadState.NotFound ->
-                ErrorState("Varlık Bulunamadı", "Düzenlemek istediğiniz varlık mevcut değil veya silinmiş.", onNavigateBack, Modifier.fillMaxSize())
+                ErrorState(
+                    title = "Varlık Bulunamadı",
+                    description = "Düzenlemek istediğiniz varlık mevcut değil veya silinmiş.",
+                    onRetry = onNavigateBack,
+                    modifier = Modifier.fillMaxSize(),
+                    actionLabel = "Geri dön",
+                )
             loadState is AssetEditLoadState.Error ->
                 ErrorState("Varlık Yüklenemedi", (loadState as AssetEditLoadState.Error).message.toDisplayText(),
                     { initialAssetId?.let(viewModel::loadForEdit) }, Modifier.fillMaxSize())
             else -> AssetFormScreen(
                 state = state,
-                onBack = onNavigateBack,
+                onBack = requestExit,
                 onInputChange = viewModel::updateInput,
                 onSubmit = viewModel::submit,
                 onRequestDelete = viewModel::requestDelete,

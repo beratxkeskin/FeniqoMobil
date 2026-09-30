@@ -62,6 +62,7 @@ class DebtFormViewModelTest {
         var deleteResult: RepositoryResult<Unit>? = null
 
         var lastCreateCommand: CreateDebtCommand? = null
+        var createCallCount: Int = 0
         var lastUpdateCommand: UpdateDebtCommand? = null
         var lastDeletedId: EntityId? = null
 
@@ -82,6 +83,7 @@ class DebtFormViewModelTest {
         }
 
         override suspend fun create(command: CreateDebtCommand): RepositoryResult<EntityId> {
+            createCallCount++
             lastCreateCommand = command
             return createResult ?: RepositoryResult.Success(EntityId("debt-created"))
         }
@@ -285,7 +287,7 @@ class DebtFormViewModelTest {
     }
 
     @Test
-    fun submit_create_successful_emitsMutationSuccess() = runTest {
+    fun submit_create_success_staysLockedUntilNavigationAndRejectsSecondSubmit() = runTest {
         viewModel.updateInput {
             it.copy(
                 titleInput = "Arkadaşa Borç",
@@ -304,10 +306,13 @@ class DebtFormViewModelTest {
 
         viewModel.submit()
         advanceUntilIdle()
+        viewModel.submit()
+        advanceUntilIdle()
 
         assertEquals(1, emittedEvents.size)
         assertEquals(DebtFormUiEvent.MutationSuccess(FinanceUiMessage.DEBT_SAVED), emittedEvents.first())
-        assertFalse(viewModel.uiState.value.isSubmitting)
+        assertEquals(1, repository.createCallCount)
+        assertTrue(viewModel.uiState.value.isSubmitting)
 
         val cmd = repository.lastCreateCommand
         assertTrue(cmd != null)

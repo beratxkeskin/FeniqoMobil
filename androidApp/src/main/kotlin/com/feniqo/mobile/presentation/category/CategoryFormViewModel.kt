@@ -52,6 +52,7 @@ class CategoryFormViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CategoryFormUiState())
+    private var initialEditableState: CategoryFormUiState = _uiState.value
     val uiState: StateFlow<CategoryFormUiState> = _uiState.asStateFlow()
 
     private val _events = Channel<CategoryFormEvent>(Channel.BUFFERED)
@@ -95,6 +96,7 @@ class CategoryFormViewModel @Inject constructor(
                     isLoadingInitialData = false,
                 )
             }
+            initialEditableState = _uiState.value
             return
         }
 
@@ -109,6 +111,7 @@ class CategoryFormViewModel @Inject constructor(
                     loadError = null,
                 )
             }
+            initialEditableState = _uiState.value
         } else if (rawCategoryId.isBlank()) {
             _uiState.update {
                 it.copy(
@@ -165,8 +168,10 @@ class CategoryFormViewModel @Inject constructor(
                             iconKey = category.icon?.key,
                             isLoadingInitialData = false,
                             loadError = null,
+                            hasUnsavedChanges = false,
                         )
                     }
+                    initialEditableState = _uiState.value
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -190,28 +195,36 @@ class CategoryFormViewModel @Inject constructor(
 
     fun onNameChanged(name: String) {
         if (!_uiState.value.isFormEnabled) return
-        _uiState.update { it.copy(name = name, nameError = null) }
+        _uiState.update { current -> current.withDirtyState(current.copy(name = name, nameError = null)) }
     }
 
     fun onTypeChanged(type: TransactionType) {
         if (!_uiState.value.isTypeEditable) return
-        _uiState.update { it.copy(type = type) }
+        _uiState.update { current -> current.withDirtyState(current.copy(type = type)) }
     }
 
     fun onColorChanged(colorHex: String) {
         if (!_uiState.value.isFormEnabled) return
-        _uiState.update { it.copy(colorHex = colorHex, colorError = null) }
+        _uiState.update { current -> current.withDirtyState(current.copy(colorHex = colorHex, colorError = null)) }
     }
 
     fun onIconChanged(iconKey: String?) {
         if (!_uiState.value.isFormEnabled) return
         val normalized = iconKey?.trim()?.takeIf { it.isNotBlank() }
-        _uiState.update { it.copy(iconKey = normalized) }
+        _uiState.update { current -> current.withDirtyState(current.copy(iconKey = normalized)) }
     }
 
     fun onDismissMessage() {
         _uiState.update { it.copy(generalMessage = null) }
     }
+
+    private fun CategoryFormUiState.withDirtyState(updated: CategoryFormUiState): CategoryFormUiState =
+        updated.copy(
+            hasUnsavedChanges = updated.name != initialEditableState.name ||
+                updated.type != initialEditableState.type ||
+                updated.colorHex != initialEditableState.colorHex ||
+                updated.iconKey != initialEditableState.iconKey,
+        )
 
     fun onSubmit() {
         val currentState = _uiState.value
@@ -266,6 +279,7 @@ class CategoryFormViewModel @Inject constructor(
 
         _uiState.update { it.copy(isSubmitting = true) }
         val job = viewModelScope.launch(start = CoroutineStart.LAZY) {
+            var mutationSucceeded = false
             try {
                 val result = if (currentState.isEditMode) {
                     val command = UpdateCategoryCommand(
@@ -289,6 +303,7 @@ class CategoryFormViewModel @Inject constructor(
 
                 when (result) {
                     is RepositoryResult.Success -> {
+                        mutationSucceeded = true
                         _events.send(CategoryFormEvent.NavigateBack)
                     }
                     is RepositoryResult.Failure -> {
@@ -308,7 +323,7 @@ class CategoryFormViewModel @Inject constructor(
                     )
                 }
             } finally {
-                _uiState.update { it.copy(isSubmitting = false) }
+                if (!mutationSucceeded) _uiState.update { it.copy(isSubmitting = false) }
                 activeSubmitJob = null
             }
         }

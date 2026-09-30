@@ -84,7 +84,7 @@ fun CustomDateRangeScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             Row(
                 modifier = Modifier
@@ -96,7 +96,7 @@ fun CustomDateRangeScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                         contentDescription = "Geri",
-                        tint = FeniqoTextPrimary,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
@@ -106,7 +106,7 @@ fun CustomDateRangeScreen(
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
                     ),
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
         },
@@ -132,7 +132,7 @@ fun CustomDateRangeScreen(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF1E3A2F),
                         contentColor = Color.White,
-                        disabledContainerColor = Color(0xFFD1D5DB),
+                        disabledContainerColor = MaterialTheme.colorScheme.outlineVariant,
                         disabledContentColor = Color.White,
                     ),
                 ) {
@@ -175,7 +175,7 @@ fun CustomDateRangeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 color = Color(0xFFFAFAFA),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -199,14 +199,14 @@ fun CustomDateRangeScreen(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
                                 contentDescription = "Önceki Ay",
-                                tint = FeniqoTextPrimary,
+                                tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
 
                         Text(
                             text = "${ReportSummaryFormatter.monthName(viewMonth)} $viewYear",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = FeniqoTextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
 
                         IconButton(
@@ -222,7 +222,7 @@ fun CustomDateRangeScreen(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                                 contentDescription = "Sonraki Ay",
-                                tint = FeniqoTextPrimary,
+                                tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
                     }
@@ -241,7 +241,7 @@ fun CustomDateRangeScreen(
                                     fontWeight = FontWeight.Medium,
                                     fontSize = 12.sp,
                                 ),
-                                color = Color(0xFF6B7280),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -307,7 +307,7 @@ fun CustomDateRangeScreen(
             Text(
                 text = "Hızlı seçim",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = FeniqoTextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(modifier = Modifier.height(10.dp))
             Row(
@@ -371,7 +371,7 @@ private fun DateSummaryCard(
         modifier = modifier,
         shape = RoundedCornerShape(14.dp),
         color = Color(0xFFF9FAFB),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -393,7 +393,7 @@ private fun DateSummaryCard(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.bodySmall,
-                    color = FeniqoTextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
@@ -402,7 +402,7 @@ private fun DateSummaryCard(
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                     ),
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
         }
@@ -459,7 +459,7 @@ private fun CalendarDayCell(
                     fontWeight = if (isInRange) FontWeight.SemiBold else FontWeight.Normal,
                     fontSize = 14.sp,
                 ),
-                color = if (isInRange) Color(0xFF1E3A2F) else FeniqoTextPrimary,
+                color = if (isInRange) Color(0xFF1E3A2F) else MaterialTheme.colorScheme.onSurface,
             )
         }
     }
@@ -478,7 +478,7 @@ private fun QuickSelectChip(
             .clickable(role = Role.Button, onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         color = Color(0xFFF3F4F6),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Box(
             modifier = Modifier.fillMaxSize(),

@@ -231,7 +231,7 @@ fun QuickAddSheet(
                         )
                     }
                     Text(
-                        text = "Fiş veya fatura eklemek için Gider formundaki 'Fiş Tara' alanını kullanabilirsin.",
+                        text = "Sık tekrarlanan ödemeler için Tekrarlayan İşlem seçeneğini kullanabilirsin.",
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

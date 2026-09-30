@@ -55,6 +55,7 @@ class GoalContributionFormViewModelTest {
         val goalsFlow = MutableStateFlow<Map<EntityId, Goal>>(emptyMap())
         var addContributionResult: RepositoryResult<EntityId>? = null
         var lastAddContributionCommand: AddGoalContributionCommand? = null
+        var addContributionCallCount: Int = 0
         var throwCancellationOnAdd: Boolean = false
 
         override fun observeGoals(): Flow<List<Goal>> = flowOf(goalsFlow.value.values.toList())
@@ -76,6 +77,7 @@ class GoalContributionFormViewModelTest {
         }
 
         override suspend fun addContribution(command: AddGoalContributionCommand): RepositoryResult<EntityId> {
+            addContributionCallCount++
             if (throwCancellationOnAdd) {
                 throw CancellationException("Simulated coroutine cancellation")
             }
@@ -213,7 +215,7 @@ class GoalContributionFormViewModelTest {
     }
 
     @Test
-    fun submit_addContribution_successful() = runTest {
+    fun submit_addContribution_success_staysLockedUntilNavigationAndRejectsSecondSubmit() = runTest {
         val goalId = EntityId("g-1")
         val sampleGoal = Goal(
             id = goalId,
@@ -247,10 +249,13 @@ class GoalContributionFormViewModelTest {
 
         viewModel.submit()
         advanceUntilIdle()
+        viewModel.submit()
+        advanceUntilIdle()
 
         assertEquals(1, emittedEvents.size)
         assertEquals(GoalContributionFormUiEvent.MutationSuccess(FinanceUiMessage.GOAL_CONTRIBUTION_ADDED), emittedEvents.first())
-        assertFalse(viewModel.uiState.value.isSubmitting)
+        assertEquals(1, repository.addContributionCallCount)
+        assertTrue(viewModel.uiState.value.isSubmitting)
 
         val cmd = repository.lastAddContributionCommand
         assertTrue(cmd != null)

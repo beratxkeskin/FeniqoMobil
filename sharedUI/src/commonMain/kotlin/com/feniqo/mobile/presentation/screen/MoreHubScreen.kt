@@ -56,6 +56,7 @@ import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTabularNumberStyle
 import com.feniqo.mobile.presentation.theme.FeniqoTextPrimary
 import com.feniqo.mobile.presentation.theme.FeniqoTextSecondary
+import com.feniqo.mobile.presentation.theme.FeniqoTouchTarget
 import com.feniqo.mobile.presentation.theme.FeniqoWarmStoneBackground
 
 /**
@@ -79,7 +80,7 @@ fun MoreHubScreen(
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = FeniqoWarmStoneBackground,
+        color = MaterialTheme.colorScheme.background,
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -103,7 +104,7 @@ fun MoreHubScreen(
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 18.sp,
                         ),
-                        color = FeniqoTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     MoreHubOverviewGraphiteCard(
                         state = state,
@@ -266,7 +267,7 @@ private fun MoreHubTopHeader(
 
             Surface(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(FeniqoTouchTarget.Minimum)
                     .clip(CircleShape)
                     .clickable(
                         role = Role.Button,
@@ -296,14 +297,14 @@ private fun MoreHubTopHeader(
                 fontSize = 28.sp,
                 letterSpacing = (-0.5).sp,
             ),
-            color = FeniqoTextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
         )
 
         // Alt Metin
         Text(
             text = "Finansının tüm parçaları, bir arada.",
             style = MaterialTheme.typography.bodyMedium,
-            color = FeniqoTextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         Spacer(modifier = Modifier.height(2.dp))
@@ -323,7 +324,7 @@ private fun MoreHubTopHeader(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 MoreHubPersonOutlineIcon(
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     size = 14.dp,
                 )
                 Text(
@@ -332,7 +333,7 @@ private fun MoreHubTopHeader(
                         fontWeight = FontWeight.Medium,
                         fontSize = 12.sp,
                     ),
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
         }
@@ -583,7 +584,7 @@ private fun SectionContainer(
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 18.sp,
             ),
-            color = FeniqoTextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
         )
         content()
     }
@@ -600,7 +601,7 @@ private fun MoreHubMenuCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -659,7 +660,7 @@ private fun MoreHubMenuItemRow(
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
                 ),
-                color = FeniqoTextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -668,7 +669,7 @@ private fun MoreHubMenuItemRow(
                 style = MaterialTheme.typography.bodySmall.copy(
                     fontSize = 13.sp,
                 ),
-                color = FeniqoTextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

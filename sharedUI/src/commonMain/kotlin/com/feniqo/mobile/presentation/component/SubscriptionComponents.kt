@@ -577,7 +577,7 @@ fun SubscriptionInsightCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
         ),
         border = androidx.compose.foundation.BorderStroke(
             width = 1.dp,
@@ -658,7 +658,7 @@ fun SubscriptionNotificationPermissionBanner(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
         ),
         border = androidx.compose.foundation.BorderStroke(
             width = 1.dp,
@@ -1061,7 +1061,7 @@ fun SubscriptionDeleteDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(24.dp),
-            color = Color.White,
+            color = MaterialTheme.colorScheme.surface,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(
@@ -1195,7 +1195,7 @@ fun SubscriptionAdvanceRenewalDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(24.dp),
-            color = Color.White,
+            color = MaterialTheme.colorScheme.surface,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(
@@ -1355,7 +1355,7 @@ fun SubscriptionEmptyState(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEBEBEB)),
     ) {
         Column(
@@ -1436,7 +1436,7 @@ fun SubscriptionErrorCard(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEBEBEB)),
     ) {
         Row(
@@ -1505,7 +1505,7 @@ fun SubscriptionNotFoundCard(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEBEBEB)),
     ) {
         Row(

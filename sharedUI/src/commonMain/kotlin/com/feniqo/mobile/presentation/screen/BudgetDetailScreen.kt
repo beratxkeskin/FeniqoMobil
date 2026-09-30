@@ -98,6 +98,7 @@ fun BudgetDetailScreen(
                     description = state.observationError?.toDisplayText() ?: "Bütçe detayı yüklenemedi.",
                     onRetry = onBack,
                     modifier = Modifier.fillMaxSize(),
+                    actionLabel = "Geri dön",
                 )
             }
             else -> {

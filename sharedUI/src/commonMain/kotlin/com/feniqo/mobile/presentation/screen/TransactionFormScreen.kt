@@ -84,6 +84,7 @@ import com.feniqo.mobile.presentation.theme.FeniqoTheme
 import com.feniqo.mobile.presentation.theme.FeniqoTypographyTokens
 import com.feniqo.mobile.presentation.transaction.CustomSplitUiHelper
 import com.feniqo.mobile.presentation.transaction.InstallmentDisplayModel
+import com.feniqo.mobile.presentation.transaction.RECEIPT_OCR_USER_ENTRY_ENABLED
 import com.feniqo.mobile.presentation.transaction.TransactionCategoryOptionUiModel
 import com.feniqo.mobile.presentation.transaction.TransactionFormFieldError
 import com.feniqo.mobile.presentation.transaction.TransactionFormUiState
@@ -515,7 +516,7 @@ private fun TransactionFormContent(
                         } else if (uiState.existingInstallment != null) {
                             TransactionExistingInstallmentBadge(uiState.existingInstallment)
                         }
-                        if (uiState.isReceiptFeatureAvailable) {
+                        if (RECEIPT_OCR_USER_ENTRY_ENABLED && uiState.isReceiptFeatureAvailable) {
                             Text("Makbuz", style = MaterialTheme.typography.titleMedium)
                             Text("Tarama, bilgileri forma aktarır. Dosyayı kalıcı makbuz eki olarak saklamaz.",
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

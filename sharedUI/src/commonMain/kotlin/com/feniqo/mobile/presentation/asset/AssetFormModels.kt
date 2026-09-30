@@ -97,6 +97,7 @@ data class AssetFormUiState(
     val errors: AssetFormErrors = AssetFormErrors(),
     val calculatedCostPreview: String? = null,
     val isSubmitting: Boolean = false,
+    val hasUnsavedChanges: Boolean = false,
     val pendingDeleteConfirmation: Boolean = false,
 )
 

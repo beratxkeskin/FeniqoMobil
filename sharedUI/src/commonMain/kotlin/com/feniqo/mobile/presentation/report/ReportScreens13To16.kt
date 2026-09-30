@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -48,14 +49,8 @@ import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.LocalDate
 
 // Tasarım Sistemi Renkleri
-private val ColorWarmBg = Color(0xFFF7F5F0)
 private val ColorSageGreen = Color(0xFF2D5A43)
-private val ColorLightSage = Color(0xFFE8EFEA)
-private val ColorDarkGraphite = Color(0xFF303536)
 private val ColorRefinedRed = Color(0xFFC04D43)
-private val ColorLightRed = Color(0xFFFDECEB)
-private val ColorMutedGray = Color(0xFF888E90)
-private val ColorCardSurface = Color(0xFFFFFFFF)
 
 // ==========================================
 // EKRAN 13: HARCAMA TAKVİMİ
@@ -74,7 +69,7 @@ fun SpendingCalendarReportScreen(
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = ColorWarmBg,
+        color = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier
@@ -94,30 +89,30 @@ fun SpendingCalendarReportScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Geri",
-                            tint = ColorDarkGraphite,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     Text(
                         text = "Harcama Takvimi",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ColorDarkGraphite,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
 
                 // Ay Geçiş Kontrolleri
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onPreviousMonth) {
-                        Icon(imageVector = Icons.Default.ChevronLeft, contentDescription = "Önceki Ay", tint = ColorDarkGraphite)
+                        Icon(imageVector = Icons.Default.ChevronLeft, contentDescription = "Önceki Ay", tint = MaterialTheme.colorScheme.onSurface)
                     }
                     Text(
                         text = monthLabel,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ColorDarkGraphite,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     IconButton(onClick = onNextMonth) {
-                        Icon(imageVector = Icons.Default.ChevronRight, contentDescription = "Sonraki Ay", tint = ColorDarkGraphite)
+                        Icon(imageVector = Icons.Default.ChevronRight, contentDescription = "Sonraki Ay", tint = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }
@@ -132,7 +127,7 @@ fun SpendingCalendarReportScreen(
                 item {
                     ReportCard(
                         modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = ColorCardSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surface,
                         cornerRadius = 20.dp,
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -145,7 +140,7 @@ fun SpendingCalendarReportScreen(
                                     Text(
                                         text = dayName,
                                         fontSize = 11.sp,
-                                        color = ColorMutedGray,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontWeight = FontWeight.Medium,
                                         modifier = Modifier.width(36.dp),
                                         textAlign = TextAlign.Center,
@@ -181,7 +176,7 @@ fun SpendingCalendarReportScreen(
                                                 .background(heatColor)
                                                 .then(
                                                     if (isSelected) {
-                                                        Modifier.border(2.dp, ColorDarkGraphite, RoundedCornerShape(8.dp))
+                                                        Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(8.dp))
                                                     } else {
                                                         Modifier
                                                     }
@@ -193,7 +188,7 @@ fun SpendingCalendarReportScreen(
                                                 text = day.dayNumber.toString(),
                                                 fontSize = 12.sp,
                                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                color = if (day.heatLevel >= 3) Color.White else ColorDarkGraphite,
+                                                color = if (day.heatLevel >= 3) Color.White else MaterialTheme.colorScheme.onSurface,
                                             )
                                         }
                                     }
@@ -212,7 +207,7 @@ fun SpendingCalendarReportScreen(
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text("Az", fontSize = 11.sp, color = ColorMutedGray)
+                                Text("Az", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 listOf(
                                     Color(0xFFF2EFE9),
@@ -230,7 +225,7 @@ fun SpendingCalendarReportScreen(
                                     Spacer(modifier = Modifier.width(4.dp))
                                 }
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Çok Harcama", fontSize = 11.sp, color = ColorMutedGray)
+                                Text("Çok Harcama", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -241,7 +236,7 @@ fun SpendingCalendarReportScreen(
                     item {
                         ReportCard(
                             modifier = Modifier.fillMaxWidth(),
-                            backgroundColor = ColorCardSurface,
+                            backgroundColor = MaterialTheme.colorScheme.surface,
                             cornerRadius = 16.dp,
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
@@ -255,12 +250,12 @@ fun SpendingCalendarReportScreen(
                                             text = "${selectedDay.date.dayOfMonth} $monthLabel",
                                             fontSize = 15.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = ColorDarkGraphite,
+                                            color = MaterialTheme.colorScheme.onSurface,
                                         )
                                         Text(
                                             text = "${selectedDay.transactionCount} işlem",
                                             fontSize = 12.sp,
-                                            color = ColorMutedGray,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                     Text(
@@ -282,7 +277,7 @@ fun SpendingCalendarReportScreen(
                             text = "Günün İşlemleri",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
-                            color = ColorDarkGraphite,
+                            color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(top = 4.dp),
                         )
                     }
@@ -290,7 +285,7 @@ fun SpendingCalendarReportScreen(
                     items(dayTransactions) { tx ->
                         ReportCard(
                             modifier = Modifier.fillMaxWidth(),
-                            backgroundColor = ColorCardSurface,
+                            backgroundColor = MaterialTheme.colorScheme.surface,
                             cornerRadius = 12.dp,
                         ) {
                             Row(
@@ -305,19 +300,19 @@ fun SpendingCalendarReportScreen(
                                         text = tx.title,
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = ColorDarkGraphite,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Text(
                                         text = tx.categoryName,
                                         fontSize = 12.sp,
-                                        color = ColorMutedGray,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                                 Text(
                                     text = (if (tx.isExpense) "-" else "+") + tx.amountFormatted,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (tx.isExpense) ColorDarkGraphite else ColorSageGreen,
+                                    color = if (tx.isExpense) MaterialTheme.colorScheme.onSurface else ColorSageGreen,
                                 )
                             }
                         }
@@ -350,7 +345,7 @@ fun BudgetPerformanceReportScreen(
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = ColorWarmBg,
+        color = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier
@@ -368,14 +363,14 @@ fun BudgetPerformanceReportScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Geri",
-                        tint = ColorDarkGraphite,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
                     text = "Bütçe Performansı",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = ColorDarkGraphite,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
 
@@ -389,7 +384,7 @@ fun BudgetPerformanceReportScreen(
                 item {
                     ReportCard(
                         modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = ColorCardSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surface,
                         cornerRadius = 20.dp,
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
@@ -401,11 +396,11 @@ fun BudgetPerformanceReportScreen(
                                 Text(
                                     text = "Toplam Bütçe Kullanımı",
                                     fontSize = 13.sp,
-                                    color = ColorMutedGray,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontWeight = FontWeight.Medium,
                                 )
                                 Surface(
-                                    color = if (isExceeded) ColorLightRed else ColorLightSage,
+                                    color = if (isExceeded) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
                                     shape = RoundedCornerShape(8.dp),
                                 ) {
                                     Text(
@@ -427,7 +422,7 @@ fun BudgetPerformanceReportScreen(
                                     .height(10.dp)
                                     .clip(RoundedCornerShape(5.dp)),
                                 color = if (isExceeded) ColorRefinedRed else ColorSageGreen,
-                                trackColor = ColorLightSage,
+                                trackColor = MaterialTheme.colorScheme.secondaryContainer,
                             )
 
                             Spacer(modifier = Modifier.height(16.dp))
@@ -437,15 +432,15 @@ fun BudgetPerformanceReportScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 Column {
-                                    Text("Harcanan", fontSize = 11.sp, color = ColorMutedGray)
-                                    Text(totalSpentFormatted, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ColorDarkGraphite)
+                                    Text("Harcanan", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(totalSpentFormatted, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                 }
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("Toplam Limit", fontSize = 11.sp, color = ColorMutedGray)
-                                    Text(totalBudgetFormatted, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ColorDarkGraphite)
+                                    Text("Toplam Limit", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(totalBudgetFormatted, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text("Kalan Bütçe", fontSize = 11.sp, color = ColorMutedGray)
+                                    Text("Kalan Bütçe", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text(
                                         text = remainingFormatted,
                                         fontSize = 14.sp,
@@ -464,7 +459,7 @@ fun BudgetPerformanceReportScreen(
                         text = "Kategori Bütçeleri",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ColorDarkGraphite,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(top = 8.dp),
                     )
                 }
@@ -473,7 +468,7 @@ fun BudgetPerformanceReportScreen(
                 items(budgetItems) { item ->
                     ReportCard(
                         modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = ColorCardSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surface,
                         cornerRadius = 14.dp,
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -486,7 +481,7 @@ fun BudgetPerformanceReportScreen(
                                     text = item.name,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = ColorDarkGraphite,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
                                     text = item.usagePercentageFormatted,
@@ -505,7 +500,7 @@ fun BudgetPerformanceReportScreen(
                                     .height(6.dp)
                                     .clip(RoundedCornerShape(3.dp)),
                                 color = if (item.isExceeded) ColorRefinedRed else ColorSageGreen,
-                                trackColor = ColorLightSage,
+                                trackColor = MaterialTheme.colorScheme.secondaryContainer,
                             )
 
                             Spacer(modifier = Modifier.height(8.dp))
@@ -517,12 +512,12 @@ fun BudgetPerformanceReportScreen(
                                 Text(
                                     text = "Harcanan: ${item.spentFormatted}",
                                     fontSize = 12.sp,
-                                    color = ColorMutedGray,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Text(
                                     text = "Limit: ${item.budgetFormatted}",
                                     fontSize = 12.sp,
-                                    color = ColorMutedGray,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -550,7 +545,7 @@ fun SubscriptionSummaryReportScreen(
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = ColorWarmBg,
+        color = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier
@@ -568,14 +563,14 @@ fun SubscriptionSummaryReportScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Geri",
-                        tint = ColorDarkGraphite,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
                     text = "Abonelik Özeti",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = ColorDarkGraphite,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
 
@@ -589,14 +584,14 @@ fun SubscriptionSummaryReportScreen(
                 item {
                     ReportCard(
                         modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = ColorCardSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surface,
                         cornerRadius = 20.dp,
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(
                                 text = "Aylık Düzenli Abonelik Yükü",
                                 fontSize = 13.sp,
-                                color = ColorMutedGray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Medium,
                             )
                             Spacer(modifier = Modifier.height(4.dp))
@@ -604,11 +599,11 @@ fun SubscriptionSummaryReportScreen(
                                 text = monthlyTotalFormatted,
                                 fontSize = 28.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = ColorDarkGraphite,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             Surface(
-                                color = ColorLightSage,
+                                color = MaterialTheme.colorScheme.secondaryContainer,
                                 shape = RoundedCornerShape(8.dp),
                             ) {
                                 Text(
@@ -629,7 +624,7 @@ fun SubscriptionSummaryReportScreen(
                         text = "Yaklaşan Yenilemeler",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ColorDarkGraphite,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(top = 8.dp),
                     )
                 }
@@ -638,7 +633,7 @@ fun SubscriptionSummaryReportScreen(
                     item {
                         ReportCard(
                             modifier = Modifier.fillMaxWidth(),
-                            backgroundColor = ColorCardSurface,
+                            backgroundColor = MaterialTheme.colorScheme.surface,
                             cornerRadius = 14.dp,
                         ) {
                             Box(
@@ -650,7 +645,7 @@ fun SubscriptionSummaryReportScreen(
                                 Text(
                                     text = "Kayıtlı aktif abonelik bulunmuyor.",
                                     fontSize = 14.sp,
-                                    color = ColorMutedGray,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -659,7 +654,7 @@ fun SubscriptionSummaryReportScreen(
                     items(upcomingSubscriptions) { sub ->
                         ReportCard(
                             modifier = Modifier.fillMaxWidth(),
-                            backgroundColor = ColorCardSurface,
+                            backgroundColor = MaterialTheme.colorScheme.surface,
                             cornerRadius = 14.dp,
                         ) {
                             Row(
@@ -674,13 +669,13 @@ fun SubscriptionSummaryReportScreen(
                                         text = sub.name,
                                         fontSize = 15.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = ColorDarkGraphite,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = "Yenilenme: ${sub.renewalDateFormatted}",
                                         fontSize = 12.sp,
-                                        color = ColorMutedGray,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
 
@@ -688,7 +683,7 @@ fun SubscriptionSummaryReportScreen(
                                     text = sub.amountFormatted,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = ColorDarkGraphite,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
                         }
@@ -718,7 +713,7 @@ fun DebtSummaryReportScreen(
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = ColorWarmBg,
+        color = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier
@@ -736,14 +731,14 @@ fun DebtSummaryReportScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Geri",
-                        tint = ColorDarkGraphite,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
                     text = "Borç ve Alacak Özeti",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = ColorDarkGraphite,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
 
@@ -757,14 +752,14 @@ fun DebtSummaryReportScreen(
                 item {
                     ReportCard(
                         modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = ColorCardSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surface,
                         cornerRadius = 20.dp,
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(
                                 text = "Net Pozisyon (Alacak - Borç)",
                                 fontSize = 13.sp,
-                                color = ColorMutedGray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Medium,
                             )
                             Spacer(modifier = Modifier.height(4.dp))
@@ -782,7 +777,7 @@ fun DebtSummaryReportScreen(
                             ) {
                                 Surface(
                                     modifier = Modifier.weight(1f),
-                                    color = ColorLightRed,
+                                    color = MaterialTheme.colorScheme.errorContainer,
                                     shape = RoundedCornerShape(12.dp),
                                 ) {
                                     Column(modifier = Modifier.padding(12.dp)) {
@@ -794,7 +789,7 @@ fun DebtSummaryReportScreen(
 
                                 Surface(
                                     modifier = Modifier.weight(1f),
-                                    color = ColorLightSage,
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
                                     shape = RoundedCornerShape(12.dp),
                                 ) {
                                     Column(modifier = Modifier.padding(12.dp)) {
@@ -814,7 +809,7 @@ fun DebtSummaryReportScreen(
                         text = "Yaklaşan Vadeler",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ColorDarkGraphite,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(top = 8.dp),
                     )
                 }
@@ -823,7 +818,7 @@ fun DebtSummaryReportScreen(
                     item {
                         ReportCard(
                             modifier = Modifier.fillMaxWidth(),
-                            backgroundColor = ColorCardSurface,
+                            backgroundColor = MaterialTheme.colorScheme.surface,
                             cornerRadius = 14.dp,
                         ) {
                             Box(
@@ -835,7 +830,7 @@ fun DebtSummaryReportScreen(
                                 Text(
                                     text = "Kayıtlı açık borç veya alacak bulunmuyor.",
                                     fontSize = 14.sp,
-                                    color = ColorMutedGray,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -844,7 +839,7 @@ fun DebtSummaryReportScreen(
                     items(deadlines) { item ->
                         ReportCard(
                             modifier = Modifier.fillMaxWidth(),
-                            backgroundColor = ColorCardSurface,
+                            backgroundColor = MaterialTheme.colorScheme.surface,
                             cornerRadius = 14.dp,
                         ) {
                             Row(
@@ -860,11 +855,11 @@ fun DebtSummaryReportScreen(
                                             text = item.title,
                                             fontSize = 15.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = ColorDarkGraphite,
+                                            color = MaterialTheme.colorScheme.onSurface,
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Surface(
-                                            color = if (item.isReceivable) ColorLightSage else ColorLightRed,
+                                            color = if (item.isReceivable) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.errorContainer,
                                             shape = RoundedCornerShape(4.dp),
                                         ) {
                                             Text(
@@ -881,7 +876,7 @@ fun DebtSummaryReportScreen(
                                         Text(
                                             text = "Vade: ${item.dueDateFormatted}",
                                             fontSize = 12.sp,
-                                            color = ColorMutedGray,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                         if (item.isOverdue) {
                                             Spacer(modifier = Modifier.width(6.dp))
@@ -899,7 +894,7 @@ fun DebtSummaryReportScreen(
                                     text = item.amountFormatted,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (item.isReceivable) ColorSageGreen else ColorDarkGraphite,
+                                    color = if (item.isReceivable) ColorSageGreen else MaterialTheme.colorScheme.onSurface,
                                 )
                             }
                         }

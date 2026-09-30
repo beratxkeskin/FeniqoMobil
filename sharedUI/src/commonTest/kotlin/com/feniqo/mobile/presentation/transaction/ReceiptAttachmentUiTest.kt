@@ -5,6 +5,11 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ReceiptAttachmentUiTest {
+    @Test
+    fun receiptOcrUserEntry_releasePolicy_isFailClosed() {
+        assertFalse(RECEIPT_OCR_USER_ENTRY_ENABLED)
+    }
+
 
     @Test
     fun transactionFormUiState_defaultReceiptState_isNoReceiptAndNotInProgress() {

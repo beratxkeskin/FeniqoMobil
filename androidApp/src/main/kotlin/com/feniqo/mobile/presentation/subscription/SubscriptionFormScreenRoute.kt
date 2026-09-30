@@ -1,6 +1,5 @@
 package com.feniqo.mobile.presentation.subscription
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -25,6 +24,7 @@ import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.SetSubscriptionActiveCommand
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
 import com.feniqo.mobile.presentation.component.SubscriptionAdvanceRenewalDialog
@@ -200,6 +200,7 @@ fun SubscriptionFormScreenRoute(
             ),
         )
     }
+    var initialInput by remember { mutableStateOf(input) }
     var isActive by remember { mutableStateOf(true) }
     var errors by remember { mutableStateOf(SubscriptionFormInputErrors()) }
     var isEditSeedApplied by remember { mutableStateOf(false) }
@@ -227,16 +228,19 @@ fun SubscriptionFormScreenRoute(
 
     LaunchedEffect(effectiveEditLoadState) {
         if (effectiveEditLoadState is SubscriptionEditLoadState.Ready && !isEditSeedApplied) {
-            input = SubscriptionFormInput.fromDraft(effectiveEditLoadState.draft)
+            val seededInput = SubscriptionFormInput.fromDraft(effectiveEditLoadState.draft)
+            input = seededInput
+            initialInput = seededInput
             isActive = effectiveEditLoadState.isActive
             isEditSeedApplied = true
         }
     }
 
-    // 1. Gönderim sırasında sistem geri hareketini engelleme
-    BackHandler(enabled = uiState.mutationState.isSubmitting) {
-        // Form submit edilirken yanlışlıkla geri çıkılmasını önler
-    }
+    val requestExit = rememberGuardedFormExit(
+        isSubmitting = uiState.mutationState.isSubmitting,
+        hasUnsavedChanges = input != initialInput,
+        onNavigateBack = onNavigateBack,
+    )
 
     // 2. ViewModel tek seferlik olaylarını toplama
     LaunchedEffect(viewModel.events) {
@@ -272,6 +276,7 @@ fun SubscriptionFormScreenRoute(
                     description = "Düzenlemek istediğiniz abonelik bulunamadı veya silinmiş.",
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
+                        actionLabel = "Geri dön",
                 )
             }
         }
@@ -285,6 +290,7 @@ fun SubscriptionFormScreenRoute(
                     description = effectiveEditLoadState.message.toDisplayText(),
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
+                        actionLabel = "Geri dön",
                 )
             }
         }
@@ -300,7 +306,7 @@ fun SubscriptionFormScreenRoute(
                 mutationState = uiState.mutationState,
                 isEditMode = input.isEditMode,
                 isActive = isActive,
-                onBack = onNavigateBack,
+                onBack = requestExit,
                 onSetActive = { targetActive ->
                     SubscriptionFormRouteHelper.computeSetActiveIntent(
                         currentSubscriptionId = input.subscriptionId,

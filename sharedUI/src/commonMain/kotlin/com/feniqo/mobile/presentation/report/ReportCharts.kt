@@ -40,10 +40,7 @@ import com.feniqo.mobile.domain.model.Money
 import kotlin.math.max
 
 private val SageGreen = Color(0xFF2D5A43)
-private val LightSage = Color(0xFFE2EBE6)
 private val ExpenseRed = Color(0xFFDC2626)
-private val NeutralGraphite = Color(0xFF303536)
-private val CardBorder = Color(0xFFE5E7EB)
 
 @Composable
 fun TrendDualLineChart(
@@ -122,7 +119,7 @@ fun TrendDualLineChart(
                 Text(
                     text = pt.monthLabel,
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                    color = Color(0xFF6B7280),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -189,7 +186,7 @@ fun WeeklyDualBarChart(
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                    color = Color(0xFF6B7280),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -204,6 +201,8 @@ fun ReportDonutChart(
     modifier: Modifier = Modifier,
     accessibleDescription: String = "Kategori dağılımı pasta grafiği",
 ) {
+    val outlineVariant = MaterialTheme.colorScheme.outlineVariant
+
     Box(
         modifier = modifier
             .size(140.dp)
@@ -216,7 +215,7 @@ fun ReportDonutChart(
 
             if (slices.isEmpty()) {
                 drawArc(
-                    color = Color(0xFFE5E7EB),
+                    color = outlineVariant,
                     startAngle = 0f,
                     sweepAngle = 360f,
                     useCenter = false,
@@ -244,7 +243,7 @@ fun ReportDonutChart(
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
             ),
-            color = NeutralGraphite,
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }
@@ -256,6 +255,7 @@ fun BidirectionalCashFlowChart(
     accessibleDescription: String = "Çift yönlü nakit akışı grafiği",
 ) {
     if (points.isEmpty()) return
+    val outlineVariant = MaterialTheme.colorScheme.outlineVariant
 
     Column(
         modifier = modifier
@@ -278,7 +278,7 @@ fun BidirectionalCashFlowChart(
 
             // Sıfır çizgisi
             drawLine(
-                color = Color(0xFFE5E7EB),
+                color = outlineVariant,
                 start = Offset(0f, midY),
                 end = Offset(w, midY),
                 strokeWidth = 1.dp.toPx(),
@@ -338,7 +338,7 @@ fun BidirectionalCashFlowChart(
                 Text(
                     text = pt.monthLabel,
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                    color = Color(0xFF6B7280),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

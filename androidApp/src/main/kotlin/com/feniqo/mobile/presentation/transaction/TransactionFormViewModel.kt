@@ -238,7 +238,7 @@ class TransactionFormViewModel @Inject constructor(
             isEditMode = isEditMode,
             isLoadingTransaction = isEditMode && initialLoadError == null,
             loadError = initialLoadError,
-            isReceiptFeatureAvailable = !isEditMode,
+            isReceiptFeatureAvailable = RECEIPT_OCR_USER_ENTRY_ENABLED && !isEditMode,
             hasUnsavedChanges = false,
         ),
     )
@@ -1041,6 +1041,7 @@ class TransactionFormViewModel @Inject constructor(
         }
 
         val job = viewModelScope.launch(start = CoroutineStart.LAZY) {
+            var mutationSucceeded = false
             try {
                 if (currentState.isEditMode) {
                     val command = TransactionCommand(
@@ -1061,6 +1062,7 @@ class TransactionFormViewModel @Inject constructor(
                     )
                     when (val result = updateTransactionUseCase(command, today)) {
                         is RepositoryResult.Success -> {
+                            mutationSucceeded = true
                             initialSnapshot = null
                             _uiState.update { it.copy(hasUnsavedChanges = false) }
                             _events.send(TransactionFormEvent.NavigateBack)
@@ -1089,6 +1091,7 @@ class TransactionFormViewModel @Inject constructor(
                     )
                     when (val result = addInstallmentGroupUseCase(command, today, now)) {
                         is RepositoryResult.Success -> {
+                            mutationSucceeded = true
                             initialSnapshot = null
                             _uiState.update { it.copy(hasUnsavedChanges = false) }
                             _events.send(TransactionFormEvent.TransactionCreated(result.value.firstTransactionId))
@@ -1120,6 +1123,7 @@ class TransactionFormViewModel @Inject constructor(
                     )
                     when (val result = addTransactionUseCase(command, today, now)) {
                         is RepositoryResult.Success -> {
+                            mutationSucceeded = true
                             initialSnapshot = null
                             _uiState.update { it.copy(hasUnsavedChanges = false) }
                             _events.send(TransactionFormEvent.TransactionCreated(newId))
@@ -1138,7 +1142,7 @@ class TransactionFormViewModel @Inject constructor(
                     it.copy(generalMessage = FinanceUiMessage.GENERIC_ERROR)
                 }
             } finally {
-                _uiState.update { it.copy(isSubmitting = false) }
+                if (!mutationSucceeded) _uiState.update { it.copy(isSubmitting = false) }
                 submitJob = null
             }
         }

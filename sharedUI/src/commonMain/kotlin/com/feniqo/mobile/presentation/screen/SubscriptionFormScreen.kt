@@ -855,7 +855,7 @@ fun SubscriptionFormScreen(
 
             Card(
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, FeniqoBorderColor),
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -992,7 +992,7 @@ fun SubscriptionFormScreen(
 
             Card(
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, FeniqoBorderColor),
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -1297,7 +1297,7 @@ fun SubscriptionFormScreen(
 
         ModalBottomSheet(
             onDismissRequest = { showFrequencySheet = false },
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         ) {
             Column(
@@ -1496,7 +1496,7 @@ fun SubscriptionFormScreen(
     if (showCategorySheet) {
         ModalBottomSheet(
             onDismissRequest = { showCategorySheet = false },
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         ) {
             Column(
@@ -1633,7 +1633,7 @@ fun SubscriptionFormScreen(
     if (showCurrencyAndTemplatesSheet) {
         ModalBottomSheet(
             onDismissRequest = { showCurrencyAndTemplatesSheet = false },
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         ) {
             Column(

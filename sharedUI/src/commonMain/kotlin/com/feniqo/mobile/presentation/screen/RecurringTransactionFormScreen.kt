@@ -144,7 +144,7 @@ fun RecurringTransactionFormScreen(
 
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = FeniqoWarmStoneBackground,
+        color = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -361,7 +361,7 @@ private fun RecurringFormTopBar(
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                     contentDescription = "Geri",
-                    tint = FeniqoTextPrimary,
+                    tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(modifier = Modifier.width(4.dp))
@@ -371,7 +371,7 @@ private fun RecurringFormTopBar(
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                     ),
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
         }
@@ -456,7 +456,7 @@ private fun RecurringTypeToggle(
                         fontSize = 14.sp,
                         fontWeight = if (isExpense) FontWeight.Bold else FontWeight.Medium,
                     ),
-                    color = if (isExpense) Color(0xFFDC2626) else FeniqoTextSecondary,
+                    color = if (isExpense) Color(0xFFDC2626) else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -502,7 +502,7 @@ private fun RecurringTypeToggle(
                         fontSize = 14.sp,
                         fontWeight = if (isIncome) FontWeight.Bold else FontWeight.Medium,
                     ),
-                    color = if (isIncome) FeniqoTrendGreen else FeniqoTextSecondary,
+                    color = if (isIncome) FeniqoTrendGreen else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -550,14 +550,14 @@ private fun RecurringAmountCard(
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
             ),
-            color = FeniqoTextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
         )
 
         Spacer(modifier = Modifier.height(6.dp))
 
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = FeniqoPureWhite),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             border = BorderStroke(
                 1.dp,
                 if (isError) FeniqoExpense else Color(0xFFF1F5F9),
@@ -621,7 +621,7 @@ private fun RecurringAmountCard(
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                     ),
-                    color = FeniqoTextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -662,7 +662,7 @@ private fun RecurringSettingsGroupCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = FeniqoPureWhite),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, Color(0xFFF1F5F9)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
@@ -836,7 +836,7 @@ private fun RecurringFormRow(
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                     ),
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text = value,
@@ -844,7 +844,7 @@ private fun RecurringFormRow(
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Normal,
                     ),
-                    color = if (isValuePlaceholder) Color(0xFF94A3B8) else FeniqoTextSecondary,
+                    color = if (isValuePlaceholder) Color(0xFF94A3B8) else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -881,7 +881,7 @@ private fun RecurringPaymentMethodCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = FeniqoPureWhite),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, Color(0xFFF1F5F9)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
@@ -928,14 +928,14 @@ private fun RecurringDescriptionCard(
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
             ),
-            color = FeniqoTextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
         )
 
         Spacer(modifier = Modifier.height(6.dp))
 
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = FeniqoPureWhite),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             border = BorderStroke(
                 1.dp,
                 if (descriptionError != null) FeniqoExpense else Color(0xFFF1F5F9),
@@ -962,7 +962,7 @@ private fun RecurringDescriptionCard(
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = 14.sp,
-                        color = FeniqoTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                     ),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color.Transparent,
@@ -1228,7 +1228,7 @@ private fun RecurringFormActionButtons(
                         .height(48.dp),
                     shape = RoundedCornerShape(14.dp),
                     border = BorderStroke(1.dp, Color(0xFFCBD5E1)),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = FeniqoTextPrimary),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
                 ) {
                     Text(
                         text = "Değişiklikleri kaydet",

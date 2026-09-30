@@ -255,7 +255,7 @@ fun GoalFilterTabs(
                         text = filter.label,
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (isSelected) Color.White else FeniqoTextPrimary,
+                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
@@ -282,7 +282,7 @@ fun GoalCard(
                 contentDescription = "${item.name}. ${item.formattedCurrentAmount} birikmiş, hedef ${item.formattedTargetAmount}, yüzde ${item.progressBasisPoints.value / 100}, $statusText"
             },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, FeniqoGoalCardBorder),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
     ) {
@@ -319,7 +319,7 @@ fun GoalCard(
                         text = item.name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = FeniqoTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -328,7 +328,7 @@ fun GoalCard(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
-                    tint = FeniqoTextSecondary,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp),
                 )
             }
@@ -338,7 +338,7 @@ fun GoalCard(
                 text = "${item.formattedCurrentAmount} / ${item.formattedTargetAmount}",
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
-                color = FeniqoTextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -382,13 +382,13 @@ fun GoalCard(
                     Icon(
                         imageVector = Icons.Outlined.CalendarMonth,
                         contentDescription = null,
-                        tint = FeniqoTextSecondary,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(15.dp),
                     )
                     Text(
                         text = "Hedef tarihi: ${item.formattedTargetDate}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = FeniqoTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
@@ -408,7 +408,7 @@ fun GoalCard(
                     else -> Text(
                         text = "${item.formattedRemainingAmount} kaldı",
                         style = MaterialTheme.typography.labelSmall,
-                        color = FeniqoTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -454,14 +454,14 @@ fun GoalsEmptyState(
             text = "Henüz bir hedefin yok",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            color = FeniqoTextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
         )
 
         Text(
             text = "İlk hedefini oluşturarak\nbirikimini takip et.",
             style = MaterialTheme.typography.bodyMedium,
-            color = FeniqoTextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             lineHeight = 20.sp,
         )
@@ -502,7 +502,7 @@ fun FilterEmptyState(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, FeniqoGoalCardBorder),
     ) {
         Column(
@@ -516,12 +516,12 @@ fun FilterEmptyState(
                 text = "${filter.label} hedef bulunmuyor",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = FeniqoTextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 text = "Farklı bir durum filtresi seçebilirsin.",
                 style = MaterialTheme.typography.bodySmall,
-                color = FeniqoTextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (filter != GoalStatusFilter.ALL) {
                 Spacer(Modifier.height(4.dp))
@@ -549,7 +549,7 @@ fun GoalDeleteDialog(
         Card(
             modifier = modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
         ) {
             Column(
@@ -580,7 +580,7 @@ fun GoalDeleteDialog(
                     text = "Hedefi silinsin mi?",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center,
                 )
 
@@ -591,7 +591,7 @@ fun GoalDeleteDialog(
                         "Bu hedefi ve birikim kayıtlarını silmek istediğine emin misin?"
                     },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = FeniqoTextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
 
@@ -661,7 +661,7 @@ fun CurrencyPickerSheet(
         onDismissRequest = onDismiss,
         modifier = modifier,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.surface,
     ) {
         Column(
             modifier = Modifier
@@ -679,10 +679,10 @@ fun CurrencyPickerSheet(
                     text = "Para birimi",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Outlined.Close, contentDescription = "Kapat", tint = FeniqoTextSecondary)
+                    Icon(Icons.Outlined.Close, contentDescription = "Kapat", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
@@ -723,7 +723,7 @@ fun CurrencyPickerSheet(
                             text = symbol,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = if (isSelected) FeniqoGoalSageGreen else FeniqoTextPrimary,
+                            color = if (isSelected) FeniqoGoalSageGreen else MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.width(32.dp),
                         )
                         Spacer(Modifier.width(8.dp))
@@ -732,12 +732,12 @@ fun CurrencyPickerSheet(
                                 text = currency.name,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = FeniqoTextPrimary,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
                                 text = name,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = FeniqoTextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
 
@@ -782,7 +782,7 @@ fun CreateGoalActionCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
             .clickable(role = Role.Button, onClick = onClick)
             .semantics { contentDescription = "Yeni hedef oluştur" },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, FeniqoGoalCardBorder),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
@@ -806,9 +806,9 @@ fun CreateGoalActionCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text("Yeni hedef oluştur", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("Hayallerini somut bir plana dönüştür.", style = MaterialTheme.typography.bodySmall, color = FeniqoTextSecondary)
+                Text("Hayallerini somut bir plana dönüştür.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = FeniqoTextSecondary)
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -820,7 +820,7 @@ fun CreateGoalActionCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
 fun GoalInsightCard(insight: GoalInsightUiModel, modifier: Modifier = Modifier) {
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, FeniqoGoalCardBorder),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier.fillMaxWidth(),
@@ -851,14 +851,14 @@ fun GoalInsightCard(insight: GoalInsightUiModel, modifier: Modifier = Modifier) 
                     text = insight.title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = insight.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = FeniqoTextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )

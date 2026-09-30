@@ -366,6 +366,7 @@ class BudgetViewModel @Inject constructor(
     }
 
     private fun createBudget(intent: BudgetIntent.CreateBudget) {
+        if (_mutationState.value.isSubmitting) return
         var hasError = false
         var categoryError: BudgetFormFieldError? = null
         var monthError: BudgetFormFieldError? = null
@@ -414,6 +415,7 @@ class BudgetViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            var mutationSucceeded = false
             try {
                 val command = CreateBudgetCommand(
                     categoryId = categoryId,
@@ -422,6 +424,7 @@ class BudgetViewModel @Inject constructor(
                 )
                 when (val result = createBudgetUseCase(command)) {
                     is RepositoryResult.Success -> {
+                        mutationSucceeded = true
                         _events.send(BudgetUiEvent.MutationSuccess(FinanceUiMessage.BUDGET_SAVED))
                     }
                     is RepositoryResult.Failure -> {
@@ -433,12 +436,13 @@ class BudgetViewModel @Inject constructor(
             } catch (e: Exception) {
                 _events.send(BudgetUiEvent.ShowMessage(FinanceUiMessage.GENERIC_ERROR))
             } finally {
-                _mutationState.update { it.copy(isSubmitting = false) }
+                if (!mutationSucceeded) _mutationState.update { it.copy(isSubmitting = false) }
             }
         }
     }
 
     private fun updateBudget(intent: BudgetIntent.UpdateBudget) {
+        if (_mutationState.value.isSubmitting) return
         val amountResult = BudgetValidationRules.validateAmount(intent.limitInput, intent.currency)
         val validAmount: Money = when (amountResult) {
             is BudgetValidationResult.Valid -> amountResult.value
@@ -458,6 +462,7 @@ class BudgetViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            var mutationSucceeded = false
             try {
                 val command = UpdateBudgetCommand(
                     id = intent.id,
@@ -465,6 +470,7 @@ class BudgetViewModel @Inject constructor(
                 )
                 when (val result = updateBudgetUseCase(command)) {
                     is RepositoryResult.Success -> {
+                        mutationSucceeded = true
                         _events.send(BudgetUiEvent.MutationSuccess(FinanceUiMessage.BUDGET_SAVED))
                     }
                     is RepositoryResult.Failure -> {
@@ -476,7 +482,7 @@ class BudgetViewModel @Inject constructor(
             } catch (e: Exception) {
                 _events.send(BudgetUiEvent.ShowMessage(FinanceUiMessage.GENERIC_ERROR))
             } finally {
-                _mutationState.update { it.copy(isSubmitting = false) }
+                if (!mutationSucceeded) _mutationState.update { it.copy(isSubmitting = false) }
             }
         }
     }

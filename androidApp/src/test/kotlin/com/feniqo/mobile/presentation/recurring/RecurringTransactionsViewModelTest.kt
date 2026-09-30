@@ -217,12 +217,15 @@ class RecurringTransactionsViewModelTest {
     }
 
     @Test
-    fun create_success_emitsMutationSuccessEventAndClearsSubmitting() = runTest {
+    fun create_success_staysLockedUntilNavigationAndRejectsSecondSubmit() = runTest {
         val recurringRepo = FakeRecurringTransactionRepository()
         val categoryRepo = FakeCategoryRepository()
         val viewModel = createViewModel(recurringRepo, categoryRepo)
 
         val events = mutableListOf<RecurringTransactionUiEvent>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.events.collect { events.add(it) }
         }
@@ -243,20 +246,26 @@ class RecurringTransactionsViewModelTest {
 
         viewModel.onIntent(RecurringTransactionsIntent.Create(command))
         advanceUntilIdle()
+        viewModel.onIntent(RecurringTransactionsIntent.Create(command))
+        advanceUntilIdle()
 
         assertEquals(command, recurringRepo.lastCreatedCommand)
         assertEquals(1, events.size)
         assertEquals(RecurringTransactionUiEvent.MutationSuccess(FinanceUiMessage.TRANSACTION_SAVED), events[0])
-        assertFalse(viewModel.uiState.value.mutationState.isSubmitting)
+        assertEquals(1, recurringRepo.createCallCount)
+        assertTrue(viewModel.uiState.value.mutationState.isSubmitting)
     }
 
     @Test
-    fun update_success_emitsMutationSuccessEventAndClearsSubmitting() = runTest {
+    fun update_success_emitsMutationSuccessEventAndStaysLockedUntilNavigation() = runTest {
         val recurringRepo = FakeRecurringTransactionRepository()
         val categoryRepo = FakeCategoryRepository()
         val viewModel = createViewModel(recurringRepo, categoryRepo)
 
         val events = mutableListOf<RecurringTransactionUiEvent>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.events.collect { events.add(it) }
         }
@@ -282,7 +291,7 @@ class RecurringTransactionsViewModelTest {
         assertEquals(command, recurringRepo.lastUpdatedCommand)
         assertEquals(1, events.size)
         assertEquals(RecurringTransactionUiEvent.MutationSuccess(FinanceUiMessage.TRANSACTION_SAVED), events[0])
-        assertFalse(viewModel.uiState.value.mutationState.isSubmitting)
+        assertTrue(viewModel.uiState.value.mutationState.isSubmitting)
     }
 
     @Test
@@ -850,6 +859,7 @@ class RecurringTransactionsViewModelTest {
         var activeCollectorCount = 0
 
         var lastCreatedCommand: CreateRecurringTransactionCommand? = null
+        var createCallCount: Int = 0
         var createResult: RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("r1"))
         var createThrowable: Throwable? = null
 
@@ -891,6 +901,7 @@ class RecurringTransactionsViewModelTest {
         }
 
         override suspend fun create(command: CreateRecurringTransactionCommand): RepositoryResult<EntityId> {
+            createCallCount++
             lastCreatedCommand = command
             val throwable = createThrowable
             if (throwable != null) {

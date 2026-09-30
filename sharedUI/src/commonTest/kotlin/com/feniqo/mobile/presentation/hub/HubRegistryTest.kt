@@ -38,22 +38,18 @@ class HubRegistryTest {
         val available = MoreHubRegistry.availableItems
         val comingSoon = MoreHubRegistry.comingSoonItems
 
-        assertEquals(8, available.size, "Finans Merkezi altında 8 aktif modül bulunmalıdır")
-        assertEquals(1, comingSoon.size, "Finans Merkezi altında 1 yakında modülü bulunmalıdır")
+        assertEquals(9, available.size, "Finans Merkezi altında 9 aktif modül bulunmalıdır")
+        assertEquals(0, comingSoon.size, "Finans Merkezi altında yakında modülü kalmamalıdır")
 
         // Aktif modüller
         assertEquals(
-            listOf("assets", "goals", "debts", "subscriptions", "recurring_transactions", "categories", "shared_spaces", "settings"),
+            listOf("assets", "goals", "debts", "subscriptions", "recurring_transactions", "categories", "shared_spaces", "reports", "settings"),
             available.map { it.id },
         )
         assertTrue(available.all { it.isAvailable && it.status == HubItemStatus.AVAILABLE })
 
         // Gelecek / pasif modüller
-        assertEquals(
-            listOf("reports"),
-            comingSoon.map { it.id },
-        )
-        assertTrue(comingSoon.all { !it.isAvailable && it.status == HubItemStatus.COMING_SOON })
+        assertTrue(comingSoon.isEmpty())
     }
 
     @Test

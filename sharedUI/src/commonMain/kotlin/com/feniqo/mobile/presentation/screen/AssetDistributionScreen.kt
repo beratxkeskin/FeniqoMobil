@@ -167,7 +167,7 @@ fun AssetDistributionScreen(
                             .fillMaxWidth()
                             .weight(1f),
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         border = CardDefaults.outlinedCardBorder(),
                     ) {
                         if (distribution == null || distribution.items.isEmpty()) {

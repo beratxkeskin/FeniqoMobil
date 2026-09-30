@@ -22,6 +22,7 @@ class AssetFormViewModel @Inject constructor(
     private val deleteAsset: DeleteAssetUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(AssetFormUiState())
+    private var initialInput: AssetFormInput = mutableState.value.input
     val uiState: StateFlow<AssetFormUiState> = mutableState.asStateFlow()
     private val mutableLoadState = MutableStateFlow<AssetEditLoadState>(AssetEditLoadState.Idle)
     val editLoadState: StateFlow<AssetEditLoadState> = mutableLoadState.asStateFlow()
@@ -39,9 +40,11 @@ class AssetFormViewModel @Inject constructor(
                     if (asset == null) mutableLoadState.value = AssetEditLoadState.NotFound
                     else {
                         val input = AssetFormInput.fromDomain(asset)
+                        initialInput = input
                         mutableState.value = AssetFormUiState(
                             input = input,
                             calculatedCostPreview = input.computeCostPreview(),
+                            hasUnsavedChanges = false,
                         )
                         mutableLoadState.value = AssetEditLoadState.Ready
                     }
@@ -62,10 +65,12 @@ class AssetFormViewModel @Inject constructor(
     fun updateInput(transform: (AssetFormInput) -> AssetFormInput) {
         mutableState.update { state ->
             val changed = transform(state.input)
+            val protectedInput = changed.copy(assetId = state.input.assetId)
             state.copy(
-                input = changed.copy(assetId = state.input.assetId),
+                input = protectedInput,
                 calculatedCostPreview = changed.computeCostPreview(),
                 errors = AssetFormErrors(),
+                hasUnsavedChanges = protectedInput != initialInput,
             )
         }
     }
@@ -77,17 +82,22 @@ class AssetFormViewModel @Inject constructor(
             is AssetFormNormalizationResult.Valid -> {
                 mutableState.update { it.copy(isSubmitting = true) }
                 mutationJob = viewModelScope.launch {
+                    var mutationSucceeded = false
                     try {
                         val result = if (normalized.draft.assetId == null) {
                             createAsset(normalized.draft.toCreateCommand())
                         } else updateAsset(normalized.draft.toUpdateCommand())
+                        mutationSucceeded = result is RepositoryResult.Success
                         eventChannel.send(
-                            if (result is RepositoryResult.Success) AssetFormUiEvent.MutationSuccess(FinanceUiMessage.ASSET_SAVED)
+                            if (mutationSucceeded) AssetFormUiEvent.MutationSuccess(FinanceUiMessage.ASSET_SAVED)
                             else AssetFormUiEvent.ShowMessage(FinanceUiMessage.GENERIC_ERROR),
                         )
                     } catch (error: CancellationException) { throw error }
                     catch (_: Exception) { eventChannel.send(AssetFormUiEvent.ShowMessage(FinanceUiMessage.GENERIC_ERROR)) }
-                    finally { mutableState.update { it.copy(isSubmitting = false) }; mutationJob = null }
+                    finally {
+                        if (!mutationSucceeded) mutableState.update { it.copy(isSubmitting = false) }
+                        mutationJob = null
+                    }
                 }
             }
         }

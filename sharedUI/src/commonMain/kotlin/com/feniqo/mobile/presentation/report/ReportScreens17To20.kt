@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -41,14 +42,8 @@ import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.ForecastProjectionPoint
 
 // Tasarım Sistemi Renkleri
-private val ColorWarmBg = Color(0xFFF7F5F0)
 private val ColorSageGreen = Color(0xFF2D5A43)
-private val ColorLightSage = Color(0xFFE8EFEA)
-private val ColorDarkGraphite = Color(0xFF303536)
 private val ColorRefinedRed = Color(0xFFC04D43)
-private val ColorLightRed = Color(0xFFFDECEB)
-private val ColorMutedGray = Color(0xFF888E90)
-private val ColorCardSurface = Color(0xFFFFFFFF)
 
 // ==========================================
 // EKRAN 17: GELECEK AY TAHMİNİ
@@ -68,7 +63,7 @@ fun ForecastOverviewReportScreen(
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = ColorWarmBg,
+        color = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier
@@ -88,19 +83,19 @@ fun ForecastOverviewReportScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Geri",
-                            tint = ColorDarkGraphite,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     Text(
                         text = "Gelecek Ay Tahmini",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ColorDarkGraphite,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
 
                 Surface(
-                    color = ColorLightSage,
+                    color = MaterialTheme.colorScheme.secondaryContainer,
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.padding(end = 8.dp),
                 ) {
@@ -135,14 +130,14 @@ fun ForecastOverviewReportScreen(
                 item {
                     ReportCard(
                         modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = ColorCardSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surface,
                         cornerRadius = 20.dp,
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(
                                 text = "$forecastMonthLabel Tahmini Net Bakiye",
                                 fontSize = 13.sp,
-                                color = ColorMutedGray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Medium,
                             )
                             Spacer(modifier = Modifier.height(4.dp))
@@ -159,15 +154,15 @@ fun ForecastOverviewReportScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 Column {
-                                    Text("Beklenen Gelir", fontSize = 11.sp, color = ColorMutedGray)
+                                    Text("Beklenen Gelir", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text(projectedIncomeFormatted, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = ColorSageGreen)
                                 }
                                 Column {
-                                    Text("Sabit Gider", fontSize = 11.sp, color = ColorMutedGray)
-                                    Text(fixedExpenseFormatted, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = ColorDarkGraphite)
+                                    Text("Sabit Gider", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(fixedExpenseFormatted, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text("Değişken Gider", fontSize = 11.sp, color = ColorMutedGray)
+                                    Text("Değişken Gider", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text(variableExpenseFormatted, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = ColorRefinedRed)
                                 }
                             }
@@ -181,7 +176,7 @@ fun ForecastOverviewReportScreen(
                         text = "Tahmini Oluşturan Kalemler",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ColorDarkGraphite,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(top = 8.dp),
                     )
                 }
@@ -189,7 +184,7 @@ fun ForecastOverviewReportScreen(
                 items(sources) { source ->
                     ReportCard(
                         modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = ColorCardSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surface,
                         cornerRadius = 14.dp,
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -202,13 +197,13 @@ fun ForecastOverviewReportScreen(
                                     text = source.title,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = ColorDarkGraphite,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
                                     text = source.amountFormatted,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = ColorDarkGraphite,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
                             Spacer(modifier = Modifier.height(8.dp))
@@ -219,7 +214,7 @@ fun ForecastOverviewReportScreen(
                                     .height(6.dp)
                                     .clip(RoundedCornerShape(3.dp)),
                                 color = ColorSageGreen,
-                                trackColor = ColorLightSage,
+                                trackColor = MaterialTheme.colorScheme.secondaryContainer,
                             )
                         }
                     }
@@ -239,14 +234,14 @@ fun ForecastOverviewReportScreen(
                             Icon(
                                 imageVector = Icons.Default.Info,
                                 contentDescription = null,
-                                tint = ColorMutedGray,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(18.dp),
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
                                 text = "Tahminler geçmiş harcama ritminiz ve kayıtlı düzenli ödemelerinize dayanır; kesin sonuç veya yatırım tavsiyesi teşkil etmez.",
                                 fontSize = 12.sp,
-                                color = ColorMutedGray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 lineHeight = 16.sp,
                             )
                         }
@@ -299,7 +294,7 @@ fun ForecastDetailReportScreen(
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = ColorWarmBg,
+        color = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier
@@ -317,14 +312,14 @@ fun ForecastDetailReportScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Geri",
-                        tint = ColorDarkGraphite,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
                     text = "Projeksiyon Detayı",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = ColorDarkGraphite,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
 
@@ -338,7 +333,7 @@ fun ForecastDetailReportScreen(
                 item {
                     ReportCard(
                         modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = ColorCardSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surface,
                         cornerRadius = 20.dp,
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
@@ -346,25 +341,25 @@ fun ForecastDetailReportScreen(
                                 text = "Hesaplama Modeli ve Varsayımlar",
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = ColorDarkGraphite,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
                                 text = "• Geçmiş 90 günlük günlük değişken harcama ortalaması: $dailyAverageFormatted",
                                 fontSize = 13.sp,
-                                color = ColorDarkGraphite,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = "• Aktif yinelenen işlem ve abonelik sayısı: $activeRecurringCount",
                                 fontSize = 13.sp,
-                                color = ColorDarkGraphite,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = "• Gerçekleşen günler gerçek işlemlerden, kalan günler ise beklenen akıştan hesaplanmıştır.",
                                 fontSize = 13.sp,
-                                color = ColorDarkGraphite,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                         }
                     }
@@ -376,7 +371,7 @@ fun ForecastDetailReportScreen(
                         text = "Aylık Projeksiyon İlerlemesi",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ColorDarkGraphite,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(top = 8.dp),
                     )
                 }
@@ -384,7 +379,7 @@ fun ForecastDetailReportScreen(
                 items(projectionPoints) { point ->
                     ReportCard(
                         modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = ColorCardSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surface,
                         cornerRadius = 14.dp,
                     ) {
                         Row(
@@ -400,12 +395,12 @@ fun ForecastDetailReportScreen(
                                         text = "${point.yearMonth.monthNumber}. Ay (${point.yearMonth.year})",
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = ColorDarkGraphite,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     if (point.isForecast) {
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Surface(
-                                            color = ColorLightSage,
+                                            color = MaterialTheme.colorScheme.secondaryContainer,
                                             shape = RoundedCornerShape(4.dp),
                                         ) {
                                             Text(
@@ -422,7 +417,7 @@ fun ForecastDetailReportScreen(
                                 Text(
                                     text = "Gelir: +₺${point.income.amountMinor / 100} • Gider: -₺${point.expense.amountMinor / 100}",
                                     fontSize = 12.sp,
-                                    color = ColorMutedGray,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
 
@@ -457,7 +452,7 @@ fun FinancialInsightsReportScreen(
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = ColorWarmBg,
+        color = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier
@@ -475,14 +470,14 @@ fun FinancialInsightsReportScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Geri",
-                        tint = ColorDarkGraphite,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
                     text = "Finansal İçgörüler",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = ColorDarkGraphite,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
 
@@ -496,7 +491,7 @@ fun FinancialInsightsReportScreen(
                     Text(
                         text = "Verilerinize Dayalı Önemli Değişimler",
                         fontSize = 13.sp,
-                        color = ColorMutedGray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp),
                     )
                 }
@@ -506,7 +501,7 @@ fun FinancialInsightsReportScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onInsightClick(item) },
-                        backgroundColor = ColorCardSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surface,
                         cornerRadius = 16.dp,
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -520,7 +515,7 @@ fun FinancialInsightsReportScreen(
                                     modifier = Modifier.weight(1f),
                                 ) {
                                     Surface(
-                                        color = if (item.isPositive) ColorLightSage else ColorLightRed,
+                                        color = if (item.isPositive) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.errorContainer,
                                         shape = RoundedCornerShape(8.dp),
                                     ) {
                                         Icon(
@@ -538,12 +533,12 @@ fun FinancialInsightsReportScreen(
                                             text = item.title,
                                             fontSize = 15.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = ColorDarkGraphite,
+                                            color = MaterialTheme.colorScheme.onSurface,
                                         )
                                         Text(
                                             text = item.subtitle,
                                             fontSize = 12.sp,
-                                            color = ColorMutedGray,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                 }
@@ -554,7 +549,7 @@ fun FinancialInsightsReportScreen(
                                             text = item.amountFormatted,
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = ColorDarkGraphite,
+                                            color = MaterialTheme.colorScheme.onSurface,
                                         )
                                         Text(
                                             text = item.deltaFormatted,
@@ -567,7 +562,7 @@ fun FinancialInsightsReportScreen(
                                     Icon(
                                         imageVector = Icons.Default.ChevronRight,
                                         contentDescription = null,
-                                        tint = ColorMutedGray,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(16.dp),
                                     )
                                 }
@@ -578,7 +573,7 @@ fun FinancialInsightsReportScreen(
                             Text(
                                 text = item.explanation,
                                 fontSize = 12.sp,
-                                color = ColorDarkGraphite,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 lineHeight = 16.sp,
                             )
                         }
@@ -606,7 +601,7 @@ fun InsightDetailReportScreen(
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = ColorWarmBg,
+        color = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier
@@ -624,14 +619,14 @@ fun InsightDetailReportScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Geri",
-                        tint = ColorDarkGraphite,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
                     text = "İçgörü Detayı",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = ColorDarkGraphite,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
 
@@ -645,7 +640,7 @@ fun InsightDetailReportScreen(
                 item {
                     ReportCard(
                         modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = ColorCardSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surface,
                         cornerRadius = 20.dp,
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
@@ -653,13 +648,13 @@ fun InsightDetailReportScreen(
                                 text = insight.title,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = ColorDarkGraphite,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = insight.subtitle,
                                 fontSize = 13.sp,
-                                color = ColorMutedGray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Spacer(modifier = Modifier.height(16.dp))
 
@@ -668,11 +663,11 @@ fun InsightDetailReportScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 Column {
-                                    Text("Toplam Tutar", fontSize = 11.sp, color = ColorMutedGray)
-                                    Text(insight.amountFormatted, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ColorDarkGraphite)
+                                    Text("Toplam Tutar", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(insight.amountFormatted, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text("Değişim Oranı", fontSize = 11.sp, color = ColorMutedGray)
+                                    Text("Değişim Oranı", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text(
                                         text = insight.deltaFormatted,
                                         fontSize = 16.sp,
@@ -689,7 +684,7 @@ fun InsightDetailReportScreen(
                 item {
                     ReportCard(
                         modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = ColorCardSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surface,
                         cornerRadius = 16.dp,
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -705,21 +700,21 @@ fun InsightDetailReportScreen(
                                     text = "Nasıl Hesaplandı?",
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = ColorDarkGraphite,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = insight.explanation,
                                 fontSize = 13.sp,
-                                color = ColorDarkGraphite,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 lineHeight = 18.sp,
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "Bu analiz ${insight.transactionCount} adet kayıtlı işlem üzerinden hesaplanmıştır.",
                                 fontSize = 12.sp,
-                                color = ColorMutedGray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -731,7 +726,7 @@ fun InsightDetailReportScreen(
                             text = "Etkileyen İşlemler",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            color = ColorDarkGraphite,
+                            color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(top = 8.dp),
                         )
                     }
@@ -739,7 +734,7 @@ fun InsightDetailReportScreen(
                     items(transactions) { tx ->
                         ReportCard(
                             modifier = Modifier.fillMaxWidth(),
-                            backgroundColor = ColorCardSurface,
+                            backgroundColor = MaterialTheme.colorScheme.surface,
                             cornerRadius = 12.dp,
                         ) {
                             Row(
@@ -754,19 +749,19 @@ fun InsightDetailReportScreen(
                                         text = tx.title,
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = ColorDarkGraphite,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Text(
                                         text = tx.dateFormatted,
                                         fontSize = 12.sp,
-                                        color = ColorMutedGray,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                                 Text(
                                     text = (if (tx.isExpense) "-" else "+") + tx.amountFormatted,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (tx.isExpense) ColorDarkGraphite else ColorSageGreen,
+                                    color = if (tx.isExpense) MaterialTheme.colorScheme.onSurface else ColorSageGreen,
                                 )
                             }
                         }

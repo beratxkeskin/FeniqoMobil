@@ -46,6 +46,7 @@ class GoalFormViewModel @Inject constructor(
             ),
         ),
     )
+    private var initialInput: GoalFormInput = _uiState.value.input
     val uiState: StateFlow<GoalFormUiState> = _uiState.asStateFlow()
 
     private val _editLoadState = MutableStateFlow<GoalEditLoadState>(GoalEditLoadState.Idle)
@@ -78,26 +79,29 @@ class GoalFormViewModel @Inject constructor(
                         if (goal != null) {
                             val draft = GoalFormDraft.fromDomain(goal)
                             val history = contributions.toSortedHistoryUiModels()
+                            val loadedInput = GoalFormInput(
+                                goalId = goal.id,
+                                nameInput = goal.name,
+                                targetAmountInput = formatMoneyToInput(goal.targetAmount),
+                                currency = goal.targetAmount.currency,
+                                initialAmountInput = "", // Editte başlangıç girilemez
+                                targetDate = goal.targetDate,
+                                colorHex = goal.color.hex,
+                                iconKey = goal.icon?.key ?: "savings",
+                            )
+                            initialInput = loadedInput
+                            _uiState.update { state ->
+                                state.copy(
+                                    input = loadedInput,
+                                    errors = GoalFormInputErrors(),
+                                    hasUnsavedChanges = false,
+                                    contributionsHistory = history,
+                                )
+                            }
                             _editLoadState.value = GoalEditLoadState.Ready(
                                 draft = draft,
                                 currentAmount = goal.currentAmount,
                             )
-                            _uiState.update { state ->
-                                state.copy(
-                                    input = GoalFormInput(
-                                        goalId = goal.id,
-                                        nameInput = goal.name,
-                                        targetAmountInput = formatMoneyToInput(goal.targetAmount),
-                                        currency = goal.targetAmount.currency,
-                                        initialAmountInput = "", // Editte başlangıç girilemez
-                                        targetDate = goal.targetDate,
-                                        colorHex = goal.color.hex,
-                                        iconKey = goal.icon?.key ?: "savings",
-                                    ),
-                                    errors = GoalFormInputErrors(),
-                                    contributionsHistory = history,
-                                )
-                            }
                         } else {
                             _editLoadState.value = GoalEditLoadState.NotFound
                             _uiState.update { it.copy(contributionsHistory = emptyList()) }
@@ -143,12 +147,14 @@ class GoalFormViewModel @Inject constructor(
             val updated = transform(state.input)
             val lockedCurrency = if (state.input.isEditMode) state.input.currency else updated.currency
             val lockedGoalId = state.input.goalId
-            state.copy(
-                input = updated.copy(
+            val protectedInput = updated.copy(
                     goalId = lockedGoalId,
                     currency = lockedCurrency,
-                ),
+                )
+            state.copy(
+                input = protectedInput,
                 errors = GoalFormInputErrors(), // Reset errors on user modification
+                hasUnsavedChanges = protectedInput != initialInput,
             )
         }
     }
@@ -164,6 +170,7 @@ class GoalFormViewModel @Inject constructor(
                 val draft = normResult.draft
                 _uiState.update { it.copy(isSubmitting = true) }
                 activeSubmitJob = viewModelScope.launch {
+                    var mutationSucceeded = false
                     try {
                         val result = if (draft.isCreateMode) {
                             createGoalUseCase(draft.toCreateCommand())
@@ -173,6 +180,7 @@ class GoalFormViewModel @Inject constructor(
 
                         when (result) {
                             is RepositoryResult.Success -> {
+                                mutationSucceeded = true
                                 _events.send(GoalFormUiEvent.MutationSuccess(FinanceUiMessage.GOAL_SAVED))
                             }
                             is RepositoryResult.Failure -> {
@@ -184,7 +192,7 @@ class GoalFormViewModel @Inject constructor(
                     } catch (_: Exception) {
                         _events.send(GoalFormUiEvent.ShowMessage(FinanceUiMessage.GENERIC_ERROR))
                     } finally {
-                        _uiState.update { it.copy(isSubmitting = false) }
+                        if (!mutationSucceeded) _uiState.update { it.copy(isSubmitting = false) }
                         activeSubmitJob = null
                     }
                 }

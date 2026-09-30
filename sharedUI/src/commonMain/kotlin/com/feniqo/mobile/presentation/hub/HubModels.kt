@@ -141,7 +141,7 @@ object MoreHubRegistry {
         title = "Raporlar",
         subtitle = "Aylık ve yıllık detaylı finansal analizler",
         iconSymbol = "R",
-        status = HubItemStatus.COMING_SOON,
+        status = HubItemStatus.AVAILABLE,
     )
 
     val SHARED_SPACES = HubMenuItem(

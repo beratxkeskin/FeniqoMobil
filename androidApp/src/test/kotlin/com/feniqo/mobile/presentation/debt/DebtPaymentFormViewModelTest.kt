@@ -57,6 +57,7 @@ class DebtPaymentFormViewModelTest {
         val paymentsFlow = MutableStateFlow<Map<EntityId, List<DebtPayment>>>(emptyMap())
         var addPaymentResult: RepositoryResult<EntityId>? = null
         var lastAddPaymentCommand: AddDebtPaymentCommand? = null
+        var addPaymentCallCount: Int = 0
         var throwCancellationOnAdd: Boolean = false
 
 
@@ -83,6 +84,7 @@ class DebtPaymentFormViewModelTest {
         }
 
         override suspend fun addPayment(command: AddDebtPaymentCommand): RepositoryResult<EntityId> {
+            addPaymentCallCount++
             if (throwCancellationOnAdd) {
                 throw CancellationException("Simulated coroutine cancellation")
             }
@@ -178,7 +180,7 @@ class DebtPaymentFormViewModelTest {
     }
 
     @Test
-    fun submit_addPayment_successful() = runTest {
+    fun submit_addPayment_success_staysLockedUntilNavigationAndRejectsSecondSubmit() = runTest {
         val debtId = EntityId("d-1")
         val sampleDebt = Debt(
             id = debtId,
@@ -210,10 +212,13 @@ class DebtPaymentFormViewModelTest {
 
         viewModel.submit()
         advanceUntilIdle()
+        viewModel.submit()
+        advanceUntilIdle()
 
         assertEquals(1, emittedEvents.size)
         assertEquals(DebtPaymentFormUiEvent.MutationSuccess(FinanceUiMessage.DEBT_PAYMENT_ADDED), emittedEvents.first())
-        assertFalse(viewModel.uiState.value.isSubmitting)
+        assertEquals(1, repository.addPaymentCallCount)
+        assertTrue(viewModel.uiState.value.isSubmitting)
 
         val cmd = repository.lastAddPaymentCommand
         assertTrue(cmd != null)

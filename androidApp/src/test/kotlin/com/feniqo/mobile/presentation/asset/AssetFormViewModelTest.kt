@@ -35,6 +35,20 @@ class AssetFormViewModelTest {
     }
 
     @Test
+    fun submit_afterImmediateSuccess_staysLockedUntilNavigationAndCreatesOnlyOnce() = runTest {
+        val repository = FakeAssetRepository()
+        val viewModel = viewModel(repository)
+        viewModel.updateInput { it.copy(nameInput = "Nakit", currentValueInput = "250") }
+
+        viewModel.submit()
+        viewModel.events.first()
+        viewModel.submit()
+
+        assertEquals(1, repository.createCallCount)
+        assertTrue(viewModel.uiState.value.isSubmitting)
+    }
+
+    @Test
     fun editLoad_preservesIdentityAndDeleteUsesLoadedId() = runTest {
         val repository = FakeAssetRepository()
         val existing = asset("asset-1")
@@ -75,6 +89,19 @@ class AssetFormViewModelTest {
         assertEquals(Currency.USD, viewModel.uiState.value.input.currency)
     }
 
+    @Test
+    fun updateInput_marksDirtyAndRevertingToInitialInputClearsDirtyState() = runTest {
+        val viewModel = viewModel(FakeAssetRepository())
+        val initialInput = viewModel.uiState.value.input
+
+        assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+        viewModel.updateInput { it.copy(nameInput = "Nakit") }
+        assertTrue(viewModel.uiState.value.hasUnsavedChanges)
+
+        viewModel.updateInput { initialInput }
+        assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+    }
+
     private fun viewModel(repository: FakeAssetRepository) = AssetFormViewModel(
         ObserveAssetUseCase(repository), CreateAssetUseCase(repository),
         UpdateAssetUseCase(repository), DeleteAssetUseCase(repository),
@@ -83,10 +110,12 @@ class AssetFormViewModelTest {
     private class FakeAssetRepository : AssetRepository {
         val asset = MutableStateFlow<Asset?>(null)
         var created: CreateAssetCommand? = null
+        var createCallCount: Int = 0
         var deleted: EntityId? = null
         override fun observeAssets(): Flow<List<Asset>> = emptyFlow()
         override fun observeAsset(id: EntityId): Flow<Asset?> = asset
         override suspend fun create(command: CreateAssetCommand): RepositoryResult<EntityId> {
+            createCallCount++
             created = command
             return RepositoryResult.Success(EntityId("created"))
         }

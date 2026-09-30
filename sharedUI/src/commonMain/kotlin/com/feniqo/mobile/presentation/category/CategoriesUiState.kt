@@ -142,6 +142,7 @@ data class CategoryFormUiState(
     val colorHex: String = "#10B981",
     val iconKey: String? = null,
     val isSubmitting: Boolean = false,
+    val hasUnsavedChanges: Boolean = false,
     val activeWorkspaceName: String? = null,
     val nameError: CategoryFormFieldError? = null,
     val colorError: CategoryFormFieldError? = null,

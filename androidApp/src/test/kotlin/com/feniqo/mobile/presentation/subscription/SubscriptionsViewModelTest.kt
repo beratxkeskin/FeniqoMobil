@@ -270,7 +270,7 @@ class SubscriptionsViewModelTest {
     }
 
     @Test
-    fun createSubscription_success_emitsMutationSuccess() = runTest {
+    fun createSubscription_success_staysLockedUntilNavigationAndRejectsSecondSubmit() = runTest {
         val subscriptionRepo = FakeSubscriptionRepository()
         val categoryRepo = FakeCategoryRepository()
         val viewModel = createViewModel(subscriptionRepo, categoryRepo)
@@ -298,11 +298,14 @@ class SubscriptionsViewModelTest {
 
         viewModel.onIntent(SubscriptionsIntent.Create(command))
         advanceUntilIdle()
+        viewModel.onIntent(SubscriptionsIntent.Create(command))
+        advanceUntilIdle()
 
         assertEquals(1, events.size)
         assertTrue(events[0] is SubscriptionUiEvent.MutationSuccess)
         assertEquals(FinanceUiMessage.SUBSCRIPTION_SAVED, (events[0] as SubscriptionUiEvent.MutationSuccess).message)
-        assertFalse(viewModel.uiState.value.mutationState.isSubmitting)
+        assertEquals(1, subscriptionRepo.createCallCount)
+        assertTrue(viewModel.uiState.value.mutationState.isSubmitting)
     }
 
     @Test
@@ -338,7 +341,7 @@ class SubscriptionsViewModelTest {
         assertEquals(1, events.size)
         assertTrue(events[0] is SubscriptionUiEvent.MutationSuccess)
         assertEquals(FinanceUiMessage.SUBSCRIPTION_SAVED, (events[0] as SubscriptionUiEvent.MutationSuccess).message)
-        assertFalse(viewModel.uiState.value.mutationState.isSubmitting)
+        assertTrue(viewModel.uiState.value.mutationState.isSubmitting)
     }
 
     @Test
@@ -708,6 +711,7 @@ class SubscriptionsViewModelTest {
         var shouldThrowOnObserve: Throwable? = null
         var shouldThrowOnObserveSingle: Throwable? = null
         var activeCollectorCount = 0
+        var createCallCount = 0
 
         var advanceRenewalResult: RepositoryResult<SubscriptionRenewalProgressionResult> =
             RepositoryResult.Success(SubscriptionRenewalProgressionResult.Advanced(LocalDate(2026, 9, 1)))
@@ -746,6 +750,7 @@ class SubscriptionsViewModelTest {
         override fun observePayments(subscriptionId: EntityId?): Flow<List<com.feniqo.mobile.domain.model.SubscriptionPayment>> = paymentsFlow
 
         override suspend fun create(command: CreateSubscriptionCommand): RepositoryResult<EntityId> {
+            createCallCount++
             return RepositoryResult.Success(EntityId("sub-created-1"))
         }
 

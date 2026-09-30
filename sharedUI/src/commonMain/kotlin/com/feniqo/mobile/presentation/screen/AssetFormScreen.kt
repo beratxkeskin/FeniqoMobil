@@ -180,7 +180,7 @@ fun AssetFormScreen(
                         .clip(RoundedCornerShape(12.dp))
                         .clickable { showTypePicker = true },
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = CardDefaults.outlinedCardBorder(),
                 ) {
                     Row(
@@ -307,7 +307,7 @@ fun AssetFormScreen(
                         .clip(RoundedCornerShape(12.dp))
                         .clickable { showCurrencyPicker = true },
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = CardDefaults.outlinedCardBorder(),
                 ) {
                     Row(
@@ -376,7 +376,7 @@ fun AssetFormScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = CardDefaults.outlinedCardBorder(),
                 ) {
                     Row(
@@ -423,7 +423,7 @@ fun AssetFormScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = CardDefaults.outlinedCardBorder(),
             ) {
                 Column(

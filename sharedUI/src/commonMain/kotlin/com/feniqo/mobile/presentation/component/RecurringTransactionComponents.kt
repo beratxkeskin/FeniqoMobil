@@ -131,7 +131,7 @@ fun RecurringTransactionCard(
             },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = FeniqoPureWhite,
+            containerColor = MaterialTheme.colorScheme.surface,
         ),
         border = BorderStroke(1.dp, Color(0xFFF1F5F9)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -161,7 +161,7 @@ fun RecurringTransactionCard(
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                     ),
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -184,7 +184,7 @@ fun RecurringTransactionCard(
                 Text(
                     text = item.formattedFrequency,
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                    color = FeniqoTextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 if (nextDateText != null) {
@@ -192,7 +192,7 @@ fun RecurringTransactionCard(
                     Text(
                         text = nextDateText,
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                        color = FeniqoTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -336,7 +336,7 @@ fun RecurringTransactionDeleteDialog(
 ) {
     ModalBottomSheet(
         onDismissRequest = { if (!isSubmitting) onDismiss() },
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         dragHandle = {
             Surface(
@@ -400,7 +400,7 @@ fun RecurringTransactionDeleteDialog(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                 ),
-                color = FeniqoTextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -411,7 +411,7 @@ fun RecurringTransactionDeleteDialog(
                     fontSize = 14.sp,
                     lineHeight = 20.sp,
                 ),
-                color = FeniqoTextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
 
@@ -494,7 +494,7 @@ fun RecurrencePatternSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         dragHandle = {
             Surface(
@@ -526,7 +526,7 @@ fun RecurrencePatternSheet(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                     ),
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 IconButton(
@@ -604,7 +604,7 @@ fun RecurrencePatternSheet(
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                 ),
-                color = FeniqoTextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -635,7 +635,7 @@ fun RecurrencePatternSheet(
                                 fontSize = 22.sp,
                                 fontWeight = FontWeight.Bold,
                             ),
-                            color = if (tempInterval > 1) FeniqoTextPrimary else Color(0xFFCBD5E1),
+                            color = if (tempInterval > 1) MaterialTheme.colorScheme.onSurface else Color(0xFFCBD5E1),
                         )
                     }
                 }
@@ -687,7 +687,7 @@ fun RecurrencePatternSheet(
                                 fontSize = 22.sp,
                                 fontWeight = FontWeight.Bold,
                             ),
-                            color = FeniqoTextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
@@ -703,7 +703,7 @@ fun RecurrencePatternSheet(
             Text(
                 text = summaryDescription,
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                color = FeniqoTextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
             )
@@ -751,7 +751,7 @@ fun RecurringCategoryPickerSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         dragHandle = {
             Surface(
@@ -782,7 +782,7 @@ fun RecurringCategoryPickerSheet(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                     ),
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 IconButton(
@@ -810,7 +810,7 @@ fun RecurringCategoryPickerSheet(
                     Text(
                         text = "Bu tür için tanımlı kategori bulunamadı.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = FeniqoTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             } else {
@@ -850,7 +850,7 @@ fun RecurringCategoryPickerSheet(
                                         fontSize = 15.sp,
                                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                     ),
-                                    color = FeniqoTextPrimary,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.weight(1f),
                                 )
 
@@ -920,7 +920,7 @@ fun RecurringPaymentMethodPickerSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         dragHandle = {
             Surface(
@@ -951,7 +951,7 @@ fun RecurringPaymentMethodPickerSheet(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                     ),
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 IconButton(
@@ -1011,7 +1011,7 @@ fun RecurringPaymentMethodPickerSheet(
                                     fontSize = 15.sp,
                                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                 ),
-                                color = FeniqoTextPrimary,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.weight(1f),
                             )
 
@@ -1092,7 +1092,7 @@ fun RecurringDatePickerSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         dragHandle = {
             Surface(
@@ -1124,7 +1124,7 @@ fun RecurringDatePickerSheet(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                     ),
-                    color = FeniqoTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 IconButton(
@@ -1171,7 +1171,7 @@ fun RecurringDatePickerSheet(
                             fontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold,
                         ),
-                        color = FeniqoTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
@@ -1186,7 +1186,7 @@ fun RecurringDatePickerSheet(
                     title = null,
                     headline = null,
                     colors = DatePickerDefaults.colors(
-                        containerColor = Color.White,
+                        containerColor = MaterialTheme.colorScheme.surface,
                         selectedDayContainerColor = FeniqoSageGreen,
                         todayDateBorderColor = FeniqoSageGreen,
                         selectedDayContentColor = Color.White,
@@ -1217,7 +1217,7 @@ fun RecurringDatePickerSheet(
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
                         ),
-                        color = FeniqoTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
@@ -1267,7 +1267,7 @@ fun RecurringDatePickerSheet(
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = FeniqoTextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         ),
                     )
                 }

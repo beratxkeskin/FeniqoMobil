@@ -30,6 +30,7 @@ import com.feniqo.mobile.presentation.screen.TransactionsScreen
 fun TransactionsScreenRoute(
     onAddTransaction: () -> Unit = {},
     onEditTransaction: (EntityId) -> Unit = {},
+    initialSelectedTransactionId: EntityId? = null,
     modifier: Modifier = Modifier,
     viewModel: TransactionsViewModel = hiltViewModel(),
     conflictViewModel: TransactionConflictViewModel = hiltViewModel(),
@@ -41,6 +42,11 @@ fun TransactionsScreenRoute(
     var showConflict by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(initialSelectedTransactionId) {
+        if (initialSelectedTransactionId != null) {
+            selectedId = initialSelectedTransactionId.value
+        }
+    }
     val selectedItem = state.groupedItems.flatMap { it.items }.find { it.id.value == selectedId }
     BackHandler(enabled = selectedItem != null) {
         selectedId = null

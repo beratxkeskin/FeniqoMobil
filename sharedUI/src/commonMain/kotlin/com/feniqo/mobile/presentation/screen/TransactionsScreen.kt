@@ -382,17 +382,20 @@ private fun DailyMiniBarChart(
         ) {
             Text(
                 text = displayBars.first().dayLabel,
-                style = TextStyle(fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (displayBars.size > 2) {
                 Text(
                     text = displayBars[displayBars.size / 2].dayLabel,
-                    style = TextStyle(fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Text(
                 text = displayBars.last().dayLabel,
-                style = TextStyle(fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -660,7 +663,7 @@ private fun ZenSearchField(
     Surface(
         modifier = modifier.defaultMinSize(minHeight = 52.dp),
         shape = RoundedCornerShape(14.dp),
-        color = com.feniqo.mobile.presentation.theme.FeniqoTextPrimary,
+        color = MaterialTheme.colorScheme.onSurface,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Row(
