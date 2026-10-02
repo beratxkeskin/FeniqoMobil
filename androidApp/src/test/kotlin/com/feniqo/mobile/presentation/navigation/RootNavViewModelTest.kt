@@ -1,5 +1,10 @@
 package com.feniqo.mobile.presentation.navigation
 
+import com.feniqo.mobile.data.local.dao.ProfileDao
+import com.feniqo.mobile.data.local.entity.UserProfileEntity
+import com.feniqo.mobile.data.remote.auth.AuthRemoteDataSource
+import com.feniqo.mobile.data.remote.auth.RemoteAuthSession
+import com.feniqo.mobile.data.repository.OfflineFirstAuthRepository
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.UserProfile
 import com.feniqo.mobile.domain.repository.AuthRecoveryState
@@ -7,6 +12,7 @@ import com.feniqo.mobile.domain.repository.AuthRepository
 import com.feniqo.mobile.domain.repository.AuthSession
 import com.feniqo.mobile.domain.repository.RepositoryResult
 import com.feniqo.mobile.domain.usecase.ObserveAuthSessionUseCase
+import com.feniqo.mobile.domain.sync.BackgroundSyncScheduler
 import com.feniqo.mobile.navigation.AppAuthState
 import com.feniqo.mobile.presentation.sync.MainDispatcherRule
 import kotlinx.coroutines.CancellationException
@@ -21,6 +27,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -37,8 +44,9 @@ class RootNavViewModelTest {
         override fun observeSession(): Flow<AuthSession?> = sessionFlow
         override fun observeCurrentProfile(): Flow<UserProfile?> = MutableStateFlow(null)
         override fun observeRecoveryState(): Flow<AuthRecoveryState> = recoveryStateFlow
-        override fun clearRecoveryState() {
+        override suspend fun clearRecoveryState(): RepositoryResult<Unit> {
             recoveryStateFlow.value = AuthRecoveryState.Idle
+            return RepositoryResult.Success(Unit)
         }
         override suspend fun signIn(email: String, password: String): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
         override suspend fun signUp(email: String, password: String, fullName: String?): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("user-1"))
@@ -182,6 +190,36 @@ class RootNavViewModelTest {
     }
 
     @Test
+    fun realRepository_abandonVerifiedRecovery_neverPromotesRecoverySessionToAuthenticated() = runTest {
+        val remote = RecoveryIntegrationRemoteDataSource()
+        val scheduler = RecoveryIntegrationSyncScheduler()
+        val repository = OfflineFirstAuthRepository(
+            remoteDataSource = remote,
+            profileDao = RecoveryIntegrationProfileDao(),
+            syncScheduler = scheduler,
+        )
+        val viewModel = createViewModel(repository)
+        val observedStates = mutableListOf<AppAuthState>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.authState.collect { observedStates.add(it) }
+        }
+
+        repository.handleAuthDeepLink(
+            "feniqo://auth/callback#access_token=recovery-access&refresh_token=recovery-refresh&type=recovery"
+        )
+        assertTrue(viewModel.authState.value is AppAuthState.PasswordRecovery)
+        val firstRecoveryIndex = observedStates.indexOfFirst { it is AppAuthState.PasswordRecovery }
+
+        val clearResult = repository.clearRecoveryState()
+
+        assertTrue(clearResult is RepositoryResult.Success<Unit>)
+        assertSame(AppAuthState.Unauthenticated, viewModel.authState.value)
+        assertEquals(1, remote.signOutCallCount)
+        assertEquals(1, scheduler.cancelCallCount)
+        assertTrue(observedStates.drop(firstRecoveryIndex).none { it is AppAuthState.Authenticated })
+    }
+
+    @Test
     fun upstreamException_emitsUnauthenticatedForSafety() = runTest {
         val errorRepository = object : AuthRepository {
             override fun observeSession(): Flow<AuthSession?> = flow {
@@ -225,4 +263,52 @@ class RootNavViewModelTest {
         // CancellationException catch bloğunda normal hata gibi yakalanıp Unauthenticated yayınlamaz
         assertSame(AppAuthState.Checking, viewModel.authState.value)
     }
+}
+
+private class RecoveryIntegrationRemoteDataSource : AuthRemoteDataSource {
+    private val session = MutableStateFlow<RemoteAuthSession?>(null)
+    var signOutCallCount = 0
+
+    override fun observeSession(): Flow<RemoteAuthSession?> = session
+    override suspend fun signIn(email: String, password: String) = Unit
+    override suspend fun signUp(email: String, password: String, fullName: String?): String = "user-1"
+    override suspend fun refreshSession() = Unit
+    override suspend fun signOut() {
+        signOutCallCount++
+        session.value = null
+    }
+    override suspend fun changePassword(email: String, currentPassword: String, newPassword: String) = Unit
+    override suspend fun sendPasswordResetEmail(email: String, redirectUrl: String) = Unit
+    override suspend fun resendEmailConfirmation(email: String) = Unit
+    override suspend fun updatePassword(newPassword: String) = Unit
+    override suspend fun exchangeCodeForSession(code: String) = publishRecoverySession()
+    override suspend fun importAuthToken(accessToken: String, refreshToken: String) = publishRecoverySession()
+
+    private fun publishRecoverySession() {
+        session.value = RemoteAuthSession(
+            userId = "11111111-1111-4111-8111-111111111111",
+            email = "recovery@feniqo.com",
+            expiresAtEpochSeconds = 1_800_000_000,
+        )
+    }
+}
+
+private class RecoveryIntegrationSyncScheduler : BackgroundSyncScheduler {
+    var cancelCallCount = 0
+    override fun scheduleInitialSync() = Unit
+    override fun scheduleOutboxSync() = Unit
+    override fun cancelSyncWork() {
+        cancelCallCount++
+    }
+}
+
+private class RecoveryIntegrationProfileDao : ProfileDao {
+    private val profile = MutableStateFlow<UserProfileEntity?>(null)
+    override fun observeById(id: String): Flow<UserProfileEntity?> = profile
+    override suspend fun upsert(entity: UserProfileEntity) {
+        profile.value = entity
+    }
+    override suspend fun insertIfMissing(entity: UserProfileEntity): Long = -1L
+    override suspend fun setActiveWorkspaceGuarded(profileId: String, workspaceId: String): Int = 0
+    override suspend fun clearActiveWorkspace(profileId: String): Int = 0
 }

@@ -47,9 +47,14 @@ class ResetPasswordViewModelTest {
             return resetPasswordResult
         }
 
-        override fun clearRecoveryState() {
+        var clearRecoveryResult: RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+
+        override suspend fun clearRecoveryState(): RepositoryResult<Unit> {
             clearRecoveryCallCount++
-            recoveryFlow.value = AuthRecoveryState.Idle
+            if (clearRecoveryResult is RepositoryResult.Success) {
+                recoveryFlow.value = AuthRecoveryState.Idle
+            }
+            return clearRecoveryResult
         }
 
         override suspend fun signIn(email: String, password: String): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
@@ -138,7 +143,7 @@ class ResetPasswordViewModelTest {
 
         assertEquals(1, repo.resetPasswordCallCount)
         assertEquals("SuperSecure123", repo.lastResetPassword)
-        assertEquals(1, repo.clearRecoveryCallCount)
+        assertEquals(0, repo.clearRecoveryCallCount)
         assertTrue(onSuccessCalled)
         assertTrue(viewModel.uiState.value.isSuccess)
         assertEquals("", viewModel.uiState.value.password)
@@ -146,7 +151,7 @@ class ResetPasswordViewModelTest {
     }
 
     @Test
-    fun abandonRecovery_clearsPasswordAndClearsRecoveryState() = runTest {
+    fun abandonRecovery_clearsPasswordAndNavigatesAfterRecoveryStateIsCleared() = runTest {
         val repo = FakeAuthRepository()
         repo.recoveryFlow.value = AuthRecoveryState.Verified("test@feniqo.com")
         val viewModel = createViewModel(repo)
@@ -154,10 +159,32 @@ class ResetPasswordViewModelTest {
 
         viewModel.onPasswordChanged("TemporaryPass")
         viewModel.onConfirmPasswordChanged("TemporaryPass")
-        viewModel.abandonRecovery()
+        var onClearedCalled = false
+        viewModel.abandonRecovery { onClearedCalled = true }
+        advanceUntilIdle()
 
         assertEquals("", viewModel.uiState.value.password)
         assertEquals("", viewModel.uiState.value.confirmPassword)
         assertEquals(1, repo.clearRecoveryCallCount)
+        assertTrue(onClearedCalled)
+        assertFalse(viewModel.uiState.value.isSubmitting)
+    }
+
+    @Test
+    fun abandonRecovery_whenCleanupFails_keepsRecoveryIsolatedAndDoesNotNavigate() = runTest {
+        val repo = FakeAuthRepository()
+        repo.recoveryFlow.value = AuthRecoveryState.Verified("test@feniqo.com")
+        repo.clearRecoveryResult = RepositoryResult.Failure(AppError.Authentication("auth_unknown"))
+        val viewModel = createViewModel(repo)
+        advanceUntilIdle()
+
+        var onClearedCalled = false
+        viewModel.abandonRecovery { onClearedCalled = true }
+        advanceUntilIdle()
+
+        assertFalse(onClearedCalled)
+        assertEquals(AuthRecoveryState.Verified("test@feniqo.com"), repo.recoveryFlow.value)
+        assertEquals(AuthUiMessage.GENERIC_ERROR, viewModel.uiState.value.generalMessage)
+        assertFalse(viewModel.uiState.value.isSubmitting)
     }
 }

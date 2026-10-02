@@ -11,6 +11,7 @@ import com.feniqo.mobile.data.sync.SyncScopeKey
 import com.feniqo.mobile.domain.model.AppError
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.SyncStatus
+import com.feniqo.mobile.domain.repository.AuthRecoveryState
 import com.feniqo.mobile.domain.repository.RepositoryResult
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -376,7 +377,8 @@ class OfflineFirstAuthRepositoryTest {
                 expiresAtEpochSeconds = 1_800_000_000,
             )
         }
-        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+        val scheduler = FakeBackgroundSyncScheduler()
+        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao(), scheduler)
 
         // Önce linki verify et
         repository.handleAuthDeepLink("feniqo://auth/callback#access_token=token&refresh_token=ref&type=recovery")
@@ -388,9 +390,56 @@ class OfflineFirstAuthRepositoryTest {
 
         assertEquals(1, remote.updatePasswordCallCount)
         assertEquals("NewSuperSecret123", remote.lastUpdatePasswordValue)
+        assertEquals(1, remote.signOutCallCount)
+        assertEquals(1, scheduler.cancelSyncCalls)
+        assertEquals(null, remote.session.value)
 
         // Şifre sıfırlama sonrası recovery Idle olmalı
         assertEquals(com.feniqo.mobile.domain.repository.AuthRecoveryState.Idle, repository.observeRecoveryState().first())
+    }
+
+    @Test
+    fun clearRecoveryState_whenVerified_signsOutCancelsSyncThenPublishesIdle() = runTest {
+        val remote = FakeAuthRemoteDataSource().apply {
+            session.value = RemoteAuthSession(
+                userId = "11111111-1111-4111-8111-111111111111",
+                email = "user@feniqo.com",
+                expiresAtEpochSeconds = 1_800_000_000,
+            )
+        }
+        val scheduler = FakeBackgroundSyncScheduler()
+        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao(), scheduler)
+        repository.handleAuthDeepLink("feniqo://auth/callback#access_token=token&refresh_token=ref&type=recovery")
+
+        val result = repository.clearRecoveryState()
+
+        assertIs<RepositoryResult.Success<Unit>>(result)
+        assertEquals(1, remote.signOutCallCount)
+        assertEquals(1, scheduler.cancelSyncCalls)
+        assertEquals(null, remote.session.value)
+        assertEquals(AuthRecoveryState.Idle, repository.observeRecoveryState().first())
+    }
+
+    @Test
+    fun clearRecoveryState_whenSignOutFails_keepsVerifiedStateAndDoesNotCancelSync() = runTest {
+        val remote = FakeAuthRemoteDataSource().apply {
+            session.value = RemoteAuthSession(
+                userId = "11111111-1111-4111-8111-111111111111",
+                email = "user@feniqo.com",
+                expiresAtEpochSeconds = 1_800_000_000,
+            )
+        }
+        val scheduler = FakeBackgroundSyncScheduler()
+        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao(), scheduler)
+        repository.handleAuthDeepLink("feniqo://auth/callback#access_token=token&refresh_token=ref&type=recovery")
+        remote.nextError = IllegalStateException("sign out failed")
+
+        val result = repository.clearRecoveryState()
+
+        assertIs<RepositoryResult.Failure>(result)
+        assertEquals(0, scheduler.cancelSyncCalls)
+        assertIs<AuthRecoveryState.Verified>(repository.observeRecoveryState().first())
+        assertEquals(1, remote.signOutCallCount)
     }
 
     @Test
@@ -427,6 +476,7 @@ private class FakeAuthRemoteDataSource : AuthRemoteDataSource {
     val session = MutableStateFlow<RemoteAuthSession?>(null)
     var nextError: Throwable? = null
     var lastEmail: String? = null
+    var signOutCallCount = 0
 
     override fun observeSession(): Flow<RemoteAuthSession?> = session
 
@@ -443,7 +493,11 @@ private class FakeAuthRemoteDataSource : AuthRemoteDataSource {
 
     override suspend fun refreshSession() = throwNextErrorIfPresent()
 
-    override suspend fun signOut() = throwNextErrorIfPresent()
+    override suspend fun signOut() {
+        signOutCallCount++
+        throwNextErrorIfPresent()
+        session.value = null
+    }
 
     var changePasswordCallCount = 0
     var lastChangePasswordEmail: String? = null

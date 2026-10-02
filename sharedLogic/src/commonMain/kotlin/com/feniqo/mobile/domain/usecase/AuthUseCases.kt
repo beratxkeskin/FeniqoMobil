@@ -105,7 +105,5 @@ class HandleAuthDeepLinkUseCase(
 class ClearRecoveryStateUseCase(
     private val authRepository: AuthRepository,
 ) {
-    operator fun invoke() {
-        authRepository.clearRecoveryState()
-    }
+    suspend operator fun invoke(): RepositoryResult<Unit> = authRepository.clearRecoveryState()
 }

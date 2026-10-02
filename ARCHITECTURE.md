@@ -178,6 +178,9 @@ sonra mevcut repository yazma akışına girebilir. Para birimi OCR metninden ta
 - Uzun yaşayan UI durumu `StateFlow`, tek seferlik olaylar `SharedFlow` ile sunulur.
 - Cancellation yakalanıp normal hata gibi yutulmaz.
 - Hassas veri, token, parola, makbuz içeriği veya finansal payload loglanmaz.
+- Doğrulanmış parola kurtarma oturumu terk edilirken uzak `signOut` ve arka plan sync iptali
+  tamamlanmadan recovery durumu `Idle` olamaz; temizleme başarısızsa navigasyon fail-closed
+  biçimde `PasswordRecovery` dalında kalır.
 
 ## 10. Test sınırları
 

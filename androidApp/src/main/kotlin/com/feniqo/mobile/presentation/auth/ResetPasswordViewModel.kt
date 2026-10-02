@@ -46,6 +46,7 @@ class ResetPasswordViewModel @Inject constructor(
     val uiState: StateFlow<ResetPasswordUiState> = _uiState.asStateFlow()
 
     private var submitJob: Job? = null
+    private var abandonJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -169,7 +170,6 @@ class ResetPasswordViewModel @Inject constructor(
                                 isSuccess = true,
                             )
                         }
-                        clearRecoveryStateUseCase()
                         onSuccess()
                     }
                     is RepositoryResult.Failure -> {
@@ -197,15 +197,49 @@ class ResetPasswordViewModel @Inject constructor(
         submitJob = job
     }
 
-    fun abandonRecovery() {
+    fun abandonRecovery(onCleared: () -> Unit) {
+        if (abandonJob?.isActive == true) return
+        submitJob?.cancel()
+
         // Akış terk edildiğinde parolayı RAM'den temizle ve recovery durumunu sıfırla
         _uiState.update {
             it.copy(
                 password = "",
                 confirmPassword = "",
+                isSubmitting = true,
                 generalMessage = null,
             )
         }
-        clearRecoveryStateUseCase()
+
+        val job = viewModelScope.launch {
+            try {
+                when (val result = clearRecoveryStateUseCase()) {
+                    is RepositoryResult.Success -> {
+                        _uiState.update { it.copy(isSubmitting = false) }
+                        onCleared()
+                    }
+                    is RepositoryResult.Failure -> {
+                        _uiState.update {
+                            it.copy(
+                                isSubmitting = false,
+                                generalMessage = result.error.toAuthUiMessage(),
+                            )
+                        }
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isSubmitting = false,
+                        generalMessage = AuthUiMessage.GENERIC_ERROR,
+                    )
+                }
+            } finally {
+                abandonJob = null
+            }
+        }
+        abandonJob = job
     }
 }

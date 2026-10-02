@@ -66,5 +66,5 @@ interface AuthRepository {
     suspend fun handleAuthDeepLink(uriString: String): RepositoryResult<AuthDeepLinkType> =
         RepositoryResult.Success(AuthDeepLinkType.UNSUPPORTED)
 
-    fun clearRecoveryState() {}
+    suspend fun clearRecoveryState(): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
 }

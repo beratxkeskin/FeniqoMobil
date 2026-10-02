@@ -180,18 +180,11 @@ class OfflineFirstAuthRepository(
             )
         }
 
-        val result = authResult {
-            remoteDataSource.updatePassword(newPassword)
-            // Parola güncellendikten sonra recovery state temizlenir ve oturum kapatılır
-            // Böylece kullanıcı yeni parolasıyla temiz giriş ekranından oturum açar
-            remoteDataSource.signOut()
-        }
+        val updateResult = authResult { remoteDataSource.updatePassword(newPassword) }
+        if (updateResult is RepositoryResult.Failure) return updateResult
 
-        if (result is RepositoryResult.Success) {
-            _recoveryState.value = AuthRecoveryState.Idle
-            syncScheduler?.cancelSyncWork()
-        }
-        return result
+        // Yeni parola kaydedildikten sonra geçici oturum tamamen kapanmadan Idle yayınlanmaz.
+        return closeVerifiedRecoverySession()
     }
 
     override suspend fun handleAuthDeepLink(uriString: String): RepositoryResult<AuthDeepLinkType> {
@@ -262,18 +255,25 @@ class OfflineFirstAuthRepository(
         }
     }
 
-    override fun clearRecoveryState() {
-        val wasVerified = _recoveryState.value is AuthRecoveryState.Verified
-        _recoveryState.value = AuthRecoveryState.Idle
-        if (wasVerified) {
-            // Geçici kurtarma oturumunun ana ekrana sızmaması için signOut çağrılır
-            try {
-                // Yangın söndürme tarzında güvenli çıkış
-                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).run {
-                    // Non-blocking fire-and-forget
-                }
-            } catch (_: Throwable) {}
+    override suspend fun clearRecoveryState(): RepositoryResult<Unit> {
+        if (_recoveryState.value !is AuthRecoveryState.Verified) {
+            _recoveryState.value = AuthRecoveryState.Idle
+            return RepositoryResult.Success(Unit)
         }
+
+        return closeVerifiedRecoverySession()
+    }
+
+    private suspend fun closeVerifiedRecoverySession(): RepositoryResult<Unit> {
+        val result = authResult {
+            remoteDataSource.signOut()
+            syncScheduler?.cancelSyncWork()
+            Unit
+        }
+        if (result is RepositoryResult.Success) {
+            _recoveryState.value = AuthRecoveryState.Idle
+        }
+        return result
     }
 }
 

@@ -380,16 +380,18 @@ fun AuthNavHost(
                     }
                 },
                 onRequestNewLink = {
-                    viewModel.abandonRecovery()
-                    navController.navigate(ForgotPasswordRoute) {
-                        popUpTo(LoginRoute) { inclusive = false }
+                    viewModel.abandonRecovery {
+                        navController.navigate(ForgotPasswordRoute) {
+                            popUpTo(LoginRoute) { inclusive = false }
+                        }
                     }
                 },
                 onNavigateToLogin = {
-                    viewModel.abandonRecovery()
-                    navController.navigate(LoginRoute) {
-                        popUpTo(LoginRoute) { inclusive = true }
-                        launchSingleTop = true
+                    viewModel.abandonRecovery {
+                        navController.navigate(LoginRoute) {
+                            popUpTo(LoginRoute) { inclusive = true }
+                            launchSingleTop = true
+                        }
                     }
                 },
             )
