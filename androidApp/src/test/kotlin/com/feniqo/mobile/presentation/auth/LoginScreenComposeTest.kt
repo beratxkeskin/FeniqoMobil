@@ -1,5 +1,8 @@
 package com.feniqo.mobile.presentation.auth
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -7,8 +10,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.feniqo.mobile.App
 import com.feniqo.mobile.presentation.screen.LoginScreen
-import com.feniqo.mobile.presentation.theme.FeniqoTheme
 import org.junit.Rule
 import org.junit.Test
 import org.junit.Assert.assertEquals
@@ -27,7 +30,7 @@ class LoginScreenComposeTest {
         var submitCount = 0
         var registerCount = 0
         composeRule.setContent {
-            FeniqoTheme {
+            App(languageTag = "tr") {
                 LoginScreen(
                     state = LoginUiState.Initial,
                     onEmailChange = {},
@@ -49,7 +52,7 @@ class LoginScreenComposeTest {
     @Test
     fun submitting_state_disables_actions_and_exposes_progress_semantics() {
         composeRule.setContent {
-            FeniqoTheme {
+            App(languageTag = "tr") {
                 LoginScreen(
                     state = LoginUiState(isSubmitting = true),
                     onEmailChange = {},
@@ -63,5 +66,29 @@ class LoginScreenComposeTest {
 
         composeRule.onNodeWithContentDescription("Giriş yapılıyor...").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Hesap oluştur").performScrollTo().assertIsNotEnabled()
+    }
+
+    @Test
+    fun login_reacts_to_runtime_locale_change() {
+        var languageTag by mutableStateOf("tr")
+
+        composeRule.setContent {
+            App(languageTag = languageTag) {
+                LoginScreen(
+                    state = LoginUiState.Initial,
+                    onEmailChange = {},
+                    onPasswordChange = {},
+                    onPasswordVisibilityToggle = {},
+                    onSubmit = {},
+                    onNavigateToRegister = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Tekrar hoş geldin.").assertIsDisplayed()
+        composeRule.runOnIdle { languageTag = "en" }
+        composeRule.onNodeWithText("Welcome back.").assertIsDisplayed()
+        composeRule.onNodeWithText("Sign in").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Create account").performScrollTo().assertIsDisplayed()
     }
 }

@@ -56,4 +56,47 @@
     <string name="navigation_more">Daha Fazla</string>
     <string name="navigation_add">Ekle</string>
     <string name="navigation_quick_add_description">Hızlı işlem ekle</string>
+
+    <string name="auth_login_welcome">Tekrar hoş geldin.</string>
+    <string name="auth_login_subtitle">Hesabına giriş yaparak devam et.</string>
+    <string name="auth_email_label">E-posta</string>
+    <string name="auth_email_placeholder">eposta@ornek.com</string>
+    <string name="auth_password_label">Parola</string>
+    <string name="auth_forgot_password">Parolamı unuttum</string>
+    <string name="auth_resend_verification">Doğrulama bağlantısını tekrar gönder</string>
+    <string name="auth_retry">Tekrar dene</string>
+    <string name="auth_sign_in">Giriş yap</string>
+    <string name="auth_signing_in">Giriş yapılıyor...</string>
+    <string name="auth_no_account">Hesabın yok mu? </string>
+    <string name="auth_create_account">Hesap oluştur</string>
+    <string name="auth_register_title">Yeni bir başlangıç.</string>
+    <string name="auth_register_subtitle">Feniqo ile finansal hedeflerine bir adım daha yaklaş.</string>
+    <string name="auth_display_name_label">Görünen ad (isteğe bağlı)</string>
+    <string name="auth_display_name_placeholder">Ayşe Yılmaz</string>
+    <string name="auth_confirm_password_label">Parola tekrar</string>
+    <string name="auth_terms">Kullanım koşulları</string>
+    <string name="auth_privacy">Gizlilik politikası</string>
+    <string name="auth_creating_account">Hesap oluşturuluyor...</string>
+    <string name="auth_existing_account">Zaten hesabın var mı? </string>
+
+    <string name="auth_error_invalid_credentials">E-posta veya parola hatalı.\nBilgilerini kontrol edip tekrar dene.</string>
+    <string name="auth_error_email_registered">Bu e-posta adresiyle kayıtlı bir hesap zaten var.</string>
+    <string name="auth_error_network">Bağlantı kurulamadı.\nİnternet bağlantını kontrol edip yeniden dene.</string>
+    <string name="auth_error_rate_limited">Çok fazla deneme yaptınız. Lütfen bir süre bekleyip tekrar deneyin.</string>
+    <string name="auth_error_email_not_confirmed">Giriş yapmadan önce e-posta adresinizi doğrulayın.</string>
+    <string name="auth_error_provider_unavailable">Giriş ve kayıt işlemleri şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.</string>
+    <string name="auth_error_invalid_input">Lütfen girdiğiniz bilgileri kontrol edin.</string>
+    <string name="auth_error_session_expired">Oturum süreniz doldu, lütfen tekrar giriş yapın.</string>
+    <string name="auth_error_generic">Bir hata oluştu. Lütfen tekrar deneyin.</string>
+    <string name="auth_email_confirmation_sent">Kaydınız oluşturuldu. Lütfen e-posta adresinize gönderilen doğrulama bağlantısını onaylayın.</string>
+    <string name="auth_password_reset_sent">Bu adresle bir hesap varsa parola sıfırlama bağlantısı gönderilecek.</string>
+    <string name="auth_error_recovery_link_invalid">Bağlantı geçersiz veya süresi dolmuş.\nParolanı yenilemek için yeni bir bağlantı iste.</string>
+    <string name="auth_error_recovery_not_authorized">Kurtarma bağlantısı doğrulanmadı. Lütfen e-postandaki bağlantıyı tekrar açın.</string>
+    <string name="auth_password_updated">Parolan güncellendi.\nYeni parolanla hesabına giriş yapabilirsin.</string>
+    <string name="auth_validation_email_required">E-posta adresi gereklidir.</string>
+    <string name="auth_validation_email_invalid">Geçerli bir e-posta adresi gir.</string>
+    <string name="auth_validation_password_required">Parola gereklidir.</string>
+    <string name="auth_validation_password_short">Parola en az 6 karakter olmalıdır.</string>
+    <string name="auth_validation_password_mismatch">Parolalar eşleşmiyor.</string>
+    <string name="auth_validation_name_short">Ad soyad en az 2 karakter olmalıdır.</string>
 </resources>

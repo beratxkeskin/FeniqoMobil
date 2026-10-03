@@ -1,7 +1,30 @@
 package com.feniqo.mobile.presentation.auth
 
+import androidx.compose.runtime.Composable
 import com.feniqo.mobile.domain.model.AppError
 import com.feniqo.mobile.domain.validation.AuthValidationError
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.auth_email_confirmation_sent
+import feniqomobil.sharedui.generated.resources.auth_error_email_not_confirmed
+import feniqomobil.sharedui.generated.resources.auth_error_email_registered
+import feniqomobil.sharedui.generated.resources.auth_error_generic
+import feniqomobil.sharedui.generated.resources.auth_error_invalid_credentials
+import feniqomobil.sharedui.generated.resources.auth_error_invalid_input
+import feniqomobil.sharedui.generated.resources.auth_error_network
+import feniqomobil.sharedui.generated.resources.auth_error_provider_unavailable
+import feniqomobil.sharedui.generated.resources.auth_error_rate_limited
+import feniqomobil.sharedui.generated.resources.auth_error_recovery_link_invalid
+import feniqomobil.sharedui.generated.resources.auth_error_recovery_not_authorized
+import feniqomobil.sharedui.generated.resources.auth_error_session_expired
+import feniqomobil.sharedui.generated.resources.auth_password_reset_sent
+import feniqomobil.sharedui.generated.resources.auth_password_updated
+import feniqomobil.sharedui.generated.resources.auth_validation_email_invalid
+import feniqomobil.sharedui.generated.resources.auth_validation_email_required
+import feniqomobil.sharedui.generated.resources.auth_validation_name_short
+import feniqomobil.sharedui.generated.resources.auth_validation_password_mismatch
+import feniqomobil.sharedui.generated.resources.auth_validation_password_required
+import feniqomobil.sharedui.generated.resources.auth_validation_password_short
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Kimlik doğrulama akışına ait tipli UI mesajlarıdır.
@@ -87,3 +110,37 @@ fun AuthValidationError.toDisplayText(): String = when (this) {
     AuthValidationError.PASSWORDS_DO_NOT_MATCH -> "Parolalar eşleşmiyor."
     AuthValidationError.FULL_NAME_TOO_SHORT -> "Ad soyad en az 2 karakter olmalıdır."
 }
+
+@Composable
+fun AuthUiMessage.toLocalizedText(): String =
+    stringResource(
+        when (this) {
+            AuthUiMessage.INVALID_CREDENTIALS -> Res.string.auth_error_invalid_credentials
+            AuthUiMessage.EMAIL_ALREADY_REGISTERED -> Res.string.auth_error_email_registered
+            AuthUiMessage.NETWORK_UNAVAILABLE -> Res.string.auth_error_network
+            AuthUiMessage.RATE_LIMITED -> Res.string.auth_error_rate_limited
+            AuthUiMessage.EMAIL_NOT_CONFIRMED -> Res.string.auth_error_email_not_confirmed
+            AuthUiMessage.AUTH_PROVIDER_UNAVAILABLE -> Res.string.auth_error_provider_unavailable
+            AuthUiMessage.INVALID_INPUT -> Res.string.auth_error_invalid_input
+            AuthUiMessage.SESSION_EXPIRED -> Res.string.auth_error_session_expired
+            AuthUiMessage.GENERIC_ERROR -> Res.string.auth_error_generic
+            AuthUiMessage.EMAIL_CONFIRMATION_SENT -> Res.string.auth_email_confirmation_sent
+            AuthUiMessage.PASSWORD_RESET_SENT -> Res.string.auth_password_reset_sent
+            AuthUiMessage.RECOVERY_LINK_INVALID -> Res.string.auth_error_recovery_link_invalid
+            AuthUiMessage.RECOVERY_NOT_AUTHORIZED -> Res.string.auth_error_recovery_not_authorized
+            AuthUiMessage.PASSWORD_UPDATED -> Res.string.auth_password_updated
+        },
+    )
+
+@Composable
+fun AuthValidationError.toLocalizedText(): String =
+    stringResource(
+        when (this) {
+            AuthValidationError.EMAIL_REQUIRED -> Res.string.auth_validation_email_required
+            AuthValidationError.EMAIL_INVALID -> Res.string.auth_validation_email_invalid
+            AuthValidationError.PASSWORD_REQUIRED -> Res.string.auth_validation_password_required
+            AuthValidationError.NEW_PASSWORD_TOO_SHORT -> Res.string.auth_validation_password_short
+            AuthValidationError.PASSWORDS_DO_NOT_MATCH -> Res.string.auth_validation_password_mismatch
+            AuthValidationError.FULL_NAME_TOO_SHORT -> Res.string.auth_validation_name_short
+        },
+    )

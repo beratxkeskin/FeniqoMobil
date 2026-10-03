@@ -56,4 +56,47 @@
     <string name="navigation_more">More</string>
     <string name="navigation_add">Add</string>
     <string name="navigation_quick_add_description">Add transaction</string>
+
+    <string name="auth_login_welcome">Welcome back.</string>
+    <string name="auth_login_subtitle">Sign in to continue to your account.</string>
+    <string name="auth_email_label">Email</string>
+    <string name="auth_email_placeholder">email@example.com</string>
+    <string name="auth_password_label">Password</string>
+    <string name="auth_forgot_password">Forgot password</string>
+    <string name="auth_resend_verification">Resend verification link</string>
+    <string name="auth_retry">Try again</string>
+    <string name="auth_sign_in">Sign in</string>
+    <string name="auth_signing_in">Signing in...</string>
+    <string name="auth_no_account">Don’t have an account? </string>
+    <string name="auth_create_account">Create account</string>
+    <string name="auth_register_title">A fresh start.</string>
+    <string name="auth_register_subtitle">Move one step closer to your financial goals with Feniqo.</string>
+    <string name="auth_display_name_label">Display name (optional)</string>
+    <string name="auth_display_name_placeholder">Jane Doe</string>
+    <string name="auth_confirm_password_label">Confirm password</string>
+    <string name="auth_terms">Terms of use</string>
+    <string name="auth_privacy">Privacy policy</string>
+    <string name="auth_creating_account">Creating account...</string>
+    <string name="auth_existing_account">Already have an account? </string>
+
+    <string name="auth_error_invalid_credentials">Incorrect email or password.\nCheck your details and try again.</string>
+    <string name="auth_error_email_registered">An account with this email address already exists.</string>
+    <string name="auth_error_network">Couldn’t connect.\nCheck your internet connection and try again.</string>
+    <string name="auth_error_rate_limited">Too many attempts. Please wait a while and try again.</string>
+    <string name="auth_error_email_not_confirmed">Verify your email address before signing in.</string>
+    <string name="auth_error_provider_unavailable">Sign-in and registration are currently unavailable. Please try again later.</string>
+    <string name="auth_error_invalid_input">Check the information you entered.</string>
+    <string name="auth_error_session_expired">Your session expired. Please sign in again.</string>
+    <string name="auth_error_generic">Something went wrong. Please try again.</string>
+    <string name="auth_email_confirmation_sent">Your account was created. Confirm the verification link sent to your email address.</string>
+    <string name="auth_password_reset_sent">If an account exists for this address, a password reset link will be sent.</string>
+    <string name="auth_error_recovery_link_invalid">This link is invalid or has expired.\nRequest a new link to reset your password.</string>
+    <string name="auth_error_recovery_not_authorized">The recovery link was not verified. Open the link in your email again.</string>
+    <string name="auth_password_updated">Your password was updated.\nYou can now sign in with your new password.</string>
+    <string name="auth_validation_email_required">Email address is required.</string>
+    <string name="auth_validation_email_invalid">Enter a valid email address.</string>
+    <string name="auth_validation_password_required">Password is required.</string>
+    <string name="auth_validation_password_short">Password must be at least 6 characters.</string>
+    <string name="auth_validation_password_mismatch">Passwords do not match.</string>
+    <string name="auth_validation_name_short">Full name must be at least 2 characters.</string>
 </resources>

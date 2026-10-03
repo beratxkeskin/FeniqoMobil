@@ -567,12 +567,6 @@
     </file>
     <file name="src/main/kotlin/com/feniqo/mobile/MainActivity.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="110" column="47" source="standard:multiline-expression-wrapping" />
-        <error line="113" column="46" source="standard:if-else-wrapping" />
-        <error line="113" column="46" source="standard:multiline-if-else" />
-        <error line="114" column="38" source="standard:if-else-wrapping" />
-        <error line="114" column="38" source="standard:multiline-if-else" />
-        <error line="160" column="5" source="standard:function-naming" />
     </file>
     <file name="src/main/kotlin/com/feniqo/mobile/demo/DemoAuthRepository.kt">
         <error line="10" column="1" source="standard:no-wildcard-imports" />
@@ -2382,8 +2376,6 @@
     <file name="src/main/kotlin/com/feniqo/mobile/presentation/settings/SettingsScreenRoute.kt">
         <error line="3" column="1" source="standard:import-ordering" />
         <error line="69" column="5" source="standard:function-naming" />
-        <error line="83" column="22" source="standard:multiline-expression-wrapping" />
-        <error line="89" column="140" source="standard:max-line-length" />
         <error line="110" column="5" source="standard:function-naming" />
         <error line="119" column="40" source="standard:multiline-expression-wrapping" />
         <error line="126" column="33" source="standard:chain-method-continuation" />
@@ -3535,16 +3527,16 @@
     </file>
     <file name="src/test/kotlin/com/feniqo/mobile/presentation/auth/LoginScreenComposeTest.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="42" column="20" source="standard:chain-method-continuation" />
-        <error line="42" column="48" source="standard:chain-method-continuation" />
-        <error line="42" column="66" source="standard:chain-method-continuation" />
-        <error line="42" column="86" source="standard:chain-method-continuation" />
-        <error line="42" column="104" source="standard:chain-method-continuation" />
-        <error line="43" column="20" source="standard:chain-method-continuation" />
-        <error line="43" column="52" source="standard:chain-method-continuation" />
-        <error line="43" column="70" source="standard:chain-method-continuation" />
-        <error line="43" column="90" source="standard:chain-method-continuation" />
-        <error line="43" column="108" source="standard:chain-method-continuation" />
+        <error line="45" column="20" source="standard:chain-method-continuation" />
+        <error line="45" column="48" source="standard:chain-method-continuation" />
+        <error line="45" column="66" source="standard:chain-method-continuation" />
+        <error line="45" column="86" source="standard:chain-method-continuation" />
+        <error line="45" column="104" source="standard:chain-method-continuation" />
+        <error line="46" column="20" source="standard:chain-method-continuation" />
+        <error line="46" column="52" source="standard:chain-method-continuation" />
+        <error line="46" column="70" source="standard:chain-method-continuation" />
+        <error line="46" column="90" source="standard:chain-method-continuation" />
+        <error line="46" column="108" source="standard:chain-method-continuation" />
     </file>
     <file name="src/test/kotlin/com/feniqo/mobile/presentation/auth/LoginViewModelTest.kt">
         <error line="17" column="1" source="standard:no-unused-imports" />

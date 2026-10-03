@@ -39,11 +39,27 @@ import com.feniqo.mobile.presentation.auth.AuthPrimaryButton
 import com.feniqo.mobile.presentation.auth.AuthTopBar
 import com.feniqo.mobile.presentation.auth.AuthUiMessage
 import com.feniqo.mobile.presentation.auth.RegisterUiState
-import com.feniqo.mobile.presentation.auth.toDisplayText
+import com.feniqo.mobile.presentation.auth.toLocalizedText
 import com.feniqo.mobile.presentation.component.AuthTextField
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTheme
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.auth_confirm_password_label
+import feniqomobil.sharedui.generated.resources.auth_create_account
+import feniqomobil.sharedui.generated.resources.auth_creating_account
+import feniqomobil.sharedui.generated.resources.auth_display_name_label
+import feniqomobil.sharedui.generated.resources.auth_display_name_placeholder
+import feniqomobil.sharedui.generated.resources.auth_email_label
+import feniqomobil.sharedui.generated.resources.auth_email_placeholder
+import feniqomobil.sharedui.generated.resources.auth_existing_account
+import feniqomobil.sharedui.generated.resources.auth_password_label
+import feniqomobil.sharedui.generated.resources.auth_privacy
+import feniqomobil.sharedui.generated.resources.auth_register_subtitle
+import feniqomobil.sharedui.generated.resources.auth_register_title
+import feniqomobil.sharedui.generated.resources.auth_sign_in
+import feniqomobil.sharedui.generated.resources.auth_terms
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Pano A - 03 Hesap Oluştur Ekranı ve Pano C-10 form doğrulama durumları.
@@ -98,7 +114,7 @@ fun RegisterScreen(
 
                     // Başlıklar
                     Text(
-                        text = "Yeni bir başlangıç.",
+                        text = stringResource(Res.string.auth_register_title),
                         style = MaterialTheme.typography.headlineMedium.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 28.sp,
@@ -106,7 +122,7 @@ fun RegisterScreen(
                         color = MaterialTheme.colorScheme.onBackground,
                     )
                     Text(
-                        text = "Feniqo ile finansal hedeflerine bir adım daha yaklaş.",
+                        text = stringResource(Res.string.auth_register_subtitle),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -117,12 +133,12 @@ fun RegisterScreen(
                     AuthTextField(
                         value = state.fullName,
                         onValueChange = onFullNameChange,
-                        label = "Görünen ad (isteğe bağlı)",
-                        placeholder = "Ayşe Yılmaz",
+                        label = stringResource(Res.string.auth_display_name_label),
+                        placeholder = stringResource(Res.string.auth_display_name_placeholder),
                         leadingIcon = Icons.Outlined.Person,
                         enabled = !state.isSubmitting,
                         isError = state.fullNameError != null,
-                        supportingText = state.fullNameError?.toDisplayText(),
+                        supportingText = state.fullNameError?.toLocalizedText(),
                         keyboardType = KeyboardType.Text,
                         imeAction = ImeAction.Next,
                         onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
@@ -132,12 +148,12 @@ fun RegisterScreen(
                     AuthTextField(
                         value = state.email,
                         onValueChange = onEmailChange,
-                        label = "E-posta",
-                        placeholder = "eposta@ornek.com",
+                        label = stringResource(Res.string.auth_email_label),
+                        placeholder = stringResource(Res.string.auth_email_placeholder),
                         leadingIcon = Icons.Outlined.MailOutline,
                         enabled = !state.isSubmitting,
                         isError = state.emailError != null,
-                        supportingText = state.emailError?.toDisplayText(),
+                        supportingText = state.emailError?.toLocalizedText(),
                         keyboardType = KeyboardType.Email,
                         imeAction = ImeAction.Next,
                         onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
@@ -147,11 +163,11 @@ fun RegisterScreen(
                     AuthTextField(
                         value = state.password,
                         onValueChange = onPasswordChange,
-                        label = "Parola",
+                        label = stringResource(Res.string.auth_password_label),
                         leadingIcon = Icons.Outlined.Lock,
                         enabled = !state.isSubmitting,
                         isError = state.passwordError != null,
-                        supportingText = state.passwordError?.toDisplayText(),
+                        supportingText = state.passwordError?.toLocalizedText(),
                         isPassword = true,
                         isPasswordVisible = state.isPasswordVisible,
                         onPasswordVisibilityToggle = onPasswordVisibilityToggle,
@@ -164,11 +180,11 @@ fun RegisterScreen(
                     AuthTextField(
                         value = state.confirmPassword,
                         onValueChange = onConfirmPasswordChange,
-                        label = "Parola tekrar",
+                        label = stringResource(Res.string.auth_confirm_password_label),
                         leadingIcon = Icons.Outlined.Lock,
                         enabled = !state.isSubmitting,
                         isError = state.confirmPasswordError != null,
-                        supportingText = state.confirmPasswordError?.toDisplayText(),
+                        supportingText = state.confirmPasswordError?.toLocalizedText(),
                         isPassword = true,
                         isPasswordVisible = state.isConfirmPasswordVisible,
                         onPasswordVisibilityToggle = onConfirmPasswordVisibilityToggle,
@@ -183,7 +199,7 @@ fun RegisterScreen(
                     // Genel hata mesajı banner'ı
                     if (state.generalMessage != null && state.generalMessage != AuthUiMessage.EMAIL_CONFIRMATION_SENT) {
                         AuthErrorBanner(
-                            message = state.generalMessage.toDisplayText(),
+                            message = state.generalMessage.toLocalizedText(),
                             isNetworkError = state.generalMessage == AuthUiMessage.NETWORK_UNAVAILABLE,
                         )
                     }
@@ -197,7 +213,7 @@ fun RegisterScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "Kullanım koşulları",
+                            text = stringResource(Res.string.auth_terms),
                             style = MaterialTheme.typography.bodySmall.copy(
                                 textDecoration = TextDecoration.Underline,
                             ),
@@ -210,7 +226,7 @@ fun RegisterScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
-                            text = "Gizlilik politikası",
+                            text = stringResource(Res.string.auth_privacy),
                             style = MaterialTheme.typography.bodySmall.copy(
                                 textDecoration = TextDecoration.Underline,
                             ),
@@ -221,13 +237,13 @@ fun RegisterScreen(
 
                     // Birincil Buton
                     AuthPrimaryButton(
-                        text = "Hesap oluştur",
+                        text = stringResource(Res.string.auth_create_account),
                         onClick = {
                             focusManager.clearFocus()
                             if (!state.isSubmitting) onSubmit()
                         },
                         isLoading = state.isSubmitting,
-                        loadingText = "Hesap oluşturuluyor...",
+                        loadingText = stringResource(Res.string.auth_creating_account),
                         enabled = !state.isSubmitting,
                     )
 
@@ -242,12 +258,12 @@ fun RegisterScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "Zaten hesabın var mı? ",
+                            text = stringResource(Res.string.auth_existing_account),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
-                            text = "Giriş yap",
+                            text = stringResource(Res.string.auth_sign_in),
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.Bold,
                             ),

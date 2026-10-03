@@ -37,11 +37,25 @@ import com.feniqo.mobile.presentation.auth.AuthPrimaryButton
 import com.feniqo.mobile.presentation.auth.AuthTopBar
 import com.feniqo.mobile.presentation.auth.AuthUiMessage
 import com.feniqo.mobile.presentation.auth.LoginUiState
-import com.feniqo.mobile.presentation.auth.toDisplayText
+import com.feniqo.mobile.presentation.auth.toLocalizedText
 import com.feniqo.mobile.presentation.component.AuthTextField
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTheme
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.auth_create_account
+import feniqomobil.sharedui.generated.resources.auth_email_label
+import feniqomobil.sharedui.generated.resources.auth_email_placeholder
+import feniqomobil.sharedui.generated.resources.auth_forgot_password
+import feniqomobil.sharedui.generated.resources.auth_login_subtitle
+import feniqomobil.sharedui.generated.resources.auth_login_welcome
+import feniqomobil.sharedui.generated.resources.auth_no_account
+import feniqomobil.sharedui.generated.resources.auth_password_label
+import feniqomobil.sharedui.generated.resources.auth_resend_verification
+import feniqomobil.sharedui.generated.resources.auth_retry
+import feniqomobil.sharedui.generated.resources.auth_sign_in
+import feniqomobil.sharedui.generated.resources.auth_signing_in
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Pano A - 02 Giriş Yap Ekranı ve Pano C (09, 11, 13) hata/durum yönetimi.
@@ -93,7 +107,7 @@ fun LoginScreen(
 
                     // Başlıklar
                     Text(
-                        text = "Tekrar hoş geldin.",
+                        text = stringResource(Res.string.auth_login_welcome),
                         style = MaterialTheme.typography.headlineMedium.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 28.sp,
@@ -101,7 +115,7 @@ fun LoginScreen(
                         color = MaterialTheme.colorScheme.onBackground,
                     )
                     Text(
-                        text = "Hesabına giriş yaparak devam et.",
+                        text = stringResource(Res.string.auth_login_subtitle),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -112,12 +126,12 @@ fun LoginScreen(
                     AuthTextField(
                         value = state.email,
                         onValueChange = onEmailChange,
-                        label = "E-posta",
-                        placeholder = "eposta@ornek.com",
+                        label = stringResource(Res.string.auth_email_label),
+                        placeholder = stringResource(Res.string.auth_email_placeholder),
                         leadingIcon = Icons.Outlined.MailOutline,
                         enabled = !state.isSubmitting,
                         isError = state.emailError != null,
-                        supportingText = state.emailError?.toDisplayText(),
+                        supportingText = state.emailError?.toLocalizedText(),
                         keyboardType = KeyboardType.Email,
                         imeAction = ImeAction.Next,
                         onImeAction = {
@@ -128,11 +142,11 @@ fun LoginScreen(
                     AuthTextField(
                         value = state.password,
                         onValueChange = onPasswordChange,
-                        label = "Parola",
+                        label = stringResource(Res.string.auth_password_label),
                         leadingIcon = Icons.Outlined.Lock,
                         enabled = !state.isSubmitting,
                         isError = state.passwordError != null,
-                        supportingText = state.passwordError?.toDisplayText(),
+                        supportingText = state.passwordError?.toLocalizedText(),
                         isPassword = true,
                         isPasswordVisible = state.isPasswordVisible,
                         onPasswordVisibilityToggle = onPasswordVisibilityToggle,
@@ -150,7 +164,7 @@ fun LoginScreen(
                         contentAlignment = Alignment.CenterEnd,
                     ) {
                         Text(
-                            text = "Parolamı unuttum",
+                            text = stringResource(Res.string.auth_forgot_password),
                             style = MaterialTheme.typography.bodySmall.copy(
                                 fontWeight = FontWeight.Medium,
                                 fontSize = 13.sp,
@@ -170,12 +184,12 @@ fun LoginScreen(
                     if (state.generalMessage != null) {
                         val isNetwork = state.generalMessage == AuthUiMessage.NETWORK_UNAVAILABLE
                         AuthErrorBanner(
-                            message = state.generalMessage.toDisplayText(),
+                            message = state.generalMessage.toLocalizedText(),
                             isNetworkError = isNetwork,
                         )
                         if (state.generalMessage == AuthUiMessage.EMAIL_NOT_CONFIRMED && onNavigateToEmailVerification != null) {
                             com.feniqo.mobile.presentation.auth.AuthSecondaryButton(
-                                text = "Doğrulama bağlantısını tekrar gönder",
+                                text = stringResource(Res.string.auth_resend_verification),
                                 onClick = { onNavigateToEmailVerification(state.email) },
                                 modifier = Modifier.fillMaxWidth(),
                             )
@@ -186,9 +200,9 @@ fun LoginScreen(
 
                     // Birincil Buton (Pano C 11'de "Tekrar dene", Pano C 13'te "Giriş yapılıyor...")
                     val buttonText = if (state.generalMessage == AuthUiMessage.NETWORK_UNAVAILABLE) {
-                        "Tekrar dene"
+                        stringResource(Res.string.auth_retry)
                     } else {
-                        "Giriş yap"
+                        stringResource(Res.string.auth_sign_in)
                     }
 
                     AuthPrimaryButton(
@@ -198,7 +212,7 @@ fun LoginScreen(
                             if (!state.isSubmitting) onSubmit()
                         },
                         isLoading = state.isSubmitting,
-                        loadingText = "Giriş yapılıyor...",
+                        loadingText = stringResource(Res.string.auth_signing_in),
                         enabled = !state.isSubmitting,
                     )
 
@@ -213,12 +227,12 @@ fun LoginScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "Hesabın yok mu? ",
+                            text = stringResource(Res.string.auth_no_account),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
-                            text = "Hesap oluştur",
+                            text = stringResource(Res.string.auth_create_account),
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.Bold,
                             ),

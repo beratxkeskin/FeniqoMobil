@@ -5,6 +5,8 @@
 - [x] Compose Multiplatform `values` / `values-en` kataloglarını oluştur ve kayıtlı `AppLanguage` tercihini uygulama kökünde çalışma zamanı locale'ine bağla.
 - [x] Ayarlar, Dil ve Bölge, alt navigasyon, Hızlı Ekle ve format önizleme pilot yüzeylerini kaynak tabanlı hale getir.
 - [x] Türkçe varsayılanı ve çalışma zamanında İngilizceye geçişi Compose regresyon testiyle doğrula; sharedLogic/sharedUI/Android testleri, debug APK ve iOS Simulator ARM64 ortak kod derlemesini çalıştır.
+- [x] İkinci dilimin auth başlangıç paketinde Giriş ve Hesap Oluştur ekranları ile tipli auth/validasyon mesajlarını TR/EN kaynaklara taşı ve runtime dil değişimini test et.
+- [ ] Şifre kurtarma, e-posta doğrulama ve hesap güvenliği auth alt akışlarını TR/EN kaynaklara taşı.
 - [ ] Kalan Compose ekran metinlerini, Android platform bildirim/biometrik metinlerini ve iOS ürün UI kataloglarını localization kaynaklarına taşı; pseudo-locale, taşma ve fiziksel cihaz dil-değişimi kabulünü tamamla.
 
 ### P2 Teknik Borç ve Yayın Yüzeyi Kapatma (2026-10-03)
