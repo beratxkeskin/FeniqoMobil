@@ -1,5 +1,8 @@
 package com.feniqo.mobile.presentation.settings
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -7,8 +10,13 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import com.feniqo.mobile.App
+import com.feniqo.mobile.domain.model.AppLanguage
+import com.feniqo.mobile.domain.model.Currency
+import com.feniqo.mobile.domain.model.ThemePreference
+import com.feniqo.mobile.presentation.localization.localizedLanguageRegionSummary
+import com.feniqo.mobile.presentation.localization.localizedThemeLabel
 import com.feniqo.mobile.presentation.screen.SettingsScreen
-import com.feniqo.mobile.presentation.theme.FeniqoTheme
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -26,7 +34,7 @@ class SettingsScreenComposeTest {
     fun settings_owns_app_controls_and_routes_account_actions_to_profile_center() {
         var profileClicked = false
         compose.setContent {
-            FeniqoTheme {
+            App(languageTag = "tr") {
                 SettingsScreen(
                     themeLabel = "Sistem teması",
                     languageRegionLabel = "Türkçe • TRY",
@@ -52,5 +60,36 @@ class SettingsScreenComposeTest {
         compose.onNodeWithText("Hesap ve çıkış").performScrollTo().performClick()
         assertTrue(profileClicked)
         compose.onAllNodesWithText("Çıkış yap").assertCountEquals(0)
+    }
+
+    @Test
+    fun settings_reacts_to_runtime_locale_change() {
+        var languageTag by mutableStateOf("tr")
+
+        compose.setContent {
+            App(languageTag = languageTag) {
+                SettingsScreen(
+                    themeLabel = localizedThemeLabel(ThemePreference.SYSTEM),
+                    languageRegionLabel = localizedLanguageRegionSummary(AppLanguage.EN, Currency.TRY.code),
+                    onBack = {},
+                    onNavigateToProfile = {},
+                    onNavigateToAppearance = {},
+                    onNavigateToLanguageRegion = {},
+                    onNavigateToNotifications = {},
+                    onNavigateToSecurity = {},
+                    onNavigateToDataManagement = {},
+                    onNavigateToHelpAbout = {},
+                )
+            }
+        }
+
+        compose.onNodeWithText("Ayarlar").assertIsDisplayed()
+        compose.onNodeWithText("Sistem teması").assertIsDisplayed()
+
+        compose.runOnIdle { languageTag = "en" }
+
+        compose.onNodeWithText("Settings").assertIsDisplayed()
+        compose.onNodeWithText("System theme").assertIsDisplayed()
+        compose.onNodeWithText("Language and region").assertIsDisplayed()
     }
 }

@@ -26,6 +26,9 @@ import com.feniqo.mobile.presentation.component.SettingsTopBar
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTouchTarget
+import com.feniqo.mobile.presentation.localization.localizedLanguageName
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * 05 Dil ve Bölge Ekranı, 06 Dil Seçimi, 19 Para Birimi Seçimi ve 20 Biçim Tercihleri.
@@ -51,6 +54,12 @@ fun LanguageRegionScreen(
     var showLanguageSheet by remember { mutableStateOf(false) }
     var showCurrencySheet by remember { mutableStateOf(false) }
     var showFormatSheet by remember { mutableStateOf(false) }
+    val currencyNames = mapOf(
+        Currency.TRY to Currency.TRY.localizedDisplayName(),
+        Currency.USD to Currency.USD.localizedDisplayName(),
+        Currency.EUR to Currency.EUR.localizedDisplayName(),
+        Currency.GBP to Currency.GBP.localizedDisplayName(),
+    )
 
     // Dinamik biçim önizleme metni
     val previewText = remember(currentCurrency, currentNumberFormat, currentDateFormat) {
@@ -73,7 +82,7 @@ fun LanguageRegionScreen(
         ) {
             item {
                 SettingsTopBar(
-                    title = "Dil ve bölge",
+                    title = stringResource(Res.string.settings_language_region_title),
                     onBack = onBack,
                 )
             }
@@ -87,42 +96,43 @@ fun LanguageRegionScreen(
             item {
                 SettingsGroupCard {
                     SettingsRowItem(
-                        title = "Uygulama dili",
-                        subtitle = when (currentLanguage) {
-                            AppLanguage.TR -> "Türkçe"
-                            AppLanguage.EN -> "English"
-                        },
+                        title = stringResource(Res.string.language_application_title),
+                        subtitle = localizedLanguageName(currentLanguage),
                         icon = Icons.Outlined.Translate,
                         onClick = { showLanguageSheet = true },
                     )
                     SettingsRowItem(
-                        title = "Bölge",
-                        subtitle = if (currentRegion.equals("US", ignoreCase = true)) "Amerika Birleşik Devletleri" else "Türkiye",
+                        title = stringResource(Res.string.language_region_label),
+                        subtitle = if (currentRegion.equals("US", ignoreCase = true)) {
+                            stringResource(Res.string.region_united_states)
+                        } else {
+                            stringResource(Res.string.region_turkey)
+                        },
                         icon = Icons.Outlined.Place,
                         onClick = null,
                         showChevron = false,
                     )
                     SettingsRowItem(
-                        title = "Varsayılan para birimi",
-                        subtitle = "${currentCurrency.code} (${currentCurrency.displayName()})",
+                        title = stringResource(Res.string.language_default_currency),
+                        subtitle = "${currentCurrency.code} (${currencyNames.getValue(currentCurrency)})",
                         icon = Icons.Outlined.Paid,
                         onClick = { showCurrencySheet = true },
                     )
                     SettingsRowItem(
-                        title = "Tarih biçimi",
+                        title = stringResource(Res.string.language_date_format),
                         subtitle = currentDateFormat.sample,
                         icon = Icons.Outlined.CalendarToday,
                         onClick = { showFormatSheet = true },
                     )
                     SettingsRowItem(
-                        title = "Sayı biçimi",
+                        title = stringResource(Res.string.language_number_format),
                         subtitle = currentNumberFormat.sample,
                         icon = Icons.Outlined.Pin,
                         onClick = { showFormatSheet = true },
                     )
                     SettingsRowItem(
-                        title = "Haftanın başlangıcı",
-                        subtitle = currentFirstDayOfWeek.label,
+                        title = stringResource(Res.string.language_first_day_of_week),
+                        subtitle = currentFirstDayOfWeek.localizedLabel(),
                         icon = Icons.Outlined.DateRange,
                         showDivider = false,
                         onClick = { showFormatSheet = true },
@@ -146,7 +156,7 @@ fun LanguageRegionScreen(
                     )
                     Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
                     Text(
-                        text = "Para birimi tercihi geçmiş işlemleri dönüştürmez.",
+                        text = stringResource(Res.string.language_currency_history_notice),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -171,13 +181,13 @@ fun LanguageRegionScreen(
                 verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
             ) {
                 Text(
-                    text = "Dil seçimi",
+                    text = stringResource(Res.string.language_selection_title),
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 )
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Dil ara") },
+                    placeholder = { Text(stringResource(Res.string.language_search_hint)) },
                     leadingIcon = { Icon(Icons.Outlined.Search, null) },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
@@ -186,8 +196,14 @@ fun LanguageRegionScreen(
 
                 SettingsGroupCard {
                     val languages = listOf(
-                        AppLanguage.TR to ("Türkçe" to "Uygulama Türkçe olarak gösterilir."),
-                        AppLanguage.EN to ("English" to "App will be shown in English."),
+                        AppLanguage.TR to (
+                            localizedLanguageName(AppLanguage.TR) to
+                                stringResource(Res.string.language_turkish_description)
+                        ),
+                        AppLanguage.EN to (
+                            localizedLanguageName(AppLanguage.EN) to
+                                stringResource(Res.string.language_english_description)
+                        ),
                     ).filter { it.second.first.contains(searchQuery, ignoreCase = true) }
 
                     languages.forEachIndexed { index, (lang, textPair) ->
@@ -232,7 +248,7 @@ fun LanguageRegionScreen(
                         .fillMaxWidth()
                         .height(FeniqoTouchTarget.PrimaryAction),
                 ) {
-                    Text("Uygula", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(Res.string.language_apply), fontWeight = FontWeight.SemiBold)
                 }
                 Spacer(modifier = Modifier.height(FeniqoSpacing.Large))
             }
@@ -249,7 +265,7 @@ fun LanguageRegionScreen(
             val filteredCurrencies = remember(searchQuery) {
                 Currency.entries.filter {
                     it.code.contains(searchQuery, ignoreCase = true) ||
-                        it.displayName().contains(searchQuery, ignoreCase = true)
+                        currencyNames.getValue(it).contains(searchQuery, ignoreCase = true)
                 }
             }
 
@@ -260,13 +276,13 @@ fun LanguageRegionScreen(
                 verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
             ) {
                 Text(
-                    text = "Para birimi seçimi",
+                    text = stringResource(Res.string.currency_selection_title),
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 )
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Para birimi ara") },
+                    placeholder = { Text(stringResource(Res.string.currency_search_hint)) },
                     leadingIcon = { Icon(Icons.Outlined.Search, null) },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
@@ -301,7 +317,7 @@ fun LanguageRegionScreen(
                                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
                                 )
                                 Text(
-                                    text = currency.displayName(),
+                                    text = currencyNames.getValue(currency),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -340,12 +356,15 @@ fun LanguageRegionScreen(
                 verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
             ) {
                 Text(
-                    text = "Biçim tercihleri",
+                    text = stringResource(Res.string.format_preferences_title),
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 )
 
                 // Tarih Biçimi
-                Text("Tarih biçimi", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
+                Text(
+                    stringResource(Res.string.language_date_format),
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                )
                 SettingsGroupCard {
                     DateFormatPreference.entries.forEachIndexed { i, df ->
                         Row(
@@ -362,12 +381,19 @@ fun LanguageRegionScreen(
                                 colors = RadioButtonDefaults.colors(selectedColor = FeniqoSageGreen),
                             )
                         }
-                        if (i < DateFormatPreference.entries.size - 1) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                        if (i < DateFormatPreference.entries.size - 1) {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                            )
+                        }
                     }
                 }
 
                 // Sayı Biçimi
-                Text("Sayı biçimi", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
+                Text(
+                    stringResource(Res.string.language_number_format),
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                )
                 SettingsGroupCard {
                     NumberFormatPreference.entries.forEachIndexed { i, nf ->
                         Row(
@@ -384,12 +410,19 @@ fun LanguageRegionScreen(
                                 colors = RadioButtonDefaults.colors(selectedColor = FeniqoSageGreen),
                             )
                         }
-                        if (i < NumberFormatPreference.entries.size - 1) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                        if (i < NumberFormatPreference.entries.size - 1) {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                            )
+                        }
                     }
                 }
 
                 // Haftanın İlk Günü
-                Text("Haftanın ilk günü", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
+                Text(
+                    stringResource(Res.string.format_first_day_title),
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                )
                 SettingsGroupCard {
                     FirstDayOfWeekPreference.entries.forEachIndexed { i, fd ->
                         Row(
@@ -399,14 +432,22 @@ fun LanguageRegionScreen(
                                 .padding(horizontal = FeniqoSpacing.Large, vertical = FeniqoSpacing.Small),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(fd.label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                fd.localizedLabel(),
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
                             RadioButton(
                                 selected = selectedFirstDay == fd,
                                 onClick = { selectedFirstDay = fd },
                                 colors = RadioButtonDefaults.colors(selectedColor = FeniqoSageGreen),
                             )
                         }
-                        if (i < FirstDayOfWeekPreference.entries.size - 1) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                        if (i < FirstDayOfWeekPreference.entries.size - 1) {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                            )
+                        }
                     }
                 }
 
@@ -423,7 +464,7 @@ fun LanguageRegionScreen(
                         .fillMaxWidth()
                         .height(FeniqoTouchTarget.PrimaryAction),
                 ) {
-                    Text("Uygula", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(Res.string.language_apply), fontWeight = FontWeight.SemiBold)
                 }
                 Spacer(modifier = Modifier.height(FeniqoSpacing.Large))
             }
@@ -431,11 +472,21 @@ fun LanguageRegionScreen(
     }
 }
 
-private fun Currency.displayName(): String = when (this) {
-    Currency.TRY -> "Türk lirası"
-    Currency.USD -> "Amerikan doları"
-    Currency.EUR -> "Euro"
-    Currency.GBP -> "İngiliz sterlini"
-}
+@Composable
+private fun Currency.localizedDisplayName(): String =
+    when (this) {
+        Currency.TRY -> stringResource(Res.string.currency_try)
+        Currency.USD -> stringResource(Res.string.currency_usd)
+        Currency.EUR -> stringResource(Res.string.currency_eur)
+        Currency.GBP -> stringResource(Res.string.currency_gbp)
+    }
 
-private fun Currency.symbol(): String = com.feniqo.mobile.presentation.util.MoneyFormatter.getCurrencySymbol(this)
+@Composable
+private fun FirstDayOfWeekPreference.localizedLabel(): String =
+    when (this) {
+        FirstDayOfWeekPreference.MONDAY -> stringResource(Res.string.weekday_monday)
+        FirstDayOfWeekPreference.SUNDAY -> stringResource(Res.string.weekday_sunday)
+    }
+
+private fun Currency.symbol(): String =
+    com.feniqo.mobile.presentation.util.MoneyFormatter.getCurrencySymbol(this)

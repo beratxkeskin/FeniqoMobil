@@ -1,0 +1,59 @@
+<resources>
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_preferences">Preferences</string>
+    <string name="settings_appearance_title">Appearance</string>
+    <string name="settings_language_region_title">Language and region</string>
+    <string name="settings_notifications_title">Notifications</string>
+    <string name="settings_notifications_subtitle">Reminders and alerts</string>
+    <string name="settings_section_control">Controls</string>
+    <string name="settings_security_title">Security and privacy</string>
+    <string name="settings_security_subtitle">App lock and protection</string>
+    <string name="settings_data_title">Data management</string>
+    <string name="settings_data_subtitle">Export, back up, and sync</string>
+    <string name="settings_help_title">Help and about</string>
+    <string name="settings_help_subtitle">Support, licenses, and version</string>
+    <string name="settings_section_account">Account</string>
+    <string name="settings_account_title">Account and sign out</string>
+    <string name="settings_account_subtitle">Profile details, shared spaces, and session</string>
+
+    <string name="theme_system">System theme</string>
+    <string name="theme_light">Light theme</string>
+    <string name="theme_dark">Dark theme</string>
+
+    <string name="language_turkish">Türkçe</string>
+    <string name="language_english">English</string>
+    <string name="language_turkish_description">The app will be shown in Turkish.</string>
+    <string name="language_english_description">The app will be shown in English.</string>
+    <string name="language_region_summary">%1$s • %2$s</string>
+    <string name="language_application_title">App language</string>
+    <string name="language_region_label">Region</string>
+    <string name="language_default_currency">Default currency</string>
+    <string name="language_date_format">Date format</string>
+    <string name="language_number_format">Number format</string>
+    <string name="language_first_day_of_week">First day of the week</string>
+    <string name="language_currency_history_notice">Changing the currency preference does not convert past transactions.</string>
+    <string name="language_selection_title">Select language</string>
+    <string name="language_search_hint">Search languages</string>
+    <string name="language_apply">Apply</string>
+    <string name="currency_selection_title">Select currency</string>
+    <string name="currency_search_hint">Search currencies</string>
+    <string name="format_preferences_title">Format preferences</string>
+    <string name="format_first_day_title">First day of the week</string>
+    <string name="format_preview_title">Format preview</string>
+
+    <string name="region_turkey">Türkiye</string>
+    <string name="region_united_states">United States</string>
+    <string name="weekday_monday">Monday</string>
+    <string name="weekday_sunday">Sunday</string>
+    <string name="currency_try">Turkish lira</string>
+    <string name="currency_usd">US dollar</string>
+    <string name="currency_eur">Euro</string>
+    <string name="currency_gbp">British pound</string>
+
+    <string name="navigation_dashboard">Home</string>
+    <string name="navigation_transactions">Transactions</string>
+    <string name="navigation_budget">Budget</string>
+    <string name="navigation_more">More</string>
+    <string name="navigation_add">Add</string>
+    <string name="navigation_quick_add_description">Add transaction</string>
+</resources>

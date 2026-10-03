@@ -27,6 +27,9 @@ import com.feniqo.mobile.security.AndroidBiometricAuthenticator
 import com.feniqo.mobile.security.AppLockAuthenticationAction
 import com.feniqo.mobile.security.AppLockViewModel
 import com.feniqo.mobile.security.DeviceAuthenticationAvailability
+import com.feniqo.mobile.domain.model.AppLanguage
+import com.feniqo.mobile.domain.model.UserSettings
+import com.feniqo.mobile.domain.repository.UserSettingsRepository
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.launch
@@ -41,6 +44,9 @@ class MainActivity : FragmentActivity() {
 
     @Inject
     lateinit var handleAuthDeepLinkUseCase: com.feniqo.mobile.domain.usecase.HandleAuthDeepLinkUseCase
+
+    @Inject
+    lateinit var userSettingsRepository: UserSettingsRepository
 
     private val rootNavViewModel: RootNavViewModel by viewModels()
     private val syncStatusViewModel: SyncStatusViewModel by viewModels()
@@ -76,6 +82,8 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             val themeMode by themePreferences.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
+            val userSettings by
+                userSettingsRepository.observeSettings().collectAsState(initial = UserSettings())
             val authState by rootNavViewModel.authState.collectAsStateWithLifecycle()
             val syncStatus by syncStatusViewModel.uiState.collectAsStateWithLifecycle()
             val appLockState by appLockViewModel.state.collectAsStateWithLifecycle()
@@ -86,7 +94,14 @@ class MainActivity : FragmentActivity() {
                 }
             }
 
-            App(themeMode = themeMode) {
+            App(
+                themeMode = themeMode,
+                languageTag =
+                    when (userSettings.language) {
+                        AppLanguage.TR -> "tr"
+                        AppLanguage.EN -> "en"
+                    },
+            ) {
                 com.feniqo.mobile.demo.DemoGate {
                     if (authState == AppAuthState.Authenticated && appLockState.isLocked) {
                         AppLockScreen(
@@ -104,14 +119,19 @@ class MainActivity : FragmentActivity() {
                             onDismissConflictDialog = syncStatusViewModel::dismissConflictDialog,
                             themeMode = themeMode,
                             onThemeModeChange = themePreferences::saveThemeMode,
-                            biometricLockEnabled = appLockState.settings?.biometricLockEnabled == true,
+                            biometricLockEnabled =
+                                appLockState.settings?.biometricLockEnabled == true,
                             biometricLockAvailable =
                                 appLockState.availability == DeviceAuthenticationAvailability.AVAILABLE,
-                            autoLockTimeout = appLockState.settings?.autoLockTimeout
-                                ?: com.feniqo.mobile.domain.repository.AutoLockTimeout.AFTER_1_MINUTE,
+                            autoLockTimeout =
+                                appLockState.settings?.autoLockTimeout
+                                    ?: com.feniqo.mobile.domain.repository.AutoLockTimeout.AFTER_1_MINUTE,
                             onBiometricLockChange = { enabled ->
-                                if (enabled) authenticate(AppLockAuthenticationAction.ENABLE)
-                                else appLockViewModel.disableLock()
+                                if (enabled) {
+                                    authenticate(AppLockAuthenticationAction.ENABLE)
+                                } else {
+                                    appLockViewModel.disableLock()
+                                }
                             },
                             onAutoLockTimeoutChange = appLockViewModel::setAutoLockTimeout,
                         )
@@ -157,7 +177,7 @@ class MainActivity : FragmentActivity() {
 
 @Preview
 @Composable
-fun AppAndroidPreview() {
+fun appAndroidPreview() {
     App {
         // Preview placeholder
     }

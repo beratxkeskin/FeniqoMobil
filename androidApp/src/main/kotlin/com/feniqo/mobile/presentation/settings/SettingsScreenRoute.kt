@@ -26,7 +26,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.feniqo.mobile.domain.repository.PERSONAL_BACKUP_MAX_BYTES
 import com.feniqo.mobile.domain.repository.PersonalBackupImportOutcome
-import com.feniqo.mobile.domain.model.AppLanguage
+import com.feniqo.mobile.presentation.localization.localizedSettingsLabels
 import com.feniqo.mobile.domain.model.ThemePreference
 import com.feniqo.mobile.domain.repository.AutoLockTimeout
 import android.graphics.Bitmap
@@ -80,13 +80,13 @@ fun SettingsScreenRoute(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    val themeLabel = when (uiState.settings.theme) {
-        ThemePreference.SYSTEM -> "Sistem teması"
-        ThemePreference.LIGHT -> "Açık tema"
-        ThemePreference.DARK -> "Koyu tema"
-    }
-
-    val languageRegionLabel = "${if (uiState.settings.language == AppLanguage.TR) "Türkçe" else "English"} • ${uiState.settings.currency.code}"
+    val (themeLabel, languageRegionLabel) =
+        localizedSettingsLabels(
+            uiState.settings.theme,
+            uiState.settings.language,
+            uiState.settings.currency.code,
+        )
+    // Route yalnız semantik tercihleri taşır; görünen metin locale kataloğunda çözülür.
 
     SettingsScreen(
         themeLabel = themeLabel,

@@ -1,5 +1,7 @@
 # FeniqoMobil Özellik Durumu
 
+> 2026-10-04 — Localization ilk dilimi tamamlandı. Compose Multiplatform kaynaklarında Türkçe varsayılan ve İngilizce katalog oluşturuldu; kaydedilmiş `AppLanguage` tercihi uygulama kökünde çalışma zamanı locale'ine bağlandı. Ayarlar, Dil ve Bölge, alt navigasyon, Hızlı Ekle ve format önizleme yüzeyleri resource-backed hale getirildi; dil değişimi için Compose regresyon testi eklendi. Kalan ekran metinleri, Android platform yüzeyleri ve iOS ürün UI katalogları sonraki localization dilimleridir; özellik uygulama genelinde tamamlanmış sayılmaz.
+
 > 2026-10-03 — Çevrimdışı Feniqo Demo varyantının Gradle configuration aşamasında staging Supabase URL/key istemesi giderildi. Staging doğrulaması yalnız debug build/test görevlerine taşındı; demo sabit `.invalid` hedefi ve sentetik demo publishable değeriyle gerçek Supabase ayarı olmadan derlenir. CI bu bağımsızlığı `assembleDemo` ile korur; Supabase ortamlarına dokunulmadı.
 >
 > 2026-10-03 — Android API 35 Managed Device yayın kapısı eklendi. SQLCipher, Room 1→22, FileProvider/avatar hesap izolasyonu, WorkManager yeniden oluşturma, bildirim kanalı ve kritik Compose senaryoları CI'da gerçek Android framework üzerinde koşacak. Play Store veri envanteri, hukuki girdi ve aşamalı yayın kontrol listesi hazırlandı; dış onay gerektiren politika URL'leri, signing ve fiziksel cihaz kabulü nedeniyle production yayın durumu kapalıdır.

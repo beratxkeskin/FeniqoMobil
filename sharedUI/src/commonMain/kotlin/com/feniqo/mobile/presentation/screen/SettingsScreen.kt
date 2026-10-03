@@ -14,6 +14,8 @@ import com.feniqo.mobile.presentation.component.SettingsRowItem
 import com.feniqo.mobile.presentation.component.SettingsTopBar
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * 01 Ayarlar Ana Ekranı.
@@ -46,7 +48,7 @@ fun SettingsScreen(
         ) {
             item {
                 SettingsTopBar(
-                    title = "Ayarlar",
+                    title = stringResource(Res.string.settings_title),
                     onBack = onBack,
                 )
             }
@@ -54,29 +56,29 @@ fun SettingsScreen(
             // Tercihler Grubu
             item {
                 Text(
-                    text = "Tercihler",
+                    text = stringResource(Res.string.settings_section_preferences),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
                 )
                 SettingsGroupCard {
                     SettingsRowItem(
-                        title = "Görünüm",
+                        title = stringResource(Res.string.settings_appearance_title),
                         subtitle = themeLabel,
                         icon = Icons.Outlined.LightMode,
                         iconTint = FeniqoSageGreen,
                         onClick = onNavigateToAppearance,
                     )
                     SettingsRowItem(
-                        title = "Dil ve bölge",
+                        title = stringResource(Res.string.settings_language_region_title),
                         subtitle = languageRegionLabel,
                         icon = Icons.Outlined.Language,
                         iconTint = Color(0xFF2E7D32),
                         onClick = onNavigateToLanguageRegion,
                     )
                     SettingsRowItem(
-                        title = "Bildirimler",
-                        subtitle = "Hatırlatmalar ve uyarılar",
+                        title = stringResource(Res.string.settings_notifications_title),
+                        subtitle = stringResource(Res.string.settings_notifications_subtitle),
                         icon = Icons.Outlined.Notifications,
                         iconTint = Color(0xFF1565C0),
                         showDivider = false,
@@ -88,29 +90,29 @@ fun SettingsScreen(
             // Kontrol Grubu
             item {
                 Text(
-                    text = "Kontrol",
+                    text = stringResource(Res.string.settings_section_control),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
                 )
                 SettingsGroupCard {
                     SettingsRowItem(
-                        title = "Güvenlik ve gizlilik",
-                        subtitle = "Uygulama kilidi ve koruma",
+                        title = stringResource(Res.string.settings_security_title),
+                        subtitle = stringResource(Res.string.settings_security_subtitle),
                         icon = Icons.Outlined.Lock,
                         iconTint = FeniqoSageGreen,
                         onClick = onNavigateToSecurity,
                     )
                     SettingsRowItem(
-                        title = "Veri yönetimi",
-                        subtitle = "Dışa aktar, yedekle ve eşitle",
+                        title = stringResource(Res.string.settings_data_title),
+                        subtitle = stringResource(Res.string.settings_data_subtitle),
                         icon = Icons.Outlined.FolderCopy,
                         iconTint = Color(0xFF00838F),
                         onClick = onNavigateToDataManagement,
                     )
                     SettingsRowItem(
-                        title = "Yardım ve hakkında",
-                        subtitle = "Destek, lisanslar ve sürüm",
+                        title = stringResource(Res.string.settings_help_title),
+                        subtitle = stringResource(Res.string.settings_help_subtitle),
                         icon = Icons.Outlined.HelpOutline,
                         iconTint = Color(0xFF6A1B9A),
                         showDivider = false,
@@ -122,15 +124,15 @@ fun SettingsScreen(
             // Hesap ve oturum işlemlerinin tek sahibi Profil Merkezi'dir.
             item {
                 Text(
-                    text = "Hesap",
+                    text = stringResource(Res.string.settings_section_account),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
                 )
                 SettingsGroupCard {
                     SettingsRowItem(
-                        title = "Hesap ve çıkış",
-                        subtitle = "Profil bilgileri, ortak alanlar ve oturum",
+                        title = stringResource(Res.string.settings_account_title),
+                        subtitle = stringResource(Res.string.settings_account_subtitle),
                         icon = Icons.Outlined.AccountCircle,
                         iconTint = MaterialTheme.colorScheme.primary,
                         showDivider = false,

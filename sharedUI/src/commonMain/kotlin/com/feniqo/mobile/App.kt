@@ -2,6 +2,7 @@ package com.feniqo.mobile
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import com.feniqo.mobile.presentation.localization.provideAppLocale
 import com.feniqo.mobile.presentation.theme.FeniqoTheme
 import com.feniqo.mobile.presentation.theme.ThemeMode
 
@@ -12,9 +13,12 @@ import com.feniqo.mobile.presentation.theme.ThemeMode
 @Composable
 fun App(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
+    languageTag: String? = null,
     content: @Composable () -> Unit,
 ) {
-    FeniqoTheme(darkTheme = themeMode.resolvesToDark(isSystemInDarkTheme())) {
-        content()
+    provideAppLocale(languageTag = languageTag) {
+        FeniqoTheme(darkTheme = themeMode.resolvesToDark(isSystemInDarkTheme())) {
+            content()
+        }
     }
 }

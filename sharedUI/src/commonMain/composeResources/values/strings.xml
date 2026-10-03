@@ -1,0 +1,59 @@
+<resources>
+    <string name="settings_title">Ayarlar</string>
+    <string name="settings_section_preferences">Tercihler</string>
+    <string name="settings_appearance_title">Görünüm</string>
+    <string name="settings_language_region_title">Dil ve bölge</string>
+    <string name="settings_notifications_title">Bildirimler</string>
+    <string name="settings_notifications_subtitle">Hatırlatmalar ve uyarılar</string>
+    <string name="settings_section_control">Kontrol</string>
+    <string name="settings_security_title">Güvenlik ve gizlilik</string>
+    <string name="settings_security_subtitle">Uygulama kilidi ve koruma</string>
+    <string name="settings_data_title">Veri yönetimi</string>
+    <string name="settings_data_subtitle">Dışa aktar, yedekle ve eşitle</string>
+    <string name="settings_help_title">Yardım ve hakkında</string>
+    <string name="settings_help_subtitle">Destek, lisanslar ve sürüm</string>
+    <string name="settings_section_account">Hesap</string>
+    <string name="settings_account_title">Hesap ve çıkış</string>
+    <string name="settings_account_subtitle">Profil bilgileri, ortak alanlar ve oturum</string>
+
+    <string name="theme_system">Sistem teması</string>
+    <string name="theme_light">Açık tema</string>
+    <string name="theme_dark">Koyu tema</string>
+
+    <string name="language_turkish">Türkçe</string>
+    <string name="language_english">English</string>
+    <string name="language_turkish_description">Uygulama Türkçe olarak gösterilir.</string>
+    <string name="language_english_description">Uygulama İngilizce olarak gösterilir.</string>
+    <string name="language_region_summary">%1$s • %2$s</string>
+    <string name="language_application_title">Uygulama dili</string>
+    <string name="language_region_label">Bölge</string>
+    <string name="language_default_currency">Varsayılan para birimi</string>
+    <string name="language_date_format">Tarih biçimi</string>
+    <string name="language_number_format">Sayı biçimi</string>
+    <string name="language_first_day_of_week">Haftanın başlangıcı</string>
+    <string name="language_currency_history_notice">Para birimi tercihi geçmiş işlemleri dönüştürmez.</string>
+    <string name="language_selection_title">Dil seçimi</string>
+    <string name="language_search_hint">Dil ara</string>
+    <string name="language_apply">Uygula</string>
+    <string name="currency_selection_title">Para birimi seçimi</string>
+    <string name="currency_search_hint">Para birimi ara</string>
+    <string name="format_preferences_title">Biçim tercihleri</string>
+    <string name="format_first_day_title">Haftanın ilk günü</string>
+    <string name="format_preview_title">Biçim önizlemesi</string>
+
+    <string name="region_turkey">Türkiye</string>
+    <string name="region_united_states">Amerika Birleşik Devletleri</string>
+    <string name="weekday_monday">Pazartesi</string>
+    <string name="weekday_sunday">Pazar</string>
+    <string name="currency_try">Türk lirası</string>
+    <string name="currency_usd">Amerikan doları</string>
+    <string name="currency_eur">Euro</string>
+    <string name="currency_gbp">İngiliz sterlini</string>
+
+    <string name="navigation_dashboard">Ana Sayfa</string>
+    <string name="navigation_transactions">İşlemler</string>
+    <string name="navigation_budget">Bütçe</string>
+    <string name="navigation_more">Daha Fazla</string>
+    <string name="navigation_add">Ekle</string>
+    <string name="navigation_quick_add_description">Hızlı işlem ekle</string>
+</resources>

@@ -43,12 +43,14 @@ import com.feniqo.mobile.presentation.sync.SyncStatusUiState
 
 import com.feniqo.mobile.domain.repository.ConflictResolution
 import com.feniqo.mobile.presentation.component.WorkspaceConflictResolutionDialog
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
-enum class AppSection(val label: String) {
-    DASHBOARD("Ana Sayfa"),
-    TRANSACTIONS("İşlemler"),
-    BUDGET("Bütçe"),
-    MORE("Daha Fazla"),
+enum class AppSection {
+    DASHBOARD,
+    TRANSACTIONS,
+    BUDGET,
+    MORE,
 }
 
 /**
@@ -72,6 +74,7 @@ fun FeniqoAppShell(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
+    val quickAddContentDescription = stringResource(Res.string.navigation_quick_add_description)
     Scaffold(
         modifier = modifier,
         bottomBar = {
@@ -94,7 +97,12 @@ fun FeniqoAppShell(
                         selected = selectedSection == AppSection.DASHBOARD,
                         onClick = { onSectionSelect(AppSection.DASHBOARD) },
                         icon = { FeniqoBottomBarIcon(AppSection.DASHBOARD) },
-                        label = { FeniqoBottomBarLabel(AppSection.DASHBOARD.label, selectedSection == AppSection.DASHBOARD) },
+                        label = {
+                            FeniqoBottomBarLabel(
+                                AppSection.DASHBOARD.localizedLabel(),
+                                selectedSection == AppSection.DASHBOARD,
+                            )
+                        },
                         colors = itemColors,
                     )
 
@@ -103,7 +111,12 @@ fun FeniqoAppShell(
                         selected = selectedSection == AppSection.TRANSACTIONS,
                         onClick = { onSectionSelect(AppSection.TRANSACTIONS) },
                         icon = { FeniqoBottomBarIcon(AppSection.TRANSACTIONS) },
-                        label = { FeniqoBottomBarLabel(AppSection.TRANSACTIONS.label, selectedSection == AppSection.TRANSACTIONS) },
+                        label = {
+                            FeniqoBottomBarLabel(
+                                AppSection.TRANSACTIONS.localizedLabel(),
+                                selectedSection == AppSection.TRANSACTIONS,
+                            )
+                        },
                         colors = itemColors,
                     )
 
@@ -120,7 +133,9 @@ fun FeniqoAppShell(
                                     .offset(y = (-6).dp)
                                     .shadow(6.dp, CircleShape)
                                     .size(56.dp)
-                                    .semantics { contentDescription = "Hızlı işlem ekle" },
+                                    .semantics {
+                                        contentDescription = quickAddContentDescription
+                                    },
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Text(
@@ -131,7 +146,7 @@ fun FeniqoAppShell(
                                 }
                             }
                         },
-                        label = { Text("Ekle") },
+                        label = { Text(stringResource(Res.string.navigation_add)) },
                         colors = NavigationBarItemDefaults.colors(
                             indicatorColor = Color.Transparent,
                         ),
@@ -142,7 +157,12 @@ fun FeniqoAppShell(
                         selected = selectedSection == AppSection.BUDGET,
                         onClick = { onSectionSelect(AppSection.BUDGET) },
                         icon = { FeniqoBottomBarIcon(AppSection.BUDGET) },
-                        label = { FeniqoBottomBarLabel(AppSection.BUDGET.label, selectedSection == AppSection.BUDGET) },
+                        label = {
+                            FeniqoBottomBarLabel(
+                                AppSection.BUDGET.localizedLabel(),
+                                selectedSection == AppSection.BUDGET,
+                            )
+                        },
                         colors = itemColors,
                     )
 
@@ -151,7 +171,12 @@ fun FeniqoAppShell(
                         selected = selectedSection == AppSection.MORE,
                         onClick = { onSectionSelect(AppSection.MORE) },
                         icon = { FeniqoBottomBarIcon(AppSection.MORE) },
-                        label = { FeniqoBottomBarLabel(AppSection.MORE.label, selectedSection == AppSection.MORE) },
+                        label = {
+                            FeniqoBottomBarLabel(
+                                AppSection.MORE.localizedLabel(),
+                                selectedSection == AppSection.MORE,
+                            )
+                        },
                         colors = itemColors,
                     )
                 }
@@ -221,10 +246,11 @@ private fun FeniqoBottomBarIcon(
     modifier: Modifier = Modifier,
 ) {
     val color = LocalContentColor.current
+    val sectionLabel = section.localizedLabel()
     Canvas(
         modifier = modifier
             .size(24.dp)
-            .semantics { contentDescription = section.label },
+            .semantics { contentDescription = sectionLabel },
     ) {
         val strokeWidth = 1.8.dp.toPx()
         val stroke = Stroke(
@@ -287,4 +313,12 @@ private fun FeniqoBottomBarIcon(
             }
         }
     }
+}
+
+@Composable
+private fun AppSection.localizedLabel(): String = when (this) {
+    AppSection.DASHBOARD -> stringResource(Res.string.navigation_dashboard)
+    AppSection.TRANSACTIONS -> stringResource(Res.string.navigation_transactions)
+    AppSection.BUDGET -> stringResource(Res.string.navigation_budget)
+    AppSection.MORE -> stringResource(Res.string.navigation_more)
 }

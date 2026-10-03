@@ -33,6 +33,9 @@ import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreenContainer
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTouchTarget
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.format_preview_title
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun SettingsTopBar(
@@ -532,7 +535,7 @@ fun FormatPreviewGraphiteCard(
             Spacer(modifier = Modifier.width(FeniqoSpacing.Medium))
             Column {
                 Text(
-                    text = "Biçim önizlemesi",
+                    text = stringResource(Res.string.format_preview_title),
                     style = MaterialTheme.typography.bodySmall,
                     color = FeniqoPureWhite.copy(alpha = 0.7f),
                 )
