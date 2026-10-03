@@ -1,28 +1,32 @@
 import SwiftUI
-import SharedLogic
 
 struct ContentView: View {
-    @State private var showContent = false
     var body: some View {
-        VStack {
-            Button("Click me!") {
-                withAnimation {
-                    showContent = !showContent
-                }
-            }
+        ZStack {
+            Color(red: 0.04, green: 0.08, blue: 0.16)
+                .ignoresSafeArea()
 
-            if showContent {
-                VStack(spacing: 16) {
-                    Image(systemName: "swift")
-                        .font(.system(size: 200))
-                        .foregroundColor(.accentColor)
-                    Text("SwiftUI: \(Greeting().greet())")
-                }
-                .transition(.move(edge: .top).combined(with: .opacity))
+            VStack(spacing: 20) {
+                Image(systemName: "chart.pie.fill")
+                    .font(.system(size: 52, weight: .semibold))
+                    .foregroundStyle(Color(red: 0.36, green: 0.82, blue: 0.73))
+
+                Text("Feniqo")
+                    .font(.system(size: 36, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+
+                Text("iOS uygulaması geliştirme aşamasında")
+                    .font(.headline)
+                    .foregroundStyle(.white.opacity(0.9))
+
+                Text("Feniqo şu anda Android öncelikli ilerliyor. iOS sürümü güvenli oturum, yerel veritabanı ve ürün ekranları tamamlandıktan sonra kullanıma açılacak.")
+                    .font(.body)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.white.opacity(0.68))
+                    .padding(.horizontal, 24)
             }
+            .accessibilityElement(children: .combine)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .padding()
     }
 }
 

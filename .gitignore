@@ -17,8 +17,12 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
+/.tooling/
 
 # Yerel tanı ve test koşucusu çıktıları
 **/__pycache__/
 *.py[cod]
 /dump*.xml
+
+# Commit edilmeyen yerel test/inceleme kanıtları
+/artifacts/local/

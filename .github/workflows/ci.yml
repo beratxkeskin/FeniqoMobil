@@ -29,6 +29,18 @@ jobs:
         shell: pwsh
         run: ./scripts/ci/check-secret-leaks.ps1
 
+      - name: Enforce artifact retention and masking policy
+        shell: pwsh
+        run: ./scripts/ci/check-artifact-policy.ps1
+
+      - name: Prevent growth of legacy oversized Kotlin sources
+        shell: pwsh
+        run: ./scripts/ci/check-source-size-ratchet.ps1
+
+      - name: Keep unaccepted OCR code out of release sources
+        shell: pwsh
+        run: ./scripts/ci/check-release-ocr-surface.ps1
+
       - name: Confirm checkout starts clean
         run: git diff --exit-code && test -z "$(git status --porcelain --untracked-files=all)"
 
@@ -44,6 +56,7 @@ jobs:
       FENIQO_PRODUCTION_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_release_placeholder_not_a_credential
       FENIQO_VERSION_CODE: "1"
       FENIQO_VERSION_NAME: 1.0.0-ci
+      FENIQO_AUTH_REDIRECT_URL: https://auth-ci.example.com/auth/callback
     steps:
       - name: Checkout clean repository state
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -68,6 +81,9 @@ jobs:
           :sharedLogic:testAndroidHostTest
           :sharedUI:testAndroidHostTest
           :androidApp:testDebugUnitTest
+          :androidApp:ktlintCheck
+          :sharedLogic:ktlintCheck
+          :sharedUI:ktlintCheck
           :androidApp:lintRelease
           :androidApp:assembleDebug
 
@@ -150,6 +166,7 @@ jobs:
           FENIQO_PRODUCTION_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_release_placeholder_not_a_credential
           FENIQO_VERSION_CODE: "1"
           FENIQO_VERSION_NAME: 1.0.0-ci
+          FENIQO_AUTH_REDIRECT_URL: https://auth-ci.example.com/auth/callback
         run: >-
           ./gradlew --no-daemon --stacktrace
           :androidApp:bundleRelease

@@ -369,6 +369,46 @@ class OfflineFirstAuthRepositoryTest {
     }
 
     @Test
+    fun handleAuthDeepLink_callbackPrefixSpoof_returnsUnsupported() = runTest {
+        val remote = FakeAuthRemoteDataSource()
+        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+        val result = repository.handleAuthDeepLink(
+            "feniqo://auth/callback.attacker#access_token=token&refresh_token=refresh&type=recovery",
+        )
+
+        val success = assertIs<RepositoryResult.Success<com.feniqo.mobile.domain.repository.AuthDeepLinkType>>(result)
+        assertEquals(com.feniqo.mobile.domain.repository.AuthDeepLinkType.UNSUPPORTED, success.value)
+        assertEquals(0, remote.importTokenCallCount)
+    }
+
+    @Test
+    fun configuredHttpsCallback_isUsedForResetAndDeepLinkValidation() = runTest {
+        val remote = FakeAuthRemoteDataSource().apply {
+            session.value = RemoteAuthSession(
+                userId = "11111111-1111-4111-8111-111111111111",
+                email = "recovered@example.com",
+                expiresAtEpochSeconds = 1_800_000_000,
+            )
+        }
+        val redirectUrl = "https://auth.example.com/auth/callback"
+        val repository = OfflineFirstAuthRepository(
+            remoteDataSource = remote,
+            profileDao = FakeProfileDao(),
+            authRedirectUrl = redirectUrl,
+        )
+
+        repository.sendPasswordResetEmail("user@example.com")
+        val result = repository.handleAuthDeepLink(
+            "$redirectUrl#access_token=token&refresh_token=refresh&type=recovery",
+        )
+
+        assertEquals(redirectUrl, remote.lastSendResetRedirectUrl)
+        assertIs<RepositoryResult.Success<com.feniqo.mobile.domain.repository.AuthDeepLinkType>>(result)
+        assertEquals(1, remote.importTokenCallCount)
+    }
+
+    @Test
     fun resetPassword_whenRecoveryVerified_updatesPasswordClearsRecoveryAndSignsOut() = runTest {
         val remote = FakeAuthRemoteDataSource().apply {
             session.value = RemoteAuthSession(

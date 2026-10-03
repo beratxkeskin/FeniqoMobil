@@ -8,6 +8,7 @@
 
 ## Güncel durum
 
+- **P2 teknik borç/yayın yüzeyi paketi (2026-10-03):** Kullanıcıya kapalı OCR'ın CameraX/ML Kit kodu ve bağımlılıkları release varyantından çıkarılıp debug source setine alındı; kamera izni avatar fotoğrafı için korunur. Parola kurtarma callback'i build configuration'a taşındı, release için doğrulanabilir HTTPS App Link zorunlu kılındı ve prefix-spoof kabulü kapatıldı. Ktlint, büyük dosya büyüme ratchet'i ve artifact hassas veri/boyut denetimi CI'a eklendi. Örnek iOS ekranı dürüst ürün-durumu kabuğuyla değiştirildi; iOS Keychain/DB/ürün UI hâlâ açık kapsamdır. Politika: [Kod kalitesi ve artifact](docs/KOD_KALITE_VE_ARTIFACT_POLITIKASI.md).
 - **Android release teknik paket kapısı (2026-10-03):** Release varyantında R8 kod küçültme ve resource shrinking etkinleştirildi. `versionCode`/`versionName` artık release için açık ortam veya yerel build configuration girdisidir; eksik/geçersiz sürüm ya da yanlış Supabase project ref release'i fail-closed durdurur. CI, Android unit ve API 35 cihaz testlerinden sonra küçültülmüş unsigned AAB'yi ve R8 mapping çıktısını doğrular. İmzalama anahtarı, Play App Signing ve mağaza rollout'u dış yetki gerektirdiğinden bu teknik kapıya dahil edilmedi.
 - **GitHub Actions CI/yayın kalite kapısı (2026-10-03):** `main` pull request ve push'larında temiz checkout/secret taraması, SharedLogic–SharedUI–Android testleri, Room migration doğrulaması, release lint, debug APK, API 35 Managed Device üzerinde Android platform testleri, Supabase ayarı olmadan çevrimdışı demo APK, fail-closed production yapılandırma kontrolü, sentetik değerlerle unsigned release AAB paketleme ve macOS üzerinde iOS Simulator ARM64 ortak kod derlemesi çalışacak şekilde `.github/workflows/ci.yml` eklendi. Cihaz kapısı SQLCipher, Room 1→22, FileProvider/avatar izolasyonu, WorkManager, notification channel ve kritik Compose senaryolarını kapsar. Workflow gerçek Supabase secret'ı kullanmaz, canlı ortama mutation göndermez ve paket yayınlamaz. Merge engelinin etkinleşmesi için repository yöneticisinin beş check'i GitHub ruleset içinde zorunlu yapması bekleniyor; ayrıntı [CI ve yayın kapısı](docs/CI_YAYIN_KAPISI.md) belgesindedir.
 - **Play Store ve hukuki hazırlık paketi (2026-10-03):** Teknik veri envanteri, hukuki metin girdi sözleşmesi, Play App Signing yaklaşımı ve internal→closed→production kanıt kapıları [tek yayın kontrol listesinde](docs/PLAY_STORE_YAYIN_HAZIRLIK.md) toplandı. Onaylı metin/URL, Play Console, güvenli signing anahtarı ve fiziksel cihaz kabulü dış yetki gerektirdiğinden yayın durumu fail-closed biçimde kapalıdır; bunlar tamamlanmış gibi işaretlenmedi.
@@ -108,7 +109,7 @@
 | 6.1 Arka plan sync | Tamamlandı | Hilt CoroutineWorker, BackgroundSyncScheduler, exponential backoff, KEEP / APPEND_OR_REPLACE |
 | 6.2 Senkronizasyon gözlemi | Tamamlandı | Room v4 SyncOverview Flow, NetworkConnectivityObserver, ViewModel, SyncStatusIndicator Compose bileşeni |
 | 7.1 Navigasyon ve UI durumları | Tamamlandı | Type-safe Navigation Compose rotaları, bağımsız Auth/Main NavHost, RootNavViewModel, stateless FeniqoAppShell |
-| 7.2 Giriş, kayıt ve parola kurtarma ekranları | Tamamlandı | Pano A/B/C onaylı tasarımları, LoginScreen, RegisterScreen, WelcomeScreen, AuthEmailVerificationScreen, ForgotPasswordScreen, PasswordResetSentScreen, ResetPasswordScreen, PasswordResetSuccessScreen, doğrulanmış recovery deep link (feniqo://auth/callback), SDK session dönüşümü |
+| 7.2 Giriş, kayıt ve parola kurtarma ekranları | Tamamlandı | Pano A/B/C onaylı tasarımları, tam ekran akışı, debug'da özel scheme; release'de yapılandırılmış HTTPS App Link, exact callback eşleşmesi ve SDK session dönüşümü. Domain sahipliği/assetlinks/Supabase allowlist rollout kapısıdır. |
 | 7.4 Dashboard | Tamamlandı | Stateless DashboardScreen, DashboardViewModel, Hilt modülleri, dinamik ay Room Flow SSOT, son işlemler, işlem/düzenleme navigasyonları, geçici MoneyScore kartı ve ön değerlendirme |
 | 8.1 Bütçeler | Tamamlandı | Bütçe listesi, dinamik ay gezinimi, %80 uyarı ve %100 aşım, harcama kategorisiyle bütçe ekleme, ID tabanlı Room SSOT form düzenlemesi, onaylı silme ve kopyalama akışları, Room V2 outbox/ACK, Staging V2 SQL migration, sözleşme testi ve Android emülatör manuel smoke kabulü |
 | 8.2 Tekrarlayan işlemler ve abonelikler | Tamamlandı | Tekrar vade hesaplayıcı, occurrence idempotency, kural/abonelik CRUD komutları, Room v6/v7/v8, V2 outbox/ACK/pull/conflict, Staging 13/13 migration, 38 senaryolu SQL sözleşme testi, MVI Compose liste ve form ekranları, hatırlatıcı planlayıcı, Room receipt claim, Android bildirim Worker'ı, 24h periyodik scheduler, Android 13+ izin CTA'sı ve Android emülatör manuel smoke kabulü |
@@ -142,10 +143,11 @@ Android akışı (2026-09-09): CameraX arka kamera ve sistem galeri seçimi, bun
 izin ret/ayarlar geri dönüşü ve ayrı aday onay diyaloğu işlem formuna bağlandı. Geçici kamera
 dosyası OCR sonrasında silinir; “Forma Aktar” seçilmeden hiçbir form alanı veya finans kaydı değişmez.
 
-Yayın kapsamı kararı (2026-09-30): Gerçek makbuz doğruluğu ve manuel cihaz kabulü açık olduğu için
-OCR kullanıcıya hazır özellik sayılmaz. Yeni işlem formu, işlem detayı ve Hızlı Ekle girişleri ortak
-fail-closed kapıyla gizlenmiştir. İç implementasyon korunur; kapı yalnız doğruluk fixture'ları, manuel
-cihaz kabulü ve ürün onayı birlikte tamamlandıktan sonra ayrı bir dilimde açılır.
+Yayın kapsamı kararı (2026-10-03): Gerçek makbuz doğruluğu ve manuel cihaz kabulü açık olduğu için
+OCR kullanıcıya hazır özellik sayılmaz. Kullanıcı girişleri kapalıdır; CameraX/ML Kit, servis ve Hilt
+bağları yalnız debug source setinde tutulur ve release paketine girmez. Ortak deterministik parser/testler
+gelecekteki kabul çalışması için korunur; özellik ancak doğruluk fixture'ları, cihaz kabulü ve ürün onayı
+birlikte tamamlandıktan sonra ayrı bir dilimde yeniden release kapsamına alınır.
 
 Faz 9.1 kapanış notu (2026-09-09): Ortak `SecuritySettings`, fail-closed kilit politikası, Android Preferences DataStore/Hilt repository, AndroidX `BiometricPrompt`, biyometri + cihaz PIN/desen/parola geri dönüşü ve navigation'dan önce çalışan lifecycle kilit kapısı tamamlandı. Uygulama kilidi SQLCipher anahtarından ayrı kaldığı için arka plan senkronizasyonu korunur. Otomatik testler, debug APK ve kullanıcı Android manuel kabulü geçti.
 

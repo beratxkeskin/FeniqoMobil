@@ -88,6 +88,12 @@ olarak desteklenir. `release`, production için ayrı değerler ve açık
 `FENIQO_RELEASE_ENVIRONMENT=production` beyanı ister; URL'nin production project ref'iyle tam
 eşleşmediği durumda derleme durur.
 
+Production parola kurtarma callback'i ayrıca `FENIQO_AUTH_REDIRECT_URL` veya
+`feniqo.auth.redirectUrl` ile `https://<doğrulanmış-domain>/auth/callback` biçiminde verilmelidir.
+Release manifesti bunu doğrulanan Android App Link olarak yayınlar. İlgili domainin
+`.well-known/assetlinks.json` kaydı ve Supabase Auth redirect allowlist girdisi rollout öncesinde
+manuel olarak doğrulanmalıdır. Debug varyantı yerel geliştirme için `feniqo://auth/callback` kullanır.
+
 Mobil uygulamada `sb_secret_...` veya service-role key kullanılamaz. Ayrıntı için
 [docs/SUPABASE_MOBIL_BUILD_CONFIG.md](docs/SUPABASE_MOBIL_BUILD_CONFIG.md) dosyasına bakın.
 

@@ -1,5 +1,13 @@
 # FeniqoMobil — Uçtan Uca Geliştirme Yol Haritası
 
+### P2 Teknik Borç ve Yayın Yüzeyi Kapatma (2026-10-03)
+
+- [x] Release makbuz OCR yüzeyi kapatıldı: CameraX/ML Kit ve OCR Hilt/UI kaynakları yalnız `debug` source setine taşındı; release bağımlılıklarına girmez. `CAMERA` izni profil avatarı için korunur.
+- [x] Auth callback build configuration'a taşındı. Release yalnız doğrulanabilir `https://<domain>/auth/callback` biçimini kabul eder, App Link `autoVerify` kullanır ve callback parser'ı prefix-spoof URL'leri reddeder. Gerçek domain `assetlinks.json` ve Supabase redirect allowlist doğrulaması rollout öncesi manuel kapıdır.
+- [x] Ktlint kalite kapısı, mevcut ihlaller için küçültülebilir baseline, büyük kaynak dosyaları için büyümeyi engelleyen satır ratchet'i ve takip edilen artifactler için boyut/hassas veri politikası CI'a eklendi.
+- [x] Örnek iOS “Click me” ekranı kaldırıldı; ürün durumunu doğru anlatan Feniqo kabuğu eklendi. iOS Keychain, şifreli DB ve gerçek ürün ekranları tamamlanmış sayılmadı.
+- [x] Aşağıdaki eski kabul bölümleri tarihsel snapshot olarak etiketlendi; güncel gerçeklik belgenin üstündeki kabul tablolarıdır.
+
 ### Gerçek İki Cihazlı Çekirdek V1 Kabulü (2026-09-29)
 
 Staging ref `rxfaiynkhaxrksosxvxp` üzerinde iki bağımsız Android 17 / API 37 emülatörü (`Feniqo_V1_A` ve `Feniqo_V1_B`) ile gerçek Room → outbox → Supabase RPC → ACK → incremental pull → ikinci cihaz Room zinciri tamamlandı. Production'a dokunulmadı; mobil veya kanıt üretiminde service-role kullanılmadı.
@@ -64,7 +72,7 @@ Kanıtlar: `artifacts/v1-acceptance/2026-09-28/S1`–`S5`, `artifacts/v1-accepta
   - Farklı hesap durumunda `requestSync` ve `retryFailedOperations` akışlarından otomatik `clearAllOperations()` ve `clearAllCursors()` çağrıları kaldırıldı; outbox mutasyonları ve cursor'lar geri döndürülemez veri kaybına karşı eksiksiz korundu. Mevcut DAO/wrapper API deklarasyonları kullanıcı değişikliği olarak korunmuştur.
   - `retryFailedOperations` hesap uyuşmazlığında eski kullanıcının operasyonlarını kesinlikle mutate etmez; tek mutex ile deadlock riski olmadan seri işlenir.
   - Hedefli `OfflineFirstSyncRepositoryTest` (31 test, 0 failure), tam `:sharedLogic:testAndroidHostTest` paketi (1529 test, 0 failure, 0 skipped) ve `:sharedLogic:compileKotlinIosSimulatorArm64` %100 başarıyla geçti.
-- [ ] **P0 Regresyon Kabulü ve Doğrulama Durumu (Otomatik Host/Unit Kapıları Tamamlandı, Enstrümantasyon & Yerel DB Kapıları Açık — 2026-09-26):**
+- [x] **Tarihsel P0 Regresyon Snapshot'ı (2026-09-26; sonraki API 35 ve gerçek iki-cihaz kapıları daha sonra tamamlandı):**
   - Dilim 1 (Room v21 UUID Canonicalization), Dilim 2 (Hata Sınıflandırması), Dilim 3A (Hesap Değişiminde Fail-Closed Koruma), Dilim 1/2 (Room v22 Kullanıcı-Scope Temeli & Kayıpsız Migration), Dilim 2A (Outbox Enqueue & DAO İzolasyonu), Dilim 2B (Karantina Runtime & Güvenli UI), Backup/Import Actor Scope ve Session Yarışı tam kapsamıyla uygulandı ve doğrulandı.
   - Statik güvenlik denetimi eksiksiz tamamlandı: Sıfır global outbox/cursor/conflict silme, sıfır destructive migration, tam scope izolasyonu, session cancellation koruması.
   - **Otomatik Host / Unit Regresyon Kapısı (TAMAMLANDI):**
@@ -86,7 +94,9 @@ Kanıtlar: `artifacts/v1-acceptance/2026-09-28/S1`–`S5`, `artifacts/v1-accepta
     - Supabase production ve staging ortamlarına kesinlikle dokunulmadı; hiçbir migration/SQL veya veri mutasyonu uygulanmadı.
     - Git commit veya push yapılmadı; working tree ve kullanıcı değişiklikleri korundu.
 
-### V1 Çekirdek Kabul Doğrulaması, Hata Sınıflandırması Toparlanması ve Staging Migration (2026-09-21)
+### Tarihsel Snapshot — V1 Çekirdek Kabul ve Staging Durumu (2026-09-21)
+
+> Bu bölüm 2026-09-21 anını korur. Staging migration ve S1–S8'in güncel sonucu belgenin en üstündeki 2026-09-27/29 kabul kayıtlarıdır.
 
 - [x] **Room v20 Şeması ve Hata Sınıflandırması:** `sync_operations` tablosuna `error_classification` sütunu (`DEFINITIVE_REJECTION`, `AMBIGUOUS_RESULT`) eklendi; Room v19→v20 ileri migration'ı (`ANDROID_MIGRATION_19_20`), schema JSON (`20.json`) ve migration testi eklendi. NULL error_classification (eski Room v19 FAILED kayıtları) hiçbir zaman kesin ret sayılmaz.
 - [x] **Tipli Kesin Ret Sınırı ve Güvenli Sınıflandırma:** `DefinitiveOutboxFailureException` (ve alt sınıfı `ServerRejectedMutationException`), `V2OutboxOperationExecutor` içinde uzak writer çağrısından ÖNCE yapılan tüm kontrollerde (protocolVersion, payload null/blank, operationType, entityType, DTO decode, ID uyuşmazlığı, baseVersion invariant'ları) tipli kesin hata olarak bağlandı. Writer çağrı sayısı 0 kaldı ve OutboxProcessor bunu `DEFINITIVE_REJECTION` olarak işaretledi. Writer çağrısı sonrası dönerken oluşabilecek `SerializationException` ve genel `IllegalArgumentException` ise `AMBIGUOUS_RESULT` olarak korundu. A, B, C, D, E, F zorunlu doğrulama testleri eklendi.
@@ -94,7 +104,7 @@ Kanıtlar: `artifacts/v1-acceptance/2026-09-28/S1`–`S5`, `artifacts/v1-accepta
 - [x] **ACK Kaybı ve Replay Gerçek Bileşen Testleri:** `RoomDaoTest.kt` içinde `FakeRemoteTransactionRpc` gerçek `TransactionDto` sözleşmesine (userId, categoryId, paymentMethod, transactionDate, createdAt, deletedAt, version) uyarlandı; operation payload JSON'unu decode ederek uzak kaydı oluşturması sağlandı. Flow A (CREATE gönderimi, uzakta kayıt ve receipt oluşması, response decode/ACK kaybı, AMBIGUOUS_RESULT, aynı operation_id ile replay, uzakta tekil kayıt ve receipt kalması, outbox temizlenmesi) ve Flow B (ACK kaybı sonrası yerel delete, successor delete bloklanması, replay sonrası unblock, uzak DELETE çalışması, zombi kayıt kalmaması) uçtan uca bileşen testi olarak başarıyla geçti.
 - [x] **Hedefli Testler ve Derlemeler:** `:sharedLogic:testAndroidHostTest` 1499 testin tamamı (0 failure), `:androidApp:testDebugUnitTest` 686 test (0 failure), `:sharedUI:testAndroidHostTest` 313 test (0 failure), `:androidApp:assembleDebug` ve `:sharedLogic:compileKotlinIosSimulatorArm64` başarıyla derlendi ve geçti.
 - [x] **Fail-Closed Kategori Seed Migration ve 16 SQL Kabul Senaryosu:** `20260921000100_seed_extended_canonical_categories.sql` fail-closed hale getirildi (17 eski kanonik kategori sözleşmesinin tam alan ve sahiplik doğrulaması, 1120 ve 1121'in kanıtlanarak tombstone edilmesi, 12 yeni kanonik kategori eklenmesi, 2 legacy kaydın tombstone edilmesi, net aktif +10 değişim ve 27 aktif kanonik kategori [9 gelir, 18 gider] tam alan/fazlalık/eksiklik post-check doğrulaması). İzole yerel PostgreSQL template veritabanları üzerinde doğrudan migration dosyasının tam metnini çalıştıran 16 gerçek SQL kabul senaryosu ve varyantı (7 legacy sözleşme varyantı [name, type, color, icon, user_id, workspace_id, aktif tombstone], 2 kanonik UUID sahiplik çakışması varyantı [user_id, workspace_id], idempotent 2. çalıştırma dar invariant ve version koruma testleri, atomik rollback ve fixture kalıcılığı güvencesi) `supabase/tests/run_extended_categories_seed_contract_test.py` ile %100 geçti.
-- [ ] **Staging Migration Uygulaması:** Staging'e henüz UYGULANMADI (Codex ve kullanıcı açık onayı bekleniyor); Staging migration geçmişi doğrulanmadı/AÇIK.
+- [x] **Staging Migration Uygulaması (sonraki durum):** 2026-09-27 itibarıyla 32/32 migration staging'e uygulanıp doğrulandı; bu bölümün ilk yazıldığı 2026-09-21 tarihinde henüz açık olduğu için tarihsel not korunur.
 - [x] **Production Güvenliği:** Production Supabase'e kesinlikle dokunulmadı; hiçbir migration/SQL veya veri mutasyonu uygulanmadı.
 - [x] **Cihaz A ve İki Cihaz Eşitlemesi:** 2026-09-29 tarihinde iki bağımsız Android 17 / API 37 emülatörüyle S1–S8 kabulü tamamlandı; ayrıntı belgenin başındaki güncel kabul tablosundadır.
 
@@ -754,16 +764,16 @@ noktalar kararlı güvenli kodlarla değiştirildi. Hassas bearer/payload içere
 
 - [x] GitHub Actions üzerinde temiz checkout, secret, Android/Room/lint/build, release paketleme ve iOS common compile kalite kapısı.
 - [x] API 35 Gradle Managed Device üzerinde SQLCipher, Room 1→22, FileProvider/avatar, WorkManager, bildirim ve kritik Compose otomatik yayın kapısı.
-- [ ] Domain/use case birim testleri.
-- [ ] DAO ve migration testleri.
-- [ ] Repository + fake remote senkronizasyon testleri.
-- [ ] ViewModel state testleri.
-- [ ] Kritik Compose ekranları için UI testleri.
-- [ ] Offline, tekrar deneme, çakışma ve soft-delete uçtan uca senaryoları.
+- [x] Domain/use case birim testleri.
+- [x] DAO ve migration testleri.
+- [x] Repository + fake remote senkronizasyon testleri.
+- [x] ViewModel state testleri.
+- [x] Kritik Compose ekranları için UI testleri.
+- [x] Offline, tekrar deneme, çakışma ve soft-delete uçtan uca senaryoları.
 
 ### 10.2 Kod kalitesi ve performans
 
-- [ ] Kotlin biçimlendirme ve statik analiz aracı seçimi.
+- [x] Kotlin biçimlendirme/statik stil kapısı (`ktlintCheck` + baseline) ve büyük kaynak dosyaları için CI ratchet'i.
 - [ ] Büyük listelerde sayfalama ve LazyColumn performansı.
 - [ ] StrictMode / sızıntı / ana iş parçacığı kontrolleri.
 - [ ] Crash raporlama ve gizlilik politikası kararı.
@@ -783,10 +793,10 @@ güvenli upload key ve fiziksel cihaz kabulü tamamlanana kadar bu maddeler aç�
 
 ### 10.4 iOS'a geçiş hazırlığı
 
-- [ ] `commonMain` derlemesini iOS hedefiyle doğrula.
+- [x] `commonMain` derlemesini iOS hedefiyle doğrula.
 - [ ] iOS güvenli depolama ve biyometri adaptörlerini uygula.
 - [ ] iOS veritabanı/şifreleme stratejisini üretim öncesi doğrula.
-- [ ] Xcode uygulama kabuğunu ekle.
+- [x] Xcode uygulama kabuğunu ekle (ürün ekranları değildir; geliştirme durumu görünürdür).
 - [ ] SwiftUI ekranlarını `sharedLogic` ortak iş mantığına bağla.
 
 ---

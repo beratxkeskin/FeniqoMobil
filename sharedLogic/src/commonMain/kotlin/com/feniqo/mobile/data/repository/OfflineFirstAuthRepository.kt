@@ -46,6 +46,7 @@ class OfflineFirstAuthRepository(
     private val fetchRemoteProfile: (suspend (String) -> ProfileDto?)? = null,
     private val enqueueProfileUpdate: (suspend (String, UserProfileEntity, OutboxOperationType, String) -> Unit)? = null,
     private val nowEpochMillisProvider: () -> Long = { kotlin.time.Clock.System.now().toEpochMilliseconds() },
+    private val authRedirectUrl: String = DEFAULT_AUTH_REDIRECT_URL,
 ) : AuthRepository {
 
     private val _recoveryState = MutableStateFlow<AuthRecoveryState>(AuthRecoveryState.Idle)
@@ -160,7 +161,7 @@ class OfflineFirstAuthRepository(
         return authResult {
             remoteDataSource.sendPasswordResetEmail(
                 email = normalizedEmail,
-                redirectUrl = "feniqo://auth/callback",
+                redirectUrl = authRedirectUrl,
             )
         }
     }
@@ -188,7 +189,7 @@ class OfflineFirstAuthRepository(
     }
 
     override suspend fun handleAuthDeepLink(uriString: String): RepositoryResult<AuthDeepLinkType> {
-        val parsed = parseDeepLinkUri(uriString)
+        val parsed = parseDeepLinkUri(uriString, authRedirectUrl)
             ?: return RepositoryResult.Success(AuthDeepLinkType.UNSUPPORTED)
 
         if (parsed.hasError) {
@@ -285,9 +286,16 @@ internal data class ParsedDeepLink(
     val hasError: Boolean,
 )
 
-internal fun parseDeepLinkUri(rawUri: String): ParsedDeepLink? {
+internal fun parseDeepLinkUri(
+    rawUri: String,
+    expectedRedirectUrl: String = DEFAULT_AUTH_REDIRECT_URL,
+): ParsedDeepLink? {
     val trimmed = rawUri.trim()
-    if (!trimmed.startsWith("feniqo://auth/callback", ignoreCase = true)) {
+    val firstParameterIndex = listOf(trimmed.indexOf('?'), trimmed.indexOf('#'))
+        .filter { it >= 0 }
+        .minOrNull() ?: trimmed.length
+    val callbackBase = trimmed.substring(0, firstParameterIndex).trimEnd('/')
+    if (!callbackBase.equals(expectedRedirectUrl.trim().trimEnd('/'), ignoreCase = true)) {
         return null
     }
 
@@ -331,6 +339,8 @@ internal fun parseDeepLinkUri(rawUri: String): ParsedDeepLink? {
         hasError = hasError,
     )
 }
+
+internal const val DEFAULT_AUTH_REDIRECT_URL = "feniqo://auth/callback"
 
 private suspend inline fun <T> authResult(block: () -> T): RepositoryResult<T> = try {
     RepositoryResult.Success(block())

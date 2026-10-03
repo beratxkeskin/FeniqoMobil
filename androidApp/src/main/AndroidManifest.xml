@@ -22,7 +22,7 @@
         <activity
             android:exported="true"
             android:name=".MainActivity">
-            <intent-filter>
+            <intent-filter android:autoVerify="${authRedirectAutoVerify}">
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -33,9 +33,9 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
-                    android:scheme="feniqo"
-                    android:host="auth"
-                    android:pathPrefix="/callback" />
+                    android:scheme="${authRedirectScheme}"
+                    android:host="${authRedirectHost}"
+                    android:path="${authRedirectPath}" />
             </intent-filter>
         </activity>
 

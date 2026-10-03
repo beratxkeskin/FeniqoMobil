@@ -64,6 +64,7 @@ object RepositoryModule {
         enqueueProfileUpdate = { syncScopeKey, entity, type, payload ->
             queue.enqueueProfileV2(syncScopeKey, entity, type, payload)
         },
+        authRedirectUrl = com.feniqo.mobile.BuildConfig.AUTH_REDIRECT_URL,
     )
 
     @Provides

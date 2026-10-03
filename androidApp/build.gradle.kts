@@ -43,6 +43,18 @@ fun validatePublishableKey(value: String, environmentLabel: String) {
     }
 }
 
+fun validateAuthRedirectUrl(value: String) {
+    val uri = runCatching { URI(value) }.getOrNull()
+    require(
+        uri?.scheme == "https" &&
+            !uri.host.isNullOrBlank() &&
+            uri.userInfo == null && uri.query == null && uri.fragment == null &&
+            uri.path == "/auth/callback",
+    ) {
+        "Release parola kurtarma adresi https://<doğrulanmış-domain>/auth/callback biçiminde olmalıdır."
+    }
+}
+
 val stagingProjectRef = "rxfaiynkhaxrksosxvxp"
 val productionProjectRef = "qgmymavltjnmfuzvfxiq"
 
@@ -78,6 +90,11 @@ val configuredReleaseVersionName = configuredSupabaseValue(
     environmentName = "FENIQO_VERSION_NAME",
     localPropertyName = "feniqo.version.name",
 )
+val productionAuthRedirectUrl = configuredSupabaseValue(
+    environmentName = "FENIQO_AUTH_REDIRECT_URL",
+    localPropertyName = "feniqo.auth.redirectUrl",
+)
+val developmentAuthRedirectUrl = "feniqo://auth/callback"
 
 val stagingConfigurationError = when {
     stagingSupabaseUrl == null ->
@@ -102,11 +119,17 @@ val productionConfigurationError = when {
     configuredReleaseVersionName.isNullOrBlank() ||
         !configuredReleaseVersionName.matches(Regex("^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$")) ->
         "Release derlemesi için semantik FENIQO_VERSION_NAME veya feniqo.version.name zorunludur."
+    productionAuthRedirectUrl == null ->
+        "Release derlemesi için FENIQO_AUTH_REDIRECT_URL veya feniqo.auth.redirectUrl zorunludur."
     else -> runCatching {
         validateSupabaseProjectUrl(productionSupabaseUrl, productionProjectRef, "Production")
         validatePublishableKey(productionSupabasePublishableKey, "Production")
+        validateAuthRedirectUrl(productionAuthRedirectUrl)
     }.exceptionOrNull()?.message
 }
+
+val releaseAuthRedirectUri = runCatching { URI(productionAuthRedirectUrl.orEmpty()) }
+    .getOrElse { URI("https://invalid.invalid/auth/callback") }
 
 val validateProductionSupabaseConfiguration = tasks.register("validateProductionSupabaseConfiguration") {
     group = "verification"
@@ -151,11 +174,11 @@ dependencies {
 
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.biometric)
-    implementation(libs.androidx.camera.camera2)
-    implementation(libs.androidx.camera.lifecycle)
-    implementation(libs.androidx.camera.view)
+    debugImplementation(libs.androidx.camera.camera2)
+    debugImplementation(libs.androidx.camera.lifecycle)
+    debugImplementation(libs.androidx.camera.view)
     implementation(libs.androidx.datastore.preferences)
-    implementation(libs.mlkit.text.recognition)
+    debugImplementation(libs.mlkit.text.recognition)
 
     implementation(libs.compose.runtime)
     implementation(libs.compose.foundation)
@@ -216,6 +239,11 @@ android {
             buildConfigField("String", "ENVIRONMENT", "\"staging\"")
             buildConfigField("String", "SUPABASE_URL", stagingSupabaseUrl.orEmpty().asBuildConfigString())
             buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", stagingSupabasePublishableKey.orEmpty().asBuildConfigString())
+            buildConfigField("String", "AUTH_REDIRECT_URL", developmentAuthRedirectUrl.asBuildConfigString())
+            manifestPlaceholders["authRedirectScheme"] = "feniqo"
+            manifestPlaceholders["authRedirectHost"] = "auth"
+            manifestPlaceholders["authRedirectPath"] = "/callback"
+            manifestPlaceholders["authRedirectAutoVerify"] = "false"
         }
         create("demo") {
             initWith(getByName("debug"))
@@ -226,6 +254,11 @@ android {
             buildConfigField("String", "ENVIRONMENT", "\"demo\"")
             buildConfigField("String", "SUPABASE_URL", "\"https://demo.invalid\"")
             buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"sb_publishable_demo_offline_0000000000000000\"")
+            buildConfigField("String", "AUTH_REDIRECT_URL", developmentAuthRedirectUrl.asBuildConfigString())
+            manifestPlaceholders["authRedirectScheme"] = "feniqo"
+            manifestPlaceholders["authRedirectHost"] = "auth"
+            manifestPlaceholders["authRedirectPath"] = "/callback"
+            manifestPlaceholders["authRedirectAutoVerify"] = "false"
         }
         release {
             isMinifyEnabled = true
@@ -233,6 +266,11 @@ android {
             buildConfigField("String", "ENVIRONMENT", "\"production\"")
             buildConfigField("String", "SUPABASE_URL", productionSupabaseUrl.orEmpty().asBuildConfigString())
             buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", productionSupabasePublishableKey.orEmpty().asBuildConfigString())
+            buildConfigField("String", "AUTH_REDIRECT_URL", productionAuthRedirectUrl.orEmpty().asBuildConfigString())
+            manifestPlaceholders["authRedirectScheme"] = releaseAuthRedirectUri.scheme
+            manifestPlaceholders["authRedirectHost"] = releaseAuthRedirectUri.host
+            manifestPlaceholders["authRedirectPath"] = releaseAuthRedirectUri.path
+            manifestPlaceholders["authRedirectAutoVerify"] = "true"
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
