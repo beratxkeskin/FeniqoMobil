@@ -10,6 +10,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.espresso.Espresso.closeSoftKeyboard
 import androidx.test.platform.app.InstrumentationRegistry
 import com.feniqo.mobile.data.local.database.FeniqoDatabase
 import com.feniqo.mobile.data.local.database.FeniqoDatabaseConstructor
@@ -275,6 +276,10 @@ class CustomSplitBoundaryAndLayoutAndroidTest {
             .performScrollTo()
             .assertIsDisplayed()
             .performClick()
+        compose.waitForIdle()
+
+        // Alt eylemler, metin girişi tamamlandıktan sonra donanım geri davranışıyla erişilebilir kalmalı.
+        closeSoftKeyboard()
         compose.waitForIdle()
 
         // 2. Verify Remainder action is accessible

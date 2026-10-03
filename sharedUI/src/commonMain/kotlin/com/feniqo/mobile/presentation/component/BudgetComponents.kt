@@ -332,7 +332,7 @@ fun BudgetExceededBanner(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(FeniqoRadius.Medium),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFFEF3C7), // Açık amber
+            containerColor = MaterialTheme.colorScheme.secondaryContainer, // Açık amber
         ),
     ) {
         Row(
@@ -1020,7 +1020,7 @@ fun BudgetDeleteDialog(
                             .defaultMinSize(minHeight = 48.dp),
                         shape = RoundedCornerShape(FeniqoRadius.Medium),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFFEE2E2), // Yumuşak kırmızı
+                            containerColor = MaterialTheme.colorScheme.errorContainer, // Yumuşak kırmızı
                             contentColor = Color(0xFFDC2626),
                         ),
                     ) {
@@ -1089,7 +1089,7 @@ fun BudgetCopyDialog(
                 // Bilgi Kartı: Sadece bütçe tanımları kopyalanır
                 Surface(
                     shape = RoundedCornerShape(FeniqoRadius.Medium),
-                    color = Color(0xFFEFF6FF), // Soft blue
+                    color = MaterialTheme.colorScheme.primaryContainer,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Row(
@@ -1100,7 +1100,7 @@ fun BudgetCopyDialog(
                         Icon(
                             imageVector = Icons.Outlined.Info,
                             contentDescription = null,
-                            tint = Color(0xFF1E40AF),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.size(18.dp),
                         )
                         Column {
@@ -1108,12 +1108,12 @@ fun BudgetCopyDialog(
                                 text = "Sadece bütçe tanımları kopyalanır.",
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF1E40AF),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
                             Text(
                                 text = "Harcamalar taşınmaz.",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF1E40AF),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f),
                             )
                         }
                     }
@@ -1178,7 +1178,7 @@ fun BudgetCopyDialog(
                 // Uyarı Kartı: Hedef aydaki bütçeler korunur
                 Surface(
                     shape = RoundedCornerShape(FeniqoRadius.Medium),
-                    color = Color(0xFFFEF3C7), // Soft amber
+                    color = MaterialTheme.colorScheme.secondaryContainer, // Soft amber
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Row(
@@ -1251,7 +1251,7 @@ fun BudgetOfflineBanner(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(FeniqoRadius.Medium),
-        color = Color(0xFFEFF6FF), // Açık mavi
+        color = MaterialTheme.colorScheme.primaryContainer,
     ) {
         Row(
             modifier = Modifier.padding(FeniqoSpacing.Medium),
@@ -1261,7 +1261,7 @@ fun BudgetOfflineBanner(
             Icon(
                 imageVector = Icons.Outlined.CloudOff,
                 contentDescription = null,
-                tint = Color(0xFF1E40AF),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(24.dp),
             )
             Column {
@@ -1269,12 +1269,12 @@ fun BudgetOfflineBanner(
                     text = "Çevrimdışısın.",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1E40AF),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
                 Text(
                     text = "Değişiklikler bu cihazda saklanır.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF1E40AF),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f),
                 )
             }
         }

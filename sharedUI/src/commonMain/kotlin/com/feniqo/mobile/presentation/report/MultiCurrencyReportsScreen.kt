@@ -103,8 +103,8 @@ fun MultiCurrencyReportsScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    color = Color(0xFFF1F5F9),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
@@ -161,10 +161,10 @@ fun MultiCurrencyReportsScreen(
                                     .clip(RoundedCornerShape(10.dp))
                                     .clickable(role = Role.RadioButton) { onSelectCurrency(curr) },
                                 shape = RoundedCornerShape(10.dp),
-                                color = if (isSelected) Color(0xFF1E3A2F) else Color(0xFFF3F4F6),
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                                 border = androidx.compose.foundation.BorderStroke(
                                     1.dp,
-                                    if (isSelected) Color(0xFF1E3A2F) else MaterialTheme.colorScheme.outlineVariant
+                                    if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
                                 ),
                             ) {
                                 Box(
@@ -176,7 +176,7 @@ fun MultiCurrencyReportsScreen(
                                         style = MaterialTheme.typography.bodySmall.copy(
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                         ),
-                                        color = if (isSelected) Color.White else Color(0xFF374151),
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             }

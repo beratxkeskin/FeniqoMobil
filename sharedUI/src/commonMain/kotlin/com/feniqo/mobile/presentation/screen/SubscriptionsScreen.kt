@@ -65,7 +65,6 @@ import com.feniqo.mobile.presentation.subscription.SubscriptionsUiState
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTypographyTokens
 
-private val FeniqoBackgroundSand = Color(0xFFF7F5F0)
 private val FeniqoSageGreen = Color(0xFF2D5A43)
 
 /**
@@ -85,7 +84,7 @@ fun SubscriptionsScreen(
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = FeniqoBackgroundSand,
+        color = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier
@@ -105,7 +104,7 @@ fun SubscriptionsScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                         contentDescription = "Geri dön",
-                        tint = Color(0xFF212121),
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -113,7 +112,7 @@ fun SubscriptionsScreen(
                         text = "Daha Fazla",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
-                        color = Color(0xFF212121),
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -124,7 +123,7 @@ fun SubscriptionsScreen(
                 text = "Abonelikler",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF1E232A),
+                color = MaterialTheme.colorScheme.onSurface,
             )
 
             Spacer(modifier = Modifier.height(6.dp))
@@ -143,14 +142,14 @@ fun SubscriptionsScreen(
                     Icon(
                         imageVector = Icons.Outlined.CreditCard,
                         contentDescription = null,
-                        tint = Color(0xFF757575),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(14.dp),
                     )
                     Text(
                         text = state.activeWorkspaceName ?: "Kişisel",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF424242),
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
@@ -245,7 +244,7 @@ fun SubscriptionsScreen(
                                             Text(
                                                 text = "Bu filtreye uygun abonelik bulunamadı.",
                                                 style = MaterialTheme.typography.bodyMedium,
-                                                color = Color(0xFF757575),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         }
                                     }
@@ -309,7 +308,7 @@ fun SubscriptionsScreen(
                                     Text(
                                         text = "Tutarlar kayıtlarına göre hesaplanır.",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = Color(0xFF9E9E9E),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                     )
                                 }

@@ -370,17 +370,17 @@ fun PeriodSummaryScreen(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        color = Color(0xFFF0FDF4),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFDCFCE7)),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Icon(
                                 imageVector = Icons.Outlined.Lightbulb,
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
-                                tint = Color(0xFF166534),
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
-                            Text(text = insightText, style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = Color(0xFF166534))
+                            Text(text = insightText, style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = MaterialTheme.colorScheme.onPrimaryContainer)
                         }
                     }
                 }
@@ -459,7 +459,7 @@ private fun IndicatorRow(
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Surface(modifier = Modifier.size(36.dp), shape = RoundedCornerShape(8.dp), color = Color(0xFFF3F4F6)) {
+            Surface(modifier = Modifier.size(36.dp), shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = iconVector,
@@ -621,7 +621,7 @@ private fun ReportHubCard(
                 Surface(
                     modifier = Modifier.size(42.dp),
                     shape = RoundedCornerShape(10.dp),
-                    color = Color(0xFFF3F4F6),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(

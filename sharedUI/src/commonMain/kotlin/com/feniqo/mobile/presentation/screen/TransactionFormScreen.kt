@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -51,6 +52,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -310,6 +315,27 @@ private fun TransactionFormContent(
 ) {
     val scrollState = rememberScrollState()
     val isFormEnabled = !uiState.isSubmitting
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val amountFocusRequester = remember { FocusRequester() }
+    val titleFocusRequester = remember { FocusRequester() }
+    val categoryFocusRequester = remember { FocusRequester() }
+    val dateFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(
+        uiState.amountError,
+        uiState.titleError,
+        uiState.descriptionError,
+        uiState.categoryError,
+        uiState.dateError,
+    ) {
+        when {
+            uiState.amountError != null -> amountFocusRequester.requestFocus()
+            uiState.titleError != null || uiState.descriptionError != null -> titleFocusRequester.requestFocus()
+            uiState.categoryError != null -> categoryFocusRequester.requestFocus()
+            uiState.dateError != null -> dateFocusRequester.requestFocus()
+        }
+    }
 
     Column(
         modifier = modifier
@@ -382,6 +408,10 @@ private fun TransactionFormContent(
             onCurrencyChange = onCurrencyChange,
             errorText = uiState.amountError?.toDisplayText(),
             enabled = isFormEnabled,
+            fieldModifier = Modifier.focusRequester(amountFocusRequester),
+            keyboardActions = KeyboardActions(
+                onNext = { titleFocusRequester.requestFocus() },
+            ),
         )
 
         // 3. İşlem Adı
@@ -391,6 +421,13 @@ private fun TransactionFormContent(
             errorText = (uiState.titleError ?: uiState.descriptionError)?.toDisplayText(),
             enabled = isFormEnabled,
             isExpense = uiState.type == TransactionType.EXPENSE,
+            fieldModifier = Modifier.focusRequester(titleFocusRequester),
+            keyboardActions = KeyboardActions(
+                onNext = {
+                    categoryFocusRequester.requestFocus()
+                    keyboardController?.hide()
+                },
+            ),
         )
 
         // 4. Kategori Seçimi
@@ -403,6 +440,7 @@ private fun TransactionFormContent(
             errorText = uiState.categoryError?.toDisplayText(),
             enabled = isFormEnabled,
             onAddCategoryClick = { onAddCategory(uiState.type) },
+            modifier = Modifier.focusRequester(categoryFocusRequester),
         )
 
         // 5. Ödeme Yöntemi
@@ -418,6 +456,7 @@ private fun TransactionFormContent(
             onDateClick = onDateClick,
             errorText = uiState.dateError?.toDisplayText(),
             enabled = isFormEnabled,
+            fieldModifier = Modifier.focusRequester(dateFocusRequester),
         )
 
         // 7. Daha Fazla Ayrıntı (Akordeon)
@@ -496,6 +535,14 @@ private fun TransactionFormContent(
                 onDismissRequest = { isMoreDetailsExpanded = false },
                 properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
             ) {
+                val noteFocusRequester = remember { FocusRequester() }
+                val dialogFocusManager = LocalFocusManager.current
+                val dialogKeyboardController = LocalSoftwareKeyboardController.current
+                LaunchedEffect(uiState.noteError) {
+                    if (uiState.noteError != null) {
+                        noteFocusRequester.requestFocus()
+                    }
+                }
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.ime)
                         .verticalScroll(rememberScrollState()).padding(20.dp),
@@ -506,8 +553,19 @@ private fun TransactionFormContent(
                             }
                             Text("Ayrıntılar", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                         }
-                        TransactionNoteField(note = draft.note, onNoteChange = { draft = draft.copy(note = it) },
-                            errorText = uiState.noteError?.toDisplayText(), enabled = isFormEnabled)
+                        TransactionNoteField(
+                            note = draft.note,
+                            onNoteChange = { draft = draft.copy(note = it) },
+                            errorText = uiState.noteError?.toDisplayText(),
+                            enabled = isFormEnabled,
+                            fieldModifier = Modifier.focusRequester(noteFocusRequester),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    dialogFocusManager.clearFocus(force = true)
+                                    dialogKeyboardController?.hide()
+                                },
+                            ),
+                        )
                         if (uiState.isInstallmentOptionAvailable) {
                             TransactionInstallmentSection(isInstallmentEnabled = draft.installmentEnabled,
                                 onToggle = { draft = draft.copy(installmentEnabled = it) },

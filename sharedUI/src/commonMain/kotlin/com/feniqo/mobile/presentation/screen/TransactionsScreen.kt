@@ -681,7 +681,7 @@ private fun ZenQuickFiltersRow(
 }
 
 /**
- * Beyaz yuvarlatılmış lüks arama çubuğu (Temizle ve kapat butonlu).
+ * Tema yüzeyine uyumlu yuvarlatılmış arama çubuğu.
  */
 @Composable
 private fun ZenSearchField(
@@ -692,7 +692,7 @@ private fun ZenSearchField(
     Surface(
         modifier = modifier.defaultMinSize(minHeight = 52.dp),
         shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.onSurface,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Row(
@@ -705,7 +705,7 @@ private fun ZenSearchField(
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = null,
-                tint = Color.White,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp),
             )
 
@@ -713,7 +713,7 @@ private fun ZenSearchField(
                 if (query.isEmpty()) {
                     Text(
                         text = "İşlem ara",
-                        style = TextStyle(fontSize = 13.sp, color = Color.White.copy(alpha = 0.8f)),
+                        style = TextStyle(fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant),
                     )
                 }
                 BasicTextField(
@@ -722,10 +722,10 @@ private fun ZenSearchField(
                     singleLine = true,
                     textStyle = TextStyle(
                         fontSize = 13.sp,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Medium,
                     ),
-                    cursorBrush = SolidColor(Color.White),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -738,7 +738,7 @@ private fun ZenSearchField(
                     Icon(
                         imageVector = Icons.Default.Clear,
                         contentDescription = "Temizle",
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp),
                     )
                 }

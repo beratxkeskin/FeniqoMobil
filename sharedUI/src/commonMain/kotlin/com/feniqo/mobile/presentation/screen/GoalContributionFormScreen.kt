@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -14,12 +15,19 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -61,6 +69,30 @@ fun GoalContributionFormScreen(
     val isAdd = input.direction == GoalContributionDirection.ADD
     val isRemove = input.direction == GoalContributionDirection.REMOVE
     val isExceedError = errors.amountError == GoalContributionFormFieldError.EXCEEDS_CURRENT_AMOUNT
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val amountFocusRequester = remember { FocusRequester() }
+    val noteFocusRequester = remember { FocusRequester() }
+    val amountErrorText = when (errors.amountError) {
+        GoalContributionFormFieldError.EXCEEDS_CURRENT_AMOUNT -> "Çıkarılacak tutar mevcut birikimi aşamaz."
+        GoalContributionFormFieldError.AMOUNT_REQUIRED -> "Tutar zorunludur."
+        GoalContributionFormFieldError.AMOUNT_NON_POSITIVE -> "Tutar sıfırdan büyük olmalıdır."
+        GoalContributionFormFieldError.CURRENCY_MISMATCH -> "Para birimi uyuşmuyor."
+        null -> null
+        else -> "Geçersiz tutar."
+    }
+    val noteErrorText = errors.noteError?.let { "Not en fazla 500 karakter olabilir." }
+    val dismissKeyboard = {
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+    }
+
+    LaunchedEffect(errors) {
+        when {
+            errors.amountError != null -> amountFocusRequester.requestFocus()
+            errors.noteError != null -> noteFocusRequester.requestFocus()
+        }
+    }
 
     // Buton aktiflik durumu (Panel 13: limit aşıldığında veya geçersiz olduğunda buton disabled görünür)
     val isSubmitEnabled = isEnabled && !errors.hasErrors && input.amountInput.isNotBlank()
@@ -110,7 +142,7 @@ fun GoalContributionFormScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 16.dp)
-                        .navigationBarsPadding(),
+                        .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime)),
                 ) {
                     val buttonColor = if (isAdd) FeniqoGoalSageGreen else FeniqoGoalExpenseRed
 
@@ -244,8 +276,8 @@ fun GoalContributionFormScreen(
                             onDirectionChange(GoalContributionDirection.ADD)
                         },
                     shape = RoundedCornerShape(12.dp),
-                    color = if (isAdd) FeniqoGoalSageGreen else Color.White,
-                    border = if (isAdd) null else BorderStroke(1.dp, FeniqoGoalCardBorder),
+                    color = if (isAdd) FeniqoGoalSageGreen else MaterialTheme.colorScheme.surface,
+                    border = if (isAdd) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
@@ -267,8 +299,8 @@ fun GoalContributionFormScreen(
                             onDirectionChange(GoalContributionDirection.REMOVE)
                         },
                     shape = RoundedCornerShape(12.dp),
-                    color = if (isRemove) FeniqoGoalExpenseRed else Color.White,
-                    border = if (isRemove) null else BorderStroke(1.dp, FeniqoGoalCardBorder),
+                    color = if (isRemove) FeniqoGoalExpenseRed else MaterialTheme.colorScheme.surface,
+                    border = if (isRemove) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
@@ -318,11 +350,18 @@ fun GoalContributionFormScreen(
                         keyboardType = KeyboardType.Decimal,
                         imeAction = ImeAction.Next,
                     ),
-                    modifier = Modifier.fillMaxWidth(),
+                    keyboardActions = KeyboardActions(onNext = { noteFocusRequester.requestFocus() }),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(amountFocusRequester)
+                        .semantics {
+                            contentDescription = "Hedef hareket tutarı"
+                            amountErrorText?.let { error(it) }
+                        },
                     shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                         focusedTextColor = amountTextColor,
                         unfocusedTextColor = amountTextColor,
                         focusedBorderColor = if (isRemove && !isAmountError) FeniqoGoalExpenseRed else borderColor,
@@ -390,7 +429,7 @@ fun GoalContributionFormScreen(
                             onClick = onDateClick,
                         ),
                     shape = RoundedCornerShape(14.dp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(
                         1.dp,
                         if (errors.dateError != null) MaterialTheme.colorScheme.error else FeniqoGoalCardBorder
@@ -465,11 +504,18 @@ fun GoalContributionFormScreen(
                     singleLine = true,
                     enabled = isEnabled,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    modifier = Modifier.fillMaxWidth(),
+                    keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(noteFocusRequester)
+                        .semantics {
+                            contentDescription = "Hedef hareket notu"
+                            noteErrorText?.let { error(it) }
+                        },
                     shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                         focusedBorderColor = FeniqoGoalSageGreen,
                         unfocusedBorderColor = FeniqoGoalCardBorder,
                     ),

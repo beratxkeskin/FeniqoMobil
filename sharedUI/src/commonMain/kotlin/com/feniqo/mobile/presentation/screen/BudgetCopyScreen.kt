@@ -49,7 +49,6 @@ import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.util.DateFormatter
 
 private val FeniqoSageGreen = Color(0xFF2D5A43)
-private val FeniqoBackgroundSand = Color(0xFFF7F5F0)
 
 /**
  * B05 Bütçeleri Kopyala ekranının durumsuz Compose sunumudur.
@@ -72,7 +71,7 @@ fun BudgetCopyScreen(
 
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = FeniqoBackgroundSand,
+        color = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier
@@ -109,7 +108,7 @@ fun BudgetCopyScreen(
                 // 2. Bilgi Banner'ı: Sadece bütçe tanımları kopyalanır
                 Surface(
                     shape = RoundedCornerShape(FeniqoRadius.Medium),
-                    color = Color(0xFFEFF6FF), // Soft blue
+                    color = MaterialTheme.colorScheme.primaryContainer,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Row(
@@ -120,7 +119,7 @@ fun BudgetCopyScreen(
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = null,
-                            tint = Color(0xFF1E40AF),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.size(20.dp),
                         )
                         Column {
@@ -128,12 +127,12 @@ fun BudgetCopyScreen(
                                 text = "Sadece bütçe tanımları kopyalanır.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF1E40AF),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
                             Text(
                                 text = "Harcamalar taşınmaz.",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF1E40AF),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f),
                             )
                         }
                     }
@@ -246,7 +245,7 @@ fun BudgetCopyScreen(
                 // 4. Uyarı Banner'ı: Hedef aydaki mevcut bütçeler korunur
                 Surface(
                     shape = RoundedCornerShape(FeniqoRadius.Medium),
-                    color = Color(0xFFFEF3C7), // Soft amber
+                    color = MaterialTheme.colorScheme.secondaryContainer, // Soft amber
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Row(

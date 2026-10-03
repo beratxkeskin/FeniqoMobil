@@ -66,7 +66,6 @@ import com.feniqo.mobile.presentation.util.ColorParser
 import com.feniqo.mobile.presentation.util.DateFormatter
 
 private val FeniqoSageGreen = Color(0xFF2D5A43)
-private val FeniqoBackgroundSand = Color(0xFFF7F5F0)
 
 /**
  * 03 Bütçe Detayı ve B06 Bütçe Aşımı ekranının durumsuz Compose sunumudur.
@@ -82,7 +81,7 @@ fun BudgetDetailScreen(
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = FeniqoBackgroundSand,
+        color = MaterialTheme.colorScheme.background,
     ) {
         val budget = state.budget
         when {
@@ -312,7 +311,7 @@ fun BudgetDetailScreen(
                     if (isExceeded) {
                         Surface(
                             shape = RoundedCornerShape(FeniqoRadius.Medium),
-                            color = Color(0xFFFEF2F2), // Light red
+                            color = MaterialTheme.colorScheme.errorContainer, // Light red
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Row(
@@ -346,7 +345,7 @@ fun BudgetDetailScreen(
                     } else {
                         Surface(
                             shape = RoundedCornerShape(FeniqoRadius.Medium),
-                            color = Color(0xFFF0FDF4), // Light green
+                            color = MaterialTheme.colorScheme.primaryContainer, // Light green
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Row(
@@ -512,7 +511,7 @@ fun BudgetDetailScreen(
                                 .defaultMinSize(minHeight = 48.dp),
                             shape = RoundedCornerShape(FeniqoRadius.Medium),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFFEE2E2), // Yumuşak kırmızı zemin
+                                containerColor = MaterialTheme.colorScheme.errorContainer, // Yumuşak kırmızı zemin
                                 contentColor = Color(0xFFDC2626),
                             ),
                         ) {

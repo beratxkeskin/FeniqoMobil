@@ -127,7 +127,7 @@ fun MoreHubScreen(
                             onClick = onNavigateToAssets,
                         )
                         HorizontalDivider(
-                            color = Color(0xFFF1F5F9),
+                            color = MaterialTheme.colorScheme.outlineVariant,
                             thickness = 1.dp,
                             modifier = Modifier.padding(horizontal = FeniqoSpacing.Large),
                         )
@@ -138,7 +138,7 @@ fun MoreHubScreen(
                             onClick = onNavigateToGoals,
                         )
                         HorizontalDivider(
-                            color = Color(0xFFF1F5F9),
+                            color = MaterialTheme.colorScheme.outlineVariant,
                             thickness = 1.dp,
                             modifier = Modifier.padding(horizontal = FeniqoSpacing.Large),
                         )
@@ -163,7 +163,7 @@ fun MoreHubScreen(
                             onClick = onNavigateToSubscriptions,
                         )
                         HorizontalDivider(
-                            color = Color(0xFFF1F5F9),
+                            color = MaterialTheme.colorScheme.outlineVariant,
                             thickness = 1.dp,
                             modifier = Modifier.padding(horizontal = FeniqoSpacing.Large),
                         )
@@ -174,7 +174,7 @@ fun MoreHubScreen(
                             onClick = onNavigateToRecurringTransactions,
                         )
                         HorizontalDivider(
-                            color = Color(0xFFF1F5F9),
+                            color = MaterialTheme.colorScheme.outlineVariant,
                             thickness = 1.dp,
                             modifier = Modifier.padding(horizontal = FeniqoSpacing.Large),
                         )
@@ -313,7 +313,7 @@ private fun MoreHubTopHeader(
         val currentWorkspace = workspaceName?.trim()?.takeIf { it.isNotBlank() } ?: "Kişisel"
         Surface(
             shape = RoundedCornerShape(12.dp),
-            color = Color(0xFFEFF2F0),
+            color = MaterialTheme.colorScheme.surfaceVariant,
             modifier = Modifier.semantics {
                 contentDescription = "Aktif çalışma alanı: $currentWorkspace"
             },
@@ -682,7 +682,7 @@ private fun MoreHubMenuItemRow(
             Text(
                 text = "›",
                 style = MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp),
-                color = Color(0xFF94A3B8),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -701,7 +701,7 @@ private fun MoreHubSharedSpacesCard(
             .fillMaxWidth()
             .clickable(role = Role.Button, onClick = onClick),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFE6EFE9)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
@@ -799,7 +799,7 @@ private fun MoreHubProfileHintRow(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = Color(0xFFF0F2F1),
+        color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
         Row(
             modifier = Modifier.padding(horizontal = FeniqoSpacing.Large, vertical = 14.dp),
@@ -807,7 +807,7 @@ private fun MoreHubProfileHintRow(
             horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
         ) {
             MoreHubPersonOutlineIcon(
-                color = Color(0xFF4B5563),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 size = 20.dp,
             )
             Text(
@@ -815,7 +815,7 @@ private fun MoreHubProfileHintRow(
                 style = MaterialTheme.typography.bodySmall.copy(
                     fontSize = 13.sp,
                 ),
-                color = Color(0xFF4B5563),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

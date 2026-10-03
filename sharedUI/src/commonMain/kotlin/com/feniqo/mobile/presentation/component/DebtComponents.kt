@@ -225,7 +225,7 @@ fun DebtsGraphiteSummaryCard(
                         Text(
                             text = "Borçlarım",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF94A3B8),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 12.sp,
                         )
                         Text(
@@ -238,7 +238,7 @@ fun DebtsGraphiteSummaryCard(
                         Text(
                             text = "Toplam ${summary.activeDebtCount} kayıt",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFF94A3B8),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 11.sp,
                         )
                     }
@@ -251,7 +251,7 @@ fun DebtsGraphiteSummaryCard(
                         Text(
                             text = "Alacaklarım",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF94A3B8),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 12.sp,
                         )
                         Text(
@@ -269,7 +269,7 @@ fun DebtsGraphiteSummaryCard(
                             Text(
                                 text = "Toplam ${summary.activeReceivableCount} kayıt",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color(0xFF94A3B8),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 11.sp,
                             )
                             Text(
@@ -290,8 +290,8 @@ fun DebtsGraphiteSummaryCard(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(FeniqoRadius.Small),
-                color = Color(0xFFF1EDE6),
-                border = BorderStroke(1.dp, Color(0xFFE2DDD4)),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = FeniqoSpacing.Medium, vertical = FeniqoSpacing.Small),
@@ -347,7 +347,7 @@ fun DebtSummaryCardsRow(
                     )
                 },
                 iconBgColor = Color(0xFFFDE8E8),
-                containerColor = Color(0xFFFFF5F5),
+                containerColor = MaterialTheme.colorScheme.errorContainer,
                 borderColor = Color(0xFFFFE4E1),
                 onClick = onDebtSummaryClick,
                 modifier = Modifier.weight(1f),
@@ -365,7 +365,7 @@ fun DebtSummaryCardsRow(
                     )
                 },
                 iconBgColor = Color(0xFFDCFCE7),
-                containerColor = Color(0xFFF2FAF5),
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
                 borderColor = Color(0xFFD7F0E3),
                 onClick = onReceivableSummaryClick,
                 modifier = Modifier.weight(1f),
@@ -387,13 +387,13 @@ fun DebtSummaryCardsRow(
                     Icon(
                         imageVector = Icons.Outlined.Scale,
                         contentDescription = null,
-                        tint = Color(0xFF64748B),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(14.dp),
                     )
                 },
-                iconBgColor = Color(0xFFEDF2F7),
-                containerColor = Color(0xFFF8FAFC),
-                borderColor = Color(0xFFE2E8F0),
+                iconBgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                containerColor = MaterialTheme.colorScheme.surface,
+                borderColor = MaterialTheme.colorScheme.outlineVariant,
                 onClick = null,
                 modifier = Modifier.weight(1f),
             )
@@ -553,7 +553,7 @@ fun UpcomingPaymentsSection(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
         ),
-        border = BorderStroke(1.dp, Color(0xFFECE7DE)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
@@ -576,7 +576,7 @@ fun UpcomingPaymentsSection(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFFFEF3C7)),
+                            .background(MaterialTheme.colorScheme.secondaryContainer),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
@@ -605,7 +605,7 @@ fun UpcomingPaymentsSection(
                 // Referans görseldeki "See all >" kapsül hap butonu
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFF5F5F7),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
                         .clickable { isExpanded = !isExpanded }
@@ -648,7 +648,7 @@ fun UpcomingPaymentsSection(
                 displayedItems.forEachIndexed { index, item ->
                     if (index > 0) {
                         HorizontalDivider(
-                            color = Color(0xFFF3EFE8),
+                            color = MaterialTheme.colorScheme.outlineVariant,
                             thickness = 1.dp,
                             modifier = Modifier.padding(vertical = FeniqoSpacing.Small),
                         )
@@ -685,7 +685,7 @@ private fun UpcomingPaymentItemRow(
             modifier = Modifier
                 .size(38.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(Color(0xFFFEF3C7)),
+                .background(MaterialTheme.colorScheme.secondaryContainer),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -736,7 +736,7 @@ private fun UpcomingPaymentItemRow(
         Icon(
             imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
             contentDescription = null,
-            tint = Color(0xFF94A3B8),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(16.dp),
         )
     }
@@ -766,7 +766,7 @@ fun DebtGroupedSectionCard(
             .clip(RoundedCornerShape(FeniqoRadius.Large)),
         shape = RoundedCornerShape(FeniqoRadius.Large),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, Color(0xFFECE7DE)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
@@ -823,7 +823,7 @@ fun DebtGroupedSectionCard(
                 // "Tümünü gör >" hap butonu
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFF5F5F7),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
                         .clickable { isExpanded = !isExpanded }
@@ -864,7 +864,7 @@ fun DebtGroupedSectionCard(
                 displayedItems.forEachIndexed { index, item ->
                     if (index > 0) {
                         HorizontalDivider(
-                            color = Color(0xFFF3EFE8),
+                            color = MaterialTheme.colorScheme.outlineVariant,
                             thickness = 1.dp,
                             modifier = Modifier.padding(vertical = FeniqoSpacing.Small),
                         )
@@ -980,7 +980,7 @@ fun DebtGroupedItemRow(
         Icon(
             imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
             contentDescription = null,
-            tint = Color(0xFF94A3B8),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(16.dp),
         )
     }
@@ -1005,7 +1005,7 @@ fun WarmDebtListItem(
             },
         shape = RoundedCornerShape(FeniqoRadius.Medium),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, Color(0xFFEDE7DE)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         DebtGroupedItemRow(
@@ -1121,7 +1121,7 @@ fun DebtInsightCard(
             },
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFFFFDF5),
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
         ),
         border = BorderStroke(1.dp, Color(0xFFFDE68A)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -1153,7 +1153,7 @@ fun DebtInsightCard(
                 Text(
                     text = insight.message,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF4B5563),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 18.sp,
                 )
             }
@@ -1310,7 +1310,7 @@ fun DebtDeleteDialog(
                 onClick = onDismiss,
                 enabled = !isSubmitting,
                 shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 modifier = Modifier.height(44.dp),
             ) {
                 Text("Vazgeç", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium)
@@ -1336,7 +1336,7 @@ fun DebtSnowballEntryCard(
             .semantics { contentDescription = "Borç kapatma planı" },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, Color(0xFFECE7DE)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
@@ -1350,7 +1350,7 @@ fun DebtSnowballEntryCard(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFFE8F1EC)),
+                    .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -1383,7 +1383,7 @@ fun DebtSnowballEntryCard(
             Icon(
                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                 contentDescription = null,
-                tint = Color(0xFF94A3B8),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
             )
         }
@@ -1453,7 +1453,7 @@ fun DebtDatePickerSheet(
                     Icon(
                         imageVector = Icons.Outlined.Close,
                         contentDescription = "Kapat",
-                        tint = Color(0xFF64748B),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -1574,7 +1574,7 @@ fun DebtCurrencyPickerSheet(
                     Icon(
                         imageVector = Icons.Outlined.Close,
                         contentDescription = "Kapat",
-                        tint = Color(0xFF64748B),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -1606,10 +1606,10 @@ fun DebtCurrencyPickerSheet(
                             onDismiss()
                         },
                     shape = RoundedCornerShape(14.dp),
-                    color = if (isSelected) Color(0xFFE8F1EC) else Color.White,
+                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
                     border = BorderStroke(
                         width = if (isSelected) 1.5.dp else 1.dp,
-                        color = if (isSelected) FeniqoSageGreen else Color(0xFFE2E8F0),
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                     ),
                 ) {
                     Row(
@@ -1695,7 +1695,7 @@ fun DebtEmptyState(
             modifier = Modifier
                 .size(72.dp)
                 .clip(CircleShape)
-                .background(Color(0xFFE8F1EC)),
+                .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -1759,8 +1759,8 @@ fun DebtSettledBanner(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
-        color = Color(0xFFE8F1EC),
-        border = BorderStroke(1.dp, Color(0xFFC7DEC4)),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
@@ -1770,14 +1770,14 @@ fun DebtSettledBanner(
             Icon(
                 imageVector = Icons.Default.Check,
                 contentDescription = null,
-                tint = FeniqoSageGreen,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(20.dp),
             )
             Text(
                 text = if (isDebt) "Bu borcun tamamı ödendi." else "Bu alacağın tamamı tahsil edildi.",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = FeniqoSageGreen,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
                 fontSize = 14.sp,
             )
         }

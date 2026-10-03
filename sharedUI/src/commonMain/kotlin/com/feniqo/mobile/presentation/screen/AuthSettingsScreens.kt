@@ -527,11 +527,11 @@ fun DeleteAccountScreen(
                     Card(
                         shape = RoundedCornerShape(FeniqoRadius.Medium),
                         colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFFFDECEA),
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
                         ),
                         border = androidx.compose.foundation.BorderStroke(
                             1.dp,
-                            Color(0xFFE57373).copy(alpha = 0.4f),
+                            MaterialTheme.colorScheme.error.copy(alpha = 0.4f),
                         ),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
@@ -542,7 +542,7 @@ fun DeleteAccountScreen(
                             Icon(
                                 imageVector = Icons.Outlined.ErrorOutline,
                                 contentDescription = null,
-                                tint = Color(0xFFD32F2F),
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
                                 modifier = Modifier
                                     .size(24.dp)
                                     .padding(top = 2.dp),
@@ -552,13 +552,13 @@ fun DeleteAccountScreen(
                                 Text(
                                     text = "Kalıcı silme şu anda destek üzerinden yürütülür. Bu ekrandan veriler silinmez.",
                                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = Color(0xFFD32F2F),
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = "Hesabını silmek için bizimle iletişime geçmen gerekmektedir.",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color(0xFFD32F2F).copy(alpha = 0.9f),
+                                    color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.9f),
                                 )
                             }
                         }

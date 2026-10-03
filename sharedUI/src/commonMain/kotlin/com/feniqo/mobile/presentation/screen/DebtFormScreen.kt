@@ -9,15 +9,21 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -45,6 +51,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,8 +59,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -105,6 +119,37 @@ fun DebtFormScreen(
 ) {
     val isEnabled = !isSubmitting
     var showCurrencyPicker by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val titleFocusRequester = remember { FocusRequester() }
+    val amountFocusRequester = remember { FocusRequester() }
+    val descriptionFocusRequester = remember { FocusRequester() }
+    val titleErrorText = when (errors.titleError) {
+        DebtFormFieldError.TITLE_REQUIRED -> "Başlık zorunludur."
+        DebtFormFieldError.TITLE_TOO_LONG -> "Başlık en fazla 500 karakter olabilir."
+        null -> null
+        else -> "Geçersiz başlık."
+    }
+    val amountErrorText = when (errors.amountError) {
+        DebtFormFieldError.AMOUNT_REQUIRED -> "Tutar zorunludur."
+        DebtFormFieldError.AMOUNT_NON_POSITIVE -> "Tutar sıfırdan büyük olmalıdır."
+        DebtFormFieldError.AMOUNT_INVALID -> "Geçerli bir tutar girin."
+        null -> null
+        else -> "Geçersiz tutar."
+    }
+    val descriptionErrorText = errors.descriptionError?.let { "Açıklama en fazla 500 karakter olabilir." }
+    val dismissKeyboard = {
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+    }
+
+    LaunchedEffect(errors) {
+        when {
+            errors.titleError != null -> titleFocusRequester.requestFocus()
+            errors.amountError != null -> amountFocusRequester.requestFocus()
+            errors.descriptionError != null -> descriptionFocusRequester.requestFocus()
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -114,7 +159,8 @@ fun DebtFormScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = FeniqoSpacing.Large),
+                .padding(horizontal = FeniqoSpacing.Large)
+                .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime)),
         ) {
             Spacer(modifier = Modifier.height(FeniqoSpacing.Medium))
 
@@ -181,7 +227,7 @@ fun DebtFormScreen(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Row(
                             modifier = Modifier
@@ -256,7 +302,7 @@ fun DebtFormScreen(
                             Text(
                                 text = if (input.type == DebtType.DEBT) "Kalan Borç" else "Kalan Alacak",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF9CA3AF),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 12.sp,
                             )
 
@@ -350,7 +396,7 @@ fun DebtFormScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFFF3F4F6))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                             .padding(4.dp),
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
@@ -372,7 +418,7 @@ fun DebtFormScreen(
                                 text = "Borç",
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 14.sp,
-                                color = if (input.type == DebtType.DEBT) Color.White else Color(0xFF4B5563),
+                                color = if (input.type == DebtType.DEBT) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
 
@@ -394,7 +440,7 @@ fun DebtFormScreen(
                                 text = "Alacak",
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 14.sp,
-                                color = if (input.type == DebtType.RECEIVABLE) Color.White else Color(0xFF4B5563),
+                                color = if (input.type == DebtType.RECEIVABLE) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -403,7 +449,7 @@ fun DebtFormScreen(
                     Text(
                         text = "Borç: ödeyeceğim · Alacak: tahsil edeceğim",
                         fontSize = 11.sp,
-                        color = Color(0xFF6B7280),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 4.dp),
                     )
                 }
@@ -416,27 +462,25 @@ fun DebtFormScreen(
                     placeholder = { Text("örn. Ahmet Borç, Garanti Kredi Kartı") },
                     isError = errors.titleError != null,
                     supportingText = {
-                        errors.titleError?.let {
-                            Text(
-                                text = when (it) {
-                                    DebtFormFieldError.TITLE_REQUIRED -> "Başlık zorunludur."
-                                    DebtFormFieldError.TITLE_TOO_LONG -> "Başlık en fazla 500 karakter olabilir."
-                                    else -> "Geçersiz başlık."
-                                },
-                                color = Color(0xFFDC2626),
-                            )
-                        }
+                        titleErrorText?.let { Text(text = it, color = MaterialTheme.colorScheme.error) }
                     },
                     singleLine = true,
                     enabled = isEnabled,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                    modifier = Modifier.fillMaxWidth(),
+                    keyboardActions = KeyboardActions(onNext = { amountFocusRequester.requestFocus() }),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(titleFocusRequester)
+                        .semantics {
+                            contentDescription = "Borç kayıt adı"
+                            titleErrorText?.let { error(it) }
+                        },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                         focusedBorderColor = FeniqoSageGreen,
-                        unfocusedBorderColor = Color(0xFFE5E7EB),
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                     ),
                 )
 
@@ -456,17 +500,7 @@ fun DebtFormScreen(
                     },
                     isError = errors.amountError != null,
                     supportingText = {
-                        errors.amountError?.let {
-                            Text(
-                                text = when (it) {
-                                    DebtFormFieldError.AMOUNT_REQUIRED -> "Tutar zorunludur."
-                                    DebtFormFieldError.AMOUNT_NON_POSITIVE -> "Tutar sıfırdan büyük olmalıdır."
-                                    DebtFormFieldError.AMOUNT_INVALID -> "Geçerli bir tutar girin."
-                                    else -> "Geçersiz tutar."
-                                },
-                                color = Color(0xFFDC2626),
-                            )
-                        }
+                        amountErrorText?.let { Text(text = it, color = MaterialTheme.colorScheme.error) }
                     },
                     singleLine = true,
                     enabled = isEnabled,
@@ -474,13 +508,20 @@ fun DebtFormScreen(
                         keyboardType = KeyboardType.Decimal,
                         imeAction = ImeAction.Next,
                     ),
-                    modifier = Modifier.fillMaxWidth(),
+                    keyboardActions = KeyboardActions(onNext = { descriptionFocusRequester.requestFocus() }),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(amountFocusRequester)
+                        .semantics {
+                            contentDescription = "Borç toplam tutarı"
+                            amountErrorText?.let { error(it) }
+                        },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                         focusedBorderColor = FeniqoSageGreen,
-                        unfocusedBorderColor = Color(0xFFE5E7EB),
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                     ),
                 )
 
@@ -490,8 +531,8 @@ fun DebtFormScreen(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
-                        border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Row(
                             modifier = Modifier
@@ -518,14 +559,14 @@ fun DebtFormScreen(
                                 Icon(
                                     imageVector = Icons.Outlined.Lock,
                                     contentDescription = "Kilitli",
-                                    tint = Color(0xFF9CA3AF),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(16.dp),
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = "Değiştirilemez",
                                     fontSize = 11.sp,
-                                    color = Color(0xFF9CA3AF),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -543,7 +584,7 @@ fun DebtFormScreen(
                             ),
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Row(
                             modifier = Modifier
@@ -645,23 +686,26 @@ fun DebtFormScreen(
                     placeholder = { Text("Not veya detay ekleyin") },
                     isError = errors.descriptionError != null,
                     supportingText = {
-                        errors.descriptionError?.let {
-                            Text(
-                                text = "Açıklama en fazla 500 karakter olabilir.",
-                                color = Color(0xFFDC2626),
-                            )
-                        }
+                        descriptionErrorText?.let { Text(text = it, color = MaterialTheme.colorScheme.error) }
                     },
                     minLines = 2,
                     maxLines = 4,
                     enabled = isEnabled,
-                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(descriptionFocusRequester)
+                        .semantics {
+                            contentDescription = "Borç açıklaması"
+                            descriptionErrorText?.let { error(it) }
+                        },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                         focusedBorderColor = FeniqoSageGreen,
-                        unfocusedBorderColor = Color(0xFFE5E7EB),
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                     ),
                 )
 
@@ -693,7 +737,7 @@ fun DebtFormScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(12.dp),
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                    border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                 ) {
                                     Row(
                                         modifier = Modifier

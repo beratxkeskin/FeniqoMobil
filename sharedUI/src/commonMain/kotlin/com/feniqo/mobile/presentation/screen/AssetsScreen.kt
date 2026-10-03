@@ -39,11 +39,11 @@ fun AssetsScreen(
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = AssetWarmBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             if (!state.isLoading && state.observationError == null && !state.isEmpty) {
                 Surface(
-                    color = AssetWarmBackground,
+                    color = MaterialTheme.colorScheme.surface,
                     shadowElevation = 8.dp,
                 ) {
                     Box(
@@ -101,14 +101,14 @@ fun AssetsScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Geri",
-                            tint = Color(0xFF1E293B),
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     Text(
                         text = "Varlıklar",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF0F172A),
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
 
@@ -165,7 +165,7 @@ fun AssetsScreen(
                                 modifier = Modifier
                                     .size(110.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFFE2EFE7)),
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
@@ -182,7 +182,7 @@ fun AssetsScreen(
                                 text = "Henüz varlığın yok",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF0F172A),
+                                color = MaterialTheme.colorScheme.onSurface,
                                 textAlign = TextAlign.Center,
                             )
 
@@ -191,7 +191,7 @@ fun AssetsScreen(
                             Text(
                                 text = "Varlıklarını ekleyerek birikiminin dağılımını takip et.",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color(0xFF64748B),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
                             )
 

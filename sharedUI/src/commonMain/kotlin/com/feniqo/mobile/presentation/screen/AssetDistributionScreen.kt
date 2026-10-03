@@ -34,7 +34,7 @@ fun AssetDistributionScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = AssetWarmBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             Row(
                 modifier = Modifier
@@ -47,7 +47,7 @@ fun AssetDistributionScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Geri",
-                        tint = Color(0xFF1E293B),
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
 
@@ -55,7 +55,7 @@ fun AssetDistributionScreen(
                     text = "Varlık dağılımı",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF0F172A),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
         },
@@ -96,7 +96,7 @@ fun AssetDistributionScreen(
                             state.availableCurrencies.forEach { currency ->
                                 val isSelected = currency == state.selectedCurrency
                                 val bg = if (isSelected) AssetSageGreen else Color(0xFFE2E8F0)
-                                val textColor = if (isSelected) Color.White else Color(0xFF475569)
+                                val textColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
 
                                 Box(
                                     modifier = Modifier
@@ -180,7 +180,7 @@ fun AssetDistributionScreen(
                                 Text(
                                     text = "Bu para biriminde kayıtlı varlık bulunmuyor.",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = Color(0xFF64748B),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         } else {
@@ -210,7 +210,7 @@ fun AssetDistributionScreen(
                                                 text = item.typeLabel,
                                                 style = MaterialTheme.typography.bodyLarge,
                                                 fontWeight = FontWeight.Medium,
-                                                color = Color(0xFF1E293B),
+                                                color = MaterialTheme.colorScheme.onSurface,
                                             )
                                         }
 
@@ -219,12 +219,12 @@ fun AssetDistributionScreen(
                                                 text = item.formattedTotal,
                                                 style = MaterialTheme.typography.bodyLarge,
                                                 fontWeight = FontWeight.Bold,
-                                                color = Color(0xFF0F172A),
+                                                color = MaterialTheme.colorScheme.onSurface,
                                             )
                                             Text(
                                                 text = item.percentageText,
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = Color(0xFF64748B),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         }
                                     }
@@ -238,7 +238,7 @@ fun AssetDistributionScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFFF1F5F9))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                             .padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -246,7 +246,7 @@ fun AssetDistributionScreen(
                         Icon(
                             imageVector = Icons.Outlined.Info,
                             contentDescription = null,
-                            tint = Color(0xFF475569),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp),
                         )
                         Text(

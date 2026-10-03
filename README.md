@@ -66,21 +66,27 @@ Repository Gradle Wrapper içerir; ayrı Gradle kurulumu gerekmez.
 
 ## Yerel Supabase yapılandırması
 
-Gerçek değerleri Git'e eklemeyin. Android build aşağıdaki kaynaklardan değer okuyabilir:
+Gerçek değerleri Git'e eklemeyin. `debug` staging paketidir ve `com.feniqo.mobile.staging`
+application ID'siyle kurulur. Tercih edilen staging değişkenleri:
 
 1. Ortam değişkenleri:
 
 ```text
-FENIQO_SUPABASE_URL
-FENIQO_SUPABASE_PUBLISHABLE_KEY
+FENIQO_STAGING_SUPABASE_URL
+FENIQO_STAGING_SUPABASE_PUBLISHABLE_KEY
 ```
 
 2. Git dışında kalan kök `local.properties`:
 
 ```properties
-feniqo.supabase.url=https://PROJECT_REF.supabase.co
-feniqo.supabase.publishableKey=YOUR_PUBLISHABLE_OR_ANON_KEY
+feniqo.supabase.staging.url=https://rxfaiynkhaxrksosxvxp.supabase.co
+feniqo.supabase.staging.publishableKey=YOUR_PUBLISHABLE_KEY
 ```
+
+Eski `FENIQO_SUPABASE_*` / `feniqo.supabase.*` adları geçiş süresince yalnız staging fallback'i
+olarak desteklenir. `release`, production için ayrı değerler ve açık
+`FENIQO_RELEASE_ENVIRONMENT=production` beyanı ister; URL'nin production project ref'iyle tam
+eşleşmediği durumda derleme durur.
 
 Mobil uygulamada `sb_secret_...` veya service-role key kullanılamaz. Ayrıntı için
 [docs/SUPABASE_MOBIL_BUILD_CONFIG.md](docs/SUPABASE_MOBIL_BUILD_CONFIG.md) dosyasına bakın.
@@ -93,6 +99,13 @@ Windows PowerShell'de proje kökünden:
 .\gradlew.bat :sharedLogic:testAndroidHostTest
 .\gradlew.bat :androidApp:assembleDebug
 .\gradlew.bat :sharedLogic:compileKotlinIosSimulatorArm64
+```
+
+Production release yalnız production rollout kararı verildiğinde ve ayrı production değerleri
+sağlandığında üretilir:
+
+```powershell
+.\gradlew.bat :androidApp:bundleRelease
 ```
 
 Güncel doğrulama durumu: 73/73 ortak Android host testi, Android debug APK ve iOS Simulator

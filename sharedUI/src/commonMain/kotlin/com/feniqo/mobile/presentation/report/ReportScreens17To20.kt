@@ -224,7 +224,7 @@ fun ForecastOverviewReportScreen(
                 item {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        color = Color(0xFFF2EFE9),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         shape = RoundedCornerShape(14.dp),
                     ) {
                         Row(

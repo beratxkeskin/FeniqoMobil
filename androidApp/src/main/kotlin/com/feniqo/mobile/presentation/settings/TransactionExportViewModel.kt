@@ -1,10 +1,9 @@
 package com.feniqo.mobile.presentation.settings
 
 import androidx.lifecycle.ViewModel
-import com.feniqo.mobile.data.backup.BackupDecodeResult
-import com.feniqo.mobile.data.backup.BackupImportResult
-import com.feniqo.mobile.data.backup.FeniqoBackupCodec
-import com.feniqo.mobile.data.backup.PersonalBackupImporter
+import com.feniqo.mobile.domain.repository.PersonalBackupImportOutcome
+import com.feniqo.mobile.domain.repository.PersonalBackupPreview
+import com.feniqo.mobile.domain.repository.PersonalBackupRepository
 import com.feniqo.mobile.domain.usecase.ObserveTransactionsUseCase
 import com.feniqo.mobile.domain.usecase.TransactionCsvExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,17 +14,14 @@ import javax.inject.Inject
 class TransactionExportViewModel @Inject constructor(
     private val observeTransactions: ObserveTransactionsUseCase,
     private val csvExporter: TransactionCsvExporter,
-    private val backupImporter: PersonalBackupImporter,
+    private val personalBackupRepository: PersonalBackupRepository,
 ) : ViewModel() {
     suspend fun buildCsv(): String = csvExporter.export(observeTransactions().first())
 
-    fun previewBackup(raw: String): BackupPreviewResult = when (val result = FeniqoBackupCodec.decode(raw)) {
-        is BackupDecodeResult.Invalid -> BackupPreviewResult.Invalid(result.reason)
-        is BackupDecodeResult.Valid -> BackupPreviewResult.Valid(
-            categoryCount = result.backup.categories.size,
-            transactionCount = result.backup.transactions.size,
-        )
+    fun previewBackup(raw: String): BackupPreviewResult = when (val result = personalBackupRepository.preview(raw)) {
+        is PersonalBackupPreview.Invalid -> BackupPreviewResult.Invalid(result.reason)
+        is PersonalBackupPreview.Valid -> BackupPreviewResult.Valid(result.categoryCount, result.transactionCount)
     }
 
-    suspend fun importBackup(raw: String): BackupImportResult = backupImporter.import(raw)
+    suspend fun importBackup(raw: String): PersonalBackupImportOutcome = personalBackupRepository.import(raw)
 }

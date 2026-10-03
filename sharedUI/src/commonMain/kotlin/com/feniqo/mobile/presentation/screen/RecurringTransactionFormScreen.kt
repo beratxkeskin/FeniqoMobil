@@ -9,15 +9,21 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -48,6 +54,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,9 +62,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -88,7 +100,6 @@ import com.feniqo.mobile.presentation.recurring.RecurringTransactionFormInput
 import com.feniqo.mobile.presentation.recurring.RecurringTransactionFormInputErrors
 import com.feniqo.mobile.presentation.recurring.RecurringTransactionMutationState
 import com.feniqo.mobile.presentation.theme.FeniqoExpense
-import com.feniqo.mobile.presentation.theme.FeniqoPureWhite
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreenContainer
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
@@ -131,6 +142,22 @@ fun RecurringTransactionFormScreen(
     modifier: Modifier = Modifier,
 ) {
     val isEnabled = !mutationState.isSubmitting
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val amountFocusRequester = remember { FocusRequester() }
+    val descriptionFocusRequester = remember { FocusRequester() }
+    val dismissKeyboard = {
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+        Unit
+    }
+
+    LaunchedEffect(errors) {
+        when {
+            errors.amountError != null -> amountFocusRequester.requestFocus()
+            errors.descriptionError != null -> descriptionFocusRequester.requestFocus()
+        }
+    }
 
     // Modal Bottom Sheet durumları
     var showCategorySheet by remember { mutableStateOf(false) }
@@ -143,7 +170,9 @@ fun RecurringTransactionFormScreen(
     val currentInterval = input.intervalInput.toIntOrNull() ?: 1
 
     Surface(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime)),
         color = MaterialTheme.colorScheme.background,
     ) {
         Column(
@@ -186,6 +215,8 @@ fun RecurringTransactionFormScreen(
                     amountError = errors.amountError,
                     onAmountChange = onAmountChange,
                     isEnabled = isEnabled,
+                    fieldFocusRequester = amountFocusRequester,
+                    onImeNext = { descriptionFocusRequester.requestFocus() },
                 )
 
                 // Beyaz Gruplu Ayar Kartı (Kategori, Tekrar, Başlangıç, Bitiş)
@@ -235,6 +266,8 @@ fun RecurringTransactionFormScreen(
                     descriptionError = errors.descriptionError,
                     onDescriptionChange = onDescriptionChange,
                     isEnabled = isEnabled,
+                    fieldFocusRequester = descriptionFocusRequester,
+                    onImeDone = dismissKeyboard,
                 )
 
                 // Dinamik Bilgi Banner'ı (Görsel 02, 03 & 08)
@@ -423,10 +456,10 @@ private fun RecurringTypeToggle(
                 .weight(1f)
                 .height(46.dp),
             shape = RoundedCornerShape(12.dp),
-            color = if (isExpense) Color(0xFFFFEBEE) else FeniqoPureWhite,
+            color = if (isExpense) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface,
             border = BorderStroke(
                 1.dp,
-                if (isExpense) Color(0xFFFFCDD2) else Color(0xFFF1F5F9),
+                if (isExpense) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant,
             ),
         ) {
             Row(
@@ -456,7 +489,7 @@ private fun RecurringTypeToggle(
                         fontSize = 14.sp,
                         fontWeight = if (isExpense) FontWeight.Bold else FontWeight.Medium,
                     ),
-                    color = if (isExpense) Color(0xFFDC2626) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (isExpense) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -469,10 +502,10 @@ private fun RecurringTypeToggle(
                 .weight(1f)
                 .height(46.dp),
             shape = RoundedCornerShape(12.dp),
-            color = if (isIncome) Color(0xFFE8F5E9) else FeniqoPureWhite,
+            color = if (isIncome) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
             border = BorderStroke(
                 1.dp,
-                if (isIncome) Color(0xFFC8E6C9) else Color(0xFFF1F5F9),
+                if (isIncome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
             ),
         ) {
             Row(
@@ -502,7 +535,7 @@ private fun RecurringTypeToggle(
                         fontSize = 14.sp,
                         fontWeight = if (isIncome) FontWeight.Bold else FontWeight.Medium,
                     ),
-                    color = if (isIncome) FeniqoTrendGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (isIncome) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -520,6 +553,8 @@ private fun RecurringAmountCard(
     amountError: RecurringTransactionFormFieldError?,
     onAmountChange: (String) -> Unit,
     isEnabled: Boolean,
+    fieldFocusRequester: FocusRequester,
+    onImeNext: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val currencySymbol = when (currency) {
@@ -593,7 +628,7 @@ private fun RecurringAmountCard(
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold,
                             ),
-                            color = Color(0xFFCBD5E1),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     },
                     singleLine = true,
@@ -601,6 +636,7 @@ private fun RecurringAmountCard(
                         keyboardType = KeyboardType.Decimal,
                         imeAction = ImeAction.Next,
                     ),
+                    keyboardActions = KeyboardActions(onNext = { onImeNext() }),
                     textStyle = MaterialTheme.typography.headlineSmall.copy(
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
@@ -612,7 +648,13 @@ private fun RecurringAmountCard(
                         disabledBorderColor = Color.Transparent,
                         errorBorderColor = Color.Transparent,
                     ),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusRequester(fieldFocusRequester)
+                        .semantics {
+                            contentDescription = "Tekrarlayan işlem tutarı"
+                            errorMessage?.let { error(it) }
+                        },
                 )
 
                 Text(
@@ -663,7 +705,7 @@ private fun RecurringSettingsGroupCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, Color(0xFFF1F5F9)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -692,7 +734,7 @@ private fun RecurringSettingsGroupCard(
                 )
             }
 
-            HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
 
             // 2. Tekrar Düzeni Satırı
             val recurrenceSummary = RecurringTransactionDisplayModelMapper.formatRecurrenceSummary(frequency, interval)
@@ -701,7 +743,7 @@ private fun RecurringSettingsGroupCard(
                     Box(
                         modifier = Modifier
                             .size(36.dp)
-                            .background(Color(0xFFE8F5EE), CircleShape),
+                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
@@ -727,7 +769,7 @@ private fun RecurringSettingsGroupCard(
                 )
             }
 
-            HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
 
             // 3. Başlangıç Tarihi Satırı
             val startDateText = startDate?.let { DateFormatter.formatReadableDate(it) } ?: "Tarih seçin"
@@ -736,7 +778,7 @@ private fun RecurringSettingsGroupCard(
                     Box(
                         modifier = Modifier
                             .size(36.dp)
-                            .background(Color(0xFFE8F5EE), CircleShape),
+                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
@@ -762,7 +804,7 @@ private fun RecurringSettingsGroupCard(
                 )
             }
 
-            HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
 
             // 4. Bitiş Tarihi Satırı
             val endDateText = endDate?.let { DateFormatter.formatReadableDate(it) } ?: "Süresiz"
@@ -771,13 +813,13 @@ private fun RecurringSettingsGroupCard(
                     Box(
                         modifier = Modifier
                             .size(36.dp)
-                            .background(Color(0xFFF1F5F9), CircleShape),
+                            .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.CalendarToday,
                             contentDescription = null,
-                            tint = Color(0xFF64748B),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp),
                         )
                     }
@@ -844,7 +886,7 @@ private fun RecurringFormRow(
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Normal,
                     ),
-                    color = if (isValuePlaceholder) Color(0xFF94A3B8) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (isValuePlaceholder) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -853,7 +895,7 @@ private fun RecurringFormRow(
             Icon(
                 imageVector = Icons.Outlined.ChevronRight,
                 contentDescription = null,
-                tint = Color(0xFF94A3B8),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
             )
         }
@@ -882,7 +924,7 @@ private fun RecurringPaymentMethodCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, Color(0xFFF1F5F9)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         RecurringFormRow(
@@ -890,7 +932,7 @@ private fun RecurringPaymentMethodCard(
                 Box(
                     modifier = Modifier
                         .size(36.dp)
-                        .background(Color(0xFFE8F5EE), CircleShape),
+                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -919,6 +961,8 @@ private fun RecurringDescriptionCard(
     descriptionError: RecurringTransactionFormFieldError?,
     onDescriptionChange: (String) -> Unit,
     isEnabled: Boolean,
+    fieldFocusRequester: FocusRequester,
+    onImeDone: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -956,10 +1000,12 @@ private fun RecurringDescriptionCard(
                         Text(
                             text = "Örn. Kira ödemesi",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFFCBD5E1),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { onImeDone() }),
                     textStyle = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -969,7 +1015,13 @@ private fun RecurringDescriptionCard(
                         unfocusedBorderColor = Color.Transparent,
                         disabledBorderColor = Color.Transparent,
                     ),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(fieldFocusRequester)
+                        .semantics {
+                            contentDescription = "Tekrarlayan işlem açıklaması"
+                            if (descriptionError != null) error("Açıklama en fazla 500 karakter olabilir.")
+                        },
                 )
 
                 Row(
@@ -979,7 +1031,7 @@ private fun RecurringDescriptionCard(
                     Text(
                         text = "${description.length}/${Transaction.MAX_DESCRIPTION_LENGTH}",
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                        color = Color(0xFF94A3B8),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -1022,7 +1074,7 @@ private fun RecurringInfoBanner(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        color = Color(0xFFF1F5F9),
+        color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
         Row(
             modifier = Modifier
@@ -1033,7 +1085,7 @@ private fun RecurringInfoBanner(
             Icon(
                 imageVector = Icons.Outlined.Info,
                 contentDescription = null,
-                tint = Color(0xFF64748B),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp),
             )
             Spacer(modifier = Modifier.width(10.dp))
@@ -1043,7 +1095,7 @@ private fun RecurringInfoBanner(
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                 ),
-                color = Color(0xFF475569),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -1165,7 +1217,7 @@ private fun RecurringFormActionButtons(
                         .height(48.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFFEBEE),
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
                         contentColor = Color(0xFFDC2626),
                     ),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
@@ -1247,7 +1299,7 @@ private fun RecurringFormActionButtons(
                         .height(48.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFFEBEE),
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
                         contentColor = Color(0xFFDC2626),
                     ),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),

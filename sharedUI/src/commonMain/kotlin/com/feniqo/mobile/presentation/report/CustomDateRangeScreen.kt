@@ -174,7 +174,7 @@ fun CustomDateRangeScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                color = Color(0xFFFAFAFA),
+                color = MaterialTheme.colorScheme.surface,
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
                 Column(
@@ -370,7 +370,7 @@ private fun DateSummaryCard(
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(14.dp),
-        color = Color(0xFFF9FAFB),
+        color = MaterialTheme.colorScheme.surface,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Row(
@@ -430,7 +430,7 @@ private fun CalendarDayCell(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(32.dp)
-                    .background(Color(0xFFE8F1EB)),
+                    .background(MaterialTheme.colorScheme.primaryContainer),
             )
         }
 
@@ -459,7 +459,7 @@ private fun CalendarDayCell(
                     fontWeight = if (isInRange) FontWeight.SemiBold else FontWeight.Normal,
                     fontSize = 14.sp,
                 ),
-                color = if (isInRange) Color(0xFF1E3A2F) else MaterialTheme.colorScheme.onSurface,
+                color = if (isInRange) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
             )
         }
     }
@@ -477,7 +477,7 @@ private fun QuickSelectChip(
             .clip(RoundedCornerShape(12.dp))
             .clickable(role = Role.Button, onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        color = Color(0xFFF3F4F6),
+        color = MaterialTheme.colorScheme.surfaceVariant,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Box(
@@ -490,7 +490,7 @@ private fun QuickSelectChip(
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 13.sp,
                 ),
-                color = Color(0xFF374151),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

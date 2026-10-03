@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -19,8 +20,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -73,6 +81,42 @@ fun GoalFormScreen(
 ) {
     val isEnabled = !isSubmitting
     var showCurrencySheet by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val nameFocusRequester = remember { FocusRequester() }
+    val targetAmountFocusRequester = remember { FocusRequester() }
+    val initialAmountFocusRequester = remember { FocusRequester() }
+    val nameErrorText = when (errors.nameError) {
+        GoalFormFieldError.NAME_REQUIRED -> "Hedef adı zorunludur."
+        GoalFormFieldError.NAME_TOO_LONG -> "Hedef adı en fazla 500 karakter olabilir."
+        null -> null
+        else -> "Geçersiz hedef adı."
+    }
+    val targetAmountErrorText = when (errors.targetAmountError) {
+        GoalFormFieldError.TARGET_AMOUNT_REQUIRED -> "Hedef tutar zorunludur."
+        GoalFormFieldError.TARGET_AMOUNT_NON_POSITIVE -> "Hedef tutar sıfırdan büyük olmalıdır."
+        GoalFormFieldError.TARGET_AMOUNT_INVALID -> "Geçerli bir tutar girin."
+        null -> null
+        else -> "Geçersiz tutar."
+    }
+    val initialAmountErrorText = when (errors.initialAmountError) {
+        GoalFormFieldError.INITIAL_AMOUNT_NEGATIVE -> "Başlangıç tutarı negatif olamaz."
+        GoalFormFieldError.INITIAL_AMOUNT_INVALID -> "Geçerli bir tutar girin."
+        null -> null
+        else -> "Geçersiz başlangıç tutarı."
+    }
+    val dismissKeyboard = {
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+    }
+
+    LaunchedEffect(errors, isEditMode) {
+        when {
+            errors.nameError != null -> nameFocusRequester.requestFocus()
+            errors.targetAmountError != null -> targetAmountFocusRequester.requestFocus()
+            !isEditMode && errors.initialAmountError != null -> initialAmountFocusRequester.requestFocus()
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -132,7 +176,7 @@ fun GoalFormScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 16.dp)
-                        .navigationBarsPadding(),
+                        .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime)),
                 ) {
                     Button(
                         onClick = onSubmit,
@@ -206,25 +250,25 @@ fun GoalFormScreen(
                         placeholder = { Text("Seyahat, Yeni bilgisayar...") },
                         isError = errors.nameError != null,
                         supportingText = {
-                            errors.nameError?.let {
-                                Text(
-                                    text = when (it) {
-                                        GoalFormFieldError.NAME_REQUIRED -> "Hedef adı zorunludur."
-                                        GoalFormFieldError.NAME_TOO_LONG -> "Hedef adı en fazla 500 karakter olabilir."
-                                        else -> "Geçersiz hedef adı."
-                                    },
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                            }
+                            nameErrorText?.let { Text(text = it, color = MaterialTheme.colorScheme.error) }
                         },
                         singleLine = true,
                         enabled = isEnabled,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                        modifier = Modifier.fillMaxWidth(),
+                        keyboardActions = KeyboardActions(
+                            onNext = { targetAmountFocusRequester.requestFocus() },
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(nameFocusRequester)
+                            .semantics {
+                                contentDescription = "Hedef adı"
+                                nameErrorText?.let { error(it) }
+                            },
                         shape = RoundedCornerShape(14.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White,
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                             focusedBorderColor = FeniqoGoalSageGreen,
                             unfocusedBorderColor = FeniqoGoalCardBorder,
                         ),
@@ -256,29 +300,29 @@ fun GoalFormScreen(
                             placeholder = { Text("₺30.000") },
                             isError = errors.targetAmountError != null,
                             supportingText = {
-                                errors.targetAmountError?.let {
-                                    Text(
-                                        text = when (it) {
-                                            GoalFormFieldError.TARGET_AMOUNT_REQUIRED -> "Hedef tutar zorunludur."
-                                            GoalFormFieldError.TARGET_AMOUNT_NON_POSITIVE -> "Hedef tutar sıfırdan büyük olmalıdır."
-                                            GoalFormFieldError.TARGET_AMOUNT_INVALID -> "Geçerli bir tutar girin."
-                                            else -> "Geçersiz tutar."
-                                        },
-                                        color = MaterialTheme.colorScheme.error,
-                                    )
-                                }
+                                targetAmountErrorText?.let { Text(text = it, color = MaterialTheme.colorScheme.error) }
                             },
                             singleLine = true,
                             enabled = isEnabled,
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Decimal,
-                                imeAction = ImeAction.Next,
+                                imeAction = if (isEditMode) ImeAction.Done else ImeAction.Next,
                             ),
-                            modifier = Modifier.fillMaxWidth(),
+                            keyboardActions = KeyboardActions(
+                                onNext = { initialAmountFocusRequester.requestFocus() },
+                                onDone = { dismissKeyboard() },
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(targetAmountFocusRequester)
+                                .semantics {
+                                    contentDescription = "Hedef tutarı"
+                                    targetAmountErrorText?.let { error(it) }
+                                },
                             shape = RoundedCornerShape(14.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = Color.White,
-                                unfocusedContainerColor = Color.White,
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                                 focusedBorderColor = FeniqoGoalSageGreen,
                                 unfocusedBorderColor = FeniqoGoalCardBorder,
                             ),
@@ -308,8 +352,8 @@ fun GoalFormScreen(
                                     onClick = { showCurrencySheet = true },
                                 ),
                             shape = RoundedCornerShape(14.dp),
-                            color = if (isEditMode) Color(0xFFF1F5F9) else Color.White,
-                            border = BorderStroke(1.dp, if (isEditMode) Color(0xFFE2E8F0) else FeniqoGoalCardBorder),
+                            color = if (isEditMode) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, if (isEditMode) MaterialTheme.colorScheme.outlineVariant else FeniqoGoalCardBorder),
                         ) {
                             Row(
                                 modifier = Modifier
@@ -327,7 +371,7 @@ fun GoalFormScreen(
                                 Icon(
                                     imageVector = Icons.Outlined.KeyboardArrowDown,
                                     contentDescription = "Para birimi seç",
-                                    tint = if (isEditMode) Color(0xFF94A3B8) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = if (isEditMode) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(20.dp),
                                 )
                             }
@@ -361,28 +405,26 @@ fun GoalFormScreen(
                             placeholder = { Text("₺5.000") },
                             isError = errors.initialAmountError != null,
                             supportingText = {
-                                if (errors.initialAmountError != null) {
-                                    Text(
-                                        text = when (errors.initialAmountError) {
-                                            GoalFormFieldError.INITIAL_AMOUNT_NEGATIVE -> "Başlangıç tutarı negatif olamaz."
-                                            GoalFormFieldError.INITIAL_AMOUNT_INVALID -> "Geçerli bir tutar girin."
-                                            else -> "Geçersiz başlangıç tutarı."
-                                        },
-                                        color = MaterialTheme.colorScheme.error,
-                                    )
-                                }
+                                initialAmountErrorText?.let { Text(text = it, color = MaterialTheme.colorScheme.error) }
                             },
                             singleLine = true,
                             enabled = isEnabled,
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Decimal,
-                                imeAction = ImeAction.Next,
+                                imeAction = ImeAction.Done,
                             ),
-                            modifier = Modifier.fillMaxWidth(),
+                            keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(initialAmountFocusRequester)
+                                .semantics {
+                                    contentDescription = "Başlangıç birikimi"
+                                    initialAmountErrorText?.let { error(it) }
+                                },
                             shape = RoundedCornerShape(14.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = Color.White,
-                                unfocusedContainerColor = Color.White,
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                                 focusedBorderColor = FeniqoGoalSageGreen,
                                 unfocusedBorderColor = FeniqoGoalCardBorder,
                             ),
@@ -481,7 +523,7 @@ fun GoalFormScreen(
                                 onClick = onTargetDateClick,
                             ),
                         shape = RoundedCornerShape(14.dp),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.surface,
                         border = BorderStroke(
                             1.dp,
                             if (errors.targetDateError != null) MaterialTheme.colorScheme.error else FeniqoGoalCardBorder

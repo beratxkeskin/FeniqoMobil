@@ -211,6 +211,7 @@ sıfırlama sınırı: [Demo kullanım rehberi](docs/DEMO_KULLANIM.md).
 
 ### Veri taşınabilirliği sınırı
 
+- Presentation katmanı yedek codec/exporter/importer sınıflarını doğrudan tüketmez. `PersonalBackupRepository` domain portu kapsam, önizleme, dışa aktarma ve içe aktarma sonuçlarını presentation'a uygun domain modelleriyle sunar; `DefaultPersonalBackupRepository` data adaptörü mevcut codec ve atomik importer/exporter implementasyonlarını bu sınırın arkasında tutar.
 - JSON yedekleri açık `format_version` ile sürümlenir; v1 yalnız kişisel kategori ve işlemleri kapsar.
 - Token/oturum, owner kimliği, private makbuz yolu, OCR içeriği, sync metadata, outbox ve conflict kayıtları yedeğe girmez.
 - Decode ve tüm referans doğrulamaları herhangi bir Room yazmasından önce tamamlanır; bilinmeyen sürüm veya alan fail-closed reddedilir.

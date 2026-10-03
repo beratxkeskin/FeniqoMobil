@@ -504,7 +504,7 @@ private fun WorkspaceItemCard(
                     if (isActive) {
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFFDCFCE7),
+                            color = MaterialTheme.colorScheme.primaryContainer,
                         ) {
                             Text(
                                 text = "Seçili alan",
@@ -708,8 +708,8 @@ private fun PickerErrorBanner(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        color = Color(0xFFFEE2E2),
-        border = BorderStroke(1.dp, Color(0xFFFECACA)),
+        color = MaterialTheme.colorScheme.errorContainer,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.45f)),
     ) {
         Row(
             modifier = Modifier
@@ -720,14 +720,14 @@ private fun PickerErrorBanner(
             Icon(
                 imageVector = Icons.Outlined.Info,
                 contentDescription = null,
-                tint = Color(0xFFDC2626),
+                tint = MaterialTheme.colorScheme.onErrorContainer,
                 modifier = Modifier.size(20.dp),
             )
             Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = message.toDisplayText(),
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF991B1B),
+                color = MaterialTheme.colorScheme.onErrorContainer,
                 modifier = Modifier.weight(1f),
             )
             IconButton(
@@ -738,7 +738,7 @@ private fun PickerErrorBanner(
                 Icon(
                     imageVector = Icons.Outlined.Close,
                     contentDescription = "Hata mesajını kapat",
-                    tint = Color(0xFF991B1B),
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.size(16.dp),
                 )
             }

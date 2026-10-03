@@ -1,36 +1,135 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.net.URI
 import java.util.Properties
 
 val localProperties = Properties().apply {
     rootProject.file("local.properties").takeIf(File::exists)?.inputStream()?.use(::load)
 }
 
-fun requiredSupabaseValue(
+fun configuredSupabaseValue(
     environmentName: String,
     localPropertyName: String,
-): String = System.getenv(environmentName)?.trim()?.takeIf(String::isNotEmpty)
-    ?: localProperties.getProperty(localPropertyName)?.trim()?.takeIf(String::isNotEmpty)
-    ?: error(
-        "$localPropertyName eksik. local.properties veya $environmentName ortam değişkeni ile tanımlayın.",
-    )
+    legacyEnvironmentName: String? = null,
+    legacyLocalPropertyName: String? = null,
+): String? = sequenceOf(
+    System.getenv(environmentName),
+    legacyEnvironmentName?.let(System::getenv),
+    localProperties.getProperty(localPropertyName),
+    legacyLocalPropertyName?.let(localProperties::getProperty),
+).mapNotNull { it?.trim()?.takeIf(String::isNotEmpty) }
+    .firstOrNull()
 
 fun String.asBuildConfigString(): String =
     "\"${replace("\\", "\\\\").replace("\"", "\\\"")}\""
 
-val supabaseUrl = requiredSupabaseValue(
-    environmentName = "FENIQO_SUPABASE_URL",
-    localPropertyName = "feniqo.supabase.url",
+fun validateSupabaseProjectUrl(value: String, expectedProjectRef: String, environmentLabel: String) {
+    val uri = runCatching { URI(value) }.getOrNull()
+    require(
+        uri?.scheme == "https" &&
+            uri.host == "$expectedProjectRef.supabase.co" &&
+            uri.userInfo == null && uri.query == null && uri.fragment == null &&
+            (uri.path.isNullOrEmpty() || uri.path == "/"),
+    ) {
+        "$environmentLabel Supabase URL beklenen project ref ile eşleşmiyor: $expectedProjectRef"
+    }
+}
+
+fun validatePublishableKey(value: String, environmentLabel: String) {
+    require(value.startsWith("sb_publishable_")) {
+        "$environmentLabel Supabase publishable key geçersiz. Yalnızca 'sb_publishable_' ile başlayan mobil istemci anahtarları kullanılabilir."
+    }
+    require(!value.startsWith("sb_secret_") && !value.contains("service_role")) {
+        "$environmentLabel Supabase secret/service-role anahtarı Android uygulamasına eklenemez."
+    }
+}
+
+val stagingProjectRef = "rxfaiynkhaxrksosxvxp"
+val productionProjectRef = "qgmymavltjnmfuzvfxiq"
+
+val stagingSupabaseUrl = configuredSupabaseValue(
+    environmentName = "FENIQO_STAGING_SUPABASE_URL",
+    localPropertyName = "feniqo.supabase.staging.url",
+    legacyEnvironmentName = "FENIQO_SUPABASE_URL",
+    legacyLocalPropertyName = "feniqo.supabase.url",
 )
-val supabasePublishableKey = requiredSupabaseValue(
-    environmentName = "FENIQO_SUPABASE_PUBLISHABLE_KEY",
-    localPropertyName = "feniqo.supabase.publishableKey",
+val stagingSupabasePublishableKey = configuredSupabaseValue(
+    environmentName = "FENIQO_STAGING_SUPABASE_PUBLISHABLE_KEY",
+    localPropertyName = "feniqo.supabase.staging.publishableKey",
+    legacyEnvironmentName = "FENIQO_SUPABASE_PUBLISHABLE_KEY",
+    legacyLocalPropertyName = "feniqo.supabase.publishableKey",
+)
+val productionSupabaseUrl = configuredSupabaseValue(
+    environmentName = "FENIQO_PRODUCTION_SUPABASE_URL",
+    localPropertyName = "feniqo.supabase.production.url",
+)
+val productionSupabasePublishableKey = configuredSupabaseValue(
+    environmentName = "FENIQO_PRODUCTION_SUPABASE_PUBLISHABLE_KEY",
+    localPropertyName = "feniqo.supabase.production.publishableKey",
+)
+val releaseEnvironment = configuredSupabaseValue(
+    environmentName = "FENIQO_RELEASE_ENVIRONMENT",
+    localPropertyName = "feniqo.release.environment",
+)
+val configuredReleaseVersionCode = configuredSupabaseValue(
+    environmentName = "FENIQO_VERSION_CODE",
+    localPropertyName = "feniqo.version.code",
+)?.toIntOrNull()
+val configuredReleaseVersionName = configuredSupabaseValue(
+    environmentName = "FENIQO_VERSION_NAME",
+    localPropertyName = "feniqo.version.name",
 )
 
-require(supabasePublishableKey.startsWith("sb_publishable_")) {
-    "Supabase publishable key geçersiz. Yalnızca 'sb_publishable_' ile başlayan mobil istemci anahtarları kullanılabilir."
+val stagingConfigurationError = when {
+    stagingSupabaseUrl == null ->
+        "Staging Supabase URL eksik. FENIQO_STAGING_SUPABASE_URL veya feniqo.supabase.staging.url tanımlayın."
+    stagingSupabasePublishableKey == null ->
+        "Staging Supabase publishable key eksik. FENIQO_STAGING_SUPABASE_PUBLISHABLE_KEY veya feniqo.supabase.staging.publishableKey tanımlayın."
+    else -> runCatching {
+        validateSupabaseProjectUrl(stagingSupabaseUrl, stagingProjectRef, "Staging")
+        validatePublishableKey(stagingSupabasePublishableKey, "Staging")
+    }.exceptionOrNull()?.message
 }
-require(!supabasePublishableKey.startsWith("sb_secret_") && !supabasePublishableKey.contains("service_role")) {
-    "Supabase secret/service-role anahtarı Android uygulamasına eklenemez."
+
+val productionConfigurationError = when {
+    releaseEnvironment != "production" ->
+        "Release derlemesi için FENIQO_RELEASE_ENVIRONMENT=production veya feniqo.release.environment=production zorunludur."
+    productionSupabaseUrl == null ->
+        "Production Supabase URL eksik. FENIQO_PRODUCTION_SUPABASE_URL veya feniqo.supabase.production.url tanımlayın."
+    productionSupabasePublishableKey == null ->
+        "Production Supabase publishable key eksik. FENIQO_PRODUCTION_SUPABASE_PUBLISHABLE_KEY veya feniqo.supabase.production.publishableKey tanımlayın."
+    configuredReleaseVersionCode == null || configuredReleaseVersionCode <= 0 ->
+        "Release derlemesi için pozitif FENIQO_VERSION_CODE veya feniqo.version.code zorunludur."
+    configuredReleaseVersionName.isNullOrBlank() ||
+        !configuredReleaseVersionName.matches(Regex("^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$")) ->
+        "Release derlemesi için semantik FENIQO_VERSION_NAME veya feniqo.version.name zorunludur."
+    else -> runCatching {
+        validateSupabaseProjectUrl(productionSupabaseUrl, productionProjectRef, "Production")
+        validatePublishableKey(productionSupabasePublishableKey, "Production")
+    }.exceptionOrNull()?.message
+}
+
+val validateProductionSupabaseConfiguration = tasks.register("validateProductionSupabaseConfiguration") {
+    group = "verification"
+    description = "Release derlemesinin doğrulanmış production Supabase projesini kullandığını denetler."
+
+    val validationError = productionConfigurationError
+    doLast {
+        if (validationError != null) {
+            throw GradleException(validationError)
+        }
+    }
+}
+
+val validateStagingSupabaseConfiguration = tasks.register("validateStagingSupabaseConfiguration") {
+    group = "verification"
+    description = "Debug derlemesinin doğrulanmış staging Supabase projesini kullandığını denetler."
+
+    val validationError = stagingConfigurationError
+    doLast {
+        if (validationError != null) {
+            throw GradleException(validationError)
+        }
+    }
 }
 
 plugins {
@@ -85,6 +184,8 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.testExt.junit)
+    androidTestImplementation(libs.androidx.room.testing)
+    androidTestImplementation(libs.androidx.work.testing)
     androidTestImplementation(libs.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
 }
@@ -97,11 +198,10 @@ android {
         applicationId = "com.feniqo.mobile"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
+        // Demo/debug yapılandırılabilsin; release kapısı aşağıdaki doğrulanmış değerleri zorunlu kılar.
+        versionCode = configuredReleaseVersionCode ?: 1
+        versionName = configuredReleaseVersionName ?: "0.0.0-dev"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "SUPABASE_URL", supabaseUrl.asBuildConfigString())
-        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", supabasePublishableKey.asBuildConfigString())
         buildConfigField("boolean", "DEMO", "false")
     }
     packaging {
@@ -110,17 +210,29 @@ android {
         }
     }
     buildTypes {
+        debug {
+            applicationIdSuffix = ".staging"
+            versionNameSuffix = "-staging"
+            buildConfigField("String", "ENVIRONMENT", "\"staging\"")
+            buildConfigField("String", "SUPABASE_URL", stagingSupabaseUrl.orEmpty().asBuildConfigString())
+            buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", stagingSupabasePublishableKey.orEmpty().asBuildConfigString())
+        }
         create("demo") {
             initWith(getByName("debug"))
             matchingFallbacks += "debug"
             applicationIdSuffix = ".demo"
             versionNameSuffix = "-demo"
             buildConfigField("boolean", "DEMO", "true")
+            buildConfigField("String", "ENVIRONMENT", "\"demo\"")
             buildConfigField("String", "SUPABASE_URL", "\"https://demo.invalid\"")
             buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"sb_publishable_demo_offline_0000000000000000\"")
         }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            buildConfigField("String", "ENVIRONMENT", "\"production\"")
+            buildConfigField("String", "SUPABASE_URL", productionSupabaseUrl.orEmpty().asBuildConfigString())
+            buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", productionSupabasePublishableKey.orEmpty().asBuildConfigString())
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -135,11 +247,32 @@ android {
         unitTests {
             isIncludeAndroidResources = true
         }
+        managedDevices {
+            localDevices {
+                create("releaseGateApi35") {
+                    device = "Pixel 2"
+                    apiLevel = 35
+                    systemImageSource = "aosp-atd"
+                    testedAbi = "x86_64"
+                }
+            }
+        }
     }
+    sourceSets.getByName("androidTest").assets.directories.add(project(":sharedLogic").file("schemas").path)
     buildFeatures {
         compose = true
         buildConfig = true
     }
+}
+
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    dependsOn(validateProductionSupabaseConfiguration)
+}
+
+tasks.matching {
+    it.name in setOf("preDebugBuild", "preDebugUnitTestBuild", "preDebugAndroidTestBuild")
+}.configureEach {
+    dependsOn(validateStagingSupabaseConfiguration)
 }
 
 tasks.withType<Test>().configureEach {

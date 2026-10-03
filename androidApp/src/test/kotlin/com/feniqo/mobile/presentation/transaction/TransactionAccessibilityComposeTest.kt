@@ -7,9 +7,13 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -142,6 +146,102 @@ class TransactionAccessibilityComposeTest {
         }
 
         compose.onNodeWithContentDescription("Gideri kaydet").assertIsDisplayed()
+    }
+
+    @Test
+    fun form_amountImeNext_movesFocusToTransactionTitle() {
+        compose.setContent {
+            FeniqoTheme {
+                TransactionFormScreen(
+                    uiState = TransactionFormUiState(),
+                    onAmountChange = {},
+                    onCurrencyChange = {},
+                    onTypeChange = {},
+                    onCategoryChange = {},
+                    onDateClick = {},
+                    onDescriptionChange = {},
+                    onPaymentMethodChange = {},
+                    onInstallmentToggle = {},
+                    onInstallmentCountChange = {},
+                    onRetryCategories = {},
+                    onSubmit = {},
+                    onBack = {},
+                    onDismissMessage = {},
+                    onAttachReceipt = {},
+                    onRemoveReceipt = {},
+                )
+            }
+        }
+
+        compose.onNodeWithContentDescription("İşlem tutarı girişi")
+            .performClick()
+            .performImeAction()
+        compose.onNodeWithContentDescription("İşlem Adı").assertIsFocused()
+    }
+
+    @Test
+    fun form_validationError_focusesFirstInvalidField() {
+        compose.setContent {
+            FeniqoTheme {
+                TransactionFormScreen(
+                    uiState = TransactionFormUiState(
+                        amountError = TransactionFormFieldError.AMOUNT_REQUIRED,
+                        titleError = TransactionFormFieldError.TITLE_REQUIRED,
+                    ),
+                    onAmountChange = {},
+                    onCurrencyChange = {},
+                    onTypeChange = {},
+                    onCategoryChange = {},
+                    onDateClick = {},
+                    onDescriptionChange = {},
+                    onPaymentMethodChange = {},
+                    onInstallmentToggle = {},
+                    onInstallmentCountChange = {},
+                    onRetryCategories = {},
+                    onSubmit = {},
+                    onBack = {},
+                    onDismissMessage = {},
+                    onAttachReceipt = {},
+                    onRemoveReceipt = {},
+                )
+            }
+        }
+
+        compose.onNodeWithContentDescription("İşlem tutarı girişi").assertIsFocused()
+    }
+
+    @Test
+    fun form_noteImeDone_clearsTextFieldFocus() {
+        compose.setContent {
+            FeniqoTheme {
+                TransactionFormScreen(
+                    uiState = TransactionFormUiState(
+                        note = "x".repeat(501),
+                        noteError = TransactionFormFieldError.NOTE_TOO_LONG,
+                    ),
+                    onAmountChange = {},
+                    onCurrencyChange = {},
+                    onTypeChange = {},
+                    onCategoryChange = {},
+                    onDateClick = {},
+                    onDescriptionChange = {},
+                    onPaymentMethodChange = {},
+                    onInstallmentToggle = {},
+                    onInstallmentCountChange = {},
+                    onRetryCategories = {},
+                    onSubmit = {},
+                    onBack = {},
+                    onDismissMessage = {},
+                    onAttachReceipt = {},
+                    onRemoveReceipt = {},
+                )
+            }
+        }
+
+        val noteField = compose.onNodeWithContentDescription("İşlem notu")
+        noteField.performClick().assertIsFocused()
+        noteField.performImeAction()
+        noteField.assertIsNotFocused()
     }
 
     @Composable

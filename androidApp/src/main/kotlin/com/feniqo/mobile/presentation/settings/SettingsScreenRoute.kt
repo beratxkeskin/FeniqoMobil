@@ -24,8 +24,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.feniqo.mobile.data.backup.BackupImportResult
-import com.feniqo.mobile.data.backup.FENIQO_BACKUP_MAX_BYTES
+import com.feniqo.mobile.domain.repository.PERSONAL_BACKUP_MAX_BYTES
+import com.feniqo.mobile.domain.repository.PersonalBackupImportOutcome
 import com.feniqo.mobile.domain.model.AppLanguage
 import com.feniqo.mobile.domain.model.ThemePreference
 import com.feniqo.mobile.domain.repository.AutoLockTimeout
@@ -534,9 +534,9 @@ fun DataManagementScreenRoute(
             if (current != null) {
                 scope.launch {
                     val message = when (val result = viewModel.importBackup(current.raw)) {
-                        is BackupImportResult.Success ->
+                        is PersonalBackupImportOutcome.Success ->
                             "${result.categoryCount} kategori ve ${result.transactionCount} işlem içe aktarıldı."
-                        is BackupImportResult.Failure -> backupFailureMessage(result.reason)
+                        is PersonalBackupImportOutcome.Failure -> backupFailureMessage(result.reason)
                     }
                     Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                     viewModel.refreshBackupScope()
@@ -1039,7 +1039,7 @@ private fun Context.readBoundedUtf8(uri: Uri): String {
             val read = source.read(buffer)
             if (read < 0) break
             total += read
-            if (total > FENIQO_BACKUP_MAX_BYTES) error("backup_too_large")
+            if (total > PERSONAL_BACKUP_MAX_BYTES) error("backup_too_large")
             output.write(buffer, 0, read)
         }
         output.toString(Charsets.UTF_8.name())

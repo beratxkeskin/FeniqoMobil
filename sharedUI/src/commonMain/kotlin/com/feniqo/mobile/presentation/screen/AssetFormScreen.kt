@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -22,10 +23,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,10 +57,36 @@ fun AssetFormScreen(
 
     var showTypePicker by remember { mutableStateOf(false) }
     var showCurrencyPicker by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val nameFocusRequester = remember { FocusRequester() }
+    val currentValueFocusRequester = remember { FocusRequester() }
+    val quantityFocusRequester = remember { FocusRequester() }
+    val purchasePriceFocusRequester = remember { FocusRequester() }
+    val trackingSymbolFocusRequester = remember { FocusRequester() }
+    val nameErrorText = state.errors.name?.toDisplayText()
+    val currentValueErrorText = state.errors.currentValue?.toDisplayText()
+    val quantityErrorText = state.errors.quantity?.toDisplayText()
+    val purchasePriceErrorText = state.errors.purchaseUnitPrice?.toDisplayText()
+    val trackingSymbolErrorText = state.errors.trackingSymbol?.toDisplayText()
+    val dismissKeyboard = {
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+    }
+
+    LaunchedEffect(state.errors, input.autoTrack) {
+        when {
+            state.errors.name != null -> nameFocusRequester.requestFocus()
+            state.errors.currentValue != null -> currentValueFocusRequester.requestFocus()
+            state.errors.quantity != null -> quantityFocusRequester.requestFocus()
+            state.errors.purchaseUnitPrice != null -> purchasePriceFocusRequester.requestFocus()
+            input.autoTrack && state.errors.trackingSymbol != null -> trackingSymbolFocusRequester.requestFocus()
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = AssetWarmBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             Row(
                 modifier = Modifier
@@ -64,7 +99,7 @@ fun AssetFormScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Geri",
-                        tint = Color(0xFF1E293B),
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
 
@@ -72,7 +107,7 @@ fun AssetFormScreen(
                     text = if (isEditMode) "Varlığı düzenle" else "Yeni varlık",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF0F172A),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 if (isEditMode) {
@@ -90,13 +125,13 @@ fun AssetFormScreen(
         },
         bottomBar = {
             Surface(
-                color = AssetWarmBackground,
+                color = MaterialTheme.colorScheme.surface,
                 shadowElevation = 8.dp,
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .navigationBarsPadding()
+                        .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))
                         .padding(horizontal = 20.dp, vertical = 12.dp),
                 ) {
                     Button(
@@ -156,9 +191,19 @@ fun AssetFormScreen(
                 label = { Text("Varlık adı") },
                 placeholder = { Text("Örn: Gram altın") },
                 isError = state.errors.name != null,
-                supportingText = state.errors.name?.let { { Text(it.toDisplayText()) } },
+                supportingText = nameErrorText?.let { { Text(it) } },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(
+                    onNext = { currentValueFocusRequester.requestFocus() },
+                ),
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(nameFocusRequester)
+                    .semantics {
+                        contentDescription = "Varlık adı"
+                        nameErrorText?.let { error(it) }
+                    },
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = AssetSageGreen,
@@ -171,7 +216,7 @@ fun AssetFormScreen(
                 Text(
                     text = "Varlık türü",
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color(0xFF64748B),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 6.dp),
                 )
                 Card(
@@ -203,14 +248,14 @@ fun AssetFormScreen(
                                 text = input.type.toDisplayLabel(),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium,
-                                color = Color(0xFF0F172A),
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                         }
 
                         Icon(
                             imageVector = Icons.Filled.KeyboardArrowDown,
                             contentDescription = "Seç",
-                            tint = Color(0xFF64748B),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -256,9 +301,21 @@ fun AssetFormScreen(
                                 color = Color.White,
                             ),
                             cursorBrush = SolidColor(Color.White),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal,
+                                imeAction = ImeAction.Next,
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onNext = { quantityFocusRequester.requestFocus() },
+                            ),
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(currentValueFocusRequester)
+                                .semantics {
+                                    contentDescription = "Güncel toplam değer"
+                                    currentValueErrorText?.let { error(it) }
+                                },
                             decorationBox = { innerTextField ->
                                 if (input.currentValueInput.isEmpty()) {
                                     Text(
@@ -285,7 +342,7 @@ fun AssetFormScreen(
                     if (state.errors.currentValue != null) {
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            text = state.errors.currentValue.toDisplayText(),
+                            text = currentValueErrorText.orEmpty(),
                             style = MaterialTheme.typography.labelSmall,
                             color = Color(0xFFFCA5A5),
                         )
@@ -298,7 +355,7 @@ fun AssetFormScreen(
                 Text(
                     text = "Para birimi",
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color(0xFF64748B),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 6.dp),
                 )
                 Card(
@@ -321,13 +378,13 @@ fun AssetFormScreen(
                             text = "${input.currency.code} (${input.currency.symbol})",
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Medium,
-                            color = Color(0xFF0F172A),
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
 
                         Icon(
                             imageVector = Icons.Filled.KeyboardArrowDown,
                             contentDescription = "Seç",
-                            tint = Color(0xFF64748B),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -340,10 +397,22 @@ fun AssetFormScreen(
                 label = { Text("Miktar (isteğe bağlı)") },
                 placeholder = { Text("Örn: 30") },
                 isError = state.errors.quantity != null,
-                supportingText = state.errors.quantity?.let { { Text(it.toDisplayText()) } },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                supportingText = quantityErrorText?.let { { Text(it) } },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                    imeAction = ImeAction.Next,
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { purchasePriceFocusRequester.requestFocus() },
+                ),
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(quantityFocusRequester)
+                    .semantics {
+                        contentDescription = "Varlık miktarı"
+                        quantityErrorText?.let { error(it) }
+                    },
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = AssetSageGreen,
@@ -359,10 +428,23 @@ fun AssetFormScreen(
                 placeholder = { Text("Örn: 4000") },
                 prefix = { Text("${input.currency.symbol} ", fontWeight = FontWeight.SemiBold) },
                 isError = state.errors.purchaseUnitPrice != null,
-                supportingText = state.errors.purchaseUnitPrice?.let { { Text(it.toDisplayText()) } },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                supportingText = purchasePriceErrorText?.let { { Text(it) } },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                    imeAction = if (input.autoTrack) ImeAction.Next else ImeAction.Done,
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { trackingSymbolFocusRequester.requestFocus() },
+                    onDone = { dismissKeyboard() },
+                ),
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(purchasePriceFocusRequester)
+                    .semantics {
+                        contentDescription = "Alış birim fiyatı"
+                        purchasePriceErrorText?.let { error(it) }
+                    },
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = AssetSageGreen,
@@ -390,13 +472,13 @@ fun AssetFormScreen(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFFF1F5F9)),
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Calculate,
                                 contentDescription = null,
-                                tint = Color(0xFF475569),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(22.dp),
                             )
                         }
@@ -405,14 +487,14 @@ fun AssetFormScreen(
                             Text(
                                 text = "Hesaplanan maliyet",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = Color(0xFF64748B),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Spacer(Modifier.height(2.dp))
                             Text(
                                 text = costPreview,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF0F172A),
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                         }
                     }
@@ -436,7 +518,7 @@ fun AssetFormScreen(
                         text = "Fiyat takibi",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF0F172A),
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
 
                     Row(
@@ -449,12 +531,12 @@ fun AssetFormScreen(
                                 text = "Otomatik fiyat takibi",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium,
-                                color = Color(0xFF0F172A),
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
                                 text = "Desteklenen semboller ve fiyat servisi gerektirir.",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF64748B),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
 
@@ -475,9 +557,17 @@ fun AssetFormScreen(
                             label = { Text("Piyasa sembolü") },
                             placeholder = { Text("Örn: BTC") },
                             isError = state.errors.trackingSymbol != null,
-                            supportingText = state.errors.trackingSymbol?.let { { Text(it.toDisplayText()) } },
+                            supportingText = trackingSymbolErrorText?.let { { Text(it) } },
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }),
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(trackingSymbolFocusRequester)
+                                .semantics {
+                                    contentDescription = "Piyasa sembolü"
+                                    trackingSymbolErrorText?.let { error(it) }
+                                },
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = AssetSageGreen,
@@ -490,7 +580,7 @@ fun AssetFormScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFFF1F5F9))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .padding(10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -498,13 +588,13 @@ fun AssetFormScreen(
                             Icon(
                                 imageVector = Icons.Outlined.Info,
                                 contentDescription = null,
-                                tint = Color(0xFF64748B),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp),
                             )
                             Text(
                                 text = "Veri sağlayıcısının sembolü desteklemesi gerekir.",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF475569),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     } else {
@@ -512,7 +602,7 @@ fun AssetFormScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFFF1F5F9))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .padding(10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -520,13 +610,13 @@ fun AssetFormScreen(
                             Icon(
                                 imageVector = Icons.Outlined.Info,
                                 contentDescription = null,
-                                tint = Color(0xFF64748B),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp),
                             )
                             Text(
                                 text = "Manuel girişte toplam değeri sen güncellersin.",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF475569),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }

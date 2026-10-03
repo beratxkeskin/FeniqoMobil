@@ -1,9 +1,5 @@
 package com.feniqo.mobile.presentation.settings
 
-import com.feniqo.mobile.data.backup.BackupImportResult
-import com.feniqo.mobile.data.backup.BackupScope
-import com.feniqo.mobile.data.backup.PersonalBackupExporter
-import com.feniqo.mobile.data.backup.PersonalBackupImporter
 import com.feniqo.mobile.domain.model.AppLanguage
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.DateFormatPreference
@@ -16,6 +12,10 @@ import com.feniqo.mobile.domain.model.Transaction
 import com.feniqo.mobile.domain.model.UserProfile
 import com.feniqo.mobile.domain.model.UserSettings
 import com.feniqo.mobile.domain.repository.AuthRepository
+import com.feniqo.mobile.domain.repository.PersonalBackupImportOutcome
+import com.feniqo.mobile.domain.repository.PersonalBackupPreview
+import com.feniqo.mobile.domain.repository.PersonalBackupRepository
+import com.feniqo.mobile.domain.repository.PersonalBackupScope
 import com.feniqo.mobile.domain.repository.AuthSession
 import com.feniqo.mobile.domain.repository.RepositoryResult
 import com.feniqo.mobile.domain.repository.SyncOverview
@@ -298,12 +298,11 @@ class SettingsViewModelTest {
         authRepository: AuthRepository,
         userSettingsRepository: UserSettingsRepository,
     ): SettingsViewModel {
-        val backupExporter = object : PersonalBackupExporter {
+        val backupRepository = object : PersonalBackupRepository {
             override suspend fun export(): String = "{}"
-            override suspend fun calculateScope(): BackupScope = BackupScope(0, 0)
-        }
-        val backupImporter = object : PersonalBackupImporter {
-            override suspend fun import(raw: String): BackupImportResult = BackupImportResult.Success(0, 0)
+            override suspend fun calculateScope() = PersonalBackupScope(0, 0)
+            override fun preview(raw: String) = PersonalBackupPreview.Valid(0, 0)
+            override suspend fun import(raw: String) = PersonalBackupImportOutcome.Success(0, 0)
         }
         val observeTransactionsUseCase = ObserveTransactionsUseCase(FakeTransactionRepository())
         val csvExporter = TransactionCsvExporter()
@@ -312,8 +311,7 @@ class SettingsViewModelTest {
         return SettingsViewModel(
             authRepository = authRepository,
             userSettingsRepository = userSettingsRepository,
-            backupExporter = backupExporter,
-            backupImporter = backupImporter,
+            personalBackupRepository = backupRepository,
             observeTransactions = observeTransactionsUseCase,
             csvExporter = csvExporter,
             observeSyncOverviewUseCase = observeSyncOverviewUseCase,

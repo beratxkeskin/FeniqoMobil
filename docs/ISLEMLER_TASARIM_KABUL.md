@@ -15,11 +15,12 @@
 - Mevcut hata/boş/yükleniyor, uygulama kabuğunun çevrimdışı göstergesi, hızlı ekle, taksit üretimi ve eşit ortak paylaşım akışları korunur.
 - Ayrıntılar tam ekran ve taslaklıdır; Vazgeç ana formu değiştirmez. Ortak harcama yalnız ortak çalışma alanında OWNER/EDITOR rolüne açılır.
 - Gider/gelir formu merkezî tutar, kart biçimli alanlar ve katalogdan gelen kategori renk/ikonlarıyla referans görsel hiyerarşisine uyarlandı. Açık ve koyu tema render edildi.
+- Formun tutar → işlem adı → kategori klavye/odak sırası açıkça bağlandı; doğrulama ilk hatalı ana alana odaklanır, ayrıntı notunda “Bitti” klavyeyi kapatır ve alan hata metinleri ekran okuyucu semantiğine eklenir.
 
 ## Açık kapsam ve somut eksikler
 
 - [ ] Büyük yazı ve farklı küçük ekran cihazlarında oturumlu erişilebilirlik kabulü.
-  - Otomatik alt kapı geçti: 320×480dp ve 2× font ölçeğinde liste özeti, uzun detay/başarı alanları, form submit erişimi ve 48dp arama temizleme hedefi Robolectric Compose testleriyle doğrulandı. Fiziksel küçük ekran/TalkBack kabulü açık tutuldu.
+  - Otomatik alt kapı geçti: 320×480dp ve 2× font ölçeğinde liste özeti, uzun detay/başarı alanları, form submit erişimi, 48dp arama temizleme hedefi, form IME sırası ve ilk hatalı alana odaklanma Robolectric Compose testleriyle doğrulandı. Proje sahibi not alanındaki “Bitti” eyleminin emülatörde yazılım klavyesini doğrudan kapattığını doğruladı. Fiziksel küçük ekran/TalkBack kabulü açık tutuldu.
 - [ ] Makbuz dosyası seçme/çekme, kalıcı ekleme ve önizleme. Mevcut bağlantı OCR'dır; private Storage veri kaynağı bulunsa da form→repository dosya yaşam döngüsü, yerel bekleyen dosya kuyruğu ve preview bağlantısı yoktur. Uzak bucket politikasına bu görevde dokunulmadı.
 - [ ] Tutara göre ortak dağıtım. Mevcut domain yalnız payer + katılımcı listesiyle eşit paylaşımı saklar. Katılımcı tutarlarını kalıcı/senkronize eden sözleşme yoktur; sahte tutarlı dağıtım eklenmedi.
 - [ ] Bağımsız kalıcı makbuz önizleme ve tutara göre ortak dağıtım ekranları (aşağıdaki veri sözleşmeleri eksik).

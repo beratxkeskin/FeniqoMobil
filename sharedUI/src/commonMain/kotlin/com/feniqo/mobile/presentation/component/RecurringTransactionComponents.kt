@@ -133,7 +133,7 @@ fun RecurringTransactionCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
         ),
-        border = BorderStroke(1.dp, Color(0xFFF1F5F9)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
@@ -208,7 +208,7 @@ fun RecurringTransactionCard(
                 Icon(
                     imageVector = Icons.Outlined.ChevronRight,
                     contentDescription = null,
-                    tint = Color(0xFF94A3B8),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp),
                 )
             }
@@ -291,8 +291,8 @@ fun RecurringStatusBadge(
 ) {
     val (containerColor, contentColor, text) = if (isPaused) {
         Triple(
-            Color(0xFFF1F5F9),
-            Color(0xFF64748B),
+            MaterialTheme.colorScheme.surfaceVariant,
+            MaterialTheme.colorScheme.onSurfaceVariant,
             "Duraklatıldı",
         )
     } else {
@@ -369,7 +369,7 @@ fun RecurringTransactionDeleteDialog(
                     Icon(
                         imageVector = Icons.Outlined.Close,
                         contentDescription = "Kapat",
-                        tint = Color(0xFF64748B),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -381,7 +381,7 @@ fun RecurringTransactionDeleteDialog(
             Box(
                 modifier = Modifier
                     .size(72.dp)
-                    .background(Color(0xFFFFEBEE), CircleShape),
+                    .background(MaterialTheme.colorScheme.errorContainer, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -458,7 +458,7 @@ fun RecurringTransactionDeleteDialog(
                     .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFF1F5F9),
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
                     contentColor = Color(0xFF334155),
                 ),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
@@ -536,7 +536,7 @@ fun RecurrencePatternSheet(
                     Icon(
                         imageVector = Icons.Outlined.Close,
                         contentDescription = "Kapat",
-                        tint = Color(0xFF64748B),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -564,10 +564,10 @@ fun RecurrencePatternSheet(
                             .weight(1f)
                             .height(72.dp),
                         shape = RoundedCornerShape(12.dp),
-                        color = if (isSelected) FeniqoSageGreen else Color(0xFFF8FAFC),
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                         border = BorderStroke(
                             1.dp,
-                            if (isSelected) FeniqoSageGreen else Color(0xFFE2E8F0),
+                            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                         ),
                     ) {
                         Column(
@@ -578,7 +578,7 @@ fun RecurrencePatternSheet(
                             Icon(
                                 imageVector = icon,
                                 contentDescription = null,
-                                tint = if (isSelected) Color.White else Color(0xFF475569),
+                                tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(22.dp),
                             )
                             Spacer(modifier = Modifier.height(4.dp))
@@ -588,7 +588,7 @@ fun RecurrencePatternSheet(
                                     fontSize = 11.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                 ),
-                                color = if (isSelected) Color.White else Color(0xFF475569),
+                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -625,7 +625,7 @@ fun RecurrencePatternSheet(
                     },
                     modifier = Modifier.size(48.dp),
                     shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFF1F5F9),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
                     enabled = tempInterval > 1,
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -678,7 +678,7 @@ fun RecurrencePatternSheet(
                     },
                     modifier = Modifier.size(48.dp),
                     shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFF1F5F9),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
@@ -792,7 +792,7 @@ fun RecurringCategoryPickerSheet(
                     Icon(
                         imageVector = Icons.Outlined.Close,
                         contentDescription = "Kapat",
-                        tint = Color(0xFF64748B),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -961,7 +961,7 @@ fun RecurringPaymentMethodPickerSheet(
                     Icon(
                         imageVector = Icons.Outlined.Close,
                         contentDescription = "Kapat",
-                        tint = Color(0xFF64748B),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -992,13 +992,13 @@ fun RecurringPaymentMethodPickerSheet(
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)
-                                    .background(Color(0xFFF1F5F9), CircleShape),
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
                                     imageVector = icon,
                                     contentDescription = null,
-                                    tint = if (isSelected) FeniqoSageGreen else Color(0xFF475569),
+                                    tint = if (isSelected) FeniqoSageGreen else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(22.dp),
                                 )
                             }
@@ -1134,7 +1134,7 @@ fun RecurringDatePickerSheet(
                     Icon(
                         imageVector = Icons.Outlined.Close,
                         contentDescription = "Kapat",
-                        tint = Color(0xFF64748B),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -1150,8 +1150,8 @@ fun RecurringDatePickerSheet(
 
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = Color(0xFFF8FAFC),
-                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Row(
@@ -1260,7 +1260,7 @@ fun RecurringDatePickerSheet(
                         .fillMaxWidth()
                         .height(48.dp),
                     shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Text(
                         text = "Bitiş tarihini kaldır",
@@ -1289,7 +1289,7 @@ fun RecurringSuccessNotification(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        color = Color(0xFFDCFCE7),
+        color = MaterialTheme.colorScheme.primaryContainer,
         border = BorderStroke(1.dp, Color(0xFFBBF7D0)),
     ) {
         Row(

@@ -548,7 +548,7 @@ private fun AllSettledBalancedCard(
             Surface(
                 modifier = Modifier.size(54.dp),
                 shape = CircleShape,
-                color = Color(0xFFDCFCE7),
+                color = MaterialTheme.colorScheme.primaryContainer,
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
@@ -590,8 +590,8 @@ private fun ExcludedExpensesWarningBanner(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        color = Color(0xFFFEF3C7),
-        border = BorderStroke(1.dp, Color(0xFFFDE68A)),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.45f)),
     ) {
         Row(
             modifier = Modifier
@@ -610,12 +610,12 @@ private fun ExcludedExpensesWarningBanner(
                 Text(
                     text = "Bazı giderler hesaplamaya dahil edilemedi.",
                     style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                    color = Color(0xFF92400E),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
                 Text(
                     text = "Eksik veriler nedeniyle tutarlar değişebilir.",
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                    color = Color(0xFFB45309),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
                 )
             }
             IconButton(
@@ -625,7 +625,7 @@ private fun ExcludedExpensesWarningBanner(
                 Icon(
                     imageVector = Icons.Outlined.Close,
                     contentDescription = "Uyarıyı kapat",
-                    tint = Color(0xFF92400E),
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
                     modifier = Modifier.size(16.dp),
                 )
             }
@@ -645,8 +645,8 @@ private fun SettlementErrorBanner(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        color = Color(0xFFFEE2E2),
-        border = BorderStroke(1.dp, Color(0xFFFECACA)),
+        color = MaterialTheme.colorScheme.errorContainer,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.45f)),
     ) {
         Row(
             modifier = Modifier
@@ -657,14 +657,14 @@ private fun SettlementErrorBanner(
             Icon(
                 imageVector = Icons.Outlined.Info,
                 contentDescription = null,
-                tint = Color(0xFFDC2626),
+                tint = MaterialTheme.colorScheme.onErrorContainer,
                 modifier = Modifier.size(20.dp),
             )
             Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = message.toDisplayText(),
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF991B1B),
+                color = MaterialTheme.colorScheme.onErrorContainer,
                 modifier = Modifier.weight(1f),
             )
             IconButton(
@@ -674,7 +674,7 @@ private fun SettlementErrorBanner(
                 Icon(
                     imageVector = Icons.Outlined.Close,
                     contentDescription = "Hata mesajını kapat",
-                    tint = Color(0xFF991B1B),
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.size(16.dp),
                 )
             }

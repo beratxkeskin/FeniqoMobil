@@ -46,7 +46,7 @@ fun AssetDetailScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = AssetWarmBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             Row(
                 modifier = Modifier
@@ -59,7 +59,7 @@ fun AssetDetailScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Geri",
-                        tint = Color(0xFF1E293B),
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
 
@@ -67,7 +67,7 @@ fun AssetDetailScreen(
                     text = "Varlıklar",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF0F172A),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 Box {
@@ -75,7 +75,7 @@ fun AssetDetailScreen(
                         Icon(
                             imageVector = Icons.Filled.MoreVert,
                             contentDescription = "Diğer İşlemler",
-                            tint = Color(0xFF1E293B),
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
 
@@ -111,7 +111,7 @@ fun AssetDetailScreen(
         bottomBar = {
             if (asset != null) {
                 Surface(
-                    color = AssetWarmBackground,
+                    color = MaterialTheme.colorScheme.surface,
                     shadowElevation = 8.dp,
                 ) {
                     Box(
@@ -134,7 +134,7 @@ fun AssetDetailScreen(
                                         .height(52.dp),
                                     shape = RoundedCornerShape(16.dp),
                                     colors = ButtonDefaults.outlinedButtonColors(
-                                        contentColor = Color(0xFF1E293B),
+                                        contentColor = MaterialTheme.colorScheme.onSurface,
                                     ),
                                 ) {
                                     Icon(
@@ -238,7 +238,7 @@ fun AssetDetailScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFFF1F5F9))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .padding(horizontal = 14.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -246,7 +246,7 @@ fun AssetDetailScreen(
                             Icon(
                                 imageVector = Icons.Outlined.Info,
                                 contentDescription = null,
-                                tint = Color(0xFF475569),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(18.dp),
                             )
                             Text(
@@ -276,12 +276,12 @@ fun AssetDetailScreen(
                                 text = asset.name,
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF0F172A),
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
                                 text = asset.typeLabel,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color(0xFF64748B),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -316,7 +316,7 @@ fun AssetDetailScreen(
                                 Row(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(8.dp))
-                                        .background(Color(0xFFFEF3C7))
+                                        .background(MaterialTheme.colorScheme.secondaryContainer)
                                         .padding(horizontal = 8.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -364,20 +364,20 @@ fun AssetDetailScreen(
                                 Text(
                                     text = "Miktar",
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = Color(0xFF64748B),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Spacer(Modifier.height(6.dp))
                                 Text(
                                     text = asset.quantityFormatted ?: "—",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF0F172A),
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 if (asset.quantityFormatted != null) {
                                     Text(
                                         text = "birim",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = Color(0xFF94A3B8),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             }
@@ -398,14 +398,14 @@ fun AssetDetailScreen(
                                 Text(
                                     text = "Alış birim fiyatı",
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = Color(0xFF64748B),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Spacer(Modifier.height(6.dp))
                                 Text(
                                     text = asset.purchaseUnitPriceFormatted ?: "—",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF0F172A),
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
                         }
@@ -417,7 +417,7 @@ fun AssetDetailScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFFF1F5F9))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .padding(14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -425,7 +425,7 @@ fun AssetDetailScreen(
                             Icon(
                                 imageVector = Icons.Outlined.Info,
                                 contentDescription = null,
-                                tint = Color(0xFF475569),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(18.dp),
                             )
                             Text(
@@ -452,14 +452,14 @@ fun AssetDetailScreen(
                                 Text(
                                     text = "Hesaplanan maliyet",
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = Color(0xFF64748B),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 Text(
                                     text = asset.calculatedCostFormatted ?: "—",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF0F172A),
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
 
                                 Spacer(Modifier.height(14.dp))
@@ -467,7 +467,7 @@ fun AssetDetailScreen(
                                 Text(
                                     text = "Değer farkı",
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = Color(0xFF64748B),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Spacer(Modifier.height(4.dp))
 
@@ -504,7 +504,7 @@ fun AssetDetailScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(10.dp))
-                                        .background(Color(0xFFF1F5F9))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant)
                                         .padding(10.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -512,13 +512,13 @@ fun AssetDetailScreen(
                                     Icon(
                                         imageVector = Icons.Outlined.Info,
                                         contentDescription = null,
-                                        tint = Color(0xFF64748B),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(16.dp),
                                     )
                                     Text(
                                         text = "Girilen miktar ve alış fiyatından hesaplanır. Gerçekleşmiş kazanç değildir.",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = Color(0xFF475569),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             } else {
@@ -529,7 +529,7 @@ fun AssetDetailScreen(
                                     Icon(
                                         imageVector = Icons.Outlined.Calculate,
                                         contentDescription = null,
-                                        tint = Color(0xFF94A3B8),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(24.dp),
                                     )
                                     Column {
@@ -537,12 +537,12 @@ fun AssetDetailScreen(
                                             text = "Maliyet ve Değer Farkı",
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = Color(0xFF1E293B),
+                                            color = MaterialTheme.colorScheme.onSurface,
                                         )
                                         Text(
                                             text = "Miktar ve alış birim fiyatı girildiğinde maliyet ve değer farkı otomatik hesaplanır.",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = Color(0xFF64748B),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                 }
@@ -573,14 +573,14 @@ fun AssetDetailScreen(
                                 Icon(
                                     imageVector = Icons.Outlined.Description,
                                     contentDescription = null,
-                                    tint = Color(0xFF64748B),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(20.dp),
                                 )
                                 Text(
                                     text = "Değer kaynağı",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium,
-                                    color = Color(0xFF1E293B),
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
 
@@ -591,12 +591,12 @@ fun AssetDetailScreen(
                                 Text(
                                     text = asset.valueSource.toDisplayLabel(),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = Color(0xFF64748B),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                     contentDescription = "Bilgi",
-                                    tint = Color(0xFF94A3B8),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(18.dp),
                                 )
                             }

@@ -74,7 +74,6 @@ import com.feniqo.mobile.presentation.theme.PhoenixOrange
 private val FeniqoBackgroundSand = Color(0xFFF7F5F0)
 private val FeniqoSageGreen = Color(0xFF2D5A43)
 private val FeniqoExpenseRed = Color(0xFFE53935)
-private val FeniqoCardBackground = Color.White
 private val FeniqoIconBgGreen = Color(0xFFE8F5E9)
 
 /**
@@ -139,7 +138,7 @@ fun SubscriptionDetailHeroCard(
             text = uiState.name,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF1E232A),
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
         )
 
@@ -149,7 +148,7 @@ fun SubscriptionDetailHeroCard(
         Text(
             text = uiState.categoryName,
             style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFF757575),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
 
@@ -197,7 +196,7 @@ fun SubscriptionDetailHeroCard(
         Text(
             text = "Sonraki yenileme: ${uiState.nextRenewalDateFormatted}",
             style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFF757575),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -215,9 +214,9 @@ fun SubscriptionDetailAttributesCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = FeniqoCardBackground,
+            containerColor = MaterialTheme.colorScheme.surface,
         ),
-        border = BorderStroke(1.dp, Color(0xFFEBEBEB)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Column(
             modifier = Modifier
@@ -282,13 +281,13 @@ private fun AttributeRowItem(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = Color(0xFF757575),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp),
             )
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF424242),
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
 
@@ -296,7 +295,7 @@ private fun AttributeRowItem(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
-            color = Color(0xFF212121),
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }
@@ -307,7 +306,7 @@ private fun HorizontalDivider() {
         modifier = Modifier
             .fillMaxWidth()
             .height(1.dp)
-            .background(Color(0xFFF0F0F0)),
+            .background(MaterialTheme.colorScheme.surfaceVariant),
     )
 }
 
@@ -326,9 +325,9 @@ fun SubscriptionDetailSettingsCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = FeniqoCardBackground,
+            containerColor = MaterialTheme.colorScheme.surface,
         ),
-        border = BorderStroke(1.dp, Color(0xFFEBEBEB)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Column(
             modifier = Modifier
@@ -351,7 +350,7 @@ fun SubscriptionDetailSettingsCard(
                     Icon(
                         imageVector = Icons.Outlined.Notifications,
                         contentDescription = null,
-                        tint = Color(0xFF424242),
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(20.dp),
                     )
                     Column {
@@ -359,12 +358,12 @@ fun SubscriptionDetailSettingsCard(
                             text = "Yenileme takibi",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF212121),
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
                             text = "Yenileme tarihini takip et.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF757575),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -397,7 +396,7 @@ fun SubscriptionDetailSettingsCard(
                     Icon(
                         imageVector = Icons.Outlined.CalendarMonth,
                         contentDescription = null,
-                        tint = Color(0xFF424242),
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(20.dp),
                     )
                     Column {
@@ -405,12 +404,12 @@ fun SubscriptionDetailSettingsCard(
                             text = "Hatırlatıcı",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF212121),
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
                             text = "Yenilemeden önce hatırlat.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF757575),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -616,9 +615,9 @@ fun SubscriptionDetailSummaryCards(
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = FeniqoCardBackground,
+                containerColor = MaterialTheme.colorScheme.surface,
             ),
-            border = BorderStroke(1.dp, Color(0xFFEBEBEB)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {
             Row(
                 modifier = Modifier
@@ -645,14 +644,14 @@ fun SubscriptionDetailSummaryCards(
                     Text(
                         text = "Tahmini yıllık",
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF757575),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = yearlyCost,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF212121),
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
@@ -663,9 +662,9 @@ fun SubscriptionDetailSummaryCards(
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = FeniqoCardBackground,
+                containerColor = MaterialTheme.colorScheme.surface,
             ),
-            border = BorderStroke(1.dp, Color(0xFFEBEBEB)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {
             Row(
                 modifier = Modifier
@@ -677,7 +676,7 @@ fun SubscriptionDetailSummaryCards(
                 Box(
                     modifier = Modifier
                         .size(36.dp)
-                        .background(Color(0xFFFFEBEE), CircleShape),
+                        .background(MaterialTheme.colorScheme.errorContainer, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -692,7 +691,7 @@ fun SubscriptionDetailSummaryCards(
                     Text(
                         text = "Kaydedilen toplam",
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF757575),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
@@ -790,13 +789,13 @@ fun SubscriptionDetailActionButtons(
             Icon(
                 imageVector = Icons.Outlined.Repeat,
                 contentDescription = null,
-                tint = Color(0xFF9E9E9E),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(14.dp),
             )
             Text(
                 text = "Geçmiş için aşağı kaydır",
                 style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFF9E9E9E),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -820,7 +819,7 @@ fun SubscriptionMonthlyPaymentsChart(
             text = "Aylık ödemeler",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF1E232A),
+            color = MaterialTheme.colorScheme.onSurface,
         )
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -829,9 +828,9 @@ fun SubscriptionMonthlyPaymentsChart(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = FeniqoCardBackground,
+                containerColor = MaterialTheme.colorScheme.surface,
             ),
-            border = BorderStroke(1.dp, Color(0xFFEBEBEB)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {
             Column(
                 modifier = Modifier
@@ -857,7 +856,7 @@ fun SubscriptionMonthlyPaymentsChart(
                                     style = MaterialTheme.typography.labelSmall,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF424242),
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     maxLines = 1,
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -884,7 +883,7 @@ fun SubscriptionMonthlyPaymentsChart(
                                 style = MaterialTheme.typography.labelSmall,
                                 fontSize = 11.sp,
                                 fontWeight = if (bar.isCurrentMonth) FontWeight.Bold else FontWeight.Normal,
-                                color = if (bar.isCurrentMonth) FeniqoSageGreen else Color(0xFF757575),
+                                color = if (bar.isCurrentMonth) FeniqoSageGreen else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -914,7 +913,7 @@ fun SubscriptionRecentPaymentsCard(
             text = "Son ödemeler",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF1E232A),
+            color = MaterialTheme.colorScheme.onSurface,
         )
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -923,9 +922,9 @@ fun SubscriptionRecentPaymentsCard(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = FeniqoCardBackground,
+                containerColor = MaterialTheme.colorScheme.surface,
             ),
-            border = BorderStroke(1.dp, Color(0xFFEBEBEB)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {
             Column(
                 modifier = Modifier
@@ -951,7 +950,7 @@ fun SubscriptionRecentPaymentsCard(
                             Box(
                                 modifier = Modifier
                                     .size(36.dp)
-                                    .background(Color(0xFFFFEBEE), CircleShape),
+                                    .background(MaterialTheme.colorScheme.errorContainer, CircleShape),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
@@ -967,12 +966,12 @@ fun SubscriptionRecentPaymentsCard(
                                     text = item.formattedDate,
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF212121),
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
                                     text = if (item.isManual) "Kullanıcı onayıyla kaydedildi" else "Otomatik yenileme kaydı",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color(0xFF757575),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -990,7 +989,7 @@ fun SubscriptionRecentPaymentsCard(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
                                 contentDescription = null,
-                                tint = Color(0xFF9E9E9E),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp),
                             )
                         }
@@ -1048,7 +1047,7 @@ fun SubscriptionDetailExtraInfoCard(
             text = "Ek bilgiler",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF1E232A),
+            color = MaterialTheme.colorScheme.onSurface,
         )
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -1057,9 +1056,9 @@ fun SubscriptionDetailExtraInfoCard(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = FeniqoCardBackground,
+                containerColor = MaterialTheme.colorScheme.surface,
             ),
-            border = BorderStroke(1.dp, Color(0xFFEBEBEB)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {
             Column(
                 modifier = Modifier
@@ -1092,12 +1091,12 @@ fun SubscriptionDetailExtraInfoCard(
                                     text = "Web sitesi",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFF212121),
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
                                     text = "Kayıtlı hizmet bağlantısı",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color(0xFF757575),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -1105,7 +1104,7 @@ fun SubscriptionDetailExtraInfoCard(
                         Icon(
                             imageVector = Icons.Outlined.Language,
                             contentDescription = "Aç",
-                            tint = Color(0xFF757575),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp),
                         )
                     }
@@ -1140,12 +1139,12 @@ fun SubscriptionDetailExtraInfoCard(
                                     text = "Notlar",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFF212121),
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
                                     text = notes,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color(0xFF757575),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -1153,7 +1152,7 @@ fun SubscriptionDetailExtraInfoCard(
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
                             contentDescription = null,
-                            tint = Color(0xFF9E9E9E),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp),
                         )
                     }
@@ -1274,7 +1273,7 @@ fun SubscriptionDetailBottomActionButtons(
         Text(
             text = "Hizmet sağlayıcındaki abonelik iptal edilmez.",
             style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFF9E9E9E),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
     }

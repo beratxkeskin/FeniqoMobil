@@ -150,7 +150,7 @@ fun DebtSnowballPlanScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFFF3F4F6))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .padding(3.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
@@ -172,7 +172,7 @@ fun DebtSnowballPlanScreen(
                                         text = currency.name,
                                         fontWeight = FontWeight.SemiBold,
                                         fontSize = 13.sp,
-                                        color = if (isSelected) Color.White else Color(0xFF4B5563),
+                                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             }
@@ -203,10 +203,10 @@ fun DebtSnowballPlanScreen(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = Color.White,
-                                unfocusedContainerColor = Color.White,
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                                 focusedBorderColor = FeniqoSageGreen,
-                                unfocusedBorderColor = Color(0xFFE5E7EB),
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                             ),
                         )
 
@@ -454,14 +454,14 @@ fun DebtSnowballPlanScreen(
                                             modifier = Modifier
                                                 .size(28.dp)
                                                 .clip(CircleShape)
-                                                .background(Color(0xFFF3F4F6)),
+                                                .background(MaterialTheme.colorScheme.surfaceVariant),
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             Text(
                                                 text = alloc.month.toString(),
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = Color(0xFF4B5563),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         }
 

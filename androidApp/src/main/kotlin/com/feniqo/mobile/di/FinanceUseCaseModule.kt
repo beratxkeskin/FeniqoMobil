@@ -35,6 +35,14 @@ object FinanceUseCaseModule {
 
     @Provides
     @Singleton
+    fun providePersonalBackupRepository(
+        exporter: com.feniqo.mobile.data.backup.PersonalBackupExporter,
+        importer: com.feniqo.mobile.data.backup.PersonalBackupImporter,
+    ): com.feniqo.mobile.domain.repository.PersonalBackupRepository =
+        com.feniqo.mobile.data.backup.DefaultPersonalBackupRepository(exporter, importer)
+
+    @Provides
+    @Singleton
     fun provideBackupImportPlanner(
         entityIdGenerator: com.feniqo.mobile.domain.model.EntityIdGenerator,
     ): com.feniqo.mobile.data.backup.BackupImportPlanner =

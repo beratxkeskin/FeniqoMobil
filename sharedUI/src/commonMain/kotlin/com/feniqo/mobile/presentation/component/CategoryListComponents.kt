@@ -539,7 +539,7 @@ private fun SummaryStatsRow(
                 Text(
                     text = "Toplam kategori",
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF6B7280),
+                    color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                 )
             }
@@ -576,7 +576,7 @@ private fun SummaryStatsRow(
                 Text(
                     text = "Senin oluşturdukların",
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF6B7280),
+                    color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                 )
             }
@@ -621,7 +621,7 @@ private fun SummaryTopCategorySection(
             Text(
                 text = labelPrefix,
                 style = MaterialTheme.typography.labelSmall,
-                color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF6B7280),
+                color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
             )
 

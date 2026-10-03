@@ -246,8 +246,8 @@ fun GoalFilterTabs(
                     .clip(RoundedCornerShape(20.dp))
                     .clickable(role = Role.Tab) { onFilterSelected(filter) },
                 shape = RoundedCornerShape(20.dp),
-                color = if (isSelected) FeniqoGoalSageGreen else Color.White,
-                border = if (isSelected) null else BorderStroke(1.dp, FeniqoGoalCardBorder),
+                color = if (isSelected) FeniqoGoalSageGreen else MaterialTheme.colorScheme.surface,
+                border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 shadowElevation = if (isSelected) 1.dp else 0.dp,
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -564,7 +564,7 @@ fun GoalDeleteDialog(
                     modifier = Modifier
                         .size(56.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFFFEE2E2)),
+                        .background(MaterialTheme.colorScheme.errorContainer),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -610,7 +610,7 @@ fun GoalDeleteDialog(
                             .height(48.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFF1F5F9),
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
                             contentColor = Color(0xFF334155),
                         ),
                     ) {

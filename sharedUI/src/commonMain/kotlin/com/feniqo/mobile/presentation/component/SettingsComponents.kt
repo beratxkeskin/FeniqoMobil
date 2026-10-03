@@ -682,8 +682,8 @@ fun ConflictAlertCard(
     if (conflictCount <= 0) return
     Card(
         shape = RoundedCornerShape(FeniqoRadius.Large),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF7E6)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFD591)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.45f)),
         modifier = modifier.fillMaxWidth(),
     ) {
         Row(
@@ -695,7 +695,7 @@ fun ConflictAlertCard(
             Icon(
                 imageVector = Icons.Outlined.WarningAmber,
                 contentDescription = null,
-                tint = Color(0xFFD46B08),
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
                 modifier = Modifier.size(24.dp),
             )
             Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
@@ -703,12 +703,12 @@ fun ConflictAlertCard(
                 Text(
                     text = "$conflictCount kayıt inceleme bekliyor.",
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = Color(0xFF873800),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
                 Text(
                     text = "Olası bir çakışma tespit edildi.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFFAD4E00),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
                 )
             }
             TextButton(onClick = onInspectConflict) {

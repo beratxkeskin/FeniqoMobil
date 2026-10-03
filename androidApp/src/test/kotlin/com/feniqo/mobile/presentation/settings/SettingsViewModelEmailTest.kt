@@ -1,9 +1,5 @@
 package com.feniqo.mobile.presentation.settings
 
-import com.feniqo.mobile.data.backup.BackupImportResult
-import com.feniqo.mobile.data.backup.BackupScope
-import com.feniqo.mobile.data.backup.PersonalBackupExporter
-import com.feniqo.mobile.data.backup.PersonalBackupImporter
 import com.feniqo.mobile.domain.model.AppLanguage
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.EmailVerificationStatus
@@ -12,6 +8,10 @@ import com.feniqo.mobile.domain.model.ThemePreference
 import com.feniqo.mobile.domain.model.UserProfile
 import com.feniqo.mobile.domain.model.UserSettings
 import com.feniqo.mobile.domain.repository.AuthRepository
+import com.feniqo.mobile.domain.repository.PersonalBackupImportOutcome
+import com.feniqo.mobile.domain.repository.PersonalBackupPreview
+import com.feniqo.mobile.domain.repository.PersonalBackupRepository
+import com.feniqo.mobile.domain.repository.PersonalBackupScope
 import com.feniqo.mobile.domain.repository.AuthSession
 import com.feniqo.mobile.domain.repository.RepositoryResult
 import com.feniqo.mobile.domain.repository.SyncOverview
@@ -140,12 +140,11 @@ class SettingsViewModelEmailTest {
             override suspend fun updateMaskAmounts(mask: Boolean) = RepositoryResult.Success(Unit)
             override suspend fun updateNotificationPreferences(preferences: com.feniqo.mobile.domain.model.NotificationPreferences) = RepositoryResult.Success(Unit)
         }
-        val dummyBackupExporter = object : PersonalBackupExporter {
+        val dummyBackupRepository = object : PersonalBackupRepository {
             override suspend fun export(): String = "{}"
-            override suspend fun calculateScope(): BackupScope = BackupScope(0, 0)
-        }
-        val dummyBackupImporter = object : PersonalBackupImporter {
-            override suspend fun import(raw: String): BackupImportResult = BackupImportResult.Success(0, 0)
+            override suspend fun calculateScope() = PersonalBackupScope(0, 0)
+            override fun preview(raw: String) = PersonalBackupPreview.Valid(0, 0)
+            override suspend fun import(raw: String) = PersonalBackupImportOutcome.Success(0, 0)
         }
         val dummyTransactionRepo = object : com.feniqo.mobile.domain.repository.TransactionRepository {
             override fun observeTransactions(filter: com.feniqo.mobile.domain.repository.TransactionFilter) = MutableStateFlow(emptyList<com.feniqo.mobile.domain.model.Transaction>())
@@ -168,8 +167,7 @@ class SettingsViewModelEmailTest {
         return SettingsViewModel(
             authRepository = authRepo,
             userSettingsRepository = dummySettingsRepo,
-            backupExporter = dummyBackupExporter,
-            backupImporter = dummyBackupImporter,
+            personalBackupRepository = dummyBackupRepository,
             observeTransactions = ObserveTransactionsUseCase(dummyTransactionRepo),
             csvExporter = TransactionCsvExporter(),
             observeSyncOverviewUseCase = ObserveSyncOverviewUseCase(dummySyncRepo),

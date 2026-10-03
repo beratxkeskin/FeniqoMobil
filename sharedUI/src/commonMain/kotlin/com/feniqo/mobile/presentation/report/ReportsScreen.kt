@@ -506,7 +506,7 @@ fun ReportsScreen(
                                             Surface(
                                                 modifier = Modifier.size(40.dp),
                                                 shape = CircleShape,
-                                                color = Color(0xFFE8F5E9),
+                                                color = MaterialTheme.colorScheme.primaryContainer,
                                             ) {
                                                 Box(contentAlignment = Alignment.Center) {
                                                     Icon(
@@ -679,8 +679,8 @@ fun ReportsScreen(
                                  Surface(
                                      modifier = Modifier.fillMaxWidth(),
                                      shape = RoundedCornerShape(16.dp),
-                                     color = Color(0xFFF0FDF4),
-                                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFDCFCE7)),
+                                     color = MaterialTheme.colorScheme.primaryContainer,
+                                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                  ) {
                                      Row(
                                          modifier = Modifier.padding(16.dp),
@@ -690,7 +690,7 @@ fun ReportsScreen(
                                          Icon(
                                              imageVector = Icons.Outlined.Lightbulb,
                                              contentDescription = null,
-                                             tint = Color(0xFF166534),
+                                             tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                              modifier = Modifier.size(22.dp),
                                          )
                                          Text(
@@ -699,7 +699,7 @@ fun ReportsScreen(
                                                  fontSize = 13.sp,
                                                  lineHeight = 18.sp,
                                              ),
-                                             color = Color(0xFF166534),
+                                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                                          )
                                      }
                                  }

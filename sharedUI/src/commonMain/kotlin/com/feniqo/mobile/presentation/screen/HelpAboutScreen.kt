@@ -411,7 +411,7 @@ fun FeedbackScreen(
                 item {
                     Card(
                         shape = RoundedCornerShape(FeniqoRadius.Medium),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFDECEA)),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE57373).copy(alpha = 0.4f)),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
@@ -430,13 +430,13 @@ fun FeedbackScreen(
                                 Text(
                                     text = "Parola ve finansal ayrıntı paylaşma",
                                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = Color(0xFFD32F2F),
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = "Güvenliğin için lütfen parola, kart bilgileri, bakiye gibi hassas finansal bilgileri gönderme.",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color(0xFFD32F2F).copy(alpha = 0.9f),
+                                    color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.9f),
                                 )
                             }
                         }

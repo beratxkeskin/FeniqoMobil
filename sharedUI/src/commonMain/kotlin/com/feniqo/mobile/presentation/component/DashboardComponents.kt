@@ -840,7 +840,7 @@ private fun HomeTransactionItemRow(
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
                 ),
-                color = Color(0xFF0F172A),
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -848,7 +848,7 @@ private fun HomeTransactionItemRow(
             Text(
                 text = "${trx.categoryName} • ${DateFormatter.formatReadableDate(trx.transactionDate)}",
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                color = Color(0xFF64748B),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -878,7 +878,7 @@ fun HomeInsightCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F6F2)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
     ) {
         Row(
@@ -924,7 +924,7 @@ fun HomeInsightCard(
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                     ),
-                    color = Color(0xFF1B4332),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
 
                 Text(
@@ -933,7 +933,7 @@ fun HomeInsightCard(
                         fontSize = 13.sp,
                         lineHeight = 19.sp,
                     ),
-                    color = Color(0xFF1E293B),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
         }
@@ -960,7 +960,7 @@ fun HomeUpcomingPaymentsSection(
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
             ),
-            color = Color(0xFF0F172A),
+            color = MaterialTheme.colorScheme.onSurface,
         )
 
         Card(
@@ -978,7 +978,7 @@ fun HomeUpcomingPaymentsSection(
                 if (upcomingBills.isEmpty()) {
                     Surface(
                         shape = RoundedCornerShape(14.dp),
-                        color = Color(0xFFF8FAF9),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable(onClick = onSubscriptionsClick),
@@ -986,7 +986,7 @@ fun HomeUpcomingPaymentsSection(
                         Text(
                             text = "Yaklaşan ödeme bulunmuyor",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF64748B),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(16.dp),
                         )
                     }
@@ -1022,7 +1022,7 @@ private fun HomeUpcomingBillRow(
         // Tarih Rozeti: Gün + EYL
         Surface(
             shape = RoundedCornerShape(8.dp),
-            color = Color(0xFFEDF4F0),
+            color = MaterialTheme.colorScheme.primaryContainer,
             modifier = Modifier.size(width = 38.dp, height = 44.dp),
         ) {
             Column(
@@ -1036,7 +1036,7 @@ private fun HomeUpcomingBillRow(
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
                     ).merge(FeniqoTabularNumberStyle),
-                    color = Color(0xFF0F172A),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text = bill.monthShort.ifBlank { "AY" },
@@ -1044,7 +1044,7 @@ private fun HomeUpcomingBillRow(
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,
                     ),
-                    color = Color(0xFF475569),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -1067,7 +1067,7 @@ private fun HomeUpcomingBillRow(
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
                 ),
-                color = Color(0xFF0F172A),
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -1075,7 +1075,7 @@ private fun HomeUpcomingBillRow(
             Text(
                 text = "Abonelik",
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                color = Color(0xFF64748B),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
@@ -1089,13 +1089,13 @@ private fun HomeUpcomingBillRow(
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
                 ).merge(FeniqoTabularNumberStyle),
-                color = Color(0xFF0F172A),
+                color = MaterialTheme.colorScheme.onSurface,
             )
 
             Icon(
                 imageVector = Icons.Outlined.ChevronRight,
                 contentDescription = null,
-                tint = Color(0xFF94A3B8),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(16.dp),
             )
         }
@@ -1122,7 +1122,7 @@ fun HomeSavingsGoalSection(
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
             ),
-            color = Color(0xFF0F172A),
+            color = MaterialTheme.colorScheme.onSurface,
         )
 
         Card(
@@ -1144,7 +1144,7 @@ fun HomeSavingsGoalSection(
                 Box(
                     modifier = Modifier
                         .size(42.dp)
-                        .background(Color(0xFFE8F5E9), CircleShape),
+                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Canvas(modifier = Modifier.size(22.dp)) {
@@ -1171,7 +1171,7 @@ fun HomeSavingsGoalSection(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                             ),
-                            color = Color(0xFF0F172A),
+                            color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -1182,7 +1182,7 @@ fun HomeSavingsGoalSection(
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 13.sp,
                             ).merge(FeniqoTabularNumberStyle),
-                            color = Color(0xFF0F172A),
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
 
@@ -1192,7 +1192,7 @@ fun HomeSavingsGoalSection(
                             .fillMaxWidth()
                             .height(6.dp)
                             .clip(RoundedCornerShape(3.dp))
-                            .background(Color(0xFFE2E8F0)),
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
                     ) {
                         Box(
                             modifier = Modifier
@@ -1205,7 +1205,7 @@ fun HomeSavingsGoalSection(
                     Text(
                         text = "%${(goal.progressRatio * 100).toInt()} tamamlandı",
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                        color = Color(0xFF64748B),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -1232,7 +1232,7 @@ fun HomeMoneyScoreSection(
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
             ),
-            color = Color(0xFF0F172A),
+            color = MaterialTheme.colorScheme.onSurface,
         )
 
         Card(
@@ -1292,7 +1292,7 @@ fun HomeMoneyScoreSection(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 32.sp,
                             ).merge(FeniqoTabularNumberStyle),
-                            color = Color(0xFF0F172A),
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
 
@@ -1322,7 +1322,7 @@ fun HomeMoneyScoreSection(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                             ),
-                            color = Color(0xFF0F172A),
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
@@ -1335,7 +1335,7 @@ fun HomeMoneyScoreSection(
                         fontSize = 12.sp,
                         lineHeight = 17.sp,
                     ),
-                    color = Color(0xFF64748B),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -1371,7 +1371,7 @@ fun CurrencyScopeNoticeCard(
             Icon(
                 imageVector = Icons.Outlined.Info,
                 contentDescription = null,
-                tint = Color(0xFF64748B),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
             )
 
@@ -1379,7 +1379,7 @@ fun CurrencyScopeNoticeCard(
                 text = "$count farklı para birimindeki işlem $currencyCode özetine dahil edilmedi.",
                 style = MaterialTheme.typography.bodySmall.copy(
                     fontSize = 12.sp,
-                    color = Color(0xFF475569),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
                 modifier = Modifier.weight(1f),
             )
@@ -1387,7 +1387,7 @@ fun CurrencyScopeNoticeCard(
             Icon(
                 imageVector = Icons.Outlined.ChevronRight,
                 contentDescription = null,
-                tint = Color(0xFF94A3B8),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(16.dp),
             )
         }

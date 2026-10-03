@@ -8,15 +8,21 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -62,6 +68,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,8 +76,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -99,8 +113,6 @@ private val FeniqoBackgroundSand = Color(0xFFF7F5F0)
 private val FeniqoSageGreen = Color(0xFF2D5A43)
 private val FeniqoExpenseRed = Color(0xFFE53935)
 private val FeniqoGraphite = Color(0xFF1E232A)
-private val FeniqoCardBg = Color.White
-private val FeniqoBorderColor = Color(0xFFEBEBEB)
 
 /**
  * Görsel 2 (04, 05, 06) ve Görsel 3 (07, 08, 09, 10, 13, 14) onaylı Abonelik Form Ekranı.
@@ -138,6 +150,31 @@ fun SubscriptionFormScreen(
     modifier: Modifier = Modifier,
 ) {
     val isEnabled = !mutationState.isSubmitting
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val nameFocusRequester = remember { FocusRequester() }
+    val amountFocusRequester = remember { FocusRequester() }
+    val websiteFocusRequester = remember { FocusRequester() }
+    val notesFocusRequester = remember { FocusRequester() }
+    val nameErrorText = errors.nameError?.let {
+        if (it == SubscriptionFormFieldError.NAME_TOO_LONG) "Abonelik adı çok uzun." else "Bu alan zorunludur."
+    }
+    val amountErrorText = errors.amountError?.let { "Sıfırdan büyük geçerli bir tutar gir." }
+    val websiteErrorText = errors.websiteUrlError?.let { "Web sitesi adresi çok uzun." }
+    val notesErrorText = errors.notesError?.let { "Not en fazla izin verilen uzunluğu aşıyor." }
+    val dismissKeyboard = {
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+    }
+
+    LaunchedEffect(errors) {
+        when {
+            errors.nameError != null -> nameFocusRequester.requestFocus()
+            errors.amountError != null -> amountFocusRequester.requestFocus()
+            errors.websiteUrlError != null -> websiteFocusRequester.requestFocus()
+            errors.notesError != null -> notesFocusRequester.requestFocus()
+        }
+    }
 
     // Modal Sheet Durumları
     var showFrequencySheet by remember { mutableStateOf(false) }
@@ -178,7 +215,8 @@ fun SubscriptionFormScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(FeniqoBackgroundSand),
+            .background(MaterialTheme.colorScheme.background)
+            .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime)),
     ) {
         // 1. Üst Bar: Geri Dönüş, Başlık ve (Düzenlemede) Durum Rozeti
         Row(
@@ -196,14 +234,14 @@ fun SubscriptionFormScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                         contentDescription = "Geri dön",
-                        tint = Color(0xFF1E232A),
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
                     text = if (isEditMode) "Aboneliği düzenle" else "Abonelik ekle",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1E232A),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
 
@@ -235,8 +273,8 @@ fun SubscriptionFormScreen(
             if (!isEditMode) {
                 Surface(
                     shape = RoundedCornerShape(16.dp),
-                    color = Color.White,
-                    border = BorderStroke(1.dp, FeniqoBorderColor),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
@@ -252,7 +290,7 @@ fun SubscriptionFormScreen(
                             text = "Kişisel",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Medium,
-                            color = Color(0xFF424242),
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
@@ -262,7 +300,7 @@ fun SubscriptionFormScreen(
                     text = "Hangi servisi eklemek\nistiyorsunuz?",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1E232A),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 // Hızlı Seçim Şablonları (3'lü Kartlar)
@@ -271,7 +309,7 @@ fun SubscriptionFormScreen(
                         text = "Hızlı seçim",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1E232A),
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
 
                     Row(
@@ -287,8 +325,8 @@ fun SubscriptionFormScreen(
                                     .clip(RoundedCornerShape(16.dp))
                                     .clickable(enabled = isEnabled) { onTemplateSelect(template) },
                                 shape = RoundedCornerShape(16.dp),
-                                color = Color.White,
-                                border = BorderStroke(1.dp, FeniqoBorderColor),
+                                color = MaterialTheme.colorScheme.surface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                             ) {
                                 Column(
                                     modifier = Modifier
@@ -304,7 +342,7 @@ fun SubscriptionFormScreen(
                                         text = template.name,
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = Color(0xFF212121),
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                     )
@@ -320,8 +358,8 @@ fun SubscriptionFormScreen(
                             .clip(RoundedCornerShape(16.dp))
                             .clickable(enabled = isEnabled) { showCurrencyAndTemplatesSheet = true },
                         shape = RoundedCornerShape(16.dp),
-                        color = Color.White,
-                        border = BorderStroke(1.dp, FeniqoBorderColor),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Row(
                             modifier = Modifier
@@ -337,7 +375,7 @@ fun SubscriptionFormScreen(
                                 Icon(
                                     imageVector = Icons.Outlined.GridView,
                                     contentDescription = null,
-                                    tint = Color(0xFF424242),
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(20.dp),
                                 )
                                 Column {
@@ -345,19 +383,19 @@ fun SubscriptionFormScreen(
                                         text = "Diğer şablonlar",
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF212121),
+                                        color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Text(
                                         text = "Hazır abonelik şablonlarını göster",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = Color(0xFF757575),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             }
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
                                 contentDescription = null,
-                                tint = Color(0xFF9E9E9E),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp),
                             )
                         }
@@ -370,7 +408,7 @@ fun SubscriptionFormScreen(
                 text = "Abonelik bilgileri",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF1E232A),
+                color = MaterialTheme.colorScheme.onSurface,
             )
 
             // 1. Servis / Abonelik Adı Alanı
@@ -380,7 +418,7 @@ fun SubscriptionFormScreen(
                         text = "Servis / abonelik adı",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF424242),
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(text = " *", color = FeniqoExpenseRed, fontWeight = FontWeight.Bold)
                 }
@@ -389,21 +427,28 @@ fun SubscriptionFormScreen(
                 OutlinedTextField(
                     value = input.nameInput,
                     onValueChange = onNameChange,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(nameFocusRequester)
+                        .semantics {
+                            contentDescription = "Abonelik adı"
+                            nameErrorText?.let { error(it) }
+                        },
                     enabled = isEnabled,
-                    placeholder = { Text("İnternet", color = Color(0xFF9E9E9E)) },
+                    placeholder = { Text("İnternet", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     singleLine = true,
                     isError = hasNameError,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
-                        errorContainerColor = Color.White,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        errorContainerColor = MaterialTheme.colorScheme.surface,
                         focusedBorderColor = FeniqoSageGreen,
-                        unfocusedBorderColor = FeniqoBorderColor,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                         errorBorderColor = FeniqoExpenseRed,
                     ),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { amountFocusRequester.requestFocus() }),
                 )
 
                 if (hasNameError) {
@@ -433,7 +478,7 @@ fun SubscriptionFormScreen(
                     text = "Kategori (isteğe bağlı)",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF424242),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 Surface(
@@ -442,8 +487,8 @@ fun SubscriptionFormScreen(
                         .clip(RoundedCornerShape(12.dp))
                         .clickable(enabled = isEnabled) { showCategorySheet = true },
                     shape = RoundedCornerShape(12.dp),
-                    color = Color.White,
-                    border = BorderStroke(1.dp, FeniqoBorderColor),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Row(
                         modifier = Modifier
@@ -460,7 +505,7 @@ fun SubscriptionFormScreen(
                             Box(
                                 modifier = Modifier
                                     .size(32.dp)
-                                    .background(Color(0xFFE8F5E9), CircleShape),
+                                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
@@ -475,14 +520,14 @@ fun SubscriptionFormScreen(
                                 text = selectedCategory?.name ?: "Kategori seçin",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = if (selectedCategory != null) FontWeight.SemiBold else FontWeight.Normal,
-                                color = if (selectedCategory != null) Color(0xFF212121) else Color(0xFF9E9E9E),
+                                color = if (selectedCategory != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
 
                         Icon(
                             imageVector = Icons.Outlined.KeyboardArrowDown,
                             contentDescription = "Kategori seç",
-                            tint = Color(0xFF757575),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp),
                         )
                     }
@@ -495,7 +540,7 @@ fun SubscriptionFormScreen(
                     text = "Para birimi",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF424242),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 val currencySymbol = when (input.currency) {
@@ -518,8 +563,8 @@ fun SubscriptionFormScreen(
                         .clip(RoundedCornerShape(12.dp))
                         .clickable(enabled = isEnabled) { showCurrencyAndTemplatesSheet = true },
                     shape = RoundedCornerShape(12.dp),
-                    color = Color.White,
-                    border = BorderStroke(1.dp, FeniqoBorderColor),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Row(
                         modifier = Modifier
@@ -536,20 +581,20 @@ fun SubscriptionFormScreen(
                                 text = currencySymbol,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF424242),
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
                                 text = currencyFullName,
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF212121),
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                         }
 
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
                             contentDescription = null,
-                            tint = Color(0xFF9E9E9E),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp),
                         )
                     }
@@ -563,7 +608,7 @@ fun SubscriptionFormScreen(
                         text = "Dönemsel tutar",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF424242),
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(text = " *", color = FeniqoExpenseRed, fontWeight = FontWeight.Bold)
                 }
@@ -572,15 +617,22 @@ fun SubscriptionFormScreen(
                 OutlinedTextField(
                     value = input.amountInput,
                     onValueChange = onAmountChange,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(amountFocusRequester)
+                        .semantics {
+                            contentDescription = "Abonelik dönemsel tutarı"
+                            amountErrorText?.let { error(it) }
+                        },
                     enabled = isEnabled,
-                    placeholder = { Text("0,00", color = Color(0xFF9E9E9E)) },
+                    placeholder = { Text("0,00", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     singleLine = true,
                     isError = hasAmountError,
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Decimal,
                         imeAction = ImeAction.Next,
                     ),
+                    keyboardActions = KeyboardActions(onNext = { websiteFocusRequester.requestFocus() }),
                     shape = RoundedCornerShape(12.dp),
                     prefix = {
                         val symbol = when (input.currency) {
@@ -601,11 +653,11 @@ fun SubscriptionFormScreen(
                         color = FeniqoExpenseRed,
                     ),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
-                        errorContainerColor = Color.White,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        errorContainerColor = MaterialTheme.colorScheme.surface,
                         focusedBorderColor = FeniqoSageGreen,
-                        unfocusedBorderColor = FeniqoBorderColor,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                         errorBorderColor = FeniqoExpenseRed,
                     ),
                 )
@@ -637,7 +689,7 @@ fun SubscriptionFormScreen(
                     text = "Fatura dönemi",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF424242),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 val interval = input.intervalInput.trim().toIntOrNull() ?: 1
@@ -654,8 +706,8 @@ fun SubscriptionFormScreen(
                         .clip(RoundedCornerShape(12.dp))
                         .clickable(enabled = isEnabled) { showFrequencySheet = true },
                     shape = RoundedCornerShape(12.dp),
-                    color = Color.White,
-                    border = BorderStroke(1.dp, FeniqoBorderColor),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Row(
                         modifier = Modifier
@@ -671,21 +723,21 @@ fun SubscriptionFormScreen(
                             Icon(
                                 imageVector = Icons.Outlined.CalendarMonth,
                                 contentDescription = null,
-                                tint = Color(0xFF424242),
+                                tint = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(20.dp),
                             )
                             Text(
                                 text = cycleText,
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF212121),
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                         }
 
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
                             contentDescription = null,
-                            tint = Color(0xFF9E9E9E),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp),
                         )
                     }
@@ -706,7 +758,7 @@ fun SubscriptionFormScreen(
                         text = "Başlangıç tarihi",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF424242),
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
 
                     Surface(
@@ -715,8 +767,8 @@ fun SubscriptionFormScreen(
                             .clip(RoundedCornerShape(12.dp))
                             .clickable(enabled = isEnabled) { onStartDateClick() },
                         shape = RoundedCornerShape(12.dp),
-                        color = Color.White,
-                        border = BorderStroke(1.dp, FeniqoBorderColor),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Row(
                             modifier = Modifier
@@ -728,14 +780,14 @@ fun SubscriptionFormScreen(
                             Icon(
                                 imageVector = Icons.Outlined.CalendarMonth,
                                 contentDescription = null,
-                                tint = Color(0xFF424242),
+                                tint = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(18.dp),
                             )
                             Text(
                                 text = input.startDate?.let { DateFormatter.formatReadableDate(it) } ?: "Tarih seç",
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Medium,
-                                color = Color(0xFF212121),
+                                color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -752,7 +804,7 @@ fun SubscriptionFormScreen(
                         text = "Bitiş tarihi",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF424242),
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
 
                     Surface(
@@ -761,8 +813,8 @@ fun SubscriptionFormScreen(
                             .clip(RoundedCornerShape(12.dp))
                             .clickable(enabled = isEnabled) { onEndDateClick() },
                         shape = RoundedCornerShape(12.dp),
-                        color = Color.White,
-                        border = BorderStroke(1.dp, FeniqoBorderColor),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Row(
                             modifier = Modifier
@@ -779,14 +831,14 @@ fun SubscriptionFormScreen(
                                 Icon(
                                     imageVector = Icons.Outlined.Repeat,
                                     contentDescription = null,
-                                    tint = Color(0xFF424242),
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(18.dp),
                                 )
                                 Text(
                                     text = input.endDate?.let { DateFormatter.formatReadableDate(it) } ?: "Süresiz",
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Medium,
-                                    color = Color(0xFF212121),
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
@@ -800,7 +852,7 @@ fun SubscriptionFormScreen(
                                     Icon(
                                         imageVector = Icons.Outlined.Close,
                                         contentDescription = "Temizle",
-                                        tint = Color(0xFF9E9E9E),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(14.dp),
                                     )
                                 }
@@ -808,7 +860,7 @@ fun SubscriptionFormScreen(
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
                                     contentDescription = null,
-                                    tint = Color(0xFF9E9E9E),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(14.dp),
                                 )
                             }
@@ -821,8 +873,8 @@ fun SubscriptionFormScreen(
             if (!isEditMode) {
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = Color.White,
-                    border = BorderStroke(1.dp, FeniqoBorderColor),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Row(
@@ -833,13 +885,13 @@ fun SubscriptionFormScreen(
                         Icon(
                             imageVector = Icons.Outlined.Info,
                             contentDescription = null,
-                            tint = Color(0xFF757575),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp),
                         )
                         Text(
                             text = "Ayarlar ve ek bilgiler aşağıda devam ediyor.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF757575),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -850,13 +902,13 @@ fun SubscriptionFormScreen(
                 text = "Abonelik ayarları",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF1E232A),
+                color = MaterialTheme.colorScheme.onSurface,
             )
 
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, FeniqoBorderColor),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(
@@ -880,7 +932,7 @@ fun SubscriptionFormScreen(
                             Box(
                                 modifier = Modifier
                                     .size(36.dp)
-                                    .background(Color(0xFFE8F5E9), CircleShape),
+                                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
@@ -895,12 +947,12 @@ fun SubscriptionFormScreen(
                                     text = "Yenileme takibi",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFF212121),
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
                                     text = "Feniqo içinde takip edilir",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color(0xFF757575),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -920,7 +972,7 @@ fun SubscriptionFormScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(1.dp)
-                            .background(Color(0xFFF0F0F0)),
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
                     )
 
                     // Hatırlatıcı Switch
@@ -939,7 +991,7 @@ fun SubscriptionFormScreen(
                             Box(
                                 modifier = Modifier
                                     .size(36.dp)
-                                    .background(Color(0xFFE8F5E9), CircleShape),
+                                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
@@ -954,12 +1006,12 @@ fun SubscriptionFormScreen(
                                     text = "Hatırlatıcı",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFF212121),
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
                                     text = "7 gün önce ve yenileme günü",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color(0xFF757575),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -987,13 +1039,13 @@ fun SubscriptionFormScreen(
                 text = "Ek bilgiler (isteğe bağlı)",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF1E232A),
+                color = MaterialTheme.colorScheme.onSurface,
             )
 
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, FeniqoBorderColor),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(
@@ -1007,29 +1059,37 @@ fun SubscriptionFormScreen(
                         Text(
                             text = "Web sitesi",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFF757575),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         OutlinedTextField(
                             value = input.websiteUrlInput,
                             onValueChange = onWebsiteUrlChange,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(websiteFocusRequester)
+                                .semantics {
+                                    contentDescription = "Abonelik web sitesi"
+                                    websiteErrorText?.let { error(it) }
+                                },
                             enabled = isEnabled,
-                            placeholder = { Text("https://...", color = Color(0xFFBDBDBD)) },
+                            placeholder = { Text("https://...", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                             singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                            keyboardActions = KeyboardActions(onNext = { notesFocusRequester.requestFocus() }),
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Outlined.Language,
                                     contentDescription = null,
-                                    tint = Color(0xFF757575),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(18.dp),
                                 )
                             },
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = Color.White,
-                                unfocusedContainerColor = Color.White,
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                                 focusedBorderColor = FeniqoSageGreen,
-                                unfocusedBorderColor = FeniqoBorderColor,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                             ),
                         )
                     }
@@ -1039,29 +1099,37 @@ fun SubscriptionFormScreen(
                         Text(
                             text = "Notlar",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFF757575),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         OutlinedTextField(
                             value = input.notesInput,
                             onValueChange = onNotesChange,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(notesFocusRequester)
+                                .semantics {
+                                    contentDescription = "Abonelik notları"
+                                    notesErrorText?.let { error(it) }
+                                },
                             enabled = isEnabled,
-                            placeholder = { Text("Ev interneti", color = Color(0xFFBDBDBD)) },
+                            placeholder = { Text("Ev interneti", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                             singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }),
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Outlined.CalendarMonth,
                                     contentDescription = null,
-                                    tint = Color(0xFF757575),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(18.dp),
                                 )
                             },
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = Color.White,
-                                unfocusedContainerColor = Color.White,
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                                 focusedBorderColor = FeniqoSageGreen,
-                                unfocusedBorderColor = FeniqoBorderColor,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                             ),
                         )
                     }
@@ -1184,8 +1252,8 @@ fun SubscriptionFormScreen(
                             .height(48.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFEEEEEE),
-                            contentColor = Color(0xFF424242),
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
                         ),
                     ) {
                         Text(
@@ -1236,14 +1304,14 @@ fun SubscriptionFormScreen(
                             .height(48.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFEEEEEE),
-                            contentColor = Color(0xFF424242),
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
                         ),
                     ) {
                         Icon(
                             imageVector = if (isActive) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
                             contentDescription = null,
-                            tint = Color(0xFF424242),
+                            tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(18.dp),
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -1262,7 +1330,7 @@ fun SubscriptionFormScreen(
                             .height(48.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFFFEBEE),
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
                             contentColor = FeniqoExpenseRed,
                         ),
                     ) {
@@ -1312,7 +1380,7 @@ fun SubscriptionFormScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                             contentDescription = "Geri",
-                            tint = Color(0xFF1E232A),
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     Column {
@@ -1320,12 +1388,12 @@ fun SubscriptionFormScreen(
                             text = "Fatura dönemi",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1E232A),
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
                             text = "Yenileme sıklığını ve ilk dönemi seç.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF757575),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -1371,14 +1439,14 @@ fun SubscriptionFormScreen(
                         text = "Tekrar aralığı",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF424242),
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
 
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        color = Color.White,
-                        border = BorderStroke(1.dp, FeniqoBorderColor),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Row(
                             modifier = Modifier
@@ -1394,7 +1462,7 @@ fun SubscriptionFormScreen(
                                 Icon(
                                     imageVector = Icons.Outlined.Remove,
                                     contentDescription = "Azalt",
-                                    tint = if (tempIntervalInt > 1) Color(0xFF212121) else Color(0xFFBDBDBD),
+                                    tint = if (tempIntervalInt > 1) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
 
@@ -1402,7 +1470,7 @@ fun SubscriptionFormScreen(
                                 text = tempIntervalInt.toString(),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF212121),
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
 
                             IconButton(
@@ -1412,7 +1480,7 @@ fun SubscriptionFormScreen(
                                 Icon(
                                     imageVector = Icons.Outlined.Add,
                                     contentDescription = "Artır",
-                                    tint = Color(0xFF212121),
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
                         }
@@ -1424,7 +1492,7 @@ fun SubscriptionFormScreen(
                     Text(
                         text = "Tekrar",
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF757575),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
 
                     val repeatExplanation = when (tempFrequency) {
@@ -1437,8 +1505,8 @@ fun SubscriptionFormScreen(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFFFAFAFA),
-                        border = BorderStroke(1.dp, FeniqoBorderColor),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Row(
                             modifier = Modifier
@@ -1451,12 +1519,12 @@ fun SubscriptionFormScreen(
                                 text = repeatExplanation,
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF212121),
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Icon(
                                 imageVector = Icons.Outlined.KeyboardArrowDown,
                                 contentDescription = null,
-                                tint = Color(0xFF757575),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -1509,7 +1577,7 @@ fun SubscriptionFormScreen(
                     text = "Kategori seç",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1E232A),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 Column(
@@ -1531,8 +1599,8 @@ fun SubscriptionFormScreen(
                                     showCategorySheet = false
                                 },
                             shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) Color(0xFFE8F5E9) else Color.White,
-                            border = BorderStroke(1.dp, if (isSelected) FeniqoSageGreen else FeniqoBorderColor),
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, if (isSelected) FeniqoSageGreen else MaterialTheme.colorScheme.outlineVariant),
                         ) {
                             Row(
                                 modifier = Modifier
@@ -1566,7 +1634,7 @@ fun SubscriptionFormScreen(
                                         text = category.name,
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = Color(0xFF212121),
+                                        color = MaterialTheme.colorScheme.onSurface,
                                     )
                                 }
 
@@ -1595,8 +1663,8 @@ fun SubscriptionFormScreen(
                                 showCategorySheet = false
                             },
                         shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFFFAFAFA),
-                        border = BorderStroke(1.dp, FeniqoBorderColor),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Row(
                             modifier = Modifier
@@ -1608,7 +1676,7 @@ fun SubscriptionFormScreen(
                             Icon(
                                 imageVector = Icons.Outlined.Block,
                                 contentDescription = null,
-                                tint = Color(0xFF757575),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(18.dp),
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -1647,7 +1715,7 @@ fun SubscriptionFormScreen(
                     text = "Para birimi",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1E232A),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 Row(
@@ -1685,7 +1753,7 @@ fun SubscriptionFormScreen(
                     text = "Hızlı seçim",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1E232A),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 Column(
@@ -1710,8 +1778,8 @@ fun SubscriptionFormScreen(
                                             showCurrencyAndTemplatesSheet = false
                                         },
                                     shape = RoundedCornerShape(12.dp),
-                                    color = Color.White,
-                                    border = BorderStroke(1.dp, FeniqoBorderColor),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                 ) {
                                     Row(
                                         modifier = Modifier
@@ -1725,7 +1793,7 @@ fun SubscriptionFormScreen(
                                             text = template.name,
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = Color(0xFF212121),
+                                            color = MaterialTheme.colorScheme.onSurface,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
                                         )
@@ -1753,8 +1821,8 @@ fun SubscriptionFormScreen(
         ) {
             Surface(
                 shape = RoundedCornerShape(24.dp),
-                color = Color.White,
-                border = BorderStroke(1.dp, FeniqoBorderColor),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
                 Column(
                     modifier = Modifier
@@ -1766,7 +1834,7 @@ fun SubscriptionFormScreen(
                     Box(
                         modifier = Modifier
                             .size(56.dp)
-                            .background(Color(0xFFE8F5E9), CircleShape),
+                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
@@ -1782,14 +1850,14 @@ fun SubscriptionFormScreen(
                             text = "Hatırlatıcılar için izin gerekli",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1E232A),
+                            color = MaterialTheme.colorScheme.onSurface,
                             textAlign = TextAlign.Center,
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = "Yenilemeden 7 gün önce ve yenileme günü bildirim al.",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF757575),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                         )
                     }
@@ -1823,8 +1891,8 @@ fun SubscriptionFormScreen(
                                 .height(44.dp),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFEEEEEE),
-                                contentColor = Color(0xFF424242),
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurface,
                             ),
                         ) {
                             Text(
@@ -1848,8 +1916,8 @@ fun SubscriptionFormScreen(
         ) {
             Surface(
                 shape = RoundedCornerShape(24.dp),
-                color = Color.White,
-                border = BorderStroke(1.dp, FeniqoBorderColor),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
                 Column(
                     modifier = Modifier
@@ -1861,7 +1929,7 @@ fun SubscriptionFormScreen(
                     Box(
                         modifier = Modifier
                             .size(56.dp)
-                            .background(Color(0xFFFFEBEE), CircleShape),
+                            .background(MaterialTheme.colorScheme.errorContainer, CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
@@ -1877,14 +1945,14 @@ fun SubscriptionFormScreen(
                             text = "Kaydı silmek istiyor musun?",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1E232A),
+                            color = MaterialTheme.colorScheme.onSurface,
                             textAlign = TextAlign.Center,
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = "Feniqo'daki yenileme takibi durdurulur. Hizmet sağlayıcındaki abonelik iptal edilmez.",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF757575),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                         )
                     }
@@ -1921,8 +1989,8 @@ fun SubscriptionFormScreen(
                                 .height(44.dp),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFEEEEEE),
-                                contentColor = Color(0xFF424242),
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurface,
                             ),
                         ) {
                             Text(
@@ -1952,8 +2020,8 @@ private fun FrequencyChipItem(
             .clip(RoundedCornerShape(14.dp))
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
-        color = if (isSelected) Color(0xFFE8F5E9) else Color.White,
-        border = BorderStroke(1.dp, if (isSelected) FeniqoSageGreen else FeniqoBorderColor),
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, if (isSelected) FeniqoSageGreen else MaterialTheme.colorScheme.outlineVariant),
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -1963,7 +2031,7 @@ private fun FrequencyChipItem(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (isSelected) FeniqoSageGreen else Color(0xFF757575),
+                tint = if (isSelected) FeniqoSageGreen else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
             )
             Spacer(modifier = Modifier.height(4.dp))
@@ -1971,7 +2039,7 @@ private fun FrequencyChipItem(
                 text = title,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) FeniqoSageGreen else Color(0xFF424242),
+                color = if (isSelected) FeniqoSageGreen else MaterialTheme.colorScheme.onSurface,
             )
         }
     }
@@ -1992,8 +2060,8 @@ private fun CurrencyChip(
             .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) Color(0xFFE8F5E9) else Color.White,
-        border = BorderStroke(1.dp, if (isSelected) FeniqoSageGreen else FeniqoBorderColor),
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, if (isSelected) FeniqoSageGreen else MaterialTheme.colorScheme.outlineVariant),
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -2004,13 +2072,13 @@ private fun CurrencyChip(
                 text = symbol,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                color = if (isSelected) FeniqoSageGreen else Color(0xFF424242),
+                color = if (isSelected) FeniqoSageGreen else MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 text = name,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if (isSelected) FeniqoSageGreen else Color(0xFF757575),
+                color = if (isSelected) FeniqoSageGreen else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

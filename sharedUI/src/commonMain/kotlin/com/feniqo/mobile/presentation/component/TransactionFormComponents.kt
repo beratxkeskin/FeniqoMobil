@@ -65,6 +65,7 @@ import com.feniqo.mobile.presentation.transaction.TransactionFormFieldError
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -204,6 +205,8 @@ fun TransactionAmountField(
     errorText: String?,
     enabled: Boolean,
     modifier: Modifier = Modifier,
+    fieldModifier: Modifier = Modifier,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
     var currencyExpanded by remember { mutableStateOf(false) }
     Column(
@@ -228,10 +231,14 @@ fun TransactionAmountField(
                 singleLine = true,
                 textStyle = amountStyle,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                keyboardActions = keyboardActions,
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                modifier = Modifier.width(androidx.compose.foundation.layout.IntrinsicSize.Min)
+                modifier = fieldModifier.width(androidx.compose.foundation.layout.IntrinsicSize.Min)
                     .defaultMinSize(minWidth = 100.dp, minHeight = 56.dp)
-                    .semantics { contentDescription = "İşlem tutarı girişi" },
+                    .semantics {
+                        contentDescription = "İşlem tutarı girişi"
+                        errorText?.let { error(it) }
+                    },
                 decorationBox = { field ->
                     Box {
                         if (amountText.isEmpty()) Text("0,00", style = amountStyle.copy(
@@ -333,7 +340,9 @@ fun TransactionCategoryPicker(
     var open by remember { mutableStateOf(false) }
     var categoryQuery by remember { mutableStateOf("") }
     val selected = availableCategories.find { it.id == selectedCategoryId }
-    Surface(onClick = { open = true }, enabled = enabled, modifier = modifier.fillMaxWidth(),
+    Surface(onClick = { open = true }, enabled = enabled, modifier = modifier.fillMaxWidth().semantics {
+        errorText?.let { error(it) }
+    },
         color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp)) {
         Row(Modifier.defaultMinSize(minHeight = 80.dp).padding(16.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -517,9 +526,13 @@ fun TransactionDatePickerField(
     errorText: String?,
     enabled: Boolean,
     modifier: Modifier = Modifier,
+    fieldModifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Surface(onClick = onDateClick, enabled = enabled,
+            modifier = fieldModifier.fillMaxWidth().semantics {
+                errorText?.let { error(it) }
+            },
             shape = RoundedCornerShape(FeniqoRadius.Medium),
             color = MaterialTheme.colorScheme.surface) {
             Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 80.dp).padding(16.dp),
@@ -744,6 +757,8 @@ fun TransactionTitleField(
     enabled: Boolean,
     isExpense: Boolean = true,
     modifier: Modifier = Modifier,
+    fieldModifier: Modifier = Modifier,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
     Surface(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(FeniqoRadius.Medium),
         color = MaterialTheme.colorScheme.surface) {
@@ -757,9 +772,13 @@ fun TransactionTitleField(
                     isError = errorText != null, singleLine = true,
                     placeholder = { Text(if (isExpense) "Örn: Market alışverişi" else "Örn: Maaş") },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = keyboardActions,
                     shape = RoundedCornerShape(FeniqoRadius.Small),
-                    modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
-                        .semantics { contentDescription = "İşlem Adı" },
+                    modifier = fieldModifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
+                        .semantics {
+                            contentDescription = "İşlem Adı"
+                            errorText?.let { error(it) }
+                        },
                 )
                 if (errorText != null) Text(errorText, color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall)
@@ -780,6 +799,8 @@ fun TransactionNoteField(
     errorText: String?,
     enabled: Boolean,
     modifier: Modifier = Modifier,
+    fieldModifier: Modifier = Modifier,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -818,12 +839,16 @@ fun TransactionNoteField(
                 keyboardType = KeyboardType.Text,
                 imeAction = ImeAction.Done,
             ),
+            keyboardActions = keyboardActions,
             shape = RoundedCornerShape(FeniqoRadius.Medium),
             minLines = 2,
             maxLines = 4,
-            modifier = Modifier
+            modifier = fieldModifier
                 .fillMaxWidth()
-                .semantics { contentDescription = "İşlem notu" },
+                .semantics {
+                    contentDescription = "İşlem notu"
+                    errorText?.let { error(it) }
+                },
         )
 
         if (errorText != null) {

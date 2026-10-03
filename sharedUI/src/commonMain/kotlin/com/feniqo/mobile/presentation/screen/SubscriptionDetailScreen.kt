@@ -39,7 +39,6 @@ import com.feniqo.mobile.presentation.component.SubscriptionRecentPaymentsCard
 import com.feniqo.mobile.presentation.subscription.SubscriptionDetailUiState
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 
-private val FeniqoBackgroundSand = Color(0xFFF7F5F0)
 
 /**
  * Görsel 1 Onaylı Abonelik Detay Ekranı.
@@ -61,7 +60,7 @@ fun SubscriptionDetailScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(FeniqoBackgroundSand),
+            .background(MaterialTheme.colorScheme.background),
     ) {
         when {
             uiState.isLoading -> {
@@ -103,7 +102,7 @@ fun SubscriptionDetailScreen(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                                 contentDescription = "Geri dön",
-                                tint = Color(0xFF1E232A),
+                                tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
 
@@ -111,7 +110,7 @@ fun SubscriptionDetailScreen(
                             text = "Abonelikler",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF1E232A),
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
 
@@ -122,7 +121,7 @@ fun SubscriptionDetailScreen(
                         Icon(
                             imageVector = Icons.Outlined.Edit,
                             contentDescription = "Aboneliği düzenle",
-                            tint = Color(0xFF1E232A),
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }

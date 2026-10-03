@@ -2,12 +2,6 @@ package com.feniqo.mobile.presentation.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.feniqo.mobile.data.backup.BackupDecodeResult
-import com.feniqo.mobile.data.backup.BackupImportResult
-import com.feniqo.mobile.data.backup.BackupScope
-import com.feniqo.mobile.data.backup.FeniqoBackupCodec
-import com.feniqo.mobile.data.backup.PersonalBackupExporter
-import com.feniqo.mobile.data.backup.PersonalBackupImporter
 import com.feniqo.mobile.domain.model.AppLanguage
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.DateFormatPreference
@@ -18,6 +12,10 @@ import com.feniqo.mobile.domain.model.ThemePreference
 import com.feniqo.mobile.domain.model.UserProfile
 import com.feniqo.mobile.domain.model.UserSettings
 import com.feniqo.mobile.domain.repository.AuthRepository
+import com.feniqo.mobile.domain.repository.PersonalBackupImportOutcome
+import com.feniqo.mobile.domain.repository.PersonalBackupPreview
+import com.feniqo.mobile.domain.repository.PersonalBackupRepository
+import com.feniqo.mobile.domain.repository.PersonalBackupScope
 import com.feniqo.mobile.domain.repository.RepositoryResult
 import com.feniqo.mobile.domain.repository.SyncOverview
 import com.feniqo.mobile.domain.repository.SyncPhase
@@ -36,7 +34,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 sealed interface BackupExportResult {
-    data class Success(val json: String, val scope: BackupScope) : BackupExportResult
+    data class Success(val json: String, val scope: PersonalBackupScope) : BackupExportResult
     data class Failure(val reason: String) : BackupExportResult
 }
 
@@ -56,7 +54,7 @@ data class SettingsUiState(
         lastSuccessfulSyncAt = null,
         lastError = null,
     ),
-    val backupScope: BackupScope = BackupScope(0, 0),
+    val backupScope: PersonalBackupScope = PersonalBackupScope(0, 0),
     val isSavingProfile: Boolean = false,
     val profileSaveSuccess: Boolean = false,
     val profileError: String? = null,
@@ -77,8 +75,7 @@ data class SettingsUiState(
 class SettingsViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val userSettingsRepository: UserSettingsRepository,
-    private val backupExporter: PersonalBackupExporter,
-    private val backupImporter: PersonalBackupImporter,
+    private val personalBackupRepository: PersonalBackupRepository,
     private val observeTransactions: ObserveTransactionsUseCase,
     private val csvExporter: TransactionCsvExporter,
     observeSyncOverviewUseCase: ObserveSyncOverviewUseCase,
@@ -96,7 +93,7 @@ class SettingsViewModel @Inject constructor(
     private val emailVerificationSent = MutableStateFlow(false)
     private val isSendingEmailVerification = MutableStateFlow(false)
 
-    private val backupScopeState = MutableStateFlow(BackupScope(0, 0))
+    private val backupScopeState = MutableStateFlow(PersonalBackupScope(0, 0))
 
     private data class FormOperationState(
         val isSavingProfile: Boolean,
@@ -183,7 +180,7 @@ class SettingsViewModel @Inject constructor(
     fun refreshBackupScope() {
         viewModelScope.launch {
             runCatching {
-                backupScopeState.value = backupExporter.calculateScope()
+                backupScopeState.value = personalBackupRepository.calculateScope()
             }
         }
     }
@@ -428,22 +425,19 @@ class SettingsViewModel @Inject constructor(
     suspend fun buildCsv(): String = csvExporter.export(observeTransactions().first())
 
     suspend fun exportJsonBackup(): BackupExportResult = runCatching {
-        val scope = backupExporter.calculateScope()
-        val json = backupExporter.export()
+        val scope = personalBackupRepository.calculateScope()
+        val json = personalBackupRepository.export()
         BackupExportResult.Success(json = json, scope = scope)
     }.getOrElse {
         BackupExportResult.Failure(it.message ?: "export_failed")
     }
 
-    fun previewBackup(raw: String): BackupPreviewResult = when (val result = FeniqoBackupCodec.decode(raw)) {
-        is BackupDecodeResult.Invalid -> BackupPreviewResult.Invalid(result.reason)
-        is BackupDecodeResult.Valid -> BackupPreviewResult.Valid(
-            categoryCount = result.backup.categories.size,
-            transactionCount = result.backup.transactions.size,
-        )
+    fun previewBackup(raw: String): BackupPreviewResult = when (val result = personalBackupRepository.preview(raw)) {
+        is PersonalBackupPreview.Invalid -> BackupPreviewResult.Invalid(result.reason)
+        is PersonalBackupPreview.Valid -> BackupPreviewResult.Valid(result.categoryCount, result.transactionCount)
     }
 
-    suspend fun importBackup(raw: String): BackupImportResult = backupImporter.import(raw)
+    suspend fun importBackup(raw: String): PersonalBackupImportOutcome = personalBackupRepository.import(raw)
 }
 
 private data class FiveFlags(

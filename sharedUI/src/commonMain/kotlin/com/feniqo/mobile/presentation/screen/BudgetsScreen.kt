@@ -54,7 +54,6 @@ import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTheme
 
 private val FeniqoSageGreen = Color(0xFF2D5A43)
-private val FeniqoBackgroundSand = Color(0xFFF7F5F0)
 
 /**
  * 01 Bütçeler listesi ve dönem özeti ekranının durumsuz (stateless) Compose sunumudur.
@@ -81,7 +80,7 @@ fun BudgetsScreen(
 
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = FeniqoBackgroundSand,
+        color = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier

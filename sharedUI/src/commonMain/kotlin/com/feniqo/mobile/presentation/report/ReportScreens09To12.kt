@@ -127,7 +127,7 @@ fun CashFlowReportScreen(
                                     .height(40.dp)
                                     .clip(RoundedCornerShape(12.dp))
                                     .clickable { onSelectMonthRange(months) },
-                                color = if (isSelected) ColorSageGreen else Color.White,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
                                 shape = RoundedCornerShape(12.dp),
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
@@ -135,7 +135,7 @@ fun CashFlowReportScreen(
                                         text = label,
                                         fontSize = 13.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                                     )
                                 }
                             }
@@ -824,7 +824,7 @@ fun SelectComparisonPeriodSheet(
                         .padding(vertical = 4.dp)
                         .clip(RoundedCornerShape(14.dp))
                         .clickable { selectedOption = key },
-                    color = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.White,
+                    color = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
                     shape = RoundedCornerShape(14.dp),
                 ) {
                     Row(

@@ -258,7 +258,7 @@ fun ReportFiltersSheetContent(
                     .clip(RoundedCornerShape(14.dp))
                     .clickable(role = Role.Button, onClick = onSelectCategory),
                 shape = RoundedCornerShape(14.dp),
-                color = Color(0xFFF9FAFB),
+                color = MaterialTheme.colorScheme.surface,
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
                 Row(
@@ -318,7 +318,7 @@ fun ReportFiltersSheetContent(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
-                color = Color(0xFFEDF5F0),
+                color = MaterialTheme.colorScheme.primaryContainer,
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -335,13 +335,13 @@ fun ReportFiltersSheetContent(
                         Text(
                             text = "Aktif filtreler",
                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                            color = Color(0xFF1E3A2F),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = summaryText,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF4B5563),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
                         )
                     }
                 }

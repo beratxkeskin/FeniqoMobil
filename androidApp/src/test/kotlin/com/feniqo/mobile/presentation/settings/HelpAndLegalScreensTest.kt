@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.feniqo.mobile.presentation.screen.HelpCenterScreen
 import com.feniqo.mobile.presentation.screen.LegalInfoScreen
 import com.feniqo.mobile.presentation.theme.FeniqoTheme
@@ -22,7 +23,7 @@ class HelpAndLegalScreensTest {
     val compose = createComposeRule()
 
     @Test
-    fun help_center_articles_preserve_honest_preparing_status() {
+    fun help_center_articles_showPublishedStatusAndOpenArticle() {
         var clickedArticle: String? = null
         compose.setContent {
             FeniqoTheme {
@@ -34,10 +35,9 @@ class HelpAndLegalScreensTest {
             }
         }
 
-        // Açık olan kategorideki "Hazırlanıyor" rozeti görünmeli
-        val preparingNodes = compose.onAllNodesWithText("Hazırlanıyor")
-        assert(preparingNodes.fetchSemanticsNodes().isNotEmpty()) {
-            "Help center articles must preserve honest 'Hazırlanıyor' status."
+        val publishedNodes = compose.onAllNodesWithText("Yayında")
+        assert(publishedNodes.fetchSemanticsNodes().isNotEmpty()) {
+            "Published help center articles must expose their current status."
         }
 
         // Bir makaleye tıklanabilmeli
@@ -46,7 +46,7 @@ class HelpAndLegalScreensTest {
     }
 
     @Test
-    fun legal_info_preserves_honest_preparing_and_pending_approval_badges() {
+    fun legal_info_preservesPendingApprovalAndShowsPublishedLicenses() {
         compose.setContent {
             FeniqoTheme {
                 LegalInfoScreen(
@@ -59,7 +59,8 @@ class HelpAndLegalScreensTest {
         val pendingNodes = compose.onAllNodesWithText("Onaylı metin bekleniyor")
         assertEquals(2, pendingNodes.fetchSemanticsNodes().size)
 
-        // Açık kaynak lisanslar "Hazırlanıyor" rozetini korumalı
-        compose.onNodeWithText("Hazırlanıyor").assertIsDisplayed()
+        compose.onNodeWithText("Görüntüle").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Kotlin — Apache License 2.0", substring = true).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Supabase Kotlin — MIT License", substring = true).performScrollTo().assertIsDisplayed()
     }
 }

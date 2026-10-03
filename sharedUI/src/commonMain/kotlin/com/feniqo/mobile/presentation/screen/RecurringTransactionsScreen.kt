@@ -336,7 +336,7 @@ private fun RecurringListEmptyState(
         Box(
             modifier = Modifier
                 .size(110.dp)
-                .background(Color(0xFFE8F5EE), CircleShape),
+                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -449,7 +449,7 @@ private fun RecurringListErrorState(
                     Box(
                         modifier = Modifier
                             .size(36.dp)
-                            .background(Color(0xFFFEE2E2), CircleShape),
+                            .background(MaterialTheme.colorScheme.errorContainer, CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
@@ -484,7 +484,7 @@ private fun RecurringListErrorState(
                 OutlinedButton(
                     onClick = onRetry,
                     shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, Color(0xFFCBD5E1)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = MaterialTheme.colorScheme.onSurface,
                     ),
@@ -522,7 +522,7 @@ private fun RecurringListLoadingState(
                     .height(84.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, Color(0xFFF1F5F9)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
                 Row(
                     modifier = Modifier
@@ -533,7 +533,7 @@ private fun RecurringListLoadingState(
                     Box(
                         modifier = Modifier
                             .size(44.dp)
-                            .background(Color(0xFFF1F5F9), CircleShape),
+                            .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
                     )
                     Spacer(modifier = Modifier.width(14.dp))
                     Column(modifier = Modifier.weight(1f)) {
@@ -541,21 +541,21 @@ private fun RecurringListLoadingState(
                             modifier = Modifier
                                 .width(120.dp)
                                 .height(14.dp)
-                                .background(Color(0xFFF1F5F9), RoundedCornerShape(4.dp)),
+                                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp)),
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Box(
                             modifier = Modifier
                                 .width(80.dp)
                                 .height(12.dp)
-                                .background(Color(0xFFF1F5F9), RoundedCornerShape(4.dp)),
+                                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp)),
                         )
                     }
                     Box(
                         modifier = Modifier
                             .width(60.dp)
                             .height(16.dp)
-                            .background(Color(0xFFF1F5F9), RoundedCornerShape(4.dp)),
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp)),
                     )
                 }
             }

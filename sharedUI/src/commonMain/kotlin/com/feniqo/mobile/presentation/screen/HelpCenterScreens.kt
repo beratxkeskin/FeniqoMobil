@@ -41,14 +41,73 @@ data class HelpCategory(
 data class HelpArticle(
     val id: String,
     val title: String,
-    val status: String = "Hazırlanıyor",
+    val paragraphs: List<String>,
+    val status: String = "Yayında",
+)
+
+internal val publishedHelpCategories = listOf(
+    HelpCategory(
+        id = "account_login",
+        title = "Hesap ve giriş",
+        articles = listOf(
+            HelpArticle("acc_1", "Hesap nasıl oluşturulur?", listOf(
+                "Karşılama ekranından Kayıt Ol'u seç. E-posta adresini ve güçlü bir parola girdikten sonra hesabını oluşturabilirsin.",
+                "E-posta doğrulama iletisi geldiyse bağlantıyı açıp uygulamaya dön. Doğrulama tamamlandığında aynı e-posta ve parolayla giriş yapabilirsin.",
+            )),
+            HelpArticle("acc_2", "Parolamı unuttum, ne yapmalıyım?", listOf(
+                "Giriş ekranındaki Parolamı Unuttum bağlantısını aç ve hesap e-posta adresini gir.",
+                "E-postadaki güvenli bağlantı Feniqo'yu parola yenileme ekranında açar. Yeni parolanı kaydettikten sonra giriş ekranından devam edebilirsin. Bağlantı süresi dolmuşsa yeni bir ileti iste.",
+            )),
+        ),
+    ),
+    HelpCategory(
+        id = "transactions_categories",
+        title = "İşlemler ve kategoriler",
+        articles = listOf(
+            HelpArticle("txn_1", "Gelir ve gider nasıl eklenir?", listOf(
+                "Alt çubuktaki + düğmesine dokunup Gider veya Gelir'i seç. Tutarı, işlem adını, kategoriyi ve tarihi doldurup kaydet.",
+                "Kayıt önce cihazındaki güvenli yerel veritabanına yazılır. İnternet yoksa kullanmaya devam edebilir, bağlantı geri geldiğinde eşitlemenin tamamlanmasını bekleyebilirsin.",
+            )),
+            HelpArticle("txn_2", "Özel kategori nasıl oluşturulur?", listOf(
+                "Daha Fazla > Kategoriler bölümüne gir ve yeni kategori eylemini seç. Gelir veya gider türünü, adı, rengi ve ikonu belirleyip kaydet.",
+                "Kullanılmış özel kategoriler veri bütünlüğünü korumak için kalıcı olarak silinmek yerine arşivlenebilir.",
+            )),
+        ),
+    ),
+    HelpCategory(
+        id = "backup_sync",
+        title = "Yedekleme ve senkronizasyon",
+        articles = listOf(
+            HelpArticle("sync_1", "Çevrimdışı kayıtlar ne zaman eşitlenir?", listOf(
+                "Çevrimdışıyken yaptığın değişiklikler cihazda saklanır ve eşitleme kuyruğuna eklenir. Ağ geri geldiğinde uygulama bunları güvenli sırayla göndermeyi dener.",
+                "Bekleyen, başarısız veya çakışan kayıtları Profil Merkezi ya da Veri Yönetimi içindeki senkronizasyon durumundan inceleyebilirsin. Çakışmalar kullanıcı kararı olmadan sessizce ezilmez.",
+            )),
+            HelpArticle("sync_2", "Verilerimi nasıl yedekleyebilirim?", listOf(
+                "Uygulama Ayarları > Veri Yönetimi bölümünden kişisel kategori ve işlemlerini JSON yedeği olarak dışa aktarabilirsin.",
+                "Yedek; parola, oturum anahtarı, makbuz yolu veya senkronizasyon metadata'sı içermez. İçe aktarmadan önce dosyanın özeti gösterilir ve açık onayın istenir.",
+            )),
+        ),
+    ),
+    HelpCategory(
+        id = "privacy_security",
+        title = "Gizlilik ve güvenlik",
+        articles = listOf(
+            HelpArticle("sec_1", "Hesap verilerim güvende mi?", listOf(
+                "Finansal veriler kullanıcı ve çalışma alanı sahipliği kurallarıyla ayrılır. Mobil uygulamada service-role anahtarı bulunmaz; uzak erişim doğrulanmış kullanıcı oturumuyla yapılır.",
+                "Uygulama hassas finansal içeriği, parolayı, tokenı veya makbuz metnini günlük kayıtlarına yazmaz.",
+            )),
+            HelpArticle("sec_2", "Verilerim nasıl saklanıyor?", listOf(
+                "Ekranlar veriyi doğrudan ağdan değil, cihazdaki Room veritabanından okur. Yerel değişiklik ve eşitleme kuyruğu aynı veritabanı işlemi içinde kaydedilir.",
+                "Silme işlemleri cihazlar arası tutarlılık için soft-delete olarak eşitlenir. Aynı kayıt iki cihazda değişirse iki kopya karar verene kadar korunur.",
+            )),
+        ),
+    ),
 )
 
 /**
  * Pano B1: Yardım Merkezi Ekranı.
  *
- * Arama ve akordeon kategoriler sunar. Doğrulanmış gerçek metinler olmadığı sürece
- * uydurma cevap üretmez; makaleleri dürüstçe "Hazırlanıyor" olarak sunar.
+ * Arama ve akordeon kategorilerle ürün sözleşmesinden türetilen yardım içeriklerini sunar.
  */
 @Composable
 fun HelpCenterScreen(
@@ -60,42 +119,7 @@ fun HelpCenterScreen(
     var searchQuery by remember { mutableStateOf("") }
     var expandedCategoryId by remember { mutableStateOf<String?>("privacy_security") }
 
-    val categories = remember {
-        listOf(
-            HelpCategory(
-                id = "account_login",
-                title = "Hesap ve giriş",
-                articles = listOf(
-                    HelpArticle("acc_1", "Hesap nasıl oluşturulur?"),
-                    HelpArticle("acc_2", "Parolamı unuttum, ne yapmalıyım?"),
-                ),
-            ),
-            HelpCategory(
-                id = "transactions_categories",
-                title = "İşlemler ve kategoriler",
-                articles = listOf(
-                    HelpArticle("txn_1", "Gelir ve gider nasıl eklenir?"),
-                    HelpArticle("txn_2", "Özel kategori nasıl oluşturulur?"),
-                ),
-            ),
-            HelpCategory(
-                id = "backup_sync",
-                title = "Yedekleme ve senkronizasyon",
-                articles = listOf(
-                    HelpArticle("sync_1", "Çevrimdışı kayıtlar ne zaman eşitlenir?"),
-                    HelpArticle("sync_2", "Verilerimi nasıl yedekleyebilirim?"),
-                ),
-            ),
-            HelpCategory(
-                id = "privacy_security",
-                title = "Gizlilik ve güvenlik",
-                articles = listOf(
-                    HelpArticle("sec_1", "Hesap verilerim güvende mi?"),
-                    HelpArticle("sec_2", "Verilerim nasıl saklanıyor?"),
-                ),
-            ),
-        )
-    }
+    val categories = remember { publishedHelpCategories }
 
     val filteredArticles = remember(searchQuery) {
         if (searchQuery.isBlank()) emptyList()
@@ -374,9 +398,7 @@ fun HelpCenterScreen(
 }
 
 /**
- * Pano B2: Hazırlanan Makale Durumu Ekranı.
- *
- * Henüz onaylı metni olmayan başlıklar için dürüst boş durum sunar.
+ * Pano B2: yayımlanmış yardım makalesi ekranı.
  */
 @Composable
 fun HelpArticleStatusScreen(
@@ -385,6 +407,9 @@ fun HelpArticleStatusScreen(
     onNavigateToFeedback: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val article = remember(articleTitle) {
+        publishedHelpCategories.flatMap { it.articles }.firstOrNull { it.title == articleTitle }
+    }
     Surface(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
@@ -399,16 +424,16 @@ fun HelpArticleStatusScreen(
                 onBack = onBack,
             )
 
-            Column(
+            LazyColumn(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .padding(horizontal = FeniqoSpacing.Large),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
+                verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
+                contentPadding = PaddingValues(vertical = FeniqoSpacing.ExtraLarge),
             ) {
-                // Büyük dairesel açık yeşil zemin + belge ikonu
-                Box(
+                item { Box(
                     modifier = Modifier
                         .size(120.dp)
                         .clip(CircleShape)
@@ -421,24 +446,31 @@ fun HelpArticleStatusScreen(
                         tint = FeniqoSageGreen,
                         modifier = Modifier.size(56.dp),
                     )
-                }
+                } }
 
-                Spacer(modifier = Modifier.height(FeniqoSpacing.ExtraLarge))
-
-                Text(
-                    text = "Bu içerik hazırlanıyor",
+                item { Text(
+                    text = article?.title ?: "Yardım içeriği bulunamadı",
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface,
-                )
+                ) }
 
-                Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
-
-                Text(
-                    text = "Doğrulanmış yardım metni yayımlandığında burada görünecek.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = FeniqoSpacing.Medium),
-                )
+                if (article != null) {
+                    items(article.paragraphs) { paragraph ->
+                        Text(
+                            text = paragraph,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                } else {
+                    item {
+                        Text(
+                            text = "Yardım merkezine dönerek yayımlanmış bir başlık seçebilirsin.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
 
             // Alt Butonlar: "Geri dön" ve "Geri bildirim gönder"
@@ -523,7 +555,7 @@ fun LegalInfoScreen(
                             title = "Gizlilik politikası",
                             subtitle = "Henüz onaylı belge sunulmadı. Bağlantı hazır olduğunda bu bölümden erişilebilir.",
                             badgeText = "Onaylı metin bekleniyor",
-                            badgeColor = Color(0xFF757575),
+                            badgeColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             icon = Icons.Outlined.Policy,
                             onClick = {},
                         )
@@ -531,7 +563,7 @@ fun LegalInfoScreen(
                             title = "Kullanım koşulları",
                             subtitle = "Henüz onaylı belge sunulmadı. Bağlantı hazır olduğunda bu bölümden erişilebilir.",
                             badgeText = "Onaylı metin bekleniyor",
-                            badgeColor = Color(0xFF757575),
+                            badgeColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             icon = Icons.Outlined.Description,
                             showDivider = false,
                             onClick = {},
@@ -560,8 +592,9 @@ fun LegalInfoScreen(
                     SettingsGroupCard {
                         SettingsRowItem(
                             title = "Açık kaynak lisanslar",
-                            badgeText = "Hazırlanıyor",
-                            badgeColor = Color(0xFF757575),
+                            subtitle = "Kullanılan temel açık kaynak bileşenleri ve lisansları",
+                            badgeText = "Görüntüle",
+                            badgeColor = FeniqoSageGreen,
                             icon = Icons.Outlined.Code,
                             showDivider = false,
                             onClick = { showLicensesDialog = true },
@@ -577,9 +610,27 @@ fun LegalInfoScreen(
             onDismissRequest = { showLicensesDialog = false },
             title = { Text("Açık kaynak lisanslar") },
             text = {
-                Text(
-                    "FeniqoMobil; Kotlin, Jetpack Compose, AndroidX, Kotlinx Coroutines, Room ve Supabase-kt gibi açık kaynak kütüphaneler kullanır. Tam yasal lisans metinleri ve telif bildirimleri derleme paketine dahil edilmek üzere hazırlanmaktadır."
-                )
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    item {
+                        Text(
+                            "FeniqoMobil aşağıdaki temel açık kaynak projelerden yararlanır. Lisansların tam metinleri ilgili proje dağıtımlarında ve kaynak depolarında yer alır.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                    items(
+                        listOf(
+                            "Kotlin — Apache License 2.0",
+                            "Jetpack Compose ve AndroidX — Apache License 2.0",
+                            "Kotlinx Coroutines, Serialization ve DateTime — Apache License 2.0",
+                            "Ktor — Apache License 2.0",
+                            "Room — Apache License 2.0",
+                            "Supabase Kotlin — MIT License",
+                            "SQLCipher Community Edition — BSD-style License",
+                        ),
+                    ) { notice ->
+                        Text("• $notice", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
             },
             confirmButton = {
                 TextButton(onClick = { showLicensesDialog = false }) {

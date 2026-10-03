@@ -426,7 +426,7 @@ private fun FilterChipRemovable(
 ) {
     Surface(
         modifier = modifier.clip(RoundedCornerShape(12.dp)),
-        color = Color(0xFFF3F4F6),
+        color = MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(12.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
@@ -570,7 +570,7 @@ fun ReportOfflineStatusSection(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFFFEF3C7)),
+                        .background(MaterialTheme.colorScheme.secondaryContainer),
                     contentAlignment = Alignment.Center,
                 ) {
                     Canvas(modifier = Modifier.size(20.dp)) {
@@ -626,8 +626,8 @@ fun ReportOfflineStatusSection(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(14.dp),
-            color = Color(0xFFFFF7ED),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFED7AA)),
+            color = MaterialTheme.colorScheme.tertiaryContainer,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.45f)),
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -638,12 +638,12 @@ fun ReportOfflineStatusSection(
                     modifier = Modifier
                         .size(18.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFFF97316)),
+                        .background(MaterialTheme.colorScheme.tertiary),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = "i",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onTertiary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                     )
@@ -652,7 +652,7 @@ fun ReportOfflineStatusSection(
                 Text(
                     text = "Raporlar bu cihazda bulunan yerel kayıtlar üzerinden çalışmaya devam eder. Bağlantı geldiğinde bekleyen değişiklikler otomatik eşitlenir.",
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
-                    color = Color(0xFF9A3412),
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -685,12 +685,12 @@ fun ReportErrorCard(
                 modifier = Modifier
                     .size(38.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFFEE2E2)),
+                    .background(MaterialTheme.colorScheme.errorContainer),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "!",
-                    color = Color(0xFFDC2626),
+                    color = MaterialTheme.colorScheme.onErrorContainer,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                 )

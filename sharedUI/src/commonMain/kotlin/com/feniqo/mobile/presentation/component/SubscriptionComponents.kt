@@ -71,7 +71,6 @@ import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 private val FeniqoGraphite = Color(0xFF1E232A)
-private val FeniqoCardBackground = Color.White
 private val FeniqoExpenseRed = Color(0xFFE53935)
 private val FeniqoIconReceiptBg = Color(0xFFFFEBEE)
 
@@ -123,7 +122,7 @@ fun SubscriptionHeroCard(
                     Icon(
                         imageVector = Icons.Outlined.Lightbulb,
                         contentDescription = "Bilgi",
-                        tint = Color(0xFF9E9E9E),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -146,7 +145,7 @@ fun SubscriptionHeroCard(
                     Text(
                         text = "TRY / ay",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFFBDBDBD),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(bottom = 6.dp),
                     )
                 }
@@ -169,7 +168,7 @@ fun SubscriptionHeroCard(
                             text = "${summary.currency.name} / ay",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Medium,
-                            color = Color(0xFFBDBDBD),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(bottom = 6.dp),
                         )
                     }
@@ -198,7 +197,7 @@ fun SubscriptionHeroCard(
                     Text(
                         text = "Yıllık yaklaşık",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF9E9E9E),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     val yearlyText = estimatedSummaries.firstOrNull()?.formattedYearlyCost ?: "₺0"
@@ -234,7 +233,7 @@ fun SubscriptionHeroCard(
                     Text(
                         text = "aktif abonelik",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF9E9E9E),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -266,11 +265,11 @@ fun SubscriptionActualSpendingCard(
             ),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = FeniqoCardBackground,
+            containerColor = MaterialTheme.colorScheme.surface,
         ),
         border = androidx.compose.foundation.BorderStroke(
             width = 1.dp,
-            color = Color(0xFFEBEBEB),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
         ),
     ) {
         Row(
@@ -301,7 +300,7 @@ fun SubscriptionActualSpendingCard(
                 Text(
                     text = "Bu ay kaydedilen ödemeler",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF424242),
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Medium,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
@@ -317,7 +316,7 @@ fun SubscriptionActualSpendingCard(
             Icon(
                 imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
                 contentDescription = null,
-                tint = Color(0xFF9E9E9E),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp),
             )
         }
@@ -545,17 +544,17 @@ fun SubscriptionFilterRow(
                     .clip(CircleShape)
                     .clickable { onFilterSelected(filter) },
                 shape = CircleShape,
-                color = if (isSelected) Color(0xFF1E232A) else Color.White,
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
                 border = androidx.compose.foundation.BorderStroke(
                     width = 1.dp,
-                    color = if (isSelected) Color(0xFF1E232A) else Color(0xFFE0E0E0),
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                 ),
             ) {
                 Text(
                     text = filter.displayName,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = if (isSelected) Color.White else Color(0xFF424242),
+                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
@@ -581,7 +580,7 @@ fun SubscriptionInsightCard(
         ),
         border = androidx.compose.foundation.BorderStroke(
             width = 1.dp,
-            color = Color(0xFFEBEBEB),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
         ),
     ) {
         Row(
@@ -662,7 +661,7 @@ fun SubscriptionNotificationPermissionBanner(
         ),
         border = androidx.compose.foundation.BorderStroke(
             width = 1.dp,
-            color = Color(0xFFEBEBEB),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
         ),
     ) {
         Row(
@@ -675,7 +674,7 @@ fun SubscriptionNotificationPermissionBanner(
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .background(Color(0xFFE8F5E9), CircleShape),
+                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -787,11 +786,11 @@ fun SubscriptionCard(
             },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = FeniqoCardBackground,
+            containerColor = MaterialTheme.colorScheme.surface,
         ),
         border = androidx.compose.foundation.BorderStroke(
             width = 1.dp,
-            color = Color(0xFFEBEBEB),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
         ),
     ) {
         Row(
@@ -821,7 +820,7 @@ fun SubscriptionCard(
                         text = item.name,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF212121),
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -842,7 +841,7 @@ fun SubscriptionCard(
                 Text(
                     text = renewalDisplay,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF757575),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -873,7 +872,7 @@ fun SubscriptionCard(
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
                     contentDescription = null,
-                    tint = Color(0xFF9E9E9E),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(16.dp),
                 )
             }
@@ -1091,7 +1090,7 @@ fun SubscriptionDeleteDialog(
                     text = "Kaydı silmek istiyor musun?",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF212121),
+                    color = MaterialTheme.colorScheme.onSurface,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 )
 
@@ -1100,7 +1099,7 @@ fun SubscriptionDeleteDialog(
                 Text(
                     text = "Feniqo'daki yenileme takibi durdurulur. Hizmet sağlayıcındaki abonelik iptal edilmez.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF757575),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 )
 
@@ -1145,8 +1144,8 @@ fun SubscriptionDeleteDialog(
                         .height(48.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFEEEEEE),
-                        contentColor = Color(0xFF424242),
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
                     ),
                 ) {
                     Text(
@@ -1225,7 +1224,7 @@ fun SubscriptionAdvanceRenewalDialog(
                     text = "Ödendi olarak kaydedilsin mi?",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF212121),
+                    color = MaterialTheme.colorScheme.onSurface,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 )
 
@@ -1235,8 +1234,8 @@ fun SubscriptionAdvanceRenewalDialog(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    color = Color(0xFFF9F9F9),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEEEEE)),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Row(
                         modifier = Modifier
@@ -1251,13 +1250,13 @@ fun SubscriptionAdvanceRenewalDialog(
                                     text = subscriptionName,
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF212121),
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
                             Text(
                                 text = formattedCurrentDueDate,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF757575),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
 
@@ -1283,7 +1282,7 @@ fun SubscriptionAdvanceRenewalDialog(
                 Text(
                     text = renewalExplainer,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF757575),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 )
 
@@ -1328,8 +1327,8 @@ fun SubscriptionAdvanceRenewalDialog(
                         .height(48.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFEEEEEE),
-                        contentColor = Color(0xFF424242),
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
                     ),
                 ) {
                     Text(
@@ -1356,7 +1355,7 @@ fun SubscriptionEmptyState(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEBEBEB)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Column(
             modifier = Modifier
@@ -1367,13 +1366,13 @@ fun SubscriptionEmptyState(
             Box(
                 modifier = Modifier
                     .size(52.dp)
-                    .background(Color(0xFFF5F5F5), CircleShape),
+                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = Icons.Outlined.CreditCard,
                     contentDescription = null,
-                    tint = Color(0xFF424242),
+                    tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(24.dp),
                 )
             }
@@ -1384,7 +1383,7 @@ fun SubscriptionEmptyState(
                 text = "Henüz aboneliğin yok",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF212121),
+                color = MaterialTheme.colorScheme.onSurface,
             )
 
             Spacer(modifier = Modifier.height(6.dp))
@@ -1392,7 +1391,7 @@ fun SubscriptionEmptyState(
             Text(
                 text = "Takibini yapmak için ilk aboneliğini ekle.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF757575),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
 
@@ -1437,7 +1436,7 @@ fun SubscriptionErrorCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEBEBEB)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Row(
             modifier = Modifier
@@ -1449,7 +1448,7 @@ fun SubscriptionErrorCard(
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .background(Color(0xFFFFEBEE), CircleShape),
+                    .background(MaterialTheme.colorScheme.errorContainer, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -1465,20 +1464,20 @@ fun SubscriptionErrorCard(
                     text = "Yüklenemedi",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF212121),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text = message,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF757575),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Button(
                     onClick = onRetry,
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFEEEEEE),
-                        contentColor = Color(0xFF424242),
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
                     ),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     modifier = Modifier.height(32.dp),
@@ -1506,7 +1505,7 @@ fun SubscriptionNotFoundCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEBEBEB)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Row(
             modifier = Modifier
@@ -1518,13 +1517,13 @@ fun SubscriptionNotFoundCard(
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .background(Color(0xFFF5F5F5), CircleShape),
+                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Lightbulb,
                     contentDescription = null,
-                    tint = Color(0xFF757575),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(22.dp),
                 )
             }
@@ -1534,20 +1533,20 @@ fun SubscriptionNotFoundCard(
                     text = "Abonelik bulunamadı",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF212121),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text = "Aradığın abonelik listede yok.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF757575),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Button(
                     onClick = onNavigateBack,
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFEEEEEE),
-                        contentColor = Color(0xFF424242),
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
                     ),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     modifier = Modifier.height(32.dp),
