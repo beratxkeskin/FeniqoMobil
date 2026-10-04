@@ -27,6 +27,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.feniqo.mobile.domain.repository.PERSONAL_BACKUP_MAX_BYTES
 import com.feniqo.mobile.domain.repository.PersonalBackupImportOutcome
 import com.feniqo.mobile.presentation.localization.localizedSettingsLabels
+import com.feniqo.mobile.presentation.localization.localizedAccountPasswordUpdated
+import com.feniqo.mobile.presentation.localization.localizedEmailVerificationResendSuccess
 import com.feniqo.mobile.domain.model.ThemePreference
 import com.feniqo.mobile.domain.repository.AutoLockTimeout
 import android.graphics.Bitmap
@@ -770,12 +772,13 @@ fun EmailVerificationScreenRoute(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
+    val resendSuccessMessage = localizedEmailVerificationResendSuccess()
     EmailVerificationScreen(
         targetEmail = newEmail,
         onBackToSettings = onBackToSettings,
         onResendEmail = {
             viewModel.requestEmailChange(newEmail)
-            Toast.makeText(context, "Doğrulama bağlantısı tekrar gönderildi.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, resendSuccessMessage, Toast.LENGTH_SHORT).show()
         },
         onCorrectAddress = onBackToSettings,
         modifier = modifier,
@@ -793,10 +796,11 @@ fun ChangePasswordScreenRoute(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val passwordUpdatedMessage = localizedAccountPasswordUpdated()
 
     LaunchedEffect(uiState.passwordSuccess) {
         if (uiState.passwordSuccess) {
-            Toast.makeText(context, "Parolanız başarıyla güncellendi.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, passwordUpdatedMessage, Toast.LENGTH_SHORT).show()
             viewModel.clearPasswordStatus()
             onBack()
         }

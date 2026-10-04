@@ -23,7 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,10 +33,22 @@ import com.feniqo.mobile.presentation.auth.AuthStatusBadge
 import com.feniqo.mobile.presentation.auth.AuthTopBar
 import com.feniqo.mobile.presentation.auth.AuthUiMessage
 import com.feniqo.mobile.presentation.auth.EmailVerificationHeroIllustration
-import com.feniqo.mobile.presentation.auth.toDisplayText
+import com.feniqo.mobile.presentation.auth.toLocalizedText
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTheme
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.auth_email_placeholder
+import feniqomobil.sharedui.generated.resources.email_verification_body
+import feniqomobil.sharedui.generated.resources.email_verification_required_badge
+import feniqomobil.sharedui.generated.resources.email_verification_required_body
+import feniqomobil.sharedui.generated.resources.email_verification_required_title
+import feniqomobil.sharedui.generated.resources.email_verification_resend_success
+import feniqomobil.sharedui.generated.resources.email_verification_title
+import feniqomobil.sharedui.generated.resources.password_back_to_login
+import feniqomobil.sharedui.generated.resources.password_resend
+import feniqomobil.sharedui.generated.resources.password_sending
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Pano A - 04 E-posta Doğrulama ve Pano C - 14 Doğrulama Gerekli Ekranı.
@@ -88,7 +99,7 @@ fun AuthEmailVerificationScreen(
                     if (isRequiredOnLogin) {
                         AuthStatusBadge(
                             imageVector = Icons.Outlined.MailOutline,
-                            contentDescription = "E-posta doğrulama gerekli",
+                            contentDescription = stringResource(Res.string.email_verification_required_badge),
                         )
                     } else {
                         EmailVerificationHeroIllustration()
@@ -99,18 +110,25 @@ fun AuthEmailVerificationScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.Start,
                     ) {
-                        val titleText = if (isRequiredOnLogin) {
-                            "E-postanı doğrulaman gerekiyor"
-                        } else {
-                            "E-postanı doğrula."
-                        }
+                        val titleText =
+                            if (isRequiredOnLogin) {
+                                stringResource(Res.string.email_verification_required_title)
+                            } else {
+                                stringResource(Res.string.email_verification_title)
+                            }
 
-                        val bodyText = if (isRequiredOnLogin) {
-                            "Hesabına giriş yapmak için e-postandaki doğrulama bağlantısını aç."
-                        } else {
-                            val targetEmail = email.ifBlank { "eposta@ornek.com" }
-                            "$targetEmail adresine gönderilen doğrulama bağlantısını aç.\n\nGerekiyorsa spam klasörünü kontrol et."
-                        }
+                        val bodyText =
+                            if (isRequiredOnLogin) {
+                                stringResource(Res.string.email_verification_required_body)
+                            } else {
+                                val targetEmail =
+                                    if (email.isBlank()) {
+                                        stringResource(Res.string.auth_email_placeholder)
+                                    } else {
+                                        email
+                                    }
+                                stringResource(Res.string.email_verification_body, targetEmail)
+                            }
 
                         Text(
                             text = titleText,
@@ -141,7 +159,7 @@ fun AuthEmailVerificationScreen(
                             color = MaterialTheme.colorScheme.primaryContainer,
                         ) {
                             Text(
-                                text = "Doğrulama bağlantısı tekrar gönderildi.",
+                                text = stringResource(Res.string.email_verification_resend_success),
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     fontWeight = FontWeight.Medium,
                                 ),
@@ -153,7 +171,7 @@ fun AuthEmailVerificationScreen(
 
                     if (errorMessage != null) {
                         AuthErrorBanner(
-                            message = errorMessage.toDisplayText(),
+                            message = errorMessage.toLocalizedText(),
                             isNetworkError = errorMessage == AuthUiMessage.NETWORK_UNAVAILABLE,
                         )
                     }
@@ -168,14 +186,14 @@ fun AuthEmailVerificationScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             AuthPrimaryButton(
-                                text = "Tekrar gönder",
+                                text = stringResource(Res.string.password_resend),
                                 onClick = onResend,
                                 isLoading = isResending,
-                                loadingText = "Gönderiliyor...",
+                                loadingText = stringResource(Res.string.password_sending),
                             )
 
                             AuthSecondaryButton(
-                                text = "Girişe dön",
+                                text = stringResource(Res.string.password_back_to_login),
                                 onClick = onNavigateToLogin,
                             )
                         }
@@ -187,12 +205,17 @@ fun AuthEmailVerificationScreen(
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
                             AuthPrimaryButton(
-                                text = "Girişe dön",
+                                text = stringResource(Res.string.password_back_to_login),
                                 onClick = onNavigateToLogin,
                             )
 
                             Text(
-                                text = if (isResending) "Gönderiliyor..." else "Tekrar gönder",
+                                text =
+                                    if (isResending) {
+                                        stringResource(Res.string.password_sending)
+                                    } else {
+                                        stringResource(Res.string.password_resend)
+                                    },
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     fontWeight = FontWeight.SemiBold,
                                 ),

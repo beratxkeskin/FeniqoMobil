@@ -122,4 +122,45 @@
     <string name="password_updating">Güncelleniyor...</string>
     <string name="password_updated_title">Parolan güncellendi</string>
     <string name="password_updated_description">Yeni parolanla hesabına giriş yapabilirsin.</string>
+
+    <string name="email_verification_required_badge">E-posta doğrulama gerekli</string>
+    <string name="email_verification_required_title">E-postanı doğrulaman gerekiyor</string>
+    <string name="email_verification_title">E-postanı doğrula.</string>
+    <string name="email_verification_required_body">Hesabına giriş yapmak için e-postandaki doğrulama bağlantısını aç.</string>
+    <string name="email_verification_body">%1$s adresine gönderilen doğrulama bağlantısını aç.\n\nGerekiyorsa spam klasörünü kontrol et.</string>
+    <string name="email_verification_resend_success">Doğrulama bağlantısı tekrar gönderildi.</string>
+
+    <string name="account_change_email_title">E-postayı değiştir</string>
+    <string name="account_current_email">Mevcut e-posta adresi</string>
+    <string name="account_new_email">Yeni e-posta</string>
+    <string name="account_new_email_placeholder">yeni@example.com</string>
+    <string name="account_email_verification_note">Yeni adres doğrulanmadan değişiklik tamamlanmaz.</string>
+    <string name="account_send_verification">Doğrulama gönder</string>
+    <string name="account_email_verification_title">E-posta doğrulaması</string>
+    <string name="account_email_verification_body">%1$s adresine doğrulama bağlantısı gönderdik. Lütfen e-postanı kontrol et ve bağlantıya tıkla.</string>
+    <string name="account_change_password_title">Parolayı değiştir</string>
+    <string name="account_current_password">Mevcut parola</string>
+    <string name="account_show_password">Parolayı göster</string>
+    <string name="account_hide_password">Parolayı gizle</string>
+    <string name="account_sign_out_title">Çıkış yapmak istiyor musun?</string>
+    <string name="account_sign_out_pending">%1$d değişiklik henüz eşitlenmedi. Çıkış yaparsanız bu değişiklikler henüz sunucuya aktarılmamış olabilir. Çıkıştan önce eşitlemenizi öneririz.</string>
+    <string name="account_sign_out_safe">Bu cihazdaki oturumunuz güvenle kapatılacak.</string>
+    <string name="account_return_to_sync">Eşitlemeye dön</string>
+    <string name="account_sign_out">Çıkış yap</string>
+    <string name="account_sign_out_anyway">Yine de çık</string>
+    <string name="common_cancel">Vazgeç</string>
+    <string name="account_delete_title">Hesap silme</string>
+    <string name="account_delete_before_title">Hesabını silmeden önce</string>
+    <string name="account_delete_before_body">Hesabını silmek kalıcı bir işlemdir. Devam etmeden önce aşağıdaki adımları tamamlamanı öneririz.</string>
+    <string name="account_delete_backup_title">Verilerini yedekle</string>
+    <string name="account_delete_backup_subtitle">Kişisel kategorilerini ve işlemlerini dışa aktararak cihazında saklayabilirsin. Makbuzlar ve ortak alanlar bu yedeğe dahil değildir.</string>
+    <string name="account_delete_shared_title">Ortak alanlarını kontrol et</string>
+    <string name="account_delete_shared_subtitle">Paylaştığın bütçe, hedef veya ortak alanlarda başka kişilerin erişimi olabilir.</string>
+    <string name="account_delete_sync_title">Eşitlenmemiş değişiklikleri incele</string>
+    <string name="account_delete_sync_subtitle">Henüz eşitlenmemiş işlemlerinin olup olmadığını kontrol et.</string>
+    <string name="account_delete_support_warning">Kalıcı silme şu anda destek üzerinden yürütülür. Bu ekrandan veriler silinmez.</string>
+    <string name="account_delete_support_body">Hesabını silmek için bizimle iletişime geçmen gerekmektedir.</string>
+    <string name="account_export_data">Verilerimi dışa aktar</string>
+    <string name="account_contact_support">Destekle iletişime geç</string>
+    <string name="account_password_updated_toast">Parolanız başarıyla güncellendi.</string>
 </resources>

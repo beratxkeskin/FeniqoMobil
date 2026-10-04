@@ -11,10 +11,10 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import com.feniqo.mobile.App
 import com.feniqo.mobile.presentation.screen.ProfileScreen
 import com.feniqo.mobile.presentation.sync.SyncConnectionUiState
 import com.feniqo.mobile.presentation.sync.SyncStatusUiState
-import com.feniqo.mobile.presentation.theme.FeniqoTheme
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -43,7 +43,7 @@ class ProfileScreenComposeTest {
         onDataManagement: () -> Unit = {},
         onSignOut: () -> Unit = {},
     ) {
-        FeniqoTheme {
+        App(languageTag = "tr") {
             ProfileScreen(
                 displayName = if (isLoading || isEmpty || profileError != null) "" else "Berat Keskin",
                 email = if (isLoading || isEmpty || profileError != null) "" else "berat@feniqo.com",
@@ -110,7 +110,8 @@ class ProfileScreenComposeTest {
         assertFalse(signedOut)
 
         compose.onNodeWithText("Çıkış Yap").performScrollTo().performClick()
-        compose.onAllNodesWithText("Çıkış Yap")[1].performClick()
+        compose.onNodeWithText("Çıkış yapmak istiyor musun?").assertIsDisplayed()
+        compose.onNodeWithText("Çıkış yap").performClick()
         assertTrue(signedOut)
     }
 

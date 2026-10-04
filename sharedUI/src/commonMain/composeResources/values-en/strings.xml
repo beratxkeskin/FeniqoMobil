@@ -122,4 +122,45 @@
     <string name="password_updating">Updating...</string>
     <string name="password_updated_title">Password updated</string>
     <string name="password_updated_description">You can now sign in with your new password.</string>
+
+    <string name="email_verification_required_badge">Email verification required</string>
+    <string name="email_verification_required_title">Verify your email to continue</string>
+    <string name="email_verification_title">Verify your email.</string>
+    <string name="email_verification_required_body">Open the verification link in your email to sign in to your account.</string>
+    <string name="email_verification_body">Open the verification link sent to %1$s.\n\nCheck your spam folder if needed.</string>
+    <string name="email_verification_resend_success">The verification link was sent again.</string>
+
+    <string name="account_change_email_title">Change email</string>
+    <string name="account_current_email">Current email address</string>
+    <string name="account_new_email">New email</string>
+    <string name="account_new_email_placeholder">new@example.com</string>
+    <string name="account_email_verification_note">The change is not complete until the new address is verified.</string>
+    <string name="account_send_verification">Send verification</string>
+    <string name="account_email_verification_title">Email verification</string>
+    <string name="account_email_verification_body">We sent a verification link to %1$s. Check your email and open the link.</string>
+    <string name="account_change_password_title">Change password</string>
+    <string name="account_current_password">Current password</string>
+    <string name="account_show_password">Show password</string>
+    <string name="account_hide_password">Hide password</string>
+    <string name="account_sign_out_title">Do you want to sign out?</string>
+    <string name="account_sign_out_pending">%1$d changes have not been synced yet. If you sign out, they may not have reached the server. We recommend syncing before signing out.</string>
+    <string name="account_sign_out_safe">Your session on this device will be closed securely.</string>
+    <string name="account_return_to_sync">Return to sync</string>
+    <string name="account_sign_out">Sign out</string>
+    <string name="account_sign_out_anyway">Sign out anyway</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="account_delete_title">Delete account</string>
+    <string name="account_delete_before_title">Before deleting your account</string>
+    <string name="account_delete_before_body">Deleting your account is permanent. We recommend completing the following steps before continuing.</string>
+    <string name="account_delete_backup_title">Back up your data</string>
+    <string name="account_delete_backup_subtitle">Export your personal categories and transactions to keep them on your device. Receipts and shared spaces are not included.</string>
+    <string name="account_delete_shared_title">Review your shared spaces</string>
+    <string name="account_delete_shared_subtitle">Other people may still have access to budgets, goals, or shared spaces you participate in.</string>
+    <string name="account_delete_sync_title">Review unsynced changes</string>
+    <string name="account_delete_sync_subtitle">Check whether you have transactions that have not been synced yet.</string>
+    <string name="account_delete_support_warning">Permanent deletion is currently handled through support. This screen does not delete your data.</string>
+    <string name="account_delete_support_body">Contact us to request deletion of your account.</string>
+    <string name="account_export_data">Export my data</string>
+    <string name="account_contact_support">Contact support</string>
+    <string name="account_password_updated_toast">Your password was updated successfully.</string>
 </resources>

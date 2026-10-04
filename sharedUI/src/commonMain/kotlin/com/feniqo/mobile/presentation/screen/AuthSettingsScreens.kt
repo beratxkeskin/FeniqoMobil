@@ -28,6 +28,46 @@ import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreenContainer
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTouchTarget
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.account_change_email_title
+import feniqomobil.sharedui.generated.resources.account_change_password_title
+import feniqomobil.sharedui.generated.resources.account_contact_support
+import feniqomobil.sharedui.generated.resources.account_current_email
+import feniqomobil.sharedui.generated.resources.account_current_password
+import feniqomobil.sharedui.generated.resources.account_delete_backup_subtitle
+import feniqomobil.sharedui.generated.resources.account_delete_backup_title
+import feniqomobil.sharedui.generated.resources.account_delete_before_body
+import feniqomobil.sharedui.generated.resources.account_delete_before_title
+import feniqomobil.sharedui.generated.resources.account_delete_shared_subtitle
+import feniqomobil.sharedui.generated.resources.account_delete_shared_title
+import feniqomobil.sharedui.generated.resources.account_delete_support_body
+import feniqomobil.sharedui.generated.resources.account_delete_support_warning
+import feniqomobil.sharedui.generated.resources.account_delete_sync_subtitle
+import feniqomobil.sharedui.generated.resources.account_delete_sync_title
+import feniqomobil.sharedui.generated.resources.account_delete_title
+import feniqomobil.sharedui.generated.resources.account_email_verification_body
+import feniqomobil.sharedui.generated.resources.account_email_verification_note
+import feniqomobil.sharedui.generated.resources.account_email_verification_title
+import feniqomobil.sharedui.generated.resources.account_export_data
+import feniqomobil.sharedui.generated.resources.account_hide_password
+import feniqomobil.sharedui.generated.resources.account_new_email
+import feniqomobil.sharedui.generated.resources.account_new_email_placeholder
+import feniqomobil.sharedui.generated.resources.account_return_to_sync
+import feniqomobil.sharedui.generated.resources.account_send_verification
+import feniqomobil.sharedui.generated.resources.account_show_password
+import feniqomobil.sharedui.generated.resources.account_sign_out
+import feniqomobil.sharedui.generated.resources.account_sign_out_anyway
+import feniqomobil.sharedui.generated.resources.account_sign_out_pending
+import feniqomobil.sharedui.generated.resources.account_sign_out_safe
+import feniqomobil.sharedui.generated.resources.account_sign_out_title
+import feniqomobil.sharedui.generated.resources.common_cancel
+import feniqomobil.sharedui.generated.resources.password_check_email
+import feniqomobil.sharedui.generated.resources.password_confirm_new_label
+import feniqomobil.sharedui.generated.resources.password_edit_email
+import feniqomobil.sharedui.generated.resources.password_new_label
+import feniqomobil.sharedui.generated.resources.password_resend
+import feniqomobil.sharedui.generated.resources.password_update
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * 13 E-postayı Değiştir Ekranı.
@@ -54,7 +94,7 @@ fun ChangeEmailScreen(
                 .padding(horizontal = FeniqoSpacing.Screen, vertical = FeniqoSpacing.Medium),
         ) {
             SettingsTopBar(
-                title = "E-postayı değiştir",
+                title = stringResource(Res.string.account_change_email_title),
                 onBack = onBack,
             )
 
@@ -65,7 +105,7 @@ fun ChangeEmailScreen(
                 // Mevcut E-posta
                 item {
                     Text(
-                        text = "Mevcut e-posta adresi",
+                        text = stringResource(Res.string.account_current_email),
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                     )
                     Spacer(modifier = Modifier.height(4.dp))
@@ -86,14 +126,14 @@ fun ChangeEmailScreen(
                 // Yeni E-posta
                 item {
                     Text(
-                        text = "Yeni e-posta",
+                        text = stringResource(Res.string.account_new_email),
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     OutlinedTextField(
                         value = newEmail,
                         onValueChange = { newEmail = it },
-                        placeholder = { Text("yeni@example.com") },
+                        placeholder = { Text(stringResource(Res.string.account_new_email_placeholder)) },
                         singleLine = true,
                         shape = RoundedCornerShape(FeniqoRadius.Medium),
                         modifier = Modifier.fillMaxWidth(),
@@ -119,7 +159,7 @@ fun ChangeEmailScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Yeni adres doğrulanmadan değişiklik tamamlanmaz.",
+                            text = stringResource(Res.string.account_email_verification_note),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -153,7 +193,7 @@ fun ChangeEmailScreen(
                         strokeWidth = 2.dp,
                     )
                 } else {
-                    Text("Doğrulama gönder", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(Res.string.account_send_verification), fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -181,7 +221,7 @@ fun EmailVerificationScreen(
                 .padding(horizontal = FeniqoSpacing.Screen, vertical = FeniqoSpacing.Medium),
         ) {
             SettingsTopBar(
-                title = "E-posta doğrulaması",
+                title = stringResource(Res.string.account_email_verification_title),
                 onBack = onBackToSettings,
             )
 
@@ -210,7 +250,7 @@ fun EmailVerificationScreen(
                 Spacer(modifier = Modifier.height(FeniqoSpacing.Large))
 
                 Text(
-                    text = "E-postanı kontrol et",
+                    text = stringResource(Res.string.password_check_email),
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -218,7 +258,7 @@ fun EmailVerificationScreen(
                 Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
 
                 Text(
-                    text = "$targetEmail adresine doğrulama bağlantısı gönderdik. Lütfen e-postanı kontrol et ve bağlantıya tıkla.",
+                    text = stringResource(Res.string.account_email_verification_body, targetEmail),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -237,14 +277,14 @@ fun EmailVerificationScreen(
                         .fillMaxWidth()
                         .height(FeniqoTouchTarget.PrimaryAction),
                 ) {
-                    Text("Tekrar gönder", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(Res.string.password_resend), fontWeight = FontWeight.SemiBold)
                 }
 
                 TextButton(
                     onClick = onCorrectAddress,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Adresi düzelt", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(Res.string.password_edit_email), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -285,7 +325,7 @@ fun ChangePasswordScreen(
                 .padding(horizontal = FeniqoSpacing.Screen, vertical = FeniqoSpacing.Medium),
         ) {
             SettingsTopBar(
-                title = "Parolayı değiştir",
+                title = stringResource(Res.string.account_change_password_title),
                 onBack = onBack,
             )
 
@@ -295,7 +335,10 @@ fun ChangePasswordScreen(
             ) {
                 // Mevcut Parola
                 item {
-                    Text("Mevcut parola", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
+                    Text(
+                        text = stringResource(Res.string.account_current_password),
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    )
                     Spacer(modifier = Modifier.height(4.dp))
                     OutlinedTextField(
                         value = currentPassword,
@@ -306,7 +349,14 @@ fun ChangePasswordScreen(
                         visualTransformation = if (showCurrent) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             IconButton(onClick = { showCurrent = !showCurrent }) {
-                                Icon(if (showCurrent) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility, null)
+                                Icon(
+                                    if (showCurrent) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                    if (showCurrent) {
+                                        stringResource(Res.string.account_hide_password)
+                                    } else {
+                                        stringResource(Res.string.account_show_password)
+                                    },
+                                )
                             }
                         },
                         colors = OutlinedTextFieldDefaults.colors(
@@ -319,7 +369,10 @@ fun ChangePasswordScreen(
 
                 // Yeni Parola
                 item {
-                    Text("Yeni parola", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
+                    Text(
+                        text = stringResource(Res.string.password_new_label),
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    )
                     Spacer(modifier = Modifier.height(4.dp))
                     OutlinedTextField(
                         value = newPassword,
@@ -330,7 +383,14 @@ fun ChangePasswordScreen(
                         visualTransformation = if (showNew) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             IconButton(onClick = { showNew = !showNew }) {
-                                Icon(if (showNew) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility, null)
+                                Icon(
+                                    if (showNew) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                    if (showNew) {
+                                        stringResource(Res.string.account_hide_password)
+                                    } else {
+                                        stringResource(Res.string.account_show_password)
+                                    },
+                                )
                             }
                         },
                         colors = OutlinedTextFieldDefaults.colors(
@@ -343,7 +403,10 @@ fun ChangePasswordScreen(
 
                 // Yeni Parola Tekrar
                 item {
-                    Text("Yeni parola tekrar", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
+                    Text(
+                        text = stringResource(Res.string.password_confirm_new_label),
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    )
                     Spacer(modifier = Modifier.height(4.dp))
                     OutlinedTextField(
                         value = confirmPassword,
@@ -354,7 +417,14 @@ fun ChangePasswordScreen(
                         visualTransformation = if (showConfirm) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             IconButton(onClick = { showConfirm = !showConfirm }) {
-                                Icon(if (showConfirm) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility, null)
+                                Icon(
+                                    if (showConfirm) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                    if (showConfirm) {
+                                        stringResource(Res.string.account_hide_password)
+                                    } else {
+                                        stringResource(Res.string.account_show_password)
+                                    },
+                                )
                             }
                         },
                         colors = OutlinedTextFieldDefaults.colors(
@@ -384,7 +454,7 @@ fun ChangePasswordScreen(
                 if (isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), color = FeniqoPureWhite, strokeWidth = 2.dp)
                 } else {
-                    Text("Parolayı güncelle", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(Res.string.password_update), fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -404,13 +474,13 @@ fun SignOutConfirmDialog(
     val hasPending = pendingChangesCount > 0
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Çıkış yapmak istiyor musun?") },
+        title = { Text(stringResource(Res.string.account_sign_out_title)) },
         text = {
             Text(
                 if (hasPending) {
-                    "$pendingChangesCount değişiklik henüz eşitlenmedi. Çıkış yaparsanız bu değişiklikler henüz sunucuya aktarılmamış olabilir. Çıkıştan önce eşitlemenizi öneririz."
+                    stringResource(Res.string.account_sign_out_pending, pendingChangesCount)
                 } else {
-                    "Bu cihazdaki oturumunuz güvenle kapatılacak."
+                    stringResource(Res.string.account_sign_out_safe)
                 }
             )
         },
@@ -420,14 +490,14 @@ fun SignOutConfirmDialog(
                     onClick = onNavigateToSync,
                     colors = ButtonDefaults.buttonColors(containerColor = FeniqoSageGreen),
                 ) {
-                    Text("Eşitlemeye dön")
+                    Text(stringResource(Res.string.account_return_to_sync))
                 }
             } else {
                 Button(
                     onClick = onConfirmSignOut,
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                 ) {
-                    Text("Çıkış Yap")
+                    Text(stringResource(Res.string.account_sign_out))
                 }
             }
         },
@@ -435,11 +505,11 @@ fun SignOutConfirmDialog(
             Row {
                 if (hasPending) {
                     TextButton(onClick = onConfirmSignOut) {
-                        Text("Yine de çık", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(Res.string.account_sign_out_anyway), color = MaterialTheme.colorScheme.error)
                     }
                 }
                 TextButton(onClick = onDismiss) {
-                    Text("Vazgeç")
+                    Text(stringResource(Res.string.common_cancel))
                 }
             }
         },
@@ -472,7 +542,7 @@ fun DeleteAccountScreen(
                 .padding(horizontal = FeniqoSpacing.Screen, vertical = FeniqoSpacing.Medium),
         ) {
             SettingsTopBar(
-                title = "Hesap silme",
+                title = stringResource(Res.string.account_delete_title),
                 onBack = onBack,
             )
 
@@ -484,13 +554,13 @@ fun DeleteAccountScreen(
                 item {
                     Column {
                         Text(
-                            text = "Hesabını silmeden önce",
+                            text = stringResource(Res.string.account_delete_before_title),
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Hesabını silmek kalıcı bir işlemdir. Devam etmeden önce aşağıdaki adımları tamamlamanı öneririz.",
+                            text = stringResource(Res.string.account_delete_before_body),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -501,20 +571,20 @@ fun DeleteAccountScreen(
                 item {
                     SettingsGroupCard {
                         SettingsRowItem(
-                            title = "Verilerini yedekle",
-                            subtitle = "Kişisel kategorilerini ve işlemlerini dışa aktararak cihazında saklayabilirsin. Makbuzlar ve ortak alanlar bu yedeğe dahil değildir.",
+                            title = stringResource(Res.string.account_delete_backup_title),
+                            subtitle = stringResource(Res.string.account_delete_backup_subtitle),
                             icon = Icons.Outlined.Description,
                             onClick = onExportData,
                         )
                         SettingsRowItem(
-                            title = "Ortak alanlarını kontrol et",
-                            subtitle = "Paylaştığın bütçe, hedef veya ortak alanlarda başka kişilerin erişimi olabilir.",
+                            title = stringResource(Res.string.account_delete_shared_title),
+                            subtitle = stringResource(Res.string.account_delete_shared_subtitle),
                             icon = Icons.Outlined.Group,
                             onClick = onCheckSharedSpaces,
                         )
                         SettingsRowItem(
-                            title = "Eşitlenmemiş değişiklikleri incele",
-                            subtitle = "Henüz eşitlenmemiş işlemlerinin olup olmadığını kontrol et.",
+                            title = stringResource(Res.string.account_delete_sync_title),
+                            subtitle = stringResource(Res.string.account_delete_sync_subtitle),
                             icon = Icons.Outlined.Sync,
                             showDivider = false,
                             onClick = onInspectSync,
@@ -550,13 +620,13 @@ fun DeleteAccountScreen(
                             Spacer(modifier = Modifier.width(FeniqoSpacing.Medium))
                             Column {
                                 Text(
-                                    text = "Kalıcı silme şu anda destek üzerinden yürütülür. Bu ekrandan veriler silinmez.",
+                                    text = stringResource(Res.string.account_delete_support_warning),
                                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                     color = MaterialTheme.colorScheme.onErrorContainer,
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Hesabını silmek için bizimle iletişime geçmen gerekmektedir.",
+                                    text = stringResource(Res.string.account_delete_support_body),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.9f),
                                 )
@@ -588,7 +658,7 @@ fun DeleteAccountScreen(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
-                    Text("Verilerimi dışa aktar", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(Res.string.account_export_data), fontWeight = FontWeight.SemiBold)
                 }
 
                 OutlinedButton(
@@ -607,7 +677,7 @@ fun DeleteAccountScreen(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
-                    Text("Destekle iletişime geç", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(Res.string.account_contact_support), fontWeight = FontWeight.SemiBold)
                 }
             }
         }

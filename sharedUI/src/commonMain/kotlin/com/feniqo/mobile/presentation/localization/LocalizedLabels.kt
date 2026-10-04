@@ -4,6 +4,8 @@ import androidx.compose.runtime.Composable
 import com.feniqo.mobile.domain.model.AppLanguage
 import com.feniqo.mobile.domain.model.ThemePreference
 import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.account_password_updated_toast
+import feniqomobil.sharedui.generated.resources.email_verification_resend_success
 import feniqomobil.sharedui.generated.resources.language_english
 import feniqomobil.sharedui.generated.resources.language_region_summary
 import feniqomobil.sharedui.generated.resources.language_turkish
@@ -45,3 +47,9 @@ fun localizedSettingsLabels(
     currencyCode: String,
 ): Pair<String, String> =
     localizedThemeLabel(theme) to localizedLanguageRegionSummary(language, currencyCode)
+
+@Composable
+fun localizedEmailVerificationResendSuccess(): String = stringResource(Res.string.email_verification_resend_success)
+
+@Composable
+fun localizedAccountPasswordUpdated(): String = stringResource(Res.string.account_password_updated_toast)

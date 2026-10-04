@@ -7,7 +7,9 @@
 - [x] Türkçe varsayılanı ve çalışma zamanında İngilizceye geçişi Compose regresyon testiyle doğrula; sharedLogic/sharedUI/Android testleri, debug APK ve iOS Simulator ARM64 ortak kod derlemesini çalıştır.
 - [x] İkinci dilimin auth başlangıç paketinde Giriş ve Hesap Oluştur ekranları ile tipli auth/validasyon mesajlarını TR/EN kaynaklara taşı ve runtime dil değişimini test et.
 - [x] Şifre kurtarma, bağlantı gönderildi, yeni parola/geçersiz bağlantı ve parola güncellendi ekranlarını TR/EN kaynaklara taşı.
-- [ ] E-posta doğrulama ve hesap güvenliği auth alt akışlarını TR/EN kaynaklara taşı.
+- [x] Kayıt sonrası ve girişte zorunlu e-posta doğrulama durumlarını TR/EN kaynaklara taşı.
+- [x] Hesap güvenliği e-posta değiştirme/doğrulama, parola değiştirme, çıkış ve hesap silme yüzeylerinin sabit metinleri ile başarı toast'larını TR/EN kaynaklara taşı.
+- [ ] `SettingsViewModel` kaynaklı dinamik e-posta/parola hata metinlerini tipli locale-aware UI durumlarına taşı.
 - [ ] Kalan Compose ekran metinlerini, Android platform bildirim/biometrik metinlerini ve iOS ürün UI kataloglarını localization kaynaklarına taşı; pseudo-locale, taşma ve fiziksel cihaz dil-değişimi kabulünü tamamla.
 
 ### P2 Teknik Borç ve Yayın Yüzeyi Kapatma (2026-10-03)

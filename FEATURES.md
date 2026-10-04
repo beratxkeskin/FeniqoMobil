@@ -1,5 +1,9 @@
 # FeniqoMobil Özellik Durumu
 
+> 2026-10-04 — Localization ikinci diliminin hesap güvenliği sabit yüzey paketi tamamlandı. E-posta değiştirme/doğrulama, parola değiştirme, çıkış onayı ve hesap silme ekranlarının görünür metinleri, parola görünürlük açıklamaları ve başarı toast'ları TR/EN kaynaklara taşındı. Katalog eşliği 155 anahtarda; çalışma zamanı dil değişimi ve İngilizce yüzeyler Compose regresyonlarıyla doğrulandı. `SettingsViewModel` kaynaklı dinamik e-posta/parola hata metinlerinin tipli locale-aware durumlara dönüştürülmesi açık kalır.
+
+> 2026-10-04 — Localization ikinci diliminin e-posta doğrulama paketi tamamlandı. Kayıt sonrası doğrulama ve girişte doğrulama gerekli durumlarının başlık, açıklama, erişilebilirlik, yeniden gönderme, başarı ve hata metinleri TR/EN kaynaklara taşındı. Katalog eşliği 122 anahtarda; iki durumun çalışma zamanı İngilizce karşılıkları Compose regresyonlarıyla doğrulandı. Hesap güvenliği alt akışları açık kalır.
+
 > 2026-10-04 — Localization ikinci diliminin şifre kurtarma paketi tamamlandı. Şifremi Unuttum, E-postanı Kontrol Et, Yeni Parola ve Parola Güncellendi ekranlarının görünür metinleri, erişilebilirlik açıklamaları, hata mesajları ve alan validasyonları TR/EN kaynaklara bağlandı. Katalog eşliği 116 anahtarda ve dört yüzeyin İngilizce karşılıkları Compose regresyonlarıyla doğrulandı. E-posta doğrulama ve hesap güvenliği alt akışları açık kalır.
 
 > 2026-10-04 — Localization ikinci diliminin auth başlangıç paketi tamamlandı. Giriş ve hesap oluşturma ekranlarının başlık, alan, eylem ve durum metinleri ile tipli auth/validasyon mesajları Türkçe/İngilizce kaynak kataloğuna taşındı. Çalışma zamanında giriş ekranının Türkçeden İngilizceye dönmesi Compose regresyonuyla doğrulandı. Şifre kurtarma, e-posta doğrulama ve hesap güvenliği alt akışları bu dilimin sonraki parçasıdır.
