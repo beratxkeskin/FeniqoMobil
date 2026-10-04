@@ -1,5 +1,6 @@
 package com.feniqo.mobile.presentation.settings
 
+import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -93,5 +94,25 @@ class AccountSecurityLocalizationComposeTest {
         composeRule.runOnIdle { surface = 3 }
         composeRule.onNodeWithText("Delete account").assertIsDisplayed()
         composeRule.onNodeWithText("Contact support").assertIsDisplayed()
+    }
+
+    @Test
+    fun typed_account_errors_use_english_catalog() {
+        var showEmailError by mutableStateOf(false)
+
+        composeRule.setContent {
+            App(languageTag = "en") {
+                val errorMessage = if (showEmailError) {
+                    AccountSecurityUiMessage.EMAIL_INVALID.toLocalizedText()
+                } else {
+                    AccountSecurityUiMessage.CURRENT_PASSWORD_INVALID.toLocalizedText()
+                }
+                Text(errorMessage)
+            }
+        }
+
+        composeRule.onNodeWithText("Your current password is incorrect.").assertIsDisplayed()
+        composeRule.runOnIdle { showEmailError = true }
+        composeRule.onNodeWithText("Enter a valid email address.").assertIsDisplayed()
     }
 }

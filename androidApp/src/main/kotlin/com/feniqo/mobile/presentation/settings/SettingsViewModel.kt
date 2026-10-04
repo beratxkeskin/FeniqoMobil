@@ -58,12 +58,12 @@ data class SettingsUiState(
     val isSavingProfile: Boolean = false,
     val profileSaveSuccess: Boolean = false,
     val profileError: String? = null,
-    val passwordError: String? = null,
+    val passwordError: AccountSecurityUiMessage? = null,
     val passwordSuccess: Boolean = false,
     val isChangingPassword: Boolean = false,
     val sessionEmail: String = "",
     val emailVerificationStatus: com.feniqo.mobile.domain.model.EmailVerificationStatus = com.feniqo.mobile.domain.model.EmailVerificationStatus.UNKNOWN,
-    val emailError: String? = null,
+    val emailError: AccountSecurityUiMessage? = null,
     val emailVerificationSent: Boolean = false,
     val isSendingEmailVerification: Boolean = false,
 ) {
@@ -85,11 +85,11 @@ class SettingsViewModel @Inject constructor(
     private val profileSaveSuccess = MutableStateFlow(false)
     private val profileError = MutableStateFlow<String?>(null)
 
-    private val passwordError = MutableStateFlow<String?>(null)
+    private val passwordError = MutableStateFlow<AccountSecurityUiMessage?>(null)
     private val passwordSuccess = MutableStateFlow(false)
     private val isChangingPassword = MutableStateFlow(false)
 
-    private val emailError = MutableStateFlow<String?>(null)
+    private val emailError = MutableStateFlow<AccountSecurityUiMessage?>(null)
     private val emailVerificationSent = MutableStateFlow(false)
     private val isSendingEmailVerification = MutableStateFlow(false)
 
@@ -99,10 +99,10 @@ class SettingsViewModel @Inject constructor(
         val isSavingProfile: Boolean,
         val profileSaveSuccess: Boolean,
         val profileError: String?,
-        val passwordError: String?,
+        val passwordError: AccountSecurityUiMessage?,
         val passwordSuccess: Boolean,
         val isChangingPassword: Boolean,
-        val emailError: String?,
+        val emailError: AccountSecurityUiMessage?,
         val emailVerificationSent: Boolean,
         val isSendingEmailVerification: Boolean,
     )
@@ -293,29 +293,30 @@ class SettingsViewModel @Inject constructor(
             try {
                 val oldValid = com.feniqo.mobile.domain.validation.AuthValidationRules.validateLoginPassword(oldPass)
                 if (oldValid is com.feniqo.mobile.domain.validation.AuthValidationResult.Invalid) {
-                    passwordError.value = "Mevcut parolanızı girmelisiniz."
+                    passwordError.value = AccountSecurityUiMessage.CURRENT_PASSWORD_REQUIRED
                     return@launch
                 }
 
                 val newValid = com.feniqo.mobile.domain.validation.AuthValidationRules.validateNewPassword(newPass)
                 if (newValid is com.feniqo.mobile.domain.validation.AuthValidationResult.Invalid) {
                     passwordError.value = when (newValid.error) {
-                        com.feniqo.mobile.domain.validation.AuthValidationError.PASSWORD_REQUIRED -> "Yeni parola girmelisiniz."
+                        com.feniqo.mobile.domain.validation.AuthValidationError.PASSWORD_REQUIRED ->
+                            AccountSecurityUiMessage.NEW_PASSWORD_REQUIRED
                         com.feniqo.mobile.domain.validation.AuthValidationError.NEW_PASSWORD_TOO_SHORT ->
-                            "Yeni parola en az ${com.feniqo.mobile.domain.validation.AuthValidationRules.MIN_PASSWORD_LENGTH} karakter olmalıdır."
-                        else -> "Geçersiz yeni parola."
+                            AccountSecurityUiMessage.NEW_PASSWORD_TOO_SHORT
+                        else -> AccountSecurityUiMessage.NEW_PASSWORD_INVALID
                     }
                     return@launch
                 }
 
                 val confirmValid = com.feniqo.mobile.domain.validation.AuthValidationRules.validateConfirmPassword(newPass, confirmPass)
                 if (confirmValid is com.feniqo.mobile.domain.validation.AuthValidationResult.Invalid) {
-                    passwordError.value = "Yeni parolalar birbiriyle eşleşmiyor."
+                    passwordError.value = AccountSecurityUiMessage.PASSWORDS_DO_NOT_MATCH
                     return@launch
                 }
 
                 if (newPass == oldPass) {
-                    passwordError.value = "Yeni parolanız mevcut parolanızdan farklı olmalıdır."
+                    passwordError.value = AccountSecurityUiMessage.PASSWORD_UNCHANGED
                     return@launch
                 }
 
@@ -327,13 +328,13 @@ class SettingsViewModel @Inject constructor(
                     is RepositoryResult.Failure -> {
                         passwordSuccess.value = false
                         passwordError.value = when (result.error.code) {
-                            "auth_invalid_credentials" -> "Mevcut parolanız hatalı."
-                            "auth_password_unchanged" -> "Yeni parolanız mevcut parolanızdan farklı olmalıdır."
-                            "auth_invalid_input" -> "Yeni parola güvenlik koşullarını karşılamıyor."
-                            "auth_session_expired" -> "Oturumunuzun süresi doldu. Lütfen yeniden giriş yapın."
-                            "auth_reauthentication_required" -> "Güvenliğiniz için yeniden giriş yapmanız gerekiyor."
-                            "network_unavailable", "auth_rate_limited" -> "Bağlantı kurulamadı. Lütfen biraz sonra tekrar deneyin."
-                            else -> "Parola güncellenemedi. Lütfen tekrar deneyin."
+                            "auth_invalid_credentials" -> AccountSecurityUiMessage.CURRENT_PASSWORD_INVALID
+                            "auth_password_unchanged" -> AccountSecurityUiMessage.PASSWORD_UNCHANGED
+                            "auth_invalid_input" -> AccountSecurityUiMessage.NEW_PASSWORD_INVALID
+                            "auth_session_expired" -> AccountSecurityUiMessage.SESSION_EXPIRED
+                            "auth_reauthentication_required" -> AccountSecurityUiMessage.REAUTHENTICATION_REQUIRED
+                            "network_unavailable", "auth_rate_limited" -> AccountSecurityUiMessage.NETWORK_UNAVAILABLE
+                            else -> AccountSecurityUiMessage.PASSWORD_UPDATE_FAILED
                         }
                     }
                 }
@@ -359,9 +360,11 @@ class SettingsViewModel @Inject constructor(
             val emailValid = com.feniqo.mobile.domain.validation.AuthValidationRules.validateEmail(newEmail)
             if (emailValid is com.feniqo.mobile.domain.validation.AuthValidationResult.Invalid) {
                 emailError.value = when (emailValid.error) {
-                    com.feniqo.mobile.domain.validation.AuthValidationError.EMAIL_REQUIRED -> "E-posta adresi girmelisiniz."
-                    com.feniqo.mobile.domain.validation.AuthValidationError.EMAIL_INVALID -> "Geçerli bir e-posta adresi girin."
-                    else -> "Geçersiz e-posta adresi."
+                    com.feniqo.mobile.domain.validation.AuthValidationError.EMAIL_REQUIRED ->
+                        AccountSecurityUiMessage.EMAIL_REQUIRED
+                    com.feniqo.mobile.domain.validation.AuthValidationError.EMAIL_INVALID ->
+                        AccountSecurityUiMessage.EMAIL_INVALID
+                    else -> AccountSecurityUiMessage.EMAIL_INVALID
                 }
                 isSendingEmailVerification.value = false
                 return@launch
@@ -389,7 +392,7 @@ class SettingsViewModel @Inject constructor(
 
             val emailValid = com.feniqo.mobile.domain.validation.AuthValidationRules.validateEmail(email)
             if (emailValid is com.feniqo.mobile.domain.validation.AuthValidationResult.Invalid) {
-                emailError.value = "Geçerli bir e-posta adresi bulunamadı."
+                emailError.value = AccountSecurityUiMessage.EMAIL_NOT_FOUND
                 isSendingEmailVerification.value = false
                 return@launch
             }
@@ -403,9 +406,9 @@ class SettingsViewModel @Inject constructor(
                     is RepositoryResult.Failure -> {
                         emailVerificationSent.value = false
                         emailError.value = when (result.error.code) {
-                            "auth_rate_limited" -> "Lütfen tekrar göndermeden önce biraz bekleyin."
-                            "network_unavailable" -> "İnternet bağlantınızı kontrol edin."
-                            else -> "Doğrulama e-postası gönderilemedi. Lütfen tekrar deneyin."
+                            "auth_rate_limited" -> AccountSecurityUiMessage.RATE_LIMITED
+                            "network_unavailable" -> AccountSecurityUiMessage.NETWORK_UNAVAILABLE
+                            else -> AccountSecurityUiMessage.EMAIL_VERIFICATION_FAILED
                         }
                     }
                 }
@@ -444,13 +447,13 @@ private data class FiveFlags(
     val sp: Boolean,
     val pss: Boolean,
     val pe: String?,
-    val pwe: String?,
+    val pwe: AccountSecurityUiMessage?,
     val pws: Boolean,
 )
 
 private data class FourFlags2(
     val cp: Boolean,
-    val ee: String?,
+    val ee: AccountSecurityUiMessage?,
     val evs: Boolean,
     val sev: Boolean,
 )

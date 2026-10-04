@@ -711,6 +711,7 @@ fun EmailSettingsScreenRoute(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val currentEmail = uiState.displayEmail
+    val emailErrorMessage = uiState.emailError?.toLocalizedText()
 
     LaunchedEffect(Unit) {
         viewModel.refreshEmailVerificationStatus()
@@ -721,7 +722,7 @@ fun EmailSettingsScreenRoute(
         verificationStatus = uiState.emailVerificationStatus,
         isSendingVerification = uiState.isSendingEmailVerification,
         verificationSentSuccess = uiState.emailVerificationSent,
-        errorMessage = uiState.emailError,
+        errorMessage = emailErrorMessage,
         onBack = onBack,
         onResendVerification = { viewModel.resendEmailVerification(currentEmail) },
         onNavigateToChangeEmail = onNavigateToChangeEmail,
@@ -740,6 +741,7 @@ fun ChangeEmailScreenRoute(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val emailErrorMessage = uiState.emailError?.toLocalizedText()
 
     LaunchedEffect(uiState.emailVerificationSent) {
         if (uiState.emailVerificationSent) {
@@ -750,7 +752,7 @@ fun ChangeEmailScreenRoute(
     ChangeEmailScreen(
         currentEmail = uiState.displayEmail,
         isLoading = uiState.isSendingEmailVerification,
-        errorMessage = uiState.emailError,
+        errorMessage = emailErrorMessage,
         onSubmitNewEmail = { newEmail ->
             viewModel.requestEmailChange(newEmail) {
                 onVerificationSent(newEmail)
@@ -797,6 +799,7 @@ fun ChangePasswordScreenRoute(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val passwordUpdatedMessage = localizedAccountPasswordUpdated()
+    val passwordErrorMessage = uiState.passwordError?.toLocalizedText()
 
     LaunchedEffect(uiState.passwordSuccess) {
         if (uiState.passwordSuccess) {
@@ -808,7 +811,7 @@ fun ChangePasswordScreenRoute(
 
     ChangePasswordScreen(
         isLoading = uiState.isChangingPassword,
-        errorMessage = uiState.passwordError,
+        errorMessage = passwordErrorMessage,
         onSubmit = { old, new, confirm -> viewModel.changePassword(old, new, confirm) },
         onBack = onBack,
         modifier = modifier,

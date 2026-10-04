@@ -163,4 +163,20 @@
     <string name="account_export_data">Verilerimi dışa aktar</string>
     <string name="account_contact_support">Destekle iletişime geç</string>
     <string name="account_password_updated_toast">Parolanız başarıyla güncellendi.</string>
+    <string name="account_error_current_password_required">Mevcut parolanızı girmelisiniz.</string>
+    <string name="account_error_new_password_required">Yeni parola girmelisiniz.</string>
+    <string name="account_error_new_password_short">Yeni parola en az 6 karakter olmalıdır.</string>
+    <string name="account_error_new_password_invalid">Geçersiz yeni parola.</string>
+    <string name="account_error_password_mismatch">Yeni parolalar birbiriyle eşleşmiyor.</string>
+    <string name="account_error_password_unchanged">Yeni parolanız mevcut parolanızdan farklı olmalıdır.</string>
+    <string name="account_error_current_password_invalid">Mevcut parolanız hatalı.</string>
+    <string name="account_error_session_expired">Oturumunuzun süresi doldu. Lütfen yeniden giriş yapın.</string>
+    <string name="account_error_reauthentication_required">Güvenliğiniz için yeniden giriş yapmanız gerekiyor.</string>
+    <string name="account_error_network">Bağlantı kurulamadı. Lütfen biraz sonra tekrar deneyin.</string>
+    <string name="account_error_password_update_failed">Parola güncellenemedi. Lütfen tekrar deneyin.</string>
+    <string name="account_error_email_required">E-posta adresi girmelisiniz.</string>
+    <string name="account_error_email_invalid">Geçerli bir e-posta adresi girin.</string>
+    <string name="account_error_email_not_found">Geçerli bir e-posta adresi bulunamadı.</string>
+    <string name="account_error_rate_limited">Lütfen tekrar göndermeden önce biraz bekleyin.</string>
+    <string name="account_error_email_verification_failed">Doğrulama e-postası gönderilemedi. Lütfen tekrar deneyin.</string>
 </resources>

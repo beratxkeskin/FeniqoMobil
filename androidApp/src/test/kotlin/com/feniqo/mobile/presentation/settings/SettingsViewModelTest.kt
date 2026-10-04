@@ -84,7 +84,7 @@ class SettingsViewModelTest {
         testScheduler.advanceUntilIdle()
 
         assertEquals(0, authRepo.changePasswordCallCount)
-        assertEquals("Mevcut parolanızı girmelisiniz.", viewModel.uiState.value.passwordError)
+        assertEquals(AccountSecurityUiMessage.CURRENT_PASSWORD_REQUIRED, viewModel.uiState.value.passwordError)
         assertFalse(viewModel.uiState.value.passwordSuccess)
         assertFalse(viewModel.uiState.value.isChangingPassword)
     }
@@ -100,7 +100,7 @@ class SettingsViewModelTest {
         testScheduler.advanceUntilIdle()
 
         assertEquals(0, authRepo.changePasswordCallCount)
-        assertTrue(viewModel.uiState.value.passwordError?.contains("en az 6") == true)
+        assertEquals(AccountSecurityUiMessage.NEW_PASSWORD_TOO_SHORT, viewModel.uiState.value.passwordError)
         assertFalse(viewModel.uiState.value.passwordSuccess)
         assertFalse(viewModel.uiState.value.isChangingPassword)
     }
@@ -116,7 +116,7 @@ class SettingsViewModelTest {
         testScheduler.advanceUntilIdle()
 
         assertEquals(0, authRepo.changePasswordCallCount)
-        assertEquals("Yeni parolalar birbiriyle eşleşmiyor.", viewModel.uiState.value.passwordError)
+        assertEquals(AccountSecurityUiMessage.PASSWORDS_DO_NOT_MATCH, viewModel.uiState.value.passwordError)
         assertFalse(viewModel.uiState.value.passwordSuccess)
         assertFalse(viewModel.uiState.value.isChangingPassword)
     }
@@ -132,7 +132,7 @@ class SettingsViewModelTest {
         testScheduler.advanceUntilIdle()
 
         assertEquals(0, authRepo.changePasswordCallCount)
-        assertEquals("Yeni parolanız mevcut parolanızdan farklı olmalıdır.", viewModel.uiState.value.passwordError)
+        assertEquals(AccountSecurityUiMessage.PASSWORD_UNCHANGED, viewModel.uiState.value.passwordError)
         assertFalse(viewModel.uiState.value.passwordSuccess)
         assertFalse(viewModel.uiState.value.isChangingPassword)
     }
@@ -169,7 +169,7 @@ class SettingsViewModelTest {
 
         assertEquals(1, authRepo.changePasswordCallCount)
         assertFalse(viewModel.uiState.value.passwordSuccess)
-        assertEquals("Mevcut parolanız hatalı.", viewModel.uiState.value.passwordError)
+        assertEquals(AccountSecurityUiMessage.CURRENT_PASSWORD_INVALID, viewModel.uiState.value.passwordError)
         assertFalse(viewModel.uiState.value.isChangingPassword)
     }
 
@@ -187,7 +187,7 @@ class SettingsViewModelTest {
 
         assertEquals(1, authRepo.changePasswordCallCount)
         assertFalse(viewModel.uiState.value.passwordSuccess)
-        assertEquals("Bağlantı kurulamadı. Lütfen biraz sonra tekrar deneyin.", viewModel.uiState.value.passwordError)
+        assertEquals(AccountSecurityUiMessage.NETWORK_UNAVAILABLE, viewModel.uiState.value.passwordError)
         assertFalse(viewModel.uiState.value.isChangingPassword)
     }
 

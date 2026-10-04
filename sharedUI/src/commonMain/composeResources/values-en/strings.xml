@@ -163,4 +163,20 @@
     <string name="account_export_data">Export my data</string>
     <string name="account_contact_support">Contact support</string>
     <string name="account_password_updated_toast">Your password was updated successfully.</string>
+    <string name="account_error_current_password_required">Enter your current password.</string>
+    <string name="account_error_new_password_required">Enter a new password.</string>
+    <string name="account_error_new_password_short">The new password must be at least 6 characters.</string>
+    <string name="account_error_new_password_invalid">The new password is invalid.</string>
+    <string name="account_error_password_mismatch">The new passwords do not match.</string>
+    <string name="account_error_password_unchanged">Your new password must be different from your current password.</string>
+    <string name="account_error_current_password_invalid">Your current password is incorrect.</string>
+    <string name="account_error_session_expired">Your session has expired. Sign in again.</string>
+    <string name="account_error_reauthentication_required">Sign in again to protect your account.</string>
+    <string name="account_error_network">Could not connect. Try again in a moment.</string>
+    <string name="account_error_password_update_failed">Could not update your password. Try again.</string>
+    <string name="account_error_email_required">Enter an email address.</string>
+    <string name="account_error_email_invalid">Enter a valid email address.</string>
+    <string name="account_error_email_not_found">A valid email address could not be found.</string>
+    <string name="account_error_rate_limited">Wait a moment before sending again.</string>
+    <string name="account_error_email_verification_failed">Could not send the verification email. Try again.</string>
 </resources>

@@ -1,5 +1,7 @@
 # FeniqoMobil Özellik Durumu
 
+> 2026-10-04 — Hesap güvenliği dinamik hata localization'ı tamamlandı. `SettingsViewModel` içindeki e-posta ve parola hata metinleri dil bağımsız `AccountSecurityUiMessage` durumlarına dönüştürüldü; Türkçe/İngilizce karşılıklar yalnız Compose kaynak katmanında çözülüyor. Katalog eşliği 171 anahtarda; ViewModel eşlemeleri ve İngilizce çalışma zamanı hata gösterimi testlerle doğrulandı.
+
 > 2026-10-04 — Localization ikinci diliminin hesap güvenliği sabit yüzey paketi tamamlandı. E-posta değiştirme/doğrulama, parola değiştirme, çıkış onayı ve hesap silme ekranlarının görünür metinleri, parola görünürlük açıklamaları ve başarı toast'ları TR/EN kaynaklara taşındı. Katalog eşliği 155 anahtarda; çalışma zamanı dil değişimi ve İngilizce yüzeyler Compose regresyonlarıyla doğrulandı. `SettingsViewModel` kaynaklı dinamik e-posta/parola hata metinlerinin tipli locale-aware durumlara dönüştürülmesi açık kalır.
 
 > 2026-10-04 — Localization ikinci diliminin e-posta doğrulama paketi tamamlandı. Kayıt sonrası doğrulama ve girişte doğrulama gerekli durumlarının başlık, açıklama, erişilebilirlik, yeniden gönderme, başarı ve hata metinleri TR/EN kaynaklara taşındı. Katalog eşliği 122 anahtarda; iki durumun çalışma zamanı İngilizce karşılıkları Compose regresyonlarıyla doğrulandı. Hesap güvenliği alt akışları açık kalır.

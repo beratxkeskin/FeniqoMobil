@@ -2435,24 +2435,24 @@
         <error line="676" column="5" source="standard:function-naming" />
         <error line="684" column="23" source="standard:multiline-expression-wrapping" />
         <error line="706" column="5" source="standard:function-naming" />
-        <error line="736" column="5" source="standard:function-naming" />
-        <error line="768" column="5" source="standard:function-naming" />
-        <error line="792" column="5" source="standard:function-naming" />
-        <error line="822" column="5" source="standard:function-naming" />
-        <error line="844" column="5" source="standard:function-naming" />
-        <error line="862" column="5" source="standard:function-naming" />
-        <error line="880" column="5" source="standard:function-naming" />
-        <error line="894" column="5" source="standard:function-naming" />
-        <error line="903" column="30" source="standard:multiline-expression-wrapping" />
-        <error line="914" column="26" source="standard:multiline-expression-wrapping" />
-        <error line="943" column="43" source="standard:function-signature" />
-        <error line="943" column="55" source="standard:function-signature" />
-        <error line="943" column="79" source="standard:function-signature" />
-        <error line="958" column="29" source="standard:multiline-expression-wrapping" />
-        <error line="965" column="27" source="standard:multiline-expression-wrapping" />
-        <error line="972" column="29" source="standard:multiline-expression-wrapping" />
-        <error line="1053" column="60" source="standard:multiline-expression-wrapping" />
-        <error line="1053" column="60" source="standard:function-signature" />
+        <error line="737" column="5" source="standard:function-naming" />
+        <error line="770" column="5" source="standard:function-naming" />
+        <error line="794" column="5" source="standard:function-naming" />
+        <error line="825" column="5" source="standard:function-naming" />
+        <error line="847" column="5" source="standard:function-naming" />
+        <error line="865" column="5" source="standard:function-naming" />
+        <error line="883" column="5" source="standard:function-naming" />
+        <error line="897" column="5" source="standard:function-naming" />
+        <error line="906" column="30" source="standard:multiline-expression-wrapping" />
+        <error line="917" column="26" source="standard:multiline-expression-wrapping" />
+        <error line="946" column="43" source="standard:function-signature" />
+        <error line="946" column="55" source="standard:function-signature" />
+        <error line="946" column="79" source="standard:function-signature" />
+        <error line="961" column="29" source="standard:multiline-expression-wrapping" />
+        <error line="968" column="27" source="standard:multiline-expression-wrapping" />
+        <error line="975" column="29" source="standard:multiline-expression-wrapping" />
+        <error line="1056" column="60" source="standard:multiline-expression-wrapping" />
+        <error line="1056" column="60" source="standard:function-signature" />
     </file>
     <file name="src/main/kotlin/com/feniqo/mobile/presentation/settings/SettingsViewModel.kt">
         <error line="37" column="24" source="standard:class-signature" />
@@ -2488,19 +2488,19 @@
         <error line="294" column="87" source="standard:chain-method-continuation" />
         <error line="300" column="87" source="standard:chain-method-continuation" />
         <error line="302" column="43" source="standard:multiline-expression-wrapping" />
-        <error line="311" column="91" source="standard:chain-method-continuation" />
-        <error line="329" column="47" source="standard:multiline-expression-wrapping" />
-        <error line="353" column="28" source="standard:function-signature" />
-        <error line="353" column="46" source="standard:function-signature" />
-        <error line="353" column="77" source="standard:function-signature" />
-        <error line="359" column="85" source="standard:chain-method-continuation" />
-        <error line="361" column="36" source="standard:multiline-expression-wrapping" />
-        <error line="390" column="85" source="standard:chain-method-continuation" />
-        <error line="405" column="44" source="standard:multiline-expression-wrapping" />
-        <error line="427" column="58" source="standard:multiline-expression-wrapping" />
-        <error line="427" column="58" source="standard:function-signature" />
-        <error line="435" column="59" source="standard:multiline-expression-wrapping" />
-        <error line="435" column="59" source="standard:function-signature" />
+        <error line="312" column="91" source="standard:chain-method-continuation" />
+        <error line="330" column="47" source="standard:multiline-expression-wrapping" />
+        <error line="354" column="28" source="standard:function-signature" />
+        <error line="354" column="46" source="standard:function-signature" />
+        <error line="354" column="77" source="standard:function-signature" />
+        <error line="360" column="85" source="standard:chain-method-continuation" />
+        <error line="362" column="36" source="standard:multiline-expression-wrapping" />
+        <error line="393" column="85" source="standard:chain-method-continuation" />
+        <error line="408" column="44" source="standard:multiline-expression-wrapping" />
+        <error line="430" column="58" source="standard:multiline-expression-wrapping" />
+        <error line="430" column="58" source="standard:function-signature" />
+        <error line="438" column="59" source="standard:multiline-expression-wrapping" />
+        <error line="438" column="59" source="standard:function-signature" />
     </file>
     <file name="src/main/kotlin/com/feniqo/mobile/presentation/settings/TransactionExportViewModel.kt">
         <error line="14" column="33" source="standard:annotation" />
@@ -5949,6 +5949,9 @@
         <error line="5" column="1" source="standard:no-unused-imports" />
         <error line="17" column="1" source="standard:no-empty-first-line-in-class-body" />
     </file>
+    <file name="src/test/kotlin/com/feniqo/mobile/presentation/settings/AccountSecurityLocalizationComposeTest.kt">
+        <error line="105" column="36" source="standard:multiline-expression-wrapping" />
+    </file>
     <file name="src/test/kotlin/com/feniqo/mobile/presentation/settings/SettingsViewModelEmailTest.kt">
         <error line="3" column="1" source="standard:import-ordering" />
         <error line="39" column="1" source="standard:no-empty-first-line-in-class-body" />
@@ -6079,7 +6082,6 @@
         <error line="77" column="71" source="standard:function-signature" />
         <error line="93" column="67" source="standard:multiline-expression-wrapping" />
         <error line="93" column="67" source="standard:function-signature" />
-        <error line="103" column="57" source="standard:chain-method-continuation" />
         <error line="109" column="76" source="standard:multiline-expression-wrapping" />
         <error line="109" column="76" source="standard:function-signature" />
         <error line="125" column="72" source="standard:multiline-expression-wrapping" />

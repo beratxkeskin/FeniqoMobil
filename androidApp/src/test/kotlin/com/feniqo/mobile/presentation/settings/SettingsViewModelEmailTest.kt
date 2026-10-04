@@ -124,7 +124,7 @@ class SettingsViewModelEmailTest {
 
         assertEquals(null, authRepo.lastResentEmail)
         assertFalse(viewModel.uiState.value.emailVerificationSent)
-        assertEquals("Geçerli bir e-posta adresi bulunamadı.", viewModel.uiState.value.emailError)
+        assertEquals(AccountSecurityUiMessage.EMAIL_NOT_FOUND, viewModel.uiState.value.emailError)
     }
 
     private fun createViewModel(authRepo: EmailTestFakeAuthRepository): SettingsViewModel {
