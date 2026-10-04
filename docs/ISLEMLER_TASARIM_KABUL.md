@@ -33,7 +33,7 @@ Taksit altyapısı yalnız metadata değildir: mevcut AddInstallmentGroupUseCase
 
 Android debug APK; Transactions, TransactionDetail, TransactionForm, TransactionSuccess ve TransactionConflict ViewModel testleri; type-safe rota/gerçek NavHost back-stack testleri; sharedUI/sharedLogic host testleri ve iOS Simulator ARM64 ortak kod derlemesi geçti. Çakışma snapshot ve açık çözüm seçimi testleri dahildir.
 
-Pixel_8 emülatöründe gerçek Compose bileşenleriyle 4 cihaz testi geçti; açık/koyu liste, gider ekleme, kategori seçimi, düzenleme ve taslaklı ayrıntılar için 6 görüntü `artifacts/transactions/transaction-visual-tests/` altında üretildi ve incelendi. Bunlar sabit test fixture'larıyla render edildi; oturumlu uçtan uca kabul değildir. Oturum bulunmadığından uygulama kabuğundaki gerçek veriyle kaydetme/silme kabulü yapılmadı.
+Pixel_8 emülatöründe gerçek Compose bileşenleriyle 4 cihaz testi geçti; açık/koyu liste, gider ekleme, kategori seçimi, düzenleme ve taslaklı ayrıntılar için 6 görüntü üretildi ve incelendi. Bunlar sabit test fixture'larıyla render edildi; oturumlu uçtan uca kabul değildir. Görsel artifactler repository sadeleştirme kararıyla 2026-10-04 tarihinde kaldırıldı. Oturum bulunmadığından uygulama kabuğundaki gerçek veriyle kaydetme/silme kabulü yapılmadı.
 
 Commit/push yapılmadı. Staging/production migration, SQL veya veri değişikliği uygulanmadı.
 
