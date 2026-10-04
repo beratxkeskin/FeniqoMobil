@@ -29,6 +29,11 @@ import com.feniqo.mobile.presentation.auth.AuthStatusBadge
 import com.feniqo.mobile.presentation.auth.AuthTopBar
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTheme
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.auth_sign_in
+import feniqomobil.sharedui.generated.resources.password_updated_description
+import feniqomobil.sharedui.generated.resources.password_updated_title
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Pano B - 08 Parola Güncellendi Ekranı.
@@ -71,7 +76,7 @@ fun PasswordResetSuccessScreen(
                     // Yeşil onay ikonu rozeti
                     AuthStatusBadge(
                         imageVector = Icons.Outlined.Check,
-                        contentDescription = "Parola güncellendi",
+                        contentDescription = stringResource(Res.string.password_updated_title),
                     )
 
                     // Başlık ve Açıklama
@@ -80,7 +85,7 @@ fun PasswordResetSuccessScreen(
                         horizontalAlignment = Alignment.Start,
                     ) {
                         Text(
-                            text = "Parolan güncellendi",
+                            text = stringResource(Res.string.password_updated_title),
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 28.sp,
@@ -91,7 +96,7 @@ fun PasswordResetSuccessScreen(
                         Spacer(modifier = Modifier.height(10.dp))
 
                         Text(
-                            text = "Yeni parolanla hesabına giriş yapabilirsin.",
+                            text = stringResource(Res.string.password_updated_description),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -101,7 +106,7 @@ fun PasswordResetSuccessScreen(
 
                     // "Giriş yap" birincil butonu
                     AuthPrimaryButton(
-                        text = "Giriş yap",
+                        text = stringResource(Res.string.auth_sign_in),
                         onClick = onNavigateToLogin,
                     )
                 }

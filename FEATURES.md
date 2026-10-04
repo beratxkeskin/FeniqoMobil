@@ -1,5 +1,7 @@
 # FeniqoMobil Özellik Durumu
 
+> 2026-10-04 — Localization ikinci diliminin şifre kurtarma paketi tamamlandı. Şifremi Unuttum, E-postanı Kontrol Et, Yeni Parola ve Parola Güncellendi ekranlarının görünür metinleri, erişilebilirlik açıklamaları, hata mesajları ve alan validasyonları TR/EN kaynaklara bağlandı. Katalog eşliği 116 anahtarda ve dört yüzeyin İngilizce karşılıkları Compose regresyonlarıyla doğrulandı. E-posta doğrulama ve hesap güvenliği alt akışları açık kalır.
+
 > 2026-10-04 — Localization ikinci diliminin auth başlangıç paketi tamamlandı. Giriş ve hesap oluşturma ekranlarının başlık, alan, eylem ve durum metinleri ile tipli auth/validasyon mesajları Türkçe/İngilizce kaynak kataloğuna taşındı. Çalışma zamanında giriş ekranının Türkçeden İngilizceye dönmesi Compose regresyonuyla doğrulandı. Şifre kurtarma, e-posta doğrulama ve hesap güvenliği alt akışları bu dilimin sonraki parçasıdır.
 
 > 2026-10-04 — Localization ilk dilimi tamamlandı. Compose Multiplatform kaynaklarında Türkçe varsayılan ve İngilizce katalog oluşturuldu; kaydedilmiş `AppLanguage` tercihi uygulama kökünde çalışma zamanı locale'ine bağlandı. Ayarlar, Dil ve Bölge, alt navigasyon, Hızlı Ekle ve format önizleme yüzeyleri resource-backed hale getirildi; dil değişimi için Compose regresyon testi eklendi. Kalan ekran metinleri, Android platform yüzeyleri ve iOS ürün UI katalogları sonraki localization dilimleridir; özellik uygulama genelinde tamamlanmış sayılmaz.

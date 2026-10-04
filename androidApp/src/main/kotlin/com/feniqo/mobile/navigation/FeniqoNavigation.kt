@@ -69,6 +69,7 @@ import com.feniqo.mobile.presentation.auth.EmailVerificationViewModel
 import com.feniqo.mobile.presentation.auth.ForgotPasswordViewModel
 import com.feniqo.mobile.presentation.auth.ResetPasswordViewModel
 import com.feniqo.mobile.presentation.auth.toDisplayText
+import com.feniqo.mobile.presentation.auth.toLocalizedText
 import com.feniqo.mobile.presentation.hub.MoreHubScreenRoute
 import com.feniqo.mobile.presentation.report.AllReportsHubRoute
 import com.feniqo.mobile.presentation.report.BudgetPerformanceReportRoute
@@ -326,7 +327,7 @@ fun AuthNavHost(
                 },
                 isSubmitting = state.isSubmitting,
                 errorMessage = state.generalMessage,
-                emailError = state.emailError?.toDisplayText(),
+                emailError = state.emailError?.toLocalizedText(),
                 onBack = {
                     viewModel.clearState()
                     navController.popBackStack()
@@ -370,8 +371,8 @@ fun AuthNavHost(
                 isSubmitting = state.isSubmitting,
                 isInvalidOrExpiredLink = state.isRecoveryLinkInvalid,
                 errorMessage = state.generalMessage,
-                passwordError = state.passwordError?.toDisplayText(),
-                confirmPasswordError = state.confirmPasswordError?.toDisplayText(),
+                passwordError = state.passwordError?.toLocalizedText(),
+                confirmPasswordError = state.confirmPasswordError?.toLocalizedText(),
                 onSubmit = {
                     viewModel.submit {
                         navController.navigate(PasswordResetSuccessRoute) {

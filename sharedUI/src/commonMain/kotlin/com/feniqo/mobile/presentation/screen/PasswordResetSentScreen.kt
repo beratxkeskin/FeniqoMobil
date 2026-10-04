@@ -33,10 +33,21 @@ import com.feniqo.mobile.presentation.auth.AuthSecondaryButton
 import com.feniqo.mobile.presentation.auth.AuthStatusBadge
 import com.feniqo.mobile.presentation.auth.AuthTopBar
 import com.feniqo.mobile.presentation.auth.AuthUiMessage
-import com.feniqo.mobile.presentation.auth.toDisplayText
+import com.feniqo.mobile.presentation.auth.toLocalizedText
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTheme
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.auth_email_placeholder
+import feniqomobil.sharedui.generated.resources.auth_password_reset_sent
+import feniqomobil.sharedui.generated.resources.password_back_to_login
+import feniqomobil.sharedui.generated.resources.password_check_email
+import feniqomobil.sharedui.generated.resources.password_edit_email
+import feniqomobil.sharedui.generated.resources.password_resend
+import feniqomobil.sharedui.generated.resources.password_resend_success
+import feniqomobil.sharedui.generated.resources.password_sending
+import feniqomobil.sharedui.generated.resources.password_spam_hint
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Pano B - 06 E-postanı Kontrol Et Ekranı.
@@ -87,7 +98,7 @@ fun PasswordResetSentScreen(
                     // Zarf rozeti
                     AuthStatusBadge(
                         imageVector = Icons.Outlined.MailOutline,
-                        contentDescription = "E-postanı kontrol et",
+                        contentDescription = stringResource(Res.string.password_check_email),
                     )
 
                     // Başlık ve Açıklama
@@ -96,7 +107,7 @@ fun PasswordResetSentScreen(
                         horizontalAlignment = Alignment.Start,
                     ) {
                         Text(
-                            text = "E-postanı kontrol et",
+                            text = stringResource(Res.string.password_check_email),
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 28.sp,
@@ -107,7 +118,7 @@ fun PasswordResetSentScreen(
                         Spacer(modifier = Modifier.height(10.dp))
 
                         Text(
-                            text = "Bu adresle bir hesap varsa parola sıfırlama bağlantısı gönderilecek.",
+                            text = stringResource(Res.string.auth_password_reset_sent),
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 lineHeight = 22.sp,
                             ),
@@ -122,7 +133,12 @@ fun PasswordResetSentScreen(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                     ) {
                         Text(
-                            text = email.ifBlank { "eposta@ornek.com" },
+                            text =
+                                if (email.isBlank()) {
+                                    stringResource(Res.string.auth_email_placeholder)
+                                } else {
+                                    email
+                                },
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.Medium,
                             ),
@@ -134,7 +150,7 @@ fun PasswordResetSentScreen(
                     // Spam hatırlatması
                     Box(modifier = Modifier.fillMaxWidth()) {
                         Text(
-                            text = "Spam klasörünü de kontrol edebilirsin.",
+                            text = stringResource(Res.string.password_spam_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -148,7 +164,7 @@ fun PasswordResetSentScreen(
                             color = MaterialTheme.colorScheme.primaryContainer,
                         ) {
                             Text(
-                                text = "Sıfırlama bağlantısı tekrar gönderildi.",
+                                text = stringResource(Res.string.password_resend_success),
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     fontWeight = FontWeight.Medium,
                                 ),
@@ -160,7 +176,7 @@ fun PasswordResetSentScreen(
 
                     if (errorMessage != null) {
                         AuthErrorBanner(
-                            message = errorMessage.toDisplayText(),
+                            message = errorMessage.toLocalizedText(),
                             isNetworkError = errorMessage == AuthUiMessage.NETWORK_UNAVAILABLE,
                         )
                     }
@@ -174,17 +190,22 @@ fun PasswordResetSentScreen(
                         verticalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
                         AuthPrimaryButton(
-                            text = "Girişe dön",
+                            text = stringResource(Res.string.password_back_to_login),
                             onClick = onNavigateToLogin,
                         )
 
                         AuthSecondaryButton(
-                            text = "Adresi düzelt",
+                            text = stringResource(Res.string.password_edit_email),
                             onClick = onEditEmail,
                         )
 
                         Text(
-                            text = if (isResending) "Gönderiliyor..." else "Tekrar gönder",
+                            text =
+                                if (isResending) {
+                                    stringResource(Res.string.password_sending)
+                                } else {
+                                    stringResource(Res.string.password_resend)
+                                },
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.SemiBold,
                             ),

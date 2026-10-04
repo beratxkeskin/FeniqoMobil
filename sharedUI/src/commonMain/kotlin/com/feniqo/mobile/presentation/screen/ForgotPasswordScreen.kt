@@ -34,10 +34,19 @@ import com.feniqo.mobile.presentation.auth.AuthSecondaryButton
 import com.feniqo.mobile.presentation.auth.AuthStatusBadge
 import com.feniqo.mobile.presentation.auth.AuthTopBar
 import com.feniqo.mobile.presentation.auth.AuthUiMessage
-import com.feniqo.mobile.presentation.auth.toDisplayText
+import com.feniqo.mobile.presentation.auth.toLocalizedText
 import com.feniqo.mobile.presentation.component.AuthTextField
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTheme
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.auth_email_placeholder
+import feniqomobil.sharedui.generated.resources.password_back_to_login
+import feniqomobil.sharedui.generated.resources.password_forgot_badge
+import feniqomobil.sharedui.generated.resources.password_forgot_subtitle
+import feniqomobil.sharedui.generated.resources.password_forgot_title
+import feniqomobil.sharedui.generated.resources.password_send_reset_link
+import feniqomobil.sharedui.generated.resources.password_sending
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Pano B - 05 Parolamı Unuttum Ekranı.
@@ -89,7 +98,7 @@ fun ForgotPasswordScreen(
                     // Anahtar rozeti
                     AuthStatusBadge(
                         imageVector = Icons.Outlined.Key,
-                        contentDescription = "Parolamı unuttum",
+                        contentDescription = stringResource(Res.string.password_forgot_badge),
                     )
 
                     // Başlık ve Açıklama
@@ -98,7 +107,7 @@ fun ForgotPasswordScreen(
                         horizontalAlignment = Alignment.Start,
                     ) {
                         Text(
-                            text = "Parolanı yenileyelim",
+                            text = stringResource(Res.string.password_forgot_title),
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 28.sp,
@@ -109,7 +118,7 @@ fun ForgotPasswordScreen(
                         Spacer(modifier = Modifier.height(10.dp))
 
                         Text(
-                            text = "Hesabında kullandığın e-posta adresini gir.",
+                            text = stringResource(Res.string.password_forgot_subtitle),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -119,7 +128,7 @@ fun ForgotPasswordScreen(
                     AuthTextField(
                         value = email,
                         onValueChange = onEmailChange,
-                        placeholder = "ayse@example.com",
+                        placeholder = stringResource(Res.string.auth_email_placeholder),
                         leadingIcon = Icons.Outlined.MailOutline,
                         enabled = !isSubmitting,
                         isError = emailError != null,
@@ -134,7 +143,7 @@ fun ForgotPasswordScreen(
 
                     if (errorMessage != null) {
                         AuthErrorBanner(
-                            message = errorMessage.toDisplayText(),
+                            message = errorMessage.toLocalizedText(),
                             isNetworkError = errorMessage == AuthUiMessage.NETWORK_UNAVAILABLE,
                         )
                     }
@@ -147,18 +156,18 @@ fun ForgotPasswordScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         AuthPrimaryButton(
-                            text = "Sıfırlama bağlantısı gönder",
+                            text = stringResource(Res.string.password_send_reset_link),
                             onClick = {
                                 focusManager.clearFocus()
                                 if (!isSubmitting) onSubmit()
                             },
                             isLoading = isSubmitting,
-                            loadingText = "Gönderiliyor...",
+                            loadingText = stringResource(Res.string.password_sending),
                             enabled = !isSubmitting,
                         )
 
                         AuthSecondaryButton(
-                            text = "Girişe dön",
+                            text = stringResource(Res.string.password_back_to_login),
                             onClick = onNavigateToLogin,
                         )
                     }

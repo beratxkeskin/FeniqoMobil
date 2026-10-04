@@ -99,4 +99,27 @@
     <string name="auth_validation_password_short">Parola en az 6 karakter olmalıdır.</string>
     <string name="auth_validation_password_mismatch">Parolalar eşleşmiyor.</string>
     <string name="auth_validation_name_short">Ad soyad en az 2 karakter olmalıdır.</string>
+
+    <string name="password_forgot_badge">Parolamı unuttum</string>
+    <string name="password_forgot_title">Parolanı yenileyelim</string>
+    <string name="password_forgot_subtitle">Hesabında kullandığın e-posta adresini gir.</string>
+    <string name="password_send_reset_link">Sıfırlama bağlantısı gönder</string>
+    <string name="password_sending">Gönderiliyor...</string>
+    <string name="password_back_to_login">Girişe dön</string>
+    <string name="password_check_email">E-postanı kontrol et</string>
+    <string name="password_spam_hint">Spam klasörünü de kontrol edebilirsin.</string>
+    <string name="password_resend_success">Sıfırlama bağlantısı tekrar gönderildi.</string>
+    <string name="password_edit_email">Adresi düzelt</string>
+    <string name="password_resend">Tekrar gönder</string>
+    <string name="password_invalid_link_badge">Bağlantı geçersiz</string>
+    <string name="password_invalid_link_title">Bağlantı geçersiz\nveya süresi dolmuş</string>
+    <string name="password_invalid_link_description">Parolanı yenilemek için yeni bir bağlantı iste.</string>
+    <string name="password_request_new_link">Yeni bağlantı iste</string>
+    <string name="password_new_title">Yeni parolanı belirle</string>
+    <string name="password_new_label">Yeni parola</string>
+    <string name="password_confirm_new_label">Yeni parola tekrar</string>
+    <string name="password_update">Parolayı güncelle</string>
+    <string name="password_updating">Güncelleniyor...</string>
+    <string name="password_updated_title">Parolan güncellendi</string>
+    <string name="password_updated_description">Yeni parolanla hesabına giriş yapabilirsin.</string>
 </resources>

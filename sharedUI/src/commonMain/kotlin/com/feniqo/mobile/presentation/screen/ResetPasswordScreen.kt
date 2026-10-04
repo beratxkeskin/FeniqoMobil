@@ -35,10 +35,22 @@ import com.feniqo.mobile.presentation.auth.AuthSecondaryButton
 import com.feniqo.mobile.presentation.auth.AuthStatusBadge
 import com.feniqo.mobile.presentation.auth.AuthTopBar
 import com.feniqo.mobile.presentation.auth.AuthUiMessage
-import com.feniqo.mobile.presentation.auth.toDisplayText
+import com.feniqo.mobile.presentation.auth.toLocalizedText
 import com.feniqo.mobile.presentation.component.AuthTextField
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTheme
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.password_back_to_login
+import feniqomobil.sharedui.generated.resources.password_confirm_new_label
+import feniqomobil.sharedui.generated.resources.password_invalid_link_badge
+import feniqomobil.sharedui.generated.resources.password_invalid_link_description
+import feniqomobil.sharedui.generated.resources.password_invalid_link_title
+import feniqomobil.sharedui.generated.resources.password_new_label
+import feniqomobil.sharedui.generated.resources.password_new_title
+import feniqomobil.sharedui.generated.resources.password_request_new_link
+import feniqomobil.sharedui.generated.resources.password_update
+import feniqomobil.sharedui.generated.resources.password_updating
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Pano B - 07 Yeni Parola ve Pano C - 12 Bağlantı Geçersiz/Süresi Dolmuş Ekranı.
@@ -101,7 +113,7 @@ fun ResetPasswordScreen(
                         AuthStatusBadge(
                             imageVector = Icons.Outlined.LinkOff,
                             isError = true,
-                            contentDescription = "Bağlantı geçersiz",
+                            contentDescription = stringResource(Res.string.password_invalid_link_badge),
                         )
 
                         Column(
@@ -109,7 +121,7 @@ fun ResetPasswordScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Text(
-                                text = "Bağlantı geçersiz\nveya süresi dolmuş",
+                                text = stringResource(Res.string.password_invalid_link_title),
                                 style = MaterialTheme.typography.headlineMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 24.sp,
@@ -122,7 +134,7 @@ fun ResetPasswordScreen(
                             Spacer(modifier = Modifier.height(10.dp))
 
                             Text(
-                                text = "Parolanı yenilemek için yeni bir bağlantı iste.",
+                                text = stringResource(Res.string.password_invalid_link_description),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -136,12 +148,12 @@ fun ResetPasswordScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             AuthPrimaryButton(
-                                text = "Yeni bağlantı iste",
+                                text = stringResource(Res.string.password_request_new_link),
                                 onClick = onRequestNewLink,
                             )
 
                             AuthSecondaryButton(
-                                text = "Girişe dön",
+                                text = stringResource(Res.string.password_back_to_login),
                                 onClick = onNavigateToLogin,
                             )
                         }
@@ -154,7 +166,7 @@ fun ResetPasswordScreen(
                             horizontalAlignment = Alignment.Start,
                         ) {
                             Text(
-                                text = "Yeni parolanı belirle",
+                                text = stringResource(Res.string.password_new_title),
                                 style = MaterialTheme.typography.headlineMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 28.sp,
@@ -171,7 +183,7 @@ fun ResetPasswordScreen(
                             AuthTextField(
                                 value = password,
                                 onValueChange = onPasswordChange,
-                                label = "Yeni parola",
+                                label = stringResource(Res.string.password_new_label),
                                 leadingIcon = Icons.Outlined.Lock,
                                 enabled = !isSubmitting,
                                 isError = passwordError != null,
@@ -187,7 +199,7 @@ fun ResetPasswordScreen(
                             AuthTextField(
                                 value = confirmPassword,
                                 onValueChange = onConfirmPasswordChange,
-                                label = "Yeni parola tekrar",
+                                label = stringResource(Res.string.password_confirm_new_label),
                                 leadingIcon = Icons.Outlined.Lock,
                                 enabled = !isSubmitting,
                                 isError = confirmPasswordError != null,
@@ -206,7 +218,7 @@ fun ResetPasswordScreen(
 
                         if (errorMessage != null) {
                             AuthErrorBanner(
-                                message = errorMessage.toDisplayText(),
+                                message = errorMessage.toLocalizedText(),
                                 isNetworkError = errorMessage == AuthUiMessage.NETWORK_UNAVAILABLE,
                             )
                         }
@@ -214,13 +226,13 @@ fun ResetPasswordScreen(
                         Spacer(modifier = Modifier.height(4.dp))
 
                         AuthPrimaryButton(
-                            text = "Parolayı güncelle",
+                            text = stringResource(Res.string.password_update),
                             onClick = {
                                 focusManager.clearFocus()
                                 if (!isSubmitting) onSubmit()
                             },
                             isLoading = isSubmitting,
-                            loadingText = "Güncelleniyor...",
+                            loadingText = stringResource(Res.string.password_updating),
                             enabled = !isSubmitting,
                         )
                     }

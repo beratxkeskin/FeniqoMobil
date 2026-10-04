@@ -99,4 +99,27 @@
     <string name="auth_validation_password_short">Password must be at least 6 characters.</string>
     <string name="auth_validation_password_mismatch">Passwords do not match.</string>
     <string name="auth_validation_name_short">Full name must be at least 2 characters.</string>
+
+    <string name="password_forgot_badge">Forgot password</string>
+    <string name="password_forgot_title">Reset your password</string>
+    <string name="password_forgot_subtitle">Enter the email address you use for your account.</string>
+    <string name="password_send_reset_link">Send reset link</string>
+    <string name="password_sending">Sending...</string>
+    <string name="password_back_to_login">Back to sign in</string>
+    <string name="password_check_email">Check your email</string>
+    <string name="password_spam_hint">Remember to check your spam folder.</string>
+    <string name="password_resend_success">The reset link was sent again.</string>
+    <string name="password_edit_email">Edit address</string>
+    <string name="password_resend">Resend</string>
+    <string name="password_invalid_link_badge">Invalid link</string>
+    <string name="password_invalid_link_title">This link is invalid\nor has expired</string>
+    <string name="password_invalid_link_description">Request a new link to reset your password.</string>
+    <string name="password_request_new_link">Request new link</string>
+    <string name="password_new_title">Set a new password</string>
+    <string name="password_new_label">New password</string>
+    <string name="password_confirm_new_label">Confirm new password</string>
+    <string name="password_update">Update password</string>
+    <string name="password_updating">Updating...</string>
+    <string name="password_updated_title">Password updated</string>
+    <string name="password_updated_description">You can now sign in with your new password.</string>
 </resources>
