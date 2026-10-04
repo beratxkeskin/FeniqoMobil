@@ -10,6 +10,11 @@
 - [x] Kayıt sonrası ve girişte zorunlu e-posta doğrulama durumlarını TR/EN kaynaklara taşı.
 - [x] Hesap güvenliği e-posta değiştirme/doğrulama, parola değiştirme, çıkış ve hesap silme yüzeylerinin sabit metinleri ile başarı toast'larını TR/EN kaynaklara taşı.
 - [x] `SettingsViewModel` kaynaklı dinamik e-posta/parola hata metinlerini tipli locale-aware UI durumlarına taşı.
+- [x] Dashboard sabit yükleme/hata, başlık, özet, bütçe, son işlemler, yaklaşan ödeme, hedef ve MoneyScore yüzeylerini TR/EN kaynaklara taşı.
+- [x] Dashboard builder içgörü, MoneyScore seviye/açıklama ve işlem adedi metinlerini tipli TR/EN kaynaklara taşı.
+- [x] İşlemler liste, filtre, durum ve işlem satırı yüzeylerini tipli TR/EN kaynaklara taşı; dönem/sıralama/tür/ödeme yöntemi etiketlerinin runtime dil değişimini test et.
+- [x] İşlem formunun çekirdek alan, seçim, eylem ve ayrıntı kabuğu metinleri ile tipli `TransactionFormFieldError` mesajlarını TR/EN kaynaklara taşı; runtime dil değişimini test et.
+- [ ] İşlem formunun ortak gider özel dağıtım editörü ve genel `FinanceUiMessage` hata yüzeyleri ile işlem detay, başarı ve conflict ekranlarını tipli TR/EN kaynaklara taşı.
 - [ ] Kalan Compose ekran metinlerini, Android platform bildirim/biometrik metinlerini ve iOS ürün UI kataloglarını localization kaynaklarına taşı; pseudo-locale, taşma ve fiziksel cihaz dil-değişimi kabulünü tamamla.
 
 ### P2 Teknik Borç ve Yayın Yüzeyi Kapatma (2026-10-03)

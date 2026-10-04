@@ -37,7 +37,18 @@ import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoStatusColor
 import com.feniqo.mobile.presentation.transaction.TransactionDisplayModel
+import com.feniqo.mobile.presentation.transaction.toLocalizedText
 import com.feniqo.mobile.presentation.util.ColorParser
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.transactions_amount_semantics
+import feniqomobil.sharedui.generated.resources.transactions_daily_net_expense
+import feniqomobil.sharedui.generated.resources.transactions_daily_net_income
+import feniqomobil.sharedui.generated.resources.transactions_date_net_semantics
+import feniqomobil.sharedui.generated.resources.transactions_installment_semantics
+import feniqomobil.sharedui.generated.resources.transactions_open_detail
+import feniqomobil.sharedui.generated.resources.transactions_receipt
+import feniqomobil.sharedui.generated.resources.transactions_receipt_available
+import org.jetbrains.compose.resources.stringResource
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -99,10 +110,15 @@ fun TransactionDateGroupHeader(
 
         if (!dailyNetFormatted.isNullOrBlank()) {
             val netDescription = if (isDailyNetNegative) {
-                "Günlük net gider: $dailyNetFormatted"
+                stringResource(Res.string.transactions_daily_net_expense, dailyNetFormatted)
             } else {
-                "Günlük net gelir: $dailyNetFormatted"
+                stringResource(Res.string.transactions_daily_net_income, dailyNetFormatted)
             }
+            val dateNetDescription = stringResource(
+                Res.string.transactions_date_net_semantics,
+                fullDateLabel,
+                netDescription,
+            )
             Text(
                 text = dailyNetFormatted,
                 style = MaterialTheme.typography.labelLarge.copy(
@@ -111,7 +127,7 @@ fun TransactionDateGroupHeader(
                 ),
                 color = if (isDailyNetNegative) MaterialTheme.colorScheme.onSurfaceVariant else FeniqoStatusColor.Success,
                 modifier = Modifier.semantics {
-                    contentDescription = "$fullDateLabel için $netDescription"
+                    contentDescription = dateNetDescription
                 },
             )
         }
@@ -126,9 +142,10 @@ fun InstallmentBadge(
     badgeText: String,
     modifier: Modifier = Modifier,
 ) {
+    val installmentDescription = stringResource(Res.string.transactions_installment_semantics, badgeText)
     Surface(
         modifier = modifier.semantics {
-            contentDescription = "Taksit $badgeText"
+            contentDescription = installmentDescription
         },
         shape = RoundedCornerShape(FeniqoRadius.Small),
         color = MaterialTheme.colorScheme.secondaryContainer,
@@ -150,15 +167,16 @@ fun InstallmentBadge(
 fun ReceiptBadge(
     modifier: Modifier = Modifier,
 ) {
+    val receiptDescription = stringResource(Res.string.transactions_receipt_available)
     Surface(
         modifier = modifier.semantics {
-            contentDescription = "Makbuz mevcut"
+            contentDescription = receiptDescription
         },
         shape = RoundedCornerShape(FeniqoRadius.Small),
         color = MaterialTheme.colorScheme.tertiaryContainer,
     ) {
         Text(
-            text = "Makbuz",
+            text = stringResource(Res.string.transactions_receipt),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -181,12 +199,20 @@ fun TransactionListItem(
     modifier: Modifier = Modifier,
 ) {
     val isClickable = true
+    val openDetailLabel = stringResource(Res.string.transactions_open_detail, item.categoryName)
+    val paymentMethodText = item.paymentMethod.toLocalizedText()
+    val typeText = item.type.toLocalizedText()
+    val amountDescription = stringResource(
+        Res.string.transactions_amount_semantics,
+        typeText,
+        item.formattedAmount,
+    )
     val cardModifier = if (isClickable) {
         modifier
             .fillMaxWidth()
             .clickable(
                 role = Role.Button,
-                onClickLabel = "${item.categoryName} işlem detayını aç",
+                onClickLabel = openDetailLabel,
             ) {
                 onTransactionClick(item)
             }
@@ -203,9 +229,9 @@ fun TransactionListItem(
 
     val title = if (!item.description.isNullOrBlank()) item.description else item.categoryName
     val subtitle = if (!item.description.isNullOrBlank()) {
-        "${item.categoryName} • ${item.paymentMethod.toDisplayText()}"
+        "${item.categoryName} • $paymentMethodText"
     } else {
-        item.paymentMethod.toDisplayText()
+        paymentMethodText
     }
 
     Card(
@@ -278,7 +304,6 @@ fun TransactionListItem(
             Spacer(modifier = Modifier.width(8.dp))
 
             // Sağ: Tutar ve Zarif İnce Chevron
-            val typePrefix = if (item.type == TransactionType.INCOME) "Gelir" else "Gider"
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -292,7 +317,7 @@ fun TransactionListItem(
                     color = amountColor,
                     maxLines = 1,
                     modifier = Modifier.semantics {
-                        contentDescription = "$typePrefix: ${item.formattedAmount}"
+                        contentDescription = amountDescription
                     },
                 )
 

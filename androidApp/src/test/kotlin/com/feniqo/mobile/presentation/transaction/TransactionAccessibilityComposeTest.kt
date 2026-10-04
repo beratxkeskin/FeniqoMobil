@@ -17,6 +17,7 @@ import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import com.feniqo.mobile.App
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.LocalDate
@@ -32,8 +33,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
+@Config(qualifiers = "tr-rTR-w1080dp-h3000dp")
 class TransactionAccessibilityComposeTest {
     @get:Rule
     val compose = createComposeRule()
@@ -41,31 +44,33 @@ class TransactionAccessibilityComposeTest {
     @Test
     fun list_smallScreenAndLargeFont_stacksSummaryAndKeepsSearchClearTargetAccessible() {
         compose.setContent {
-            LargeFontSmallScreen {
-                TransactionsScreen(
-                    state = TransactionsUiState(
-                        isLoading = false,
-                        searchQuery = "market",
-                        summary = TransactionSummaryUiModel(
-                            totalIncomeFormatted = "₺123.456.789,00",
-                            totalSpendingFormatted = "₺98.765.432,00",
-                            transactionCount = 42,
+            App(languageTag = "tr") {
+                LargeFontSmallScreen {
+                    TransactionsScreen(
+                        state = TransactionsUiState(
+                            isLoading = false,
+                            searchQuery = "market",
+                            summary = TransactionSummaryUiModel(
+                                totalIncomeFormatted = "₺123.456.789,00",
+                                totalSpendingFormatted = "₺98.765.432,00",
+                                transactionCount = 42,
+                            ),
                         ),
-                    ),
-                    onSearchQueryChanged = {},
-                    onFilterClick = {},
-                    onFilterDismiss = {},
-                    onTypeFilterChanged = {},
-                    onCategoryFilterChanged = {},
-                    onPaymentMethodFilterChanged = {},
-                    onPeriodPresetChanged = {},
-                    onClearFilters = {},
-                    onDeleteClicked = {},
-                    onDismissDeleteDialog = {},
-                    onConfirmSingleDelete = {},
-                    onConfirmInstallmentDelete = {},
-                    onRetryObservation = {},
-                )
+                        onSearchQueryChanged = {},
+                        onFilterClick = {},
+                        onFilterDismiss = {},
+                        onTypeFilterChanged = {},
+                        onCategoryFilterChanged = {},
+                        onPaymentMethodFilterChanged = {},
+                        onPeriodPresetChanged = {},
+                        onClearFilters = {},
+                        onDeleteClicked = {},
+                        onDismissDeleteDialog = {},
+                        onConfirmSingleDelete = {},
+                        onConfirmInstallmentDelete = {},
+                        onRetryObservation = {},
+                    )
+                }
             }
         }
 
@@ -176,7 +181,7 @@ class TransactionAccessibilityComposeTest {
         compose.onNodeWithContentDescription("İşlem tutarı girişi")
             .performClick()
             .performImeAction()
-        compose.onNodeWithContentDescription("İşlem Adı").assertIsFocused()
+        compose.onNodeWithContentDescription("İşlem adı").assertIsFocused()
     }
 
     @Test

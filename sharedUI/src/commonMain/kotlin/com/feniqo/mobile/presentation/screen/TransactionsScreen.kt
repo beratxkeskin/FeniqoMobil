@@ -94,6 +94,39 @@ import com.feniqo.mobile.presentation.transaction.TransactionPeriodPreset
 import com.feniqo.mobile.presentation.transaction.TransactionSortOrder
 import com.feniqo.mobile.presentation.transaction.TransactionSummaryUiModel
 import com.feniqo.mobile.presentation.transaction.TransactionsUiState
+import com.feniqo.mobile.presentation.transaction.localizedTransactionPeriodText
+import com.feniqo.mobile.presentation.transaction.toLocalizedText
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.transactions_add_new
+import feniqomobil.sharedui.generated.resources.transactions_all
+import feniqomobil.sharedui.generated.resources.transactions_all_categories
+import feniqomobil.sharedui.generated.resources.transactions_category_select
+import feniqomobil.sharedui.generated.resources.transactions_chart_empty
+import feniqomobil.sharedui.generated.resources.transactions_chart_empty_semantics
+import feniqomobil.sharedui.generated.resources.transactions_chart_semantics
+import feniqomobil.sharedui.generated.resources.transactions_clear
+import feniqomobil.sharedui.generated.resources.transactions_clear_filters
+import feniqomobil.sharedui.generated.resources.transactions_count
+import feniqomobil.sharedui.generated.resources.transactions_currency_excluded
+import feniqomobil.sharedui.generated.resources.transactions_currency_excluded_semantics
+import feniqomobil.sharedui.generated.resources.transactions_empty_body
+import feniqomobil.sharedui.generated.resources.transactions_empty_title
+import feniqomobil.sharedui.generated.resources.transactions_expense
+import feniqomobil.sharedui.generated.resources.transactions_filters_count
+import feniqomobil.sharedui.generated.resources.transactions_income
+import feniqomobil.sharedui.generated.resources.transactions_loading
+import feniqomobil.sharedui.generated.resources.transactions_load_error
+import feniqomobil.sharedui.generated.resources.transactions_no_results
+import feniqomobil.sharedui.generated.resources.transactions_no_results_body
+import feniqomobil.sharedui.generated.resources.transactions_period_details
+import feniqomobil.sharedui.generated.resources.transactions_period_net
+import feniqomobil.sharedui.generated.resources.transactions_period_net_explanation
+import feniqomobil.sharedui.generated.resources.transactions_period_select
+import feniqomobil.sharedui.generated.resources.transactions_retry
+import feniqomobil.sharedui.generated.resources.transactions_search
+import feniqomobil.sharedui.generated.resources.transactions_sort_select
+import feniqomobil.sharedui.generated.resources.transactions_title
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * İşlemler ekranının Modern Zen / Warm Luxury tasarımına sahip ana Compose sunumudur.
@@ -124,6 +157,17 @@ fun TransactionsScreen(
     onCustomPeriodChanged: (com.feniqo.mobile.domain.model.ReportPeriod?) -> Unit = {},
 ) {
     val visibleFilterCount = state.filter.visibleFilterCount()
+    val periodLabel = localizedTransactionPeriodText(
+        preset = state.filter.periodPreset,
+        hasCustomPeriod = state.filter.customPeriod != null,
+        customDateRangeText = state.summary.dateRangeText,
+    )
+    val filtersDescription = stringResource(Res.string.transactions_filters_count, visibleFilterCount)
+    val currencyExcludedDescription = stringResource(
+        Res.string.transactions_currency_excluded_semantics,
+        state.summary.excludedDifferentCurrencyCount,
+        state.summary.summaryCurrencyCode,
+    )
 
 
     Surface(
@@ -140,18 +184,18 @@ fun TransactionsScreen(
                 Column {
                     Text("feniqo", color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text("İşlemler", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+                    Text(stringResource(Res.string.transactions_title), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
                 }
                 ActiveWorkspaceIndicator(workspaceName = state.activeWorkspaceName, isCompact = true)
             }
             Spacer(Modifier.height(12.dp))
             ZenQuickFiltersRow(
-                periodPreset = state.filter.periodPreset, periodLabel = state.periodChipLabel,
+                periodPreset = state.filter.periodPreset, periodLabel = periodLabel,
                 categoryId = state.filter.categoryId, availableCategories = state.availableCategories,
                 sortOrder = state.filter.sortOrder, onPeriodPresetChanged = onPeriodPresetChanged,
                 onCategoryFilterChanged = onCategoryFilterChanged, onSortOrderChanged = onSortOrderChanged)
             Spacer(Modifier.height(12.dp))
-            ZenPeriodSummaryCard(summary = state.summary, selectedType = state.filter.type)
+            ZenPeriodSummaryCard(summary = state.summary, selectedType = state.filter.type, periodTitle = periodLabel)
             ZenTransactionTypeTabs(selectedType = state.filter.type, onTypeFilterChanged = onTypeFilterChanged)
             Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -160,7 +204,7 @@ fun TransactionsScreen(
                 Surface(onClick = onFilterClick, shape = RoundedCornerShape(14.dp),
                     color = MaterialTheme.colorScheme.primary, modifier = Modifier.size(52.dp)) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Tune, "Filtreler ($visibleFilterCount)", tint = MaterialTheme.colorScheme.onPrimary)
+                        Icon(Icons.Default.Tune, filtersDescription, tint = MaterialTheme.colorScheme.onPrimary)
                     }
                 }
             }
@@ -171,13 +215,17 @@ fun TransactionsScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp)
                         .semantics {
-                            contentDescription = "${state.summary.excludedDifferentCurrencyCount} işlem ${state.summary.summaryCurrencyCode} dışındaki para biriminde olduğu için özete dahil edilmedi"
+                            contentDescription = currencyExcludedDescription
                         },
                     shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.secondaryContainer,
                 ) {
                     Text(
-                        text = "${state.summary.excludedDifferentCurrencyCount} farklı para birimli işlem seçili dönemde mevcut; ${state.summary.summaryCurrencyCode} özetine dahil edilmedi.",
+                        text = stringResource(
+                            Res.string.transactions_currency_excluded,
+                            state.summary.excludedDifferentCurrencyCount,
+                            state.summary.summaryCurrencyCode,
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -206,8 +254,11 @@ fun TransactionsScreen(
             when {
                 state.isLoading -> item { TransactionsLoadingContent(Modifier.fillMaxWidth().padding(24.dp)) }
                 state.observationError != null -> item {
-                    TransactionsErrorContent(state.observationError.toDisplayText(), onRetryObservation,
-                        Modifier.fillMaxWidth().padding(24.dp))
+                    TransactionsErrorContent(
+                        message = stringResource(Res.string.transactions_load_error),
+                        onRetry = onRetryObservation,
+                        modifier = Modifier.fillMaxWidth().padding(24.dp),
+                    )
                 }
                 state.groupedItems.isEmpty() && state.searchQuery.isBlank() && visibleFilterCount == 0 -> item {
                     TransactionsEmptyContent(canAddTransaction, onAddTransactionClick, Modifier.fillMaxWidth().padding(24.dp))
@@ -275,6 +326,7 @@ fun TransactionsScreen(
 private fun ZenPeriodSummaryCard(
     summary: TransactionSummaryUiModel,
     selectedType: TransactionType?,
+    periodTitle: String,
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -284,9 +336,9 @@ private fun ZenPeriodSummaryCard(
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val useStackedSummary = maxWidth < 300.dp || LocalDensity.current.fontScale >= 1.3f
             val metrics = listOf(
-                "Gelir" to summary.totalIncomeFormatted,
-                "Gider" to summary.totalSpendingFormatted,
-                "İşlem" to summary.transactionCount.toString(),
+                stringResource(Res.string.transactions_income) to summary.totalIncomeFormatted,
+                stringResource(Res.string.transactions_expense) to summary.totalSpendingFormatted,
+                stringResource(Res.string.transactions_count) to summary.transactionCount.toString(),
             )
             if (useStackedSummary) {
                 Column(
@@ -325,16 +377,16 @@ private fun ZenPeriodSummaryCard(
         androidx.compose.material3.HorizontalDivider(Modifier.padding(horizontal = 16.dp))
         Row(Modifier.fillMaxWidth().clickable { expanded = !expanded }.padding(16.dp),
             horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-            Text("Dönem neti", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(Res.string.transactions_period_net), color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.width(8.dp))
             Text(summary.netFormatted, fontWeight = FontWeight.Bold,
                 color = if (summary.isNetPositive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
-            Icon(Icons.Default.KeyboardArrowDown, "Dönem ayrıntıları")
+            Icon(Icons.Default.KeyboardArrowDown, stringResource(Res.string.transactions_period_details))
         }
         if (expanded) {
-            Text("Seçili dönemdeki gelir ve gider farkıdır; hesap bakiyesi değildir.",
+            Text(stringResource(Res.string.transactions_period_net_explanation),
                 style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(16.dp))
-            DailyMiniBarChart(summary.dailyBars, summary.periodTitle,
+            DailyMiniBarChart(summary.dailyBars, periodTitle,
                 Modifier.fillMaxWidth().height(72.dp).padding(16.dp))
         }
     }
@@ -349,15 +401,16 @@ private fun DailyMiniBarChart(
     periodTitle: String,
     modifier: Modifier = Modifier,
 ) {
+    val emptyChartDescription = stringResource(Res.string.transactions_chart_empty_semantics, periodTitle)
     if (bars.isEmpty()) {
         Box(
             modifier = modifier.semantics {
-                contentDescription = "$periodTitle için işlem aktivitesi grafiği: Veri bulunmuyor"
+                contentDescription = emptyChartDescription
             },
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "İşlem verisi yok",
+                text = stringResource(Res.string.transactions_chart_empty),
                 style = TextStyle(fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant),
             )
         }
@@ -371,9 +424,10 @@ private fun DailyMiniBarChart(
         bars
     }
 
+    val chartDescription = stringResource(Res.string.transactions_chart_semantics, periodTitle, bars.size)
     Column(
         modifier = modifier.semantics {
-            contentDescription = "$periodTitle için ${bars.size} günlük işlem aktivitesi grafiği"
+            contentDescription = chartDescription
         },
         verticalArrangement = Arrangement.SpaceBetween,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -447,9 +501,9 @@ private fun ZenTransactionTypeTabs(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         val tabs = listOf(
-            null to "Tümü",
-            TransactionType.EXPENSE to "Gider",
-            TransactionType.INCOME to "Gelir",
+            null to stringResource(Res.string.transactions_all),
+            TransactionType.EXPENSE to stringResource(Res.string.transactions_expense),
+            TransactionType.INCOME to stringResource(Res.string.transactions_income),
         )
         tabs.forEach { (type, label) ->
             val isSelected = selectedType == type
@@ -526,7 +580,7 @@ private fun ZenQuickFiltersRow(
                     )
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Dönem seç",
+                        contentDescription = stringResource(Res.string.transactions_period_select),
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -538,42 +592,42 @@ private fun ZenQuickFiltersRow(
                 onDismissRequest = { isPeriodMenuOpen = false },
             ) {
                 DropdownMenuItem(
-                    text = { Text("Bu Ay") },
+                    text = { Text(TransactionPeriodPreset.THIS_MONTH.toLocalizedText()) },
                     onClick = {
                         onPeriodPresetChanged(TransactionPeriodPreset.THIS_MONTH)
                         isPeriodMenuOpen = false
                     },
                 )
                 DropdownMenuItem(
-                    text = { Text("Bu Hafta") },
+                    text = { Text(TransactionPeriodPreset.THIS_WEEK.toLocalizedText()) },
                     onClick = {
                         onPeriodPresetChanged(TransactionPeriodPreset.THIS_WEEK)
                         isPeriodMenuOpen = false
                     },
                 )
                 DropdownMenuItem(
-                    text = { Text("Bugün") },
+                    text = { Text(TransactionPeriodPreset.TODAY.toLocalizedText()) },
                     onClick = {
                         onPeriodPresetChanged(TransactionPeriodPreset.TODAY)
                         isPeriodMenuOpen = false
                     },
                 )
                 DropdownMenuItem(
-                    text = { Text("Son 30 Gün") },
+                    text = { Text(TransactionPeriodPreset.LAST_30_DAYS.toLocalizedText()) },
                     onClick = {
                         onPeriodPresetChanged(TransactionPeriodPreset.LAST_30_DAYS)
                         isPeriodMenuOpen = false
                     },
                 )
                 DropdownMenuItem(
-                    text = { Text("Bu Yıl") },
+                    text = { Text(TransactionPeriodPreset.THIS_YEAR.toLocalizedText()) },
                     onClick = {
                         onPeriodPresetChanged(TransactionPeriodPreset.THIS_YEAR)
                         isPeriodMenuOpen = false
                     },
                 )
                 DropdownMenuItem(
-                    text = { Text("Tüm Zamanlar") },
+                    text = { Text(localizedTransactionPeriodText(null, false, "")) },
                     onClick = {
                         onPeriodPresetChanged(null)
                         isPeriodMenuOpen = false
@@ -598,13 +652,13 @@ private fun ZenQuickFiltersRow(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        text = selectedCategoryName ?: "Tüm kategoriler",
+                        text = selectedCategoryName ?: stringResource(Res.string.transactions_all_categories),
                         style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 12.sp),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Kategori seç",
+                        contentDescription = stringResource(Res.string.transactions_category_select),
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -616,7 +670,7 @@ private fun ZenQuickFiltersRow(
                 onDismissRequest = { isCategoryMenuOpen = false },
             ) {
                 DropdownMenuItem(
-                    text = { Text("Tüm Kategoriler") },
+                    text = { Text(stringResource(Res.string.transactions_all_categories)) },
                     onClick = {
                         onCategoryFilterChanged(null)
                         isCategoryMenuOpen = false
@@ -649,13 +703,13 @@ private fun ZenQuickFiltersRow(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        text = sortOrder.toDisplayText(),
+                        text = sortOrder.toLocalizedText(),
                         style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 12.sp),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Sıralama seç",
+                        contentDescription = stringResource(Res.string.transactions_sort_select),
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -668,7 +722,7 @@ private fun ZenQuickFiltersRow(
             ) {
                 TransactionSortOrder.entries.forEach { order ->
                     DropdownMenuItem(
-                        text = { Text(order.toDisplayText()) },
+                        text = { Text(order.toLocalizedText()) },
                         onClick = {
                             onSortOrderChanged(order)
                             isSortMenuOpen = false
@@ -712,7 +766,7 @@ private fun ZenSearchField(
             Box(modifier = Modifier.weight(1f)) {
                 if (query.isEmpty()) {
                     Text(
-                        text = "İşlem ara",
+                        text = stringResource(Res.string.transactions_search),
                         style = TextStyle(fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant),
                     )
                 }
@@ -737,7 +791,7 @@ private fun ZenSearchField(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Clear,
-                        contentDescription = "Temizle",
+                        contentDescription = stringResource(Res.string.transactions_clear),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp),
                     )
@@ -767,7 +821,7 @@ private fun TransactionsLoadingContent(
     ) {
         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         Text(
-            text = "İşlemler yükleniyor…",
+            text = stringResource(Res.string.transactions_loading),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -795,7 +849,7 @@ private fun TransactionsErrorContent(
             modifier = Modifier.defaultMinSize(minHeight = 48.dp),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
         ) {
-            Text("Yeniden Dene", color = MaterialTheme.colorScheme.onPrimary)
+            Text(stringResource(Res.string.transactions_retry), color = MaterialTheme.colorScheme.onPrimary)
         }
     }
 }
@@ -827,12 +881,12 @@ private fun TransactionsEmptyContent(
                 tint = MaterialTheme.colorScheme.primary,
             )
             Text(
-                text = "Henüz bir işlem kaydı yok",
+                text = stringResource(Res.string.transactions_empty_title),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = "Harcama ve gelirlerinizi kaydederek finansal durumunuzu anlık olarak takip edin.",
+                text = stringResource(Res.string.transactions_empty_body),
                 style = TextStyle(fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
@@ -843,7 +897,7 @@ private fun TransactionsEmptyContent(
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 ) {
-                    Text("+ Yeni İşlem Ekle", color = MaterialTheme.colorScheme.onPrimary)
+                    Text(stringResource(Res.string.transactions_add_new), color = MaterialTheme.colorScheme.onPrimary)
                 }
             }
         }
@@ -861,12 +915,12 @@ private fun TransactionsSearchEmptyContent(
         verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
     ) {
         Text(
-            text = "Sonuç bulunamadı",
+            text = stringResource(Res.string.transactions_no_results),
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
-            text = "Arama veya filtrelerinizi değiştirmeyi deneyin.",
+            text = stringResource(Res.string.transactions_no_results_body),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -875,7 +929,7 @@ private fun TransactionsSearchEmptyContent(
             onClick = onClearFilters,
             modifier = Modifier.defaultMinSize(minHeight = 48.dp),
         ) {
-            Text("Filtreleri Temizle")
+            Text(stringResource(Res.string.transactions_clear_filters))
         }
     }
 }

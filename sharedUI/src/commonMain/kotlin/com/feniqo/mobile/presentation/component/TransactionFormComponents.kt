@@ -88,9 +88,64 @@ import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoStatusColor
 import com.feniqo.mobile.presentation.transaction.InstallmentDisplayModel
 import com.feniqo.mobile.presentation.transaction.TransactionCategoryOptionUiModel
+import com.feniqo.mobile.presentation.transaction.toLocalizedText
 import com.feniqo.mobile.presentation.util.ColorParser
 import com.feniqo.mobile.presentation.util.MoneyFormatter
 import com.feniqo.mobile.presentation.workspace.WorkspaceMemberUiModel
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.transaction_form_add_category_semantics
+import feniqomobil.sharedui.generated.resources.transaction_form_amount_semantics
+import feniqomobil.sharedui.generated.resources.transaction_form_apply_selection
+import feniqomobil.sharedui.generated.resources.transaction_form_back_short
+import feniqomobil.sharedui.generated.resources.transaction_form_categories_load_failed
+import feniqomobil.sharedui.generated.resources.transaction_form_category
+import feniqomobil.sharedui.generated.resources.transaction_form_clear
+import feniqomobil.sharedui.generated.resources.transaction_form_currency_eur
+import feniqomobil.sharedui.generated.resources.transaction_form_currency_gbp
+import feniqomobil.sharedui.generated.resources.transaction_form_currency_semantics
+import feniqomobil.sharedui.generated.resources.transaction_form_currency_try
+import feniqomobil.sharedui.generated.resources.transaction_form_currency_usd
+import feniqomobil.sharedui.generated.resources.transaction_form_date
+import feniqomobil.sharedui.generated.resources.transaction_form_deleted_category_semantics
+import feniqomobil.sharedui.generated.resources.transaction_form_existing_installment
+import feniqomobil.sharedui.generated.resources.transaction_form_existing_installment_hint
+import feniqomobil.sharedui.generated.resources.transaction_form_expense_name_example
+import feniqomobil.sharedui.generated.resources.transaction_form_expense_selection_semantics
+import feniqomobil.sharedui.generated.resources.transaction_form_income_name_example
+import feniqomobil.sharedui.generated.resources.transaction_form_income_selection_semantics
+import feniqomobil.sharedui.generated.resources.transaction_form_installment
+import feniqomobil.sharedui.generated.resources.transaction_form_installment_amount_hint
+import feniqomobil.sharedui.generated.resources.transaction_form_installment_count
+import feniqomobil.sharedui.generated.resources.transaction_form_installment_count_semantics
+import feniqomobil.sharedui.generated.resources.transaction_form_installment_description
+import feniqomobil.sharedui.generated.resources.transaction_form_installment_toggle_semantics
+import feniqomobil.sharedui.generated.resources.transaction_form_month_april
+import feniqomobil.sharedui.generated.resources.transaction_form_month_august
+import feniqomobil.sharedui.generated.resources.transaction_form_month_december
+import feniqomobil.sharedui.generated.resources.transaction_form_month_february
+import feniqomobil.sharedui.generated.resources.transaction_form_month_january
+import feniqomobil.sharedui.generated.resources.transaction_form_month_july
+import feniqomobil.sharedui.generated.resources.transaction_form_month_june
+import feniqomobil.sharedui.generated.resources.transaction_form_month_march
+import feniqomobil.sharedui.generated.resources.transaction_form_month_may
+import feniqomobil.sharedui.generated.resources.transaction_form_month_november
+import feniqomobil.sharedui.generated.resources.transaction_form_month_october
+import feniqomobil.sharedui.generated.resources.transaction_form_month_september
+import feniqomobil.sharedui.generated.resources.transaction_form_name
+import feniqomobil.sharedui.generated.resources.transaction_form_name_semantics
+import feniqomobil.sharedui.generated.resources.transaction_form_new_category
+import feniqomobil.sharedui.generated.resources.transaction_form_no_categories
+import feniqomobil.sharedui.generated.resources.transaction_form_note
+import feniqomobil.sharedui.generated.resources.transaction_form_note_placeholder
+import feniqomobil.sharedui.generated.resources.transaction_form_note_semantics
+import feniqomobil.sharedui.generated.resources.transaction_form_payment_method
+import feniqomobil.sharedui.generated.resources.transaction_form_retry
+import feniqomobil.sharedui.generated.resources.transaction_form_search_category
+import feniqomobil.sharedui.generated.resources.transaction_form_select_category
+import feniqomobil.sharedui.generated.resources.transaction_form_select_date
+import feniqomobil.sharedui.generated.resources.transactions_expense
+import feniqomobil.sharedui.generated.resources.transactions_income
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * İşlem türü seçicisi bileşenidir (Gider / Gelir).
@@ -103,6 +158,8 @@ fun TransactionTypeSelector(
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val expenseDescription = stringResource(Res.string.transaction_form_expense_selection_semantics)
+    val incomeDescription = stringResource(Res.string.transaction_form_income_selection_semantics)
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -130,7 +187,7 @@ fun TransactionTypeSelector(
                 .defaultMinSize(minHeight = 52.dp)
                 .semantics {
                     role = Role.Tab
-                    contentDescription = "Gider seçimi, Harcamalar ve gider takibi"
+                    contentDescription = expenseDescription
                 },
         ) {
             Column(
@@ -139,7 +196,7 @@ fun TransactionTypeSelector(
                 modifier = Modifier.padding(vertical = FeniqoSpacing.Small, horizontal = FeniqoSpacing.ExtraSmall),
             ) {
                 Text(
-                    text = "Gider",
+                    text = stringResource(Res.string.transactions_expense),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = if (isExpense) FontWeight.Bold else FontWeight.SemiBold,
                     color = if (isExpense) {
@@ -168,7 +225,7 @@ fun TransactionTypeSelector(
                 .defaultMinSize(minHeight = 52.dp)
                 .semantics {
                     role = Role.Tab
-                    contentDescription = "Gelir seçimi, Maaş, serbest gelir ve ek kazanç"
+                    contentDescription = incomeDescription
                 },
         ) {
             Column(
@@ -177,7 +234,7 @@ fun TransactionTypeSelector(
                 modifier = Modifier.padding(vertical = FeniqoSpacing.Small, horizontal = FeniqoSpacing.ExtraSmall),
             ) {
                 Text(
-                    text = "Gelir",
+                    text = stringResource(Res.string.transactions_income),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = if (isIncome) FontWeight.Bold else FontWeight.SemiBold,
                     color = if (isIncome) {
@@ -209,6 +266,7 @@ fun TransactionAmountField(
     keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
     var currencyExpanded by remember { mutableStateOf(false) }
+    val amountDescription = stringResource(Res.string.transaction_form_amount_semantics)
     Column(
         modifier = modifier.fillMaxWidth().padding(vertical = FeniqoSpacing.Large),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -236,7 +294,7 @@ fun TransactionAmountField(
                 modifier = fieldModifier.width(androidx.compose.foundation.layout.IntrinsicSize.Min)
                     .defaultMinSize(minWidth = 100.dp, minHeight = 56.dp)
                     .semantics {
-                        contentDescription = "İşlem tutarı girişi"
+                        contentDescription = amountDescription
                         errorText?.let { error(it) }
                     },
                 decorationBox = { field ->
@@ -250,10 +308,10 @@ fun TransactionAmountField(
         }
         TextButton(onClick = { currencyExpanded = !currencyExpanded }, enabled = enabled) {
             Text(when (currency) {
-                Currency.TRY -> "Türk Lirası (TRY)"
-                Currency.USD -> "Amerikan Doları (USD)"
-                Currency.EUR -> "Euro (EUR)"
-                Currency.GBP -> "İngiliz Sterlini (GBP)"
+                Currency.TRY -> stringResource(Res.string.transaction_form_currency_try)
+                Currency.USD -> stringResource(Res.string.transaction_form_currency_usd)
+                Currency.EUR -> stringResource(Res.string.transaction_form_currency_eur)
+                Currency.GBP -> stringResource(Res.string.transaction_form_currency_gbp)
             }, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = null)
         }
@@ -284,6 +342,7 @@ fun CurrencySelector(
     ) {
         Currency.entries.forEach { curr ->
             val isSelected = curr == selectedCurrency
+            val currencyDescription = stringResource(Res.string.transaction_form_currency_semantics, curr.code)
             Surface(
                 selected = isSelected,
                 onClick = { onCurrencyChange(curr) },
@@ -298,7 +357,7 @@ fun CurrencySelector(
                     .defaultMinSize(minWidth = 40.dp, minHeight = 40.dp)
                     .semantics {
                         role = Role.RadioButton
-                        contentDescription = "Para birimi ${curr.code}"
+                        contentDescription = currencyDescription
                     },
             ) {
                 Box(
@@ -339,6 +398,7 @@ fun TransactionCategoryPicker(
 ) {
     var open by remember { mutableStateOf(false) }
     var categoryQuery by remember { mutableStateOf("") }
+    val addCategoryDescription = stringResource(Res.string.transaction_form_add_category_semantics)
     val selected = availableCategories.find { it.id == selectedCategoryId }
     Surface(onClick = { open = true }, enabled = enabled, modifier = modifier.fillMaxWidth().semantics {
         errorText?.let { error(it) }
@@ -346,10 +406,20 @@ fun TransactionCategoryPicker(
         color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp)) {
         Row(Modifier.defaultMinSize(minHeight = 80.dp).padding(16.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            CategoryTonalIcon(selected?.iconKey, ColorParser.parseHexColorOrNull(selected?.colorHex) ?: MaterialTheme.colorScheme.primary, containerSize = 48.dp)
+            CategoryTonalIcon(
+                selected?.iconKey,
+                ColorParser.parseHexColorOrNull(selected?.colorHex) ?: MaterialTheme.colorScheme.primary,
+                containerSize = 48.dp,
+            )
             Column(Modifier.weight(1f)) {
-                Text("Kategori", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(selected?.name ?: "Kategori seç", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    stringResource(Res.string.transaction_form_category),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    selected?.name ?: stringResource(Res.string.transaction_form_select_category),
+                    style = MaterialTheme.typography.titleMedium,
+                )
             }
             Icon(Icons.Outlined.KeyboardArrowDown, null)
         }
@@ -363,14 +433,14 @@ fun TransactionCategoryPicker(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
     ) {
-        TextButton(onClick = { open = false }) { Text("Geri") }
+        TextButton(onClick = { open = false }) { Text(stringResource(Res.string.transaction_form_back_short)) }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Kategori",
+                text = stringResource(Res.string.transaction_form_category),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -386,7 +456,7 @@ fun TransactionCategoryPicker(
                         modifier = Modifier.defaultMinSize(minHeight = 40.dp),
                     ) {
                         Text(
-                            text = "Temizle",
+                            text = stringResource(Res.string.transaction_form_clear),
                             style = MaterialTheme.typography.labelSmall,
                         )
                     }
@@ -398,11 +468,11 @@ fun TransactionCategoryPicker(
                     modifier = Modifier
                         .defaultMinSize(minHeight = 48.dp)
                         .semantics {
-                            contentDescription = "Bu işlem türü için yeni kategori ekle"
+                            contentDescription = addCategoryDescription
                         },
                 ) {
                     Text(
-                        text = "+ Yeni Kategori",
+                        text = stringResource(Res.string.transaction_form_new_category),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                     )
@@ -425,7 +495,7 @@ fun TransactionCategoryPicker(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "Kategoriler yüklenemedi.",
+                        text = stringResource(Res.string.transaction_form_categories_load_failed),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.weight(1f),
@@ -436,7 +506,7 @@ fun TransactionCategoryPicker(
                         modifier = Modifier.defaultMinSize(minHeight = 48.dp),
                     ) {
                         Text(
-                            text = "Yeniden Dene",
+                            text = stringResource(Res.string.transaction_form_retry),
                             style = MaterialTheme.typography.labelSmall,
                         )
                     }
@@ -444,7 +514,7 @@ fun TransactionCategoryPicker(
             }
         } else if (availableCategories.isEmpty()) {
             Text(
-                text = "Bu işlem türüne ait kategori bulunmuyor.",
+                text = stringResource(Res.string.transaction_form_no_categories),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = FeniqoSpacing.Small),
@@ -453,7 +523,7 @@ fun TransactionCategoryPicker(
             OutlinedTextField(
                 value = categoryQuery,
                 onValueChange = { categoryQuery = it },
-                placeholder = { Text("Kategori ara") },
+                placeholder = { Text(stringResource(Res.string.transaction_form_search_category)) },
                 singleLine = true,
                 enabled = enabled,
                 modifier = Modifier.fillMaxWidth(),
@@ -465,6 +535,11 @@ fun TransactionCategoryPicker(
                 availableCategories.filter { it.name.contains(categoryQuery, ignoreCase = true) }.forEach { category ->
                     val isSelected = selectedCategoryId == category.id
                     val color = ColorParser.parseHexColorOrNull(category.colorHex)
+                    val categoryDescription = if (category.isHistorical) {
+                        stringResource(Res.string.transaction_form_deleted_category_semantics, category.name)
+                    } else {
+                        category.name
+                    }
 
                     FilterChip(
                         selected = isSelected,
@@ -491,11 +566,7 @@ fun TransactionCategoryPicker(
                         modifier = Modifier
                             .defaultMinSize(minHeight = 48.dp)
                             .semantics {
-                                contentDescription = if (category.isHistorical) {
-                                    "${category.name}, silinmiş kategori"
-                                } else {
-                                    category.name
-                                }
+                                contentDescription = categoryDescription
                             },
                     )
                 }
@@ -540,9 +611,15 @@ fun TransactionDatePickerField(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Icon(Icons.Outlined.CalendarMonth, null, modifier = Modifier.size(32.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Tarih", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(date?.let(::formatDisplayDate) ?: "Tarih seçin",
-                        style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        stringResource(Res.string.transaction_form_date),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        date?.let { formatDisplayDate(it, localizedMonthName(it.month)) }
+                            ?: stringResource(Res.string.transaction_form_select_date),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
                 }
                 Icon(Icons.Outlined.KeyboardArrowDown, null)
             }
@@ -571,8 +648,11 @@ fun TransactionPaymentMethodSelector(
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Icon(Icons.Outlined.CreditCard, null, modifier = Modifier.size(32.dp))
             Column(Modifier.weight(1f)) {
-                Text("Ödeme yöntemi", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(selectedMethod.toDisplayText(), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    stringResource(Res.string.transaction_form_payment_method),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(selectedMethod.toLocalizedText(), style = MaterialTheme.typography.titleMedium)
             }
             Icon(Icons.Outlined.KeyboardArrowDown, null)
         }
@@ -583,11 +663,21 @@ fun TransactionPaymentMethodSelector(
             Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    TextButton(onClick = { open = false }) { Text("Geri") }
-                    Text("Ödeme yöntemi", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+                    TextButton(onClick = { open = false }) {
+                        Text(stringResource(Res.string.transaction_form_back_short))
+                    }
+                    Text(
+                        stringResource(Res.string.transaction_form_payment_method),
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
                     PaymentMethod.entries.forEach { method ->
                         Surface(onClick = { draft = method }, shape = RoundedCornerShape(16.dp),
-                            color = if (draft == method) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface) {
+                            color = if (draft == method) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surface
+                            }) {
                             Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(when (method) {
                                     PaymentMethod.CASH -> Icons.Outlined.Payments
@@ -595,13 +685,23 @@ fun TransactionPaymentMethodSelector(
                                     PaymentMethod.OTHER -> Icons.Outlined.MoreHoriz
                                     else -> Icons.Outlined.CreditCard
                                 }, null)
-                                Text(method.toDisplayText(), Modifier.weight(1f).padding(horizontal = 16.dp))
+                                Text(
+                                    method.toLocalizedText(),
+                                    Modifier.weight(1f).padding(horizontal = 16.dp),
+                                )
                                 androidx.compose.material3.RadioButton(selected = draft == method, onClick = null)
                             }
                         }
                     }
-                    androidx.compose.material3.Button(onClick = { onMethodChange(draft); open = false },
-                        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp)) { Text("Seçimi uygula") }
+                    androidx.compose.material3.Button(
+                        onClick = {
+                            onMethodChange(draft)
+                            open = false
+                        },
+                        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp),
+                    ) {
+                        Text(stringResource(Res.string.transaction_form_apply_selection))
+                    }
                 }
             }
         }
@@ -620,6 +720,8 @@ fun TransactionInstallmentSection(
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val installmentToggleDescription = stringResource(Res.string.transaction_form_installment_toggle_semantics)
+    val installmentCountDescription = stringResource(Res.string.transaction_form_installment_count_semantics)
     OutlinedCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(FeniqoRadius.Medium),
@@ -644,13 +746,13 @@ fun TransactionInstallmentSection(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Taksitli İşlem",
+                        text = stringResource(Res.string.transaction_form_installment),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        text = "Kredi kartı ile yapılan harcamayı taksitlere bölün.",
+                        text = stringResource(Res.string.transaction_form_installment_description),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -660,14 +762,14 @@ fun TransactionInstallmentSection(
                     checked = isInstallmentEnabled,
                     onCheckedChange = onToggle,
                     enabled = enabled,
-                    modifier = Modifier.semantics { contentDescription = "Taksitli işlem açma kapatma" },
+                    modifier = Modifier.semantics { contentDescription = installmentToggleDescription },
                 )
             }
 
             if (isInstallmentEnabled) {
                 Column(verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small)) {
                     Text(
-                        text = "Girilen tutar toplam işlem tutarıdır; seçilen taksit sayısına eşit olarak bölünecektir.",
+                        text = stringResource(Res.string.transaction_form_installment_amount_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Medium,
@@ -678,7 +780,7 @@ fun TransactionInstallmentSection(
                         onValueChange = onCountChange,
                         enabled = enabled,
                         isError = errorText != null,
-                        label = { Text("Taksit Sayısı (2 - 60)") },
+                        label = { Text(stringResource(Res.string.transaction_form_installment_count)) },
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number,
                             imeAction = ImeAction.Next,
@@ -688,7 +790,7 @@ fun TransactionInstallmentSection(
                         modifier = Modifier
                             .fillMaxWidth()
                             .defaultMinSize(minHeight = 48.dp)
-                            .semantics { contentDescription = "Taksit sayısı" },
+                            .semantics { contentDescription = installmentCountDescription },
                     )
 
                     if (errorText != null) {
@@ -731,13 +833,13 @@ fun TransactionExistingInstallmentBadge(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Taksitli İşlem (${installment.badgeText})",
+                    text = stringResource(Res.string.transaction_form_existing_installment, installment.badgeText),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
                 Text(
-                    text = "Taksitli işlem düzenlenirken mevcut taksit planı korunur.",
+                    text = stringResource(Res.string.transaction_form_existing_installment_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
                 )
@@ -760,23 +862,37 @@ fun TransactionTitleField(
     fieldModifier: Modifier = Modifier,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
+    val nameDescription = stringResource(Res.string.transaction_form_name_semantics)
     Surface(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(FeniqoRadius.Medium),
         color = MaterialTheme.colorScheme.surface) {
         Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Outlined.Description, null, modifier = Modifier.size(32.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("İşlem adı", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    stringResource(Res.string.transaction_form_name),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 OutlinedTextField(
                     value = title, onValueChange = onTitleChange, enabled = enabled,
                     isError = errorText != null, singleLine = true,
-                    placeholder = { Text(if (isExpense) "Örn: Market alışverişi" else "Örn: Maaş") },
+                    placeholder = {
+                        Text(
+                            stringResource(
+                                if (isExpense) {
+                                    Res.string.transaction_form_expense_name_example
+                                } else {
+                                    Res.string.transaction_form_income_name_example
+                                },
+                            ),
+                        )
+                    },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     keyboardActions = keyboardActions,
                     shape = RoundedCornerShape(FeniqoRadius.Small),
                     modifier = fieldModifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
                         .semantics {
-                            contentDescription = "İşlem Adı"
+                            contentDescription = nameDescription
                             errorText?.let { error(it) }
                         },
                 )
@@ -802,6 +918,7 @@ fun TransactionNoteField(
     fieldModifier: Modifier = Modifier,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
+    val noteDescription = stringResource(Res.string.transaction_form_note_semantics)
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
@@ -812,7 +929,7 @@ fun TransactionNoteField(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Not / Açıklama (İsteğe Bağlı)",
+                text = stringResource(Res.string.transaction_form_note),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -834,7 +951,7 @@ fun TransactionNoteField(
             onValueChange = onNoteChange,
             enabled = enabled,
             isError = errorText != null,
-            placeholder = { Text("İşlem hakkında not ekleyin...") },
+            placeholder = { Text(stringResource(Res.string.transaction_form_note_placeholder)) },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Text,
                 imeAction = ImeAction.Done,
@@ -846,7 +963,7 @@ fun TransactionNoteField(
             modifier = fieldModifier
                 .fillMaxWidth()
                 .semantics {
-                    contentDescription = "İşlem notu"
+                    contentDescription = noteDescription
                     errorText?.let { error(it) }
                 },
         )
@@ -882,26 +999,46 @@ fun TransactionDescriptionField(
     )
 }
 
+@Composable
+private fun localizedMonthName(month: kotlinx.datetime.Month): String =
+    stringResource(
+        when (month) {
+            kotlinx.datetime.Month.JANUARY -> Res.string.transaction_form_month_january
+            kotlinx.datetime.Month.FEBRUARY -> Res.string.transaction_form_month_february
+            kotlinx.datetime.Month.MARCH -> Res.string.transaction_form_month_march
+            kotlinx.datetime.Month.APRIL -> Res.string.transaction_form_month_april
+            kotlinx.datetime.Month.MAY -> Res.string.transaction_form_month_may
+            kotlinx.datetime.Month.JUNE -> Res.string.transaction_form_month_june
+            kotlinx.datetime.Month.JULY -> Res.string.transaction_form_month_july
+            kotlinx.datetime.Month.AUGUST -> Res.string.transaction_form_month_august
+            kotlinx.datetime.Month.SEPTEMBER -> Res.string.transaction_form_month_september
+            kotlinx.datetime.Month.OCTOBER -> Res.string.transaction_form_month_october
+            kotlinx.datetime.Month.NOVEMBER -> Res.string.transaction_form_month_november
+            kotlinx.datetime.Month.DECEMBER -> Res.string.transaction_form_month_december
+        },
+    )
+
 /**
- * Tarihi Türkçe gün ay yıl formatına dönüştürür.
+ * Tarihi gün, ay adı ve yıl formatına dönüştürür. Varsayılan ay adı eski Türkçe saf test sözleşmesini korur.
  */
-fun formatDisplayDate(date: LocalDate): String {
-    val monthName = when (date.month) {
-        kotlinx.datetime.Month.JANUARY -> "Ocak"
-        kotlinx.datetime.Month.FEBRUARY -> "Şubat"
-        kotlinx.datetime.Month.MARCH -> "Mart"
-        kotlinx.datetime.Month.APRIL -> "Nisan"
-        kotlinx.datetime.Month.MAY -> "Mayıs"
-        kotlinx.datetime.Month.JUNE -> "Haziran"
-        kotlinx.datetime.Month.JULY -> "Temmuz"
-        kotlinx.datetime.Month.AUGUST -> "Ağustos"
-        kotlinx.datetime.Month.SEPTEMBER -> "Eylül"
-        kotlinx.datetime.Month.OCTOBER -> "Ekim"
-        kotlinx.datetime.Month.NOVEMBER -> "Kasım"
-        kotlinx.datetime.Month.DECEMBER -> "Aralık"
-        else -> ""
-    }
-    return "${date.dayOfMonth} $monthName ${date.year}"
+fun formatDisplayDate(
+    date: LocalDate,
+    monthName: String = defaultTurkishMonthName(date.month),
+): String = "${date.dayOfMonth} $monthName ${date.year}"
+
+private fun defaultTurkishMonthName(month: kotlinx.datetime.Month): String = when (month) {
+    kotlinx.datetime.Month.JANUARY -> "Ocak"
+    kotlinx.datetime.Month.FEBRUARY -> "Şubat"
+    kotlinx.datetime.Month.MARCH -> "Mart"
+    kotlinx.datetime.Month.APRIL -> "Nisan"
+    kotlinx.datetime.Month.MAY -> "Mayıs"
+    kotlinx.datetime.Month.JUNE -> "Haziran"
+    kotlinx.datetime.Month.JULY -> "Temmuz"
+    kotlinx.datetime.Month.AUGUST -> "Ağustos"
+    kotlinx.datetime.Month.SEPTEMBER -> "Eylül"
+    kotlinx.datetime.Month.OCTOBER -> "Ekim"
+    kotlinx.datetime.Month.NOVEMBER -> "Kasım"
+    kotlinx.datetime.Month.DECEMBER -> "Aralık"
 }
 
 /**

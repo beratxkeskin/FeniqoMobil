@@ -1898,11 +1898,11 @@
         <error line="99" column="50" source="standard:multiline-expression-wrapping" />
         <error line="102" column="35" source="standard:multiline-expression-wrapping" />
         <error line="116" column="32" source="standard:multiline-expression-wrapping" />
-        <error line="138" column="48" source="standard:multiline-expression-wrapping" />
-        <error line="147" column="45" source="standard:multiline-expression-wrapping" />
-        <error line="156" column="45" source="standard:multiline-expression-wrapping" />
-        <error line="165" column="45" source="standard:multiline-expression-wrapping" />
-        <error line="177" column="24" source="standard:multiline-expression-wrapping" />
+        <error line="137" column="48" source="standard:multiline-expression-wrapping" />
+        <error line="146" column="45" source="standard:multiline-expression-wrapping" />
+        <error line="155" column="45" source="standard:multiline-expression-wrapping" />
+        <error line="164" column="45" source="standard:multiline-expression-wrapping" />
+        <error line="176" column="24" source="standard:multiline-expression-wrapping" />
     </file>
     <file name="src/main/kotlin/com/feniqo/mobile/presentation/debt/DebtFormScreenRoute.kt">
         <error line="4" column="1" source="standard:no-unused-imports" />
@@ -4328,12 +4328,12 @@
         <error line="397" column="29" source="standard:multiline-expression-wrapping" />
         <error line="416" column="26" source="standard:multiline-expression-wrapping" />
         <error line="428" column="29" source="standard:multiline-expression-wrapping" />
-        <error line="456" column="68" source="standard:multiline-expression-wrapping" />
-        <error line="456" column="68" source="standard:function-signature" />
-        <error line="464" column="26" source="standard:multiline-expression-wrapping" />
-        <error line="492" column="61" source="standard:multiline-expression-wrapping" />
-        <error line="492" column="61" source="standard:function-signature" />
-        <error line="499" column="26" source="standard:multiline-expression-wrapping" />
+        <error line="453" column="68" source="standard:multiline-expression-wrapping" />
+        <error line="453" column="68" source="standard:function-signature" />
+        <error line="461" column="26" source="standard:multiline-expression-wrapping" />
+        <error line="489" column="61" source="standard:multiline-expression-wrapping" />
+        <error line="489" column="61" source="standard:function-signature" />
+        <error line="496" column="26" source="standard:multiline-expression-wrapping" />
     </file>
     <file name="src/test/kotlin/com/feniqo/mobile/presentation/debt/DebtFormViewModelTest.kt">
         <error line="48" column="1" source="standard:no-empty-first-line-in-class-body" />
@@ -6401,15 +6401,15 @@
         <error line="617" column="50" source="standard:multiline-expression-wrapping" />
     </file>
     <file name="src/test/kotlin/com/feniqo/mobile/presentation/transaction/TransactionAccessibilityComposeTest.kt">
-        <error line="46" column="29" source="standard:multiline-expression-wrapping" />
-        <error line="49" column="35" source="standard:multiline-expression-wrapping" />
-        <error line="79" column="27" source="standard:multiline-expression-wrapping" />
-        <error line="101" column="27" source="standard:multiline-expression-wrapping" />
-        <error line="125" column="31" source="standard:multiline-expression-wrapping" />
-        <error line="176" column="16" source="standard:chain-method-continuation" />
-        <error line="187" column="31" source="standard:multiline-expression-wrapping" />
-        <error line="218" column="31" source="standard:multiline-expression-wrapping" />
-        <error line="248" column="17" source="standard:function-naming" />
+        <error line="50" column="33" source="standard:multiline-expression-wrapping" />
+        <error line="53" column="39" source="standard:multiline-expression-wrapping" />
+        <error line="84" column="27" source="standard:multiline-expression-wrapping" />
+        <error line="106" column="27" source="standard:multiline-expression-wrapping" />
+        <error line="130" column="31" source="standard:multiline-expression-wrapping" />
+        <error line="181" column="16" source="standard:chain-method-continuation" />
+        <error line="192" column="31" source="standard:multiline-expression-wrapping" />
+        <error line="223" column="31" source="standard:multiline-expression-wrapping" />
+        <error line="253" column="17" source="standard:function-naming" />
     </file>
     <file name="src/test/kotlin/com/feniqo/mobile/presentation/transaction/TransactionConflictViewModelTest.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -7177,9 +7177,9 @@
         <error line="135" column="24" source="standard:multiline-expression-wrapping" />
     </file>
     <file name="src/test/kotlin/com/feniqo/mobile/presentation/transaction/TransactionReceiptEntryComposeTest.kt">
-        <error line="74" column="20" source="standard:chain-method-continuation" />
-        <error line="82" column="60" source="standard:multiline-expression-wrapping" />
-        <error line="82" column="60" source="standard:function-signature" />
+        <error line="76" column="20" source="standard:chain-method-continuation" />
+        <error line="84" column="60" source="standard:multiline-expression-wrapping" />
+        <error line="84" column="60" source="standard:function-signature" />
     </file>
     <file name="src/test/kotlin/com/feniqo/mobile/presentation/transaction/TransactionSuccessViewModelTest.kt">
         <error line="4" column="1" source="standard:no-wildcard-imports" />

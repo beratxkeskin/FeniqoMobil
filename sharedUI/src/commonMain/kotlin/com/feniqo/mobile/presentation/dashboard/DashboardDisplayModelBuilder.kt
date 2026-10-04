@@ -2,7 +2,6 @@ package com.feniqo.mobile.presentation.dashboard
 
 import com.feniqo.mobile.domain.model.Category
 import com.feniqo.mobile.domain.model.DashboardSummary
-import com.feniqo.mobile.domain.model.MoneyScoreLevel
 import com.feniqo.mobile.domain.model.Transaction
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.presentation.transaction.InstallmentDisplayModel
@@ -34,7 +33,7 @@ object DashboardDisplayModelBuilder {
         goals: List<com.feniqo.mobile.domain.model.Goal> = emptyList(),
         moneyScoreIsProvisional: Boolean = false,
         moneyScoreExplanationText: String = "",
-        userName: String = "Kullanıcı",
+        userName: String = "",
         excludedDifferentCurrencyCount: Int = 0,
         summaryCurrencyCode: String = "TRY",
     ): DashboardDisplayModel {
@@ -80,7 +79,6 @@ object DashboardDisplayModelBuilder {
                 categoryIconKey = cat?.icon?.key,
                 formattedAmount = MoneyFormatter.format(top.amount),
                 transactionCount = top.transactionCount,
-                formattedTransactionCount = "${top.transactionCount} işlem",
             )
         }
 
@@ -169,20 +167,20 @@ object DashboardDisplayModelBuilder {
         val dynamicInsight = when {
             topExpenseCategory != null -> {
                 DashboardInsightModel(
-                    title = "Feniqo İçgörü",
-                    message = "Bu ay en yüksek harcaman ${topExpenseCategory.categoryName} kategorisinde (${topExpenseCategory.formattedAmount}). Harcamalarını dengede tutmak için harika bir fırsat!",
+                    type = DashboardInsightType.TOP_EXPENSE,
+                    categoryName = topExpenseCategory.categoryName,
+                    formattedAmount = topExpenseCategory.formattedAmount,
                 )
             }
             summary.savingsRate.value > 1500 -> {
                 DashboardInsightModel(
-                    title = "Feniqo İçgörü",
-                    message = "Bu ay %${summary.savingsRate.value / 100} tasarruf oranına ulaştın. Harika bir finansal disiplin sergiliyorsun!",
+                    type = DashboardInsightType.HIGH_SAVINGS,
+                    savingsRatePercent = summary.savingsRate.value / 100,
                 )
             }
             else -> {
                 DashboardInsightModel(
-                    title = "Feniqo İçgörü",
-                    message = "Küçük adımlarla finansal hedeflerine doğru ilerliyorsun. Günlük harcamalarını düzenli kaydetmeyi unutma!",
+                    type = DashboardInsightType.CONSISTENCY,
                 )
             }
         }
@@ -192,11 +190,6 @@ object DashboardDisplayModelBuilder {
             MoneyScoreDisplayModel(
                 totalScore = score.total,
                 level = score.level,
-                formattedLevel = when (score.level) {
-                    MoneyScoreLevel.CRITICAL -> "Kritik"
-                    MoneyScoreLevel.HEALTHY -> "Sağlıklı"
-                    MoneyScoreLevel.EXCELLENT -> "Mükemmel"
-                },
                 savingsScore = score.savings,
                 budgetScore = score.budget,
                 debtScore = score.debt,

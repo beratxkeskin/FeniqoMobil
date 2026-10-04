@@ -256,7 +256,9 @@ class DashboardDisplayModelBuilderTest {
         assertNull(top?.categoryIconKey)
         assertEquals("250,00 ₺", top?.formattedAmount)
         assertEquals(1, top?.transactionCount)
-        assertEquals("1 işlem", top?.formattedTransactionCount)
+        assertEquals(DashboardInsightType.TOP_EXPENSE, result.insight?.type)
+        assertEquals("Kategori", result.insight?.categoryName)
+        assertEquals("250,00 ₺", result.insight?.formattedAmount)
     }
 
     @Test
@@ -291,7 +293,6 @@ class DashboardDisplayModelBuilderTest {
         assertNotNull(defaultMs)
         assertEquals(85, defaultMs?.totalScore)
         assertEquals(MoneyScoreLevel.HEALTHY, defaultMs?.level)
-        assertEquals("Sağlıklı", defaultMs?.formattedLevel)
         assertEquals(25, defaultMs?.savingsScore)
         assertEquals(25, defaultMs?.budgetScore)
         assertEquals(18, defaultMs?.debtScore)

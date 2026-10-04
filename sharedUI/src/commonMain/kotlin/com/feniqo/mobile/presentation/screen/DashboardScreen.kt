@@ -37,6 +37,7 @@ import com.feniqo.mobile.presentation.component.SavingsRateSection
 import com.feniqo.mobile.presentation.dashboard.DashboardBudgetProgressItem
 import com.feniqo.mobile.presentation.dashboard.DashboardDisplayModel
 import com.feniqo.mobile.presentation.dashboard.DashboardInsightModel
+import com.feniqo.mobile.presentation.dashboard.DashboardInsightType
 import com.feniqo.mobile.presentation.dashboard.DashboardSavingsGoalItem
 import com.feniqo.mobile.presentation.dashboard.DashboardUiState
 import com.feniqo.mobile.presentation.dashboard.DashboardUpcomingBillItem
@@ -47,6 +48,10 @@ import com.feniqo.mobile.presentation.dashboard.TopExpenseCategoryDisplayModel
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTheme
 import com.feniqo.mobile.presentation.transaction.TransactionDisplayModel
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.dashboard_error_title
+import feniqomobil.sharedui.generated.resources.dashboard_loading
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Feniqo Ana Sayfa (Dashboard) ekranı.
@@ -86,7 +91,7 @@ fun DashboardScreen(
                 state.isLoading -> {
                     LoadingContent(
                         modifier = Modifier.fillMaxSize(),
-                        message = "Finansal özet yükleniyor…",
+                        message = stringResource(Res.string.dashboard_loading),
                     )
                 }
 
@@ -96,7 +101,7 @@ fun DashboardScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         ErrorState(
-                            title = "Finansal Özet Alınamadı",
+                            title = stringResource(Res.string.dashboard_error_title),
                             description = state.observationError.toDisplayText(),
                             onRetry = onRetry,
                             modifier = Modifier.padding(FeniqoSpacing.Large),
@@ -266,13 +271,11 @@ private val sampleTopExpense = TopExpenseCategoryDisplayModel(
     categoryIconKey = "shopping-cart",
     formattedAmount = "₺4.200",
     transactionCount = 6,
-    formattedTransactionCount = "6 işlem",
 )
 
 private val sampleMoneyScore = MoneyScoreDisplayModel(
     totalScore = 78,
     level = MoneyScoreLevel.HEALTHY,
-    formattedLevel = "Sağlıklı",
     savingsScore = 24,
     budgetScore = 22,
     debtScore = 16,
@@ -381,8 +384,9 @@ private val sampleSavingsGoal = DashboardSavingsGoalItem(
 )
 
 private val sampleInsight = DashboardInsightModel(
-    title = "Feniqo İçgörü",
-    message = "Bu ay en yüksek harcaman Market kategorisinde: ₺4.200.",
+    type = DashboardInsightType.TOP_EXPENSE,
+    categoryName = "Market",
+    formattedAmount = "₺4.200",
 )
 
 private val fullDashboardState = DashboardUiState(
@@ -428,7 +432,12 @@ private val emptyDashboardState = DashboardUiState(
         budgetProgressItems = emptyList(),
         upcomingBills = emptyList(),
         savingsGoal = null,
-        insight = sampleInsight.copy(message = "Küçük adımlarla finansal hedeflerine doğru ilerliyorsun. Günlük harcamalarını düzenli kaydetmeyi unutma!"),
+        insight =
+            sampleInsight.copy(
+                type = DashboardInsightType.CONSISTENCY,
+                categoryName = null,
+                formattedAmount = null,
+            ),
     ),
     selectedMonth = YearMonth("2026-09"),
     activeWorkspaceName = "Kişisel",

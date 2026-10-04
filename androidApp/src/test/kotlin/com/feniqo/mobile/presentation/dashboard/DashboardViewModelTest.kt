@@ -280,7 +280,7 @@ class DashboardViewModelTest {
         // MoneyScore is calculated and present
         assertNotNull(dashboard.moneyScore)
         assertTrue(dashboard.moneyScore!!.isProvisional)
-        assertTrue(dashboard.moneyScore!!.explanationText.contains("nötr başlangıç puanlarıyla"))
+        assertEquals("", dashboard.moneyScore!!.explanationText)
 
         collectJob.cancel()
     }
@@ -444,10 +444,7 @@ class DashboardViewModelTest {
         assertEquals(expectedScore.goal, moneyScore.goalScore)
         assertEquals(expectedScore.level, moneyScore.level)
         assertTrue(moneyScore.isProvisional)
-        assertEquals(
-            "Skor şu anda gelir-gider hareketleri ve henüz kullanılmayan bütçe, borç ve hedef modülleri için nötr başlangıç puanlarıyla hesaplanır.",
-            moneyScore.explanationText,
-        )
+        assertEquals("", moneyScore.explanationText)
 
         collectJob.cancel()
     }

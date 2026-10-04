@@ -56,6 +56,7 @@ import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.presentation.dashboard.BudgetAlertDisplayModel
 import com.feniqo.mobile.presentation.dashboard.DashboardBudgetProgressItem
 import com.feniqo.mobile.presentation.dashboard.DashboardInsightModel
+import com.feniqo.mobile.presentation.dashboard.DashboardInsightType
 import com.feniqo.mobile.presentation.dashboard.DashboardSavingsGoalItem
 import com.feniqo.mobile.presentation.dashboard.DashboardUpcomingBillItem
 import com.feniqo.mobile.presentation.dashboard.MoneyScoreDisplayModel
@@ -69,6 +70,47 @@ import com.feniqo.mobile.presentation.theme.FeniqoWarning
 import com.feniqo.mobile.presentation.transaction.TransactionDisplayModel
 import com.feniqo.mobile.presentation.util.ColorParser
 import com.feniqo.mobile.presentation.util.DateFormatter
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.dashboard_add_budget
+import feniqomobil.sharedui.generated.resources.dashboard_add_first_transaction
+import feniqomobil.sharedui.generated.resources.dashboard_all
+import feniqomobil.sharedui.generated.resources.dashboard_budget_exceeded
+import feniqomobil.sharedui.generated.resources.dashboard_budgets
+import feniqomobil.sharedui.generated.resources.dashboard_currency_scope_notice
+import feniqomobil.sharedui.generated.resources.dashboard_default_user
+import feniqomobil.sharedui.generated.resources.dashboard_expense
+import feniqomobil.sharedui.generated.resources.dashboard_financial_outlook
+import feniqomobil.sharedui.generated.resources.dashboard_goal_progress
+import feniqomobil.sharedui.generated.resources.dashboard_greeting
+import feniqomobil.sharedui.generated.resources.dashboard_highest_expense
+import feniqomobil.sharedui.generated.resources.dashboard_income
+import feniqomobil.sharedui.generated.resources.dashboard_insight_consistency
+import feniqomobil.sharedui.generated.resources.dashboard_insight_high_savings
+import feniqomobil.sharedui.generated.resources.dashboard_insight_title
+import feniqomobil.sharedui.generated.resources.dashboard_insight_top_expense
+import feniqomobil.sharedui.generated.resources.dashboard_money_score_critical
+import feniqomobil.sharedui.generated.resources.dashboard_money_score_excellent
+import feniqomobil.sharedui.generated.resources.dashboard_money_score_healthy
+import feniqomobil.sharedui.generated.resources.dashboard_month_fallback
+import feniqomobil.sharedui.generated.resources.dashboard_month_overview
+import feniqomobil.sharedui.generated.resources.dashboard_month_transaction_summary
+import feniqomobil.sharedui.generated.resources.dashboard_monthly_income_basis
+import feniqomobil.sharedui.generated.resources.dashboard_near_limit
+import feniqomobil.sharedui.generated.resources.dashboard_no_budgets
+import feniqomobil.sharedui.generated.resources.dashboard_no_transactions
+import feniqomobil.sharedui.generated.resources.dashboard_no_upcoming_payments
+import feniqomobil.sharedui.generated.resources.dashboard_period_net
+import feniqomobil.sharedui.generated.resources.dashboard_personal_workspace
+import feniqomobil.sharedui.generated.resources.dashboard_profile_account
+import feniqomobil.sharedui.generated.resources.dashboard_provisional
+import feniqomobil.sharedui.generated.resources.dashboard_recent_transactions
+import feniqomobil.sharedui.generated.resources.dashboard_savings_goal
+import feniqomobil.sharedui.generated.resources.dashboard_savings_rate
+import feniqomobil.sharedui.generated.resources.dashboard_score_explanation
+import feniqomobil.sharedui.generated.resources.dashboard_subscription
+import feniqomobil.sharedui.generated.resources.dashboard_transaction_count
+import feniqomobil.sharedui.generated.resources.dashboard_upcoming_payments
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * 1. Feniqo logosu, profil girişine bağlı avatar, kullanıcı adına göre selamlama,
@@ -78,10 +120,17 @@ import com.feniqo.mobile.presentation.util.DateFormatter
 fun DashboardHeader(
     formattedMonth: String,
     modifier: Modifier = Modifier,
-    userName: String = "Kullanıcı",
+    userName: String = "",
     activeWorkspaceName: String? = null,
     onProfileClick: () -> Unit = {},
 ) {
+    val displayUserName =
+        if (userName.isBlank()) {
+            stringResource(Res.string.dashboard_default_user)
+        } else {
+            userName
+        }
+    val profileAccountLabel = stringResource(Res.string.dashboard_profile_account)
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
@@ -108,15 +157,15 @@ fun DashboardHeader(
                     .clip(CircleShape)
                     .clickable(
                         role = Role.Button,
-                        onClickLabel = "Profil ve hesap",
+                        onClickLabel = profileAccountLabel,
                         onClick = onProfileClick,
                     )
-                    .semantics { contentDescription = "Profil ve hesap" },
+                    .semantics { contentDescription = profileAccountLabel },
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.secondaryContainer,
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    val initialLetter = userName.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "U"
+                    val initialLetter = displayUserName.trim().first().uppercaseChar().toString()
                     Text(
                         text = initialLetter,
                         style = MaterialTheme.typography.titleMedium.copy(
@@ -132,7 +181,7 @@ fun DashboardHeader(
 
         // Karşılama: "Merhaba, Ayşe"
         Text(
-            text = "Merhaba, $userName",
+            text = stringResource(Res.string.dashboard_greeting, displayUserName),
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontSize = 15.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -141,7 +190,7 @@ fun DashboardHeader(
 
         // Büyük Başlık: "Ayına bir bakış"
         Text(
-            text = "Ayına bir bakış",
+            text = stringResource(Res.string.dashboard_month_overview),
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.ExtraBold,
                 fontSize = 26.sp,
@@ -175,7 +224,12 @@ fun DashboardHeader(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
-                        text = activeWorkspaceName?.takeIf { it.isNotBlank() } ?: "Kişisel",
+                        text =
+                            if (activeWorkspaceName.isNullOrBlank()) {
+                                stringResource(Res.string.dashboard_personal_workspace)
+                            } else {
+                                activeWorkspaceName
+                            },
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Medium,
                             fontSize = 13.sp,
@@ -258,7 +312,7 @@ fun GraphiteSummaryCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "Dönem neti",
+                        text = stringResource(Res.string.dashboard_period_net),
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
                         color = Color.White.copy(alpha = 0.75f),
                     )
@@ -288,7 +342,7 @@ fun GraphiteSummaryCard(
 
                 // Alt Başlık: "Bu ayın işlem özeti"
                 Text(
-                    text = "Bu ayın işlem özeti",
+                    text = stringResource(Res.string.dashboard_month_transaction_summary),
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                     color = Color.White.copy(alpha = 0.65f),
                 )
@@ -344,7 +398,7 @@ fun GraphiteSummaryCard(
 
                             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(
-                                    text = "Gelir",
+                                    text = stringResource(Res.string.dashboard_income),
                                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                                     color = Color.White.copy(alpha = 0.7f),
                                 )
@@ -406,7 +460,7 @@ fun GraphiteSummaryCard(
 
                             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(
-                                    text = "Gider",
+                                    text = stringResource(Res.string.dashboard_expense),
                                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                                     color = Color.White.copy(alpha = 0.7f),
                                 )
@@ -456,7 +510,7 @@ fun SavingsRateSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Tasarruf oranı",
+                text = stringResource(Res.string.dashboard_savings_rate),
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
@@ -491,7 +545,7 @@ fun SavingsRateSection(
         }
 
         Text(
-            text = "Aylık gelire göre",
+            text = stringResource(Res.string.dashboard_monthly_income_basis),
             style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -513,7 +567,7 @@ fun HomeBudgetsSection(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text(
-            text = "Bütçelerin",
+            text = stringResource(Res.string.dashboard_budgets),
             style = MaterialTheme.typography.titleMedium.copy(
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
@@ -549,12 +603,12 @@ fun HomeBudgetsSection(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = "Bu ay için henüz bütçe belirlenmedi",
+                                text = stringResource(Res.string.dashboard_no_budgets),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Text(
-                                text = "+ Bütçe Ekle",
+                                text = stringResource(Res.string.dashboard_add_budget),
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -625,7 +679,7 @@ private fun HomeBudgetItemRow(
 
                 if (isNearLimit) {
                     Text(
-                        text = "Limite yaklaşıyor",
+                        text = stringResource(Res.string.dashboard_near_limit),
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Medium,
                             fontSize = 11.sp,
@@ -634,7 +688,7 @@ private fun HomeBudgetItemRow(
                     )
                 } else if (isOverLimit) {
                     Text(
-                        text = "Bütçe aşıldı",
+                        text = stringResource(Res.string.dashboard_budget_exceeded),
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Medium,
                             fontSize = 11.sp,
@@ -711,7 +765,7 @@ fun HomeRecentTransactionsSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Son işlemler",
+                text = stringResource(Res.string.dashboard_recent_transactions),
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
@@ -720,7 +774,7 @@ fun HomeRecentTransactionsSection(
             )
 
             Text(
-                text = "Tümü",
+                text = stringResource(Res.string.dashboard_all),
                 style = MaterialTheme.typography.labelLarge.copy(
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
@@ -761,12 +815,12 @@ fun HomeRecentTransactionsSection(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             Text(
-                                text = "Henüz bu aya ait işlem bulunmuyor",
+                                text = stringResource(Res.string.dashboard_no_transactions),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Text(
-                                text = "+ İlk İşlemini Ekle",
+                                text = stringResource(Res.string.dashboard_add_first_transaction),
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -875,6 +929,21 @@ fun HomeInsightCard(
     insight: DashboardInsightModel,
     modifier: Modifier = Modifier,
 ) {
+    val insightMessage =
+        when (insight.type) {
+            DashboardInsightType.TOP_EXPENSE ->
+                stringResource(
+                    Res.string.dashboard_insight_top_expense,
+                    insight.categoryName.orEmpty(),
+                    insight.formattedAmount.orEmpty(),
+                )
+            DashboardInsightType.HIGH_SAVINGS ->
+                stringResource(
+                    Res.string.dashboard_insight_high_savings,
+                    insight.savingsRatePercent ?: 0,
+                )
+            DashboardInsightType.CONSISTENCY -> stringResource(Res.string.dashboard_insight_consistency)
+        }
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -919,7 +988,7 @@ fun HomeInsightCard(
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = insight.title,
+                    text = stringResource(Res.string.dashboard_insight_title),
                     style = MaterialTheme.typography.titleSmall.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
@@ -928,7 +997,7 @@ fun HomeInsightCard(
                 )
 
                 Text(
-                    text = insight.message,
+                    text = insightMessage,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = 13.sp,
                         lineHeight = 19.sp,
@@ -955,7 +1024,7 @@ fun HomeUpcomingPaymentsSection(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text(
-            text = "Yaklaşan ödemeler",
+            text = stringResource(Res.string.dashboard_upcoming_payments),
             style = MaterialTheme.typography.titleMedium.copy(
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
@@ -984,7 +1053,7 @@ fun HomeUpcomingPaymentsSection(
                             .clickable(onClick = onSubscriptionsClick),
                     ) {
                         Text(
-                            text = "Yaklaşan ödeme bulunmuyor",
+                            text = stringResource(Res.string.dashboard_no_upcoming_payments),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(16.dp),
@@ -1039,7 +1108,12 @@ private fun HomeUpcomingBillRow(
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = bill.monthShort.ifBlank { "AY" },
+                    text =
+                        if (bill.monthShort.isBlank()) {
+                            stringResource(Res.string.dashboard_month_fallback)
+                        } else {
+                            bill.monthShort
+                        },
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,
@@ -1073,7 +1147,7 @@ private fun HomeUpcomingBillRow(
             )
 
             Text(
-                text = "Abonelik",
+                text = stringResource(Res.string.dashboard_subscription),
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -1117,7 +1191,7 @@ fun HomeSavingsGoalSection(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text(
-            text = "Birikim hedefin",
+            text = stringResource(Res.string.dashboard_savings_goal),
             style = MaterialTheme.typography.titleMedium.copy(
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
@@ -1203,7 +1277,11 @@ fun HomeSavingsGoalSection(
                     }
 
                     Text(
-                        text = "%${(goal.progressRatio * 100).toInt()} tamamlandı",
+                        text =
+                            stringResource(
+                                Res.string.dashboard_goal_progress,
+                                (goal.progressRatio * 100).toInt(),
+                            ),
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -1222,6 +1300,14 @@ fun HomeMoneyScoreSection(
     moneyScore: MoneyScoreDisplayModel,
     modifier: Modifier = Modifier,
 ) {
+    val scoreLevelText =
+        stringResource(
+            when (moneyScore.level) {
+                MoneyScoreLevel.CRITICAL -> Res.string.dashboard_money_score_critical
+                MoneyScoreLevel.HEALTHY -> Res.string.dashboard_money_score_healthy
+                MoneyScoreLevel.EXCELLENT -> Res.string.dashboard_money_score_excellent
+            },
+        )
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -1306,7 +1392,7 @@ fun HomeMoneyScoreSection(
                             color = Color(0xFFE8F1EC),
                         ) {
                             Text(
-                                text = "Ön değerlendirme",
+                                text = stringResource(Res.string.dashboard_provisional),
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 11.sp,
@@ -1317,12 +1403,17 @@ fun HomeMoneyScoreSection(
                         }
 
                         Text(
-                            text = "Finansal görünümün",
+                            text = stringResource(Res.string.dashboard_financial_outlook),
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                             ),
                             color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = scoreLevelText,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -1330,7 +1421,7 @@ fun HomeMoneyScoreSection(
                 // Açıklama Metni
                 Text(
                     text = moneyScore.explanationText.takeIf { it.isNotBlank() }
-                        ?: "Bu puan ön değerlendirmedir; bazı bileşenler nötr değerlerle hesaplanır.",
+                        ?: stringResource(Res.string.dashboard_score_explanation),
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontSize = 12.sp,
                         lineHeight = 17.sp,
@@ -1376,7 +1467,7 @@ fun CurrencyScopeNoticeCard(
             )
 
             Text(
-                text = "$count farklı para birimindeki işlem $currencyCode özetine dahil edilmedi.",
+                text = stringResource(Res.string.dashboard_currency_scope_notice, count, currencyCode),
                 style = MaterialTheme.typography.bodySmall.copy(
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1483,7 +1574,7 @@ fun TopExpenseCategorySection(
 
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        text = "En Yüksek Gider",
+                        text = stringResource(Res.string.dashboard_highest_expense),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -1509,7 +1600,11 @@ fun TopExpenseCategorySection(
                     color = MaterialTheme.colorScheme.error,
                 )
                 Text(
-                    text = topExpenseCategory.formattedTransactionCount,
+                    text =
+                        stringResource(
+                            Res.string.dashboard_transaction_count,
+                            topExpenseCategory.transactionCount,
+                        ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

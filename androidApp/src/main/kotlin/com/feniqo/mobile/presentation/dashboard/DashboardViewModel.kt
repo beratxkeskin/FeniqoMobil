@@ -111,7 +111,7 @@ class DashboardViewModel @Inject constructor(
             val calculatedScore = calculateMoneyScoreUseCase(moneyScoreInput)
             val summaryWithScore = summary.copy(moneyScore = calculatedScore)
 
-            val userName = profile?.fullName?.takeIf { it.isNotBlank() } ?: "Kullanıcı"
+            val userName = profile?.fullName?.takeIf { it.isNotBlank() }.orEmpty()
 
             val displayModel = DashboardDisplayModelBuilder.build(
                 summary = summaryWithScore,
@@ -121,7 +121,6 @@ class DashboardViewModel @Inject constructor(
                 subscriptions = subscriptions,
                 goals = goals,
                 moneyScoreIsProvisional = true,
-                moneyScoreExplanationText = PROVISIONAL_MONEY_SCORE_EXPLANATION,
                 userName = userName,
                 excludedDifferentCurrencyCount = excludedDifferentCurrencyCount,
                 summaryCurrencyCode = summaryCurrency.name,
@@ -198,10 +197,5 @@ class DashboardViewModel @Inject constructor(
 
     fun showMessage(message: FinanceUiMessage) {
         _userMessage.value = message
-    }
-
-    companion object {
-        const val PROVISIONAL_MONEY_SCORE_EXPLANATION =
-            "Skor şu anda gelir-gider hareketleri ve henüz kullanılmayan bütçe, borç ve hedef modülleri için nötr başlangıç puanlarıyla hesaplanır."
     }
 }

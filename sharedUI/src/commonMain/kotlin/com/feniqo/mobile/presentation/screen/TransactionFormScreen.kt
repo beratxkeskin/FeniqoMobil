@@ -94,6 +94,28 @@ import com.feniqo.mobile.presentation.transaction.RECEIPT_OCR_USER_ENTRY_ENABLED
 import com.feniqo.mobile.presentation.transaction.TransactionCategoryOptionUiModel
 import com.feniqo.mobile.presentation.transaction.TransactionFormFieldError
 import com.feniqo.mobile.presentation.transaction.TransactionFormUiState
+import com.feniqo.mobile.presentation.transaction.toLocalizedText
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.transaction_form_add_expense_title
+import feniqomobil.sharedui.generated.resources.transaction_form_add_income_title
+import feniqomobil.sharedui.generated.resources.transaction_form_back
+import feniqomobil.sharedui.generated.resources.transaction_form_cancel
+import feniqomobil.sharedui.generated.resources.transaction_form_close
+import feniqomobil.sharedui.generated.resources.transaction_form_apply_details
+import feniqomobil.sharedui.generated.resources.transaction_form_details
+import feniqomobil.sharedui.generated.resources.transaction_form_edit_title
+import feniqomobil.sharedui.generated.resources.transaction_form_filled
+import feniqomobil.sharedui.generated.resources.transaction_form_hide_details
+import feniqomobil.sharedui.generated.resources.transaction_form_load_failed
+import feniqomobil.sharedui.generated.resources.transaction_form_loading
+import feniqomobil.sharedui.generated.resources.transaction_form_receipt
+import feniqomobil.sharedui.generated.resources.transaction_form_receipt_hint
+import feniqomobil.sharedui.generated.resources.transaction_form_save_changes
+import feniqomobil.sharedui.generated.resources.transaction_form_save_expense
+import feniqomobil.sharedui.generated.resources.transaction_form_save_income
+import feniqomobil.sharedui.generated.resources.transaction_form_shared_expense_hint
+import feniqomobil.sharedui.generated.resources.transaction_form_show_details
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * İşlem ekleme ve düzenleme için stateless ana form ekranıdır.
@@ -219,6 +241,7 @@ private fun TransactionFormHeader(
     isBackEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val backLabel = stringResource(Res.string.transaction_form_back)
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -247,7 +270,7 @@ private fun TransactionFormHeader(
                     enabled = isBackEnabled,
                     modifier = Modifier
                         .size(48.dp)
-                        .semantics { contentDescription = "Geri dön" },
+                        .semantics { contentDescription = backLabel },
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -257,9 +280,9 @@ private fun TransactionFormHeader(
                 }
 
                 val titleText = when {
-                    isEditMode -> "İşlemi düzenle"
-                    type == TransactionType.EXPENSE -> "Gider ekle"
-                    else -> "Gelir ekle"
+                    isEditMode -> stringResource(Res.string.transaction_form_edit_title)
+                    type == TransactionType.EXPENSE -> stringResource(Res.string.transaction_form_add_expense_title)
+                    else -> stringResource(Res.string.transaction_form_add_income_title)
                 }
 
                 Text(
@@ -380,7 +403,7 @@ private fun TransactionFormContent(
                         modifier = Modifier.defaultMinSize(minHeight = 48.dp),
                     ) {
                         Text(
-                            text = "Kapat",
+                            text = stringResource(Res.string.transaction_form_close),
                             style = MaterialTheme.typography.labelSmall,
                             color = if (uiState.generalMessage.isError) {
                                 MaterialTheme.colorScheme.onErrorContainer
@@ -406,7 +429,7 @@ private fun TransactionFormContent(
             currency = uiState.currency,
             onAmountChange = onAmountChange,
             onCurrencyChange = onCurrencyChange,
-            errorText = uiState.amountError?.toDisplayText(),
+            errorText = uiState.amountError?.toLocalizedText(),
             enabled = isFormEnabled,
             fieldModifier = Modifier.focusRequester(amountFocusRequester),
             keyboardActions = KeyboardActions(
@@ -418,7 +441,7 @@ private fun TransactionFormContent(
         TransactionTitleField(
             title = uiState.title.ifEmpty { uiState.description },
             onTitleChange = onTitleChange,
-            errorText = (uiState.titleError ?: uiState.descriptionError)?.toDisplayText(),
+            errorText = (uiState.titleError ?: uiState.descriptionError)?.toLocalizedText(),
             enabled = isFormEnabled,
             isExpense = uiState.type == TransactionType.EXPENSE,
             fieldModifier = Modifier.focusRequester(titleFocusRequester),
@@ -437,7 +460,7 @@ private fun TransactionFormContent(
             onCategoryChange = onCategoryChange,
             categoryLoadError = uiState.categoryLoadError,
             onRetryCategories = onRetryCategories,
-            errorText = uiState.categoryError?.toDisplayText(),
+            errorText = uiState.categoryError?.toLocalizedText(),
             enabled = isFormEnabled,
             onAddCategoryClick = { onAddCategory(uiState.type) },
             modifier = Modifier.focusRequester(categoryFocusRequester),
@@ -454,7 +477,7 @@ private fun TransactionFormContent(
         TransactionDatePickerField(
             date = uiState.transactionDate,
             onDateClick = onDateClick,
-            errorText = uiState.dateError?.toDisplayText(),
+            errorText = uiState.dateError?.toLocalizedText(),
             enabled = isFormEnabled,
             fieldModifier = Modifier.focusRequester(dateFocusRequester),
         )
@@ -495,7 +518,7 @@ private fun TransactionFormContent(
                         modifier = Modifier.size(18.dp),
                     )
                     Text(
-                        text = "Ayrıntılar",
+                        text = stringResource(Res.string.transaction_form_details),
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
@@ -510,7 +533,7 @@ private fun TransactionFormContent(
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
                         ) {
                             Text(
-                                text = "Dolu",
+                                text = stringResource(Res.string.transaction_form_filled),
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontSize = 11.sp,
@@ -523,7 +546,13 @@ private fun TransactionFormContent(
                 }
                 Icon(
                     imageVector = if (isMoreDetailsExpanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
-                    contentDescription = if (isMoreDetailsExpanded) "Ayrıntıları gizle" else "Ayrıntıları göster",
+                    contentDescription = stringResource(
+                        if (isMoreDetailsExpanded) {
+                            Res.string.transaction_form_hide_details
+                        } else {
+                            Res.string.transaction_form_show_details
+                        },
+                    ),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -549,14 +578,21 @@ private fun TransactionFormContent(
                         verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = { isMoreDetailsExpanded = false }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Vazgeç")
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack,
+                                    stringResource(Res.string.transaction_form_cancel),
+                                )
                             }
-                            Text("Ayrıntılar", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                            Text(
+                                stringResource(Res.string.transaction_form_details),
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                            )
                         }
                         TransactionNoteField(
                             note = draft.note,
                             onNoteChange = { draft = draft.copy(note = it) },
-                            errorText = uiState.noteError?.toDisplayText(),
+                            errorText = uiState.noteError?.toLocalizedText(),
                             enabled = isFormEnabled,
                             fieldModifier = Modifier.focusRequester(noteFocusRequester),
                             keyboardActions = KeyboardActions(
@@ -571,14 +607,20 @@ private fun TransactionFormContent(
                                 onToggle = { draft = draft.copy(installmentEnabled = it) },
                                 installmentCountText = draft.installmentCount,
                                 onCountChange = { draft = draft.copy(installmentCount = it) },
-                                errorText = uiState.installmentCountError?.toDisplayText(), enabled = isFormEnabled)
+                                errorText = uiState.installmentCountError?.toLocalizedText(), enabled = isFormEnabled)
                         } else if (uiState.existingInstallment != null) {
                             TransactionExistingInstallmentBadge(uiState.existingInstallment)
                         }
                         if (RECEIPT_OCR_USER_ENTRY_ENABLED && uiState.isReceiptFeatureAvailable) {
-                            Text("Makbuz", style = MaterialTheme.typography.titleMedium)
-                            Text("Tarama, bilgileri forma aktarır. Dosyayı kalıcı makbuz eki olarak saklamaz.",
-                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                stringResource(Res.string.transaction_form_receipt),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Text(
+                                stringResource(Res.string.transaction_form_receipt_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                             ReceiptAttachmentSection(hasReceipt = draft.hasReceipt,
                                 isActionInProgress = uiState.isReceiptActionInProgress,
                                 onAttachReceipt = onAttachReceipt,
@@ -612,7 +654,7 @@ private fun TransactionFormContent(
                                 selectedParticipantUserIds = draft.participants,
                                 onPaidByUserSelected = { draft = draft.selectPayer(it) },
                                 onParticipantToggled = { draft = draft.toggleParticipant(it) },
-                                errorText = uiState.splitError?.toDisplayText(),
+                                errorText = uiState.splitError?.toLocalizedText(),
                                 enabled = isFormEnabled && uiState.canManageSplit,
                                 splitMode = draft.splitMode,
                                 customSharesText = draft.customSharesText,
@@ -642,8 +684,11 @@ private fun TransactionFormContent(
                                 },
                             )
                         } else {
-                            Text("Ortak harcama yalnız uygun ortak çalışma alanında kullanılabilir.",
-                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                stringResource(Res.string.transaction_form_shared_expense_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                         Button(onClick = {
                             onNoteChange(draft.note)
@@ -661,8 +706,15 @@ private fun TransactionFormContent(
                                 )
                             }
                             isMoreDetailsExpanded = false
-                        }, modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp)) { Text("Ayrıntıları uygula") }
-                        TextButton(onClick = { isMoreDetailsExpanded = false }, modifier = Modifier.fillMaxWidth()) { Text("Vazgeç") }
+                        }, modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp)) {
+                            Text(stringResource(Res.string.transaction_form_apply_details))
+                        }
+                        TextButton(
+                            onClick = { isMoreDetailsExpanded = false },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(Res.string.transaction_form_cancel))
+                        }
                     }
                 }
             }
@@ -700,14 +752,14 @@ private fun TransactionFormBottomBar(
                 .padding(horizontal = FeniqoSpacing.Large, vertical = FeniqoSpacing.Medium),
         ) {
             val submitButtonText = when {
-                isEditMode -> "Değişiklikleri kaydet"
-                type == TransactionType.EXPENSE -> "Gideri kaydet"
-                else -> "Geliri kaydet"
+                isEditMode -> stringResource(Res.string.transaction_form_save_changes)
+                type == TransactionType.EXPENSE -> stringResource(Res.string.transaction_form_save_expense)
+                else -> stringResource(Res.string.transaction_form_save_income)
             }
 
             if (isEditMode) {
                 TextButton(onClick = onCancel, enabled = !isSubmitting, modifier = Modifier.fillMaxWidth()) {
-                    Text("Vazgeç")
+                    Text(stringResource(Res.string.transaction_form_cancel))
                 }
             }
 
@@ -764,7 +816,7 @@ private fun TransactionLoadingView(modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.primary,
             )
             Text(
-                text = "İşlem bilgileri yükleniyor...",
+                text = stringResource(Res.string.transaction_form_loading),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -803,7 +855,7 @@ private fun TransactionErrorView(
                 verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Large),
             ) {
                 Text(
-                    text = "İşlem Yüklenemedi",
+                    text = stringResource(Res.string.transaction_form_load_failed),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.error,
@@ -824,7 +876,7 @@ private fun TransactionErrorView(
                         .defaultMinSize(minHeight = 48.dp),
                 ) {
                     Text(
-                        text = "Geri Dön",
+                        text = stringResource(Res.string.transaction_form_back),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
                     )

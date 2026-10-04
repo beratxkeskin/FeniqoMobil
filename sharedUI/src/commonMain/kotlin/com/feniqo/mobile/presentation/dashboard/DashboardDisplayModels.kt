@@ -38,7 +38,6 @@ data class TopExpenseCategoryDisplayModel(
     val categoryIconKey: String?,
     val formattedAmount: String,
     val transactionCount: Int,
-    val formattedTransactionCount: String,
 )
 
 /**
@@ -47,7 +46,6 @@ data class TopExpenseCategoryDisplayModel(
 data class MoneyScoreDisplayModel(
     val totalScore: Int,
     val level: MoneyScoreLevel,
-    val formattedLevel: String,
     val savingsScore: Int,
     val budgetScore: Int,
     val debtScore: Int,
@@ -102,10 +100,17 @@ data class DashboardSavingsGoalItem(
 /**
  * Feniqo İçgörü banner presentation modelidir.
  */
+enum class DashboardInsightType {
+    TOP_EXPENSE,
+    HIGH_SAVINGS,
+    CONSISTENCY,
+}
+
 data class DashboardInsightModel(
-    val title: String = "Feniqo İçgörü",
-    val message: String,
-    val percentageText: String? = null,
+    val type: DashboardInsightType,
+    val categoryName: String? = null,
+    val formattedAmount: String? = null,
+    val savingsRatePercent: Int? = null,
 )
 
 /**
@@ -119,7 +124,7 @@ data class DashboardDisplayModel(
     val recentTransactions: List<TransactionDisplayModel>,
     val moneyScore: MoneyScoreDisplayModel?,
     val budgetAlert: BudgetAlertDisplayModel? = null,
-    val userName: String = "Kullanıcı",
+    val userName: String = "",
     val excludedDifferentCurrencyCount: Int = 0,
     val summaryCurrencyCode: String = "TRY",
     val budgetProgressItems: List<DashboardBudgetProgressItem> = emptyList(),

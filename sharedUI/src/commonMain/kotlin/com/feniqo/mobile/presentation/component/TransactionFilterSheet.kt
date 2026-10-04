@@ -53,7 +53,38 @@ import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.transaction.CategoryFilterOptionUiModel
 import com.feniqo.mobile.presentation.transaction.TransactionFilterUiModel
 import com.feniqo.mobile.presentation.transaction.TransactionPeriodPreset
-import com.feniqo.mobile.presentation.util.ColorParser
+import com.feniqo.mobile.presentation.transaction.toLocalizedText
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.transactions_all
+import feniqomobil.sharedui.generated.resources.transactions_all_categories
+import feniqomobil.sharedui.generated.resources.transactions_all_payment_methods
+import feniqomobil.sharedui.generated.resources.transactions_apply_filters
+import feniqomobil.sharedui.generated.resources.transactions_cancel
+import feniqomobil.sharedui.generated.resources.transactions_category_section
+import feniqomobil.sharedui.generated.resources.transactions_clear
+import feniqomobil.sharedui.generated.resources.transactions_date_range
+import feniqomobil.sharedui.generated.resources.transactions_end_date
+import feniqomobil.sharedui.generated.resources.transactions_filter_category_chip
+import feniqomobil.sharedui.generated.resources.transactions_filter_category_fallback
+import feniqomobil.sharedui.generated.resources.transactions_filter_clear_search
+import feniqomobil.sharedui.generated.resources.transactions_filter_payment_chip
+import feniqomobil.sharedui.generated.resources.transactions_filter_period_chip
+import feniqomobil.sharedui.generated.resources.transactions_filter_remove_category
+import feniqomobil.sharedui.generated.resources.transactions_filter_remove_payment
+import feniqomobil.sharedui.generated.resources.transactions_filter_remove_period
+import feniqomobil.sharedui.generated.resources.transactions_filter_remove_type
+import feniqomobil.sharedui.generated.resources.transactions_filter_search
+import feniqomobil.sharedui.generated.resources.transactions_filter_type_chip
+import feniqomobil.sharedui.generated.resources.transactions_filters
+import feniqomobil.sharedui.generated.resources.transactions_invalid_date_range
+import feniqomobil.sharedui.generated.resources.transactions_payment_section
+import feniqomobil.sharedui.generated.resources.transactions_period_all_time
+import feniqomobil.sharedui.generated.resources.transactions_select_dates
+import feniqomobil.sharedui.generated.resources.transactions_select_from_calendar
+import feniqomobil.sharedui.generated.resources.transactions_sort_section
+import feniqomobil.sharedui.generated.resources.transactions_start_date
+import feniqomobil.sharedui.generated.resources.transactions_type_section
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Arama sorgusu giriş alanı bileşenidir.
@@ -65,6 +96,7 @@ fun TransactionSearchField(
     modifier: Modifier = Modifier,
 ) {
     val focusManager = LocalFocusManager.current
+    val clearSearchDescription = stringResource(Res.string.transactions_filter_clear_search)
 
     OutlinedTextField(
         value = query,
@@ -75,7 +107,7 @@ fun TransactionSearchField(
         shape = RoundedCornerShape(FeniqoRadius.Medium),
         placeholder = {
             Text(
-                text = "İşlemlerde ara",
+                text = stringResource(Res.string.transactions_filter_search),
                 style = MaterialTheme.typography.bodyMedium,
             )
         },
@@ -93,10 +125,10 @@ fun TransactionSearchField(
                     onClick = { onQueryChange("") },
                     modifier = Modifier
                         .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-                        .semantics { contentDescription = "Aramayı temizle" },
+                        .semantics { contentDescription = clearSearchDescription },
                 ) {
                     Text(
-                        text = "Temizle",
+                        text = stringResource(Res.string.transactions_clear),
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
@@ -131,11 +163,12 @@ fun ActiveTransactionFilterChips(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (filter.type != null) {
-            val typeText = filter.type.toDisplayText()
+            val typeText = filter.type.toLocalizedText()
+            val removeTypeDescription = stringResource(Res.string.transactions_filter_remove_type, typeText)
             InputChip(
                 selected = true,
                 onClick = { onTypeFilterChanged(null) },
-                label = { Text("Tür: $typeText") },
+                label = { Text(stringResource(Res.string.transactions_filter_type_chip, typeText)) },
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Close,
@@ -146,23 +179,20 @@ fun ActiveTransactionFilterChips(
                 modifier = Modifier
                     .defaultMinSize(minHeight = 48.dp)
                     .semantics {
-                        contentDescription = "$typeText türü filtresini kaldır"
+                        contentDescription = removeTypeDescription
                     },
             )
         }
 
         if (filter.categoryId != null) {
             val matchedCategory = availableCategories.find { it.id == filter.categoryId }
-            val categoryLabel = matchedCategory?.name ?: "Kategori"
-            val removeDescription = if (matchedCategory != null) {
-                "${matchedCategory.name} kategori filtresini kaldır"
-            } else {
-                "Kategori filtresini kaldır"
-            }
+            val categoryLabel = matchedCategory?.name
+                ?: stringResource(Res.string.transactions_filter_category_fallback)
+            val removeDescription = stringResource(Res.string.transactions_filter_remove_category, categoryLabel)
             InputChip(
                 selected = true,
                 onClick = { onCategoryFilterChanged(null) },
-                label = { Text("Kategori: $categoryLabel") },
+                label = { Text(stringResource(Res.string.transactions_filter_category_chip, categoryLabel)) },
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Close,
@@ -179,11 +209,12 @@ fun ActiveTransactionFilterChips(
         }
 
         if (filter.paymentMethod != null) {
-            val paymentText = filter.paymentMethod.toDisplayText()
+            val paymentText = filter.paymentMethod.toLocalizedText()
+            val removePaymentDescription = stringResource(Res.string.transactions_filter_remove_payment, paymentText)
             InputChip(
                 selected = true,
                 onClick = { onPaymentMethodFilterChanged(null) },
-                label = { Text("Ödeme: $paymentText") },
+                label = { Text(stringResource(Res.string.transactions_filter_payment_chip, paymentText)) },
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Close,
@@ -194,17 +225,18 @@ fun ActiveTransactionFilterChips(
                 modifier = Modifier
                     .defaultMinSize(minHeight = 48.dp)
                     .semantics {
-                        contentDescription = "$paymentText ödeme filtresini kaldır"
+                        contentDescription = removePaymentDescription
                     },
             )
         }
 
         if (filter.periodPreset != null) {
-            val periodText = filter.periodPreset.toDisplayText()
+            val periodText = filter.periodPreset.toLocalizedText()
+            val removePeriodDescription = stringResource(Res.string.transactions_filter_remove_period, periodText)
             InputChip(
                 selected = true,
                 onClick = { onPeriodPresetChanged(null) },
-                label = { Text("Dönem: $periodText") },
+                label = { Text(stringResource(Res.string.transactions_filter_period_chip, periodText)) },
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Close,
@@ -215,7 +247,7 @@ fun ActiveTransactionFilterChips(
                 modifier = Modifier
                     .defaultMinSize(minHeight = 48.dp)
                     .semantics {
-                        contentDescription = "$periodText dönem filtresini kaldır"
+                        contentDescription = removePeriodDescription
                     },
             )
         }
@@ -256,53 +288,60 @@ fun TransactionFilterSheet(
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically) {
-                Text("Filtreler", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                TextButton(onClick = { draft = TransactionFilterUiModel(workspaceId = filter.workspaceId); start = ""; end = "" }) { Text("Temizle") }
+                Text(stringResource(Res.string.transactions_filters), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                TextButton(onClick = { draft = TransactionFilterUiModel(workspaceId = filter.workspaceId); start = ""; end = "" }) {
+                    Text(stringResource(Res.string.transactions_clear))
+                }
             }
-            FilterSection("Tarih aralığı") {
-                OutlinedButton(onClick = { showCalendar = true }, modifier = Modifier.fillMaxWidth()) { Text("Takvimden seç") }
+            FilterSection(stringResource(Res.string.transactions_date_range)) {
+                OutlinedButton(onClick = { showCalendar = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(Res.string.transactions_select_from_calendar))
+                }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(selected = draft.periodPreset == null && custom == null,
-                        onClick = { draft = draft.copy(periodPreset = null, customPeriod = null); start = ""; end = "" }, label = { Text("Tüm zamanlar") })
+                        onClick = { draft = draft.copy(periodPreset = null, customPeriod = null); start = ""; end = "" },
+                        label = { Text(stringResource(Res.string.transactions_period_all_time)) })
                     TransactionPeriodPreset.entries.forEach { preset ->
                         FilterChip(selected = draft.periodPreset == preset, onClick = {
                             draft = draft.copy(periodPreset = preset, customPeriod = null); start = ""; end = ""
-                        }, label = { Text(preset.toDisplayText()) })
+                        }, label = { Text(preset.toLocalizedText()) })
                     }
                 }
                 OutlinedTextField(value = start, onValueChange = { start = it; draft = draft.copy(periodPreset = null) },
-                    label = { Text("Başlangıç (YYYY-AA-GG)") }, singleLine = true, isError = invalidRange, modifier = Modifier.fillMaxWidth())
+                    label = { Text(stringResource(Res.string.transactions_start_date)) }, singleLine = true, isError = invalidRange, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = end, onValueChange = { end = it; draft = draft.copy(periodPreset = null) },
-                    label = { Text("Bitiş (YYYY-AA-GG)") }, singleLine = true, isError = invalidRange, modifier = Modifier.fillMaxWidth())
-                if (invalidRange) Text("Geçerli ve sıralı bir tarih aralığı girin.", color = MaterialTheme.colorScheme.error)
+                    label = { Text(stringResource(Res.string.transactions_end_date)) }, singleLine = true, isError = invalidRange, modifier = Modifier.fillMaxWidth())
+                if (invalidRange) Text(stringResource(Res.string.transactions_invalid_date_range), color = MaterialTheme.colorScheme.error)
             }
-            FilterSection("İşlem türü") {
+            FilterSection(stringResource(Res.string.transactions_type_section)) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(null, TransactionType.EXPENSE, TransactionType.INCOME).forEach { type ->
                         FilterChip(selected = draft.type == type, onClick = { draft = draft.copy(type = type, categoryId = null) },
-                            label = { Text(type?.toDisplayText() ?: "Tümü") })
+                            label = { Text(type?.toLocalizedText() ?: stringResource(Res.string.transactions_all)) })
                     }
                 }
             }
-            FilterSection("Kategori") {
+            FilterSection(stringResource(Res.string.transactions_category_section)) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = draft.categoryId == null, onClick = { draft = draft.copy(categoryId = null) }, label = { Text("Tüm kategoriler") })
+                    FilterChip(selected = draft.categoryId == null, onClick = { draft = draft.copy(categoryId = null) },
+                        label = { Text(stringResource(Res.string.transactions_all_categories)) })
                     availableCategories.filter { draft.type == null || it.type == draft.type }.forEach { category ->
                         FilterChip(selected = draft.categoryId == category.id, onClick = { draft = draft.copy(categoryId = category.id) }, label = { Text(category.name) })
                     }
                 }
             }
-            FilterSection("Ödeme yöntemi") {
+            FilterSection(stringResource(Res.string.transactions_payment_section)) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     (listOf<PaymentMethod?>(null) + PaymentMethod.entries).forEach { method ->
-                        FilterChip(selected = draft.paymentMethod == method, onClick = { draft = draft.copy(paymentMethod = method) }, label = { Text(method?.toDisplayText() ?: "Tüm yöntemler") })
+                        FilterChip(selected = draft.paymentMethod == method, onClick = { draft = draft.copy(paymentMethod = method) },
+                            label = { Text(method?.toLocalizedText() ?: stringResource(Res.string.transactions_all_payment_methods)) })
                     }
                 }
             }
-            FilterSection("Sıralama") {
+            FilterSection(stringResource(Res.string.transactions_sort_section)) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     com.feniqo.mobile.presentation.transaction.TransactionSortOrder.entries.forEach { order ->
-                        FilterChip(selected = draft.sortOrder == order, onClick = { draft = draft.copy(sortOrder = order) }, label = { Text(order.toDisplayText()) })
+                        FilterChip(selected = draft.sortOrder == order, onClick = { draft = draft.copy(sortOrder = order) }, label = { Text(order.toLocalizedText()) })
                     }
                 }
             }
@@ -314,7 +353,9 @@ fun TransactionFilterSheet(
                 if (custom != null) onCustomPeriodChanged(custom)
                 onSortOrderChanged(draft.sortOrder)
                 onFilterDismiss()
-            }, enabled = !invalidRange, modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp)) { Text("Filtreleri uygula") }
+            }, enabled = !invalidRange, modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp)) {
+                Text(stringResource(Res.string.transactions_apply_filters))
+            }
         }
     }
     if (showCalendar) {
@@ -330,12 +371,16 @@ fun TransactionFilterSheet(
                         end = date(requireNotNull(calendar.selectedEndDateMillis))
                         draft = draft.copy(periodPreset = null)
                         showCalendar = false
-                    }) { Text("Tarihleri seç") }
+                    }) { Text(stringResource(Res.string.transactions_select_dates)) }
             },
-            dismissButton = { TextButton(onClick = { showCalendar = false }) { Text("Vazgeç") } },
+            dismissButton = {
+                TextButton(onClick = { showCalendar = false }) {
+                    Text(stringResource(Res.string.transactions_cancel))
+                }
+            },
         ) {
             androidx.compose.material3.DateRangePicker(state = calendar, modifier = Modifier.height(480.dp),
-                title = { Text("Tarih aralığı", Modifier.padding(16.dp)) })
+                title = { Text(stringResource(Res.string.transactions_date_range), Modifier.padding(16.dp)) })
         }
     }
 }

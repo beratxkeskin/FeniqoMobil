@@ -19,8 +19,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
+@Config(qualifiers = "tr-rTR-w1080dp-h3000dp")
 class TransactionReceiptEntryComposeTest {
     @get:Rule
     val composeRule = createComposeRule()

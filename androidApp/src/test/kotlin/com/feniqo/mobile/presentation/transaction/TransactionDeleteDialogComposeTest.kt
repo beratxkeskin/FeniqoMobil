@@ -42,7 +42,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(qualifiers = "w1080dp-h3000dp")
+@Config(qualifiers = "tr-rTR-w1080dp-h3000dp")
 class TransactionDeleteDialogComposeTest {
 
     @get:Rule
