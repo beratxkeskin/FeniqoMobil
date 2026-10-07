@@ -25,6 +25,7 @@ import com.feniqo.mobile.domain.model.SetSubscriptionActiveCommand
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
 import com.feniqo.mobile.presentation.component.SubscriptionAdvanceRenewalDialog
@@ -287,7 +288,7 @@ fun SubscriptionFormScreenRoute(
             ) {
                 ErrorState(
                     title = "Abonelik Yüklenemedi",
-                    description = effectiveEditLoadState.message.toDisplayText(),
+                    description = effectiveEditLoadState.message.toLocalizedText(),
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
                         actionLabel = "Geri dön",

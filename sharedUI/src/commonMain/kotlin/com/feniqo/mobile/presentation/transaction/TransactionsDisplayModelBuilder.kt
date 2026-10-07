@@ -70,6 +70,7 @@ object TransactionsDisplayModelBuilder {
                 type = trx.type,
                 categoryId = trx.categoryId,
                 categoryName = category?.name ?: "Bilinmeyen kategori",
+                isCategoryUnavailable = category == null,
                 categoryColorHex = category?.color?.hex,
                 categoryIconKey = category?.icon?.key,
                 description = trx.description,

@@ -30,6 +30,7 @@ import com.feniqo.mobile.domain.model.GoalStatus
 import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.RateBasisPoints
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.*
 import com.feniqo.mobile.presentation.goal.*
 import com.feniqo.mobile.presentation.theme.*
@@ -79,7 +80,7 @@ fun GoalsScreen(
                     state.observationError != null -> item("error") {
                         ErrorState(
                             title = "Hedefler Yüklenemedi",
-                            description = state.observationError.toDisplayText(),
+                            description = state.observationError.toLocalizedText(),
                             onRetry = onRetry,
                         )
                     }

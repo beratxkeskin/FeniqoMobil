@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:no-wildcard-imports")
+
 package com.feniqo.mobile.presentation.screen
 
 import androidx.compose.foundation.background
@@ -26,12 +28,16 @@ import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.presentation.component.CategorySemanticIconResolver
 import com.feniqo.mobile.presentation.component.ResponsiveLabelValueRow
-import com.feniqo.mobile.presentation.component.toDisplayText
 import com.feniqo.mobile.presentation.theme.*
 import com.feniqo.mobile.presentation.transaction.TransactionDisplayModel
 import com.feniqo.mobile.presentation.transaction.TransactionSuccessUiState
+import com.feniqo.mobile.presentation.transaction.TransactionSurfaceUiMessage
+import com.feniqo.mobile.presentation.transaction.toLocalizedText
+import com.feniqo.mobile.presentation.transaction.toLocalizedTransactionDate
+import com.feniqo.mobile.presentation.transaction.toLocalizedTransactionStatusText
 import com.feniqo.mobile.presentation.util.ColorParser
-import com.feniqo.mobile.presentation.util.DateFormatter
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Yeni işlem oluşturulduktan sonra gösterilen warm-luxury başarı ekranıdır.
@@ -72,7 +78,7 @@ fun TransactionSuccessScreen(
 
                 uiState.errorMessage != null || uiState.transaction == null -> {
                     TransactionSuccessErrorView(
-                        errorMessage = uiState.errorMessage ?: "İşlem bilgisi yüklenemedi.",
+                        errorMessage = uiState.errorMessage,
                         onClose = onClose,
                         modifier = Modifier.weight(1f),
                     )
@@ -97,6 +103,7 @@ private fun TransactionSuccessTopBar(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val closeDescription = stringResource(Res.string.transaction_success_close)
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -117,7 +124,7 @@ private fun TransactionSuccessTopBar(
             onClick = onClose,
             modifier = Modifier
                 .size(48.dp)
-                .semantics { contentDescription = "Kapat" },
+                .semantics { contentDescription = closeDescription },
         ) {
             Icon(
                 imageVector = Icons.Default.Close,
@@ -137,6 +144,8 @@ private fun TransactionSuccessContent(
     modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
+    val addNewDescription = stringResource(Res.string.transaction_success_add_new_semantics)
+    val viewDescription = stringResource(Res.string.transaction_success_view)
 
     Column(
         modifier = modifier
@@ -176,7 +185,7 @@ private fun TransactionSuccessContent(
 
         // Başlık ve Açıklama
         Text(
-            text = "İşlem Kaydedildi!",
+            text = stringResource(Res.string.transaction_success_saved),
             style = MaterialTheme.typography.headlineSmall.copy(
                 fontWeight = FontWeight.Bold,
                 fontSize = 22.sp,
@@ -188,7 +197,10 @@ private fun TransactionSuccessContent(
         Spacer(Modifier.height(6.dp))
 
         Text(
-            text = "Bu cihazda kaydedildi. ${transaction.syncStatus.transactionStatusText()}.",
+            text = stringResource(
+                Res.string.transaction_success_saved_description,
+                transaction.syncStatus.toLocalizedTransactionStatusText(),
+            ),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -202,7 +214,9 @@ private fun TransactionSuccessContent(
 
         Spacer(Modifier.height(16.dp))
 
-        Button(onClick = onClose, modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp)) { Text("İşlemlere dön") }
+        Button(onClick = onClose, modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp)) {
+            Text(stringResource(Res.string.transaction_success_return))
+        }
         Spacer(Modifier.height(10.dp))
         // Aksiyon Butonları
         Button(
@@ -215,10 +229,10 @@ private fun TransactionSuccessContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = 52.dp)
-                .semantics { contentDescription = "Yeni işlem ekle" },
+                .semantics { contentDescription = addNewDescription },
         ) {
             Text(
-                text = "Yeni İşlem Ekle",
+                text = stringResource(Res.string.transaction_success_add_new),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -232,10 +246,10 @@ private fun TransactionSuccessContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = 52.dp)
-                .semantics { contentDescription = "İşlemi görüntüle" },
+                .semantics { contentDescription = viewDescription },
         ) {
             Text(
-                text = "İşlemi görüntüle",
+                text = stringResource(Res.string.transaction_success_view),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -252,6 +266,11 @@ private fun TransactionSummaryCard(
     val categoryColor = ColorParser.parseHexColorOrNull(transaction.categoryColorHex) ?: MaterialTheme.colorScheme.primary
     val categoryIcon = CategorySemanticIconResolver.resolve(transaction.categoryIconKey)
     val amountColor = if (transaction.type == TransactionType.EXPENSE) FeniqoExpense else FeniqoEmerald
+    val categoryName = if (transaction.isCategoryUnavailable) {
+        stringResource(Res.string.transaction_unknown_category)
+    } else {
+        transaction.categoryName
+    }
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -291,7 +310,7 @@ private fun TransactionSummaryCard(
                     }
 
                     Text(
-                        text = transaction.categoryName,
+                        text = categoryName,
                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -301,7 +320,7 @@ private fun TransactionSummaryCard(
             Spacer(Modifier.height(14.dp))
 
             // İşlem Adı
-            val displayTitle = transaction.description?.takeIf { it.isNotBlank() } ?: transaction.categoryName
+            val displayTitle = transaction.description?.takeIf { it.isNotBlank() } ?: categoryName
             Text(
                 text = displayTitle,
                 style = MaterialTheme.typography.titleLarge.copy(
@@ -337,25 +356,25 @@ private fun TransactionSummaryCard(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 SummaryDetailRow(
-                    label = "Tarih",
-                    value = DateFormatter.formatReadableDate(transaction.transactionDate),
+                    label = stringResource(Res.string.transaction_detail_date),
+                    value = transaction.transactionDate.toLocalizedTransactionDate(),
                 )
 
                 SummaryDetailRow(
-                    label = "Ödeme Yöntemi",
-                    value = transaction.paymentMethod.toDisplayText(),
+                    label = stringResource(Res.string.transaction_detail_payment_method),
+                    value = transaction.paymentMethod.toLocalizedText(),
                 )
 
                 if (transaction.installment != null) {
                     SummaryDetailRow(
-                        label = "Taksit",
+                        label = stringResource(Res.string.transaction_detail_installment),
                         value = "${transaction.installment.number}/${transaction.installment.total}",
                     )
                 }
 
                 if (!transaction.note.isNullOrBlank()) {
                     SummaryDetailRow(
-                        label = "Not",
+                        label = stringResource(Res.string.transaction_detail_note),
                         value = transaction.note,
                     )
                 }
@@ -380,7 +399,7 @@ private fun SummaryDetailRow(
 
 @Composable
 private fun TransactionSuccessErrorView(
-    errorMessage: String,
+    errorMessage: TransactionSurfaceUiMessage?,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -392,7 +411,7 @@ private fun TransactionSuccessErrorView(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = errorMessage,
+            text = errorMessage?.toLocalizedText() ?: stringResource(Res.string.transaction_detail_unavailable),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.error,
             textAlign = TextAlign.Center,
@@ -404,7 +423,7 @@ private fun TransactionSuccessErrorView(
             onClick = onClose,
             shape = RoundedCornerShape(FeniqoRadius.Medium),
         ) {
-            Text("İşlemlere Dön")
+            Text(stringResource(Res.string.transaction_success_return))
         }
     }
 }

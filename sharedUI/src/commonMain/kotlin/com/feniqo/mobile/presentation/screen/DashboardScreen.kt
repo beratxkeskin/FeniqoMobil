@@ -21,6 +21,7 @@ import com.feniqo.mobile.domain.model.PaymentMethod
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.YearMonth
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.BudgetAlertBanner
 import com.feniqo.mobile.presentation.component.CurrencyScopeNoticeCard
 import com.feniqo.mobile.presentation.component.DashboardHeader
@@ -102,7 +103,7 @@ fun DashboardScreen(
                     ) {
                         ErrorState(
                             title = stringResource(Res.string.dashboard_error_title),
-                            description = state.observationError.toDisplayText(),
+                            description = state.observationError.toLocalizedText(),
                             onRetry = onRetry,
                             modifier = Modifier.padding(FeniqoSpacing.Large),
                         )

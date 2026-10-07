@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.presentation.asset.AssetDistributionUiState
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.*
 
 @Composable
@@ -72,7 +73,7 @@ fun AssetDistributionScreen(
             state.observationError != null -> {
                 ErrorState(
                     title = "Dağılım Yüklenemedi",
-                    description = state.observationError.toDisplayText(),
+                    description = state.observationError.toLocalizedText(),
                     onRetry = onRetry,
                     modifier = Modifier
                         .fillMaxSize()

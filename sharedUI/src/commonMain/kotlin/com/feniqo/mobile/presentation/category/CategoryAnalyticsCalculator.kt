@@ -415,35 +415,35 @@ object CategoryAnalyticsCalculator {
             emptyList()
         }
 
-        // Feniqo İçgörü metni türetimi
-        val insightText = when {
+        // Cümleyi değil, yerelleştirilebilir içgörü türünü ve argümanlarını üretir.
+        val insight = when {
             targetType == TransactionType.INCOME -> {
                 if (topCategoryName != null && maxTargetMinor > 0L && totalIncomeMinor > 0L) {
                     val sharePercent = topCategoryShareBasisPoints / 100
-                    "$topCategoryName bu ayki en yüksek gelir kalemin. Toplam gelirlerinin %$sharePercent'ini oluşturuyor."
+                    CategoryInsight.TopIncome(topCategoryName, sharePercent)
                 } else {
-                    "Bu dönemde henüz gelir kaydı bulunmuyor."
+                    CategoryInsight.NoIncome
                 }
             }
             topCategoryName != null && maxTargetMinor > 0L && totalExpenseMinor > 0L -> {
                 val sharePercent = topCategoryShareBasisPoints / 100
-                "$topCategoryName bu ayki en yüksek harcaman. Toplam giderlerinin %$sharePercent'ini oluşturuyor."
+                CategoryInsight.TopExpense(topCategoryName, sharePercent)
             }
             totalIncomeMinor > 0L && totalExpenseMinor == 0L -> {
-                "Bu ay harcamanız bulunmuyor. Gelirleriniz bütçenizi güçlendiriyor."
+                CategoryInsight.IncomeWithoutExpense
             }
             totalExpenseMinor == 0L && totalIncomeMinor == 0L -> {
-                "Bu dönemde henüz işlem kaydı yok. Kategorilerinizi düzenleyerek harcamalarınızı kolayca takip edin."
+                CategoryInsight.NoTransactions
             }
             else -> {
-                "Harcamalarınız kategorileriniz arasında dengeli dağılmış görünüyor."
+                CategoryInsight.BalancedDistribution
             }
         }
 
         val balanceMessage = when {
-            totalExpenseMinor == 0L -> "Harcamaların dengede."
-            totalIncomeMinor >= totalExpenseMinor -> "Gelir ve harcamaların dengede."
-            else -> "Harcamalarını gözden geçirmelisin."
+            totalExpenseMinor == 0L -> CategoryBalanceMessage.EXPENSES_BALANCED
+            totalIncomeMinor >= totalExpenseMinor -> CategoryBalanceMessage.INCOME_AND_EXPENSES_BALANCED
+            else -> CategoryBalanceMessage.REVIEW_EXPENSES
         }
 
         val totalCatCount = filteredCategories.size
@@ -461,7 +461,7 @@ object CategoryAnalyticsCalculator {
             topCategoryType = targetType,
             topCategoryShareBasisPoints = topCategoryShareBasisPoints,
             miniBarProportionsBasisPoints = miniBarProportionsBasisPoints,
-            insightText = insightText,
+            insight = insight,
             balanceMessage = balanceMessage,
         )
 

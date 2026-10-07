@@ -305,11 +305,20 @@ class BudgetsUiStateTest {
     }
 
     @Test
-    fun formatCopyResultMessage_formatsAllOutcomeVariationsCorrectly() {
-        assertEquals("3 bütçe kopyalandı.", formatCopyResultMessage(copiedCount = 3, skippedCount = 0))
-        assertEquals("3 bütçe kopyalandı; 2 mevcut bütçe atlandı.", formatCopyResultMessage(copiedCount = 3, skippedCount = 2))
-        assertEquals("Kopyalanacak yeni bütçe bulunamadı; 2 mevcut bütçe atlandı.", formatCopyResultMessage(copiedCount = 0, skippedCount = 2))
-        assertEquals("Kaynak ayda kopyalanacak bütçe bulunamadı.", formatCopyResultMessage(copiedCount = 0, skippedCount = 0))
+    fun overview_producesTypedFastestCategoryUsageInsight() {
+        val warning = safeBudget.copy(
+            currency = Currency.TRY,
+            categoryName = "Market",
+            limitMinor = 100_000L,
+            spentMinor = 80_000L,
+            remainingMinor = 20_000L,
+            usageRateBasisPoints = 8_000,
+        )
+        val overview = BudgetOverviewCalculator.calculate(listOf(warning)) as BudgetOverview.Ready
+        assertTrue(overview.insight is BudgetInsight.FastestCategoryUsage)
+        val insight = overview.insight as BudgetInsight.FastestCategoryUsage
+        assertEquals("Market", insight.categoryName)
+        assertEquals(8_000, insight.usageRateBasisPoints)
     }
 
     @Test
@@ -345,9 +354,51 @@ class BudgetsUiStateTest {
     }
 
     @Test
-    fun overview_failsClosed_whenLongTotalOverflows() {
-        val first = safeBudget.copy(limitMinor = Long.MAX_VALUE, spentMinor = 0L)
-        val second = safeBudget.copy(id = EntityId("b-overflow"), limitMinor = 1L, spentMinor = 0L)
-        assertEquals(BudgetOverview.UnsafeTotal, BudgetOverviewCalculator.calculate(listOf(first, second)))
+    fun overview_propagatesMissingCategory_toFastestCategoryUsageInsight() {
+        val missingCategoryBudget = safeBudget.copy(
+            id = EntityId("b-missing"),
+            isCategoryMissing = true,
+            categoryName = "",
+            limitMinor = 100_000L,
+            spentMinor = 90_000L,
+            remainingMinor = 10_000L,
+            usageRateBasisPoints = 9_000,
+            health = BudgetHealth.WARNING,
+        )
+        val overview = BudgetOverviewCalculator.calculate(listOf(missingCategoryBudget)) as BudgetOverview.Ready
+        val insight = overview.insight as BudgetInsight.FastestCategoryUsage
+        assertTrue(insight.isCategoryMissing)
+        assertEquals(9_000, insight.usageRateBasisPoints)
+    }
+
+    @Test
+    fun formatBasisPointsRate_formatsPrecisionCorrectlyForTrAndEn() {
+        val trResult = formatBasisPointsRate(
+            basisPoints = 8_099,
+            decimalSeparator = ",",
+            percentFormat = { "yüzde $it" },
+        )
+        assertEquals("yüzde 80,99", trResult)
+
+        val enResult = formatBasisPointsRate(
+            basisPoints = 8_099,
+            decimalSeparator = ".",
+            percentFormat = { "$it%" },
+        )
+        assertEquals("80.99%", enResult)
+
+        val trWhole = formatBasisPointsRate(
+            basisPoints = 8_500,
+            decimalSeparator = ",",
+            percentFormat = { "yüzde $it" },
+        )
+        assertEquals("yüzde 85", trWhole)
+
+        val enWhole = formatBasisPointsRate(
+            basisPoints = 8_500,
+            decimalSeparator = ".",
+            percentFormat = { "$it%" },
+        )
+        assertEquals("85%", enWhole)
     }
 }

@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.presentation.asset.AssetsUiState
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.*
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 
@@ -142,7 +143,7 @@ fun AssetsScreen(
                 state.observationError != null -> {
                     ErrorState(
                         title = "Varlıklar Yüklenemedi",
-                        description = state.observationError.toDisplayText(),
+                        description = state.observationError.toLocalizedText(),
                         onRetry = onRetry,
                         modifier = Modifier.fillMaxSize(),
                     )

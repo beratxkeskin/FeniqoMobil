@@ -80,15 +80,23 @@ import com.feniqo.mobile.domain.model.YearMonth
 import com.feniqo.mobile.domain.usecase.BudgetHealth
 import com.feniqo.mobile.presentation.budget.BudgetCopyConfirmationState
 import com.feniqo.mobile.presentation.budget.BudgetDeleteConfirmationState
+import com.feniqo.mobile.presentation.budget.BudgetInsight
 import com.feniqo.mobile.presentation.budget.BudgetMonthlySummaryDisplayModel
 import com.feniqo.mobile.presentation.budget.BudgetProgressDisplayModel
+import com.feniqo.mobile.presentation.budget.localizedCurrencyDisplayName
+import com.feniqo.mobile.presentation.budget.localizedShortMonthName
 import com.feniqo.mobile.presentation.budget.nextMonth
 import com.feniqo.mobile.presentation.budget.previousMonth
+import com.feniqo.mobile.presentation.budget.resolveCategoryDisplayName
+import com.feniqo.mobile.presentation.budget.toLocalizedBudgetPeriod
+import com.feniqo.mobile.presentation.budget.toLocalizedStatusSummary
+import com.feniqo.mobile.presentation.budget.toLocalizedText
 import com.feniqo.mobile.presentation.category.CategoryDisplayModel
 import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.util.ColorParser
-import com.feniqo.mobile.presentation.util.DateFormatter
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 private val FeniqoSageGreen = Color(0xFF2D5A43)
 
@@ -106,9 +114,9 @@ fun BudgetHeader(
     modifier: Modifier = Modifier,
 ) {
     val formattedMonth = if (selectedMonth != null) {
-        DateFormatter.formatYearMonth(selectedMonth)
+        selectedMonth.toLocalizedBudgetPeriod()
     } else {
-        "Dönem Seçin"
+        stringResource(Res.string.budget_select_period_title)
     }
 
     Column(
@@ -128,7 +136,7 @@ fun BudgetHeader(
                     color = FeniqoSageGreen,
                 )
                 Text(
-                    text = "Bütçe",
+                    text = stringResource(Res.string.budget_title),
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -160,7 +168,7 @@ fun BudgetHeader(
                         )
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowDown,
-                            contentDescription = "Dönem seç",
+                            contentDescription = stringResource(Res.string.budget_select_period),
                             modifier = Modifier.size(16.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -182,12 +190,12 @@ fun BudgetHeader(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.ContentCopy,
-                            contentDescription = "Bütçeleri kopyala",
+                            contentDescription = stringResource(Res.string.budget_header_copy_desc),
                             modifier = Modifier.size(16.dp),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            text = "Kopyala",
+                            text = stringResource(Res.string.budget_header_copy_action),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -232,17 +240,17 @@ fun BudgetMonthlyOverviewCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 OverviewColumn(
-                    label = "Bütçe",
+                    label = stringResource(Res.string.budget_overview_budget),
                     amount = summary.prefixLimit,
                     modifier = Modifier.weight(1f),
                 )
                 OverviewColumn(
-                    label = "Harcanan",
+                    label = stringResource(Res.string.budget_overview_spent),
                     amount = summary.prefixSpent,
                     modifier = Modifier.weight(1f),
                 )
                 OverviewColumn(
-                    label = "Kalan",
+                    label = stringResource(Res.string.budget_overview_remaining),
                     amount = summary.prefixRemaining,
                     modifier = Modifier.weight(1f),
                 )
@@ -251,7 +259,7 @@ fun BudgetMonthlyOverviewCard(
             // Alt Satır: "Bütçelenen kategorilerde" + İlerleme Çubuğu ve %81
             Column(verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small)) {
                 Text(
-                    text = "Bütçelenen kategorilerde",
+                    text = stringResource(Res.string.budget_overview_budgeted_categories),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -282,9 +290,68 @@ fun BudgetMonthlyOverviewCard(
             // Farklı Para Birimi Notu (Varsa)
             if (summary.excludedTransactionCount > 0) {
                 Text(
-                    text = "${summary.excludedTransactionCount} işlem farklı para biriminde olduğu için toplama dahil edilmedi.",
+                    text = stringResource(Res.string.budget_overview_excluded_currency, summary.excludedTransactionCount),
                     style = MaterialTheme.typography.labelSmall,
                     color = Color(0xFFD97706),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Feniqo İçgörü Kartı.
+ */
+@Composable
+fun BudgetInsightCard(
+    insight: BudgetInsight,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(FeniqoRadius.Medium),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(FeniqoSpacing.Large),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = CircleShape,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = null,
+                    tint = FeniqoSageGreen,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+
+            Spacer(modifier = Modifier.width(FeniqoSpacing.Medium))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(Res.string.budget_insight_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = FeniqoSageGreen,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = insight.toLocalizedText(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
         }
@@ -356,7 +423,7 @@ fun BudgetExceededBanner(
                 )
             }
             Text(
-                text = "$exceededCount bütçe aşıldı",
+                text = stringResource(Res.string.budget_exceeded_count, exceededCount),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF92400E),
@@ -364,7 +431,7 @@ fun BudgetExceededBanner(
             )
             Icon(
                 imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
-                contentDescription = "Aşılan bütçeleri gör",
+                contentDescription = stringResource(Res.string.budget_exceeded_view_action),
                 tint = Color(0xFF92400E),
                 modifier = Modifier.size(16.dp),
             )
@@ -447,7 +514,7 @@ fun BudgetProgressCard(
             // 2. Kategori Adı, Harcanan / Limit ve İlerleme Çubuğu
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = budget.categoryName,
+                    text = budget.resolveCategoryDisplayName(),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -477,7 +544,7 @@ fun BudgetProgressCard(
             // 3. Sağ Taraf: Kalan/Aşılan Tutar ve Kullanım Yüzdesi
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = budget.statusSummaryText,
+                    text = budget.toLocalizedStatusSummary(),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = if (isExceeded) Color(0xFFEF4444) else MaterialTheme.colorScheme.onSurface,
@@ -494,7 +561,7 @@ fun BudgetProgressCard(
             // 4. Detaya Geçiş Chevron Oku
             Icon(
                 imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
-                contentDescription = "${budget.categoryName} bütçesini incele",
+                contentDescription = stringResource(Res.string.budget_card_view_details, budget.resolveCategoryDisplayName()),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.size(16.dp),
             )
@@ -536,7 +603,7 @@ fun BudgetEmptyState(
         Spacer(modifier = Modifier.height(FeniqoSpacing.Large))
 
         Text(
-            text = "Bu ay bütçe yok",
+            text = stringResource(Res.string.budget_empty_title),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
@@ -545,7 +612,7 @@ fun BudgetEmptyState(
         Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
 
         Text(
-            text = "Kategori limitlerini belirleyerek başlayabilirsin.",
+            text = stringResource(Res.string.budget_empty_desc),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -562,7 +629,7 @@ fun BudgetEmptyState(
             colors = ButtonDefaults.buttonColors(containerColor = FeniqoSageGreen),
         ) {
             Text(
-                text = "Yeni bütçe",
+                text = stringResource(Res.string.budget_add_new),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
             )
@@ -578,7 +645,7 @@ fun BudgetEmptyState(
             shape = RoundedCornerShape(FeniqoRadius.Medium),
         ) {
             Text(
-                text = "Önceki aydan kopyala",
+                text = stringResource(Res.string.budget_copy_prev_month_action),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -626,12 +693,12 @@ fun BudgetCategoryPickerSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Kategori seç",
+                    text = stringResource(Res.string.budget_picker_category_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                 )
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = "Kapat")
+                    Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.budget_close))
                 }
             }
 
@@ -641,7 +708,7 @@ fun BudgetCategoryPickerSheet(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Kategori ara") },
+                placeholder = { Text(stringResource(Res.string.budget_picker_category_search_placeholder)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -691,7 +758,7 @@ fun BudgetCategoryPickerSheet(
                                 fontWeight = FontWeight.SemiBold,
                             )
                             Text(
-                                text = "Gider kategorisi",
+                                text = stringResource(Res.string.budget_form_expense_category_type),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -733,7 +800,7 @@ fun BudgetPeriodPickerSheet(
     var selectedCurrency by remember { mutableStateOf(initialCurrency) }
     var currencyMenuExpanded by remember { mutableStateOf(false) }
 
-    val monthNames = listOf("Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara")
+    val monthNames = (1..12).map { localizedShortMonthName(it) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -755,12 +822,12 @@ fun BudgetPeriodPickerSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Dönem ve para birimi",
+                    text = stringResource(Res.string.budget_picker_period_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                 )
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = "Kapat")
+                    Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.budget_close))
                 }
             }
 
@@ -776,7 +843,7 @@ fun BudgetPeriodPickerSheet(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = "Dönem seçin",
+                    text = stringResource(Res.string.budget_picker_select_period_heading),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -847,7 +914,7 @@ fun BudgetPeriodPickerSheet(
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = "Para birimi",
+                        text = stringResource(Res.string.budget_form_currency_label),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -870,12 +937,7 @@ fun BudgetPeriodPickerSheet(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            val currName = when (selectedCurrency) {
-                                Currency.TRY -> "Türk lirası (TRY)"
-                                Currency.USD -> "Amerikan doları (USD)"
-                                Currency.EUR -> "Avro (EUR)"
-                                Currency.GBP -> "İngiliz sterlini (GBP)"
-                            }
+                            val currName = localizedCurrencyDisplayName(selectedCurrency)
                             Text(text = currName, style = MaterialTheme.typography.bodyMedium)
                             Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
                         }
@@ -886,15 +948,15 @@ fun BudgetPeriodPickerSheet(
                         onDismissRequest = { currencyMenuExpanded = false },
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Türk lirası (TRY)") },
+                            text = { Text(localizedCurrencyDisplayName(Currency.TRY)) },
                             onClick = { selectedCurrency = Currency.TRY; currencyMenuExpanded = false },
                         )
                         DropdownMenuItem(
-                            text = { Text("Amerikan doları (USD)") },
+                            text = { Text(localizedCurrencyDisplayName(Currency.USD)) },
                             onClick = { selectedCurrency = Currency.USD; currencyMenuExpanded = false },
                         )
                         DropdownMenuItem(
-                            text = { Text("Avro (EUR)") },
+                            text = { Text(localizedCurrencyDisplayName(Currency.EUR)) },
                             onClick = { selectedCurrency = Currency.EUR; currencyMenuExpanded = false },
                         )
                     }
@@ -918,7 +980,7 @@ fun BudgetPeriodPickerSheet(
                 colors = ButtonDefaults.buttonColors(containerColor = FeniqoSageGreen),
             ) {
                 Text(
-                    text = "Seçimi uygula",
+                    text = stringResource(Res.string.budget_picker_apply_action),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
@@ -943,7 +1005,7 @@ fun BudgetDeleteDialog(
     val categoryColor = ColorParser.parseHexColorOrNull(target.categoryColorHex)
         ?: MaterialTheme.colorScheme.primary
 
-    val monthText = DateFormatter.formatYearMonth(target.month)
+    val monthText = target.month.toLocalizedBudgetPeriod()
 
     AlertDialog(
         onDismissRequest = { if (!isDeleting) onDismiss() },
@@ -963,7 +1025,7 @@ fun BudgetDeleteDialog(
                     horizontalArrangement = Arrangement.End,
                 ) {
                     IconButton(onClick = onDismiss, enabled = !isDeleting) {
-                        Icon(Icons.Default.Close, contentDescription = "Kapat")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.budget_close))
                     }
                 }
 
@@ -975,21 +1037,21 @@ fun BudgetDeleteDialog(
                 )
 
                 Text(
-                    text = "Bütçeyi sil?",
+                    text = stringResource(Res.string.budget_delete_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 Text(
-                    text = "${target.categoryName} · $monthText",
+                    text = "${target.resolveCategoryDisplayName()} · $monthText",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 Text(
-                    text = "Bütçe kaldırılır. Harcama kayıtların silinmez.",
+                    text = stringResource(Res.string.budget_delete_body),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -1009,7 +1071,7 @@ fun BudgetDeleteDialog(
                             .defaultMinSize(minHeight = 48.dp),
                         shape = RoundedCornerShape(FeniqoRadius.Medium),
                     ) {
-                        Text("Vazgeç")
+                        Text(stringResource(Res.string.budget_cancel))
                     }
 
                     Button(
@@ -1041,7 +1103,7 @@ fun BudgetDeleteDialog(
                                     modifier = Modifier.size(18.dp),
                                     tint = Color(0xFFDC2626),
                                 )
-                                Text("Sil", fontWeight = FontWeight.Bold)
+                                Text(stringResource(Res.string.budget_delete_confirm), fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -1068,15 +1130,15 @@ fun BudgetCopyDialog(
     val sourceMonth = confirmation.sourceMonth
     val targetMonth = confirmation.targetMonth
     val isSameMonth = sourceMonth == targetMonth
-    val formattedSource = DateFormatter.formatYearMonth(sourceMonth)
-    val formattedTarget = DateFormatter.formatYearMonth(targetMonth)
+    val formattedSource = sourceMonth.toLocalizedBudgetPeriod()
+    val formattedTarget = targetMonth.toLocalizedBudgetPeriod()
 
     AlertDialog(
         onDismissRequest = { if (!isCopying) onDismiss() },
         modifier = modifier,
         title = {
             Text(
-                text = "Bütçeleri kopyala",
+                text = stringResource(Res.string.budget_copy_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
             )
@@ -1105,13 +1167,13 @@ fun BudgetCopyDialog(
                         )
                         Column {
                             Text(
-                                text = "Sadece bütçe tanımları kopyalanır.",
+                                text = stringResource(Res.string.budget_copy_info_title),
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
                             Text(
-                                text = "Harcamalar taşınmaz.",
+                                text = stringResource(Res.string.budget_copy_info_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f),
                             )
@@ -1133,7 +1195,7 @@ fun BudgetCopyDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Column {
-                            Text("Kaynak ay", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(Res.string.budget_copy_source_month), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.height(4.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(
@@ -1142,7 +1204,7 @@ fun BudgetCopyDialog(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.ChevronLeft,
-                                        contentDescription = "Önceki ay",
+                                        contentDescription = stringResource(Res.string.budget_copy_prev_month),
                                         modifier = Modifier.size(18.dp),
                                     )
                                 }
@@ -1153,7 +1215,7 @@ fun BudgetCopyDialog(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.ChevronRight,
-                                        contentDescription = "Sonraki ay",
+                                        contentDescription = stringResource(Res.string.budget_copy_next_month),
                                         modifier = Modifier.size(18.dp),
                                     )
                                 }
@@ -1168,7 +1230,7 @@ fun BudgetCopyDialog(
                         )
 
                         Column(horizontalAlignment = Alignment.End) {
-                            Text("Hedef ay", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(Res.string.budget_copy_target_month), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(formattedTarget, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                         }
@@ -1194,13 +1256,13 @@ fun BudgetCopyDialog(
                         )
                         Column {
                             Text(
-                                text = "Hedef aydaki mevcut bütçeler korunur.",
+                                text = stringResource(Res.string.budget_copy_warning_title),
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF92400E),
                             )
                             Text(
-                                text = "Aynı kategoride bütçe varsa üzerine yazılmaz, atlanır.",
+                                text = stringResource(Res.string.budget_copy_warning_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFF92400E),
                             )
@@ -1210,7 +1272,7 @@ fun BudgetCopyDialog(
 
                 if (isSameMonth) {
                     Text(
-                        text = "Kaynak ve hedef ay aynı olamaz.",
+                        text = stringResource(Res.string.budget_form_error_source_and_target_month_same),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         fontWeight = FontWeight.Medium,
@@ -1229,13 +1291,13 @@ fun BudgetCopyDialog(
                 if (isCopying) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
                 } else {
-                    Text("Kopyala", fontWeight = FontWeight.Bold)
+                    Text(stringResource(Res.string.budget_copy_action), fontWeight = FontWeight.Bold)
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isCopying) {
-                Text("Vazgeç")
+                Text(stringResource(Res.string.budget_cancel))
             }
         },
     )
@@ -1266,13 +1328,13 @@ fun BudgetOfflineBanner(
             )
             Column {
                 Text(
-                    text = "Çevrimdışısın.",
+                    text = stringResource(Res.string.budget_offline_title),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
                 Text(
-                    text = "Değişiklikler bu cihazda saklanır.",
+                    text = stringResource(Res.string.budget_offline_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f),
                 )

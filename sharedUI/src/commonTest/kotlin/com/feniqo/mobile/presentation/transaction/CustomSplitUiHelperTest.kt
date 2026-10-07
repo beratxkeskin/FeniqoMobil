@@ -5,7 +5,6 @@ import com.feniqo.mobile.domain.model.EntityId
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -313,7 +312,10 @@ class CustomSplitUiHelperTest {
         // Başarı rozeti kaybolmalı
         assertFalse(summaryParticipantInactive.isBalanced)
         assertTrue(summaryParticipantInactive.hasInactiveMember)
-        assertNotNull(summaryParticipantInactive.inactiveMemberMessage)
+        assertEquals(
+            CustomSplitInactiveMemberMessage.PARTICIPANTS,
+            summaryParticipantInactive.inactiveMemberMessage,
+        )
         // Kalan eylemi engellenmeli
         assertFalse(summaryParticipantInactive.canApplyPayerRemainder)
     }
@@ -338,7 +340,10 @@ class CustomSplitUiHelperTest {
         // Başarı rozeti kaybolmalı
         assertFalse(summaryPayerInactive.isBalanced)
         assertTrue(summaryPayerInactive.hasInactiveMember)
-        assertNotNull(summaryPayerInactive.inactiveMemberMessage)
+        assertEquals(
+            CustomSplitInactiveMemberMessage.PAYER_AND_PARTICIPANTS,
+            summaryPayerInactive.inactiveMemberMessage,
+        )
         // Kalan eylemi engellenmeli
         assertFalse(summaryPayerInactive.canApplyPayerRemainder)
     }

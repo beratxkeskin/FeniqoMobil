@@ -33,6 +33,9 @@ import feniqomobil.sharedui.generated.resources.transaction_form_error_split_tot
 import feniqomobil.sharedui.generated.resources.transaction_form_error_split_total_overflow
 import feniqomobil.sharedui.generated.resources.transaction_form_error_title_required
 import feniqomobil.sharedui.generated.resources.transaction_form_error_title_too_long
+import feniqomobil.sharedui.generated.resources.transaction_form_split_inactive_participants
+import feniqomobil.sharedui.generated.resources.transaction_form_split_inactive_payer
+import feniqomobil.sharedui.generated.resources.transaction_form_split_inactive_payer_and_participants
 import feniqomobil.sharedui.generated.resources.transactions_expense
 import feniqomobil.sharedui.generated.resources.transactions_income
 import feniqomobil.sharedui.generated.resources.transactions_payment_bank_transfer
@@ -132,6 +135,17 @@ fun TransactionFormFieldError.toLocalizedText(): String =
             TransactionFormFieldError.SPLIT_CUSTOM_NOT_ALLOWED_IN_PERSONAL -> Res.string.transaction_form_error_split_custom_personal
             TransactionFormFieldError.SPLIT_CUSTOM_NOT_SUPPORTED_WITH_INSTALLMENT ->
                 Res.string.transaction_form_error_split_custom_installment
+        },
+    )
+
+@Composable
+fun CustomSplitInactiveMemberMessage.toLocalizedText(): String =
+    stringResource(
+        when (this) {
+            CustomSplitInactiveMemberMessage.PAYER_AND_PARTICIPANTS ->
+                Res.string.transaction_form_split_inactive_payer_and_participants
+            CustomSplitInactiveMemberMessage.PAYER -> Res.string.transaction_form_split_inactive_payer
+            CustomSplitInactiveMemberMessage.PARTICIPANTS -> Res.string.transaction_form_split_inactive_participants
         },
     )
 

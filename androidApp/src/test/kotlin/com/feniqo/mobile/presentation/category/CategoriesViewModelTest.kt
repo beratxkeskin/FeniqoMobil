@@ -1103,7 +1103,10 @@ class CategoriesViewModelTest {
         assertEquals("Maaş", viewModel.uiState.value.summary.topCategoryName)
         assertEquals(TransactionType.INCOME, viewModel.uiState.value.summary.topCategoryType)
         assertEquals("1.000,00 ₺", viewModel.uiState.value.summary.formattedTopCategoryAmount)
-        assertTrue(viewModel.uiState.value.summary.insightText?.contains("en yüksek gelir") == true)
+        assertEquals(
+            CategoryInsight.TopIncome(categoryName = "Maaş", sharePercent = 100),
+            viewModel.uiState.value.summary.insight,
+        )
 
         collector.cancel()
     }

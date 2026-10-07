@@ -45,6 +45,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.Currency
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.EmptyState
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
@@ -243,7 +244,7 @@ fun DebtSnowballPlanScreen(
                 } else if (state.observationError != null) {
                     ErrorState(
                         title = "Bir Hata Oluştu",
-                        description = state.observationError.toDisplayText(),
+                        description = state.observationError.toLocalizedText(),
                         onRetry = onRetry,
                         modifier = Modifier.fillMaxWidth().padding(vertical = FeniqoSpacing.Large),
                     )

@@ -18,12 +18,18 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.presentation.common.resolveLocalizedText
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.InstallmentTransactionDeleteDialog
 import com.feniqo.mobile.presentation.component.LoadingContent
 import com.feniqo.mobile.presentation.component.SingleTransactionDeleteDialog
 import com.feniqo.mobile.presentation.component.TransactionConflictDialog
 import com.feniqo.mobile.presentation.screen.TransactionDetailScreen
+import com.feniqo.mobile.presentation.transaction.toLocalizedText
+import com.feniqo.mobile.presentation.transaction.transactionDetailLoadingText
+import com.feniqo.mobile.presentation.transaction.transactionDetailOpenFailedText
+import com.feniqo.mobile.presentation.transaction.transactionDetailReturnText
+import com.feniqo.mobile.presentation.transaction.transactionDetailUnavailableText
 
 /** Bağımsız işlem detay destination'ının Compose adaptörüdür. */
 @Composable
@@ -58,13 +64,13 @@ fun TransactionDetailScreenRoute(
     LaunchedEffect(state.userMessage) {
         state.userMessage?.let { message ->
             viewModel.consumeMessage()
-            snackbarHostState.showSnackbar(message.toDisplayText())
+            snackbarHostState.showSnackbar(message.resolveLocalizedText())
         }
     }
 
     Box(modifier = modifier.fillMaxSize()) {
         when {
-            state.isLoading -> LoadingContent(message = "İşlem ayrıntıları yükleniyor…")
+            state.isLoading -> LoadingContent(message = transactionDetailLoadingText())
             state.item != null -> {
                 val item = checkNotNull(state.item)
                 TransactionDetailScreen(
@@ -80,10 +86,12 @@ fun TransactionDetailScreenRoute(
                 )
             }
             else -> ErrorState(
-                title = "İşlem açılamadı",
-                description = state.errorMessage ?: "İşlem ayrıntıları kullanılamıyor.",
+                title = transactionDetailOpenFailedText(),
+                description =
+                    state.errorMessage?.toLocalizedText()
+                        ?: transactionDetailUnavailableText(),
                 onRetry = onBack,
-                actionLabel = "Geri dön",
+                actionLabel = transactionDetailReturnText(),
                 modifier = Modifier.fillMaxSize(),
             )
         }

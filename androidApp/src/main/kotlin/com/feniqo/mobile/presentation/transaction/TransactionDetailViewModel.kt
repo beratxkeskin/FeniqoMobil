@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
 data class TransactionDetailUiState(
     val isLoading: Boolean = true,
     val item: TransactionDisplayModel? = null,
-    val errorMessage: String? = null,
+    val errorMessage: TransactionSurfaceUiMessage? = null,
     val deleteDialog: TransactionDeleteDialogState? = null,
     val isDeleteInProgress: Boolean = false,
     val userMessage: FinanceUiMessage? = null,
@@ -48,7 +48,7 @@ sealed interface TransactionDetailEvent {
 private data class TransactionDetailContent(
     val isLoading: Boolean,
     val item: TransactionDisplayModel?,
-    val errorMessage: String?,
+    val errorMessage: TransactionSurfaceUiMessage?,
 )
 
 /** Bağımsız detay rotasının Room SSOT yükleme ve silme yaşam döngüsünü yönetir. */
@@ -80,7 +80,7 @@ class TransactionDetailViewModel @Inject constructor(
             TransactionDetailContent(
                 isLoading = false,
                 item = null,
-                errorMessage = "İşlem bağlantısı geçersiz veya eksik.",
+                errorMessage = TransactionSurfaceUiMessage.DETAIL_INVALID_LINK,
             ),
         )
         is ChildRouteIdResult.ValidId -> combine(
@@ -91,7 +91,7 @@ class TransactionDetailViewModel @Inject constructor(
                 TransactionDetailContent(
                     isLoading = false,
                     item = null,
-                    errorMessage = "İşlem bulunamadı veya artık kullanılamıyor.",
+                    errorMessage = TransactionSurfaceUiMessage.DETAIL_NOT_FOUND,
                 )
             } else {
                 val item = TransactionsDisplayModelBuilder.build(
@@ -102,7 +102,7 @@ class TransactionDetailViewModel @Inject constructor(
                 TransactionDetailContent(
                     isLoading = false,
                     item = item,
-                    errorMessage = if (item == null) "İşlem ayrıntıları hazırlanamadı." else null,
+                    errorMessage = if (item == null) TransactionSurfaceUiMessage.DETAIL_PREPARATION_FAILED else null,
                 )
             }
         }.catch { throwable ->
@@ -111,7 +111,7 @@ class TransactionDetailViewModel @Inject constructor(
                 TransactionDetailContent(
                     isLoading = false,
                     item = null,
-                    errorMessage = "İşlem ayrıntıları yüklenemedi.",
+                    errorMessage = TransactionSurfaceUiMessage.DETAIL_LOAD_FAILED,
                 ),
             )
         }

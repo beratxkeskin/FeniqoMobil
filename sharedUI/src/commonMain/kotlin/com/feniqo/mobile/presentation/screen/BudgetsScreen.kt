@@ -38,11 +38,13 @@ import com.feniqo.mobile.presentation.budget.BudgetProgressDisplayModel
 import com.feniqo.mobile.presentation.budget.BudgetsUiState
 import com.feniqo.mobile.presentation.budget.previousMonth
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.BudgetCopyDialog
 import com.feniqo.mobile.presentation.component.BudgetDeleteDialog
 import com.feniqo.mobile.presentation.component.BudgetEmptyState
 import com.feniqo.mobile.presentation.component.BudgetExceededBanner
 import com.feniqo.mobile.presentation.component.BudgetHeader
+import com.feniqo.mobile.presentation.component.BudgetInsightCard
 import com.feniqo.mobile.presentation.component.BudgetMonthlyOverviewCard
 import com.feniqo.mobile.presentation.component.BudgetPeriodPickerSheet
 import com.feniqo.mobile.presentation.component.BudgetProgressCard
@@ -52,6 +54,8 @@ import com.feniqo.mobile.presentation.component.LoadingContent
 import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTheme
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 private val FeniqoSageGreen = Color(0xFF2D5A43)
 
@@ -114,15 +118,15 @@ fun BudgetsScreen(
                 when {
                     state.isLoading -> {
                         LoadingContent(
-                            message = "Bütçeler yükleniyor...",
+                            message = stringResource(Res.string.budget_loading),
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
 
                     state.observationError != null -> {
                         ErrorState(
-                            title = "Bütçeler Yüklenemedi",
-                            description = state.observationError.toDisplayText(),
+                            title = stringResource(Res.string.budget_load_failed),
+                            description = state.observationError.toLocalizedText(),
                             onRetry = onRetry,
                             modifier = Modifier.align(Alignment.Center),
                         )
@@ -152,11 +156,14 @@ fun BudgetsScreen(
                                     items(overview.summaries, key = { "summary-${it.currency.name}" }) { summary ->
                                         BudgetMonthlyOverviewCard(summary)
                                     }
+                                    item(key = "budget-overview-insight") {
+                                        BudgetInsightCard(insight = overview.insight)
+                                    }
                                 }
                                 BudgetOverview.UnsafeTotal -> item {
                                     ErrorState(
-                                        title = "Bütçe özeti gösterilemiyor",
-                                        description = "Toplam güvenli biçimde hesaplanamadı. Kategori bütçeleri aşağıda korunuyor.",
+                                        title = stringResource(Res.string.budget_overview_unsafe_title),
+                                        description = stringResource(Res.string.budget_overview_unsafe_desc),
                                         onRetry = onRetry,
                                     )
                                 }
@@ -179,7 +186,7 @@ fun BudgetsScreen(
 
                             // Yeşil Dikey Çizgili "▎Kategori bütçeleri" Başlığı
                             item {
-                                BudgetSectionHeader("Kategori bütçeleri")
+                                BudgetSectionHeader(stringResource(Res.string.budget_section_categories))
                             }
 
                             // Kategori Bütçe Kartları
@@ -211,7 +218,7 @@ fun BudgetsScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = FeniqoSageGreen),
                     ) {
                         Text(
-                            text = "Yeni bütçe",
+                            text = stringResource(Res.string.budget_add_new),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                         )

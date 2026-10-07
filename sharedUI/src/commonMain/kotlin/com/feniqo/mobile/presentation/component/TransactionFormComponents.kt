@@ -143,6 +143,44 @@ import feniqomobil.sharedui.generated.resources.transaction_form_retry
 import feniqomobil.sharedui.generated.resources.transaction_form_search_category
 import feniqomobil.sharedui.generated.resources.transaction_form_select_category
 import feniqomobil.sharedui.generated.resources.transaction_form_select_date
+import feniqomobil.sharedui.generated.resources.transaction_form_split_apply_remainder
+import feniqomobil.sharedui.generated.resources.transaction_form_split_balanced
+import feniqomobil.sharedui.generated.resources.transaction_form_split_custom
+import feniqomobil.sharedui.generated.resources.transaction_form_split_custom_semantics
+import feniqomobil.sharedui.generated.resources.transaction_form_split_custom_status_semantics
+import feniqomobil.sharedui.generated.resources.transaction_form_split_description
+import feniqomobil.sharedui.generated.resources.transaction_form_split_disable_installment
+import feniqomobil.sharedui.generated.resources.transaction_form_split_distributed
+import feniqomobil.sharedui.generated.resources.transaction_form_split_equal
+import feniqomobil.sharedui.generated.resources.transaction_form_split_equal_hint
+import feniqomobil.sharedui.generated.resources.transaction_form_split_equal_semantics
+import feniqomobil.sharedui.generated.resources.transaction_form_split_excess
+import feniqomobil.sharedui.generated.resources.transaction_form_split_excess_fallback
+import feniqomobil.sharedui.generated.resources.transaction_form_split_inactive_member
+import feniqomobil.sharedui.generated.resources.transaction_form_split_installment_warning_hint
+import feniqomobil.sharedui.generated.resources.transaction_form_split_installment_warning_title
+import feniqomobil.sharedui.generated.resources.transaction_form_split_member_left
+import feniqomobil.sharedui.generated.resources.transaction_form_split_members_loading
+import feniqomobil.sharedui.generated.resources.transaction_form_split_members_loading_semantics
+import feniqomobil.sharedui.generated.resources.transaction_form_split_mode
+import feniqomobil.sharedui.generated.resources.transaction_form_split_money_limit_exceeded
+import feniqomobil.sharedui.generated.resources.transaction_form_split_money_limit_excess
+import feniqomobil.sharedui.generated.resources.transaction_form_split_money_limit_remaining
+import feniqomobil.sharedui.generated.resources.transaction_form_split_no_active_members
+import feniqomobil.sharedui.generated.resources.transaction_form_split_numeric_limit_exceeded
+import feniqomobil.sharedui.generated.resources.transaction_form_split_participant_selected_semantics
+import feniqomobil.sharedui.generated.resources.transaction_form_split_participant_unselected_semantics
+import feniqomobil.sharedui.generated.resources.transaction_form_split_participants
+import feniqomobil.sharedui.generated.resources.transaction_form_split_payer
+import feniqomobil.sharedui.generated.resources.transaction_form_split_payer_required
+import feniqomobil.sharedui.generated.resources.transaction_form_split_payer_selection_semantics
+import feniqomobil.sharedui.generated.resources.transaction_form_split_remaining
+import feniqomobil.sharedui.generated.resources.transaction_form_split_section_semantics
+import feniqomobil.sharedui.generated.resources.transaction_form_split_select_equal
+import feniqomobil.sharedui.generated.resources.transaction_form_split_share_amount
+import feniqomobil.sharedui.generated.resources.transaction_form_split_share_amount_semantics
+import feniqomobil.sharedui.generated.resources.transaction_form_split_title
+import feniqomobil.sharedui.generated.resources.transaction_form_split_total
 import feniqomobil.sharedui.generated.resources.transactions_expense
 import feniqomobil.sharedui.generated.resources.transactions_income
 import org.jetbrains.compose.resources.stringResource
@@ -1068,10 +1106,16 @@ fun TransactionSplitSection(
     onCustomShareChanged: (EntityId, String) -> Unit = { _, _ -> },
     onApplyPayerRemainder: () -> Unit = {},
 ) {
+    val sectionDescription = stringResource(Res.string.transaction_form_split_section_semantics)
+    val equalModeDescription = stringResource(Res.string.transaction_form_split_equal_semantics)
+    val customModeDescription = stringResource(Res.string.transaction_form_split_custom_semantics)
+    val membersLoadingDescription = stringResource(Res.string.transaction_form_split_members_loading_semantics)
+    val customStatusDescription = stringResource(Res.string.transaction_form_split_custom_status_semantics)
+    val applyRemainderDescription = stringResource(Res.string.transaction_form_split_apply_remainder)
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .semantics { contentDescription = "Gider Paylaşımı Bölümü" },
+            .semantics { contentDescription = sectionDescription },
         shape = RoundedCornerShape(FeniqoRadius.Medium),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
@@ -1085,13 +1129,13 @@ fun TransactionSplitSection(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall)) {
                 Text(
-                    text = "Gider Paylaşımı",
+                    text = stringResource(Res.string.transaction_form_split_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = "Harcamayı kimin ödediğini ve paylaşıma kimlerin dahil olduğunu belirleyin.",
+                    text = stringResource(Res.string.transaction_form_split_description),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1110,13 +1154,13 @@ fun TransactionSplitSection(
                         verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
                     ) {
                         Text(
-                            text = "Özel tutarlı paylaşım taksitli işlemlerde kullanılamaz.",
+                            text = stringResource(Res.string.transaction_form_split_installment_warning_title),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onErrorContainer,
                         )
                         Text(
-                            text = "Lütfen eşit paylaşımı seçin veya taksiti kapatın.",
+                            text = stringResource(Res.string.transaction_form_split_installment_warning_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onErrorContainer,
                         )
@@ -1127,13 +1171,13 @@ fun TransactionSplitSection(
                             TextButton(
                                 onClick = { onSplitModeChanged(TransactionSplitMode.EQUAL) },
                             ) {
-                                Text("Eşit Paylaşımı Seç")
+                                Text(stringResource(Res.string.transaction_form_split_select_equal))
                             }
                             if (onToggleInstallment != null) {
                                 TextButton(
                                     onClick = { onToggleInstallment(false) },
                                 ) {
-                                    Text("Taksiti Kapat")
+                                    Text(stringResource(Res.string.transaction_form_split_disable_installment))
                                 }
                             }
                         }
@@ -1152,19 +1196,19 @@ fun TransactionSplitSection(
                     CircularProgressIndicator(
                         modifier = Modifier
                             .size(24.dp)
-                            .semantics { contentDescription = "Üyeler yükleniyor" },
+                            .semantics { contentDescription = membersLoadingDescription },
                         strokeWidth = 2.dp,
                     )
                     Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
                     Text(
-                        text = "Çalışma alanı üyeleri yükleniyor...",
+                        text = stringResource(Res.string.transaction_form_split_members_loading),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             } else if (members.isEmpty()) {
                 Text(
-                    text = "Çalışma alanında aktif üye bulunamadı.",
+                    text = stringResource(Res.string.transaction_form_split_no_active_members),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -1172,7 +1216,7 @@ fun TransactionSplitSection(
                 // 1. Paylaşım Modu Seçimi (Eşit Paylaşım vs Özel Tutarlar)
                 Column(verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small)) {
                     Text(
-                        text = "Paylaşım Şekli",
+                        text = stringResource(Res.string.transaction_form_split_mode),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -1187,7 +1231,7 @@ fun TransactionSplitSection(
                             enabled = enabled,
                             label = {
                                 Text(
-                                    text = "Eşit Paylaşım",
+                                    text = stringResource(Res.string.transaction_form_split_equal),
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = if (splitMode == TransactionSplitMode.EQUAL) FontWeight.Bold else FontWeight.Normal,
                                 )
@@ -1195,7 +1239,7 @@ fun TransactionSplitSection(
                             modifier = Modifier
                                 .weight(1f)
                                 .defaultMinSize(minHeight = 44.dp)
-                                .semantics { contentDescription = "Eşit Paylaşım Modu" },
+                                .semantics { contentDescription = equalModeDescription },
                         )
                         FilterChip(
                             selected = splitMode == TransactionSplitMode.CUSTOM,
@@ -1203,7 +1247,7 @@ fun TransactionSplitSection(
                             enabled = enabled,
                             label = {
                                 Text(
-                                    text = "Özel Tutarlar",
+                                    text = stringResource(Res.string.transaction_form_split_custom),
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = if (splitMode == TransactionSplitMode.CUSTOM) FontWeight.Bold else FontWeight.Normal,
                                 )
@@ -1211,7 +1255,7 @@ fun TransactionSplitSection(
                             modifier = Modifier
                                 .weight(1f)
                                 .defaultMinSize(minHeight = 44.dp)
-                                .semantics { contentDescription = "Özel Tutarlar Modu" },
+                                .semantics { contentDescription = customModeDescription },
                         )
                     }
                 }
@@ -1219,7 +1263,7 @@ fun TransactionSplitSection(
                 // 2. Ödeyen Kişi Seçimi
                 Column(verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small)) {
                     Text(
-                        text = "Ödeyen Kişi",
+                        text = stringResource(Res.string.transaction_form_split_payer),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -1231,6 +1275,10 @@ fun TransactionSplitSection(
                     ) {
                         members.forEach { member ->
                             val isSelected = member.userId == selectedPaidByUserId
+                            val payerSelectionDescription = stringResource(
+                                Res.string.transaction_form_split_payer_selection_semantics,
+                                member.displayName,
+                            )
                             FilterChip(
                                 selected = isSelected,
                                 onClick = { onPaidByUserSelected(member.userId) },
@@ -1245,7 +1293,7 @@ fun TransactionSplitSection(
                                 modifier = Modifier
                                     .defaultMinSize(minHeight = 44.dp)
                                     .semantics {
-                                        contentDescription = "${member.displayName} ödedi seçimi"
+                                        contentDescription = payerSelectionDescription
                                     },
                             )
                         }
@@ -1255,7 +1303,7 @@ fun TransactionSplitSection(
                 // 3. Katılımcılar Seçimi ve Dağıtım
                 Column(verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small)) {
                     Text(
-                        text = "Katılımcılar",
+                        text = stringResource(Res.string.transaction_form_split_participants),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -1264,6 +1312,18 @@ fun TransactionSplitSection(
                     members.forEach { member ->
                         val isParticipant = member.userId in selectedParticipantUserIds
                         val isPayer = member.userId == selectedPaidByUserId
+                        val participantDescription = stringResource(
+                            if (isParticipant) {
+                                Res.string.transaction_form_split_participant_selected_semantics
+                            } else {
+                                Res.string.transaction_form_split_participant_unselected_semantics
+                            },
+                            member.displayName,
+                        )
+                        val shareAmountDescription = stringResource(
+                            Res.string.transaction_form_split_share_amount_semantics,
+                            member.displayName,
+                        )
 
                         Column(
                             modifier = Modifier
@@ -1282,7 +1342,7 @@ fun TransactionSplitSection(
                                     )
                                     .padding(vertical = FeniqoSpacing.Small, horizontal = FeniqoSpacing.ExtraSmall)
                                     .semantics {
-                                        contentDescription = "${member.displayName} katılımcı: ${if (isParticipant) "seçili" else "seçili değil"}"
+                                        contentDescription = participantDescription
                                     },
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1317,7 +1377,7 @@ fun TransactionSplitSection(
                                             color = MaterialTheme.colorScheme.primaryContainer,
                                         ) {
                                             Text(
-                                                text = "Ödeyen (Zorunlu)",
+                                                text = stringResource(Res.string.transaction_form_split_payer_required),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                                 fontWeight = FontWeight.Medium,
@@ -1331,7 +1391,7 @@ fun TransactionSplitSection(
                                             color = MaterialTheme.colorScheme.errorContainer,
                                         ) {
                                             Text(
-                                                text = "Ayrıldı",
+                                                text = stringResource(Res.string.transaction_form_split_member_left),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                                 fontWeight = FontWeight.Medium,
@@ -1352,7 +1412,7 @@ fun TransactionSplitSection(
                                     enabled = enabled,
                                     singleLine = true,
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                    label = { Text("Pay Tutarı") },
+                                    label = { Text(stringResource(Res.string.transaction_form_split_share_amount)) },
                                     trailingIcon = {
                                         Text(
                                             text = currency.symbol,
@@ -1366,12 +1426,12 @@ fun TransactionSplitSection(
                                         .fillMaxWidth()
                                         .padding(start = 32.dp, bottom = FeniqoSpacing.ExtraSmall)
                                         .semantics {
-                                            contentDescription = "${member.displayName} pay tutarı"
+                                            contentDescription = shareAmountDescription
                                         },
                                 )
                                 if (displayError != null) {
                                     Text(
-                                        text = displayError.toDisplayText(),
+                                        text = displayError.toLocalizedText(),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.error,
                                         modifier = Modifier.padding(start = 36.dp, bottom = FeniqoSpacing.ExtraSmall),
@@ -1383,7 +1443,7 @@ fun TransactionSplitSection(
 
                     if (splitMode == TransactionSplitMode.EQUAL) {
                         Text(
-                            text = "Harcamalar seçilen katılımcılar arasında eşit paylaşılır.",
+                            text = stringResource(Res.string.transaction_form_split_equal_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = FeniqoSpacing.ExtraSmall),
@@ -1410,12 +1470,13 @@ fun TransactionSplitSection(
                                 activeMembers = activeMemberIds,
                             )
                         }
+                        val inactiveMemberText = summary.inactiveMemberMessage?.toLocalizedText()
 
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(top = FeniqoSpacing.Small)
-                                .semantics { contentDescription = "Özel Dağıtım Durumu" },
+                                .semantics { contentDescription = customStatusDescription },
                             shape = RoundedCornerShape(FeniqoRadius.Small),
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surface,
@@ -1434,17 +1495,25 @@ fun TransactionSplitSection(
                                 ) {
                                     Column {
                                         Text(
-                                            text = "Toplam: ${summary.totalAmountMinor?.let { MoneyFormatter.format(Money(it, currency)) } ?: "-"}",
+                                            text = stringResource(
+                                                Res.string.transaction_form_split_total,
+                                                summary.totalAmountMinor?.let { MoneyFormatter.format(Money(it, currency)) } ?: "-",
+                                            ),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                         val distributedDisplay = when {
-                                            summary.isLongOverflow -> "Sayı sınırı aşıldı"
-                                            summary.isMoneyMaxExceeded -> "Desteklenen para sınırı aşıldı"
+                                            summary.isLongOverflow ->
+                                                stringResource(Res.string.transaction_form_split_numeric_limit_exceeded)
+                                            summary.isMoneyMaxExceeded ->
+                                                stringResource(Res.string.transaction_form_split_money_limit_exceeded)
                                             else -> MoneyFormatter.format(Money(summary.distributedAmountMinor, currency))
                                         }
                                         Text(
-                                            text = "Dağıtılan: $distributedDisplay",
+                                            text = stringResource(
+                                                Res.string.transaction_form_split_distributed,
+                                                distributedDisplay,
+                                            ),
                                             style = MaterialTheme.typography.bodySmall,
                                             fontWeight = FontWeight.Medium,
                                             color = MaterialTheme.colorScheme.onSurface,
@@ -1454,24 +1523,32 @@ fun TransactionSplitSection(
                                     Column(horizontalAlignment = Alignment.End) {
                                         if (summary.isBalanced) {
                                             Text(
-                                                text = "✓ Tam Eşleşti",
+                                                text = stringResource(Res.string.transaction_form_split_balanced),
                                                 style = MaterialTheme.typography.labelMedium,
                                                 fontWeight = FontWeight.Bold,
                                                 color = MaterialTheme.colorScheme.primary,
                                             )
                                         } else if (summary.hasInactiveMember) {
                                             Text(
-                                                text = "Aktif olmayan üye var",
+                                                text = stringResource(Res.string.transaction_form_split_inactive_member),
                                                 style = MaterialTheme.typography.labelMedium,
                                                 fontWeight = FontWeight.Bold,
                                                 color = MaterialTheme.colorScheme.error,
                                             )
                                         } else if (summary.hasExcess) {
                                             val excessText = when {
-                                                summary.isLongOverflow -> "Sayı sınırı aşıldı"
-                                                summary.remainingAmountMinor != null && kotlin.math.abs(summary.remainingAmountMinor) > Money.MAX_AMOUNT_MINOR -> "Desteklenen para sınırı aşıldı (Fazla)"
-                                                summary.remainingAmountMinor != null -> "${MoneyFormatter.format(Money(kotlin.math.abs(summary.remainingAmountMinor), currency))} Fazla"
-                                                else -> "Fazla"
+                                                summary.isLongOverflow ->
+                                                    stringResource(Res.string.transaction_form_split_numeric_limit_exceeded)
+                                                summary.remainingAmountMinor != null && kotlin.math.abs(summary.remainingAmountMinor) > Money.MAX_AMOUNT_MINOR ->
+                                                    stringResource(Res.string.transaction_form_split_money_limit_excess)
+                                                summary.remainingAmountMinor != null ->
+                                                    stringResource(
+                                                        Res.string.transaction_form_split_excess,
+                                                        MoneyFormatter.format(
+                                                            Money(kotlin.math.abs(summary.remainingAmountMinor), currency),
+                                                        ),
+                                                    )
+                                                else -> stringResource(Res.string.transaction_form_split_excess_fallback)
                                             }
                                             Text(
                                                 text = excessText,
@@ -1481,9 +1558,15 @@ fun TransactionSplitSection(
                                             )
                                         } else if (summary.remainingAmountMinor != null && summary.remainingAmountMinor > 0) {
                                             val remainingText = when {
-                                                summary.isLongOverflow -> "Sayı sınırı aşıldı"
-                                                summary.remainingAmountMinor > Money.MAX_AMOUNT_MINOR -> "Desteklenen para sınırı aşıldı (Kalan)"
-                                                else -> "${MoneyFormatter.format(Money(summary.remainingAmountMinor, currency))} Kalan"
+                                                summary.isLongOverflow ->
+                                                    stringResource(Res.string.transaction_form_split_numeric_limit_exceeded)
+                                                summary.remainingAmountMinor > Money.MAX_AMOUNT_MINOR ->
+                                                    stringResource(Res.string.transaction_form_split_money_limit_remaining)
+                                                else ->
+                                                    stringResource(
+                                                        Res.string.transaction_form_split_remaining,
+                                                        MoneyFormatter.format(Money(summary.remainingAmountMinor, currency)),
+                                                    )
                                             }
                                             Text(
                                                 text = remainingText,
@@ -1493,7 +1576,13 @@ fun TransactionSplitSection(
                                             )
                                         } else if (summary.isOverflow) {
                                             Text(
-                                                text = if (summary.isLongOverflow) "Sayı sınırı aşıldı" else "Desteklenen para sınırı aşıldı",
+                                                text = stringResource(
+                                                    if (summary.isLongOverflow) {
+                                                        Res.string.transaction_form_split_numeric_limit_exceeded
+                                                    } else {
+                                                        Res.string.transaction_form_split_money_limit_exceeded
+                                                    },
+                                                ),
                                                 style = MaterialTheme.typography.labelMedium,
                                                 fontWeight = FontWeight.Bold,
                                                 color = MaterialTheme.colorScheme.error,
@@ -1502,9 +1591,9 @@ fun TransactionSplitSection(
                                     }
                                 }
 
-                                if (summary.hasInactiveMember && summary.inactiveMemberMessage != null) {
+                                if (summary.hasInactiveMember && inactiveMemberText != null) {
                                     Text(
-                                        text = summary.inactiveMemberMessage,
+                                        text = inactiveMemberText,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.error,
                                         modifier = Modifier.padding(top = FeniqoSpacing.ExtraSmall),
@@ -1516,9 +1605,9 @@ fun TransactionSplitSection(
                                     enabled = enabled && summary.canApplyPayerRemainder,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .semantics { contentDescription = "Kalan tutarı ödeyene aktar" },
+                                        .semantics { contentDescription = applyRemainderDescription },
                                 ) {
-                                    Text("Kalan tutarı ödeyene aktar")
+                                    Text(stringResource(Res.string.transaction_form_split_apply_remainder))
                                 }
                             }
                         }

@@ -17,6 +17,7 @@ import com.feniqo.mobile.domain.model.YearMonth
 import com.feniqo.mobile.presentation.category.CategoryDisplayModel
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
 import com.feniqo.mobile.presentation.screen.BudgetFormScreen
@@ -120,7 +121,7 @@ fun BudgetFormScreenRoute(
                 color = MaterialTheme.colorScheme.background,
             ) {
                 LoadingContent(
-                    message = "Bütçe yükleniyor...",
+                    message = budgetFormLoadingText(),
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -131,11 +132,11 @@ fun BudgetFormScreenRoute(
                 color = MaterialTheme.colorScheme.background,
             ) {
                 ErrorState(
-                    title = "Bütçe Bulunamadı",
-                    description = "Düzenlemek istediğiniz bütçe bulunamadı veya silinmiş.",
+                    title = budgetFormNotFoundTitleText(),
+                    description = budgetFormNotFoundDescText(),
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
-                    actionLabel = "Geri dön",
+                    actionLabel = budgetFormBackActionText(),
                 )
             }
         }
@@ -145,11 +146,11 @@ fun BudgetFormScreenRoute(
                 color = MaterialTheme.colorScheme.background,
             ) {
                 ErrorState(
-                    title = "Bütçe Yüklenemedi",
-                    description = effectiveEditLoadState.message.toDisplayText(),
+                    title = budgetFormErrorTitleText(),
+                    description = effectiveEditLoadState.message.toLocalizedText(),
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
-                    actionLabel = "Geri dön",
+                    actionLabel = budgetFormBackActionText(),
                 )
             }
         }

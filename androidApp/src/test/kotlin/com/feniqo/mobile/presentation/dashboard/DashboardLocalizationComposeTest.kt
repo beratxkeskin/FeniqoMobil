@@ -11,6 +11,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.feniqo.mobile.App
 import com.feniqo.mobile.domain.model.MoneyScoreLevel
+import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.component.DashboardHeader
 import com.feniqo.mobile.presentation.component.HomeInsightCard
 import com.feniqo.mobile.presentation.component.HomeMoneyScoreSection
@@ -65,6 +66,39 @@ class DashboardLocalizationComposeTest {
         }
 
         composeRule.onNodeWithText("Loading your financial summary…").assertIsDisplayed()
+    }
+
+    @Test
+    fun dashboard_finance_error_reacts_to_runtime_locale_change() {
+        var languageTag by mutableStateOf("tr")
+
+        composeRule.setContent {
+            App(languageTag = languageTag) {
+                val snackbarHostState = remember { SnackbarHostState() }
+                DashboardScreen(
+                    state =
+                        DashboardUiState(
+                            isLoading = false,
+                            observationError = FinanceUiMessage.NETWORK_ERROR,
+                        ),
+                    snackbarHostState = snackbarHostState,
+                    onRetry = {},
+                    onAddTransaction = {},
+                    onViewAllTransactions = {},
+                    onTransactionClick = {},
+                )
+            }
+        }
+
+        composeRule
+            .onNodeWithText("Ağ bağlantısı kurulamadı. Lütfen internet bağlantınızı kontrol edin.")
+            .assertIsDisplayed()
+
+        composeRule.runOnIdle { languageTag = "en" }
+
+        composeRule
+            .onNodeWithText("Could not connect to the network. Check your internet connection.")
+            .assertIsDisplayed()
     }
 
     @Test

@@ -43,10 +43,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.YearMonth
+import com.feniqo.mobile.presentation.budget.toLocalizedBudgetPeriod
 import com.feniqo.mobile.presentation.component.BudgetPeriodPickerSheet
 import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
-import com.feniqo.mobile.presentation.util.DateFormatter
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.budget_back
+import feniqomobil.sharedui.generated.resources.budget_cancel
+import feniqomobil.sharedui.generated.resources.budget_copy_action
+import feniqomobil.sharedui.generated.resources.budget_copy_info_desc
+import feniqomobil.sharedui.generated.resources.budget_copy_info_title
+import feniqomobil.sharedui.generated.resources.budget_copy_select_source
+import feniqomobil.sharedui.generated.resources.budget_copy_source_month
+import feniqomobil.sharedui.generated.resources.budget_copy_target_month
+import feniqomobil.sharedui.generated.resources.budget_copy_title
+import feniqomobil.sharedui.generated.resources.budget_copy_warning_desc
+import feniqomobil.sharedui.generated.resources.budget_copy_warning_title
+import feniqomobil.sharedui.generated.resources.budget_form_error_source_and_target_month_same
+import org.jetbrains.compose.resources.stringResource
 
 private val FeniqoSageGreen = Color(0xFF2D5A43)
 
@@ -65,8 +79,8 @@ fun BudgetCopyScreen(
 ) {
     var showSourcePicker by remember { mutableStateOf(false) }
 
-    val formattedSource = DateFormatter.formatYearMonth(sourceMonth)
-    val formattedTarget = DateFormatter.formatYearMonth(targetMonth)
+    val formattedSource = sourceMonth.toLocalizedBudgetPeriod()
+    val formattedTarget = targetMonth.toLocalizedBudgetPeriod()
     val isSameMonth = sourceMonth == targetMonth
 
     Surface(
@@ -93,12 +107,12 @@ fun BudgetCopyScreen(
                     IconButton(onClick = onCancel, enabled = !isCopying) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Geri dön",
+                            contentDescription = stringResource(Res.string.budget_back),
                         )
                     }
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Bütçeleri kopyala",
+                        text = stringResource(Res.string.budget_copy_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground,
@@ -124,13 +138,13 @@ fun BudgetCopyScreen(
                         )
                         Column {
                             Text(
-                                text = "Sadece bütçe tanımları kopyalanır.",
+                                text = stringResource(Res.string.budget_copy_info_title),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
                             Text(
-                                text = "Harcamalar taşınmaz.",
+                                text = stringResource(Res.string.budget_copy_info_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f),
                             )
@@ -164,7 +178,7 @@ fun BudgetCopyScreen(
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Text(
-                                    text = "Kaynak ay",
+                                    text = stringResource(Res.string.budget_copy_source_month),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -189,7 +203,7 @@ fun BudgetCopyScreen(
                                     )
                                     Icon(
                                         imageVector = Icons.Default.KeyboardArrowDown,
-                                        contentDescription = "Kaynak ay seç",
+                                        contentDescription = stringResource(Res.string.budget_copy_select_source),
                                         modifier = Modifier.size(16.dp),
                                     )
                                 }
@@ -219,7 +233,7 @@ fun BudgetCopyScreen(
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Text(
-                                    text = "Hedef ay",
+                                    text = stringResource(Res.string.budget_copy_target_month),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -261,13 +275,13 @@ fun BudgetCopyScreen(
                         )
                         Column {
                             Text(
-                                text = "Hedef aydaki mevcut bütçeler korunur.",
+                                text = stringResource(Res.string.budget_copy_warning_title),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF92400E),
                             )
                             Text(
-                                text = "Aynı kategoride bütçe varsa üzerine yazılmaz, atlanır.",
+                                text = stringResource(Res.string.budget_copy_warning_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFF92400E),
                             )
@@ -277,7 +291,7 @@ fun BudgetCopyScreen(
 
                 if (isSameMonth) {
                     Text(
-                        text = "Kaynak ve hedef ay aynı olamaz.",
+                        text = stringResource(Res.string.budget_form_error_source_and_target_month_same),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         fontWeight = FontWeight.Medium,
@@ -304,7 +318,7 @@ fun BudgetCopyScreen(
                     if (isCopying) {
                         CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
                     } else {
-                        Text("Kopyala", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(stringResource(Res.string.budget_copy_action), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -316,7 +330,7 @@ fun BudgetCopyScreen(
                         .defaultMinSize(minHeight = 48.dp),
                     shape = RoundedCornerShape(FeniqoRadius.Medium),
                 ) {
-                    Text("Vazgeç", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(Res.string.budget_cancel), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 }
             }
         }

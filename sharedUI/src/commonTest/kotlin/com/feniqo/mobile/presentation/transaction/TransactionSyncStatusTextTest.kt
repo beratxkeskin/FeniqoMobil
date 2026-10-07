@@ -1,7 +1,9 @@
+@file:Suppress("ktlint:standard:no-wildcard-imports")
+
 package com.feniqo.mobile.presentation.transaction
 
 import com.feniqo.mobile.domain.model.SyncStatus
-import com.feniqo.mobile.presentation.screen.transactionStatusText
+import feniqomobil.sharedui.generated.resources.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -9,11 +11,14 @@ import kotlin.test.assertNotEquals
 class TransactionSyncStatusTextTest {
     @Test
     fun onlyAcknowledgedRecordsAreShownAsSynced() {
-        assertEquals("Senkronize edildi", SyncStatus.SYNCED.transactionStatusText())
+        assertEquals(Res.string.transaction_detail_sync_synced, SyncStatus.SYNCED.toTransactionStatusStringResource())
         SyncStatus.entries.filter { it != SyncStatus.SYNCED }.forEach {
-            assertNotEquals("Senkronize edildi", it.transactionStatusText())
+            assertNotEquals(Res.string.transaction_detail_sync_synced, it.toTransactionStatusStringResource())
         }
-        assertNotEquals("Senkronize edildi", null.transactionStatusText())
-        assertEquals("Senkronizasyon bekleniyor", SyncStatus.PENDING_CREATE.transactionStatusText())
+        assertNotEquals(Res.string.transaction_detail_sync_synced, null.toTransactionStatusStringResource())
+        assertEquals(
+            Res.string.transaction_detail_sync_pending,
+            SyncStatus.PENDING_CREATE.toTransactionStatusStringResource(),
+        )
     }
 }

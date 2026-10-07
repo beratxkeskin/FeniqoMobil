@@ -39,7 +39,7 @@ class TransactionSuccessViewModel @Inject constructor(
             TransactionSuccessUiState(
                 isLoading = false,
                 transaction = null,
-                errorMessage = "Geçersiz işlem parametresi.",
+                errorMessage = TransactionSurfaceUiMessage.SUCCESS_INVALID_PARAMETER,
             ),
         )
     } else {
@@ -52,7 +52,7 @@ class TransactionSuccessViewModel @Inject constructor(
                 TransactionSuccessUiState(
                     isLoading = false,
                     transaction = null,
-                    errorMessage = "İşlem bulunamadı.",
+                    errorMessage = TransactionSurfaceUiMessage.SUCCESS_NOT_FOUND,
                 )
             } else {
                 val category = categories.find { it.id == transaction.categoryId }
@@ -66,7 +66,8 @@ class TransactionSuccessViewModel @Inject constructor(
                     ),
                     type = transaction.type,
                     categoryId = transaction.categoryId,
-                    categoryName = category?.name ?: "Bilinmeyen Kategori",
+                    categoryName = category?.name.orEmpty(),
+                    isCategoryUnavailable = category == null,
                     categoryColorHex = category?.color?.hex,
                     categoryIconKey = category?.icon?.key,
                     description = transaction.description,

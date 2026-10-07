@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:no-wildcard-imports")
+
 package com.feniqo.mobile.presentation.component
 
 import androidx.compose.foundation.BorderStroke
@@ -75,16 +77,23 @@ import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.YearMonth
 import com.feniqo.mobile.presentation.category.CategoriesSummaryUiModel
 import com.feniqo.mobile.presentation.category.CategoryDisplayModel
+import com.feniqo.mobile.presentation.category.CategoryInsight
 import com.feniqo.mobile.presentation.category.CategorySpendingDisplayModel
 import com.feniqo.mobile.presentation.category.CategoryTrend
 import com.feniqo.mobile.presentation.category.TrendMovement
 import com.feniqo.mobile.presentation.category.TrendSentiment
+import com.feniqo.mobile.presentation.category.toLocalizedCategoryPeriod
+import com.feniqo.mobile.presentation.category.toLocalizedText
+import com.feniqo.mobile.presentation.category.toMonthResource
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoStatusColor
 import com.feniqo.mobile.presentation.theme.FeniqoTouchTarget
 import com.feniqo.mobile.presentation.util.ColorParser
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 /** Adaçayı yeşili warm-luxury tonu */
 private val SageGreen = Color(0xFF2D5A43)
@@ -96,32 +105,6 @@ private val SoftExpenseRed = Color(0xFFFEE2E2)
 private val ExpenseRedText = Color(0xFFDC2626)
 private val SoftIncomeGreen = Color(0xFFDCFCE7)
 private val IncomeGreenText = Color(0xFF16A34A)
-
-/**
- * Türkçe ay ve yıl formatlayıcısı.
- */
-fun formatYearMonthTurkish(yearMonth: YearMonth): String {
-    val parts = yearMonth.value.split("-")
-    if (parts.size != 2) return yearMonth.value
-    val year = parts[0]
-    val month = parts[1].toIntOrNull() ?: return yearMonth.value
-    val monthName = when (month) {
-        1 -> "Ocak"
-        2 -> "Şubat"
-        3 -> "Mart"
-        4 -> "Nisan"
-        5 -> "Mayıs"
-        6 -> "Haziran"
-        7 -> "Temmuz"
-        8 -> "Ağustos"
-        9 -> "Eylül"
-        10 -> "Ekim"
-        11 -> "Kasım"
-        12 -> "Aralık"
-        else -> ""
-    }
-    return "$monthName $year"
-}
 
 /**
  * 2. Dönem seçici bileşeni.
@@ -139,6 +122,12 @@ fun CategoryPeriodSelector(
     modifier: Modifier = Modifier,
 ) {
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val localizedPeriod = selectedYearMonth.toLocalizedCategoryPeriod()
+    val previousMonthDescription = stringResource(Res.string.categories_previous_month)
+    val selectedPeriodDescription = stringResource(Res.string.categories_selected_period_semantics, localizedPeriod)
+    val nextMonthDescription = stringResource(
+        if (isNextMonthEnabled) Res.string.categories_next_month else Res.string.categories_future_month_unavailable,
+    )
 
     Surface(
         shape = RoundedCornerShape(24.dp),
@@ -173,7 +162,7 @@ fun CategoryPeriodSelector(
                 modifier = Modifier
                     .size(48.dp)
                     .semantics {
-                        contentDescription = "Önceki aya git"
+                        contentDescription = previousMonthDescription
                         role = Role.Button
                     },
             ) {
@@ -194,14 +183,14 @@ fun CategoryPeriodSelector(
                         role = Role.Button,
                     )
                     .semantics {
-                        contentDescription = "Seçili dönem: ${formatYearMonthTurkish(selectedYearMonth)}. Ay değiştirmek için tıklayın."
+                        contentDescription = selectedPeriodDescription
                     }
                     .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {
                 Text(
-                    text = formatYearMonthTurkish(selectedYearMonth),
+                    text = localizedPeriod,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -223,7 +212,7 @@ fun CategoryPeriodSelector(
                 modifier = Modifier
                     .size(48.dp)
                     .semantics {
-                        contentDescription = if (isNextMonthEnabled) "Sonraki aya git" else "Gelecek aylar seçilemez"
+                        contentDescription = nextMonthDescription
                         role = Role.Button
                     },
             ) {
@@ -261,11 +250,7 @@ fun MonthYearPickerDialog(
     val maxYear = maxParts.getOrNull(0)?.toIntOrNull() ?: 2026
     val maxMonth = maxParts.getOrNull(1)?.toIntOrNull() ?: 12
 
-    val months = listOf(
-        1 to "Oca", 2 to "Şub", 3 to "Mar", 4 to "Nis",
-        5 to "May", 6 to "Haz", 7 to "Tem", 8 to "Ağu",
-        9 to "Eyl", 10 to "Eki", 11 to "Kas", 12 to "Ara"
-    )
+    val months = (1..12).map { month -> month to stringResource(month.toMonthResource()).take(3) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -277,10 +262,13 @@ fun MonthYearPickerDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     IconButton(onClick = onDismiss, modifier = Modifier.size(40.dp)) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Dönem seçimini kapat")
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = stringResource(Res.string.categories_period_picker_close),
+                        )
                     }
                     Text(
-                        text = "Dönem seç",
+                        text = stringResource(Res.string.categories_period_picker_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
@@ -299,7 +287,10 @@ fun MonthYearPickerDialog(
                         onClick = { currentYear-- },
                         modifier = Modifier.size(44.dp),
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Önceki yıl")
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = stringResource(Res.string.categories_previous_year),
+                        )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
@@ -316,7 +307,7 @@ fun MonthYearPickerDialog(
                     ) {
                         Icon(
                             Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = "Sonraki yıl",
+                            contentDescription = stringResource(Res.string.categories_next_year),
                             tint = if (currentYear < maxYear) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                         )
                     }
@@ -389,7 +380,7 @@ fun MonthYearPickerDialog(
                     .height(48.dp),
             ) {
                 Text(
-                    text = "Uygula",
+                    text = stringResource(Res.string.categories_apply),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
@@ -529,7 +520,7 @@ private fun SummaryStatsRow(
             }
             Column {
                 Text(
-                    text = "$totalCount kategori",
+                    text = stringResource(Res.string.categories_total_count, totalCount),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF1F2937),
@@ -537,7 +528,7 @@ private fun SummaryStatsRow(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = "Toplam kategori",
+                    text = stringResource(Res.string.categories_total_label),
                     style = MaterialTheme.typography.labelSmall,
                     color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -566,7 +557,7 @@ private fun SummaryStatsRow(
             }
             Column {
                 Text(
-                    text = "$customCount özel kategori",
+                    text = stringResource(Res.string.categories_custom_count, customCount),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF1F2937),
@@ -574,7 +565,7 @@ private fun SummaryStatsRow(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = "Senin oluşturdukların",
+                    text = stringResource(Res.string.categories_custom_label),
                     style = MaterialTheme.typography.labelSmall,
                     color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -617,7 +608,9 @@ private fun SummaryTopCategorySection(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(1.dp),
         ) {
-            val labelPrefix = if (isExpense) "En yüksek gider" else "En yüksek gelir"
+            val labelPrefix = stringResource(
+                if (isExpense) Res.string.categories_top_expense else Res.string.categories_top_income,
+            )
             Text(
                 text = labelPrefix,
                 style = MaterialTheme.typography.labelSmall,
@@ -644,7 +637,9 @@ private fun SummaryTopCategorySection(
                 )
             } else {
                 Text(
-                    text = if (isExpense) "Harcama Yok" else "Gelir Yok",
+                    text = stringResource(
+                        if (isExpense) Res.string.categories_no_expense else Res.string.categories_no_income,
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF1F2937),
@@ -662,6 +657,7 @@ private fun SummaryMiniBarChart(
     modifier: Modifier = Modifier,
 ) {
     val barColor = if (isDark) MaterialTheme.colorScheme.primary else SageGreen
+    val chartDescription = stringResource(Res.string.categories_chart_semantics)
     val singleBar = bars.size == 1
     val barWidth = if (singleBar) 16.dp else 7.dp
     val spacing = 5.dp
@@ -671,7 +667,7 @@ private fun SummaryMiniBarChart(
             .widthIn(min = 68.dp, max = 92.dp)
             .height(56.dp)
             .semantics {
-                contentDescription = "Kategori harcama dağılımı görseli"
+                contentDescription = chartDescription
             },
         contentAlignment = Alignment.BottomCenter,
     ) {
@@ -724,7 +720,7 @@ fun CategorySectionHeader(
         )
         if (count != null) {
             Text(
-                text = "$count kategori",
+                text = stringResource(Res.string.categories_total_count, count),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -745,6 +741,9 @@ fun CategoryFilterChips(
     enabled: Boolean = true,
 ) {
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val allDescription = stringResource(Res.string.categories_filter_all_semantics)
+    val expenseDescription = stringResource(Res.string.categories_filter_expense_semantics)
+    val incomeDescription = stringResource(Res.string.categories_filter_income_semantics)
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -760,7 +759,7 @@ fun CategoryFilterChips(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "Tümü",
+                        text = stringResource(Res.string.categories_filter_all),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = if (selectedTypeFilter == null) FontWeight.Bold else FontWeight.Medium,
                     )
@@ -772,7 +771,7 @@ fun CategoryFilterChips(
                 .weight(1f)
                 .height(48.dp)
                 .semantics {
-                    contentDescription = "Tüm kategorileri göster"
+                    contentDescription = allDescription
                 },
             colors = FilterChipDefaults.filterChipColors(
                 containerColor = if (isDark) MaterialTheme.colorScheme.surface else Color.White,
@@ -802,7 +801,7 @@ fun CategoryFilterChips(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "Gider",
+                        text = stringResource(Res.string.categories_filter_expense),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = if (selectedTypeFilter == TransactionType.EXPENSE) FontWeight.Bold else FontWeight.Medium,
                     )
@@ -814,7 +813,7 @@ fun CategoryFilterChips(
                 .weight(1f)
                 .height(48.dp)
                 .semantics {
-                    contentDescription = "Gider kategorilerini filtrele"
+                    contentDescription = expenseDescription
                 },
             colors = FilterChipDefaults.filterChipColors(
                 containerColor = if (isDark) MaterialTheme.colorScheme.surface else Color.White,
@@ -844,7 +843,7 @@ fun CategoryFilterChips(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "Gelir",
+                        text = stringResource(Res.string.categories_filter_income),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = if (selectedTypeFilter == TransactionType.INCOME) FontWeight.Bold else FontWeight.Medium,
                     )
@@ -856,7 +855,7 @@ fun CategoryFilterChips(
                 .weight(1f)
                 .height(48.dp)
                 .semantics {
-                    contentDescription = "Gelir kategorilerini filtrele"
+                    contentDescription = incomeDescription
                 },
             colors = FilterChipDefaults.filterChipColors(
                 containerColor = if (isDark) MaterialTheme.colorScheme.surface else Color.White,
@@ -888,6 +887,9 @@ fun CategoryTypeSelector(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
+    val expenseDescription = stringResource(Res.string.categories_filter_expense_semantics)
+    val incomeDescription = stringResource(Res.string.categories_filter_income_semantics)
+
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
@@ -897,7 +899,7 @@ fun CategoryTypeSelector(
             onClick = { onTypeSelected(TransactionType.EXPENSE) },
             label = {
                 Text(
-                    text = "Gider",
+                    text = stringResource(Res.string.categories_filter_expense),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = if (selectedType == TransactionType.EXPENSE) FontWeight.Bold else FontWeight.Normal,
                 )
@@ -907,7 +909,7 @@ fun CategoryTypeSelector(
                 .weight(1f)
                 .defaultMinSize(minHeight = 48.dp)
                 .semantics {
-                    contentDescription = "Gider kategorilerini filtrele"
+                    contentDescription = expenseDescription
                 },
             colors = FilterChipDefaults.filterChipColors(
                 selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -920,7 +922,7 @@ fun CategoryTypeSelector(
             onClick = { onTypeSelected(TransactionType.INCOME) },
             label = {
                 Text(
-                    text = "Gelir",
+                    text = stringResource(Res.string.categories_filter_income),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = if (selectedType == TransactionType.INCOME) FontWeight.Bold else FontWeight.Normal,
                 )
@@ -930,7 +932,7 @@ fun CategoryTypeSelector(
                 .weight(1f)
                 .defaultMinSize(minHeight = 48.dp)
                 .semantics {
-                    contentDescription = "Gelir kategorilerini filtrele"
+                    contentDescription = incomeDescription
                 },
             colors = FilterChipDefaults.filterChipColors(
                 selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -956,6 +958,13 @@ fun CategoryAnalyticsListItem(
 ) {
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     var isMenuExpanded by remember { mutableStateOf(false) }
+    val rowDescription = stringResource(
+        Res.string.categories_row_semantics,
+        item.category.name,
+        item.transactionCount,
+        item.formattedCurrentAmount,
+    )
+    val actionsDescription = stringResource(Res.string.categories_actions_semantics, item.category.name)
 
     Card(
         modifier = modifier
@@ -966,7 +975,7 @@ fun CategoryAnalyticsListItem(
                 role = Role.Button,
             )
             .semantics {
-                contentDescription = "${item.category.name}, ${item.transactionCount} işlem, seçili dönem tutarı ${item.formattedCurrentAmount}."
+                contentDescription = rowDescription
             },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
@@ -1019,7 +1028,7 @@ fun CategoryAnalyticsListItem(
                             color = if (isDark) PurpleText.copy(alpha = 0.25f) else SoftPurple,
                         ) {
                             Text(
-                                text = "Özel",
+                                text = stringResource(Res.string.categories_custom_badge),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
@@ -1031,7 +1040,7 @@ fun CategoryAnalyticsListItem(
                 }
 
                 Text(
-                    text = "${item.transactionCount} işlem",
+                    text = stringResource(Res.string.categories_transaction_count, item.transactionCount),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -1074,7 +1083,7 @@ fun CategoryAnalyticsListItem(
                             modifier = Modifier.padding(top = 1.dp),
                         ) {
                             Text(
-                                text = "Yeni",
+                                text = stringResource(Res.string.categories_trend_new),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
@@ -1133,7 +1142,7 @@ fun CategoryAnalyticsListItem(
                         modifier = Modifier
                             .size(48.dp)
                             .semantics {
-                                contentDescription = "${item.category.name} kategorisi işlem seçenekleri"
+                                contentDescription = actionsDescription
                             },
                     ) {
                         Icon(
@@ -1161,7 +1170,7 @@ fun CategoryAnalyticsListItem(
                                         tint = MaterialTheme.colorScheme.onSurface,
                                         modifier = Modifier.size(18.dp),
                                     )
-                                    Text("Düzenle")
+                                    Text(stringResource(Res.string.categories_edit))
                                 }
                             },
                             onClick = {
@@ -1182,7 +1191,7 @@ fun CategoryAnalyticsListItem(
                                         modifier = Modifier.size(18.dp),
                                     )
                                     Text(
-                                        text = "Sil",
+                                        text = stringResource(Res.string.categories_delete),
                                         color = MaterialTheme.colorScheme.error,
                                         fontWeight = FontWeight.SemiBold,
                                     )
@@ -1206,7 +1215,7 @@ fun CategoryAnalyticsListItem(
  */
 @Composable
 fun CategoryInsightCard(
-    insightText: String,
+    insight: CategoryInsight,
     modifier: Modifier = Modifier,
 ) {
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
@@ -1252,14 +1261,14 @@ fun CategoryInsightCard(
                 modifier = Modifier.weight(1f),
             ) {
                 Text(
-                    text = "Feniqo İçgörü",
+                    text = stringResource(Res.string.categories_insight_title),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = if (isDark) MaterialTheme.colorScheme.primary else SageGreen,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = insightText,
+                    text = insight.toLocalizedText(),
                     style = MaterialTheme.typography.bodySmall,
                     color = if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF2E382E),
                     lineHeight = 18.sp,
@@ -1277,6 +1286,8 @@ fun CreateCategoryActionCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val createDescription = stringResource(Res.string.categories_create_semantics)
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -1285,7 +1296,7 @@ fun CreateCategoryActionCard(
                 role = Role.Button,
             )
             .semantics {
-                contentDescription = "Yeni kategori oluştur. Özel bir kategori eklemek için tıklayın."
+                contentDescription = createDescription
             },
         shape = RoundedCornerShape(FeniqoRadius.Medium),
         colors = CardDefaults.cardColors(
@@ -1320,13 +1331,13 @@ fun CreateCategoryActionCard(
                 modifier = Modifier.weight(1f),
             ) {
                 Text(
-                    text = "Yeni kategori oluştur",
+                    text = stringResource(Res.string.categories_create_title),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = "Harcamalarınıza uygun özel bir kategori ekleyin.",
+                    text = stringResource(Res.string.categories_create_subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1363,6 +1374,7 @@ fun CategoryMessageBanner(
     } else {
         MaterialTheme.colorScheme.onPrimaryContainer
     }
+    val closeDescription = stringResource(Res.string.categories_message_close_semantics)
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -1377,7 +1389,7 @@ fun CategoryMessageBanner(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = message.toDisplayText(),
+                text = message.toLocalizedText(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = contentColor,
                 modifier = Modifier.weight(1f),
@@ -1389,14 +1401,14 @@ fun CategoryMessageBanner(
                 modifier = Modifier
                     .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
                     .semantics {
-                        contentDescription = "Mesajı kapat"
+                        contentDescription = closeDescription
                     },
                 colors = ButtonDefaults.textButtonColors(
                     contentColor = contentColor,
                 ),
             ) {
                 Text(
-                    text = "Kapat",
+                    text = stringResource(Res.string.categories_close),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                 )
@@ -1447,7 +1459,7 @@ fun CategoryDeleteDialog(
                 }
 
                 Text(
-                    text = "Kategori silinsin mi?",
+                    text = stringResource(Res.string.categories_delete_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -1457,7 +1469,7 @@ fun CategoryDeleteDialog(
         },
         text = {
             Text(
-                text = "${targetCategory.name} kategorisini silmek istiyor musun? Geçmiş işlemlerde kategori adı korunur.",
+                text = stringResource(Res.string.categories_delete_body, targetCategory.name),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -1488,9 +1500,15 @@ fun CategoryDeleteDialog(
                             strokeWidth = 2.dp,
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Siliniyor...", fontWeight = FontWeight.Bold)
+                        Text(
+                            text = stringResource(Res.string.categories_deleting),
+                            fontWeight = FontWeight.Bold,
+                        )
                     } else {
-                        Text(text = "Kategoriyi sil", fontWeight = FontWeight.Bold)
+                        Text(
+                            text = stringResource(Res.string.categories_delete_confirm),
+                            fontWeight = FontWeight.Bold,
+                        )
                     }
                 }
 
@@ -1503,7 +1521,7 @@ fun CategoryDeleteDialog(
                         .height(48.dp),
                 ) {
                     Text(
-                        text = "Vazgeç",
+                        text = stringResource(Res.string.categories_cancel),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
@@ -1560,14 +1578,14 @@ fun CategoryEmptyFilterCard(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    text = "Bu filtreye uygun kategori bulunamadı.",
+                    text = stringResource(Res.string.categories_empty_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center,
                 )
                 Text(
-                    text = "Farklı bir dönem seçebilir veya yeni kategori oluşturabilirsin.",
+                    text = stringResource(Res.string.categories_empty_body),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -1585,7 +1603,7 @@ fun CategoryEmptyFilterCard(
                     .height(48.dp),
             ) {
                 Text(
-                    text = "Yeni kategori oluştur",
+                    text = stringResource(Res.string.categories_create_title),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,

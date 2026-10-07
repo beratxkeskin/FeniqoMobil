@@ -37,7 +37,6 @@ data class BudgetProgressDisplayModel(
     val prefixLimit: String get() = MoneyFormatter.formatPrefix(limitMinor, currency, dropZeroDecimals = true)
     val prefixSpent: String get() = MoneyFormatter.formatPrefix(spentMinor, currency, dropZeroDecimals = true)
     val prefixRemaining: String get() = MoneyFormatter.formatPrefix(kotlin.math.abs(remainingMinor), currency, dropZeroDecimals = true)
-    val statusSummaryText: String get() = if (isRemainingNegative) "$prefixRemaining aşıldı" else "$prefixRemaining kaldı"
     val compactUsageRate: String get() = "%${usageRateBasisPoints / 100}"
 }
 
@@ -62,9 +61,19 @@ data class BudgetMonthlySummaryDisplayModel(
     val compactUsageRate: String get() = "%${usageRateBasisPoints / 100}"
 }
 
+sealed interface BudgetInsight {
+    data class FastestCategoryUsage(
+        val categoryName: String,
+        val isCategoryMissing: Boolean = false,
+        val usageRateBasisPoints: Int,
+    ) : BudgetInsight
+    data class BudgetsInAlert(val totalBudgetsCount: Int, val alertCount: Int) : BudgetInsight
+    data class RemainingTotalBudget(val remainingRateBasisPoints: Int) : BudgetInsight
+}
+
 sealed interface BudgetOverview {
     data object None : BudgetOverview
-    data class Ready(val summaries: List<BudgetMonthlySummaryDisplayModel>, val insight: String) : BudgetOverview
+    data class Ready(val summaries: List<BudgetMonthlySummaryDisplayModel>, val insight: BudgetInsight) : BudgetOverview
     data object UnsafeTotal : BudgetOverview
 }
 
@@ -105,11 +114,22 @@ object BudgetOverviewCalculator {
         val primary = summaries.first()
         val fastest = budgets.maxWithOrNull(compareBy<BudgetProgressDisplayModel> { it.usageRateBasisPoints }.thenBy { it.categoryName })
         val alertCount = budgets.count { it.health != BudgetHealth.SAFE }
-        val insight = when {
+        val insight: BudgetInsight = when {
             fastest != null && fastest.usageRateBasisPoints >= 8_000 ->
-                "${fastest.categoryName} bütçenin ${fastest.formattedUsageRate}'ini kullandın."
-            alertCount > 0 -> "${budgets.size} bütçenden $alertCount'i uyarı seviyesinde."
-            else -> "Bu ay toplam bütçenin ${MoneyFormatter.formatBasisPoints(com.feniqo.mobile.domain.model.RateBasisPoints((10_000 - primary.usageRateBasisPoints).coerceAtLeast(0)))}'i kaldı."
+                BudgetInsight.FastestCategoryUsage(
+                    categoryName = fastest.categoryName,
+                    isCategoryMissing = fastest.isCategoryMissing,
+                    usageRateBasisPoints = fastest.usageRateBasisPoints,
+                )
+            alertCount > 0 ->
+                BudgetInsight.BudgetsInAlert(
+                    totalBudgetsCount = budgets.size,
+                    alertCount = alertCount,
+                )
+            else ->
+                BudgetInsight.RemainingTotalBudget(
+                    remainingRateBasisPoints = (10_000 - primary.usageRateBasisPoints).coerceAtLeast(0),
+                )
         }
         return BudgetOverview.Ready(summaries, insight)
     }
@@ -147,19 +167,7 @@ enum class BudgetFormFieldError {
     AMOUNT_NON_POSITIVE,
     AMOUNT_EXCESSIVE_DECIMAL_DIGITS,
     AMOUNT_MAX_EXCEEDED,
-    SOURCE_AND_TARGET_MONTH_SAME;
-
-    fun toDisplayText(): String = when (this) {
-        CATEGORY_REQUIRED -> "Lütfen bir harcama kategorisi seçin."
-        MONTH_REQUIRED -> "Lütfen bir ay seçin."
-        MONTH_INVALID_FORMAT -> "Geçersiz ay formatı (YYYY-AA)."
-        AMOUNT_REQUIRED -> "Lütfen bir bütçe limiti girin."
-        AMOUNT_INVALID_FORMAT -> "Geçerli bir tutar girin."
-        AMOUNT_NON_POSITIVE -> "Bütçe limiti 0'dan büyük olmalıdır."
-        AMOUNT_EXCESSIVE_DECIMAL_DIGITS -> "Kuruş hanesi en fazla 2 basamak olabilir."
-        AMOUNT_MAX_EXCEEDED -> "Bütçe limiti izin verilen üst sınırı aşıyor."
-        SOURCE_AND_TARGET_MONTH_SAME -> "Kaynak ve hedef ay aynı olamaz."
-    }
+    SOURCE_AND_TARGET_MONTH_SAME,
 }
 
 /**
@@ -472,18 +480,6 @@ sealed interface BudgetIntent {
 }
 
 /**
- * Bütçe kopyalama sonuç özeti mesaj formatlayıcısıdır.
- */
-fun formatCopyResultMessage(copiedCount: Int, skippedCount: Int): String {
-    return when {
-        copiedCount > 0 && skippedCount == 0 -> "$copiedCount bütçe kopyalandı."
-        copiedCount > 0 && skippedCount > 0 -> "$copiedCount bütçe kopyalandı; $skippedCount mevcut bütçe atlandı."
-        copiedCount == 0 && skippedCount > 0 -> "Kopyalanacak yeni bütçe bulunamadı; $skippedCount mevcut bütçe atlandı."
-        else -> "Kaynak ayda kopyalanacak bütçe bulunamadı."
-    }
-}
-
-/**
  * Para birimi sembolü presentation gösterim yardımcısıdır.
  */
 val com.feniqo.mobile.domain.model.Currency.symbolText: String
@@ -498,8 +494,6 @@ val com.feniqo.mobile.domain.model.Currency.symbolText: String
  * Domain [BudgetProgressItem] nesnesini UI için güvenli ve formatlanmış [BudgetProgressDisplayModel]'e dönüştürür.
  */
 object BudgetDisplayModelMapper {
-    const val FALLBACK_CATEGORY_NAME = "Kategori Yok"
-
     fun toDisplayModel(item: BudgetProgressItem): BudgetProgressDisplayModel {
         val progress = item.progress
         val budget = progress.budget
@@ -509,7 +503,7 @@ object BudgetDisplayModelMapper {
         return BudgetProgressDisplayModel(
             id = budget.id,
             categoryId = budget.categoryId,
-            categoryName = category?.name ?: FALLBACK_CATEGORY_NAME,
+            categoryName = category?.name.orEmpty(),
             categoryColorHex = category?.color?.hex,
             categoryIconKey = category?.icon?.key,
             isCategoryMissing = category == null,

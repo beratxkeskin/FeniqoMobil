@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.validation.SubscriptionFilter
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.ActiveWorkspaceIndicator
 import com.feniqo.mobile.presentation.component.EmptyState
 import com.feniqo.mobile.presentation.component.ErrorState
@@ -178,7 +179,7 @@ fun SubscriptionsScreen(
 
                     state.observationError != null -> {
                         SubscriptionErrorCard(
-                            message = state.observationError.toDisplayText(),
+                            message = state.observationError.toLocalizedText(),
                             onRetry = onRetry,
                             modifier = Modifier.align(Alignment.Center),
                         )

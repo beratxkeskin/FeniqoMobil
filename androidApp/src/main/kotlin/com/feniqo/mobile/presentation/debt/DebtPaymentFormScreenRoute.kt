@@ -21,6 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
 import com.feniqo.mobile.presentation.goal.GoalDebtFormRouteHelper
@@ -94,7 +95,7 @@ fun DebtPaymentFormScreenRoute(
             is DebtPaymentParentLoadState.Error -> {
                 ErrorState(
                     title = "Kayıt Yüklenemedi",
-                    description = effectiveLoadState.message.toDisplayText(),
+                    description = effectiveLoadState.message.toLocalizedText(),
                     onRetry = {
                         if (parentDebtId != null) {
                             viewModel.loadParentDebt(parentDebtId)

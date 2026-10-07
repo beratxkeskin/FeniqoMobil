@@ -6,5 +6,5 @@ package com.feniqo.mobile.presentation.transaction
 data class TransactionSuccessUiState(
     val isLoading: Boolean = true,
     val transaction: TransactionDisplayModel? = null,
-    val errorMessage: String? = null,
+    val errorMessage: TransactionSurfaceUiMessage? = null,
 )

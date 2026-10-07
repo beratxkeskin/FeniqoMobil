@@ -148,6 +148,7 @@ data class TransactionDisplayModel(
     val type: TransactionType,
     val categoryId: EntityId,
     val categoryName: String,
+    val isCategoryUnavailable: Boolean = false,
     val categoryColorHex: String?, // Kategori bulunamazsa null
     val categoryIconKey: String?,
     val description: String?,

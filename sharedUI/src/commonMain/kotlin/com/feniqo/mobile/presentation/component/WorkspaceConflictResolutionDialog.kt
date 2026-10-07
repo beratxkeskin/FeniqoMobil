@@ -27,9 +27,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.feniqo.mobile.domain.repository.ConflictResolution
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.sync.WorkspaceConflictDialogState
 import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.workspace_conflict_applying
+import feniqomobil.sharedui.generated.resources.workspace_conflict_cancel
+import feniqomobil.sharedui.generated.resources.workspace_conflict_description
+import feniqomobil.sharedui.generated.resources.workspace_conflict_keep_local
+import feniqomobil.sharedui.generated.resources.workspace_conflict_keep_remote
+import feniqomobil.sharedui.generated.resources.workspace_conflict_local_version
+import feniqomobil.sharedui.generated.resources.workspace_conflict_remote_version
+import feniqomobil.sharedui.generated.resources.workspace_conflict_title
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Kullanıcıya Workspace çakışmasını bildiren ve KEEP_REMOTE veya KEEP_LOCAL seçimini sunan
@@ -51,7 +62,7 @@ fun WorkspaceConflictResolutionDialog(
         modifier = modifier,
         title = {
             Text(
-                text = "Çalışma Alanı Çakışması",
+                text = stringResource(Res.string.workspace_conflict_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
             )
@@ -62,7 +73,7 @@ fun WorkspaceConflictResolutionDialog(
                 verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
             ) {
                 Text(
-                    text = "Cihazınızdaki yerel çalışma alanı değişiklikleri ile sunucudaki güncel veri çakıştı. Hangi veriyi korumak istersiniz?",
+                    text = stringResource(Res.string.workspace_conflict_description),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -82,7 +93,7 @@ fun WorkspaceConflictResolutionDialog(
                             .padding(FeniqoSpacing.Small),
                     ) {
                         Text(
-                            text = dialogState.error.toDisplayText(),
+                            text = dialogState.error.toLocalizedText(),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onErrorContainer,
                             fontWeight = FontWeight.Medium,
@@ -106,7 +117,7 @@ fun WorkspaceConflictResolutionDialog(
                         )
                         Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
                         Text(
-                            text = "Çözüm uygulanıyor...",
+                            text = stringResource(Res.string.workspace_conflict_applying),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -125,7 +136,7 @@ fun WorkspaceConflictResolutionDialog(
                     enabled = !dialogState.isResolving,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(text = "Yerel Değişikliği Koru")
+                    Text(text = stringResource(Res.string.workspace_conflict_keep_local))
                 }
 
                 // 2. Sunucu Verisini Al (KEEP_REMOTE)
@@ -134,7 +145,7 @@ fun WorkspaceConflictResolutionDialog(
                     enabled = !dialogState.isResolving,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(text = "Sunucu Verisini Al")
+                    Text(text = stringResource(Res.string.workspace_conflict_keep_remote))
                 }
             }
         },
@@ -143,7 +154,7 @@ fun WorkspaceConflictResolutionDialog(
                 onClick = onDismiss,
                 enabled = !dialogState.isResolving,
             ) {
-                Text(text = "Vazgeç")
+                Text(text = stringResource(Res.string.workspace_conflict_cancel))
             }
         },
     )
@@ -163,12 +174,12 @@ private fun SurfaceVersionInfoBox(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
-                text = "Yerel Sürüm: v$localVersion",
+                text = stringResource(Res.string.workspace_conflict_local_version, localVersion),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = "Sunucu Sürümü: v$remoteVersion",
+                text = stringResource(Res.string.workspace_conflict_remote_version, remoteVersion),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

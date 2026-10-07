@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.presentation.common.resolveLocalizedText
 import com.feniqo.mobile.presentation.screen.TransactionsScreen
 
 /** İşlem listesi rotası yalnız liste, filtre ve liste kaynaklı silme davranışlarını yönetir. */
@@ -31,7 +32,7 @@ fun TransactionsScreenRoute(
     LaunchedEffect(state.userMessage) {
         state.userMessage?.let { message ->
             viewModel.consumeMessage()
-            snackbarHostState.showSnackbar(message.toDisplayText())
+            snackbarHostState.showSnackbar(message.resolveLocalizedText())
         }
     }
 

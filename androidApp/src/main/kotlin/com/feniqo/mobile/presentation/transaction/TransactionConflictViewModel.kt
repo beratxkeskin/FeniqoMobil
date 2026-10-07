@@ -17,10 +17,10 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class TransactionConflictViewModel @Inject constructor(private val repository: SyncRepository) : ViewModel() {
-    val error = MutableStateFlow<String?>(null)
+    val error = MutableStateFlow<TransactionSurfaceUiMessage?>(null)
     val resolving = MutableStateFlow(false)
     val conflicts = repository.observeConflicts().catch {
-        error.value = "Çakışma bilgileri okunamadı."
+        error.value = TransactionSurfaceUiMessage.CONFLICT_LOAD_FAILED
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun resolve(id: EntityId, choice: ConflictResolution) {
@@ -30,12 +30,12 @@ class TransactionConflictViewModel @Inject constructor(private val repository: S
         viewModelScope.launch {
             try {
                 if (repository.resolveConflict(id, choice) is RepositoryResult.Failure) {
-                    error.value = "Çakışma çözülemedi. Yeniden deneyin."
+                    error.value = TransactionSurfaceUiMessage.CONFLICT_RESOLUTION_FAILED
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
-                error.value = "Çakışma çözülemedi. Yeniden deneyin."
+                error.value = TransactionSurfaceUiMessage.CONFLICT_RESOLUTION_FAILED
             } finally {
                 resolving.value = false
             }

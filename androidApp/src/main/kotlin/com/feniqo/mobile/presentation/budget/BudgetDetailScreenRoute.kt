@@ -16,6 +16,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.YearMonth
+import com.feniqo.mobile.presentation.common.resolveLocalizedText
 import com.feniqo.mobile.presentation.component.BudgetDeleteDialog
 import com.feniqo.mobile.presentation.screen.BudgetDetailScreen
 
@@ -48,7 +49,7 @@ fun BudgetDetailScreenRoute(
                     onBack()
                 }
                 is BudgetUiEvent.ShowMessage -> {
-                    snackbarHostState.showSnackbar(event.message.toDisplayText())
+                    snackbarHostState.showSnackbar(event.message.resolveLocalizedText())
                 }
                 is BudgetUiEvent.CopyCompleted -> Unit
             }

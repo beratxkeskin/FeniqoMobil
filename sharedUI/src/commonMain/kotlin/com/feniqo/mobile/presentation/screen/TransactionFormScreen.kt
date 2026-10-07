@@ -70,12 +70,12 @@ import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.PaymentMethod
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.common.toLocalizedText as toLocalizedFinanceText
 import com.feniqo.mobile.presentation.component.ActiveWorkspaceIndicator
 import com.feniqo.mobile.presentation.component.ReceiptAttachmentSection
 import com.feniqo.mobile.presentation.component.TransactionAmountField
 import com.feniqo.mobile.presentation.component.TransactionCategoryPicker
 import com.feniqo.mobile.presentation.component.TransactionDatePickerField
-import com.feniqo.mobile.presentation.component.TransactionDescriptionField
 import com.feniqo.mobile.presentation.component.TransactionExistingInstallmentBadge
 import com.feniqo.mobile.presentation.component.TransactionInstallmentSection
 import com.feniqo.mobile.presentation.component.TransactionNoteField
@@ -87,7 +87,6 @@ import com.feniqo.mobile.domain.model.TransactionSplitMode
 import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTheme
-import com.feniqo.mobile.presentation.theme.FeniqoTypographyTokens
 import com.feniqo.mobile.presentation.transaction.CustomSplitUiHelper
 import com.feniqo.mobile.presentation.transaction.InstallmentDisplayModel
 import com.feniqo.mobile.presentation.transaction.RECEIPT_OCR_USER_ENTRY_ENABLED
@@ -189,7 +188,7 @@ fun TransactionFormScreen(
             // 2. Kalıcı işlem yükleme hatası
             uiState.loadError != null -> {
                 TransactionErrorView(
-                    errorMessage = uiState.loadError.toDisplayText(),
+                    errorMessage = uiState.loadError.toLocalizedFinanceText(),
                     onBack = onBack,
                     modifier = Modifier
                         .fillMaxSize()
@@ -387,7 +386,7 @@ private fun TransactionFormContent(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = uiState.generalMessage.toDisplayText(),
+                        text = uiState.generalMessage.toLocalizedFinanceText(),
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (uiState.generalMessage.isError) {
                             MaterialTheme.colorScheme.onErrorContainer

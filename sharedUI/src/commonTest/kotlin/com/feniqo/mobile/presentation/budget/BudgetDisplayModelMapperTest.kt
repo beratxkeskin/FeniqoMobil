@@ -137,7 +137,7 @@ class BudgetDisplayModelMapperTest {
     }
 
     @Test
-    fun toDisplayModel_whenCategoryIsNull_usesFallbackCategoryName() {
+    fun toDisplayModel_whenCategoryIsNull_marksCategoryMissingWithEmptyName() {
         val item = BudgetProgressItem(
             progress = BudgetProgress(
                 budget = sampleBudget,
@@ -152,7 +152,7 @@ class BudgetDisplayModelMapperTest {
 
         val display = BudgetDisplayModelMapper.toDisplayModel(item)
 
-        assertEquals("Kategori Yok", display.categoryName)
+        assertEquals("", display.categoryName)
         assertNull(display.categoryColorHex)
         assertNull(display.categoryIconKey)
         assertTrue(display.isCategoryMissing)

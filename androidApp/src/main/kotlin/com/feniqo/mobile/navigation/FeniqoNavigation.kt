@@ -31,6 +31,7 @@ import com.feniqo.mobile.domain.repository.AutoLockTimeout
 import com.feniqo.mobile.presentation.category.CategoriesScreenRoute
 import com.feniqo.mobile.presentation.category.CategoriesViewModel
 import com.feniqo.mobile.presentation.category.CategoryFormScreenRoute
+import com.feniqo.mobile.presentation.common.resolveLocalizedText
 import com.feniqo.mobile.presentation.debt.DebtFormScreenRoute
 import com.feniqo.mobile.presentation.debt.DebtFormViewModel
 import com.feniqo.mobile.presentation.debt.DebtPaymentFormScreenRoute
@@ -68,7 +69,6 @@ import com.feniqo.mobile.presentation.screen.PasswordResetSuccessScreen
 import com.feniqo.mobile.presentation.auth.EmailVerificationViewModel
 import com.feniqo.mobile.presentation.auth.ForgotPasswordViewModel
 import com.feniqo.mobile.presentation.auth.ResetPasswordViewModel
-import com.feniqo.mobile.presentation.auth.toDisplayText
 import com.feniqo.mobile.presentation.auth.toLocalizedText
 import com.feniqo.mobile.presentation.hub.MoreHubScreenRoute
 import com.feniqo.mobile.presentation.report.AllReportsHubRoute
@@ -716,7 +716,7 @@ fun MainNavHost(
                         },
                         onMessage = { message ->
                             scope.launch {
-                                snackbarHostState.showSnackbar(message.toDisplayText())
+                                snackbarHostState.showSnackbar(message.resolveLocalizedText())
                             }
                         },
                         editLoadState = editLoadState,
@@ -956,7 +956,7 @@ fun MainNavHost(
                             onAssetDeleted = {
                                 if (!navController.popBackStack()) navController.navigate(AssetsRoute)
                             },
-                            onMessage = { message -> scope.launch { snackbarHostState.showSnackbar(message.toDisplayText()) } },
+                            onMessage = { message -> scope.launch { snackbarHostState.showSnackbar(message.resolveLocalizedText()) } },
                             modifier = Modifier.padding(padding),
                         )
                         ChildRouteIdResult.InvalidId -> {
@@ -990,7 +990,7 @@ fun MainNavHost(
                         initialAssetId = (parsed as? AssetRouteIdResult.ValidId)?.id,
                         hasInvalidRouteId = parsed == AssetRouteIdResult.InvalidId,
                         onNavigateBack = { if (!navController.popBackStack()) navController.navigate(AssetsRoute) },
-                        onMessage = { message -> scope.launch { snackbarHostState.showSnackbar(message.toDisplayText()) } },
+                        onMessage = { message -> scope.launch { snackbarHostState.showSnackbar(message.resolveLocalizedText()) } },
                         modifier = Modifier.padding(padding),
                     )
                 }
@@ -1312,7 +1312,7 @@ fun MainNavHost(
                         },
                         onMessage = { message ->
                             scope.launch {
-                                snackbarHostState.showSnackbar(message.toDisplayText())
+                                snackbarHostState.showSnackbar(message.resolveLocalizedText())
                             }
                         },
                         initialRecurringTransactionId = (recurringRouteIdResult as? RecurringRouteIdResult.ValidId)?.id,
@@ -1353,7 +1353,7 @@ fun MainNavHost(
                         },
                         onMessage = { message ->
                             scope.launch {
-                                snackbarHostState.showSnackbar(message.toDisplayText())
+                                snackbarHostState.showSnackbar(message.resolveLocalizedText())
                             }
                         },
                         initialSubscriptionId = (subscriptionRouteIdResult as? SubscriptionRouteIdResult.ValidId)?.id,
@@ -1389,7 +1389,7 @@ fun MainNavHost(
                         },
                         onMessage = { message ->
                             scope.launch {
-                                snackbarHostState.showSnackbar(message.toDisplayText())
+                                snackbarHostState.showSnackbar(message.resolveLocalizedText())
                             }
                         },
                         modifier = Modifier.padding(padding),
@@ -1421,7 +1421,7 @@ fun MainNavHost(
                         onAdd = { navController.navigate(GoalContributionFormRoute(route.goalId, "ADD")) },
                         onRemove = { navController.navigate(GoalContributionFormRoute(route.goalId, "REMOVE")) },
                         onDeleted = { navController.navigate(GoalsRoute) { popUpTo<GoalsRoute> { inclusive = false }; launchSingleTop = true } },
-                        onMessage = { message -> scope.launch { snackbarHostState.showSnackbar(message.toDisplayText()) } },
+                        onMessage = { message -> scope.launch { snackbarHostState.showSnackbar(message.resolveLocalizedText()) } },
                         modifier = Modifier.fillMaxSize(),
                     )
                     SnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter).navigationBarsPadding())
@@ -1452,7 +1452,7 @@ fun MainNavHost(
                         },
                         onMessage = { message ->
                             scope.launch {
-                                snackbarHostState.showSnackbar(message.toDisplayText())
+                                snackbarHostState.showSnackbar(message.resolveLocalizedText())
                             }
                         },
                         initialGoalId = (goalRouteIdResult as? GoalRouteIdResult.ValidId)?.id,
@@ -1492,7 +1492,7 @@ fun MainNavHost(
                         },
                         onMessage = { message ->
                             scope.launch {
-                                snackbarHostState.showSnackbar(message.toDisplayText())
+                                snackbarHostState.showSnackbar(message.resolveLocalizedText())
                             }
                         },
                         parentGoalId = (childRouteIdResult as? ChildRouteIdResult.ValidId)?.id,
@@ -1551,7 +1551,7 @@ fun MainNavHost(
                         },
                         onMessage = { message ->
                             scope.launch {
-                                snackbarHostState.showSnackbar(message.toDisplayText())
+                                snackbarHostState.showSnackbar(message.resolveLocalizedText())
                             }
                         },
                         initialDebtId = (debtRouteIdResult as? DebtRouteIdResult.ValidId)?.id,
@@ -1591,7 +1591,7 @@ fun MainNavHost(
                         },
                         onMessage = { message ->
                             scope.launch {
-                                snackbarHostState.showSnackbar(message.toDisplayText())
+                                snackbarHostState.showSnackbar(message.resolveLocalizedText())
                             }
                         },
                         parentDebtId = (childRouteIdResult as? ChildRouteIdResult.ValidId)?.id,
@@ -1622,7 +1622,7 @@ fun MainNavHost(
                         },
                         onMessage = { message ->
                             scope.launch {
-                                snackbarHostState.showSnackbar(message.toDisplayText())
+                                snackbarHostState.showSnackbar(message.resolveLocalizedText())
                             }
                         },
                         viewModel = snowballViewModel,

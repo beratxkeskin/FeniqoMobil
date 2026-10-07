@@ -18,12 +18,18 @@ data class CustomSplitSummary(
     val isMoneyMaxExceeded: Boolean = false,
     val hasInvalidShares: Boolean = false,
     val hasInactiveMember: Boolean = false,
-    val inactiveMemberMessage: String? = null,
+    val inactiveMemberMessage: CustomSplitInactiveMemberMessage? = null,
     val isOverflow: Boolean = isLongOverflow || isMoneyMaxExceeded,
     val hasExcess: Boolean = false,
     val canApplyPayerRemainder: Boolean = false,
     val calculatedPayerRemainderMinor: Long? = null,
 )
+
+enum class CustomSplitInactiveMemberMessage {
+    PAYER_AND_PARTICIPANTS,
+    PAYER,
+    PARTICIPANTS,
+}
 
 /**
  * Custom Split hesaplama, kalan aktarma ve girdi çözümleme saf UI motorudur.
@@ -96,11 +102,11 @@ object CustomSplitUiHelper {
 
         val inactiveMemberMessage = if (hasInactiveMember) {
             if (payer != null && payer !in activeMembers && participants.any { it !in activeMembers }) {
-                "Ödeyen ve bazı katılımcılar çalışma alanında aktif üye değil."
+                CustomSplitInactiveMemberMessage.PAYER_AND_PARTICIPANTS
             } else if (payer != null && payer !in activeMembers) {
-                "Harcamayı ödeyen kişi çalışma alanında aktif üye değil."
+                CustomSplitInactiveMemberMessage.PAYER
             } else {
-                "Seçilen bazı katılımcılar çalışma alanında aktif üye değil."
+                CustomSplitInactiveMemberMessage.PARTICIPANTS
             }
         } else null
 

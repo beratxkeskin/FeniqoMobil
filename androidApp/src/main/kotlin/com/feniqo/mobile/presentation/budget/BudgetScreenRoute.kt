@@ -16,6 +16,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.YearMonth
+import com.feniqo.mobile.presentation.common.resolveLocalizedText
 import com.feniqo.mobile.presentation.screen.BudgetsScreen
 
 /**
@@ -38,13 +39,13 @@ fun BudgetScreenRoute(
         viewModel.events.collect { event ->
             when (event) {
                 is BudgetUiEvent.MutationSuccess -> {
-                    snackbarHostState.showSnackbar(event.message.toDisplayText())
+                    snackbarHostState.showSnackbar(event.message.resolveLocalizedText())
                 }
                 is BudgetUiEvent.ShowMessage -> {
-                    snackbarHostState.showSnackbar(event.message.toDisplayText())
+                    snackbarHostState.showSnackbar(event.message.resolveLocalizedText())
                 }
                 is BudgetUiEvent.CopyCompleted -> {
-                    val message = formatCopyResultMessage(event.copiedCount, event.skippedCount)
+                    val message = resolveBudgetCopyResultMessage(event.copiedCount, event.skippedCount)
                     snackbarHostState.showSnackbar(message)
                 }
             }

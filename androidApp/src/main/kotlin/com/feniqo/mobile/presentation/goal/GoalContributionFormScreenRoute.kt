@@ -22,6 +22,7 @@ import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.GoalContributionDirection
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
 import com.feniqo.mobile.presentation.screen.GoalContributionFormScreen
@@ -97,7 +98,7 @@ fun GoalContributionFormScreenRoute(
             is GoalContributionParentLoadState.Error -> {
                 ErrorState(
                     title = "Hedef Yüklenemedi",
-                    description = effectiveLoadState.message.toDisplayText(),
+                    description = effectiveLoadState.message.toLocalizedText(),
                     onRetry = {
                         if (parentGoalId != null) {
                             viewModel.loadParentGoal(parentGoalId)

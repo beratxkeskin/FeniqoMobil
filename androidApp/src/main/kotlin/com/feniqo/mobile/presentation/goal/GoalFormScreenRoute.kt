@@ -22,6 +22,7 @@ import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.GoalDeleteDialog
 import com.feniqo.mobile.presentation.component.LoadingContent
@@ -96,7 +97,7 @@ fun GoalFormScreenRoute(
             is GoalEditLoadState.Error -> {
                 ErrorState(
                     title = "Hedef Yüklenemedi",
-                    description = effectiveLoadState.message.toDisplayText(),
+                    description = effectiveLoadState.message.toLocalizedText(),
                     onRetry = {
                         if (initialGoalId != null) {
                             viewModel.loadGoalForEdit(initialGoalId)

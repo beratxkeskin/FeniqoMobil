@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.presentation.common.resolveLocalizedText
 import com.feniqo.mobile.presentation.screen.DashboardScreen
 
 /**
@@ -33,7 +34,7 @@ fun DashboardScreenRoute(
     val userMessage = state.userMessage
     LaunchedEffect(userMessage) {
         if (userMessage != null) {
-            val text = userMessage.toDisplayText()
+            val text = userMessage.resolveLocalizedText()
             viewModel.consumeMessage()
             snackbarHostState.showSnackbar(message = text)
         }

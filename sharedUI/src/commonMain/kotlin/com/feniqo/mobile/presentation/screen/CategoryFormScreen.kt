@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:no-wildcard-imports")
+
 package com.feniqo.mobile.presentation.screen
 
 import androidx.compose.foundation.background
@@ -42,7 +44,7 @@ import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.presentation.category.CategoryFormFieldError
 import com.feniqo.mobile.presentation.category.CategoryFormLoadError
 import com.feniqo.mobile.presentation.category.CategoryFormUiState
-import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.category.toLocalizedText
 import com.feniqo.mobile.presentation.component.CategoryColorSelectionDialog
 import com.feniqo.mobile.presentation.component.CategoryFormHeader
 import com.feniqo.mobile.presentation.component.CategoryIconSelectionDialog
@@ -52,9 +54,10 @@ import com.feniqo.mobile.presentation.component.CategoryNameField
 import com.feniqo.mobile.presentation.component.CategorySubmitButton
 import com.feniqo.mobile.presentation.component.CategoryTypeSection
 import com.feniqo.mobile.presentation.component.CategoryVisualSettingsCard
-import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTheme
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Kategori oluşturma ve düzenleme ekranının durumsuz (stateless) Compose sunumudur.
@@ -72,7 +75,9 @@ fun CategoryFormScreen(
     onDismissMessage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val title = if (state.isEditMode) "Kategoriyi düzenle" else "Yeni kategori"
+    val title = stringResource(
+        if (state.isEditMode) Res.string.category_form_edit_title else Res.string.category_form_create_title,
+    )
     var showColorDialog by remember { mutableStateOf(false) }
     var showIconDialog by remember { mutableStateOf(false) }
 
@@ -119,7 +124,7 @@ fun CategoryFormScreen(
                             )
                             Spacer(modifier = Modifier.height(FeniqoSpacing.Medium))
                             Text(
-                                text = "Kategori yükleniyor...",
+                                text = stringResource(Res.string.category_form_loading),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -164,13 +169,13 @@ fun CategoryFormScreen(
                                         )
                                     }
                                     Text(
-                                        text = state.loadError.toDisplayText(),
+                                        text = state.loadError.toLocalizedText(),
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Text(
-                                        text = "Lütfen daha sonra tekrar dene.",
+                                        text = stringResource(Res.string.category_form_retry_later),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -183,7 +188,11 @@ fun CategoryFormScreen(
                                             .fillMaxWidth()
                                             .height(48.dp),
                                     ) {
-                                        Text("Geri dön", color = Color.White, fontWeight = FontWeight.Bold)
+                                        Text(
+                                            stringResource(Res.string.category_form_go_back),
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                        )
                                     }
                                 }
                             }

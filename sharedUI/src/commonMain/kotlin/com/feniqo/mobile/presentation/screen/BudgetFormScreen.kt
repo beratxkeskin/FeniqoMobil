@@ -73,14 +73,18 @@ import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.YearMonth
 import com.feniqo.mobile.domain.usecase.BudgetHealth
 import com.feniqo.mobile.presentation.budget.BudgetFormUiState
+import com.feniqo.mobile.presentation.budget.localizedCurrencyDisplayName
 import com.feniqo.mobile.presentation.budget.symbolText
+import com.feniqo.mobile.presentation.budget.toLocalizedBudgetPeriod
+import com.feniqo.mobile.presentation.budget.toLocalizedText
 import com.feniqo.mobile.presentation.component.BudgetCategoryPickerSheet
 import com.feniqo.mobile.presentation.component.BudgetPeriodPickerSheet
 import com.feniqo.mobile.presentation.component.CategoryTonalIcon
 import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.util.ColorParser
-import com.feniqo.mobile.presentation.util.DateFormatter
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 private val FeniqoSageGreen = Color(0xFF2D5A43)
 private val FeniqoBackgroundSand = Color(0xFFF7F5F0)
@@ -105,7 +109,8 @@ fun BudgetFormScreen(
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val limitFocusRequester = remember { FocusRequester() }
-    val amountErrorText = state.mutationState.amountError?.toDisplayText()
+    val amountErrorText = state.mutationState.amountError?.toLocalizedText()
+    val limitContentDescription = stringResource(Res.string.budget_form_limit_content_desc)
     val dismissKeyboard = {
         focusManager.clearFocus(force = true)
         keyboardController?.hide()
@@ -135,12 +140,16 @@ fun BudgetFormScreen(
                 IconButton(onClick = onBack, enabled = !state.isSubmitting) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Geri dön",
+                        contentDescription = stringResource(Res.string.budget_back),
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = if (state.isEditMode) "Bütçeyi düzenle" else "Bütçe oluştur",
+                    text = if (state.isEditMode) {
+                        stringResource(Res.string.budget_form_edit_title)
+                    } else {
+                        stringResource(Res.string.budget_form_create_title)
+                    },
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -184,255 +193,254 @@ fun BudgetFormScreen(
                                 )
 
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = state.selectedCategoryName ?: "Kategori",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                    )
-                                    Text(
-                                        text = "Gider kategorisi",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
+                                     Text(
+                                         text = state.selectedCategoryName ?: stringResource(Res.string.budget_fallback_category_name),
+                                         style = MaterialTheme.typography.titleMedium,
+                                         fontWeight = FontWeight.Bold,
+                                     )
+                                     Text(
+                                         text = stringResource(Res.string.budget_form_expense_category_type),
+                                         style = MaterialTheme.typography.bodySmall,
+                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                     )
+                                 }
 
-                                Icon(
-                                    imageVector = Icons.Default.Lock,
-                                    contentDescription = "Kategori değiştirilemez",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                    modifier = Modifier.size(20.dp),
-                                )
-                            }
-                        }
-                    }
+                                 Icon(
+                                     imageVector = Icons.Default.Lock,
+                                     contentDescription = stringResource(Res.string.budget_form_category_locked_desc),
+                                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                     modifier = Modifier.size(20.dp),
+                                 )
+                             }
+                         }
+                     }
 
-                    // Kilitli Dönem Kartı
-                    item {
-                        val formattedMonth = state.selectedMonth?.let { DateFormatter.formatYearMonth(it) } ?: ""
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(FeniqoRadius.Large),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(FeniqoSpacing.Medium),
-                                verticalArrangement = Arrangement.spacedBy(4.dp),
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.CalendarMonth,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    Text(
-                                        text = "Dönem",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Surface(
-                                    shape = RoundedCornerShape(FeniqoRadius.Medium),
-                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                    modifier = Modifier.fillMaxWidth(),
-                                ) {
-                                    Text(
-                                        text = formattedMonth,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.SemiBold,
-                                        modifier = Modifier.padding(horizontal = FeniqoSpacing.Medium, vertical = 12.dp),
-                                    )
-                                }
-                            }
-                        }
-                    }
+                     // Kilitli Dönem Kartı
+                     item {
+                         val formattedMonth = state.selectedMonth?.toLocalizedBudgetPeriod() ?: ""
+                         Card(
+                             modifier = Modifier.fillMaxWidth(),
+                             shape = RoundedCornerShape(FeniqoRadius.Large),
+                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                         ) {
+                             Column(
+                                 modifier = Modifier
+                                     .fillMaxWidth()
+                                     .padding(FeniqoSpacing.Medium),
+                                 verticalArrangement = Arrangement.spacedBy(4.dp),
+                             ) {
+                                 Row(
+                                     verticalAlignment = Alignment.CenterVertically,
+                                     horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                                 ) {
+                                     Icon(
+                                         imageVector = Icons.Outlined.CalendarMonth,
+                                         contentDescription = null,
+                                         modifier = Modifier.size(18.dp),
+                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                     )
+                                     Text(
+                                         text = stringResource(Res.string.budget_form_period_label),
+                                         style = MaterialTheme.typography.labelMedium,
+                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                     )
+                                 }
+                                 Surface(
+                                     shape = RoundedCornerShape(FeniqoRadius.Medium),
+                                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                     modifier = Modifier.fillMaxWidth(),
+                                 ) {
+                                     Text(
+                                         text = formattedMonth,
+                                         style = MaterialTheme.typography.bodyLarge,
+                                         fontWeight = FontWeight.SemiBold,
+                                         modifier = Modifier.padding(horizontal = FeniqoSpacing.Medium, vertical = 12.dp),
+                                     )
+                                 }
+                             }
+                         }
+                     }
 
-                    // Aylık Limit Girişi (B04)
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(FeniqoRadius.Large),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(FeniqoSpacing.Medium),
-                                verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                            ) {
-                                Text(
-                                    text = "Aylık limit",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                     // Aylık Limit Girişi (B04)
+                     item {
+                         Card(
+                             modifier = Modifier.fillMaxWidth(),
+                             shape = RoundedCornerShape(FeniqoRadius.Large),
+                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                         ) {
+                             Column(
+                                 modifier = Modifier
+                                     .fillMaxWidth()
+                                     .padding(FeniqoSpacing.Medium),
+                                 verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                             ) {
+                                 Text(
+                                     text = stringResource(Res.string.budget_form_monthly_limit_label),
+                                     style = MaterialTheme.typography.labelMedium,
+                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                 )
 
-                                OutlinedTextField(
-                                    value = state.limitInput,
-                                    onValueChange = onLimitChanged,
-                                    enabled = state.isFormEnabled,
-                                    placeholder = { Text("0,00") },
-                                    prefix = {
-                                        Text(
-                                            text = state.currency.symbolText,
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            fontWeight = FontWeight.Bold,
-                                        )
-                                    },
-                                    trailingIcon = {
-                                        Surface(
-                                            shape = RoundedCornerShape(FeniqoRadius.Small),
-                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                            modifier = Modifier.padding(end = 8.dp),
-                                        ) {
-                                            Text(
-                                                text = "${state.currency.name} ∨",
-                                                style = MaterialTheme.typography.labelMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                            )
-                                        }
-                                    },
-                                    singleLine = true,
-                                    keyboardOptions = KeyboardOptions(
-                                        keyboardType = KeyboardType.Decimal,
-                                        imeAction = ImeAction.Done,
-                                    ),
-                                    keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }),
-                                    isError = state.mutationState.amountError != null,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .focusRequester(limitFocusRequester)
-                                        .semantics {
-                                            contentDescription = "Bütçe aylık limiti"
-                                            amountErrorText?.let { error(it) }
-                                        },
-                                    shape = RoundedCornerShape(FeniqoRadius.Medium),
-                                )
+                                 OutlinedTextField(
+                                     value = state.limitInput,
+                                     onValueChange = onLimitChanged,
+                                     enabled = state.isFormEnabled,
+                                     placeholder = { Text("0,00") },
+                                     prefix = {
+                                         Text(
+                                             text = state.currency.symbolText,
+                                             style = MaterialTheme.typography.bodyLarge,
+                                             fontWeight = FontWeight.Bold,
+                                         )
+                                     },
+                                     trailingIcon = {
+                                         Surface(
+                                             shape = RoundedCornerShape(FeniqoRadius.Small),
+                                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                             modifier = Modifier.padding(end = 8.dp),
+                                         ) {
+                                             Text(
+                                                 text = "${state.currency.name} ∨",
+                                                 style = MaterialTheme.typography.labelMedium,
+                                                 fontWeight = FontWeight.Bold,
+                                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                             )
+                                         }
+                                     },
+                                     singleLine = true,
+                                     keyboardOptions = KeyboardOptions(
+                                         keyboardType = KeyboardType.Decimal,
+                                         imeAction = ImeAction.Done,
+                                     ),
+                                     keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }),
+                                     isError = state.mutationState.amountError != null,
+                                     modifier = Modifier
+                                         .fillMaxWidth()
+                                         .focusRequester(limitFocusRequester)
+                                         .semantics {
+                                             contentDescription = limitContentDescription
+                                             amountErrorText?.let { error(it) }
+                                         },
+                                     shape = RoundedCornerShape(FeniqoRadius.Medium),
+                                 )
 
-                                state.mutationState.amountError?.let { error ->
-                                    Text(
-                                        text = error.toDisplayText(),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.error,
-                                    )
-                                }
-                            }
-                        }
-                    }
+                                 state.mutationState.amountError?.let { error ->
+                                     Text(
+                                         text = error.toLocalizedText(),
+                                         style = MaterialTheme.typography.bodySmall,
+                                         color = MaterialTheme.colorScheme.error,
+                                     )
+                                 }
+                             }
+                         }
+                     }
 
-                    // Canlı Önizleme Kartı (B04)
-                    state.editPreview?.let { preview ->
-                        item {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(FeniqoRadius.Large),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(FeniqoSpacing.Medium),
-                                    verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.BarChart,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(18.dp),
-                                        )
-                                        Text(
-                                            text = "Önizleme",
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.Bold,
-                                        )
-                                    }
+                     // Canlı Önizleme Kartı (B04)
+                     state.editPreview?.let { preview ->
+                         item {
+                             Card(
+                                 modifier = Modifier.fillMaxWidth(),
+                                 shape = RoundedCornerShape(FeniqoRadius.Large),
+                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                             ) {
+                                 Column(
+                                     modifier = Modifier
+                                         .fillMaxWidth()
+                                         .padding(FeniqoSpacing.Medium),
+                                     verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                                 ) {
+                                     Row(
+                                         verticalAlignment = Alignment.CenterVertically,
+                                         horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                                     ) {
+                                         Icon(
+                                             imageVector = Icons.Outlined.BarChart,
+                                             contentDescription = null,
+                                             tint = MaterialTheme.colorScheme.primary,
+                                             modifier = Modifier.size(18.dp),
+                                         )
+                                         Text(
+                                             text = stringResource(Res.string.budget_form_preview_title),
+                                             style = MaterialTheme.typography.titleSmall,
+                                             fontWeight = FontWeight.Bold,
+                                         )
+                                     }
 
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                    ) {
-                                        Column {
-                                            Text("Harcanan", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            Text(preview.formattedSpent, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                                        }
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Text("Yeni kalan", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            Text(
-                                                preview.formattedNewRemaining,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (preview.isRemainingNegative) Color(0xFFEF4444) else MaterialTheme.colorScheme.onSurface,
-                                            )
-                                        }
-                                        Column(horizontalAlignment = Alignment.End) {
-                                            Text("Kullanım oranı", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            Text(
-                                                preview.formattedUsageRate,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (preview.isRemainingNegative) Color(0xFFEF4444) else FeniqoSageGreen,
-                                            )
-                                        }
-                                    }
+                                     Row(
+                                         modifier = Modifier.fillMaxWidth(),
+                                         horizontalArrangement = Arrangement.SpaceBetween,
+                                     ) {
+                                         Column {
+                                             Text(stringResource(Res.string.budget_overview_spent), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                             Text(preview.formattedSpent, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                                         }
+                                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                             Text(stringResource(Res.string.budget_form_preview_new_remaining), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                             Text(
+                                                 preview.formattedNewRemaining,
+                                                 style = MaterialTheme.typography.bodyMedium,
+                                                 fontWeight = FontWeight.Bold,
+                                                 color = if (preview.isRemainingNegative) Color(0xFFEF4444) else MaterialTheme.colorScheme.onSurface,
+                                             )
+                                         }
+                                         Column(horizontalAlignment = Alignment.End) {
+                                             Text(stringResource(Res.string.budget_detail_usage_rate), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                             Text(
+                                                 preview.formattedUsageRate,
+                                                 style = MaterialTheme.typography.bodyMedium,
+                                                 fontWeight = FontWeight.Bold,
+                                                 color = if (preview.isRemainingNegative) Color(0xFFEF4444) else FeniqoSageGreen,
+                                             )
+                                         }
+                                     }
 
-                                    LinearProgressIndicator(
-                                        progress = { preview.usageProgressFraction },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(6.dp)
-                                            .clip(RoundedCornerShape(3.dp)),
-                                        color = if (preview.isRemainingNegative) Color(0xFFEF4444) else FeniqoSageGreen,
-                                        trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                    )
-                                }
-                            }
-                        }
-                    }
+                                     LinearProgressIndicator(
+                                         progress = { preview.usageProgressFraction },
+                                         modifier = Modifier
+                                             .fillMaxWidth()
+                                             .height(6.dp)
+                                             .clip(RoundedCornerShape(3.dp)),
+                                         color = if (preview.isRemainingNegative) Color(0xFFEF4444) else FeniqoSageGreen,
+                                         trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                     )
+                                 }
+                             }
+                         }
+                     }
 
-                    // Bilgi Notu (B04): Harcama kayıtların değişmez
-                    item {
-                        Surface(
-                            shape = RoundedCornerShape(FeniqoRadius.Medium),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(FeniqoSpacing.Medium),
-                                verticalAlignment = Alignment.Top,
-                                horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Info,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                                Column {
-                                    Text(
-                                        text = "Harcama kayıtların değişmez.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    )
-                                    Text(
-                                        text = "Bu işlem yalnızca aylık bütçe limitini değiştirir.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f),
-                                    )
-                                }
-                            }
-                        }
-                    }
-
+                     // Bilgi Notu (B04): Harcama kayıtların değişmez
+                     item {
+                         Surface(
+                             shape = RoundedCornerShape(FeniqoRadius.Medium),
+                             color = MaterialTheme.colorScheme.primaryContainer,
+                             modifier = Modifier.fillMaxWidth(),
+                         ) {
+                             Row(
+                                 modifier = Modifier.padding(FeniqoSpacing.Medium),
+                                 verticalAlignment = Alignment.Top,
+                                 horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
+                             ) {
+                                 Icon(
+                                     imageVector = Icons.Default.Info,
+                                     contentDescription = null,
+                                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                     modifier = Modifier.size(20.dp),
+                                 )
+                                 Column {
+                                     Text(
+                                         text = stringResource(Res.string.budget_form_edit_info_title),
+                                         style = MaterialTheme.typography.bodySmall,
+                                         fontWeight = FontWeight.Bold,
+                                         color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                     )
+                                     Text(
+                                         text = stringResource(Res.string.budget_form_edit_info_desc),
+                                         style = MaterialTheme.typography.bodySmall,
+                                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f),
+                                     )
+                                 }
+                             }
+                         }
+                     }
                 } else {
                     // -------------------------------------------------------------
                     // 02: Bütçe Oluştur Modu
@@ -456,7 +464,7 @@ fun BudgetFormScreen(
                                 verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
                             ) {
                                 Text(
-                                    text = "Kategori",
+                                    text = stringResource(Res.string.budget_form_category_label),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -477,7 +485,7 @@ fun BudgetFormScreen(
                                                 containerSize = 40.dp,
                                             )
                                             Text(
-                                                text = state.selectedCategoryName ?: "Seçilen Kategori",
+                                                text = state.selectedCategoryName ?: stringResource(Res.string.budget_fallback_category_name),
                                                 style = MaterialTheme.typography.bodyLarge,
                                                 fontWeight = FontWeight.SemiBold,
                                             )
@@ -491,7 +499,7 @@ fun BudgetFormScreen(
                                                 Text("?", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                             }
                                             Text(
-                                                text = "Kategori seç",
+                                                text = stringResource(Res.string.budget_form_category_placeholder),
                                                 style = MaterialTheme.typography.bodyLarge,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
@@ -500,7 +508,7 @@ fun BudgetFormScreen(
 
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                        contentDescription = "Kategori seç",
+                                        contentDescription = stringResource(Res.string.budget_form_category_placeholder),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                         modifier = Modifier.size(16.dp),
                                     )
@@ -510,7 +518,7 @@ fun BudgetFormScreen(
 
                         state.mutationState.categoryError?.let { error ->
                             Text(
-                                text = error.toDisplayText(),
+                                text = error.toLocalizedText(),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.padding(start = 4.dp, top = 2.dp),
@@ -520,7 +528,7 @@ fun BudgetFormScreen(
 
                     // Dönem Seçim Kartı (02)
                     item {
-                        val formattedMonth = state.selectedMonth?.let { DateFormatter.formatYearMonth(it) } ?: "Dönem seç"
+                        val formattedMonth = state.selectedMonth?.toLocalizedBudgetPeriod() ?: stringResource(Res.string.budget_form_select_period)
                         Card(
                             onClick = { if (state.isMonthEditable) showPeriodPicker = true },
                             modifier = Modifier.fillMaxWidth(),
@@ -534,7 +542,7 @@ fun BudgetFormScreen(
                                 verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
                             ) {
                                 Text(
-                                    text = "Dönem",
+                                    text = stringResource(Res.string.budget_form_period_label),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -563,7 +571,7 @@ fun BudgetFormScreen(
 
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                        contentDescription = "Dönem seç",
+                                        contentDescription = stringResource(Res.string.budget_form_select_period),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                         modifier = Modifier.size(16.dp),
                                     )
@@ -587,7 +595,7 @@ fun BudgetFormScreen(
                                 verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
                             ) {
                                 Text(
-                                    text = "Para birimi",
+                                    text = stringResource(Res.string.budget_form_currency_label),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -607,14 +615,8 @@ fun BudgetFormScreen(
                                             fontWeight = FontWeight.Bold,
                                             color = FeniqoSageGreen,
                                         )
-                                        val currLabel = when (state.currency) {
-                                            Currency.TRY -> "Türk lirası (TRY)"
-                                            Currency.USD -> "Amerikan doları (USD)"
-                                            Currency.EUR -> "Avro (EUR)"
-                                            Currency.GBP -> "İngiliz sterlini (GBP)"
-                                        }
                                         Text(
-                                            text = currLabel,
+                                            text = localizedCurrencyDisplayName(state.currency),
                                             style = MaterialTheme.typography.bodyLarge,
                                             fontWeight = FontWeight.SemiBold,
                                         )
@@ -622,7 +624,7 @@ fun BudgetFormScreen(
 
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                        contentDescription = "Para birimi seç",
+                                        contentDescription = stringResource(Res.string.budget_form_select_currency),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                         modifier = Modifier.size(16.dp),
                                     )
@@ -645,7 +647,7 @@ fun BudgetFormScreen(
                                 verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
                             ) {
                                 Text(
-                                    text = "Aylık limit",
+                                    text = stringResource(Res.string.budget_form_monthly_limit_label),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -673,7 +675,7 @@ fun BudgetFormScreen(
                                         .fillMaxWidth()
                                         .focusRequester(limitFocusRequester)
                                         .semantics {
-                                            contentDescription = "Bütçe aylık limiti"
+                                            contentDescription = limitContentDescription
                                             amountErrorText?.let { error(it) }
                                         },
                                     shape = RoundedCornerShape(FeniqoRadius.Medium),
@@ -685,7 +687,7 @@ fun BudgetFormScreen(
 
                                 state.mutationState.amountError?.let { error ->
                                     Text(
-                                        text = error.toDisplayText(),
+                                        text = error.toLocalizedText(),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.error,
                                     )
@@ -713,7 +715,7 @@ fun BudgetFormScreen(
                                     modifier = Modifier.size(16.dp),
                                 )
                                 Text(
-                                    text = "Bu kategorinin seçili aydaki giderleri bütçeye dahil edilir.",
+                                    text = stringResource(Res.string.budget_form_create_info_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -745,7 +747,7 @@ fun BudgetFormScreen(
                                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                                         ) {
                                             Text(
-                                                text = "Seçilen ayın harcaması",
+                                                text = stringResource(Res.string.budget_form_current_spent_title),
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 fontWeight = FontWeight.SemiBold,
                                             )
@@ -766,7 +768,7 @@ fun BudgetFormScreen(
                                     }
 
                                     Text(
-                                        text = "Bu tutar bilgilendirme amaçlıdır, tahsilat değildir.",
+                                        text = stringResource(Res.string.budget_form_current_spent_disclaimer),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -793,7 +795,7 @@ fun BudgetFormScreen(
                     if (state.isSubmitting) {
                         CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
                     } else {
-                        Text("Değişiklikleri kaydet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(stringResource(Res.string.budget_form_save_changes), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -807,7 +809,7 @@ fun BudgetFormScreen(
                         .defaultMinSize(minHeight = 48.dp),
                     shape = RoundedCornerShape(FeniqoRadius.Medium),
                 ) {
-                    Text("Vazgeç", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(Res.string.budget_cancel), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 }
             } else {
                 Button(
@@ -822,7 +824,7 @@ fun BudgetFormScreen(
                     if (state.isSubmitting) {
                         CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
                     } else {
-                        Text("Bütçeyi oluştur", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(stringResource(Res.string.budget_form_create_button), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
                 }
             }

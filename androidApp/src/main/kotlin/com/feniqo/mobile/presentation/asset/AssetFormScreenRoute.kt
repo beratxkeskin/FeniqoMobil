@@ -10,6 +10,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
 import com.feniqo.mobile.presentation.screen.AssetFormScreen
@@ -62,7 +63,7 @@ fun AssetFormScreenRoute(
                     actionLabel = "Geri dön",
                 )
             loadState is AssetEditLoadState.Error ->
-                ErrorState("Varlık Yüklenemedi", (loadState as AssetEditLoadState.Error).message.toDisplayText(),
+                ErrorState("Varlık Yüklenemedi", (loadState as AssetEditLoadState.Error).message.toLocalizedText(),
                     { initialAssetId?.let(viewModel::loadForEdit) }, Modifier.fillMaxSize())
             else -> AssetFormScreen(
                 state = state,

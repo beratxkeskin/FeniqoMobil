@@ -159,7 +159,7 @@ class TransactionSuccessViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
         assertNull(state.transaction)
-        assertEquals("İşlem bulunamadı.", state.errorMessage)
+        assertEquals(TransactionSurfaceUiMessage.SUCCESS_NOT_FOUND, state.errorMessage)
         assertEquals(1, trxRepo.observeTransactionCallCount)
 
         collectJob.cancel()
@@ -174,7 +174,7 @@ class TransactionSuccessViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
         assertNull(state.transaction)
-        assertEquals("Geçersiz işlem parametresi.", state.errorMessage)
+        assertEquals(TransactionSurfaceUiMessage.SUCCESS_INVALID_PARAMETER, state.errorMessage)
         assertEquals(0, trxRepo.observeTransactionCallCount)
 
         collectJob.cancel()
@@ -189,7 +189,7 @@ class TransactionSuccessViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
         assertNull(state.transaction)
-        assertEquals("Geçersiz işlem parametresi.", state.errorMessage)
+        assertEquals(TransactionSurfaceUiMessage.SUCCESS_INVALID_PARAMETER, state.errorMessage)
         assertEquals(0, trxRepo.observeTransactionCallCount)
 
         collectJob.cancel()
@@ -204,7 +204,7 @@ class TransactionSuccessViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
         assertNull(state.transaction)
-        assertEquals("Geçersiz işlem parametresi.", state.errorMessage)
+        assertEquals(TransactionSurfaceUiMessage.SUCCESS_INVALID_PARAMETER, state.errorMessage)
         assertEquals(0, trxRepo.observeTransactionCallCount)
 
         collectJob.cancel()
@@ -224,7 +224,7 @@ class TransactionSuccessViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
         assertNull(state.transaction)
-        assertEquals("Geçersiz işlem parametresi.", state.errorMessage)
+        assertEquals(TransactionSurfaceUiMessage.SUCCESS_INVALID_PARAMETER, state.errorMessage)
         assertEquals(0, trxRepo.observeTransactionCallCount)
 
         collectJob.cancel()

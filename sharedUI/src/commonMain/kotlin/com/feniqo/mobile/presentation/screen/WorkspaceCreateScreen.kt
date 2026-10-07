@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.WorkspaceType
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreenContainer
 import com.feniqo.mobile.presentation.workspace.WorkspaceCreateUiState
@@ -674,7 +675,7 @@ private fun CreateErrorBanner(
             )
             Spacer(modifier = Modifier.width(10.dp))
             Text(
-                text = message.toDisplayText(),
+                text = message.toLocalizedText(),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onErrorContainer,
                 modifier = Modifier.weight(1f),

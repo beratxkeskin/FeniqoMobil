@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.*
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.*
 import com.feniqo.mobile.presentation.goal.*
 import com.feniqo.mobile.presentation.theme.*
@@ -106,7 +107,7 @@ fun GoalDetailScreen(
             )
             state.observationError != null && state.detail == null -> ErrorState(
                 title = "Hedef Yüklenemedi",
-                description = state.observationError.toDisplayText(),
+                description = state.observationError.toLocalizedText(),
                 onRetry = onBack,
                 modifier = Modifier
                     .fillMaxSize()

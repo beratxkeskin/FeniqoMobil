@@ -520,7 +520,7 @@ class CategoryAnalyticsCalculatorTest {
         assertEquals(TransactionType.INCOME, summary.topCategoryType)
         assertEquals("Maaş", summary.topCategoryName)
         assertEquals("350,00 ₺", summary.formattedTopCategoryAmount)
-        assertTrue(summary.insightText?.contains("en yüksek gelir") == true)
+        assertEquals(CategoryInsight.TopIncome(categoryName = "Maaş", sharePercent = 100), summary.insight)
     }
 
     @Test

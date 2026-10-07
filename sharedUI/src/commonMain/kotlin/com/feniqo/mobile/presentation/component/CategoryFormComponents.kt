@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:no-wildcard-imports")
+
 package com.feniqo.mobile.presentation.component
 
 import androidx.compose.foundation.BorderStroke
@@ -68,9 +70,12 @@ import androidx.compose.ui.window.DialogProperties
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.validation.CategoryValidationRules
 import com.feniqo.mobile.presentation.category.CategoryFormFieldError
-import com.feniqo.mobile.presentation.theme.FeniqoRadius
-import com.feniqo.mobile.presentation.theme.FeniqoSpacing
+import com.feniqo.mobile.presentation.category.localizedCategoryColorName
+import com.feniqo.mobile.presentation.category.localizedCategoryIconLabel
+import com.feniqo.mobile.presentation.category.toLocalizedText
 import com.feniqo.mobile.presentation.util.ColorParser
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 private val SageGreen = Color(0xFF2D5A43)
 private val SoftExpenseRed = Color(0xFFFEE2E2)
@@ -168,6 +173,7 @@ fun CategoryFormHeader(
     isBackEnabled: Boolean = true,
     activeWorkspaceName: String? = null,
 ) {
+    val backSemantics = stringResource(Res.string.category_form_back_semantics, title)
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -180,7 +186,7 @@ fun CategoryFormHeader(
             modifier = Modifier
                 .clickable(enabled = isBackEnabled, onClick = onBack)
                 .semantics {
-                    contentDescription = "$title, geri dön"
+                    contentDescription = backSemantics
                     role = Role.Button
                 },
         ) {
@@ -260,7 +266,7 @@ fun CategoryLivePreviewCard(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    text = name.ifBlank { "Kategori Adı" },
+                    text = name.ifBlank { stringResource(Res.string.category_form_preview_fallback_name) },
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = if (name.isBlank()) {
@@ -272,7 +278,14 @@ fun CategoryLivePreviewCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = if (type == TransactionType.EXPENSE) "Gider kategorisi" else "Gelir kategorisi",
+                    text =
+                        stringResource(
+                            if (type == TransactionType.EXPENSE) {
+                                Res.string.category_form_expense_category
+                            } else {
+                                Res.string.category_form_income_category
+                            },
+                        ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -295,13 +308,14 @@ fun CategoryNameField(
 ) {
     val focusManager = LocalFocusManager.current
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val nameFieldSemantics = stringResource(Res.string.category_form_name_semantics)
 
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
-            text = "Kategori adı",
+            text = stringResource(Res.string.category_form_name_label),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
@@ -314,7 +328,7 @@ fun CategoryNameField(
             },
             placeholder = {
                 Text(
-                    text = "Kategori adı gir",
+                    text = stringResource(Res.string.category_form_name_placeholder),
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 )
             },
@@ -337,13 +351,13 @@ fun CategoryNameField(
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = 52.dp)
                 .semantics {
-                    contentDescription = "Kategori adı metin alanı"
+                    contentDescription = nameFieldSemantics
                 },
         )
 
         if (nameError != null) {
             Text(
-                text = nameError.toDisplayText(),
+                text = nameError.toLocalizedText(),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(start = 4.dp),
@@ -364,13 +378,33 @@ fun CategoryTypeSection(
     modifier: Modifier = Modifier,
 ) {
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val expenseText = stringResource(Res.string.category_form_expense)
+    val incomeText = stringResource(Res.string.category_form_income)
+    val expenseSemantics =
+        stringResource(
+            if (selectedType == TransactionType.EXPENSE) {
+                Res.string.category_form_type_selected_semantics
+            } else {
+                Res.string.category_form_type_unselected_semantics
+            },
+            expenseText,
+        )
+    val incomeSemantics =
+        stringResource(
+            if (selectedType == TransactionType.INCOME) {
+                Res.string.category_form_type_selected_semantics
+            } else {
+                Res.string.category_form_type_unselected_semantics
+            },
+            incomeText,
+        )
 
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
-            text = "Kategori türü",
+            text = stringResource(Res.string.category_form_type_label),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
@@ -413,7 +447,7 @@ fun CategoryTypeSection(
                             )
                         }
                         Text(
-                            text = if (selectedType == TransactionType.EXPENSE) "Gider" else "Gelir",
+                            text = if (selectedType == TransactionType.EXPENSE) expenseText else incomeText,
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -422,7 +456,7 @@ fun CategoryTypeSection(
 
                     Icon(
                         imageVector = Icons.Outlined.Lock,
-                        contentDescription = "Kategori türü kilitli",
+                        contentDescription = stringResource(Res.string.category_form_type_locked),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp),
                     )
@@ -430,7 +464,7 @@ fun CategoryTypeSection(
             }
 
             Text(
-                text = "Mevcut işlemlerle tutarlılık için tür değiştirilemez.",
+                text = stringResource(Res.string.category_form_type_locked_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 4.dp, top = 2.dp),
@@ -462,7 +496,7 @@ fun CategoryTypeSection(
                             onTypeSelected(TransactionType.EXPENSE)
                         }
                         .semantics {
-                            contentDescription = "Gider kategorisi seçimi, ${if (isExpense) "seçili" else "seçili değil"}"
+                            contentDescription = expenseSemantics
                             role = Role.Button
                         },
                 ) {
@@ -486,7 +520,7 @@ fun CategoryTypeSection(
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Gider",
+                            text = expenseText,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = if (isExpense) FontWeight.Bold else FontWeight.Medium,
                             color = if (isExpense) ExpenseRedText else MaterialTheme.colorScheme.onSurface,
@@ -515,7 +549,7 @@ fun CategoryTypeSection(
                             onTypeSelected(TransactionType.INCOME)
                         }
                         .semantics {
-                            contentDescription = "Gelir kategorisi seçimi, ${if (isIncome) "seçili" else "seçili değil"}"
+                            contentDescription = incomeSemantics
                             role = Role.Button
                         },
                 ) {
@@ -539,7 +573,7 @@ fun CategoryTypeSection(
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Gelir",
+                            text = incomeText,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = if (isIncome) FontWeight.Bold else FontWeight.Medium,
                             color = if (isIncome) IncomeGreenText else MaterialTheme.colorScheme.onSurface,
@@ -572,7 +606,7 @@ fun CategoryVisualSettingsCard(
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
-            text = "Görsel ayarları",
+            text = stringResource(Res.string.category_form_visual_settings),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
@@ -610,7 +644,7 @@ fun CategoryVisualSettingsCard(
                                 .background(categoryColor, CircleShape),
                         )
                         Text(
-                            text = "Renk",
+                            text = stringResource(Res.string.category_form_color),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -622,7 +656,7 @@ fun CategoryVisualSettingsCard(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         Text(
-                            text = getPresetColorName(colorHex),
+                            text = localizedCategoryColorName(colorHex),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -668,7 +702,7 @@ fun CategoryVisualSettingsCard(
                             )
                         }
                         Text(
-                            text = "Simge",
+                            text = stringResource(Res.string.category_form_icon),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -680,7 +714,7 @@ fun CategoryVisualSettingsCard(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         Text(
-                            text = getPresetIconLabel(iconKey),
+                            text = localizedCategoryIconLabel(iconKey),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -696,7 +730,7 @@ fun CategoryVisualSettingsCard(
         }
 
         Text(
-            text = "Önizleme seçimlerine göre güncellenir.",
+            text = stringResource(Res.string.category_form_preview_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 4.dp),
@@ -748,11 +782,11 @@ fun CategoryIconSelectionDialog(
                     IconButton(onClick = onDismiss, modifier = Modifier.size(48.dp)) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Simge seçimini kapat",
+                            contentDescription = stringResource(Res.string.category_form_icon_picker_close),
                         )
                     }
                     Text(
-                        text = "Simge seç",
+                        text = stringResource(Res.string.category_form_icon_picker_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                     )
@@ -770,13 +804,23 @@ fun CategoryIconSelectionDialog(
                 ) {
                     items(PRESET_CATEGORY_ICONS, key = { it.key ?: "none" }) { option ->
                         val isSelected = option.key == selectedKey
+                        val optionLabel = localizedCategoryIconLabel(option.key)
+                        val optionSemantics =
+                            stringResource(
+                                if (isSelected) {
+                                    Res.string.category_form_icon_selected_semantics
+                                } else {
+                                    Res.string.category_form_icon_unselected_semantics
+                                },
+                                optionLabel,
+                            )
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(4.dp),
                             modifier = Modifier
                                 .clickable { selectedKey = option.key }
                                 .semantics {
-                                    contentDescription = "${option.label} simgesi, ${if (isSelected) "seçili" else "seçili değil"}"
+                                    contentDescription = optionSemantics
                                     role = Role.Button
                                 },
                         ) {
@@ -807,7 +851,7 @@ fun CategoryIconSelectionDialog(
                             }
 
                             Text(
-                                text = option.label,
+                                text = optionLabel,
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                 color = if (isSelected) categoryColor else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -832,7 +876,7 @@ fun CategoryIconSelectionDialog(
                         .height(52.dp),
                 ) {
                     Text(
-                        text = "Seçimi uygula",
+                        text = stringResource(Res.string.category_form_apply_selection),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -886,11 +930,11 @@ fun CategoryColorSelectionDialog(
                     IconButton(onClick = onDismiss, modifier = Modifier.size(48.dp)) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Renk seçimini kapat",
+                            contentDescription = stringResource(Res.string.category_form_color_picker_close),
                         )
                     }
                     Text(
-                        text = "Renk seç",
+                        text = stringResource(Res.string.category_form_color_picker_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                     )
@@ -925,13 +969,13 @@ fun CategoryColorSelectionDialog(
                         }
                         Column {
                             Text(
-                                text = categoryName.ifBlank { "Kategori Adı" },
+                                text = categoryName.ifBlank { stringResource(Res.string.category_form_preview_fallback_name) },
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
-                                text = "Bu renk kategori simgesinde kullanılacak.",
+                                text = stringResource(Res.string.category_form_color_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -952,13 +996,23 @@ fun CategoryColorSelectionDialog(
                         val isSelected = hex.equals(selectedHex, ignoreCase = true)
                         val color = ColorParser.parseHexColorOrNull(hex) ?: SageGreen
                         val checkTint = if (color.luminance() > 0.5f) Color.Black else Color.White
+                        val colorName = localizedCategoryColorName(hex)
+                        val colorSemantics =
+                            stringResource(
+                                if (isSelected) {
+                                    Res.string.category_form_color_selected_semantics
+                                } else {
+                                    Res.string.category_form_color_unselected_semantics
+                                },
+                                colorName,
+                            )
 
                         Box(
                             modifier = Modifier
                                 .size(54.dp)
                                 .clickable { selectedHex = hex }
                                 .semantics {
-                                    contentDescription = "${getPresetColorName(hex)} rengi, ${if (isSelected) "seçili" else "seçili değil"}"
+                                    contentDescription = colorSemantics
                                     role = Role.Button
                                 },
                             contentAlignment = Alignment.Center,
@@ -1004,7 +1058,7 @@ fun CategoryColorSelectionDialog(
                         .height(52.dp),
                 ) {
                     Text(
-                        text = "Seçimi uygula",
+                        text = stringResource(Res.string.category_form_apply_selection),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -1026,7 +1080,18 @@ fun CategorySubmitButton(
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val buttonText = if (isEditMode) "Değişiklikleri kaydet" else "Kategoriyi oluştur"
+    val buttonText =
+        stringResource(
+            if (isEditMode) Res.string.category_form_save_changes else Res.string.category_form_create,
+        )
+    val buttonSemantics =
+        stringResource(
+            if (isEditMode) {
+                Res.string.category_form_save_changes_semantics
+            } else {
+                Res.string.category_form_create_semantics
+            },
+        )
 
     Button(
         onClick = onSubmit,
@@ -1040,7 +1105,7 @@ fun CategorySubmitButton(
             .fillMaxWidth()
             .height(54.dp)
             .semantics {
-                contentDescription = if (isEditMode) "Kategori değişikliklerini kaydet" else "Yeni kategori oluştur"
+                contentDescription = buttonSemantics
             },
     ) {
         if (isSubmitting) {
@@ -1051,7 +1116,7 @@ fun CategorySubmitButton(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Kaydediliyor...",
+                text = stringResource(Res.string.category_form_saving),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,

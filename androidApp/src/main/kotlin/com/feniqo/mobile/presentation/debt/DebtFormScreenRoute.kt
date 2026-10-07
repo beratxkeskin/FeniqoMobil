@@ -22,6 +22,7 @@ import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.DebtDeleteDialog
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
@@ -96,7 +97,7 @@ fun DebtFormScreenRoute(
             is DebtEditLoadState.Error -> {
                 ErrorState(
                     title = "Kayıt Yüklenemedi",
-                    description = effectiveLoadState.message.toDisplayText(),
+                    description = effectiveLoadState.message.toLocalizedText(),
                     onRetry = {
                         if (initialDebtId != null) {
                             viewModel.loadDebtForEdit(initialDebtId)

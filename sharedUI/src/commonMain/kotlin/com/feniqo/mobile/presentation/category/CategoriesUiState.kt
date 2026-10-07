@@ -84,6 +84,32 @@ data class CategorySpendingDisplayModel(
     val proportionBasisPoints: Int = 0,
 )
 
+sealed interface CategoryInsight {
+    data class TopIncome(
+        val categoryName: String,
+        val sharePercent: Int,
+    ) : CategoryInsight
+
+    data object NoIncome : CategoryInsight
+
+    data class TopExpense(
+        val categoryName: String,
+        val sharePercent: Int,
+    ) : CategoryInsight
+
+    data object IncomeWithoutExpense : CategoryInsight
+
+    data object NoTransactions : CategoryInsight
+
+    data object BalancedDistribution : CategoryInsight
+}
+
+enum class CategoryBalanceMessage {
+    EXPENSES_BALANCED,
+    INCOME_AND_EXPENSES_BALANCED,
+    REVIEW_EXPENSES,
+}
+
 /**
  * Kategoriler ekranı üst özet kartı presentation modelidir.
  * Float/Double içermez; mini bar oranları 0..10_000 baz puan aralığındadır.
@@ -96,8 +122,8 @@ data class CategoriesSummaryUiModel(
     val topCategoryType: TransactionType = TransactionType.EXPENSE,
     val topCategoryShareBasisPoints: Int = 0,
     val miniBarProportionsBasisPoints: List<Int> = emptyList(),
-    val insightText: String? = null,
-    val balanceMessage: String = "Harcamaların dengede.",
+    val insight: CategoryInsight? = null,
+    val balanceMessage: CategoryBalanceMessage = CategoryBalanceMessage.EXPENSES_BALANCED,
 ) {
     val topExpenseCategoryName: String?
         get() = if (topCategoryType == TransactionType.EXPENSE) topCategoryName else null

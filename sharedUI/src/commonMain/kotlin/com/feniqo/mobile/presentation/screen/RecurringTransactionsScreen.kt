@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.ActiveWorkspaceIndicator
 import com.feniqo.mobile.presentation.component.RecurringOverviewGraphiteCard
 import com.feniqo.mobile.presentation.component.RecurringTransactionCard
@@ -133,7 +134,7 @@ fun RecurringTransactionsScreen(
 
                 state.observationError != null -> {
                     RecurringListErrorState(
-                        errorMessage = state.observationError.toDisplayText(),
+                        errorMessage = state.observationError.toLocalizedText(),
                         onRetry = onRetry,
                         modifier = Modifier.fillMaxSize(),
                     )

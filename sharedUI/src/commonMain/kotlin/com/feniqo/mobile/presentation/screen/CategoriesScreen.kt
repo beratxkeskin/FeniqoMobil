@@ -31,7 +31,9 @@ import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.YearMonth
 import com.feniqo.mobile.presentation.category.CategoriesSummaryUiModel
 import com.feniqo.mobile.presentation.category.CategoriesUiState
+import com.feniqo.mobile.presentation.category.CategoryBalanceMessage
 import com.feniqo.mobile.presentation.category.CategoryDisplayModel
+import com.feniqo.mobile.presentation.category.CategoryInsight
 import com.feniqo.mobile.presentation.category.CategorySpendingDisplayModel
 import com.feniqo.mobile.presentation.category.CategoryTrend
 import com.feniqo.mobile.presentation.category.TrendMovement
@@ -52,6 +54,11 @@ import com.feniqo.mobile.presentation.component.MonthYearPickerDialog
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTheme
 import com.feniqo.mobile.presentation.theme.FeniqoTypographyTokens
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.categories_section_title
+import feniqomobil.sharedui.generated.resources.categories_subtitle
+import feniqomobil.sharedui.generated.resources.categories_title
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Kategoriler ekranının warm-luxury, durumsuz (stateless) ana Compose sunumudur.
@@ -119,7 +126,7 @@ fun CategoriesScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "Kategoriler",
+                            text = stringResource(Res.string.categories_title),
                             style = FeniqoTypographyTokens.DisplayTitle,
                             color = MaterialTheme.colorScheme.onBackground,
                         )
@@ -129,7 +136,7 @@ fun CategoriesScreen(
                         )
                     }
                     Text(
-                        text = "Gelir ve giderlerinizi netlikle organize edin.",
+                        text = stringResource(Res.string.categories_subtitle),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -146,7 +153,7 @@ fun CategoriesScreen(
             // 3. “Kategorilerin” bölüm başlığı ve kategori sayısı
             item(key = "categories_section_header") {
                 CategorySectionHeader(
-                    title = "Kategorilerin",
+                    title = stringResource(Res.string.categories_section_title),
                     count = state.items.size,
                 )
                 Spacer(modifier = Modifier.height(6.dp))
@@ -210,10 +217,10 @@ fun CategoriesScreen(
             }
 
             // 7. Feniqo İçgörü kartı
-            if (state.summary.insightText != null) {
+            if (state.summary.insight != null) {
                 item(key = "insight_card") {
                     Spacer(modifier = Modifier.height(8.dp))
-                    CategoryInsightCard(insightText = state.summary.insightText)
+                    CategoryInsightCard(insight = state.summary.insight)
                 }
             }
 
@@ -268,8 +275,8 @@ private fun CategoriesScreenLoadedPreview() {
         topCategoryType = TransactionType.EXPENSE,
         topCategoryShareBasisPoints = 3800,
         miniBarProportionsBasisPoints = listOf(10_000, 6_400, 4_300, 3_900, 3_200),
-        insightText = "Yeme & İçme bu ayki en yüksek harcaman. Toplam giderlerinin %38'ini oluşturuyor.",
-        balanceMessage = "Harcamaların dengede.",
+        insight = CategoryInsight.TopExpense(categoryName = "Yeme & İçme", sharePercent = 38),
+        balanceMessage = CategoryBalanceMessage.EXPENSES_BALANCED,
     )
 
     val sampleItems = listOf(
@@ -411,8 +418,8 @@ private fun CategoriesScreenZeroTransactionsPreview() {
         customCategoriesCount = 1,
         topCategoryName = null,
         formattedTopCategoryAmount = null,
-        insightText = "Bu dönemde henüz işlem kaydı yok. Kategorilerinizi düzenleyerek harcamalarınızı kolayca takip edin.",
-        balanceMessage = "Harcamaların dengede.",
+        insight = CategoryInsight.NoTransactions,
+        balanceMessage = CategoryBalanceMessage.EXPENSES_BALANCED,
     )
 
     val sampleItems = listOf(

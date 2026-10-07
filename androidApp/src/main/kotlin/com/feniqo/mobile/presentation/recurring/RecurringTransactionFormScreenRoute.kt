@@ -28,6 +28,7 @@ import com.feniqo.mobile.domain.model.CategoryIcon
 import com.feniqo.mobile.presentation.category.CategoryDisplayModel
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
 import com.feniqo.mobile.presentation.component.RecurringTransactionDeleteDialog
@@ -285,7 +286,7 @@ fun RecurringTransactionFormScreenRoute(
             ) {
                 ErrorState(
                     title = "İşlem Yüklenemedi",
-                    description = effectiveEditLoadState.message.toDisplayText(),
+                    description = effectiveEditLoadState.message.toLocalizedText(),
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
                     actionLabel = "Geri dön",

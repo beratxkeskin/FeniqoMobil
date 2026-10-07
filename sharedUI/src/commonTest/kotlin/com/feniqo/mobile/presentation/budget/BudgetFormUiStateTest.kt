@@ -12,6 +12,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+import feniqomobil.sharedui.generated.resources.*
+
 class BudgetFormUiStateTest {
 
     private val sampleCategories = listOf(
@@ -142,16 +144,16 @@ class BudgetFormUiStateTest {
     }
 
     @Test
-    fun fieldErrors_mapToCorrectDisplayText() {
-        assertEquals("Lütfen bir harcama kategorisi seçin.", BudgetFormFieldError.CATEGORY_REQUIRED.toDisplayText())
-        assertEquals("Lütfen bir ay seçin.", BudgetFormFieldError.MONTH_REQUIRED.toDisplayText())
-        assertEquals("Geçersiz ay formatı (YYYY-AA).", BudgetFormFieldError.MONTH_INVALID_FORMAT.toDisplayText())
-        assertEquals("Lütfen bir bütçe limiti girin.", BudgetFormFieldError.AMOUNT_REQUIRED.toDisplayText())
-        assertEquals("Geçerli bir tutar girin.", BudgetFormFieldError.AMOUNT_INVALID_FORMAT.toDisplayText())
-        assertEquals("Bütçe limiti 0'dan büyük olmalıdır.", BudgetFormFieldError.AMOUNT_NON_POSITIVE.toDisplayText())
-        assertEquals("Kuruş hanesi en fazla 2 basamak olabilir.", BudgetFormFieldError.AMOUNT_EXCESSIVE_DECIMAL_DIGITS.toDisplayText())
-        assertEquals("Bütçe limiti izin verilen üst sınırı aşıyor.", BudgetFormFieldError.AMOUNT_MAX_EXCEEDED.toDisplayText())
-        assertEquals("Kaynak ve hedef ay aynı olamaz.", BudgetFormFieldError.SOURCE_AND_TARGET_MONTH_SAME.toDisplayText())
+    fun fieldErrors_mapToCorrectStringResource() {
+        assertEquals(Res.string.budget_form_error_category_required, BudgetFormFieldError.CATEGORY_REQUIRED.toStringResource())
+        assertEquals(Res.string.budget_form_error_month_required, BudgetFormFieldError.MONTH_REQUIRED.toStringResource())
+        assertEquals(Res.string.budget_form_error_month_invalid_format, BudgetFormFieldError.MONTH_INVALID_FORMAT.toStringResource())
+        assertEquals(Res.string.budget_form_error_amount_required, BudgetFormFieldError.AMOUNT_REQUIRED.toStringResource())
+        assertEquals(Res.string.budget_form_error_amount_invalid_format, BudgetFormFieldError.AMOUNT_INVALID_FORMAT.toStringResource())
+        assertEquals(Res.string.budget_form_error_amount_non_positive, BudgetFormFieldError.AMOUNT_NON_POSITIVE.toStringResource())
+        assertEquals(Res.string.budget_form_error_amount_excessive_decimal_digits, BudgetFormFieldError.AMOUNT_EXCESSIVE_DECIMAL_DIGITS.toStringResource())
+        assertEquals(Res.string.budget_form_error_amount_max_exceeded, BudgetFormFieldError.AMOUNT_MAX_EXCEEDED.toStringResource())
+        assertEquals(Res.string.budget_form_error_source_and_target_month_same, BudgetFormFieldError.SOURCE_AND_TARGET_MONTH_SAME.toStringResource())
     }
 
     @Test

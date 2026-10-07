@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.DebtEmptyState
 import com.feniqo.mobile.presentation.component.DebtGroupedSectionCard
 import com.feniqo.mobile.presentation.component.DebtSnowballEntryCard
@@ -171,7 +172,7 @@ fun DebtsScreen(
                     state.observationError != null -> {
                         ErrorState(
                             title = "Borç ve Alacaklar Yüklenemedi",
-                            description = state.observationError.toDisplayText(),
+                            description = state.observationError.toLocalizedText(),
                             onRetry = onRetry,
                             modifier = Modifier.align(Alignment.Center),
                         )

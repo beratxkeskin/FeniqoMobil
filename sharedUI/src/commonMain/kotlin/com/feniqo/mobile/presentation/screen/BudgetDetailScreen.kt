@@ -56,6 +56,9 @@ import com.feniqo.mobile.domain.model.YearMonth
 import com.feniqo.mobile.domain.usecase.BudgetHealth
 import com.feniqo.mobile.presentation.budget.BudgetDetailTransactionItem
 import com.feniqo.mobile.presentation.budget.BudgetDetailUiState
+import com.feniqo.mobile.presentation.budget.resolveCategoryDisplayName
+import com.feniqo.mobile.presentation.budget.toLocalizedBudgetPeriod
+import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.BudgetSectionHeader
 import com.feniqo.mobile.presentation.component.CategoryTonalIcon
 import com.feniqo.mobile.presentation.component.ErrorState
@@ -63,7 +66,8 @@ import com.feniqo.mobile.presentation.component.LoadingContent
 import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.util.ColorParser
-import com.feniqo.mobile.presentation.util.DateFormatter
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 private val FeniqoSageGreen = Color(0xFF2D5A43)
 
@@ -87,24 +91,24 @@ fun BudgetDetailScreen(
         when {
             state.isLoading -> {
                 LoadingContent(
-                    message = "Bütçe detayları yükleniyor...",
+                    message = stringResource(Res.string.budget_detail_loading),
                     modifier = Modifier.fillMaxSize(),
                 )
             }
             state.observationError != null || budget == null -> {
                 ErrorState(
-                    title = "Bütçe Bulunamadı",
-                    description = state.observationError?.toDisplayText() ?: "Bütçe detayı yüklenemedi.",
+                    title = stringResource(Res.string.budget_detail_not_found_title),
+                    description = state.observationError?.toLocalizedText() ?: stringResource(Res.string.budget_detail_load_failed),
                     onRetry = onBack,
                     modifier = Modifier.fillMaxSize(),
-                    actionLabel = "Geri dön",
+                    actionLabel = stringResource(Res.string.budget_back),
                 )
             }
             else -> {
                 val isExceeded = budget.health == BudgetHealth.EXCEEDED
                 val categoryColor = ColorParser.parseHexColorOrNull(budget.categoryColorHex)
                     ?: MaterialTheme.colorScheme.primary
-                val formattedMonth = DateFormatter.formatYearMonth(budget.month)
+                val formattedMonth = budget.month.toLocalizedBudgetPeriod()
 
                 var menuExpanded by remember { mutableStateOf(false) }
 
@@ -127,12 +131,16 @@ fun BudgetDetailScreen(
                             IconButton(onClick = onBack) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Geri dön",
+                                    contentDescription = stringResource(Res.string.budget_back),
                                 )
                             }
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = if (isExceeded) "Bütçe aşımı" else "${budget.categoryName} bütçesi",
+                                text = if (isExceeded) {
+                                    stringResource(Res.string.budget_detail_exceeded_title)
+                                } else {
+                                    stringResource(Res.string.budget_detail_category_budget_title, budget.resolveCategoryDisplayName())
+                                },
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onBackground,
@@ -141,21 +149,21 @@ fun BudgetDetailScreen(
 
                         Box {
                             IconButton(onClick = { menuExpanded = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "Bütçe seçenekleri")
+                                Icon(Icons.Default.MoreVert, contentDescription = stringResource(Res.string.budget_detail_options_desc))
                             }
                             DropdownMenu(
                                 expanded = menuExpanded,
                                 onDismissRequest = { menuExpanded = false },
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Bütçeyi düzenle") },
+                                    text = { Text(stringResource(Res.string.budget_detail_edit_action)) },
                                     onClick = {
                                         menuExpanded = false
                                         onEditBudget(budget.id, budget.month)
                                     },
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Bütçeyi sil", color = MaterialTheme.colorScheme.error) },
+                                    text = { Text(stringResource(Res.string.budget_detail_delete_action), color = MaterialTheme.colorScheme.error) },
                                     onClick = {
                                         menuExpanded = false
                                         onDeleteBudget()
@@ -180,7 +188,7 @@ fun BudgetDetailScreen(
                         )
 
                         Text(
-                            text = budget.categoryName,
+                            text = budget.resolveCategoryDisplayName(),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -209,7 +217,7 @@ fun BudgetDetailScreen(
                             modifier = Modifier.padding(top = 2.dp),
                         ) {
                             Text(
-                                text = if (isExceeded) "Bütçe aşımı" else "Kalan bütçe",
+                                text = if (isExceeded) stringResource(Res.string.budget_detail_status_pill_exceeded) else stringResource(Res.string.budget_detail_status_pill_remaining),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isExceeded) Color(0xFFDC2626) else Color(0xFF166534),
@@ -236,7 +244,7 @@ fun BudgetDetailScreen(
                             ) {
                                 Column {
                                     Text(
-                                        text = if (isExceeded) "Aylık limit" else "Limit",
+                                        text = if (isExceeded) stringResource(Res.string.budget_detail_monthly_limit) else stringResource(Res.string.budget_detail_limit),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -248,7 +256,7 @@ fun BudgetDetailScreen(
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
                                     Text(
-                                        text = "Harcanan",
+                                        text = stringResource(Res.string.budget_detail_spent),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -267,7 +275,7 @@ fun BudgetDetailScreen(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                     ) {
                                         Text(
-                                            text = "Kullanım oranı",
+                                            text = stringResource(Res.string.budget_detail_usage_rate),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
@@ -329,13 +337,13 @@ fun BudgetDetailScreen(
                                 }
                                 Column {
                                     Text(
-                                        text = "Belirlediğin limiti ${budget.prefixRemaining} aştın.",
+                                        text = stringResource(Res.string.budget_detail_exceeded_notice_title, budget.prefixRemaining),
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFF991B1B),
                                     )
                                     Text(
-                                        text = "Bu kategoride belirlediğin aylık bütçeyi aştın.",
+                                        text = stringResource(Res.string.budget_detail_exceeded_notice_subtitle),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = Color(0xFF991B1B),
                                     )
@@ -367,7 +375,7 @@ fun BudgetDetailScreen(
                                     )
                                 }
                                 Text(
-                                    text = "Limitin içinde",
+                                    text = stringResource(Res.string.budget_detail_within_limit),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF166534),
@@ -377,7 +385,7 @@ fun BudgetDetailScreen(
                     }
 
                     // 5. "▎Son harcamalar" Bölümü
-                    BudgetSectionHeader("Son harcamalar")
+                    BudgetSectionHeader(stringResource(Res.string.budget_detail_recent_transactions))
 
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -387,7 +395,7 @@ fun BudgetDetailScreen(
                         Column(modifier = Modifier.fillMaxWidth()) {
                             if (state.recentTransactions.isEmpty()) {
                                 Text(
-                                    text = "Bu ay için henüz harcama kaydı yok.",
+                                    text = stringResource(Res.string.budget_detail_no_transactions),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(FeniqoSpacing.Large),
@@ -469,7 +477,7 @@ fun BudgetDetailScreen(
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                     Text(
-                                        text = if (isExceeded) "İlgili işlemleri gör" else "Bu ayın tüm işlemleri",
+                                        text = if (isExceeded) stringResource(Res.string.budget_detail_view_related_transactions) else stringResource(Res.string.budget_detail_view_all_transactions),
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.SemiBold,
                                         color = MaterialTheme.colorScheme.onSurface,
@@ -497,7 +505,7 @@ fun BudgetDetailScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = FeniqoSageGreen),
                     ) {
                         Text(
-                            text = if (isExceeded) "Limiti düzenle" else "Bütçeyi düzenle",
+                            text = if (isExceeded) stringResource(Res.string.budget_detail_edit_limit_button) else stringResource(Res.string.budget_detail_edit_budget_button),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                         )
@@ -526,7 +534,7 @@ fun BudgetDetailScreen(
                                     modifier = Modifier.size(18.dp),
                                 )
                                 Text(
-                                    text = "Bütçeyi sil",
+                                    text = stringResource(Res.string.budget_detail_delete_budget_button),
                                     fontWeight = FontWeight.Bold,
                                 )
                             }
