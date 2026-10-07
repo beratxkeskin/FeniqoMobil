@@ -82,22 +82,22 @@ fun GoalContributionFormScreenRoute(
         when (effectiveLoadState) {
             is GoalContributionParentLoadState.Loading -> {
                 LoadingContent(
-                    message = "Hedef bilgileri yükleniyor...",
+                    message = goalFormLoadingText(),
                     modifier = Modifier.fillMaxSize(),
                 )
             }
             is GoalContributionParentLoadState.NotFound -> {
                 ErrorState(
-                    title = "Hedef Bulunamadı",
-                    description = "Hareket eklemek istediğiniz hedef mevcut değil veya silinmiş.",
+                    title = goalFormNotFoundTitleText(),
+                    description = goalContributionNotFoundDescText(),
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
-                    actionLabel = "Geri dön",
+                    actionLabel = goalFormBackActionText(),
                 )
             }
             is GoalContributionParentLoadState.Error -> {
                 ErrorState(
-                    title = "Hedef Yüklenemedi",
+                    title = goalFormErrorTitleText(),
                     description = effectiveLoadState.message.toLocalizedText(),
                     onRetry = {
                         if (parentGoalId != null) {
@@ -149,12 +149,12 @@ fun GoalContributionFormScreenRoute(
                         showDatePicker = false
                     },
                 ) {
-                    Text("Tamam")
+                    Text(goalDialogOkText())
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) {
-                    Text("Vazgeç")
+                    Text(goalDialogCancelText())
                 }
             },
         ) {

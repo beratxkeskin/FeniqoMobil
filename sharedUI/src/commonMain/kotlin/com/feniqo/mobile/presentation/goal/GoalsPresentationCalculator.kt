@@ -4,7 +4,6 @@ import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.GoalStatus
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.RateBasisPoints
-import com.feniqo.mobile.presentation.util.MoneyFormatter
 
 /** Hedef listesinden filtre, para-birimi-güvenli özet ve açıklanabilir içgörü üretir. */
 object GoalsPresentationCalculator {
@@ -61,7 +60,7 @@ object GoalsPresentationCalculator {
             currencySummaries = totals.map { (currency, total) ->
                 val saved = Money(total.savedMinor, currency)
                 val target = Money(total.targetMinor, currency)
-                GoalCurrencySummaryUiModel(currency, saved, target, MoneyFormatter.format(saved), MoneyFormatter.format(target))
+                GoalCurrencySummaryUiModel(currency, saved, target)
             },
         )
     }
@@ -78,21 +77,28 @@ object GoalsPresentationCalculator {
         ).firstOrNull()?.let { closest ->
             result += GoalInsightUiModel(
                 id = "closest-${closest.id.value}",
-                title = "Tamamlanmaya en yakın hedefin: ${closest.name}",
-                description = "%${closest.progressBasisPoints.value / 100} · ${closest.formattedRemainingAmount} kaldı",
+                payload = GoalInsightPayload.ClosestGoal(
+                    goalName = closest.name,
+                    progressBasisPoints = closest.progressBasisPoints,
+                    remainingAmount = closest.remainingAmount,
+                ),
             )
         }
         result += GoalInsightUiModel(
             id = "completion-count",
-            title = "${goals.size} hedeften $achievedCount tanesi tamamlandı",
-            description = if (active.isEmpty()) "Seçili kapsamda aktif hedef bulunmuyor." else "${active.size} aktif hedefin bulunuyor.",
+            payload = GoalInsightPayload.CompletionCount(
+                totalCount = goals.size,
+                achievedCount = achievedCount,
+                activeCount = active.size,
+            ),
         )
         val pastDateCount = active.count { it.isTargetDatePast }
         if (pastDateCount > 0) {
             result += GoalInsightUiModel(
                 id = "past-date-count",
-                title = "$pastDateCount aktif hedefin hedef tarihi geçti",
-                description = "Hedeflerini güncelleyebilir veya birikimlerini gözden geçirebilirsin.",
+                payload = GoalInsightPayload.PastDateCount(
+                    pastDateCount = pastDateCount,
+                ),
             )
         }
         return result.take(3)

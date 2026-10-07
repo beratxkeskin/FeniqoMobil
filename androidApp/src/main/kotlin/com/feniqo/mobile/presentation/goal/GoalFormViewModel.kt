@@ -61,7 +61,7 @@ class GoalFormViewModel @Inject constructor(
     private var activeSubmitJob: Job? = null
     private var activeDeleteJob: Job? = null
 
-    fun loadGoalForEdit(id: EntityId) {
+    fun loadGoalForEdit(id: EntityId, decimalSeparator: Char) {
         editLoadJob?.cancel()
         val currentToken = ++editLoadToken
         _editLoadState.value = GoalEditLoadState.Loading
@@ -82,7 +82,7 @@ class GoalFormViewModel @Inject constructor(
                             val loadedInput = GoalFormInput(
                                 goalId = goal.id,
                                 nameInput = goal.name,
-                                targetAmountInput = formatMoneyToInput(goal.targetAmount),
+                                targetAmountInput = formatMoneyToInput(goal.targetAmount, decimalSeparator),
                                 currency = goal.targetAmount.currency,
                                 initialAmountInput = "", // Editte başlangıç girilemez
                                 targetDate = goal.targetDate,
@@ -119,17 +119,12 @@ class GoalFormViewModel @Inject constructor(
         }
     }
 
-    private fun formatMoneyToInput(money: com.feniqo.mobile.domain.model.Money): String {
-        val digits = money.currency.minorUnitDigits
-        val divisor = if (digits == 0) 1L else (1..digits).fold(1L) { acc, _ -> acc * 10L }
-        val major = money.amountMinor / divisor
-        val minor = money.amountMinor % divisor
-        return if (digits > 0 && minor != 0L) {
-            val minorStr = minor.toString().padStart(digits, '0').trimEnd('0')
-            "$major,$minorStr"
-        } else {
-            major.toString()
-        }
+    private fun formatMoneyToInput(money: com.feniqo.mobile.domain.model.Money, decimalSeparator: Char): String {
+        return com.feniqo.mobile.presentation.common.formatMinorUnitsToInputText(
+            amountMinor = money.amountMinor,
+            currency = money.currency,
+            decimalSeparator = decimalSeparator,
+        )
     }
 
 

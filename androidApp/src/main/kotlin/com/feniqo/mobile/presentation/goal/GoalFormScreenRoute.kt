@@ -14,6 +14,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -21,6 +22,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.common.currentLocaleDecimalSeparator
 import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
 import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.ErrorState
@@ -41,6 +43,8 @@ fun GoalFormScreenRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val editLoadState by viewModel.editLoadState.collectAsStateWithLifecycle()
+    val decimalSeparator = currentLocaleDecimalSeparator()
+    val currentSeparatorState = rememberUpdatedState(decimalSeparator)
 
     var showDatePicker by remember { mutableStateOf(false) }
 
@@ -48,7 +52,7 @@ fun GoalFormScreenRoute(
         if (hasInvalidRouteId) {
             viewModel.setEditLoadInvalidId()
         } else if (initialGoalId != null) {
-            viewModel.loadGoalForEdit(initialGoalId)
+            viewModel.loadGoalForEdit(initialGoalId, currentSeparatorState.value)
         }
     }
 
@@ -81,26 +85,26 @@ fun GoalFormScreenRoute(
         when (effectiveLoadState) {
             is GoalEditLoadState.Loading -> {
                 LoadingContent(
-                    message = "Hedef bilgileri yükleniyor...",
+                    message = goalFormLoadingText(),
                     modifier = Modifier.fillMaxSize(),
                 )
             }
             is GoalEditLoadState.NotFound -> {
                 ErrorState(
-                    title = "Hedef Bulunamadı",
-                    description = "Düzenlemek istediğiniz hedef mevcut değil veya silinmiş.",
+                    title = goalFormNotFoundTitleText(),
+                    description = goalFormNotFoundDescText(),
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
-                    actionLabel = "Geri dön",
+                    actionLabel = goalFormBackActionText(),
                 )
             }
             is GoalEditLoadState.Error -> {
                 ErrorState(
-                    title = "Hedef Yüklenemedi",
+                    title = goalFormErrorTitleText(),
                     description = effectiveLoadState.message.toLocalizedText(),
                     onRetry = {
                         if (initialGoalId != null) {
-                            viewModel.loadGoalForEdit(initialGoalId)
+                            viewModel.loadGoalForEdit(initialGoalId, decimalSeparator)
                         }
                     },
                     modifier = Modifier.fillMaxSize(),
@@ -156,12 +160,12 @@ fun GoalFormScreenRoute(
                         showDatePicker = false
                     },
                 ) {
-                    Text("Tamam")
+                    Text(goalDialogOkText())
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) {
-                    Text("Vazgeç")
+                    Text(goalDialogCancelText())
                 }
             },
         ) {

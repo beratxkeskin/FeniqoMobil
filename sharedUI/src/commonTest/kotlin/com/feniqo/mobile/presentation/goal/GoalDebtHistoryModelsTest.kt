@@ -1,3 +1,11 @@
+@file:Suppress(
+    "ktlint:standard:max-line-length",
+    "ktlint:standard:function-signature",
+    "ktlint:standard:multiline-expression-wrapping",
+    "ktlint:standard:no-wildcard-imports",
+    "ktlint:standard:argument-list-wrapping",
+)
+
 package com.feniqo.mobile.presentation.goal
 
 import com.feniqo.mobile.domain.model.Currency
@@ -12,10 +20,8 @@ import kotlinx.datetime.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class GoalDebtHistoryModelsTest {
-
     @Test
     fun goalContributions_toSortedHistoryUiModels_sortsByOccurredOnDescThenIdDesc() {
         val contributions = listOf(
@@ -54,13 +60,13 @@ class GoalDebtHistoryModelsTest {
         // 1. 2026-09-02, gc-3 (id desc)
         assertEquals(EntityId("gc-3"), result[0].id)
         assertEquals(GoalContributionDirection.REMOVE, result[0].direction)
-        assertTrue(result[0].formattedAmount.startsWith("-"))
+        assertEquals(Money(200_00L, Currency.TRY), result[0].amount)
         assertNull(result[0].note)
 
         // 2. 2026-09-02, gc-2
         assertEquals(EntityId("gc-2"), result[1].id)
         assertEquals(GoalContributionDirection.ADD, result[1].direction)
-        assertTrue(result[1].formattedAmount.startsWith("+"))
+        assertEquals(Money(300_00L, Currency.TRY), result[1].amount)
         assertEquals("Not 2", result[1].note)
 
         // 3. 2026-09-01, gc-1

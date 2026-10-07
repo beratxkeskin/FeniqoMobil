@@ -3,16 +3,27 @@ package com.feniqo.mobile.presentation.goal
 import com.feniqo.mobile.domain.model.*
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 
+enum class GoalDetailStatus {
+    ACTIVE,
+    ACHIEVED,
+    PAST_DUE,
+}
+
+sealed interface GoalDetailInsight {
+    data object Achieved : GoalDetailInsight
+    data object ZeroContribution : GoalDetailInsight
+    data class PastDue(val remaining: Money) : GoalDetailInsight
+    data class InProgress(val progress: RateBasisPoints, val remaining: Money) : GoalDetailInsight
+}
+
 data class GoalChartPoint(val date: LocalDate, val amount: Money, val progress: RateBasisPoints)
 
 data class GoalDetailDisplayModel(
     val goal: Goal,
-    val statusLabel: String,
-    val formattedCurrent: String,
-    val formattedTarget: String,
-    val formattedRemaining: String,
+    val status: GoalDetailStatus,
+    val typedInsight: GoalDetailInsight,
+    val remainingAmount: Money,
     val progress: RateBasisPoints,
-    val insight: String?,
     val daysRemaining: Long?,
     val monthlyRequired: Money?,
     val estimatedCompletion: LocalDate?,

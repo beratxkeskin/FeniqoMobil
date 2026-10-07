@@ -1,3 +1,11 @@
+@file:Suppress(
+    "ktlint:standard:max-line-length",
+    "ktlint:standard:function-signature",
+    "ktlint:standard:multiline-expression-wrapping",
+    "ktlint:standard:no-wildcard-imports",
+    "ktlint:standard:argument-list-wrapping",
+)
+
 package com.feniqo.mobile.presentation.goal
 
 import com.feniqo.mobile.domain.model.AppError
@@ -157,7 +165,7 @@ class GoalFormViewModelTest {
         )
         repository.goalsFlow.value = mapOf(goalId to sampleGoal)
 
-        viewModel.loadGoalForEdit(goalId)
+        viewModel.loadGoalForEdit(goalId, ',')
         advanceUntilIdle()
 
         val loadState = viewModel.editLoadState.value
@@ -180,7 +188,7 @@ class GoalFormViewModelTest {
 
     @Test
     fun loadGoalForEdit_notFound_setsNotFound() = runTest {
-        viewModel.loadGoalForEdit(EntityId("non-existent"))
+        viewModel.loadGoalForEdit(EntityId("non-existent"), ',')
         advanceUntilIdle()
 
         assertEquals(GoalEditLoadState.NotFound, viewModel.editLoadState.value)
@@ -227,9 +235,9 @@ class GoalFormViewModelTest {
 
 
         // 1. Önce yavaş olanı başlat
-        customViewModel.loadGoalForEdit(slowGoalId)
+        customViewModel.loadGoalForEdit(slowGoalId, ',')
         // 2. Ardından hızlı olanı başlat (token artar)
-        customViewModel.loadGoalForEdit(fastGoalId)
+        customViewModel.loadGoalForEdit(fastGoalId, ',')
         advanceUntilIdle()
 
         assertEquals(GoalEditLoadState.Ready(GoalFormDraft.fromDomain(fastGoal), fastGoal.currentAmount), customViewModel.editLoadState.value)
@@ -270,7 +278,7 @@ class GoalFormViewModelTest {
             createdAt = Instant.fromEpochMilliseconds(1000L),
         )
         repository.goalsFlow.value = mapOf(goalId to sampleGoal)
-        viewModel.loadGoalForEdit(goalId)
+        viewModel.loadGoalForEdit(goalId, ',')
         advanceUntilIdle()
 
         viewModel.updateInput {
@@ -391,7 +399,7 @@ class GoalFormViewModelTest {
             createdAt = Instant.fromEpochMilliseconds(1000L),
         )
         repository.goalsFlow.value = mapOf(goalId to sampleGoal)
-        viewModel.loadGoalForEdit(goalId)
+        viewModel.loadGoalForEdit(goalId, ',')
         advanceUntilIdle()
 
         // 1. Request delete
@@ -459,7 +467,7 @@ class GoalFormViewModelTest {
         repository.goalsFlow.value = mapOf(goalId to sampleGoal)
         repository.contributionsFlow.value = mapOf(goalId to contributions)
 
-        viewModel.loadGoalForEdit(goalId)
+        viewModel.loadGoalForEdit(goalId, ',')
         advanceUntilIdle()
 
         val history = viewModel.uiState.value.contributionsHistory
@@ -500,7 +508,7 @@ class GoalFormViewModelTest {
             ),
         )
 
-        viewModel.loadGoalForEdit(goalId)
+        viewModel.loadGoalForEdit(goalId, ',')
         advanceUntilIdle()
         assertEquals(1, viewModel.uiState.value.contributionsHistory.size)
 
@@ -530,7 +538,7 @@ class GoalFormViewModelTest {
         repository.goalsFlow.value = mapOf(goalId to sampleGoal)
         repository.observeContributionsError = RuntimeException("Database error")
 
-        viewModel.loadGoalForEdit(goalId)
+        viewModel.loadGoalForEdit(goalId, ',')
         advanceUntilIdle()
 
         assertEquals(GoalEditLoadState.Error(FinanceUiMessage.GENERIC_ERROR), viewModel.editLoadState.value)
@@ -579,12 +587,12 @@ class GoalFormViewModelTest {
             EntityId("g-2") to emptyList(),
         )
 
-        viewModel.loadGoalForEdit(EntityId("g-1"))
+        viewModel.loadGoalForEdit(EntityId("g-1"), ',')
         advanceUntilIdle()
         assertEquals(1, viewModel.uiState.value.contributionsHistory.size)
 
         // Hedef 2'ye geçildiğinde eski geçmiş hemen temizlenmeli
-        viewModel.loadGoalForEdit(EntityId("g-2"))
+        viewModel.loadGoalForEdit(EntityId("g-2"), ',')
         assertTrue(viewModel.uiState.value.contributionsHistory.isEmpty())
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value.contributionsHistory.isEmpty())
@@ -608,7 +616,7 @@ class GoalFormViewModelTest {
         repository.goalsFlow.value = mapOf(goalId to sampleGoal)
         repository.observeContributionsError = CancellationException("Observation cancelled")
 
-        viewModel.loadGoalForEdit(goalId)
+        viewModel.loadGoalForEdit(goalId, ',')
         advanceUntilIdle()
 
         // CancellationException generic hataya dönüşmemeli

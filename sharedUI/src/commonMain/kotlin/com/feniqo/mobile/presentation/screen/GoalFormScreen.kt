@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.GoalContributionDirection
 import com.feniqo.mobile.domain.model.Money
+import com.feniqo.mobile.presentation.common.toLocalizedFormatted
 import com.feniqo.mobile.presentation.component.ActiveWorkspaceIndicator
 import com.feniqo.mobile.presentation.component.CurrencyPickerSheet
 import com.feniqo.mobile.presentation.component.FeniqoGoalCardBorder
@@ -48,10 +49,12 @@ import com.feniqo.mobile.presentation.goal.GoalContributionHistoryItemUiModel
 import com.feniqo.mobile.presentation.goal.GoalFormFieldError
 import com.feniqo.mobile.presentation.goal.GoalFormInput
 import com.feniqo.mobile.presentation.goal.GoalFormInputErrors
+import com.feniqo.mobile.presentation.goal.toLocalizedReadableDate
+import com.feniqo.mobile.presentation.goal.toLocalizedText
 import com.feniqo.mobile.presentation.theme.*
 import com.feniqo.mobile.presentation.util.ColorParser
-import com.feniqo.mobile.presentation.util.DateFormatter
-import com.feniqo.mobile.presentation.util.MoneyFormatter
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Birikim hedefi oluşturma ve düzenleme ekranı.
@@ -86,25 +89,12 @@ fun GoalFormScreen(
     val nameFocusRequester = remember { FocusRequester() }
     val targetAmountFocusRequester = remember { FocusRequester() }
     val initialAmountFocusRequester = remember { FocusRequester() }
-    val nameErrorText = when (errors.nameError) {
-        GoalFormFieldError.NAME_REQUIRED -> "Hedef adı zorunludur."
-        GoalFormFieldError.NAME_TOO_LONG -> "Hedef adı en fazla 500 karakter olabilir."
-        null -> null
-        else -> "Geçersiz hedef adı."
-    }
-    val targetAmountErrorText = when (errors.targetAmountError) {
-        GoalFormFieldError.TARGET_AMOUNT_REQUIRED -> "Hedef tutar zorunludur."
-        GoalFormFieldError.TARGET_AMOUNT_NON_POSITIVE -> "Hedef tutar sıfırdan büyük olmalıdır."
-        GoalFormFieldError.TARGET_AMOUNT_INVALID -> "Geçerli bir tutar girin."
-        null -> null
-        else -> "Geçersiz tutar."
-    }
-    val initialAmountErrorText = when (errors.initialAmountError) {
-        GoalFormFieldError.INITIAL_AMOUNT_NEGATIVE -> "Başlangıç tutarı negatif olamaz."
-        GoalFormFieldError.INITIAL_AMOUNT_INVALID -> "Geçerli bir tutar girin."
-        null -> null
-        else -> "Geçersiz başlangıç tutarı."
-    }
+    val nameErrorText = errors.nameError?.toLocalizedText()
+    val targetAmountErrorText = errors.targetAmountError?.toLocalizedText()
+    val initialAmountErrorText = errors.initialAmountError?.toLocalizedText()
+    val nameContentDesc = stringResource(Res.string.goal_form_name_desc)
+    val targetAmountContentDesc = stringResource(Res.string.goal_form_target_amount_desc)
+    val initialAmountContentDesc = stringResource(Res.string.goal_form_initial_amount_desc)
     val dismissKeyboard = {
         focusManager.clearFocus(force = true)
         keyboardController?.hide()
@@ -125,7 +115,11 @@ fun GoalFormScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = if (isEditMode) "Hedefi düzenle" else "Yeni hedef",
+                        text = if (isEditMode) {
+                            stringResource(Res.string.goal_form_edit_title)
+                        } else {
+                            stringResource(Res.string.goal_form_create_title)
+                        },
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -135,7 +129,7 @@ fun GoalFormScreen(
                     IconButton(onClick = onBack, enabled = isEnabled) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Geri",
+                            contentDescription = stringResource(Res.string.goal_top_bar_back_desc),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
@@ -200,7 +194,11 @@ fun GoalFormScreen(
                             )
                         } else {
                             Text(
-                                text = if (isEditMode) "Değişiklikleri kaydet" else "Hedef oluştur",
+                                text = if (isEditMode) {
+                                    stringResource(Res.string.goal_form_save_changes)
+                                } else {
+                                    stringResource(Res.string.goal_form_save_create)
+                                },
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                             )
@@ -222,13 +220,21 @@ fun GoalFormScreen(
             item("header-titles") {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = if (isEditMode) "Hedefini güncelle" else "Yeni bir hedef oluştur",
+                        text = if (isEditMode) {
+                            stringResource(Res.string.goal_form_edit_header_title)
+                        } else {
+                            stringResource(Res.string.goal_form_create_header_title)
+                        },
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        text = if (isEditMode) "Hedef detaylarını düzenleyebilirsin." else "Hayallerin için plan yap, adım adım ilerle.",
+                        text = if (isEditMode) {
+                            stringResource(Res.string.goal_form_edit_header_subtitle)
+                        } else {
+                            stringResource(Res.string.goal_form_create_header_subtitle)
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -239,7 +245,7 @@ fun GoalFormScreen(
             item("name-field") {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "Hedef adı",
+                        text = stringResource(Res.string.goal_form_name_label),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -247,7 +253,7 @@ fun GoalFormScreen(
                     OutlinedTextField(
                         value = input.nameInput,
                         onValueChange = onNameChange,
-                        placeholder = { Text("Seyahat, Yeni bilgisayar...") },
+                        placeholder = { Text(stringResource(Res.string.goal_form_name_placeholder)) },
                         isError = errors.nameError != null,
                         supportingText = {
                             nameErrorText?.let { Text(text = it, color = MaterialTheme.colorScheme.error) }
@@ -262,7 +268,7 @@ fun GoalFormScreen(
                             .fillMaxWidth()
                             .focusRequester(nameFocusRequester)
                             .semantics {
-                                contentDescription = "Hedef adı"
+                                contentDescription = nameContentDesc
                                 nameErrorText?.let { error(it) }
                             },
                         shape = RoundedCornerShape(14.dp),
@@ -289,7 +295,7 @@ fun GoalFormScreen(
                         verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         Text(
-                            text = "Hedef tutar",
+                            text = stringResource(Res.string.goal_form_target_amount_label),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -297,7 +303,7 @@ fun GoalFormScreen(
                         OutlinedTextField(
                             value = input.targetAmountInput,
                             onValueChange = onTargetAmountChange,
-                            placeholder = { Text("₺30.000") },
+                            placeholder = { Text(stringResource(Res.string.goal_form_target_amount_placeholder)) },
                             isError = errors.targetAmountError != null,
                             supportingText = {
                                 targetAmountErrorText?.let { Text(text = it, color = MaterialTheme.colorScheme.error) }
@@ -316,7 +322,7 @@ fun GoalFormScreen(
                                 .fillMaxWidth()
                                 .focusRequester(targetAmountFocusRequester)
                                 .semantics {
-                                    contentDescription = "Hedef tutarı"
+                                    contentDescription = targetAmountContentDesc
                                     targetAmountErrorText?.let { error(it) }
                                 },
                             shape = RoundedCornerShape(14.dp),
@@ -335,7 +341,7 @@ fun GoalFormScreen(
                         verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         Text(
-                            text = "Para birimi",
+                            text = stringResource(Res.string.goal_form_currency_label),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -370,8 +376,8 @@ fun GoalFormScreen(
                                 )
                                 Icon(
                                     imageVector = Icons.Outlined.KeyboardArrowDown,
-                                    contentDescription = "Para birimi seç",
-                                    tint = if (isEditMode) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    contentDescription = stringResource(Res.string.goal_form_currency_select_desc),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(20.dp),
                                 )
                             }
@@ -379,7 +385,7 @@ fun GoalFormScreen(
 
                         if (isEditMode) {
                             Text(
-                                text = "ⓘ Para birimi değiştirilemez.",
+                                text = stringResource(Res.string.goal_form_currency_locked_notice),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 2.dp),
@@ -394,7 +400,7 @@ fun GoalFormScreen(
                 item("initial-amount-field") {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = "Başlangıç birikimi (isteğe bağlı)",
+                            text = stringResource(Res.string.goal_form_initial_amount_label),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -402,7 +408,7 @@ fun GoalFormScreen(
                         OutlinedTextField(
                             value = input.initialAmountInput,
                             onValueChange = onInitialAmountChange,
-                            placeholder = { Text("₺5.000") },
+                            placeholder = { Text(stringResource(Res.string.goal_form_initial_amount_placeholder)) },
                             isError = errors.initialAmountError != null,
                             supportingText = {
                                 initialAmountErrorText?.let { Text(text = it, color = MaterialTheme.colorScheme.error) }
@@ -418,7 +424,7 @@ fun GoalFormScreen(
                                 .fillMaxWidth()
                                 .focusRequester(initialAmountFocusRequester)
                                 .semantics {
-                                    contentDescription = "Başlangıç birikimi"
+                                    contentDescription = initialAmountContentDesc
                                     initialAmountErrorText?.let { error(it) }
                                 },
                             shape = RoundedCornerShape(14.dp),
@@ -470,12 +476,12 @@ fun GoalFormScreen(
 
                                 Column {
                                     Text(
-                                        text = "Mevcut birikim",
+                                        text = stringResource(Res.string.goal_form_current_savings_label),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                     Text(
-                                        text = currentAmount?.let { MoneyFormatter.format(it) } ?: "₺0",
+                                        text = currentAmount?.toLocalizedFormatted() ?: "₺0",
                                         style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurface,
@@ -490,7 +496,7 @@ fun GoalFormScreen(
                                     contentPadding = PaddingValues(horizontal = 8.dp),
                                 ) {
                                     Text(
-                                        text = "Hareket ekle >",
+                                        text = stringResource(Res.string.goal_form_add_movement_action),
                                         style = MaterialTheme.typography.labelLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = FeniqoGoalSageGreen,
@@ -506,7 +512,7 @@ fun GoalFormScreen(
             item("target-date-card") {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "Hedef tarihi",
+                        text = stringResource(Res.string.goal_form_target_date_label),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -547,11 +553,7 @@ fun GoalFormScreen(
                                     modifier = Modifier.size(20.dp),
                                 )
                                 Text(
-                                    text = if (input.targetDate != null) {
-                                        DateFormatter.formatReadableDate(input.targetDate)
-                                    } else {
-                                        "Tarih seçin"
-                                    },
+                                    text = input.targetDate?.toLocalizedReadableDate() ?: stringResource(Res.string.goal_form_target_date_placeholder),
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.Medium,
                                     color = if (input.targetDate != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -560,7 +562,7 @@ fun GoalFormScreen(
 
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                contentDescription = "Tarih seç",
+                                contentDescription = stringResource(Res.string.goal_form_target_date_select_desc),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(20.dp),
                             )
@@ -569,7 +571,7 @@ fun GoalFormScreen(
 
                     if (errors.targetDateError != null) {
                         Text(
-                            text = "Hedef tarihi seçilmelidir.",
+                            text = errors.targetDateError.toLocalizedText(),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
                             modifier = Modifier.padding(start = 4.dp),
@@ -582,7 +584,7 @@ fun GoalFormScreen(
             item("color-picker") {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        text = "Hedef rengi",
+                        text = stringResource(Res.string.goal_form_color_label),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -617,7 +619,7 @@ fun GoalFormScreen(
                                 if (isSelected) {
                                     Icon(
                                         imageVector = Icons.Outlined.Check,
-                                        contentDescription = "Seçili renk",
+                                        contentDescription = stringResource(Res.string.goal_form_color_selected_desc),
                                         tint = Color.White,
                                         modifier = Modifier.size(20.dp),
                                     )
@@ -633,7 +635,7 @@ fun GoalFormScreen(
                 item("history-header") {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "Hareket Geçmişi",
+                        text = stringResource(Res.string.goal_form_history_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -642,6 +644,9 @@ fun GoalFormScreen(
 
                 items(contributionsHistory, key = { it.id.value }) { item ->
                     val isAdd = item.direction == GoalContributionDirection.ADD
+                    val prefix = if (isAdd) "+" else "-"
+                    val localizedDate = item.occurredOn.toLocalizedReadableDate()
+                    val localizedAmount = "$prefix${item.amount.toLocalizedFormatted()}"
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
@@ -656,9 +661,9 @@ fun GoalFormScreen(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isAdd) FeniqoGoalSageGreenLight else Color(0xFFFEE2E2)),
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(if (isAdd) FeniqoGoalSageGreenLight else Color(0xFFFEE2E2)),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
@@ -673,12 +678,16 @@ fun GoalFormScreen(
 
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = item.formattedDate,
+                                    text = localizedDate,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Text(
-                                    text = item.note?.takeIf { it.isNotBlank() } ?: if (isAdd) "Birikim eklendi" else "Para çıkarıldı",
+                                    text = item.note?.takeIf { it.isNotBlank() } ?: if (isAdd) {
+                                        stringResource(Res.string.goal_detail_movement_added)
+                                    } else {
+                                        stringResource(Res.string.goal_detail_movement_removed)
+                                    },
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -688,7 +697,7 @@ fun GoalFormScreen(
                             }
 
                             Text(
-                                text = item.formattedAmount,
+                                text = localizedAmount,
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isAdd) FeniqoTrendGreen else Color(0xFFC0392B),

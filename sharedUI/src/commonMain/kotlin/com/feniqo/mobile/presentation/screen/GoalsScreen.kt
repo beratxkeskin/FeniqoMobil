@@ -34,6 +34,8 @@ import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.*
 import com.feniqo.mobile.presentation.goal.*
 import com.feniqo.mobile.presentation.theme.*
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Hedef yönetiminin stateless, Room-verisiyle beslenen warm-luxury sunumu.
@@ -73,13 +75,13 @@ fun GoalsScreen(
                 when {
                     state.isLoading -> item("loading") {
                         LoadingContent(
-                            message = "Hedefler yükleniyor…",
+                            message = stringResource(Res.string.goal_loading),
                             modifier = Modifier.fillParentMaxWidth().heightIn(min = 280.dp),
                         )
                     }
                     state.observationError != null -> item("error") {
                         ErrorState(
-                            title = "Hedefler Yüklenemedi",
+                            title = stringResource(Res.string.goal_error_title),
                             description = state.observationError.toLocalizedText(),
                             onRetry = onRetry,
                         )
@@ -126,7 +128,7 @@ fun GoalsScreen(
                         if (state.insights.isNotEmpty()) {
                             item("insights-heading") {
                                 Text(
-                                    text = "İçgörüler",
+                                    text = stringResource(Res.string.goal_insights_title),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -172,7 +174,7 @@ fun GoalsScreen(
                             Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = "Yeni hedef",
+                                text = stringResource(Res.string.goal_action_new),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                             )
@@ -207,7 +209,7 @@ private fun GoalsTopBar(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Geri",
+                    contentDescription = stringResource(Res.string.goal_top_bar_back_desc),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -216,7 +218,7 @@ private fun GoalsTopBar(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Hedefler",
+                text = stringResource(Res.string.goal_title),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -237,7 +239,7 @@ private fun GoalsTopBar(
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Outlined.Add,
-                    contentDescription = "Yeni hedef ekle",
+                    contentDescription = stringResource(Res.string.goal_top_bar_add_desc),
                     tint = Color.White,
                     modifier = Modifier.size(22.dp),
                 )
@@ -252,12 +254,8 @@ private val previewGoal = GoalDisplayModel(
     targetAmount = Money(3_000_000, Currency.TRY),
     currentAmount = Money(1_200_000, Currency.TRY),
     remainingAmount = Money(1_800_000, Currency.TRY),
-    formattedTargetAmount = "₺30.000",
-    formattedCurrentAmount = "₺12.000",
-    formattedRemainingAmount = "₺18.000",
     currency = Currency.TRY,
     targetDate = LocalDate(2026, 12, 31),
-    formattedTargetDate = "31 Aralık 2026",
     colorHex = "#2D5A43",
     iconKey = "travel",
     status = GoalStatus.IN_PROGRESS,
@@ -276,8 +274,6 @@ private val previewSummary = GoalsSummaryUiModel(
             currency = Currency.TRY,
             savedAmount = Money(3_200_000, Currency.TRY),
             targetAmount = Money(8_000_000, Currency.TRY),
-            formattedSavedAmount = "₺32.000",
-            formattedTargetAmount = "₺80.000",
         ),
     ),
 )

@@ -1,3 +1,11 @@
+@file:Suppress(
+    "ktlint:standard:max-line-length",
+    "ktlint:standard:function-signature",
+    "ktlint:standard:multiline-expression-wrapping",
+    "ktlint:standard:no-wildcard-imports",
+    "ktlint:standard:argument-list-wrapping",
+)
+
 package com.feniqo.mobile.presentation.goal
 
 import com.feniqo.mobile.domain.model.CategoryColor
@@ -16,7 +24,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class GoalDisplayModelMapperTest {
-
     private fun sampleGoal(
         id: String,
         name: String = "Test Hedef",
@@ -60,10 +67,6 @@ class GoalDisplayModelMapperTest {
         assertEquals(75_000L, model.remainingAmount.amountMinor)
         assertEquals(RateBasisPoints(2_500), model.progressBasisPoints)
         assertEquals(0.25f, model.progressFraction, 0.001f)
-        assertEquals("1.000,00 ₺", model.formattedTargetAmount)
-        assertEquals("250,00 ₺", model.formattedCurrentAmount)
-        assertEquals("750,00 ₺", model.formattedRemainingAmount)
-        assertEquals("31 Aralık 2026", model.formattedTargetDate)
         assertEquals("#2E7D32", model.colorHex)
         assertEquals("savings", model.iconKey)
     }
@@ -85,9 +88,6 @@ class GoalDisplayModelMapperTest {
         assertEquals(50_000L, model.remainingAmount.amountMinor)
         assertEquals(RateBasisPoints(5_000), model.progressBasisPoints)
         assertEquals(0.5f, model.progressFraction, 0.001f)
-        assertEquals("1.000,00 ₺", model.formattedTargetAmount)
-        assertEquals("500,00 ₺", model.formattedCurrentAmount)
-        assertEquals("500,00 ₺", model.formattedRemainingAmount)
     }
 
     @Test
@@ -107,8 +107,6 @@ class GoalDisplayModelMapperTest {
         assertEquals(0L, model.remainingAmount.amountMinor)
         assertEquals(RateBasisPoints(12_000), model.progressBasisPoints) // Gerçek oran %120 = 12_000 basis points!
         assertEquals(1.0f, model.progressFraction, 0.001f) // Yalnız UI progress bar için clamp edilir!
-        assertEquals("1.200,00 ₺", model.formattedCurrentAmount)
-        assertEquals("0,00 ₺", model.formattedRemainingAmount)
     }
 
     @Test
@@ -153,7 +151,13 @@ class GoalDisplayModelMapperTest {
     fun goalsUiState_isEmptyContract() {
         assertTrue(GoalsUiState(isLoading = false, allGoals = emptyList(), observationError = null).isEmpty)
         assertFalse(GoalsUiState(isLoading = true, allGoals = emptyList(), observationError = null).isEmpty)
-        assertFalse(GoalsUiState(isLoading = false, allGoals = emptyList(), observationError = com.feniqo.mobile.presentation.common.FinanceUiMessage.GENERIC_ERROR).isEmpty)
+        assertFalse(
+            GoalsUiState(
+                isLoading = false,
+                allGoals = emptyList(),
+                observationError = com.feniqo.mobile.presentation.common.FinanceUiMessage.GENERIC_ERROR,
+            ).isEmpty,
+        )
         assertFalse(
             GoalsUiState(
                 isLoading = false,

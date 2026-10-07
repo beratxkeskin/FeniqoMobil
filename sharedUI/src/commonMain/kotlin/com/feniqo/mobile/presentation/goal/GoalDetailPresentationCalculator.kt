@@ -2,7 +2,6 @@ package com.feniqo.mobile.presentation.goal
 
 import com.feniqo.mobile.domain.model.*
 import com.feniqo.mobile.domain.validation.GoalProgressCalculator
-import com.feniqo.mobile.presentation.util.MoneyFormatter
 
 /** Hedef detayı için yalnız gerçek kayıtlardan, Long küçük-birim aritmetiğiyle sunum üretir. */
 object GoalDetailPresentationCalculator {
@@ -19,16 +18,28 @@ object GoalDetailPresentationCalculator {
             }
         }.getOrNull()
         val estimate = runCatching { estimateCompletion(goal, sorted, today) }.getOrNull()
-        val insight = when {
-            progress.isAchieved -> "Hedefini tamamladın."
-            goal.currentAmount.amountMinor == 0L -> "Henüz bu hedefe para eklenmedi."
-            days < 0 -> "Hedef tarihin geçti ve ${MoneyFormatter.format(progress.remainingAmount)} kaldı."
-            else -> "Hedefinin %${progress.progressBasisPoints.value / 100}’üne ulaştın. ${MoneyFormatter.format(progress.remainingAmount)} kaldı."
+        val detailStatus = when {
+            progress.isAchieved -> GoalDetailStatus.ACHIEVED
+            days < 0 -> GoalDetailStatus.PAST_DUE
+            else -> GoalDetailStatus.ACTIVE
+        }
+        val typedInsight = when {
+            progress.isAchieved -> GoalDetailInsight.Achieved
+            goal.currentAmount.amountMinor == 0L -> GoalDetailInsight.ZeroContribution
+            days < 0 -> GoalDetailInsight.PastDue(progress.remainingAmount)
+            else -> GoalDetailInsight.InProgress(progress.progressBasisPoints, progress.remainingAmount)
         }
         return GoalDetailDisplayModel(
-            goal, when { progress.isAchieved -> "Tamamlandı"; days < 0 -> "Hedef tarihi geçti"; else -> "Aktif" },
-            MoneyFormatter.format(goal.currentAmount), MoneyFormatter.format(goal.targetAmount), MoneyFormatter.format(progress.remainingAmount),
-            progress.progressBasisPoints, insight, days.takeIf { it >= 0 }, monthly, estimate, chart, sorted.asReversed(),
+            goal = goal,
+            status = detailStatus,
+            typedInsight = typedInsight,
+            remainingAmount = progress.remainingAmount,
+            progress = progress.progressBasisPoints,
+            daysRemaining = days.takeIf { it >= 0 },
+            monthlyRequired = monthly,
+            estimatedCompletion = estimate,
+            chart = chart,
+            recentContributions = sorted.asReversed(),
         )
     }
 

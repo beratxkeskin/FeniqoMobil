@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.Goal
 import com.feniqo.mobile.domain.model.GoalContributionDirection
+import com.feniqo.mobile.presentation.common.formatLocalizedRateBasisPoints
+import com.feniqo.mobile.presentation.common.toLocalizedFormatted
 import com.feniqo.mobile.presentation.component.FeniqoGoalCardBorder
 import com.feniqo.mobile.presentation.component.FeniqoGoalExpenseRed
 import com.feniqo.mobile.presentation.component.FeniqoGoalSageGreen
@@ -42,9 +44,11 @@ import com.feniqo.mobile.presentation.component.FeniqoGoalSageGreenLight
 import com.feniqo.mobile.presentation.goal.GoalContributionFormFieldError
 import com.feniqo.mobile.presentation.goal.GoalContributionFormInput
 import com.feniqo.mobile.presentation.goal.GoalContributionFormInputErrors
+import com.feniqo.mobile.presentation.goal.toLocalizedReadableDate
+import com.feniqo.mobile.presentation.goal.toLocalizedText
 import com.feniqo.mobile.presentation.theme.*
-import com.feniqo.mobile.presentation.util.DateFormatter
-import com.feniqo.mobile.presentation.util.MoneyFormatter
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Hedef birikim hareketi ekleme / çıkarma formu.
@@ -73,15 +77,10 @@ fun GoalContributionFormScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val amountFocusRequester = remember { FocusRequester() }
     val noteFocusRequester = remember { FocusRequester() }
-    val amountErrorText = when (errors.amountError) {
-        GoalContributionFormFieldError.EXCEEDS_CURRENT_AMOUNT -> "Çıkarılacak tutar mevcut birikimi aşamaz."
-        GoalContributionFormFieldError.AMOUNT_REQUIRED -> "Tutar zorunludur."
-        GoalContributionFormFieldError.AMOUNT_NON_POSITIVE -> "Tutar sıfırdan büyük olmalıdır."
-        GoalContributionFormFieldError.CURRENCY_MISMATCH -> "Para birimi uyuşmuyor."
-        null -> null
-        else -> "Geçersiz tutar."
-    }
-    val noteErrorText = errors.noteError?.let { "Not en fazla 500 karakter olabilir." }
+    val amountErrorText = errors.amountError?.toLocalizedText()
+    val noteErrorText = errors.noteError?.toLocalizedText()
+    val amountContentDesc = stringResource(Res.string.goal_contrib_amount_desc)
+    val noteContentDesc = stringResource(Res.string.goal_contrib_note_desc)
     val dismissKeyboard = {
         focusManager.clearFocus(force = true)
         keyboardController?.hide()
@@ -101,10 +100,10 @@ fun GoalContributionFormScreen(
     val progressRatio = if (parentGoal.targetAmount.amountMinor > 0) {
         (parentGoal.currentAmount.amountMinor.toFloat() / parentGoal.targetAmount.amountMinor.toFloat()).coerceIn(0f, 1f)
     } else 0f
-    val progressPercent = (progressRatio * 100).toInt()
+    val progressBasisPointsValue = (progressRatio * 10_000).toInt()
 
-    val formattedCurrent = MoneyFormatter.format(parentGoal.currentAmount)
-    val formattedTarget = MoneyFormatter.format(parentGoal.targetAmount)
+    val formattedCurrent = parentGoal.currentAmount.toLocalizedFormatted()
+    val formattedTarget = parentGoal.targetAmount.toLocalizedFormatted()
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -113,7 +112,7 @@ fun GoalContributionFormScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Hedef hareketi",
+                        text = stringResource(Res.string.goal_contrib_form_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -123,7 +122,7 @@ fun GoalContributionFormScreen(
                     IconButton(onClick = onBack, enabled = isEnabled) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Geri",
+                            contentDescription = stringResource(Res.string.goal_top_bar_back_desc),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
@@ -168,7 +167,11 @@ fun GoalContributionFormScreen(
                             )
                         } else {
                             Text(
-                                text = if (isAdd) "Birikime ekle" else "Para çıkar",
+                                text = if (isAdd) {
+                                    stringResource(Res.string.goal_contrib_form_action_add)
+                                } else {
+                                    stringResource(Res.string.goal_contrib_form_action_remove)
+                                },
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                             )
@@ -251,7 +254,7 @@ fun GoalContributionFormScreen(
                                 trackColor = Color.White.copy(alpha = 0.7f),
                             )
                             Text(
-                                text = "%$progressPercent",
+                                text = formatLocalizedRateBasisPoints(progressBasisPointsValue),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -281,7 +284,7 @@ fun GoalContributionFormScreen(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
-                            text = "Para ekle",
+                            text = stringResource(Res.string.goal_contrib_direction_add),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = if (isAdd) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -304,7 +307,7 @@ fun GoalContributionFormScreen(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
-                            text = "Para çıkar",
+                            text = stringResource(Res.string.goal_contrib_direction_remove),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = if (isRemove) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -316,7 +319,7 @@ fun GoalContributionFormScreen(
             // 3. Tutar Girişi (Paneller 06, 07, 13)
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "Tutar",
+                    text = stringResource(Res.string.goal_contrib_amount_label),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -333,13 +336,13 @@ fun GoalContributionFormScreen(
                 OutlinedTextField(
                     value = input.amountInput,
                     onValueChange = onAmountChange,
-                    placeholder = { Text("0,00") },
+                    placeholder = { Text(stringResource(Res.string.goal_contrib_amount_placeholder)) },
                     isError = isAmountError,
                     trailingIcon = {
                         if (isAmountError) {
                             Icon(
                                 imageVector = Icons.Outlined.ErrorOutline,
-                                contentDescription = "Hata",
+                                contentDescription = null,
                                 tint = Color(0xFFEF4444),
                             )
                         }
@@ -355,7 +358,7 @@ fun GoalContributionFormScreen(
                         .fillMaxWidth()
                         .focusRequester(amountFocusRequester)
                         .semantics {
-                            contentDescription = "Hedef hareket tutarı"
+                            contentDescription = amountContentDesc
                             amountErrorText?.let { error(it) }
                         },
                     shape = RoundedCornerShape(14.dp),
@@ -373,36 +376,31 @@ fun GoalContributionFormScreen(
                 // Alt Açıklama ve Hata Bildirimleri (Paneller 06, 07, 13)
                 if (isExceedError) {
                     Text(
-                        text = "◆ Çıkarılacak tutar mevcut birikimi aşamaz.",
+                        text = stringResource(Res.string.goal_contrib_exceeds_prefix),
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.SemiBold,
                         color = Color(0xFFEF4444),
                     )
                     Text(
-                        text = "Maksimum çekilebilir: $formattedCurrent",
+                        text = stringResource(Res.string.goal_contrib_max_withdrawable, formattedCurrent),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 } else if (errors.amountError != null) {
                     Text(
-                        text = when (errors.amountError) {
-                            GoalContributionFormFieldError.AMOUNT_REQUIRED -> "Tutar zorunludur."
-                            GoalContributionFormFieldError.AMOUNT_NON_POSITIVE -> "Tutar sıfırdan büyük olmalıdır."
-                            GoalContributionFormFieldError.CURRENCY_MISMATCH -> "Para birimi uyuşmuyor."
-                            else -> "Geçersiz tutar."
-                        },
+                        text = errors.amountError.toLocalizedText(),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFFEF4444),
                     )
                 } else if (isRemove) {
                     Text(
-                        text = "Maksimum çekilebilir: $formattedCurrent",
+                        text = stringResource(Res.string.goal_contrib_max_withdrawable, formattedCurrent),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 } else {
                     Text(
-                        text = "${parentGoal.targetAmount.currency.code} • Hedefin para birimi",
+                        text = stringResource(Res.string.goal_contrib_currency_hint, parentGoal.targetAmount.currency.code),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -412,7 +410,7 @@ fun GoalContributionFormScreen(
             // 4. Tarih Seçici Kartı
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "Tarih",
+                    text = stringResource(Res.string.goal_contrib_date_label),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -453,7 +451,7 @@ fun GoalContributionFormScreen(
                                 modifier = Modifier.size(20.dp),
                             )
                             Text(
-                                text = input.occurredOn?.let { DateFormatter.formatReadableDate(it) } ?: "Tarih seçin",
+                                text = input.occurredOn?.toLocalizedReadableDate() ?: stringResource(Res.string.goal_contrib_date_placeholder),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium,
                                 color = if (input.occurredOn != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -462,7 +460,7 @@ fun GoalContributionFormScreen(
 
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = "Tarih seç",
+                            contentDescription = stringResource(Res.string.goal_contrib_date_select_desc),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp),
                         )
@@ -471,7 +469,7 @@ fun GoalContributionFormScreen(
 
                 if (errors.dateError != null) {
                     Text(
-                        text = "İşlem tarihi seçilmelidir.",
+                        text = errors.dateError.toLocalizedText(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(start = 4.dp),
@@ -482,7 +480,7 @@ fun GoalContributionFormScreen(
             // 5. Not Alanı (Opsiyonel)
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "Not (isteğe bağlı)",
+                    text = stringResource(Res.string.goal_contrib_note_label),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -491,12 +489,20 @@ fun GoalContributionFormScreen(
                 OutlinedTextField(
                     value = input.noteInput,
                     onValueChange = onNoteChange,
-                    placeholder = { Text(if (isAdd) "Aylık birikim, Prim..." else "İhtiyaç için...") },
+                    placeholder = {
+                        Text(
+                            text = if (isAdd) {
+                                stringResource(Res.string.goal_contrib_note_placeholder_add)
+                            } else {
+                                stringResource(Res.string.goal_contrib_note_placeholder_remove)
+                            },
+                        )
+                    },
                     isError = errors.noteError != null,
                     supportingText = {
-                        errors.noteError?.let {
+                        noteErrorText?.let {
                             Text(
-                                text = "Not en fazla 500 karakter olabilir.",
+                                text = it,
                                 color = MaterialTheme.colorScheme.error,
                             )
                         }
@@ -509,7 +515,7 @@ fun GoalContributionFormScreen(
                         .fillMaxWidth()
                         .focusRequester(noteFocusRequester)
                         .semantics {
-                            contentDescription = "Hedef hareket notu"
+                            contentDescription = noteContentDesc
                             noteErrorText?.let { error(it) }
                         },
                     shape = RoundedCornerShape(14.dp),
@@ -537,7 +543,7 @@ fun GoalContributionFormScreen(
                     modifier = Modifier.size(18.dp),
                 )
                 Text(
-                    text = "Bu kayıt hedef birikiminizi günceller.",
+                    text = stringResource(Res.string.goal_contrib_info_notice),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

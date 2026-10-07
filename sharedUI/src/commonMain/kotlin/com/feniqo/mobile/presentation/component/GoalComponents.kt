@@ -33,11 +33,25 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.GoalStatus
+import com.feniqo.mobile.domain.model.Money
+import com.feniqo.mobile.presentation.common.currentLocaleDecimalSeparator
+import com.feniqo.mobile.presentation.common.formatBasisPointsRateNumber
+import com.feniqo.mobile.presentation.common.formatLocalizedRateBasisPoints
+import com.feniqo.mobile.presentation.common.toLocalizedNameText
+import com.feniqo.mobile.presentation.common.toLocalizedFormatted
 import com.feniqo.mobile.presentation.goal.GoalDisplayModel
 import com.feniqo.mobile.presentation.goal.GoalInsightUiModel
 import com.feniqo.mobile.presentation.goal.GoalStatusFilter
 import com.feniqo.mobile.presentation.goal.GoalsSummaryUiModel
+import com.feniqo.mobile.presentation.goal.resolveTitleAndDescription
+import com.feniqo.mobile.presentation.goal.toLocalizedGoalFilterLabel
+import com.feniqo.mobile.presentation.goal.toLocalizedGoalStatusLabel
+import com.feniqo.mobile.presentation.goal.toLocalizedReadableDate
+import com.feniqo.mobile.presentation.goal.toLocalizedSummaryCountLabel
+import com.feniqo.mobile.presentation.goal.toLocalizedSummaryTitle
 import com.feniqo.mobile.presentation.theme.*
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 // Onaylı görsel referans renkleri
 val FeniqoGoalGraphite = Color(0xFF303536)
@@ -58,17 +72,8 @@ fun GoalsSummaryHeroCard(
     filter: GoalStatusFilter,
     modifier: Modifier = Modifier,
 ) {
-    val filterTitle = when (filter) {
-        GoalStatusFilter.ALL -> "Hedeflerde biriken"
-        GoalStatusFilter.ACTIVE -> "Aktif hedeflerde biriken"
-        GoalStatusFilter.ACHIEVED -> "Tamamlanan hedeflerde biriken"
-    }
-
-    val countLabel = when (filter) {
-        GoalStatusFilter.ALL -> "toplam hedef"
-        GoalStatusFilter.ACTIVE -> "aktif hedef"
-        GoalStatusFilter.ACHIEVED -> "tamamlanan hedef"
-    }
+    val filterTitle = filter.toLocalizedSummaryTitle()
+    val countLabel = filter.toLocalizedSummaryCountLabel()
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -88,7 +93,7 @@ fun GoalsSummaryHeroCard(
             when {
                 isError -> {
                     Text(
-                        text = "Özet güvenle hesaplanamadı.",
+                        text = stringResource(Res.string.goal_summary_error),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color(0xFFE0E0E0),
                     )
@@ -100,13 +105,13 @@ fun GoalsSummaryHeroCard(
                         color = Color(0xFFB0B8BA),
                     )
                     Text(
-                        text = "₺0",
+                        text = Money(0L, Currency.TRY).toLocalizedFormatted(),
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                     )
                     Text(
-                        text = "Bu filtrede gösterilecek birikim bulunmuyor.",
+                        text = stringResource(Res.string.goal_summary_empty),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFF8E9799),
                     )
@@ -114,7 +119,6 @@ fun GoalsSummaryHeroCard(
                 else -> {
                     val primaryCurrency = summary.currencySummaries.first()
                     val progressRatio = (summary.averageProgressBasisPoints?.value?.coerceIn(0, 10_000)?.toFloat() ?: 0f) / 10_000f
-                    val progressPercent = summary.averageProgressBasisPoints?.let { it.value / 100 } ?: 0
 
                     // Üst Kısım: Başlık & Hedef Sayısı
                     Row(
@@ -130,7 +134,7 @@ fun GoalsSummaryHeroCard(
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                text = primaryCurrency.formattedSavedAmount,
+                                text = primaryCurrency.savedAmount.toLocalizedFormatted(),
                                 style = MaterialTheme.typography.headlineLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
@@ -139,7 +143,7 @@ fun GoalsSummaryHeroCard(
                             )
                             Spacer(Modifier.height(2.dp))
                             Text(
-                                text = "${primaryCurrency.formattedTargetAmount} toplam hedef",
+                                text = stringResource(Res.string.goal_summary_target_label, primaryCurrency.targetAmount.toLocalizedFormatted()),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = Color(0xFFB0B8BA),
                                 maxLines = 1,
@@ -184,7 +188,7 @@ fun GoalsSummaryHeroCard(
                             trackColor = Color(0xFF454B4D),
                         )
                         Text(
-                            text = "%$progressPercent",
+                            text = formatLocalizedRateBasisPoints(summary.averageProgressBasisPoints?.value ?: 0),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
                             color = Color(0xFFE0E0E0),
@@ -209,7 +213,7 @@ fun GoalsSummaryHeroCard(
                                     color = Color(0xFFB0B8BA),
                                 )
                                 Text(
-                                    text = "${extra.formattedSavedAmount} / ${extra.formattedTargetAmount}",
+                                    text = "${extra.savedAmount.toLocalizedFormatted()} / ${extra.targetAmount.toLocalizedFormatted()}",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium,
                                     color = Color.White,
@@ -252,7 +256,7 @@ fun GoalFilterTabs(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
-                        text = filter.label,
+                        text = filter.toLocalizedGoalFilterLabel(),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                         color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
@@ -272,14 +276,22 @@ fun GoalCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val statusText = if (item.isAchieved) "Tamamlandı" else "Aktif"
+    val statusText = item.status.toLocalizedGoalStatusLabel()
+    val accessibilityText = stringResource(
+        Res.string.goal_card_accessibility,
+        item.name,
+        item.currentAmount.toLocalizedFormatted(),
+        item.targetAmount.toLocalizedFormatted(),
+        formatBasisPointsRateNumber(item.progressBasisPoints.value, currentLocaleDecimalSeparator().toString()),
+        statusText,
+    )
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable(role = Role.Button, onClick = onClick)
             .semantics {
-                contentDescription = "${item.name}. ${item.formattedCurrentAmount} birikmiş, hedef ${item.formattedTargetAmount}, yüzde ${item.progressBasisPoints.value / 100}, $statusText"
+                contentDescription = accessibilityText
             },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -335,7 +347,7 @@ fun GoalCard(
 
             // Tutar Satırı: ₺12.000 / ₺30.000
             Text(
-                text = "${item.formattedCurrentAmount} / ${item.formattedTargetAmount}",
+                text = "${item.currentAmount.toLocalizedFormatted()} / ${item.targetAmount.toLocalizedFormatted()}",
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -362,7 +374,7 @@ fun GoalCard(
                     trackColor = Color(0xFFF1F5F9),
                 )
                 Text(
-                    text = "%${item.progressBasisPoints.value / 100}",
+                    text = formatLocalizedRateBasisPoints(item.progressBasisPoints.value),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = if (item.isAchieved) FeniqoTrendGreen else FeniqoGoalSageGreen,
@@ -386,7 +398,7 @@ fun GoalCard(
                         modifier = Modifier.size(15.dp),
                     )
                     Text(
-                        text = "Hedef tarihi: ${item.formattedTargetDate}",
+                        text = stringResource(Res.string.goal_card_target_date_label, item.targetDate.toLocalizedReadableDate()),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -394,19 +406,19 @@ fun GoalCard(
 
                 when {
                     item.isAchieved -> Text(
-                        text = "Hedefe ulaşıldı",
+                        text = stringResource(Res.string.goal_card_badge_achieved),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Medium,
                         color = FeniqoTrendGreen,
                     )
                     item.isTargetDatePast -> Text(
-                        text = "Hedef tarihi geçti",
+                        text = stringResource(Res.string.goal_card_badge_past_due),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Medium,
                         color = FeniqoGoalExpenseRed,
                     )
                     else -> Text(
-                        text = "${item.formattedRemainingAmount} kaldı",
+                        text = stringResource(Res.string.goal_card_badge_remaining, item.remainingAmount.toLocalizedFormatted()),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -451,7 +463,7 @@ fun GoalsEmptyState(
         Spacer(Modifier.height(4.dp))
 
         Text(
-            text = "Henüz bir hedefin yok",
+            text = stringResource(Res.string.goal_empty_title),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
@@ -459,7 +471,7 @@ fun GoalsEmptyState(
         )
 
         Text(
-            text = "İlk hedefini oluşturarak\nbirikimini takip et.",
+            text = stringResource(Res.string.goal_empty_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -482,7 +494,7 @@ fun GoalsEmptyState(
             Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text(
-                text = "İlk hedefini oluştur",
+                text = stringResource(Res.string.goal_empty_button),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -513,20 +525,24 @@ fun FilterEmptyState(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = "${filter.label} hedef bulunmuyor",
+                text = stringResource(Res.string.goal_filter_empty_title, filter.toLocalizedGoalFilterLabel()),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = "Farklı bir durum filtresi seçebilirsin.",
+                text = stringResource(Res.string.goal_filter_empty_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (filter != GoalStatusFilter.ALL) {
                 Spacer(Modifier.height(4.dp))
                 TextButton(onClick = onShowAll) {
-                    Text("Tüm hedefleri göster", color = FeniqoGoalSageGreen, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = stringResource(Res.string.goal_filter_empty_show_all),
+                        color = FeniqoGoalSageGreen,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
             }
         }
@@ -577,7 +593,7 @@ fun GoalDeleteDialog(
 
                 // Başlık & Açıklama
                 Text(
-                    text = "Hedefi silinsin mi?",
+                    text = stringResource(Res.string.goal_delete_dialog_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -586,9 +602,9 @@ fun GoalDeleteDialog(
 
                 Text(
                     text = if (!goalName.isNullOrBlank()) {
-                        "$goalName hedefini silmek istediğine emin misin?"
+                        stringResource(Res.string.goal_delete_dialog_desc_with_name, goalName)
                     } else {
-                        "Bu hedefi ve birikim kayıtlarını silmek istediğine emin misin?"
+                        stringResource(Res.string.goal_delete_dialog_desc_general)
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -614,7 +630,10 @@ fun GoalDeleteDialog(
                             contentColor = Color(0xFF334155),
                         ),
                     ) {
-                        Text("Vazgeç", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            text = stringResource(Res.string.goal_delete_dialog_cancel),
+                            fontWeight = FontWeight.SemiBold,
+                        )
                     }
 
                     Button(
@@ -636,7 +655,10 @@ fun GoalDeleteDialog(
                                 strokeWidth = 2.dp,
                             )
                         } else {
-                            Text("Sil", fontWeight = FontWeight.Bold)
+                            Text(
+                                text = stringResource(Res.string.goal_delete_dialog_confirm),
+                                fontWeight = FontWeight.Bold,
+                            )
                         }
                     }
                 }
@@ -676,13 +698,17 @@ fun CurrencyPickerSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Para birimi",
+                    text = stringResource(Res.string.goal_currency_picker_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Outlined.Close, contentDescription = "Kapat", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = stringResource(Res.string.goal_currency_picker_close),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
 
@@ -693,12 +719,6 @@ fun CurrencyPickerSheet(
                     Currency.USD -> "$"
                     Currency.EUR -> "€"
                     Currency.GBP -> "£"
-                }
-                val name = when (currency) {
-                    Currency.TRY -> "Türk lirası"
-                    Currency.USD -> "Amerikan doları"
-                    Currency.EUR -> "Euro"
-                    Currency.GBP -> "İngiliz sterlini"
                 }
 
                 Surface(
@@ -735,7 +755,7 @@ fun CurrencyPickerSheet(
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
-                                text = name,
+                                text = currency.toLocalizedNameText(),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -776,11 +796,12 @@ fun CurrencyPickerSheet(
  */
 @Composable
 fun CreateGoalActionCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val actionDesc = stringResource(Res.string.goal_action_card_title)
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable(role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = "Yeni hedef oluştur" },
+            .semantics { contentDescription = actionDesc },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, FeniqoGoalCardBorder),
@@ -805,8 +826,16 @@ fun CreateGoalActionCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text("Yeni hedef oluştur", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("Hayallerini somut bir plana dönüştür.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = stringResource(Res.string.goal_action_card_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = stringResource(Res.string.goal_action_card_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -818,6 +847,8 @@ fun CreateGoalActionCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
  */
 @Composable
 fun GoalInsightCard(insight: GoalInsightUiModel, modifier: Modifier = Modifier) {
+    val (resolvedTitle, resolvedDescription) = insight.payload.resolveTitleAndDescription()
+
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -848,7 +879,7 @@ fun GoalInsightCard(insight: GoalInsightUiModel, modifier: Modifier = Modifier) 
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    text = insight.title,
+                    text = resolvedTitle,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -856,7 +887,7 @@ fun GoalInsightCard(insight: GoalInsightUiModel, modifier: Modifier = Modifier) 
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = insight.description,
+                    text = resolvedDescription,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,

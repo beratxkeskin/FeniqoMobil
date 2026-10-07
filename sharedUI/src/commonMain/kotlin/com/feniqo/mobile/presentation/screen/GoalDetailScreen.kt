@@ -29,12 +29,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.*
+import com.feniqo.mobile.presentation.common.formatLocalizedRateBasisPoints
+import com.feniqo.mobile.presentation.common.toLocalizedFormatted
 import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.*
 import com.feniqo.mobile.presentation.goal.*
 import com.feniqo.mobile.presentation.theme.*
-import com.feniqo.mobile.presentation.util.DateFormatter
-import com.feniqo.mobile.presentation.util.MoneyFormatter
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Hedef Detay Ekranı.
@@ -79,7 +81,7 @@ fun GoalDetailScreen(
                             Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = "Para ekle",
+                                text = stringResource(Res.string.goal_detail_action_add),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                             )
@@ -94,19 +96,19 @@ fun GoalDetailScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
-                message = "Hedef yükleniyor…",
+                message = stringResource(Res.string.goal_detail_loading),
             )
             state.isNotFound -> ErrorState(
-                title = "Hedef Bulunamadı",
-                description = "Hedef silinmiş veya bu çalışma alanında bulunmuyor.",
+                title = stringResource(Res.string.goal_detail_not_found_title),
+                description = stringResource(Res.string.goal_detail_not_found_desc),
                 onRetry = onBack,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
-                actionLabel = "Geri dön",
+                actionLabel = stringResource(Res.string.goal_detail_not_found_back),
             )
             state.observationError != null && state.detail == null -> ErrorState(
-                title = "Hedef Yüklenemedi",
+                title = stringResource(Res.string.goal_detail_error_title),
                 description = state.observationError.toLocalizedText(),
                 onRetry = onBack,
                 modifier = Modifier
@@ -157,7 +159,7 @@ private fun DetailContent(
                 IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Geri",
+                        contentDescription = stringResource(Res.string.goal_top_bar_back_desc),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
@@ -166,7 +168,7 @@ private fun DetailContent(
                     IconButton(onClick = { menuExpanded = true }) {
                         Icon(
                             imageVector = Icons.Outlined.MoreVert,
-                            contentDescription = "Hedef menüsü",
+                            contentDescription = stringResource(Res.string.goal_detail_menu_desc),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
@@ -177,7 +179,7 @@ private fun DetailContent(
                         containerColor = MaterialTheme.colorScheme.surface,
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Hedefi düzenle", fontWeight = FontWeight.Medium) },
+                            text = { Text(stringResource(Res.string.goal_detail_menu_edit), fontWeight = FontWeight.Medium) },
                             onClick = {
                                 menuExpanded = false
                                 onEdit()
@@ -186,7 +188,7 @@ private fun DetailContent(
                         )
                         HorizontalDivider(color = FeniqoGoalCardBorder)
                         DropdownMenuItem(
-                            text = { Text("Hedefi sil", color = FeniqoGoalExpenseRed, fontWeight = FontWeight.Medium) },
+                            text = { Text(stringResource(Res.string.goal_detail_menu_delete), color = FeniqoGoalExpenseRed, fontWeight = FontWeight.Medium) },
                             onClick = {
                                 menuExpanded = false
                                 onDelete()
@@ -235,7 +237,7 @@ private fun DetailContent(
                         color = FeniqoGoalSageGreenLight,
                     ) {
                         Text(
-                            text = "Tamamlandı",
+                            text = stringResource(Res.string.goal_card_badge_achieved),
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
@@ -281,7 +283,7 @@ private fun DetailContent(
                         color = FeniqoGoalSageGreenLight,
                     ) {
                         Text(
-                            text = d.statusLabel,
+                            text = d.status.toLocalizedDetailStatusLabel(),
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
@@ -333,12 +335,12 @@ private fun DetailContent(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Hedef tarihi",
+                            text = stringResource(Res.string.goal_card_target_date_label_short),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
-                            text = DateFormatter.formatReadableDate(d.goal.targetDate),
+                            text = d.goal.targetDate.toLocalizedReadableDate(),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -385,7 +387,7 @@ private fun DetailContent(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = "Para çıkar",
+                            text = stringResource(Res.string.goal_detail_action_remove),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -417,7 +419,7 @@ private fun DetailContent(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = "Düzenle",
+                            text = stringResource(Res.string.goal_detail_action_edit),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -433,48 +435,47 @@ private fun DetailContent(
         }
 
         // 7. Destekleyici Metrikler / İçgörü
-        d.insight?.let { insightText ->
-            item("insight") {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, FeniqoGoalCardBorder),
+        item("insight") {
+            val insightText = d.typedInsight.resolveLocalizedText()
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, FeniqoGoalCardBorder),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.Top,
                 ) {
-                    Row(
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.Top,
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(FeniqoGoalSageGreenLight),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(FeniqoGoalSageGreenLight),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Lightbulb,
-                                contentDescription = null,
-                                tint = FeniqoGoalSageGreen,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(
-                                text = "Feniqo İçgörü",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                text = insightText,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Outlined.Lightbulb,
+                            contentDescription = null,
+                            tint = FeniqoGoalSageGreen,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = stringResource(Res.string.goal_detail_insight_header),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = insightText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -501,7 +502,7 @@ private fun DetailContent(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "Hareketler",
+                            text = stringResource(Res.string.goal_detail_movements_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -513,7 +514,11 @@ private fun DetailContent(
                                 contentPadding = PaddingValues(0.dp),
                             ) {
                                 Text(
-                                    text = if (contributionsExpanded) "Daralt" else "Tümünü gör >",
+                                    text = if (contributionsExpanded) {
+                                        stringResource(Res.string.goal_detail_movements_collapse)
+                                    } else {
+                                        stringResource(Res.string.goal_detail_movements_expand)
+                                    },
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -524,7 +529,7 @@ private fun DetailContent(
 
                     if (d.recentContributions.isEmpty()) {
                         Text(
-                            text = "Henüz bir hareket kaydı bulunmuyor.",
+                            text = stringResource(Res.string.goal_detail_movements_empty),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 8.dp),
@@ -556,7 +561,6 @@ private fun DetailHeroCard(
     isCompleted: Boolean,
 ) {
     val progressRatio = d.progress.value.coerceIn(0, 10_000).toFloat() / 10_000f
-    val progressPercent = d.progress.value / 100
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -581,7 +585,7 @@ private fun DetailHeroCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = d.formattedCurrent,
+                        text = d.goal.currentAmount.toLocalizedFormatted(),
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -590,7 +594,11 @@ private fun DetailHeroCard(
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        text = if (isCompleted) "Mevcut birikim" else "Biriken",
+                        text = if (isCompleted) {
+                            stringResource(Res.string.goal_detail_current_savings)
+                        } else {
+                            stringResource(Res.string.goal_detail_saved)
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFFB0B8BA),
                     )
@@ -601,7 +609,7 @@ private fun DetailHeroCard(
                     modifier = Modifier.padding(start = 12.dp),
                 ) {
                     Text(
-                        text = d.formattedTarget,
+                        text = d.goal.targetAmount.toLocalizedFormatted(),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -610,7 +618,11 @@ private fun DetailHeroCard(
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        text = if (isCompleted) "Hedef tutarı" else "Hedef",
+                        text = if (isCompleted) {
+                            stringResource(Res.string.goal_detail_target_amount)
+                        } else {
+                            stringResource(Res.string.goal_detail_target)
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFFB0B8BA),
                     )
@@ -633,7 +645,7 @@ private fun DetailHeroCard(
                     trackColor = Color(0xFF454B4D),
                 )
                 Text(
-                    text = "%$progressPercent",
+                    text = formatLocalizedRateBasisPoints(d.progress.value),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFFE0E0E0),
@@ -643,7 +655,7 @@ private fun DetailHeroCard(
             // Kalan Tutar Bilgisi
             if (!isCompleted) {
                 Text(
-                    text = "Kalan: ${d.formattedRemaining}",
+                    text = stringResource(Res.string.goal_detail_remaining, d.remainingAmount.toLocalizedFormatted()),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFFB0B8BA),
                 )
@@ -676,14 +688,14 @@ private fun DetailChartCard(d: GoalDetailDisplayModel) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Birikim ilerlemesi",
+                    text = stringResource(Res.string.goal_detail_chart_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 Text(
-                    text = "Hedef: ${d.formattedTarget}",
+                    text = stringResource(Res.string.goal_detail_chart_target_ref, d.goal.targetAmount.toLocalizedFormatted()),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -699,7 +711,7 @@ private fun DetailChartCard(d: GoalDetailDisplayModel) {
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "Henüz ilerleme hareketi yok.\nPara eklediğinde gelişimini burada görebilirsin.",
+                        text = stringResource(Res.string.goal_detail_chart_empty),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -711,6 +723,13 @@ private fun DetailChartCard(d: GoalDetailDisplayModel) {
                 val gridColor = Color(0xFFF1F5F9)
                 val lineColor = FeniqoGoalSageGreen
                 val targetDashedColor = Color(0xFFCBD5E1)
+
+                val accessibilityDescription = stringResource(
+                    Res.string.goal_detail_chart_accessibility,
+                    points.size,
+                    d.goal.currentAmount.toLocalizedFormatted(),
+                    d.goal.targetAmount.toLocalizedFormatted(),
+                )
 
                 Row(
                     modifier = Modifier
@@ -726,12 +745,12 @@ private fun DetailChartCard(d: GoalDetailDisplayModel) {
                         horizontalAlignment = Alignment.End,
                     ) {
                         Text(
-                            text = MoneyFormatter.format(Money(maxVal, d.goal.targetAmount.currency)).take(7),
+                            text = Money(maxVal, d.goal.targetAmount.currency).toLocalizedFormatted().take(7),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
-                            text = MoneyFormatter.format(Money(midVal, d.goal.targetAmount.currency)).take(7),
+                            text = Money(midVal, d.goal.targetAmount.currency).toLocalizedFormatted().take(7),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -751,7 +770,7 @@ private fun DetailChartCard(d: GoalDetailDisplayModel) {
                                 .fillMaxWidth()
                                 .weight(1f)
                                 .semantics {
-                                    contentDescription = "${points.size} tarih noktası. Son birikim ${d.formattedCurrent}, hedef ${d.formattedTarget}."
+                                    contentDescription = accessibilityDescription
                                 },
                         ) {
                             fun yPos(value: Long): Float {
@@ -810,20 +829,20 @@ private fun DetailChartCard(d: GoalDetailDisplayModel) {
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Text(
-                                text = "${points.first().date.day} ${formatShortMonth(points.first().date.monthNumber)}",
+                                text = "${points.first().date.day} ${localizedShortMonthName(points.first().date.monthNumber)}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             if (points.size > 2) {
                                 val midPoint = points[points.size / 2]
                                 Text(
-                                    text = "${midPoint.date.day} ${formatShortMonth(midPoint.date.monthNumber)}",
+                                    text = "${midPoint.date.day} ${localizedShortMonthName(midPoint.date.monthNumber)}",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                             Text(
-                                text = "${points.last().date.day} ${formatShortMonth(points.last().date.monthNumber)}",
+                                text = "${points.last().date.day} ${localizedShortMonthName(points.last().date.monthNumber)}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -842,8 +861,12 @@ private fun DetailChartCard(d: GoalDetailDisplayModel) {
 @Composable
 private fun MovementRow(c: GoalContribution) {
     val isAdd = c.direction == GoalContributionDirection.ADD
-    val amountFormatted = MoneyFormatter.format(c.amount)
-    val label = c.note?.takeIf { it.isNotBlank() } ?: if (isAdd) "Birikim eklendi" else "Para çıkarıldı"
+    val amountFormatted = c.amount.toLocalizedFormatted()
+    val label = c.note?.takeIf { it.isNotBlank() } ?: if (isAdd) {
+        stringResource(Res.string.goal_detail_movement_added)
+    } else {
+        stringResource(Res.string.goal_detail_movement_removed)
+    }
 
     Row(
         modifier = Modifier
@@ -871,7 +894,7 @@ private fun MovementRow(c: GoalContribution) {
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = DateFormatter.formatReadableDate(c.occurredOn),
+                text = c.occurredOn.toLocalizedReadableDate(),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -892,20 +915,4 @@ private fun MovementRow(c: GoalContribution) {
             color = if (isAdd) FeniqoTrendGreen else FeniqoGoalExpenseRed,
         )
     }
-}
-
-private fun formatShortMonth(month: Int): String = when (month) {
-    1 -> "Oca"
-    2 -> "Şub"
-    3 -> "Mar"
-    4 -> "Nis"
-    5 -> "May"
-    6 -> "Haz"
-    7 -> "Tem"
-    8 -> "Ağu"
-    9 -> "Eyl"
-    10 -> "Eki"
-    11 -> "Kas"
-    12 -> "Ara"
-    else -> ""
 }

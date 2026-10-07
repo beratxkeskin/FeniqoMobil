@@ -200,3 +200,16 @@ fun formatLocalizedMoneyDelta(
         }
     return formatMoneyDelta(delta, options, showPositiveSign = showPositiveSign)
 }
+
+/**
+ * Money nesnesini güncel locale ve para birimine göre formatlar.
+ */
+@Composable
+fun Money.toLocalizedFormatted(): String = formatLocalizedMoney(this)
+
+/**
+ * MoneyDelta nesnesini güncel locale ve para birimine göre formatlar.
+ */
+@Composable
+fun MoneyDelta.toLocalizedFormatted(showPositiveSign: Boolean = false): String =
+    formatLocalizedMoneyDelta(this, showPositiveSign = showPositiveSign)

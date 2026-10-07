@@ -1059,4 +1059,194 @@
         <item quantity="one">varlık</item>
         <item quantity="other">varlık</item>
     </plurals>
+    <!-- Goals Feature Strings -->
+    <!-- Screen & Top Bar & Actions -->
+    <string name="goal_title">Hedefler</string>
+    <string name="goal_top_bar_back_desc">Geri</string>
+    <string name="goal_top_bar_add_desc">Yeni hedef ekle</string>
+    <string name="goal_loading">Hedefler yükleniyor…</string>
+    <string name="goal_error_title">Hedefler Yüklenemedi</string>
+    <string name="goal_action_new">Yeni hedef</string>
+    <string name="goal_insights_title">İçgörüler</string>
+
+    <!-- Filters -->
+    <string name="goal_filter_all">Tümü</string>
+    <string name="goal_filter_active">Aktif</string>
+    <string name="goal_filter_achieved">Tamamlanan</string>
+
+    <!-- Summary Hero Card -->
+    <string name="goal_summary_title_all">Hedeflerde biriken</string>
+    <string name="goal_summary_title_active">Aktif hedeflerde biriken</string>
+    <string name="goal_summary_title_achieved">Tamamlanan hedeflerde biriken</string>
+    <string name="goal_summary_count_all">toplam hedef</string>
+    <string name="goal_summary_count_active">aktif hedef</string>
+    <string name="goal_summary_count_achieved">tamamlanan hedef</string>
+    <string name="goal_summary_error">Özet güvenle hesaplanamadı.</string>
+    <string name="goal_summary_empty">Bu filtrede gösterilecek birikim bulunmuyor.</string>
+    <string name="goal_summary_target_label">%1$s toplam hedef</string>
+
+    <!-- Goal Card & Status -->
+    <string name="goal_card_status_achieved">Tamamlandı</string>
+    <string name="goal_card_status_active">Aktif</string>
+    <string name="goal_card_target_date_label">Hedef tarihi: %1$s</string>
+    <string name="goal_card_target_date_label_short">Hedef tarihi</string>
+    <string name="goal_card_badge_achieved">Hedefe ulaşıldı</string>
+    <string name="goal_card_badge_past_due">Hedef tarihi geçti</string>
+    <string name="goal_card_badge_remaining">%1$s kaldı</string>
+    <string name="goal_card_accessibility">%1$s. %2$s birikmiş, hedef %3$s, yüzde %4$s, %5$s</string>
+
+    <!-- Empty States -->
+    <string name="goal_empty_title">Henüz bir hedefin yok</string>
+    <string name="goal_empty_description">İlk hedefini oluşturarak\nbirikimini takip et.</string>
+    <string name="goal_empty_button">İlk hedefini oluştur</string>
+    <string name="goal_filter_empty_title">%1$s hedef bulunmuyor</string>
+    <string name="goal_filter_empty_desc">Farklı bir durum filtresi seçebilirsin.</string>
+    <string name="goal_filter_empty_show_all">Tüm hedefleri göster</string>
+    <string name="goal_action_card_title">Yeni hedef oluştur</string>
+    <string name="goal_action_card_subtitle">Hayallerini somut bir plana dönüştür.</string>
+
+    <!-- Goal Detail Screen -->
+    <string name="goal_detail_loading">Hedef yükleniyor…</string>
+    <string name="goal_detail_not_found_title">Hedef Bulunamadı</string>
+    <string name="goal_detail_not_found_desc">Hedef silinmiş veya bu çalışma alanında bulunmuyor.</string>
+    <string name="goal_detail_not_found_back">Geri dön</string>
+    <string name="goal_detail_error_title">Hedef Yüklenemedi</string>
+    <string name="goal_detail_menu_desc">Hedef menüsü</string>
+    <string name="goal_detail_menu_edit">Hedefi düzenle</string>
+    <string name="goal_detail_menu_delete">Hedefi sil</string>
+    <string name="goal_detail_current_savings">Mevcut birikim</string>
+    <string name="goal_detail_saved">Biriken</string>
+    <string name="goal_detail_target_amount">Hedef tutarı</string>
+    <string name="goal_detail_target">Hedef</string>
+    <string name="goal_detail_remaining">Kalan: %1$s</string>
+    <string name="goal_detail_action_add">Para ekle</string>
+    <string name="goal_detail_action_remove">Para çıkar</string>
+    <string name="goal_detail_action_edit">Düzenle</string>
+    <string name="goal_detail_chart_title">Birikim ilerlemesi</string>
+    <string name="goal_detail_chart_target_ref">Hedef: %1$s</string>
+    <string name="goal_detail_chart_empty">Henüz ilerleme hareketi yok.\nPara eklediğinde gelişimini burada görebilirsin.</string>
+    <string name="goal_detail_chart_accessibility">%1$d tarih noktası. Son birikim %2$s, hedef %3$s.</string>
+    <string name="goal_detail_insight_header">Feniqo İçgörü</string>
+    <string name="goal_detail_movements_title">Hareketler</string>
+    <string name="goal_detail_movements_collapse">Daralt</string>
+    <string name="goal_detail_movements_expand">Tümünü gör &gt;</string>
+    <string name="goal_detail_movements_empty">Henüz bir hareket kaydı bulunmuyor.</string>
+    <string name="goal_detail_movement_added">Birikim eklendi</string>
+    <string name="goal_detail_movement_removed">Para çıkarıldı</string>
+
+    <!-- Goal Insights &amp; Payloads -->
+    <string name="goal_insight_closest_title">Tamamlanmaya en yakın hedefin: %1$s</string>
+    <string name="goal_insight_closest_desc">%1$s · %2$s kaldı</string>
+    <string name="goal_insight_completion_desc_empty">Seçili kapsamda aktif hedef bulunmuyor.</string>
+    <string name="goal_insight_past_date_desc">Hedeflerini güncelleyebilir veya birikimlerini gözden geçirebilirsin.</string>
+    <string name="goal_detail_insight_achieved">Hedefini tamamladın.</string>
+    <string name="goal_detail_insight_zero">Henüz bu hedefe para eklenmedi.</string>
+    <string name="goal_detail_insight_past_due">Hedef tarihin geçti ve %1$s kaldı.</string>
+    <string name="goal_detail_insight_in_progress">Hedefinin %1$s’üne ulaştın. %2$s kaldı.</string>
+
+    <!-- Goal Form Screen -->
+    <string name="goal_form_create_title">Yeni hedef</string>
+    <string name="goal_form_edit_title">Hedefi düzenle</string>
+    <string name="goal_form_create_header_title">Yeni bir hedef oluştur</string>
+    <string name="goal_form_create_header_subtitle">Hayallerin için plan yap, adım adım ilerle.</string>
+    <string name="goal_form_edit_header_title">Hedefini güncelle</string>
+    <string name="goal_form_edit_header_subtitle">Hedef detaylarını düzenleyebilirsin.</string>
+    <string name="goal_form_name_label">Hedef adı</string>
+    <string name="goal_form_name_placeholder">Seyahat, Yeni bilgisayar...</string>
+    <string name="goal_form_target_amount_label">Hedef tutar</string>
+    <string name="goal_form_target_amount_placeholder">₺30.000</string>
+    <string name="goal_form_currency_label">Para birimi</string>
+    <string name="goal_form_currency_select_desc">Para birimi seç</string>
+    <string name="goal_form_currency_locked_notice">ⓘ Para birimi değiştirilemez.</string>
+    <string name="goal_form_initial_amount_label">Başlangıç birikimi (isteğe bağlı)</string>
+    <string name="goal_form_initial_amount_placeholder">₺5.000</string>
+    <string name="goal_form_current_savings_label">Mevcut birikim</string>
+    <string name="goal_form_add_movement_action">Hareket ekle &gt;</string>
+    <string name="goal_form_target_date_label">Hedef tarihi</string>
+    <string name="goal_form_target_date_placeholder">Tarih seçin</string>
+    <string name="goal_form_target_date_select_desc">Tarih seç</string>
+    <string name="goal_form_color_label">Hedef rengi</string>
+    <string name="goal_form_color_selected_desc">Seçili renk</string>
+    <string name="goal_form_history_title">Hareket Geçmişi</string>
+    <string name="goal_form_save_create">Hedef oluştur</string>
+    <string name="goal_form_save_changes">Değişiklikleri kaydet</string>
+    <string name="goal_form_name_desc">Hedef adı</string>
+    <string name="goal_form_target_amount_desc">Hedef tutarı</string>
+    <string name="goal_form_initial_amount_desc">Başlangıç birikimi</string>
+
+    <!-- Goal Contribution Form Screen -->
+    <string name="goal_contrib_form_title">Hedef hareketi</string>
+    <string name="goal_contrib_form_action_add">Birikime ekle</string>
+    <string name="goal_contrib_form_action_remove">Para çıkar</string>
+    <string name="goal_contrib_direction_add">Para ekle</string>
+    <string name="goal_contrib_direction_remove">Para çıkar</string>
+    <string name="goal_contrib_amount_label">Tutar</string>
+    <string name="goal_contrib_amount_placeholder">0,00</string>
+    <string name="goal_contrib_amount_desc">Hedef hareket tutarı</string>
+    <string name="goal_contrib_currency_hint">%1$s • Hedefin para birimi</string>
+    <string name="goal_contrib_max_withdrawable">Maksimum çekilebilir: %1$s</string>
+    <string name="goal_contrib_exceeds_prefix">◆ Çıkarılacak tutar mevcut birikimi aşamaz.</string>
+    <string name="goal_contrib_date_label">Tarih</string>
+    <string name="goal_contrib_date_placeholder">Tarih seçin</string>
+    <string name="goal_contrib_date_select_desc">Tarih seç</string>
+    <string name="goal_contrib_note_label">Not (isteğe bağlı)</string>
+    <string name="goal_contrib_note_placeholder_add">Aylık birikim, Prim...</string>
+    <string name="goal_contrib_note_placeholder_remove">İhtiyaç için...</string>
+    <string name="goal_contrib_note_desc">Hedef hareket notu</string>
+    <string name="goal_contrib_info_notice">Bu kayıt hedef birikiminizi günceller.</string>
+
+    <!-- Dialogs &amp; Route States -->
+    <string name="goal_delete_dialog_title">Hedefi silinsin mi?</string>
+    <string name="goal_delete_dialog_desc_with_name">%1$s hedefini silmek istediğine emin misin?</string>
+    <string name="goal_delete_dialog_desc_general">Bu hedefi ve birikim kayıtlarını silmek istediğine emin misin?</string>
+    <string name="goal_delete_dialog_cancel">Vazgeç</string>
+    <string name="goal_delete_dialog_confirm">Sil</string>
+    <string name="goal_currency_picker_title">Para birimi</string>
+    <string name="goal_currency_picker_close">Kapat</string>
+    <string name="goal_form_route_loading">Hedef bilgileri yükleniyor...</string>
+    <string name="goal_form_route_not_found_title">Hedef Bulunamadı</string>
+    <string name="goal_form_route_not_found_desc">Düzenlemek istediğiniz hedef mevcut değil veya silinmiş.</string>
+    <string name="goal_form_route_back">Geri dön</string>
+    <string name="goal_form_route_error_title">Hedef Yüklenemedi</string>
+    <string name="goal_contrib_route_not_found_desc">Hareket eklemek istediğiniz hedef mevcut değil veya silinmiş.</string>
+    <string name="goal_dialog_ok">Tamam</string>
+    <string name="goal_dialog_cancel">Vazgeç</string>
+
+    <!-- Validation Errors -->
+    <string name="goal_error_name_required">Hedef adı zorunludur.</string>
+    <string name="goal_error_name_too_long">Hedef adı en fazla 500 karakter olabilir.</string>
+    <string name="goal_error_name_invalid">Geçersiz hedef adı.</string>
+    <string name="goal_error_target_amount_required">Hedef tutar zorunludur.</string>
+    <string name="goal_error_target_amount_non_positive">Hedef tutar sıfırdan büyük olmalıdır.</string>
+    <string name="goal_error_target_amount_invalid">Geçerli bir tutar girin.</string>
+    <string name="goal_error_initial_amount_negative">Başlangıç tutarı negatif olamaz.</string>
+    <string name="goal_error_initial_amount_invalid">Geçerli bir tutar girin.</string>
+    <string name="goal_error_initial_amount_generic">Geçersiz başlangıç tutarı.</string>
+    <string name="goal_error_initial_amount_not_allowed_in_edit">Başlangıç tutarı düzenleme modunda değiştirilemez.</string>
+    <string name="goal_error_target_date_required">Hedef tarihi seçilmelidir.</string>
+    <string name="goal_error_color_invalid">Geçerli bir hedef rengi seçin.</string>
+    <string name="goal_error_currency_locked_in_edit">Para birimi düzenleme modunda değiştirilemez.</string>
+
+    <string name="goal_contrib_error_amount_required">Tutar zorunludur.</string>
+    <string name="goal_contrib_error_amount_non_positive">Tutar sıfırdan büyük olmalıdır.</string>
+    <string name="goal_contrib_error_amount_invalid">Geçerli bir tutar girin.</string>
+    <string name="goal_contrib_error_exceeds_current">Çıkarılacak tutar mevcut birikimi aşamaz.</string>
+    <string name="goal_contrib_error_date_required">İşlem tarihi seçilmelidir.</string>
+    <string name="goal_contrib_error_note_too_long">Not en fazla 500 karakter olabilir.</string>
+    <string name="goal_contrib_error_currency_mismatch">Para birimi uyuşmuyor.</string>
+    <string name="goal_contrib_error_parent_missing">Hedef bulunamadı.</string>
+
+    <!-- Goal Plurals -->
+    <plurals name="goal_count_plural">
+        <item quantity="one">%1$d hedeften %2$d tanesi tamamlandı</item>
+        <item quantity="other">%1$d hedeften %2$d tanesi tamamlandı</item>
+    </plurals>
+    <plurals name="goal_active_count_plural">
+        <item quantity="one">%1$d aktif hedefin bulunuyor.</item>
+        <item quantity="other">%1$d aktif hedefin bulunuyor.</item>
+    </plurals>
+    <plurals name="goal_past_date_count_plural">
+        <item quantity="one">%1$d aktif hedefin hedef tarihi geçti</item>
+        <item quantity="other">%1$d aktif hedefin hedef tarihi geçti</item>
+    </plurals>
 </resources>

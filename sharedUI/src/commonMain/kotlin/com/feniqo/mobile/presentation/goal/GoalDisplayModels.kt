@@ -9,8 +9,6 @@ import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.RateBasisPoints
 import com.feniqo.mobile.domain.validation.GoalProgressCalculator
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
-import com.feniqo.mobile.presentation.util.DateFormatter
-import com.feniqo.mobile.presentation.util.MoneyFormatter
 
 /**
  * Birikim hedefleri liste ekranı UI durum modelidir.
@@ -32,10 +30,10 @@ data class GoalsUiState(
     val isFilterEmpty: Boolean get() = !isEmpty && visibleGoals.isEmpty()
 }
 
-enum class GoalStatusFilter(val label: String) {
-    ALL("Tümü"),
-    ACTIVE("Aktif"),
-    ACHIEVED("Tamamlanan"),
+enum class GoalStatusFilter {
+    ALL,
+    ACTIVE,
+    ACHIEVED,
 }
 
 
@@ -51,8 +49,6 @@ data class GoalCurrencySummaryUiModel(
     val currency: Currency,
     val savedAmount: Money,
     val targetAmount: Money,
-    val formattedSavedAmount: String,
-    val formattedTargetAmount: String,
 )
 
 data class GoalsSummaryUiModel(
@@ -63,10 +59,27 @@ data class GoalsSummaryUiModel(
     val currencySummaries: List<GoalCurrencySummaryUiModel>,
 )
 
+sealed interface GoalInsightPayload {
+    data class ClosestGoal(
+        val goalName: String,
+        val progressBasisPoints: RateBasisPoints,
+        val remainingAmount: Money,
+    ) : GoalInsightPayload
+
+    data class CompletionCount(
+        val totalCount: Int,
+        val achievedCount: Int,
+        val activeCount: Int,
+    ) : GoalInsightPayload
+
+    data class PastDateCount(
+        val pastDateCount: Int,
+    ) : GoalInsightPayload
+}
+
 data class GoalInsightUiModel(
     val id: String,
-    val title: String,
-    val description: String,
+    val payload: GoalInsightPayload,
 )
 
 /**
@@ -78,12 +91,8 @@ data class GoalDisplayModel(
     val targetAmount: Money,
     val currentAmount: Money,
     val remainingAmount: Money,
-    val formattedTargetAmount: String,
-    val formattedCurrentAmount: String,
-    val formattedRemainingAmount: String,
     val currency: Currency,
     val targetDate: LocalDate,
-    val formattedTargetDate: String,
     val colorHex: String,
     val iconKey: String?,
     val status: GoalStatus,
@@ -118,12 +127,8 @@ object GoalDisplayModelMapper {
             targetAmount = progress.targetAmount,
             currentAmount = progress.currentAmount,
             remainingAmount = progress.remainingAmount,
-            formattedTargetAmount = MoneyFormatter.format(progress.targetAmount),
-            formattedCurrentAmount = MoneyFormatter.format(progress.currentAmount),
-            formattedRemainingAmount = MoneyFormatter.format(progress.remainingAmount),
             currency = progress.targetAmount.currency,
             targetDate = goal.targetDate,
-            formattedTargetDate = DateFormatter.formatReadableDate(goal.targetDate),
             colorHex = goal.color.hex,
             iconKey = goal.icon?.key,
             status = progress.status,

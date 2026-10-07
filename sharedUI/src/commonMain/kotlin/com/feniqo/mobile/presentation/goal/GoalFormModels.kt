@@ -15,7 +15,6 @@ import com.feniqo.mobile.domain.validation.GoalDebtValidationRules
 import com.feniqo.mobile.domain.validation.MoneyAmountParser
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.util.ColorParser
-import com.feniqo.mobile.presentation.util.MoneyFormatter
 
 /**
  * Birikim hedefi formu alan bazlı doğrulama hataları.
@@ -279,22 +278,17 @@ fun resolveEffectiveGoalEditLoadState(
 data class GoalContributionHistoryItemUiModel(
     val id: EntityId,
     val amount: Money,
-    val formattedAmount: String,
     val direction: com.feniqo.mobile.domain.model.GoalContributionDirection,
     val occurredOn: LocalDate,
-    val formattedDate: String,
     val note: String?,
 )
 
 fun com.feniqo.mobile.domain.model.GoalContribution.toHistoryItemUiModel(): GoalContributionHistoryItemUiModel {
-    val prefix = if (direction == com.feniqo.mobile.domain.model.GoalContributionDirection.ADD) "+" else "-"
     return GoalContributionHistoryItemUiModel(
         id = id,
         amount = amount,
-        formattedAmount = "$prefix${MoneyFormatter.format(amount)}",
         direction = direction,
         occurredOn = occurredOn,
-        formattedDate = com.feniqo.mobile.presentation.util.DateFormatter.formatReadableDate(occurredOn),
         note = note,
     )
 }
