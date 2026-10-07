@@ -877,4 +877,186 @@
     <!-- Offline Banner -->
     <string name="budget_offline_title">You are offline.</string>
     <string name="budget_offline_desc">Changes are stored on this device.</string>
+
+    <!-- Common Formatting -->
+    <string name="common_language_code">en</string>
+    <string name="common_decimal_separator">.</string>
+    <string name="common_group_separator">,</string>
+
+    <!-- Assets Module -->
+    <string name="navigation_assets">Assets</string>
+    <string name="asset_back_action">Back</string>
+    <string name="asset_close_action">Close</string>
+    <string name="asset_select_action">Select</string>
+    <string name="asset_done_action">Done</string>
+    <string name="asset_apply_action">Apply</string>
+    <string name="asset_understand_action">Understood</string>
+    <string name="asset_cancel_action">Cancel</string>
+    <string name="asset_retry_action">Try again</string>
+    <string name="asset_retrying_action">Trying…</string>
+    <string name="asset_delete_confirm_action">Delete</string>
+
+    <!-- Assets Screen (List) -->
+    <string name="asset_screen_title">Assets</string>
+    <string name="asset_screen_add_new">New asset</string>
+    <string name="asset_screen_add_first">Add your first asset</string>
+    <string name="asset_screen_add_button_content_desc">Add New Asset</string>
+    <string name="asset_screen_loading">Loading assets...</string>
+    <string name="asset_screen_error_title">Could Not Load Assets</string>
+    <string name="asset_screen_empty_title">No assets yet</string>
+    <string name="asset_screen_empty_desc">Track the distribution of your savings by adding your assets.</string>
+    <string name="asset_screen_refresh_prices">Refresh prices</string>
+    <string name="asset_screen_refreshing_prices">Refreshing…</string>
+    <string name="asset_screen_price_refresh_error">Market price could not be updated; stored value is displayed.</string>
+
+    <!-- Assets Summary Card -->
+    <string name="asset_summary_total_title">Total Assets</string>
+    <string name="asset_summary_total_error">Total assets could not be calculated safely.</string>
+    <string name="asset_summary_single_currency_title">%1$s total assets</string>
+    <string name="asset_summary_multi_currency_title">Totals by currency</string>
+    <string name="asset_summary_no_exchange_rate">No exchange rate conversion applied.</string>
+    <string name="asset_summary_count_and_source">%1$s · %2$s</string>
+
+    <!-- Assets Source Summary -->
+    <string name="asset_source_summary_fresh_only">Current market values</string>
+    <string name="asset_source_summary_fresh_and_manual">Market and manual values</string>
+    <string name="asset_source_summary_stale">Includes unverified values</string>
+    <string name="asset_source_summary_manual_only">Manual values</string>
+
+    <!-- Assets Distribution -->
+    <string name="asset_distribution_title">Distribution</string>
+    <string name="asset_distribution_screen_title">Asset distribution</string>
+    <string name="asset_distribution_open_content_desc">Open distribution details</string>
+    <string name="asset_distribution_empty_card">No asset records to display distribution.</string>
+    <string name="asset_distribution_loading">Calculating distribution…</string>
+    <string name="asset_distribution_error_title">Could Not Load Distribution</string>
+    <string name="asset_distribution_card_total_title">Total asset value</string>
+    <string name="asset_distribution_card_stored_subtitle">%1$s · Stored values</string>
+    <string name="asset_distribution_empty_for_currency">No registered assets in this currency.</string>
+    <string name="asset_distribution_currency_scope_note">Only records in %1$s are included.</string>
+    <string name="asset_donut_assets_label">assets</string>
+
+    <!-- Asset Item Card -->
+    <string name="asset_item_go_to_detail_desc">Go to %1$s details</string>
+
+    <!-- Asset Types -->
+    <string name="asset_type_cash">Cash</string>
+    <string name="asset_type_cash_subtitle">Cash and currency assets</string>
+    <string name="asset_type_crypto">Crypto</string>
+    <string name="asset_type_crypto_subtitle">Cryptocurrency assets</string>
+    <string name="asset_type_stocks">Stocks</string>
+    <string name="asset_type_stocks_subtitle">Stock market shares</string>
+    <string name="asset_type_real_estate">Real estate</string>
+    <string name="asset_type_real_estate_subtitle">Residential, land, and property</string>
+    <string name="asset_type_precious_metals">Precious metals</string>
+    <string name="asset_type_precious_metals_subtitle">Gold, silver, platinum, etc.</string>
+    <string name="asset_type_other">Other</string>
+    <string name="asset_type_other_subtitle">Art, collectibles, etc.</string>
+    <string name="asset_type_selection_sheet_title">Asset type</string>
+
+    <!-- Currency Selection -->
+    <string name="asset_currency_selection_sheet_title">Select currency</string>
+    <string name="asset_currency_search_placeholder">Search currency</string>
+    <string name="asset_currency_selected_content_desc">Selected</string>
+
+    <!-- Detail Screen -->
+    <string name="asset_detail_more_actions_desc">More Actions</string>
+    <string name="asset_detail_menu_delete">Delete asset</string>
+    <string name="asset_detail_action_edit">Edit</string>
+    <string name="asset_detail_action_edit_asset">Edit asset</string>
+    <string name="asset_detail_loading">Loading asset…</string>
+    <string name="asset_detail_not_found_title">Asset Not Found</string>
+    <string name="asset_detail_not_found_desc">The asset you are looking for has been deleted or does not exist.</string>
+    <string name="asset_detail_market_price_failed_banner">Current market price could not be retrieved.</string>
+    <string name="asset_detail_unverified_badge">Could not be verified.</string>
+    <string name="asset_detail_last_recorded_value_label">Last recorded total value</string>
+    <string name="asset_detail_current_total_value_label">Current total value</string>
+    <string name="asset_detail_quantity_label">Quantity</string>
+    <string name="asset_detail_purchase_price_label">Purchase unit price</string>
+    <string name="asset_detail_unverified_disclaimer">This value has not been verified as current market value.</string>
+    <string name="asset_detail_cost_label">Calculated cost</string>
+    <string name="asset_detail_difference_label">Value difference</string>
+    <string name="asset_detail_cost_disclaimer">Calculated from entered quantity and purchase price. Not a realized gain.</string>
+    <string name="asset_detail_cost_placeholder_title">Cost and Value Difference</string>
+    <string name="asset_detail_cost_placeholder_desc">When quantity and purchase unit price are entered, cost and value difference are calculated automatically.</string>
+    <string name="asset_detail_source_label">Value source</string>
+    <string name="asset_detail_source_info_desc">Info</string>
+
+    <!-- Value Sources -->
+    <string name="asset_value_source_market_fresh">Current market</string>
+    <string name="asset_value_source_market_stale">Stored market (old)</string>
+    <string name="asset_value_source_manual">Manual entry</string>
+    <string name="asset_source_dialog_title">Value Source</string>
+    <string name="asset_source_dialog_fresh">The value of this asset is updated via reliable market price service using symbol %1$s.</string>
+    <string name="asset_source_dialog_stale">This asset is tracked automatically, but the latest market price could not be verified or is not current. The last recorded value is shown.</string>
+    <string name="asset_source_dialog_manual">The total value of this asset was entered manually. It is not affected by market price movements; you can edit the total value at any time.</string>
+
+    <!-- Delete Modal -->
+    <string name="asset_delete_modal_title">Delete asset?</string>
+    <string name="asset_delete_modal_message">Are you sure you want to delete %1$s?</string>
+    <string name="asset_delete_modal_disclaimer">This action does not create a sell order.</string>
+    <string name="asset_delete_fallback_name">This asset</string>
+
+    <!-- Form Screen -->
+    <string name="asset_form_create_title">New asset</string>
+    <string name="asset_form_edit_title">Edit asset</string>
+    <string name="asset_form_save_create">Save asset</string>
+    <string name="asset_form_save_changes">Save changes</string>
+    <string name="asset_form_name_label">Asset name</string>
+    <string name="asset_form_name_placeholder">e.g. Gold gram</string>
+    <string name="asset_form_type_label">Asset type</string>
+    <string name="asset_form_current_value_label">Current total value</string>
+    <string name="asset_form_current_value_placeholder">0.00</string>
+    <string name="asset_form_current_value_disclaimer">This amount is the total value of the asset.</string>
+    <string name="asset_form_currency_label">Currency</string>
+    <string name="asset_form_quantity_label">Quantity (optional)</string>
+    <string name="asset_form_quantity_desc">Asset quantity</string>
+    <string name="asset_form_quantity_placeholder">e.g. 30</string>
+    <string name="asset_form_purchase_price_label">Purchase unit price (optional)</string>
+    <string name="asset_form_purchase_price_desc">Purchase unit price</string>
+    <string name="asset_form_purchase_price_placeholder">e.g. 4000</string>
+    <string name="asset_form_calculated_cost_label">Calculated cost</string>
+    <string name="asset_form_price_tracking_title">Price tracking</string>
+    <string name="asset_form_auto_track_label">Automatic price tracking</string>
+    <string name="asset_form_auto_track_desc">Requires supported symbols and price service.</string>
+    <string name="asset_form_tracking_symbol_label">Market symbol</string>
+    <string name="asset_form_tracking_symbol_placeholder">e.g. BTC</string>
+    <string name="asset_form_tracking_symbol_note">The data provider must support the symbol.</string>
+    <string name="asset_form_manual_note">In manual entry, you update the total value yourself.</string>
+    <string name="asset_form_loading">Loading asset...</string>
+    <string name="asset_form_not_found_title">Asset Not Found</string>
+    <string name="asset_form_not_found_desc">The asset you want to edit does not exist or has been deleted.</string>
+    <string name="asset_form_error_title">Could Not Load Asset</string>
+    <string name="asset_form_back_action">Go back</string>
+
+    <!-- Navigation Error Route -->
+    <string name="asset_route_invalid_id_title">Could Not Open Asset</string>
+    <string name="asset_route_invalid_id_desc">Asset link is invalid or missing.</string>
+
+    <!-- Validation Errors -->
+    <string name="asset_error_name_required">Asset name is required.</string>
+    <string name="asset_error_name_too_long">Asset name cannot exceed 120 characters.</string>
+    <string name="asset_error_current_value_required">Current value is required.</string>
+    <string name="asset_error_current_value_invalid">Please enter a valid current value.</string>
+    <string name="asset_error_current_value_too_large">Current value exceeds the supported limit.</string>
+    <string name="asset_error_quantity_invalid">Please enter a valid quantity.</string>
+    <string name="asset_error_quantity_scale_exceeded">Quantity cannot exceed 12 decimal places.</string>
+    <string name="asset_error_purchase_price_invalid">Please enter a valid purchase unit price.</string>
+    <string name="asset_error_purchase_price_too_large">Purchase price exceeds the supported limit.</string>
+    <string name="asset_error_tracking_symbol_required">Market symbol is required for automatic tracking.</string>
+    <string name="asset_error_tracking_symbol_too_long">Market symbol cannot exceed 32 characters.</string>
+
+    <!-- Plurals -->
+    <plurals name="asset_count_plural">
+        <item quantity="one">%1$d asset</item>
+        <item quantity="other">%1$d assets</item>
+    </plurals>
+    <plurals name="asset_unit_count_plural">
+        <item quantity="one">%1$s unit</item>
+        <item quantity="other">%1$s units</item>
+    </plurals>
+    <plurals name="asset_donut_count_plural">
+        <item quantity="one">asset</item>
+        <item quantity="other">assets</item>
+    </plurals>
 </resources>

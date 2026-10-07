@@ -35,10 +35,10 @@ class AssetsViewModelTest {
         assertFalse(state.isLoading)
         assertFalse(state.isEmpty)
         assertEquals("asset-1", state.assets.single().id.value)
-        assertEquals(listOf("100,00 ₺"), state.netWorth?.totalsFormatted)
+        assertEquals(listOf(Money(10_000L, Currency.TRY)), state.netWorth?.currencyTotals?.map { it.total })
         assertEquals(1, state.netWorth?.assetCount)
         assertNotNull(state.distributionSummary)
-        assertEquals("100,00 ₺", state.distributionSummary?.overallTotalFormatted)
+        assertEquals(Money(10_000L, Currency.TRY), state.distributionSummary?.overallTotal)
         assertNull(state.observationError)
     }
 
@@ -78,9 +78,9 @@ class AssetsViewModelTest {
         )
 
         val state = viewModel.uiState.value
-        assertEquals("50,00 $", state.assets.single().currentValueFormatted)
+        assertEquals(Money(5_000L, Currency.USD), state.assets.single().currentValue)
         assertEquals(AssetValueSource.MARKET_FRESH, state.assets.single().valueSource)
-        assertEquals(listOf("50,00 $"), state.netWorth?.totalsFormatted)
+        assertEquals(listOf(Money(5_000L, Currency.USD)), state.netWorth?.currencyTotals?.map { it.total })
     }
 
     @Test

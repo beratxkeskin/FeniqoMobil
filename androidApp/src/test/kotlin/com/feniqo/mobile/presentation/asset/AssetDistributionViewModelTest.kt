@@ -44,12 +44,12 @@ class AssetDistributionViewModelTest {
 
         val dist = state.distribution
         assertNotNull(dist)
-        assertEquals("250.000,00 ₺", dist!!.overallTotalFormatted)
+        assertEquals(Money(25_000_000L, Currency.TRY), dist!!.overallTotal)
         assertEquals(3, dist.assetCount)
         assertEquals(3, dist.items.size)
-        assertEquals("%60", dist.items[0].percentageText)
-        assertEquals("%30", dist.items[1].percentageText)
-        assertEquals("%10", dist.items[2].percentageText)
+        assertEquals(6000, dist.items[0].percentageBps)
+        assertEquals(3000, dist.items[1].percentageBps)
+        assertEquals(1000, dist.items[2].percentageBps)
     }
 
     @Test
@@ -71,10 +71,10 @@ class AssetDistributionViewModelTest {
         assertEquals(Currency.USD, state.selectedCurrency)
         val dist = state.distribution
         assertNotNull(dist)
-        assertEquals("2.000,00 $", dist!!.overallTotalFormatted)
+        assertEquals(Money(200_000L, Currency.USD), dist!!.overallTotal)
         assertEquals(1, dist.assetCount)
         assertEquals(AssetType.CASH, dist.items.single().type)
-        assertEquals("%100", dist.items.single().percentageText)
+        assertEquals(10000, dist.items.single().percentageBps)
     }
 
     private fun asset(

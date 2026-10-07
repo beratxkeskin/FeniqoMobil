@@ -877,4 +877,186 @@
     <!-- Offline Banner -->
     <string name="budget_offline_title">Çevrimdışısın.</string>
     <string name="budget_offline_desc">Değişiklikler bu cihazda saklanır.</string>
+
+    <!-- Common Formatting -->
+    <string name="common_language_code">tr</string>
+    <string name="common_decimal_separator">,</string>
+    <string name="common_group_separator">.</string>
+
+    <!-- Assets Module -->
+    <string name="navigation_assets">Varlıklar</string>
+    <string name="asset_back_action">Geri</string>
+    <string name="asset_close_action">Kapat</string>
+    <string name="asset_select_action">Seç</string>
+    <string name="asset_done_action">Tamam</string>
+    <string name="asset_apply_action">Uygula</string>
+    <string name="asset_understand_action">Anladım</string>
+    <string name="asset_cancel_action">Vazgeç</string>
+    <string name="asset_retry_action">Yeniden dene</string>
+    <string name="asset_retrying_action">Deneniyor…</string>
+    <string name="asset_delete_confirm_action">Sil</string>
+
+    <!-- Assets Screen (List) -->
+    <string name="asset_screen_title">Varlıklar</string>
+    <string name="asset_screen_add_new">Yeni varlık</string>
+    <string name="asset_screen_add_first">İlk varlığını ekle</string>
+    <string name="asset_screen_add_button_content_desc">Yeni Varlık Ekle</string>
+    <string name="asset_screen_loading">Varlıklar yükleniyor...</string>
+    <string name="asset_screen_error_title">Varlıklar Yüklenemedi</string>
+    <string name="asset_screen_empty_title">Henüz varlığın yok</string>
+    <string name="asset_screen_empty_desc">Varlıklarını ekleyerek birikiminin dağılımını takip et.</string>
+    <string name="asset_screen_refresh_prices">Fiyatları yenile</string>
+    <string name="asset_screen_refreshing_prices">Yenileniyor…</string>
+    <string name="asset_screen_price_refresh_error">Piyasa fiyatı güncellenemedi; kayıtlı değer gösteriliyor.</string>
+
+    <!-- Assets Summary Card -->
+    <string name="asset_summary_total_title">Varlık Toplamı</string>
+    <string name="asset_summary_total_error">Varlık toplamı güvenli biçimde hesaplanamadı.</string>
+    <string name="asset_summary_single_currency_title">%1$s varlık toplamı</string>
+    <string name="asset_summary_multi_currency_title">Para birimine göre toplamlar</string>
+    <string name="asset_summary_no_exchange_rate">Kur dönüşümü yapılmadı.</string>
+    <string name="asset_summary_count_and_source">%1$s · %2$s</string>
+
+    <!-- Assets Source Summary -->
+    <string name="asset_source_summary_fresh_only">Güncel piyasa değerleri</string>
+    <string name="asset_source_summary_fresh_and_manual">Piyasa ve manuel değerler</string>
+    <string name="asset_source_summary_stale">Güncelliği doğrulanamayan değerler içerir</string>
+    <string name="asset_source_summary_manual_only">Manuel değerler</string>
+
+    <!-- Assets Distribution -->
+    <string name="asset_distribution_title">Dağılım</string>
+    <string name="asset_distribution_screen_title">Varlık dağılımı</string>
+    <string name="asset_distribution_open_content_desc">Dağılım detayını aç</string>
+    <string name="asset_distribution_empty_card">Dağılım gösterilecek varlık kaydı bulunmuyor.</string>
+    <string name="asset_distribution_loading">Dağılım hesaplanıyor…</string>
+    <string name="asset_distribution_error_title">Dağılım Yüklenemedi</string>
+    <string name="asset_distribution_card_total_title">Toplam varlık değeri</string>
+    <string name="asset_distribution_card_stored_subtitle">%1$s · Kayıtlı değerler</string>
+    <string name="asset_distribution_empty_for_currency">Bu para biriminde kayıtlı varlık bulunmuyor.</string>
+    <string name="asset_distribution_currency_scope_note">Yalnız %1$s cinsindeki kayıtlar dahildir.</string>
+    <string name="asset_donut_assets_label">varlık</string>
+
+    <!-- Asset Item Card -->
+    <string name="asset_item_go_to_detail_desc">%1$s detayına git</string>
+
+    <!-- Asset Types -->
+    <string name="asset_type_cash">Nakit</string>
+    <string name="asset_type_cash_subtitle">TL, döviz ve nakit varlıklar</string>
+    <string name="asset_type_crypto">Kripto</string>
+    <string name="asset_type_crypto_subtitle">Kripto para varlıkları</string>
+    <string name="asset_type_stocks">Hisse senedi</string>
+    <string name="asset_type_stocks_subtitle">Borsa hisseleri</string>
+    <string name="asset_type_real_estate">Gayrimenkul</string>
+    <string name="asset_type_real_estate_subtitle">Konut, arsa ve diğer gayrimenkuller</string>
+    <string name="asset_type_precious_metals">Değerli metal</string>
+    <string name="asset_type_precious_metals_subtitle">Altın, gümüş, platin vb.</string>
+    <string name="asset_type_other">Diğer</string>
+    <string name="asset_type_other_subtitle">Sanat eseri, koleksiyon vb.</string>
+    <string name="asset_type_selection_sheet_title">Varlık türü</string>
+
+    <!-- Currency Selection -->
+    <string name="asset_currency_selection_sheet_title">Para birimi seç</string>
+    <string name="asset_currency_search_placeholder">Para birimi ara</string>
+    <string name="asset_currency_selected_content_desc">Seçili</string>
+
+    <!-- Detail Screen -->
+    <string name="asset_detail_more_actions_desc">Diğer İşlemler</string>
+    <string name="asset_detail_menu_delete">Varlığı sil</string>
+    <string name="asset_detail_action_edit">Düzenle</string>
+    <string name="asset_detail_action_edit_asset">Varlığı düzenle</string>
+    <string name="asset_detail_loading">Varlık yükleniyor…</string>
+    <string name="asset_detail_not_found_title">Varlık Bulunamadı</string>
+    <string name="asset_detail_not_found_desc">Aradığın varlık silinmiş veya mevcut değil.</string>
+    <string name="asset_detail_market_price_failed_banner">Güncel piyasa fiyatı alınamadı.</string>
+    <string name="asset_detail_unverified_badge">Güncelliği doğrulanamadı.</string>
+    <string name="asset_detail_last_recorded_value_label">Son kayıtlı toplam değer</string>
+    <string name="asset_detail_current_total_value_label">Güncel toplam değer</string>
+    <string name="asset_detail_quantity_label">Miktar</string>
+    <string name="asset_detail_purchase_price_label">Alış birim fiyatı</string>
+    <string name="asset_detail_unverified_disclaimer">Bu değer güncel piyasa değeri olarak doğrulanmamıştır.</string>
+    <string name="asset_detail_cost_label">Hesaplanan maliyet</string>
+    <string name="asset_detail_difference_label">Değer farkı</string>
+    <string name="asset_detail_cost_disclaimer">Girilen miktar ve alış fiyatından hesaplanır. Gerçekleşmiş kazanç değildir.</string>
+    <string name="asset_detail_cost_placeholder_title">Maliyet ve Değer Farkı</string>
+    <string name="asset_detail_cost_placeholder_desc">Miktar ve alış birim fiyatı girildiğinde maliyet ve değer farkı otomatik hesaplanır.</string>
+    <string name="asset_detail_source_label">Değer kaynağı</string>
+    <string name="asset_detail_source_info_desc">Bilgi</string>
+
+    <!-- Value Sources -->
+    <string name="asset_value_source_market_fresh">Güncel piyasa</string>
+    <string name="asset_value_source_market_stale">Kayıtlı piyasa (eski)</string>
+    <string name="asset_value_source_manual">Manuel giriş</string>
+    <string name="asset_source_dialog_title">Değer Kaynağı</string>
+    <string name="asset_source_dialog_fresh">Bu varlığın değeri, %1$s sembolü üzerinden güvenilir piyasa fiyat servisi ile güncellenmiştir.</string>
+    <string name="asset_source_dialog_stale">Bu varlık otomatik takip edilmektedir ancak son piyasa fiyatı doğrulanamadı veya güncel değil. Kayıtlı son değer gösterilmektedir.</string>
+    <string name="asset_source_dialog_manual">Bu varlığın toplam değeri manuel olarak girilmiştir. Piyasa fiyatı hareketlerinden etkilenmez; toplam değeri dilediğin zaman düzenleyebilirsin.</string>
+
+    <!-- Delete Modal -->
+    <string name="asset_delete_modal_title">Varlık silinsin mi?</string>
+    <string name="asset_delete_modal_message">%1$s kaydını silmek istediğine emin misin?</string>
+    <string name="asset_delete_modal_disclaimer">Bu işlem bir satış emri oluşturmaz.</string>
+    <string name="asset_delete_fallback_name">Bu varlık</string>
+
+    <!-- Form Screen -->
+    <string name="asset_form_create_title">Yeni varlık</string>
+    <string name="asset_form_edit_title">Varlığı düzenle</string>
+    <string name="asset_form_save_create">Varlığı kaydet</string>
+    <string name="asset_form_save_changes">Değişiklikleri kaydet</string>
+    <string name="asset_form_name_label">Varlık adı</string>
+    <string name="asset_form_name_placeholder">Örn: Gram altın</string>
+    <string name="asset_form_type_label">Varlık türü</string>
+    <string name="asset_form_current_value_label">Güncel toplam değer</string>
+    <string name="asset_form_current_value_placeholder">0,00</string>
+    <string name="asset_form_current_value_disclaimer">Bu tutar varlığın toplam değeridir.</string>
+    <string name="asset_form_currency_label">Para birimi</string>
+    <string name="asset_form_quantity_label">Miktar (isteğe bağlı)</string>
+    <string name="asset_form_quantity_desc">Varlık miktarı</string>
+    <string name="asset_form_quantity_placeholder">Örn: 30</string>
+    <string name="asset_form_purchase_price_label">Alış birim fiyatı (isteğe bağlı)</string>
+    <string name="asset_form_purchase_price_desc">Alış birim fiyatı</string>
+    <string name="asset_form_purchase_price_placeholder">Örn: 4000</string>
+    <string name="asset_form_calculated_cost_label">Hesaplanan maliyet</string>
+    <string name="asset_form_price_tracking_title">Fiyat takibi</string>
+    <string name="asset_form_auto_track_label">Otomatik fiyat takibi</string>
+    <string name="asset_form_auto_track_desc">Desteklenen semboller ve fiyat servisi gerektirir.</string>
+    <string name="asset_form_tracking_symbol_label">Piyasa sembolü</string>
+    <string name="asset_form_tracking_symbol_placeholder">Örn: BTC</string>
+    <string name="asset_form_tracking_symbol_note">Veri sağlayıcısının sembolü desteklemesi gerekir.</string>
+    <string name="asset_form_manual_note">Manuel girişte toplam değeri sen güncellersin.</string>
+    <string name="asset_form_loading">Varlık yükleniyor...</string>
+    <string name="asset_form_not_found_title">Varlık Bulunamadı</string>
+    <string name="asset_form_not_found_desc">Düzenlemek istediğiniz varlık mevcut değil veya silinmiş.</string>
+    <string name="asset_form_error_title">Varlık Yüklenemedi</string>
+    <string name="asset_form_back_action">Geri dön</string>
+
+    <!-- Navigation Error Route -->
+    <string name="asset_route_invalid_id_title">Varlık açılamadı</string>
+    <string name="asset_route_invalid_id_desc">Varlık bağlantısı geçersiz veya eksik.</string>
+
+    <!-- Validation Errors -->
+    <string name="asset_error_name_required">Varlık adı zorunludur.</string>
+    <string name="asset_error_name_too_long">Varlık adı en fazla 120 karakter olabilir.</string>
+    <string name="asset_error_current_value_required">Güncel değer zorunludur.</string>
+    <string name="asset_error_current_value_invalid">Geçerli bir güncel değer girin.</string>
+    <string name="asset_error_current_value_too_large">Güncel değer desteklenen sınırı aşıyor.</string>
+    <string name="asset_error_quantity_invalid">Geçerli bir miktar girin.</string>
+    <string name="asset_error_quantity_scale_exceeded">Miktar en fazla 12 ondalık basamak içerebilir.</string>
+    <string name="asset_error_purchase_price_invalid">Geçerli bir alış birim fiyatı girin.</string>
+    <string name="asset_error_purchase_price_too_large">Alış fiyatı desteklenen sınırı aşıyor.</string>
+    <string name="asset_error_tracking_symbol_required">Otomatik takip için piyasa sembolü zorunludur.</string>
+    <string name="asset_error_tracking_symbol_too_long">Piyasa sembolü en fazla 32 karakter olabilir.</string>
+
+    <!-- Plurals -->
+    <plurals name="asset_count_plural">
+        <item quantity="one">%1$d varlık</item>
+        <item quantity="other">%1$d varlık</item>
+    </plurals>
+    <plurals name="asset_unit_count_plural">
+        <item quantity="one">%1$s birim</item>
+        <item quantity="other">%1$s birim</item>
+    </plurals>
+    <plurals name="asset_donut_count_plural">
+        <item quantity="one">varlık</item>
+        <item quantity="other">varlık</item>
+    </plurals>
 </resources>

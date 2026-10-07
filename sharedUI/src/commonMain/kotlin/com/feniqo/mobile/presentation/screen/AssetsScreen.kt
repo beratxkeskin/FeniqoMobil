@@ -25,7 +25,8 @@ import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.presentation.asset.AssetsUiState
 import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.*
-import com.feniqo.mobile.presentation.theme.FeniqoSpacing
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AssetsScreen(
@@ -48,26 +49,29 @@ fun AssetsScreen(
                     shadowElevation = 8.dp,
                 ) {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .navigationBarsPadding()
+                                .padding(horizontal = 20.dp, vertical = 12.dp),
                     ) {
                         Button(
                             onClick = onAddAsset,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp),
                             shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = AssetSageGreen,
-                                contentColor = Color.White,
-                            ),
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = AssetSageGreen,
+                                    contentColor = Color.White,
+                                ),
                         ) {
                             Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = "Yeni varlık",
+                                text = stringResource(Res.string.asset_screen_add_new),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                             )
@@ -78,16 +82,18 @@ fun AssetsScreen(
         },
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 20.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 20.dp),
         ) {
             // Üst Bar: Geri butonu, Başlık ve (+) Daire butonu
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -101,12 +107,12 @@ fun AssetsScreen(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Geri",
+                            contentDescription = stringResource(Res.string.asset_back_action),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     Text(
-                        text = "Varlıklar",
+                        text = stringResource(Res.string.asset_screen_title),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -115,16 +121,17 @@ fun AssetsScreen(
 
                 // Sağ üst dairesel (+) butonu
                 Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(AssetSageGreen)
-                        .clickable(onClick = onAddAsset),
+                    modifier =
+                        Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(AssetSageGreen)
+                            .clickable(onClick = onAddAsset),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Add,
-                        contentDescription = "Yeni Varlık Ekle",
+                        contentDescription = stringResource(Res.string.asset_screen_add_button_content_desc),
                         tint = Color.White,
                         modifier = Modifier.size(22.dp),
                     )
@@ -136,13 +143,13 @@ fun AssetsScreen(
             when {
                 state.isLoading -> {
                     LoadingContent(
-                        message = "Varlıklar yükleniyor...",
+                        message = stringResource(Res.string.asset_screen_loading),
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
                 state.observationError != null -> {
                     ErrorState(
-                        title = "Varlıklar Yüklenemedi",
+                        title = stringResource(Res.string.asset_screen_error_title),
                         description = state.observationError.toLocalizedText(),
                         onRetry = onRetry,
                         modifier = Modifier.fillMaxSize(),
@@ -151,9 +158,10 @@ fun AssetsScreen(
                 state.isEmpty -> {
                     // 11 Numaralı Tasarım: Boş durum
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
                         contentAlignment = Alignment.Center,
                     ) {
                         Column(
@@ -163,10 +171,11 @@ fun AssetsScreen(
                         ) {
                             // Büyük cüzdan ikonu yumuşak daire içinde
                             Box(
-                                modifier = Modifier
-                                    .size(110.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                modifier =
+                                    Modifier
+                                        .size(110.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primaryContainer),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
@@ -180,7 +189,7 @@ fun AssetsScreen(
                             Spacer(Modifier.height(24.dp))
 
                             Text(
-                                text = "Henüz varlığın yok",
+                                text = stringResource(Res.string.asset_screen_empty_title),
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
@@ -190,7 +199,7 @@ fun AssetsScreen(
                             Spacer(Modifier.height(8.dp))
 
                             Text(
-                                text = "Varlıklarını ekleyerek birikiminin dağılımını takip et.",
+                                text = stringResource(Res.string.asset_screen_empty_desc),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
@@ -201,18 +210,20 @@ fun AssetsScreen(
                             Button(
                                 onClick = onAddAsset,
                                 shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = AssetSageGreen,
-                                    contentColor = Color.White,
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(52.dp),
+                                colors =
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = AssetSageGreen,
+                                        contentColor = Color.White,
+                                    ),
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(52.dp),
                             ) {
                                 Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(20.dp))
                                 Spacer(Modifier.width(8.dp))
                                 Text(
-                                    text = "İlk varlığını ekle",
+                                    text = stringResource(Res.string.asset_screen_add_first),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold,
                                 )
@@ -254,7 +265,7 @@ fun AssetsScreen(
                                 ) {
                                     if (state.priceRefreshError) {
                                         Text(
-                                            text = "Piyasa fiyatı güncellenemedi; kayıtlı değer gösteriliyor.",
+                                            text = stringResource(Res.string.asset_screen_price_refresh_error),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.error,
                                             modifier = Modifier.weight(1f),
@@ -275,7 +286,12 @@ fun AssetsScreen(
                                         )
                                         Spacer(Modifier.width(4.dp))
                                         Text(
-                                            text = if (state.isRefreshingPrices) "Yenileniyor…" else "Fiyatları yenile",
+                                            text =
+                                                if (state.isRefreshingPrices) {
+                                                    stringResource(Res.string.asset_screen_refreshing_prices)
+                                                } else {
+                                                    stringResource(Res.string.asset_screen_refresh_prices)
+                                                },
                                             style = MaterialTheme.typography.labelMedium,
                                             color = AssetSageGreen,
                                             fontWeight = FontWeight.SemiBold,

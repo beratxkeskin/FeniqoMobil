@@ -10,25 +10,11 @@ package com.feniqo.mobile.presentation.budget
 import androidx.compose.runtime.Composable
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.YearMonth
+import com.feniqo.mobile.presentation.common.formatBasisPointsRateNumber
 import feniqomobil.sharedui.generated.resources.*
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
-
-fun formatBasisPointsRateNumber(
-    basisPoints: Int,
-    decimalSeparator: String,
-): String {
-    val absValue = kotlin.math.abs(basisPoints)
-    val major = absValue / 100
-    val minor = absValue % 100
-    return if (minor == 0) {
-        "$major"
-    } else {
-        val minorStr = minor.toString().padStart(2, '0').trimEnd('0')
-        "$major$decimalSeparator$minorStr"
-    }
-}
 
 fun formatBasisPointsRate(
     basisPoints: Int,

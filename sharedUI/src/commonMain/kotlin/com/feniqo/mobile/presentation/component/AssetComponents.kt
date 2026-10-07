@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:no-wildcard-imports")
+
 package com.feniqo.mobile.presentation.component
 
 import androidx.compose.foundation.Canvas
@@ -41,8 +43,15 @@ import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.AssetType
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.presentation.asset.*
+import com.feniqo.mobile.presentation.common.formatAssetQuantity
+import com.feniqo.mobile.presentation.common.formatLocalizedMoney
+import com.feniqo.mobile.presentation.common.formatLocalizedRateBasisPoints
+import com.feniqo.mobile.presentation.common.toLocalizedNameResource
+import com.feniqo.mobile.presentation.common.toLocalizedNameText
 import com.feniqo.mobile.presentation.theme.*
 import com.feniqo.mobile.presentation.util.MoneyFormatter
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 // Renk paleti (Mockup 01-13 uyumlu)
 val AssetSageGreen = Color(0xFF2D5A43)
@@ -151,25 +160,25 @@ fun AssetGraphiteSummaryCard(
             Column(modifier = Modifier.fillMaxWidth()) {
                 if (hasError) {
                     Text(
-                        text = "Varlık Toplamı",
+                        text = stringResource(Res.string.asset_summary_total_title),
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.White.copy(alpha = 0.7f),
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "Varlık toplamı güvenli biçimde hesaplanamadı.",
+                        text = stringResource(Res.string.asset_summary_total_error),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color(0xFFFCA5A5),
                     )
                 } else if (netWorth == null) {
                     Text(
-                        text = "Varlık Toplamı",
+                        text = stringResource(Res.string.asset_summary_total_title),
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.White.copy(alpha = 0.7f),
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "0,00 ₺",
+                        text = formatLocalizedMoney(com.feniqo.mobile.domain.model.Money(0L, Currency.TRY)),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -178,33 +187,34 @@ fun AssetGraphiteSummaryCard(
                     // 01 Numaralı Tasarım: Tek para birimi
                     val currencyName = netWorth.primaryCurrency?.code ?: "TRY"
                     Text(
-                        text = "$currencyName varlık toplamı",
+                        text = stringResource(Res.string.asset_summary_single_currency_title, currencyName),
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.White.copy(alpha = 0.75f),
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        text = netWorth.primaryTotalFormatted ?: "0,00 ₺",
+                        text = netWorth.primaryTotal?.let { formatLocalizedMoney(it) } ?: "",
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        text = "${netWorth.assetCount} varlık · ${netWorth.sourceSummary}",
+                        text = "${formatLocalizedAssetCount(netWorth.assetCount)} · ${netWorth.sourceSummary.toLocalizedText()}",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.7f),
                     )
                 } else {
                     // 08 Numaralı Tasarım: Çoklu para birimi
                     Text(
-                        text = "Para birimine göre toplamlar",
+                        text = stringResource(Res.string.asset_summary_multi_currency_title),
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.White.copy(alpha = 0.75f),
                     )
                     Spacer(Modifier.height(14.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         netWorth.currencyTotals.forEach { item ->
+                            val itemTotalFormatted = formatLocalizedMoney(item.total)
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -237,10 +247,13 @@ fun AssetGraphiteSummaryCard(
                                     )
                                 }
                                 Text(
-                                    text = item.formattedTotal,
+                                    text = itemTotalFormatted,
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White,
+                                    modifier = Modifier.semantics {
+                                        contentDescription = "${item.currency.code} $itemTotalFormatted"
+                                    },
                                 )
                             }
                         }
@@ -257,7 +270,7 @@ fun AssetGraphiteSummaryCard(
                             modifier = Modifier.size(14.dp),
                         )
                         Text(
-                            text = "Kur dönüşümü yapılmadı.",
+                            text = stringResource(Res.string.asset_summary_no_exchange_rate),
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.White.copy(alpha = 0.65f),
                         )
@@ -297,14 +310,14 @@ fun AssetDistributionPreviewCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Dağılım",
+                    text = stringResource(Res.string.asset_distribution_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = "Dağılım detayını aç",
+                    contentDescription = stringResource(Res.string.asset_distribution_open_content_desc),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp),
                 )
@@ -314,7 +327,7 @@ fun AssetDistributionPreviewCard(
 
             if (distribution == null || distribution.items.isEmpty()) {
                 Text(
-                    text = "Dağılım gösterilecek varlık kaydı bulunmuyor.",
+                    text = stringResource(Res.string.asset_distribution_empty_card),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -359,13 +372,13 @@ fun AssetDistributionPreviewCard(
                                         .background(getAssetTypeColor(item.type)),
                                 )
                                 Text(
-                                    text = item.typeLabel,
+                                    text = item.type.toLocalizedLabelText(),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = Color(0xFF334155),
                                 )
                             }
                             Text(
-                                text = item.percentageText,
+                                text = formatLocalizedRateBasisPoints(item.percentageBps),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface,
@@ -436,7 +449,7 @@ fun AssetDonutChart(
                 color = Color.White,
             )
             Text(
-                text = "varlık",
+                text = formatLocalizedDonutAssetLabel(totalAssetCount),
                 style = MaterialTheme.typography.labelSmall,
                 color = Color.White.copy(alpha = 0.7f),
             )
@@ -481,16 +494,19 @@ fun AssetItemCard(
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text = asset.currentValueFormatted,
+                    text = formatLocalizedMoney(asset.currentValue),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(Modifier.height(2.dp))
 
+                val decimalSeparator = stringResource(Res.string.common_decimal_separator)
                 val subParts = buildList {
-                    asset.quantityFormatted?.let { add("$it birim") }
-                    add(asset.valueSource.toDisplayLabel())
+                    asset.quantity?.let {
+                        add(formatLocalizedQuantityUnit(it, decimalSeparator))
+                    }
+                    add(asset.valueSource.toLocalizedText())
                 }
                 Text(
                     text = subParts.joinToString(" · "),
@@ -501,7 +517,7 @@ fun AssetItemCard(
 
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "${asset.name} detayına git",
+                contentDescription = stringResource(Res.string.asset_item_go_to_detail_desc, asset.name),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
             )
@@ -536,7 +552,7 @@ fun AssetTypeSelectionBottomSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Varlık türü",
+                    text = stringResource(Res.string.asset_type_selection_sheet_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -544,7 +560,7 @@ fun AssetTypeSelectionBottomSheet(
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Filled.Close,
-                        contentDescription = "Kapat",
+                        contentDescription = stringResource(Res.string.asset_close_action),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -593,7 +609,7 @@ fun AssetTypeSelectionBottomSheet(
                         if (isSelected) {
                             Icon(
                                 imageVector = Icons.Filled.Check,
-                                contentDescription = "Seçili",
+                                contentDescription = stringResource(Res.string.asset_currency_selected_content_desc),
                                 tint = AssetSageGreen,
                                 modifier = Modifier.size(22.dp),
                             )
@@ -616,13 +632,17 @@ fun CurrencySelectionBottomSheet(
     onDismiss: () -> Unit,
 ) {
     var searchQuery by remember { mutableStateOf("") }
-    val filteredCurrencies = remember(searchQuery) {
+    val currencyNames = Currency.entries.associateWith { stringResource(it.toLocalizedNameResource()) }
+    val filteredCurrencies = remember(searchQuery, currencyNames) {
         val q = searchQuery.trim().lowercase()
-        if (q.isEmpty()) Currency.entries.toList()
-        else Currency.entries.filter {
-            it.code.lowercase().contains(q) ||
-                it.symbol.lowercase().contains(q) ||
-                it.toTurkishName().lowercase().contains(q)
+        if (q.isEmpty()) {
+            Currency.entries.toList()
+        } else {
+            Currency.entries.filter {
+                it.code.lowercase().contains(q) ||
+                    it.symbol.lowercase().contains(q) ||
+                    (currencyNames[it]?.lowercase()?.contains(q) == true)
+            }
         }
     }
 
@@ -643,7 +663,7 @@ fun CurrencySelectionBottomSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Para birimi seç",
+                    text = stringResource(Res.string.asset_currency_selection_sheet_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -651,7 +671,7 @@ fun CurrencySelectionBottomSheet(
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Filled.Close,
-                        contentDescription = "Kapat",
+                        contentDescription = stringResource(Res.string.asset_close_action),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -664,7 +684,12 @@ fun CurrencySelectionBottomSheet(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Para birimi ara", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                placeholder = {
+                    Text(
+                        text = stringResource(Res.string.asset_currency_search_placeholder),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Search,
@@ -721,7 +746,7 @@ fun CurrencySelectionBottomSheet(
                         )
 
                         Text(
-                            text = currency.toTurkishName(),
+                            text = currency.toLocalizedNameText(),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.weight(1f),
@@ -766,7 +791,7 @@ fun AssetDeleteConfirmationModal(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "Varlık silinsin mi?",
+                text = stringResource(Res.string.asset_delete_modal_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -774,7 +799,7 @@ fun AssetDeleteConfirmationModal(
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "$assetName kaydını silmek istediğine emin misin?",
+                text = stringResource(Res.string.asset_delete_modal_message, assetName),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -799,7 +824,7 @@ fun AssetDeleteConfirmationModal(
                     modifier = Modifier.size(20.dp),
                 )
                 Text(
-                    text = "Bu işlem bir satış emri oluşturmaz.",
+                    text = stringResource(Res.string.asset_delete_modal_disclaimer),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF334155),
                 )
@@ -823,7 +848,7 @@ fun AssetDeleteConfirmationModal(
                         contentColor = Color(0xFF334155),
                     ),
                 ) {
-                    Text("Vazgeç", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(Res.string.asset_cancel_action), fontWeight = FontWeight.SemiBold)
                 }
 
                 Button(
@@ -845,7 +870,7 @@ fun AssetDeleteConfirmationModal(
                             strokeWidth = 2.dp,
                         )
                     } else {
-                        Text("Sil", fontWeight = FontWeight.Bold)
+                        Text(stringResource(Res.string.asset_delete_confirm_action), fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -865,26 +890,26 @@ fun AssetValueSourceInfoDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Değer Kaynağı", fontWeight = FontWeight.Bold)
+            Text(stringResource(Res.string.asset_source_dialog_title), fontWeight = FontWeight.Bold)
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 when (valueSource) {
                     AssetValueSource.MARKET_FRESH -> {
                         Text(
-                            "Bu varlığın değeri, $symbol sembolü üzerinden güvenilir piyasa fiyat servisi ile güncellenmiştir.",
+                            stringResource(Res.string.asset_source_dialog_fresh, symbol ?: ""),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
                     AssetValueSource.MARKET_STALE -> {
                         Text(
-                            "Bu varlık otomatik takip edilmektedir ancak son piyasa fiyatı doğrulanamadı veya güncel değil. Kayıtlı son değer gösterilmektedir.",
+                            stringResource(Res.string.asset_source_dialog_stale),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
                     AssetValueSource.MANUAL -> {
                         Text(
-                            "Bu varlığın toplam değeri manuel olarak girilmiştir. Piyasa fiyatı hareketlerinden etkilenmez; toplam değeri dilediğin zaman düzenleyebilirsin.",
+                            stringResource(Res.string.asset_source_dialog_manual),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -893,17 +918,10 @@ fun AssetValueSourceInfoDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Anladım", color = AssetSageGreen, fontWeight = FontWeight.Bold)
+                Text(stringResource(Res.string.asset_understand_action), color = AssetSageGreen, fontWeight = FontWeight.Bold)
             }
         },
     )
-}
-
-fun Currency.toTurkishName(): String = when (this) {
-    Currency.TRY -> "Türk lirası"
-    Currency.USD -> "Amerikan doları"
-    Currency.EUR -> "Euro"
-    Currency.GBP -> "İngiliz sterlini"
 }
 
 val Currency.symbol: String

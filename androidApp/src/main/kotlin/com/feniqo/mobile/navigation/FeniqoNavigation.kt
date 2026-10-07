@@ -128,8 +128,10 @@ import com.feniqo.mobile.presentation.workspace.WorkspaceCreateScreenRoute
 import com.feniqo.mobile.presentation.workspace.WorkspaceJoinScreenRoute
 import com.feniqo.mobile.presentation.workspace.WorkspaceDetailsScreenRoute
 import com.feniqo.mobile.presentation.workspace.WorkspaceSettlementScreenRoute
+import com.feniqo.mobile.presentation.asset.assetFormBackActionText
+import com.feniqo.mobile.presentation.asset.assetRouteInvalidIdDescText
+import com.feniqo.mobile.presentation.asset.assetRouteInvalidIdTitleText
 import kotlinx.coroutines.launch
-
 import com.feniqo.mobile.domain.repository.ConflictResolution
 
 /**
@@ -953,20 +955,16 @@ fun MainNavHost(
                             assetId = parsedAssetId.id,
                             onBack = { if (!navController.popBackStack()) navController.navigate(AssetsRoute) },
                             onEdit = { id -> navController.navigate(AssetFormRoute(id.value)) },
-                            onAssetDeleted = {
-                                if (!navController.popBackStack()) navController.navigate(AssetsRoute)
-                            },
+                            onAssetDeleted = { if (!navController.popBackStack()) navController.navigate(AssetsRoute) },
                             onMessage = { message -> scope.launch { snackbarHostState.showSnackbar(message.resolveLocalizedText()) } },
                             modifier = Modifier.padding(padding),
                         )
                         ChildRouteIdResult.InvalidId -> {
                             com.feniqo.mobile.presentation.component.ErrorState(
-                                title = "Varlık açılamadı",
-                                description = "Varlık bağlantısı geçersiz veya eksik.",
-                                onRetry = {
-                                    if (!navController.popBackStack()) navController.navigate(AssetsRoute)
-                                },
-                                actionLabel = "Geri dön",
+                                title = assetRouteInvalidIdTitleText(),
+                                description = assetRouteInvalidIdDescText(),
+                                onRetry = { if (!navController.popBackStack()) navController.navigate(AssetsRoute) },
+                                actionLabel = assetFormBackActionText(),
                                 modifier = Modifier.padding(padding).fillMaxSize(),
                             )
                         }

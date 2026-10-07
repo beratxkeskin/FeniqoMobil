@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.presentation.common.currentLocaleDecimalSeparator
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
 import com.feniqo.mobile.presentation.common.toLocalizedText
@@ -26,10 +27,11 @@ fun AssetFormScreenRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val loadState by viewModel.editLoadState.collectAsStateWithLifecycle()
+    val decimalSeparator = currentLocaleDecimalSeparator()
 
     LaunchedEffect(initialAssetId, hasInvalidRouteId) {
         if (hasInvalidRouteId) viewModel.setInvalidRouteId()
-        else if (initialAssetId != null) viewModel.loadForEdit(initialAssetId)
+        else if (initialAssetId != null) viewModel.loadForEdit(initialAssetId, decimalSeparator)
     }
 
     LaunchedEffect(Unit) {
@@ -53,18 +55,26 @@ fun AssetFormScreenRoute(
     Surface(modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when {
             initialAssetId != null && loadState == AssetEditLoadState.Loading ->
-                LoadingContent(message = "Varlık yükleniyor...", modifier = Modifier.fillMaxSize())
+                LoadingContent(
+                    message = assetFormLoadingText(),
+                    modifier = Modifier.fillMaxSize(),
+                )
             hasInvalidRouteId || loadState == AssetEditLoadState.NotFound ->
                 ErrorState(
-                    title = "Varlık Bulunamadı",
-                    description = "Düzenlemek istediğiniz varlık mevcut değil veya silinmiş.",
+                    title = assetFormNotFoundTitleText(),
+                    description = assetFormNotFoundDescText(),
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
-                    actionLabel = "Geri dön",
+                    actionLabel = assetFormBackActionText(),
                 )
             loadState is AssetEditLoadState.Error ->
-                ErrorState("Varlık Yüklenemedi", (loadState as AssetEditLoadState.Error).message.toLocalizedText(),
-                    { initialAssetId?.let(viewModel::loadForEdit) }, Modifier.fillMaxSize())
+                ErrorState(
+                    title = assetFormErrorTitleText(),
+                    description = (loadState as AssetEditLoadState.Error).message.toLocalizedText(),
+                    onRetry = { initialAssetId?.let { viewModel.loadForEdit(it, decimalSeparator) } },
+                    modifier = Modifier.fillMaxSize(),
+                    actionLabel = assetFormBackActionText(),
+                )
             else -> AssetFormScreen(
                 state = state,
                 onBack = requestExit,

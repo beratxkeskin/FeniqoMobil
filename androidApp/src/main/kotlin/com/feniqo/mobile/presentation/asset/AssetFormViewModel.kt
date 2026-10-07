@@ -31,7 +31,7 @@ class AssetFormViewModel @Inject constructor(
     private var loadJob: Job? = null
     private var mutationJob: Job? = null
 
-    fun loadForEdit(id: EntityId) {
+    fun loadForEdit(id: EntityId, decimalSeparator: Char) {
         loadJob?.cancel()
         mutableLoadState.value = AssetEditLoadState.Loading
         loadJob = viewModelScope.launch {
@@ -39,11 +39,11 @@ class AssetFormViewModel @Inject constructor(
                 observeAsset(id).collect { asset ->
                     if (asset == null) mutableLoadState.value = AssetEditLoadState.NotFound
                     else {
-                        val input = AssetFormInput.fromDomain(asset)
+                        val input = AssetFormInput.fromDomain(asset, decimalSeparator)
                         initialInput = input
                         mutableState.value = AssetFormUiState(
                             input = input,
-                            calculatedCostPreview = input.computeCostPreview(),
+                            calculatedCost = input.computeCost(),
                             hasUnsavedChanges = false,
                         )
                         mutableLoadState.value = AssetEditLoadState.Ready
@@ -68,7 +68,7 @@ class AssetFormViewModel @Inject constructor(
             val protectedInput = changed.copy(assetId = state.input.assetId)
             state.copy(
                 input = protectedInput,
-                calculatedCostPreview = changed.computeCostPreview(),
+                calculatedCost = changed.computeCost(),
                 errors = AssetFormErrors(),
                 hasUnsavedChanges = protectedInput != initialInput,
             )

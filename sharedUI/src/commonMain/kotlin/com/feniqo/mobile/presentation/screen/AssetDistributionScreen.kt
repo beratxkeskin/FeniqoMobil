@@ -19,9 +19,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.feniqo.mobile.domain.model.Currency
+import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.presentation.asset.AssetDistributionUiState
+import com.feniqo.mobile.presentation.asset.toLocalizedLabelText
+import com.feniqo.mobile.presentation.common.formatLocalizedMoney
+import com.feniqo.mobile.presentation.common.formatLocalizedRateBasisPoints
 import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.*
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AssetDistributionScreen(
@@ -38,22 +45,23 @@ fun AssetDistributionScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 IconButton(onClick = onBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Geri",
+                        contentDescription = stringResource(Res.string.asset_back_action),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
 
                 Text(
-                    text = "Varlık dağılımı",
+                    text = stringResource(Res.string.asset_distribution_screen_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -64,28 +72,31 @@ fun AssetDistributionScreen(
         when {
             state.isLoading -> {
                 LoadingContent(
-                    message = "Dağılım hesaplanıyor…",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
+                    message = stringResource(Res.string.asset_distribution_loading),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
                 )
             }
             state.observationError != null -> {
                 ErrorState(
-                    title = "Dağılım Yüklenemedi",
+                    title = stringResource(Res.string.asset_distribution_error_title),
                     description = state.observationError.toLocalizedText(),
                     onRetry = onRetry,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
                 )
             }
             else -> {
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .padding(horizontal = 20.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                            .padding(horizontal = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     // Para Birimi Seçim Çipleri (03 Numaralı Tasarım)
@@ -100,11 +111,12 @@ fun AssetDistributionScreen(
                                 val textColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
 
                                 Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(20.dp))
-                                        .background(bg)
-                                        .clickable { onSelectCurrency(currency) }
-                                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                                    modifier =
+                                        Modifier
+                                            .clip(RoundedCornerShape(20.dp))
+                                            .background(bg)
+                                            .clickable { onSelectCurrency(currency) }
+                                            .padding(horizontal = 20.dp, vertical = 8.dp),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Text(
@@ -125,28 +137,31 @@ fun AssetDistributionScreen(
                         colors = CardDefaults.cardColors(containerColor = AssetGraphiteBg),
                     ) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(20.dp),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(20.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Toplam varlık değeri",
+                                    text = stringResource(Res.string.asset_distribution_card_total_title),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = Color.White.copy(alpha = 0.75f),
                                 )
                                 Spacer(Modifier.height(6.dp))
                                 Text(
-                                    text = distribution?.overallTotalFormatted ?: "0,00 ₺",
+                                    text = formatLocalizedMoney(distribution?.overallTotal ?: Money.zero(state.selectedCurrency)),
                                     style = MaterialTheme.typography.headlineMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White,
                                 )
                                 Spacer(Modifier.height(6.dp))
+                                val assetCount = distribution?.assetCount ?: 0
+                                val countText = pluralStringResource(Res.plurals.asset_count_plural, assetCount, assetCount)
                                 Text(
-                                    text = "${distribution?.assetCount ?: 0} varlık · Kayıtlı değerler",
+                                    text = stringResource(Res.string.asset_distribution_card_stored_subtitle, countText),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color.White.copy(alpha = 0.7f),
                                 )
@@ -164,31 +179,34 @@ fun AssetDistributionScreen(
 
                     // Tür Bazlı Dağılım Listesi
                     Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         border = CardDefaults.outlinedCardBorder(),
                     ) {
                         if (distribution == null || distribution.items.isEmpty()) {
                             Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(24.dp),
+                                modifier =
+                                    Modifier
+                                        .fillMaxSize()
+                                        .padding(24.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    text = "Bu para biriminde kayıtlı varlık bulunmuyor.",
+                                    text = stringResource(Res.string.asset_distribution_empty_for_currency),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         } else {
                             LazyColumn(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                modifier =
+                                    Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
                                 verticalArrangement = Arrangement.spacedBy(16.dp),
                             ) {
                                 items(distribution.items, key = { it.type.name }) { item ->
@@ -202,13 +220,14 @@ fun AssetDistributionScreen(
                                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                                         ) {
                                             Box(
-                                                modifier = Modifier
-                                                    .size(12.dp)
-                                                    .clip(CircleShape)
-                                                    .background(getAssetTypeColor(item.type)),
+                                                modifier =
+                                                    Modifier
+                                                        .size(12.dp)
+                                                        .clip(CircleShape)
+                                                        .background(getAssetTypeColor(item.type)),
                                             )
                                             Text(
-                                                text = item.typeLabel,
+                                                text = item.type.toLocalizedLabelText(),
                                                 style = MaterialTheme.typography.bodyLarge,
                                                 fontWeight = FontWeight.Medium,
                                                 color = MaterialTheme.colorScheme.onSurface,
@@ -217,13 +236,13 @@ fun AssetDistributionScreen(
 
                                         Column(horizontalAlignment = Alignment.End) {
                                             Text(
-                                                text = item.formattedTotal,
+                                                text = formatLocalizedMoney(item.total),
                                                 style = MaterialTheme.typography.bodyLarge,
                                                 fontWeight = FontWeight.Bold,
                                                 color = MaterialTheme.colorScheme.onSurface,
                                             )
                                             Text(
-                                                text = item.percentageText,
+                                                text = formatLocalizedRateBasisPoints(item.percentageBps),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
@@ -236,11 +255,12 @@ fun AssetDistributionScreen(
 
                     // Alt Kapsam Bilgi Kutusu: (i) Yalnız TRY cinsindeki kayıtlar dahildir.
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(14.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
@@ -251,7 +271,7 @@ fun AssetDistributionScreen(
                             modifier = Modifier.size(20.dp),
                         )
                         Text(
-                            text = "Yalnız ${state.selectedCurrency.code} cinsindeki kayıtlar dahildir.",
+                            text = stringResource(Res.string.asset_distribution_currency_scope_note, state.selectedCurrency.code),
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFF334155),
                         )

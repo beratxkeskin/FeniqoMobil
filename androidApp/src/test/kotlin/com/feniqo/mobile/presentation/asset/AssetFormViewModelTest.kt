@@ -54,7 +54,7 @@ class AssetFormViewModelTest {
         val existing = asset("asset-1")
         repository.asset.value = existing
         val viewModel = viewModel(repository)
-        viewModel.loadForEdit(existing.id)
+        viewModel.loadForEdit(existing.id, ',')
         assertEquals(AssetEditLoadState.Ready, viewModel.editLoadState.value)
         assertEquals(existing.id, viewModel.uiState.value.input.assetId)
 
@@ -66,6 +66,28 @@ class AssetFormViewModelTest {
             AssetFormUiEvent.MutationSuccess(FinanceUiMessage.ASSET_DELETED),
             viewModel.events.first(),
         )
+    }
+
+    @Test
+    fun loadForEdit_usesProvidedDecimalSeparator() = runTest {
+        val repository = FakeAssetRepository()
+        val existing = asset("asset-2").copy(
+            currentValue = Money(12_550L, Currency.TRY),
+            quantity = AssetQuantity(150L, 2),
+            purchaseUnitPrice = Money(8_325L, Currency.TRY),
+        )
+        repository.asset.value = existing
+        val viewModelEn = viewModel(repository)
+        viewModelEn.loadForEdit(existing.id, '.')
+        assertEquals("125.5", viewModelEn.uiState.value.input.currentValueInput)
+        assertEquals("1.5", viewModelEn.uiState.value.input.quantityInput)
+        assertEquals("83.25", viewModelEn.uiState.value.input.purchaseUnitPriceInput)
+
+        val viewModelTr = viewModel(repository)
+        viewModelTr.loadForEdit(existing.id, ',')
+        assertEquals("125,5", viewModelTr.uiState.value.input.currentValueInput)
+        assertEquals("1,5", viewModelTr.uiState.value.input.quantityInput)
+        assertEquals("83,25", viewModelTr.uiState.value.input.purchaseUnitPriceInput)
     }
 
     @Test
@@ -83,7 +105,7 @@ class AssetFormViewModelTest {
             )
         }
 
-        assertEquals("120.000,00 ₺", viewModel.uiState.value.calculatedCostPreview)
+        assertEquals(Money(12_000_000L, Currency.TRY), viewModel.uiState.value.calculatedCost)
 
         viewModel.updateInput { it.copy(currency = Currency.USD) }
         assertEquals(Currency.USD, viewModel.uiState.value.input.currency)

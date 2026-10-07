@@ -5,7 +5,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -21,11 +20,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.feniqo.mobile.presentation.asset.AssetDetailDisplayModel
+import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.presentation.asset.AssetDetailUiState
-import com.feniqo.mobile.presentation.asset.toDisplayLabel
+import com.feniqo.mobile.presentation.asset.formatLocalizedQuantityUnit
+import com.feniqo.mobile.presentation.asset.toLocalizedLabelText
+import com.feniqo.mobile.presentation.asset.toLocalizedText
+import com.feniqo.mobile.presentation.common.formatAssetQuantity
+import com.feniqo.mobile.presentation.common.formatLocalizedMoney
+import com.feniqo.mobile.presentation.common.formatLocalizedMoneyDelta
+import com.feniqo.mobile.presentation.common.formatLocalizedRateBasisPoints
 import com.feniqo.mobile.presentation.component.*
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,22 +56,23 @@ fun AssetDetailScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Geri",
+                        contentDescription = stringResource(Res.string.asset_back_action),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
 
                 Text(
-                    text = "Varlıklar",
+                    text = stringResource(Res.string.asset_screen_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -74,7 +82,7 @@ fun AssetDetailScreen(
                     IconButton(onClick = { showMenu = true }) {
                         Icon(
                             imageVector = Icons.Filled.MoreVert,
-                            contentDescription = "Diğer İşlemler",
+                            contentDescription = stringResource(Res.string.asset_detail_more_actions_desc),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
@@ -87,7 +95,7 @@ fun AssetDetailScreen(
                         DropdownMenuItem(
                             text = {
                                 Text(
-                                    text = "Varlığı sil",
+                                    text = stringResource(Res.string.asset_detail_menu_delete),
                                     color = Color(0xFFDC2626),
                                     fontWeight = FontWeight.SemiBold,
                                 )
@@ -115,10 +123,11 @@ fun AssetDetailScreen(
                     shadowElevation = 8.dp,
                 ) {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .navigationBarsPadding()
+                                .padding(horizontal = 20.dp, vertical = 12.dp),
                     ) {
                         if (asset.isPriceVerificationFailed) {
                             // 09 Numaralı Tasarım: Yeniden dene ve Düzenle yan yana
@@ -129,13 +138,15 @@ fun AssetDetailScreen(
                                 OutlinedButton(
                                     onClick = onRetryPrice,
                                     enabled = !state.isRefreshingPrice,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(52.dp),
+                                    modifier =
+                                        Modifier
+                                            .weight(1f)
+                                            .height(52.dp),
                                     shape = RoundedCornerShape(16.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        contentColor = MaterialTheme.colorScheme.onSurface,
-                                    ),
+                                    colors =
+                                        ButtonDefaults.outlinedButtonColors(
+                                            contentColor = MaterialTheme.colorScheme.onSurface,
+                                        ),
                                 ) {
                                     Icon(
                                         imageVector = Icons.Outlined.Refresh,
@@ -144,21 +155,28 @@ fun AssetDetailScreen(
                                     )
                                     Spacer(Modifier.width(6.dp))
                                     Text(
-                                        text = if (state.isRefreshingPrice) "Deneniyor…" else "Yeniden dene",
+                                        text =
+                                            if (state.isRefreshingPrice) {
+                                                stringResource(Res.string.asset_retrying_action)
+                                            } else {
+                                                stringResource(Res.string.asset_retry_action)
+                                            },
                                         fontWeight = FontWeight.SemiBold,
                                     )
                                 }
 
                                 Button(
                                     onClick = onEdit,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(52.dp),
+                                    modifier =
+                                        Modifier
+                                            .weight(1f)
+                                            .height(52.dp),
                                     shape = RoundedCornerShape(16.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = AssetSageGreen,
-                                        contentColor = Color.White,
-                                    ),
+                                    colors =
+                                        ButtonDefaults.buttonColors(
+                                            containerColor = AssetSageGreen,
+                                            contentColor = Color.White,
+                                        ),
                                 ) {
                                     Icon(
                                         imageVector = Icons.Outlined.Edit,
@@ -167,7 +185,7 @@ fun AssetDetailScreen(
                                     )
                                     Spacer(Modifier.width(6.dp))
                                     Text(
-                                        text = "Düzenle",
+                                        text = stringResource(Res.string.asset_detail_action_edit),
                                         fontWeight = FontWeight.SemiBold,
                                     )
                                 }
@@ -176,14 +194,16 @@ fun AssetDetailScreen(
                             // 02 Numaralı Tasarım: Tek birincil Düzenle butonu
                             Button(
                                 onClick = onEdit,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(52.dp),
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(52.dp),
                                 shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = AssetSageGreen,
-                                    contentColor = Color.White,
-                                ),
+                                colors =
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = AssetSageGreen,
+                                        contentColor = Color.White,
+                                    ),
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.Edit,
@@ -192,7 +212,7 @@ fun AssetDetailScreen(
                                 )
                                 Spacer(Modifier.width(8.dp))
                                 Text(
-                                    text = "Varlığı düzenle",
+                                    text = stringResource(Res.string.asset_detail_action_edit_asset),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold,
                                 )
@@ -206,40 +226,44 @@ fun AssetDetailScreen(
         when {
             state.isLoading -> {
                 LoadingContent(
-                    message = "Varlık yükleniyor…",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
+                    message = stringResource(Res.string.asset_detail_loading),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
                 )
             }
             state.isNotFound || asset == null -> {
                 ErrorState(
-                    title = "Varlık Bulunamadı",
-                    description = "Aradığın varlık silinmiş veya mevcut değil.",
+                    title = stringResource(Res.string.asset_detail_not_found_title),
+                    description = stringResource(Res.string.asset_detail_not_found_desc),
                     onRetry = onBack,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                    actionLabel = "Geri dön",
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                    actionLabel = stringResource(Res.string.asset_form_back_action),
                 )
             }
             else -> {
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .padding(horizontal = 20.dp)
-                        .verticalScroll(rememberScrollState()),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                            .padding(horizontal = 20.dp)
+                            .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     // 09: Piyasa fiyatı alınamadı bilgi banner'ı
                     if (asset.isPriceVerificationFailed) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
@@ -250,7 +274,7 @@ fun AssetDetailScreen(
                                 modifier = Modifier.size(18.dp),
                             )
                             Text(
-                                text = "Güncel piyasa fiyatı alınamadı.",
+                                text = stringResource(Res.string.asset_detail_market_price_failed_banner),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFF334155),
                             )
@@ -259,9 +283,10 @@ fun AssetDetailScreen(
 
                     // Varlık Başlık Alanı (İkon + Ad + Tür)
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
@@ -279,7 +304,7 @@ fun AssetDetailScreen(
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
-                                text = asset.typeLabel,
+                                text = asset.type.toLocalizedLabelText(),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -293,18 +318,24 @@ fun AssetDetailScreen(
                         colors = CardDefaults.cardColors(containerColor = AssetGraphiteBg),
                     ) {
                         Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(20.dp),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(20.dp),
                         ) {
                             Text(
-                                text = if (asset.isPriceVerificationFailed) "Son kayıtlı toplam değer" else "Güncel toplam değer",
+                                text =
+                                    if (asset.isPriceVerificationFailed) {
+                                        stringResource(Res.string.asset_detail_last_recorded_value_label)
+                                    } else {
+                                        stringResource(Res.string.asset_detail_current_total_value_label)
+                                    },
                                 style = MaterialTheme.typography.labelMedium,
                                 color = Color.White.copy(alpha = 0.75f),
                             )
                             Spacer(Modifier.height(6.dp))
                             Text(
-                                text = asset.currentValueFormatted,
+                                text = formatLocalizedMoney(asset.currentValue),
                                 style = MaterialTheme.typography.headlineLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
@@ -314,10 +345,11 @@ fun AssetDetailScreen(
                             if (asset.isPriceVerificationFailed) {
                                 // 09: Sarı / Amber uyarı rozeti
                                 Row(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(MaterialTheme.colorScheme.secondaryContainer)
-                                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                                    modifier =
+                                        Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                                            .padding(horizontal = 8.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 ) {
@@ -328,7 +360,7 @@ fun AssetDetailScreen(
                                         modifier = Modifier.size(14.dp),
                                     )
                                     Text(
-                                        text = "Güncelliği doğrulanamadı.",
+                                        text = stringResource(Res.string.asset_detail_unverified_badge),
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Medium,
                                         color = Color(0xFF92400E),
@@ -336,7 +368,7 @@ fun AssetDetailScreen(
                                 }
                             } else {
                                 Text(
-                                    text = asset.valueSourceLabel,
+                                    text = asset.valueSource.toLocalizedText(),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color.White.copy(alpha = 0.7f),
                                 )
@@ -357,25 +389,28 @@ fun AssetDetailScreen(
                             border = CardDefaults.outlinedCardBorder(),
                         ) {
                             Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
                             ) {
                                 Text(
-                                    text = "Miktar",
+                                    text = stringResource(Res.string.asset_detail_quantity_label),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Spacer(Modifier.height(6.dp))
+                                val decimalSeparator = stringResource(Res.string.common_decimal_separator)
+                                val formattedQuantity = asset.quantity?.let { formatAssetQuantity(it, decimalSeparator) }
                                 Text(
-                                    text = asset.quantityFormatted ?: "—",
+                                    text = formattedQuantity ?: "—",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
-                                if (asset.quantityFormatted != null) {
+                                if (formattedQuantity != null && asset.quantity != null) {
                                     Text(
-                                        text = "birim",
+                                        text = formatLocalizedQuantityUnit(asset.quantity, decimalSeparator),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -391,18 +426,19 @@ fun AssetDetailScreen(
                             border = CardDefaults.outlinedCardBorder(),
                         ) {
                             Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
                             ) {
                                 Text(
-                                    text = "Alış birim fiyatı",
+                                    text = stringResource(Res.string.asset_detail_purchase_price_label),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Spacer(Modifier.height(6.dp))
                                 Text(
-                                    text = asset.purchaseUnitPriceFormatted ?: "—",
+                                    text = asset.purchaseUnitPrice?.let { formatLocalizedMoney(it) } ?: "—",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -414,11 +450,12 @@ fun AssetDetailScreen(
                     // 09 Durumundaki ek miktar ve doğrulanamadı uyarısı
                     if (asset.isPriceVerificationFailed) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .padding(14.dp),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .padding(14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
@@ -429,7 +466,7 @@ fun AssetDetailScreen(
                                 modifier = Modifier.size(18.dp),
                             )
                             Text(
-                                text = "Bu değer güncel piyasa değeri olarak doğrulanmamıştır.",
+                                text = stringResource(Res.string.asset_detail_unverified_disclaimer),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFF334155),
                             )
@@ -444,19 +481,20 @@ fun AssetDetailScreen(
                         border = CardDefaults.outlinedCardBorder(),
                     ) {
                         Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
                         ) {
-                            if (asset.hasCalculatedCost) {
+                            if (asset.calculatedCost != null) {
                                 Text(
-                                    text = "Hesaplanan maliyet",
+                                    text = stringResource(Res.string.asset_detail_cost_label),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 Text(
-                                    text = asset.calculatedCostFormatted ?: "—",
+                                    text = formatLocalizedMoney(asset.calculatedCost),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -465,31 +503,36 @@ fun AssetDetailScreen(
                                 Spacer(Modifier.height(14.dp))
 
                                 Text(
-                                    text = "Değer farkı",
+                                    text = stringResource(Res.string.asset_detail_difference_label),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Spacer(Modifier.height(4.dp))
 
-                                val diffColor = when (asset.isDifferencePositive) {
-                                    true -> AssetSageGreen
-                                    false -> Color(0xFFDC2626)
-                                    null -> Color(0xFF475569)
-                                }
+                                val difference = asset.difference
+                                val diffColor =
+                                    when {
+                                        difference == null -> Color(0xFF475569)
+                                        difference.amountMinor > 0 -> AssetSageGreen
+                                        difference.amountMinor < 0 -> Color(0xFFDC2626)
+                                        else -> Color(0xFF475569)
+                                    }
 
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 ) {
                                     Text(
-                                        text = asset.differenceFormatted ?: "0,00 ₺",
+                                        text =
+                                            difference?.let { formatLocalizedMoneyDelta(it, showPositiveSign = true) }
+                                                ?: formatLocalizedMoney(Money.zero(asset.currentValue.currency)),
                                         style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = diffColor,
                                     )
-                                    asset.differencePercentageText?.let { pct ->
+                                    asset.differencePercentageBps?.let { bps ->
                                         Text(
-                                            text = pct,
+                                            text = formatLocalizedRateBasisPoints(bps),
                                             style = MaterialTheme.typography.bodyLarge,
                                             fontWeight = FontWeight.SemiBold,
                                             color = diffColor,
@@ -501,11 +544,12 @@ fun AssetDetailScreen(
 
                                 // Bilgilendirme kutusu
                                 Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                                        .padding(10.dp),
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                                            .padding(10.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
@@ -516,7 +560,7 @@ fun AssetDetailScreen(
                                         modifier = Modifier.size(16.dp),
                                     )
                                     Text(
-                                        text = "Girilen miktar ve alış fiyatından hesaplanır. Gerçekleşmiş kazanç değildir.",
+                                        text = stringResource(Res.string.asset_detail_cost_disclaimer),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -534,13 +578,13 @@ fun AssetDetailScreen(
                                     )
                                     Column {
                                         Text(
-                                            text = "Maliyet ve Değer Farkı",
+                                            text = stringResource(Res.string.asset_detail_cost_placeholder_title),
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = FontWeight.SemiBold,
                                             color = MaterialTheme.colorScheme.onSurface,
                                         )
                                         Text(
-                                            text = "Miktar ve alış birim fiyatı girildiğinde maliyet ve değer farkı otomatik hesaplanır.",
+                                            text = stringResource(Res.string.asset_detail_cost_placeholder_desc),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
@@ -552,17 +596,19 @@ fun AssetDetailScreen(
 
                     // "Değer Kaynağı" Satırı
                     Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showSourceInfoDialog = true },
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { showSourceInfoDialog = true },
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         border = CardDefaults.outlinedCardBorder(),
                     ) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
@@ -577,7 +623,7 @@ fun AssetDetailScreen(
                                     modifier = Modifier.size(20.dp),
                                 )
                                 Text(
-                                    text = "Değer kaynağı",
+                                    text = stringResource(Res.string.asset_detail_source_label),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -589,13 +635,13 @@ fun AssetDetailScreen(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 Text(
-                                    text = asset.valueSource.toDisplayLabel(),
+                                    text = asset.valueSource.toLocalizedText(),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                    contentDescription = "Bilgi",
+                                    contentDescription = stringResource(Res.string.asset_detail_source_info_desc),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(18.dp),
                                 )

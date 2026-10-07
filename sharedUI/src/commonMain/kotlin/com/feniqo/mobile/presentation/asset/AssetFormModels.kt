@@ -13,7 +13,8 @@ import com.feniqo.mobile.domain.validation.AssetValidationRules
 import com.feniqo.mobile.domain.validation.CostCalculationResult
 import com.feniqo.mobile.domain.validation.MoneyAmountParser
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
-import com.feniqo.mobile.presentation.util.MoneyFormatter
+import com.feniqo.mobile.presentation.common.formatAssetQuantity
+import com.feniqo.mobile.presentation.common.formatMinorUnitsToInputText
 
 enum class AssetFormFieldError {
     NAME_REQUIRED,
@@ -29,20 +30,6 @@ enum class AssetFormFieldError {
     TRACKING_SYMBOL_TOO_LONG,
 }
 
-fun AssetFormFieldError.toDisplayText(): String = when (this) {
-    AssetFormFieldError.NAME_REQUIRED -> "Varlık adı zorunludur."
-    AssetFormFieldError.NAME_TOO_LONG -> "Varlık adı en fazla 120 karakter olabilir."
-    AssetFormFieldError.CURRENT_VALUE_REQUIRED -> "Güncel değer zorunludur."
-    AssetFormFieldError.CURRENT_VALUE_INVALID -> "Geçerli bir güncel değer girin."
-    AssetFormFieldError.CURRENT_VALUE_TOO_LARGE -> "Güncel değer desteklenen sınırı aşıyor."
-    AssetFormFieldError.QUANTITY_INVALID -> "Geçerli bir miktar girin."
-    AssetFormFieldError.QUANTITY_SCALE_EXCEEDED -> "Miktar en fazla 12 ondalık basamak içerebilir."
-    AssetFormFieldError.PURCHASE_PRICE_INVALID -> "Geçerli bir alış birim fiyatı girin."
-    AssetFormFieldError.PURCHASE_PRICE_TOO_LARGE -> "Alış fiyatı desteklenen sınırı aşıyor."
-    AssetFormFieldError.TRACKING_SYMBOL_REQUIRED -> "Otomatik takip için piyasa sembolü zorunludur."
-    AssetFormFieldError.TRACKING_SYMBOL_TOO_LONG -> "Piyasa sembolü en fazla 32 karakter olabilir."
-}
-
 data class AssetFormErrors(
     val name: AssetFormFieldError? = null,
     val currentValue: AssetFormFieldError? = null,
@@ -51,8 +38,12 @@ data class AssetFormErrors(
     val trackingSymbol: AssetFormFieldError? = null,
 ) {
     val hasErrors: Boolean
-        get() = name != null || currentValue != null || quantity != null ||
-            purchaseUnitPrice != null || trackingSymbol != null
+        get() =
+            name != null ||
+                currentValue != null ||
+                quantity != null ||
+                purchaseUnitPrice != null ||
+                trackingSymbol != null
 }
 
 data class AssetFormDraft(
@@ -65,37 +56,44 @@ data class AssetFormDraft(
     val trackingSymbol: String?,
     val autoTrack: Boolean,
 ) {
-    fun toCreateCommand(): CreateAssetCommand = CreateAssetCommand(
-        name = name,
-        type = type,
-        currentValue = currentValue,
-        quantity = quantity,
-        purchaseUnitPrice = purchaseUnitPrice,
-        trackingSymbol = trackingSymbol,
-        autoTrack = autoTrack,
-    )
+    fun toCreateCommand(): CreateAssetCommand =
+        CreateAssetCommand(
+            name = name,
+            type = type,
+            currentValue = currentValue,
+            quantity = quantity,
+            purchaseUnitPrice = purchaseUnitPrice,
+            trackingSymbol = trackingSymbol,
+            autoTrack = autoTrack,
+        )
 
-    fun toUpdateCommand(): UpdateAssetCommand = UpdateAssetCommand(
-        id = requireNotNull(assetId) { "Düzenleme için varlık kimliği zorunludur." },
-        name = name,
-        type = type,
-        currentValue = currentValue,
-        quantity = quantity,
-        purchaseUnitPrice = purchaseUnitPrice,
-        trackingSymbol = trackingSymbol,
-        autoTrack = autoTrack,
-    )
+    fun toUpdateCommand(): UpdateAssetCommand =
+        UpdateAssetCommand(
+            id = requireNotNull(assetId) { "Düzenleme için varlık kimliği zorunludur." },
+            name = name,
+            type = type,
+            currentValue = currentValue,
+            quantity = quantity,
+            purchaseUnitPrice = purchaseUnitPrice,
+            trackingSymbol = trackingSymbol,
+            autoTrack = autoTrack,
+        )
 }
 
 sealed interface AssetFormNormalizationResult {
-    data class Valid(val draft: AssetFormDraft) : AssetFormNormalizationResult
-    data class Invalid(val errors: AssetFormErrors) : AssetFormNormalizationResult
+    data class Valid(
+        val draft: AssetFormDraft,
+    ) : AssetFormNormalizationResult
+
+    data class Invalid(
+        val errors: AssetFormErrors,
+    ) : AssetFormNormalizationResult
 }
 
 data class AssetFormUiState(
     val input: AssetFormInput = AssetFormInput(),
     val errors: AssetFormErrors = AssetFormErrors(),
-    val calculatedCostPreview: String? = null,
+    val calculatedCost: Money? = null,
     val isSubmitting: Boolean = false,
     val hasUnsavedChanges: Boolean = false,
     val pendingDeleteConfirmation: Boolean = false,
@@ -103,15 +101,26 @@ data class AssetFormUiState(
 
 sealed interface AssetEditLoadState {
     data object Idle : AssetEditLoadState
+
     data object Loading : AssetEditLoadState
+
     data object Ready : AssetEditLoadState
+
     data object NotFound : AssetEditLoadState
-    data class Error(val message: FinanceUiMessage) : AssetEditLoadState
+
+    data class Error(
+        val message: FinanceUiMessage,
+    ) : AssetEditLoadState
 }
 
 sealed interface AssetFormUiEvent {
-    data class MutationSuccess(val message: FinanceUiMessage) : AssetFormUiEvent
-    data class ShowMessage(val message: FinanceUiMessage) : AssetFormUiEvent
+    data class MutationSuccess(
+        val message: FinanceUiMessage,
+    ) : AssetFormUiEvent
+
+    data class ShowMessage(
+        val message: FinanceUiMessage,
+    ) : AssetFormUiEvent
 }
 
 data class AssetFormInput(
@@ -127,30 +136,33 @@ data class AssetFormInput(
 ) {
     fun toDraft(): AssetFormNormalizationResult {
         val name = nameInput.trim()
-        val nameError = when {
-            name.isEmpty() -> AssetFormFieldError.NAME_REQUIRED
-            name.length > AssetValidationRules.MAX_NAME_LENGTH -> AssetFormFieldError.NAME_TOO_LONG
-            else -> null
-        }
+        val nameError =
+            when {
+                name.isEmpty() -> AssetFormFieldError.NAME_REQUIRED
+                name.length > AssetValidationRules.MAX_NAME_LENGTH -> AssetFormFieldError.NAME_TOO_LONG
+                else -> null
+            }
 
         val currentValueResult = parseMoneyAllowingZero(currentValueInput, currency, required = true)
         val quantityResult = parseQuantity(quantityInput)
         val purchaseResult = parseMoneyAllowingZero(purchaseUnitPriceInput, currency, required = false)
         val symbol = trackingSymbolInput.trim().takeIf(String::isNotEmpty)
-        val symbolError = when {
-            symbol != null && symbol.length > AssetValidationRules.MAX_TRACKING_SYMBOL_LENGTH ->
-                AssetFormFieldError.TRACKING_SYMBOL_TOO_LONG
-            autoTrack && symbol == null -> AssetFormFieldError.TRACKING_SYMBOL_REQUIRED
-            else -> null
-        }
+        val symbolError =
+            when {
+                symbol != null && symbol.length > AssetValidationRules.MAX_TRACKING_SYMBOL_LENGTH ->
+                    AssetFormFieldError.TRACKING_SYMBOL_TOO_LONG
+                autoTrack && symbol == null -> AssetFormFieldError.TRACKING_SYMBOL_REQUIRED
+                else -> null
+            }
 
-        val errors = AssetFormErrors(
-            name = nameError,
-            currentValue = currentValueResult.error,
-            quantity = quantityResult.error,
-            purchaseUnitPrice = purchaseResult.error,
-            trackingSymbol = symbolError,
-        )
+        val errors =
+            AssetFormErrors(
+                name = nameError,
+                currentValue = currentValueResult.error,
+                quantity = quantityResult.error,
+                purchaseUnitPrice = purchaseResult.error,
+                trackingSymbol = symbolError,
+            )
         if (errors.hasErrors || currentValueResult.money == null) {
             return AssetFormNormalizationResult.Invalid(errors)
         }
@@ -168,41 +180,58 @@ data class AssetFormInput(
         )
     }
 
-    /** Miktar ve alış birim fiyatı geçerli girilmişse anlık maliyet önizlemesi üretir. */
-    fun computeCostPreview(): String? {
+    /** Miktar ve alış birim fiyatı geçerli girilmişse anlık maliyet üretir. */
+    fun computeCost(): Money? {
         val quantityResult = parseQuantity(quantityInput)
         val purchaseResult = parseMoneyAllowingZero(purchaseUnitPriceInput, currency, required = false)
         val quantity = quantityResult.quantity ?: return null
         val purchasePrice = purchaseResult.money ?: return null
         val costResult = AssetFinancialCalculator.calculateCost(quantity, purchasePrice)
         return if (costResult is CostCalculationResult.Success) {
-            MoneyFormatter.format(costResult.cost)
-        } else null
+            costResult.cost
+        } else {
+            null
+        }
     }
 
     companion object {
-        fun fromDomain(asset: Asset): AssetFormInput = AssetFormInput(
-            assetId = asset.id,
-            nameInput = asset.name,
-            type = asset.type,
-            currentValueInput = MoneyFormatter.formatMinorUnitsToInputText(
-                asset.currentValue.amountMinor,
-                asset.currentValue.currency,
-            ),
-            currency = asset.currentValue.currency,
-            quantityInput = asset.quantity?.toInputText().orEmpty(),
-            purchaseUnitPriceInput = asset.purchaseUnitPrice?.let {
-                MoneyFormatter.formatMinorUnitsToInputText(it.amountMinor, it.currency)
-            }.orEmpty(),
-            trackingSymbolInput = asset.trackingSymbol.orEmpty(),
-            autoTrack = asset.autoTrack,
-        )
+        fun fromDomain(
+            asset: Asset,
+            decimalSeparator: Char,
+        ): AssetFormInput =
+            AssetFormInput(
+                assetId = asset.id,
+                nameInput = asset.name,
+                type = asset.type,
+                currentValueInput =
+                    formatMinorUnitsToInputText(
+                        asset.currentValue.amountMinor,
+                        asset.currentValue.currency,
+                        decimalSeparator,
+                    ),
+                currency = asset.currentValue.currency,
+                quantityInput = asset.quantity?.let { formatAssetQuantity(it, decimalSeparator.toString()) }.orEmpty(),
+                purchaseUnitPriceInput =
+                    asset.purchaseUnitPrice
+                        ?.let {
+                            formatMinorUnitsToInputText(it.amountMinor, it.currency, decimalSeparator)
+                        }.orEmpty(),
+                trackingSymbolInput = asset.trackingSymbol.orEmpty(),
+                autoTrack = asset.autoTrack,
+            )
     }
 }
 
-private data class MoneyFieldResult(val money: Money?, val error: AssetFormFieldError?)
+private data class MoneyFieldResult(
+    val money: Money?,
+    val error: AssetFormFieldError?,
+)
 
-private fun parseMoneyAllowingZero(input: String, currency: Currency, required: Boolean): MoneyFieldResult {
+private fun parseMoneyAllowingZero(
+    input: String,
+    currency: Currency,
+    required: Boolean,
+): MoneyFieldResult {
     val trimmed = input.trim()
     if (trimmed.isEmpty()) {
         return MoneyFieldResult(null, if (required) AssetFormFieldError.CURRENT_VALUE_REQUIRED else null)
@@ -210,22 +239,25 @@ private fun parseMoneyAllowingZero(input: String, currency: Currency, required: 
     if (trimmed.isZeroDecimal()) return MoneyFieldResult(Money.zero(currency), null)
     return when (val parsed = MoneyAmountParser.parseToMinorUnits(trimmed, currency)) {
         is MoneyAmountParser.ParseResult.Success -> MoneyFieldResult(Money(parsed.amountMinor, currency), null)
-        is MoneyAmountParser.ParseResult.Invalid -> MoneyFieldResult(
-            null,
-            when (parsed.error) {
-                MoneyAmountParser.MoneyParseError.EMPTY -> if (required) {
-                    AssetFormFieldError.CURRENT_VALUE_REQUIRED
-                } else {
-                    AssetFormFieldError.PURCHASE_PRICE_INVALID
-                }
-                MoneyAmountParser.MoneyParseError.MAX_AMOUNT_EXCEEDED -> if (required) {
-                    AssetFormFieldError.CURRENT_VALUE_TOO_LARGE
-                } else {
-                    AssetFormFieldError.PURCHASE_PRICE_TOO_LARGE
-                }
-                else -> if (required) AssetFormFieldError.CURRENT_VALUE_INVALID else AssetFormFieldError.PURCHASE_PRICE_INVALID
-            },
-        )
+        is MoneyAmountParser.ParseResult.Invalid ->
+            MoneyFieldResult(
+                null,
+                when (parsed.error) {
+                    MoneyAmountParser.MoneyParseError.EMPTY ->
+                        if (required) {
+                            AssetFormFieldError.CURRENT_VALUE_REQUIRED
+                        } else {
+                            AssetFormFieldError.PURCHASE_PRICE_INVALID
+                        }
+                    MoneyAmountParser.MoneyParseError.MAX_AMOUNT_EXCEEDED ->
+                        if (required) {
+                            AssetFormFieldError.CURRENT_VALUE_TOO_LARGE
+                        } else {
+                            AssetFormFieldError.PURCHASE_PRICE_TOO_LARGE
+                        }
+                    else -> if (required) AssetFormFieldError.CURRENT_VALUE_INVALID else AssetFormFieldError.PURCHASE_PRICE_INVALID
+                },
+            )
     }
 }
 
@@ -237,7 +269,10 @@ private fun String.isZeroDecimal(): Boolean {
     return parts.all { part -> part.all { it == '0' } }
 }
 
-private data class QuantityFieldResult(val quantity: AssetQuantity?, val error: AssetFormFieldError?)
+private data class QuantityFieldResult(
+    val quantity: AssetQuantity?,
+    val error: AssetFormFieldError?,
+)
 
 private fun parseQuantity(input: String): QuantityFieldResult {
     val trimmed = input.trim()
@@ -245,25 +280,24 @@ private fun parseQuantity(input: String): QuantityFieldResult {
     if (!trimmed.all { it.isDigit() || it == '.' || it == ',' } || ('.' in trimmed && ',' in trimmed)) {
         return QuantityFieldResult(null, AssetFormFieldError.QUANTITY_INVALID)
     }
-    val separator = when {
-        ',' in trimmed -> ','
-        '.' in trimmed -> '.'
-        else -> null
-    }
+    val separator =
+        when {
+            ',' in trimmed -> ','
+            '.' in trimmed -> '.'
+            else -> null
+        }
     val parts = if (separator == null) listOf(trimmed) else trimmed.split(separator)
     if (parts.size > 2 || parts.any(String::isEmpty) || parts.any { part -> !part.all(Char::isDigit) }) {
         return QuantityFieldResult(null, AssetFormFieldError.QUANTITY_INVALID)
     }
     val scale = parts.getOrNull(1)?.length ?: 0
     if (scale > 12) return QuantityFieldResult(null, AssetFormFieldError.QUANTITY_SCALE_EXCEEDED)
-    val unscaled = parts.joinToString("").trimStart('0').ifEmpty { "0" }.toLongOrNull()
-        ?: return QuantityFieldResult(null, AssetFormFieldError.QUANTITY_INVALID)
+    val unscaled =
+        parts
+            .joinToString("")
+            .trimStart('0')
+            .ifEmpty { "0" }
+            .toLongOrNull()
+            ?: return QuantityFieldResult(null, AssetFormFieldError.QUANTITY_INVALID)
     return QuantityFieldResult(AssetQuantity(unscaled, scale), null)
-}
-
-private fun AssetQuantity.toInputText(): String {
-    if (scale == 0) return unscaledValue.toString()
-    val digits = unscaledValue.toString().padStart(scale + 1, '0')
-    val fractional = digits.takeLast(scale).trimEnd('0')
-    return if (fractional.isEmpty()) digits.dropLast(scale) else "${digits.dropLast(scale)},$fractional"
 }

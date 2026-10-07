@@ -57,12 +57,10 @@ class AssetDetailViewModelTest {
         assertNotNull(state.asset)
         val detail = state.asset!!
         assertEquals("Gram altın", detail.name)
-        assertEquals("150.000,00 ₺", detail.currentValueFormatted)
-        assertTrue(detail.hasCalculatedCost)
-        assertEquals("120.000,00 ₺", detail.calculatedCostFormatted)
-        assertEquals("+ 30.000,00 ₺", detail.differenceFormatted)
-        assertEquals("(+%25)", detail.differencePercentageText)
-        assertEquals(true, detail.isDifferencePositive)
+        assertEquals(Money(15_000_000L, Currency.TRY), detail.currentValue)
+        assertEquals(Money(12_000_000L, Currency.TRY), detail.calculatedCost)
+        assertEquals(MoneyDelta(3_000_000L, Currency.TRY), detail.difference)
+        assertEquals(2500, detail.differencePercentageBps)
         assertFalse(detail.isPriceVerificationFailed)
     }
 
@@ -96,9 +94,9 @@ class AssetDetailViewModelTest {
 
         val detail = viewModel.uiState.value.asset
         assertNotNull(detail)
-        assertFalse(detail!!.hasCalculatedCost)
-        assertNull(detail.calculatedCostFormatted)
-        assertNull(detail.differenceFormatted)
+        assertNull(detail!!.calculatedCost)
+        assertNull(detail.difference)
+        assertNull(detail.differencePercentageBps)
     }
 
     @Test
