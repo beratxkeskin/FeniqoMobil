@@ -1249,4 +1249,259 @@
         <item quantity="one">%1$d active goal is past its target date</item>
         <item quantity="other">%1$d active goals are past their target date</item>
     </plurals>
+        <!-- Debts & Receivables: Main Screen & Sections -->
+    <string name="debt_main_title">Debts &amp; Receivables</string>
+    <string name="debt_main_nav_back">Back</string>
+    <string name="debt_main_add_desc">Create new record</string>
+    <string name="debt_main_subtitle">Track how much you owe and how much is owed to you.</string>
+    <string name="debt_main_loading">Loading debts and receivables...</string>
+    <string name="debt_main_error_title">Failed to Load Debts &amp; Receivables</string>
+    <string name="debt_main_add_button">+ New record</string>
+    <string name="debt_main_my_debts_title">My Debts</string>
+    <string name="debt_main_my_receivables_title">My Receivables</string>
+    <string name="debt_main_settled_title">Completed</string>
+
+    <!-- Debts & Receivables: Summary & Net Status -->
+    <string name="debt_summary_net_position">Net status</string>
+    <string name="debt_summary_my_debts">My Debts</string>
+    <string name="debt_summary_you_owe">You owe</string>
+    <string name="debt_summary_my_receivables">My Receivables</string>
+    <string name="debt_summary_owed_to_you">Owed to you</string>
+    <string name="debt_summary_zero_person">0 people</string>
+    <string name="debt_summary_excluded_currencies_notice">%1$d records in other currencies (%2$s) are excluded from this total.</string>
+    <string name="debt_net_status_debt_exceeds">Your debt exceeds your receivables.</string>
+    <string name="debt_net_status_receivable_exceeds">Your receivables exceed your debt.</string>
+    <string name="debt_net_status_balanced">Your debts and receivables are balanced.</string>
+
+    <!-- Debts & Receivables: Upcoming Payments -->
+    <string name="debt_upcoming_section_title">Upcoming Due Dates</string>
+    <string name="debt_upcoming_subtitle_mixed">%1$d overdue, %2$d upcoming</string>
+    <string name="debt_upcoming_see_all">See all</string>
+    <string name="debt_upcoming_show_less">Show less</string>
+    <string name="debt_upcoming_collapse_desc">Collapse upcoming due dates</string>
+    <string name="debt_upcoming_expand_desc">Expand upcoming due dates</string>
+    <string name="debt_upcoming_item_prefix">Upcoming due date • %1$s</string>
+    <string name="debt_upcoming_item_content_desc">Upcoming due date: %1$s, Remaining: %2$s, Due: %3$s</string>
+
+    <!-- Debts & Receivables: Group Cards & Item Rows -->
+    <string name="debt_grouped_collapse_desc">Collapse %1$s</string>
+    <string name="debt_grouped_expand_desc">Expand %1$s</string>
+    <string name="debt_type_debt">Debt</string>
+    <string name="debt_type_receivable">Receivable</string>
+    <string name="debt_due_status_overdue">Overdue</string>
+    <string name="debt_due_status_due_today">Today</string>
+    <string name="debt_due_status_due_soon">Approaching</string>
+    <string name="debt_due_status_on_time">On time</string>
+    <string name="debt_due_status_settled">Settled</string>
+    <string name="debt_item_settled_label">Completed</string>
+    <string name="debt_item_remaining_prefix">Remaining: %1$s</string>
+    <string name="debt_item_row_content_desc">%1$s, %2$s, Remaining: %3$s, Due: %4$s, Status: %5$s</string>
+
+    <!-- Debts & Receivables: Insights -->
+    <string name="debt_insight_overdue_title">Overdue Debt Warning</string>
+    <string name="debt_insight_receivable_title">Feniqo Insight</string>
+    <string name="debt_insight_receivable_message">You have a total of %1$s pending to be collected. Consider sending a friendly reminder to avoid delays.</string>
+    <string name="debt_insight_snowball_title">Snowball Plan Suggestion</string>
+    <string name="debt_insight_single_tracking_title">Regular Tracking</string>
+    <string name="debt_insight_single_tracking_message">Your remaining balance for %1$s is %2$s. You can clear your balance with planned payments before the due date (%3$s).</string>
+    <string name="debt_insight_all_settled_title">Great News!</string>
+    <string name="debt_insight_all_settled_message">All your debts and receivables are settled. Congratulations, your financial obligations are fully under control.</string>
+
+    <!-- Debts & Receivables: Empty & Banner & Snowball Entry -->
+    <string name="debt_empty_title">No records yet</string>
+    <string name="debt_empty_desc">Track your debts and receivables in one place.</string>
+    <string name="debt_empty_create_button">Create first record</string>
+    <string name="debt_settled_banner_debt">This debt is paid in full.</string>
+    <string name="debt_settled_banner_receivable">This receivable is collected in full.</string>
+    <string name="debt_snowball_card_title">Debt payoff plan</string>
+    <string name="debt_snowball_card_desc">Create a plan to pay off your debts faster.</string>
+
+    <!-- Debts & Receivables: Form Screen -->
+    <string name="debt_form_title_create">New record</string>
+    <string name="debt_form_title_edit">Edit record</string>
+    <string name="debt_form_nav_back">Back</string>
+    <string name="debt_form_delete_desc">Delete record</string>
+    <string name="debt_form_default_record_title">Debt / Receivable Record</string>
+    <string name="debt_form_badge_settled">Completed</string>
+    <string name="debt_form_badge_active">Active</string>
+    <string name="debt_form_balance_remaining_debt">Remaining Debt</string>
+    <string name="debt_form_balance_remaining_receivable">Remaining Receivable</string>
+    <string name="debt_form_balance_total_label">Total: %1$s</string>
+    <string name="debt_form_balance_paid_debt">Paid: %1$s</string>
+    <string name="debt_form_balance_paid_receivable">Collected: %1$s</string>
+    <string name="debt_form_status_debt_settled">Debt Fully Paid</string>
+    <string name="debt_form_status_receivable_settled">Receivable Fully Collected</string>
+    <string name="debt_form_status_debt_in_progress">Payment In Progress</string>
+    <string name="debt_form_status_receivable_in_progress">Collection In Progress</string>
+    <string name="debt_form_add_payment_debt">+ Add payment</string>
+    <string name="debt_form_add_payment_receivable">+ Add collection</string>
+    <string name="debt_form_section_info">Record info</string>
+    <string name="debt_form_type_desc_hint">Debt: I will pay · Receivable: I will collect</string>
+    <string name="debt_form_title_label">Record name / person / company *</string>
+    <string name="debt_form_title_placeholder">e.g. John Debt, Credit Card</string>
+    <string name="debt_form_title_content_desc">Debt record name</string>
+    <string name="debt_form_amount_label">Total amount *</string>
+    <string name="debt_form_amount_placeholder">0.00</string>
+    <string name="debt_form_amount_content_desc">Debt total amount</string>
+    <string name="debt_form_currency_label">Currency</string>
+    <string name="debt_form_currency_locked">Cannot be changed</string>
+    <string name="debt_form_currency_locked_desc">Locked</string>
+    <string name="debt_form_currency_select_desc">Select currency</string>
+    <string name="debt_form_due_date_label">Due date *</string>
+    <string name="debt_form_due_date_placeholder">Select date</string>
+    <string name="debt_form_due_date_desc">Select due date</string>
+    <string name="debt_form_description_label">Description (optional)</string>
+    <string name="debt_form_description_placeholder">Add note or details</string>
+    <string name="debt_form_description_content_desc">Debt description</string>
+    <string name="debt_form_history_title_debt">Payment history</string>
+    <string name="debt_form_history_title_receivable">Collection history</string>
+    <string name="debt_form_history_empty_debt">No payment records yet.</string>
+    <string name="debt_form_history_empty_receivable">No collection records yet.</string>
+    <string name="debt_form_history_badge_debt">Payment made</string>
+    <string name="debt_form_history_badge_receivable">Collection made</string>
+    <string name="debt_form_delete_button">Delete record</string>
+    <string name="debt_form_save_changes">Save changes</string>
+    <string name="debt_form_create_record">Create record</string>
+
+    <!-- Debts & Receivables: Delete Dialog -->
+    <string name="debt_delete_dialog_desc_with_title">Are you sure you want to delete %1$s?</string>
+    <string name="debt_delete_dialog_desc_general">Are you sure you want to delete this debt / receivable record? This action cannot be undone.</string>
+    <string name="debt_delete_dialog_title">Do you want to delete the record?</string>
+    <string name="debt_delete_dialog_confirm">Delete</string>
+    <string name="debt_delete_dialog_cancel">Cancel</string>
+    <string name="debt_delete_dialog_default_name">this record</string>
+    <string name="debt_delete_dialog_content_desc">Debt receivable delete confirmation dialog</string>
+
+    <!-- Debts & Receivables: Date & Currency Pickers -->
+    <string name="debt_date_picker_default_title">Select due date</string>
+    <string name="debt_date_picker_payment_title">Select Payment Date</string>
+    <string name="debt_date_picker_collection_title">Select Collection Date</string>
+    <string name="debt_date_picker_close">Close</string>
+    <string name="debt_date_picker_confirm">Select date</string>
+    <string name="debt_currency_picker_title">Select currency</string>
+    <string name="debt_currency_picker_close">Close</string>
+
+    <!-- Debts & Receivables: Payment Form Screen -->
+    <string name="debt_payment_form_title_debt">Add payment</string>
+    <string name="debt_payment_form_title_receivable">Add collection</string>
+    <string name="debt_payment_form_nav_back">Back</string>
+    <string name="debt_payment_form_balance_remaining_debt">Remaining Debt</string>
+    <string name="debt_payment_form_balance_remaining_receivable">Remaining Receivable</string>
+    <string name="debt_payment_form_balance_total">Total: %1$s</string>
+    <string name="debt_payment_form_balance_paid_debt">Paid: %1$s</string>
+    <string name="debt_payment_form_balance_paid_receivable">Collected: %1$s</string>
+    <string name="debt_payment_form_settled_notice">This record is fully settled. No new payments can be added.</string>
+    <string name="debt_payment_form_amount_label_debt">Payment Amount *</string>
+    <string name="debt_payment_form_amount_label_receivable">Collection Amount *</string>
+    <string name="debt_payment_form_amount_desc_debt">Payment amount</string>
+    <string name="debt_payment_form_amount_desc_receivable">Collection amount</string>
+    <string name="debt_payment_form_max_limit">Maximum: %1$s</string>
+    <string name="debt_payment_form_date_label_debt">Payment Date *</string>
+    <string name="debt_payment_form_date_label_receivable">Collection Date *</string>
+    <string name="debt_payment_form_date_placeholder">Select date</string>
+    <string name="debt_payment_form_date_desc">Select date</string>
+    <string name="debt_payment_form_info_notice_debt">This records a payment and updates the remaining balance of the debt.</string>
+    <string name="debt_payment_form_info_notice_receivable">This records a collection and updates the remaining balance of the receivable.</string>
+    <string name="debt_payment_form_submit_debt">+ Save payment</string>
+    <string name="debt_payment_form_submit_receivable">+ Save collection</string>
+
+    <!-- Debts & Receivables: Snowball Payoff Plan Screen -->
+    <string name="debt_snowball_title">Debt payoff plan</string>
+    <string name="debt_snowball_subtitle">Pay off debts starting from the smallest balance.</string>
+    <string name="debt_snowball_nav_back">Back</string>
+    <string name="debt_snowball_currency_label">Simulation currency</string>
+    <string name="debt_snowball_budget_label">Monthly budget you can allocate *</string>
+    <string name="debt_snowball_budget_placeholder">0.00</string>
+    <string name="debt_snowball_calculate_button">+ Calculate plan</string>
+    <string name="debt_snowball_error_title">An Error Occurred</string>
+    <string name="debt_snowball_empty_title">No Eligible Debts Found</string>
+    <string name="debt_snowball_empty_desc">There are no active unpaid debts in the selected currency (%1$s).</string>
+    <string name="debt_snowball_result_title">Simulation result</string>
+    <string name="debt_snowball_total_debt">Total debt</string>
+    <string name="debt_snowball_monthly_budget">Monthly budget</string>
+    <string name="debt_snowball_approx_prefix">Approximately</string>
+    <string name="debt_snowball_approx_suffix">to pay off</string>
+    <string name="debt_snowball_disclaimer">Interest and future debts are not included. This simulation does not make automatic payments; it is a guide.</string>
+    <string name="debt_snowball_order_section_title">Payoff order</string>
+    <string name="debt_snowball_settled_in_month">Settled in month %1$d</string>
+    <string name="debt_snowball_monthly_dist_title">Monthly breakdown</string>
+    <string name="debt_snowball_allocation_header">Month %1$d • %2$s</string>
+    <string name="debt_snowball_allocation_remaining">Remaining: %1$s</string>
+    <string name="debt_snowball_allocation_payment">Payment</string>
+    <string name="debt_snowball_missing_debt_fallback">Debt (%1$s)</string>
+
+    <!-- Debts & Receivables: Route Loading & Not Found States -->
+    <string name="debt_route_loading">Loading record details...</string>
+    <string name="debt_route_not_found_title">Record Not Found</string>
+    <string name="debt_form_route_not_found_desc">The debt/receivable record you want to edit does not exist or has been deleted.</string>
+    <string name="debt_payment_route_not_found_desc">The debt/receivable record you want to add payment for does not exist or has been deleted.</string>
+    <string name="debt_route_back_action">Go back</string>
+    <string name="debt_route_error_title">Failed to Load Record</string>
+
+    <!-- Debts & Receivables: Form Validation Errors -->
+    <string name="debt_error_title_required">Title is required.</string>
+    <string name="debt_error_title_too_long">Title cannot exceed 500 characters.</string>
+    <string name="debt_error_amount_required">Amount is required.</string>
+    <string name="debt_error_amount_non_positive">Amount must be greater than zero.</string>
+    <string name="debt_error_amount_invalid">Enter a valid amount.</string>
+    <string name="debt_error_due_date_required">Due date must be selected.</string>
+    <string name="debt_error_description_too_long">Description cannot exceed 500 characters.</string>
+    <string name="debt_error_currency_locked_in_edit">Currency cannot be changed in edit mode.</string>
+    <string name="debt_error_generic">Invalid input.</string>
+
+    <string name="debt_payment_error_amount_required">Payment amount is required.</string>
+    <string name="debt_payment_error_amount_non_positive">Amount must be greater than zero.</string>
+    <string name="debt_payment_error_amount_invalid">Enter a valid amount.</string>
+    <string name="debt_payment_error_exceeds_remaining">Payment amount cannot exceed remaining debt. Maximum payment amount: %1$s</string>
+    <string name="debt_payment_error_already_settled">Cannot make payment because debt is fully settled.</string>
+    <string name="debt_payment_error_date_required">Payment date must be selected.</string>
+    <string name="debt_payment_error_currency_mismatch">Currency mismatch.</string>
+    <string name="debt_payment_error_parent_missing">Debt record not found.</string>
+
+    <string name="debt_snowball_error_budget_required">Monthly budget is required.</string>
+    <string name="debt_snowball_error_budget_non_positive">Monthly budget must be greater than zero.</string>
+    <string name="debt_snowball_error_budget_max_exceeded">Monthly budget is too high.</string>
+    <string name="debt_snowball_error_budget_invalid">Enter a valid amount.</string>
+
+    <!-- Debts & Receivables: Plurals -->
+    <plurals name="debt_active_debt_count_plural">
+        <item quantity="one">%1$d active debt</item>
+        <item quantity="other">%1$d active debts</item>
+    </plurals>
+    <plurals name="debt_active_receivable_count_plural">
+        <item quantity="one">%1$d active receivable</item>
+        <item quantity="other">%1$d active receivables</item>
+    </plurals>
+    <plurals name="debt_settled_count_plural">
+        <item quantity="one">%1$d settled record</item>
+        <item quantity="other">%1$d settled records</item>
+    </plurals>
+    <plurals name="debt_summary_record_count_plural">
+        <item quantity="one">%1$d record in total</item>
+        <item quantity="other">%1$d records in total</item>
+    </plurals>
+    <plurals name="debt_summary_person_count_plural">
+        <item quantity="one">%1$d person</item>
+        <item quantity="other">%1$d people</item>
+    </plurals>
+    <plurals name="debt_upcoming_subtitle_within_7_days_plural">
+        <item quantity="one">%1$d payment in the next 7 days</item>
+        <item quantity="other">%1$d payments in the next 7 days</item>
+    </plurals>
+    <plurals name="debt_insight_overdue_message_plural">
+        <item quantity="one">You have %1$d overdue debt. Prioritizing this payment is recommended to avoid late penalties.</item>
+        <item quantity="other">You have %1$d overdue debts. Prioritizing these payments is recommended to avoid late penalties.</item>
+    </plurals>
+    <plurals name="debt_insight_snowball_message_plural">
+        <item quantity="one">You have %1$d active debt. Check the Payoff Plan to pay off the lowest balance first and gain psychological momentum.</item>
+        <item quantity="other">You have %1$d active debts. Check the Payoff Plan to pay off lowest balances first and gain psychological momentum.</item>
+    </plurals>
+    <plurals name="debt_snowball_eligible_debts_plural">
+        <item quantity="one">%1$d eligible debt found.</item>
+        <item quantity="other">%1$d eligible debts found.</item>
+    </plurals>
+    <plurals name="debt_snowball_month_count_plural">
+        <item quantity="one">%1$d month</item>
+        <item quantity="other">%1$d months</item>
+    </plurals>
 </resources>

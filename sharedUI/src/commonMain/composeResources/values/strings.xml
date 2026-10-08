@@ -1249,4 +1249,260 @@
         <item quantity="one">%1$d aktif hedefin hedef tarihi geçti</item>
         <item quantity="other">%1$d aktif hedefin hedef tarihi geçti</item>
     </plurals>
+
+    <!-- Debts & Receivables: Main Screen & Sections -->
+    <string name="debt_main_title">Borç ve Alacaklar</string>
+    <string name="debt_main_nav_back">Geri</string>
+    <string name="debt_main_add_desc">Yeni kayıt oluştur</string>
+    <string name="debt_main_subtitle">Kime ne kadar borcunuz olduğunu ve kimden alacağınız olduğunu takip edin.</string>
+    <string name="debt_main_loading">Borç ve alacaklar yükleniyor...</string>
+    <string name="debt_main_error_title">Borç ve Alacaklar Yüklenemedi</string>
+    <string name="debt_main_add_button">+ Yeni kayıt</string>
+    <string name="debt_main_my_debts_title">Borçlarım</string>
+    <string name="debt_main_my_receivables_title">Alacaklarım</string>
+    <string name="debt_main_settled_title">Tamamlananlar</string>
+
+    <!-- Debts & Receivables: Summary & Net Status -->
+    <string name="debt_summary_net_position">Net durum</string>
+    <string name="debt_summary_my_debts">Borçlarım</string>
+    <string name="debt_summary_you_owe">Borcunuz</string>
+    <string name="debt_summary_my_receivables">Alacaklarım</string>
+    <string name="debt_summary_owed_to_you">Alacağınız</string>
+    <string name="debt_summary_zero_person">0 kişi</string>
+    <string name="debt_summary_excluded_currencies_notice">%1$d kayıt farklı para biriminde (%2$s) olduğu için bu toplama dahil edilmedi.</string>
+    <string name="debt_net_status_debt_exceeds">Borcunuz alacağınızdan fazla.</string>
+    <string name="debt_net_status_receivable_exceeds">Alacağınız borcunuzdan fazla.</string>
+    <string name="debt_net_status_balanced">Borç ve alacaklarınız dengede.</string>
+
+    <!-- Debts & Receivables: Upcoming Payments -->
+    <string name="debt_upcoming_section_title">Yaklaşan Vadeler</string>
+    <string name="debt_upcoming_subtitle_mixed">%1$d gecikmiş, %2$d yaklaşan ödeme</string>
+    <string name="debt_upcoming_see_all">Tümünü gör</string>
+    <string name="debt_upcoming_show_less">Daha az</string>
+    <string name="debt_upcoming_collapse_desc">Yaklaşan vadeler listesini daralt</string>
+    <string name="debt_upcoming_expand_desc">Yaklaşan vadeler listesini genişlet</string>
+    <string name="debt_upcoming_item_prefix">Yaklaşan vade • %1$s</string>
+    <string name="debt_upcoming_item_content_desc">Yaklaşan vade: %1$s, Kalan: %2$s, Vade: %3$s</string>
+
+    <!-- Debts & Receivables: Group Cards & Item Rows -->
+    <string name="debt_grouped_collapse_desc">%1$s listesini daralt</string>
+    <string name="debt_grouped_expand_desc">%1$s listesini genişlet</string>
+    <string name="debt_type_debt">Borç</string>
+    <string name="debt_type_receivable">Alacak</string>
+    <string name="debt_due_status_overdue">Gecikti</string>
+    <string name="debt_due_status_due_today">Bugün</string>
+    <string name="debt_due_status_due_soon">Yaklaşıyor</string>
+    <string name="debt_due_status_on_time">Zamanında</string>
+    <string name="debt_due_status_settled">Kapandı</string>
+    <string name="debt_item_settled_label">Tamamlandı</string>
+    <string name="debt_item_remaining_prefix">Kalan: %1$s</string>
+    <string name="debt_item_row_content_desc">%1$s, %2$s, Kalan: %3$s, Vade: %4$s, Durum: %5$s</string>
+
+    <!-- Debts & Receivables: Insights -->
+    <string name="debt_insight_overdue_title">Gecikmiş Borç Uyarısı</string>
+    <string name="debt_insight_receivable_title">Feniqo İçgörü</string>
+    <string name="debt_insight_receivable_message">Tahsil edilmeyi bekleyen toplam %1$s alacağınız var. Gecikmeleri önlemek için karşı tarafa hatırlatma yapmayı düşünebilirsiniz.</string>
+    <string name="debt_insight_snowball_title">Kartopu Planı Önerisi</string>
+    <string name="debt_insight_single_tracking_title">Düzenli Takip</string>
+    <string name="debt_insight_single_tracking_message">%1$s için kalan borcunuz %2$s. Vade tarihine (%3$s) kadar planlı ödemelerle bakiyenizi sıfırlayabilirsiniz.</string>
+    <string name="debt_insight_all_settled_title">Harika Durum!</string>
+    <string name="debt_insight_all_settled_message">Tüm borç ve alacak kayıtlarınız kapandı. Tebrikler, finansal yükümlülükleriniz tamamen kontrol altında.</string>
+
+    <!-- Debts & Receivables: Empty & Banner & Snowball Entry -->
+    <string name="debt_empty_title">Henüz kayıt yok</string>
+    <string name="debt_empty_desc">Borçlarını ve alacaklarını tek yerde takip et.</string>
+    <string name="debt_empty_create_button">İlk kaydını oluştur</string>
+    <string name="debt_settled_banner_debt">Bu borcun tamamı ödendi.</string>
+    <string name="debt_settled_banner_receivable">Bu alacağın tamamı tahsil edildi.</string>
+    <string name="debt_snowball_card_title">Borç kapatma planı</string>
+    <string name="debt_snowball_card_desc">Borçlarını daha hızlı kapatmak için bir plan oluştur.</string>
+
+    <!-- Debts & Receivables: Form Screen -->
+    <string name="debt_form_title_create">Yeni kayıt</string>
+    <string name="debt_form_title_edit">Kaydı düzenle</string>
+    <string name="debt_form_nav_back">Geri</string>
+    <string name="debt_form_delete_desc">Kaydı sil</string>
+    <string name="debt_form_default_record_title">Borç / Alacak Kaydı</string>
+    <string name="debt_form_badge_settled">Tamamlandı</string>
+    <string name="debt_form_badge_active">Aktif</string>
+    <string name="debt_form_balance_remaining_debt">Kalan Borç</string>
+    <string name="debt_form_balance_remaining_receivable">Kalan Alacak</string>
+    <string name="debt_form_balance_total_label">Toplam: %1$s</string>
+    <string name="debt_form_balance_paid_debt">Ödenen: %1$s</string>
+    <string name="debt_form_balance_paid_receivable">Tahsil: %1$s</string>
+    <string name="debt_form_status_debt_settled">Borç Tamamen Ödendi</string>
+    <string name="debt_form_status_receivable_settled">Alacak Tamamen Tahsil Edildi</string>
+    <string name="debt_form_status_debt_in_progress">Ödeme Devam Ediyor</string>
+    <string name="debt_form_status_receivable_in_progress">Tahsilat Devam Ediyor</string>
+    <string name="debt_form_add_payment_debt">+ Ödeme ekle</string>
+    <string name="debt_form_add_payment_receivable">+ Tahsilat ekle</string>
+    <string name="debt_form_section_info">Kayıt bilgileri</string>
+    <string name="debt_form_type_desc_hint">Borç: ödeyeceğim · Alacak: tahsil edeceğim</string>
+    <string name="debt_form_title_label">Kayıt adı / kişi / kurum *</string>
+    <string name="debt_form_title_placeholder">örn. Ahmet Borç, Garanti Kredi Kartı</string>
+    <string name="debt_form_title_content_desc">Borç kayıt adı</string>
+    <string name="debt_form_amount_label">Toplam tutar *</string>
+    <string name="debt_form_amount_placeholder">0,00</string>
+    <string name="debt_form_amount_content_desc">Borç toplam tutarı</string>
+    <string name="debt_form_currency_label">Para birimi</string>
+    <string name="debt_form_currency_locked">Değiştirilemez</string>
+    <string name="debt_form_currency_locked_desc">Kilitli</string>
+    <string name="debt_form_currency_select_desc">Para birimi seç</string>
+    <string name="debt_form_due_date_label">Vade tarihi *</string>
+    <string name="debt_form_due_date_placeholder">Tarih seçin</string>
+    <string name="debt_form_due_date_desc">Vade tarihi seç</string>
+    <string name="debt_form_description_label">Açıklama (opsiyonel)</string>
+    <string name="debt_form_description_placeholder">Not veya detay ekleyin</string>
+    <string name="debt_form_description_content_desc">Borç açıklaması</string>
+    <string name="debt_form_history_title_debt">Ödeme geçmişi</string>
+    <string name="debt_form_history_title_receivable">Tahsilat geçmişi</string>
+    <string name="debt_form_history_empty_debt">Henüz bir ödeme kaydı bulunmuyor.</string>
+    <string name="debt_form_history_empty_receivable">Henüz bir tahsilat kaydı bulunmuyor.</string>
+    <string name="debt_form_history_badge_debt">Ödeme yapıldı</string>
+    <string name="debt_form_history_badge_receivable">Tahsilat yapıldı</string>
+    <string name="debt_form_delete_button">Kaydı sil</string>
+    <string name="debt_form_save_changes">Değişiklikleri kaydet</string>
+    <string name="debt_form_create_record">Kaydı oluştur</string>
+
+    <!-- Debts & Receivables: Delete Dialog -->
+    <string name="debt_delete_dialog_desc_with_title">%1$s kaydını silmek istediğine emin misin?</string>
+    <string name="debt_delete_dialog_desc_general">Bu borç / alacak kaydını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</string>
+    <string name="debt_delete_dialog_title">Kaydı silmek istiyor musun?</string>
+    <string name="debt_delete_dialog_confirm">Sil</string>
+    <string name="debt_delete_dialog_cancel">Vazgeç</string>
+    <string name="debt_delete_dialog_default_name">bu kaydı</string>
+    <string name="debt_delete_dialog_content_desc">Borç alacak silme onay diyaloğu</string>
+
+    <!-- Debts & Receivables: Date & Currency Pickers -->
+    <string name="debt_date_picker_default_title">Vade tarihi seç</string>
+    <string name="debt_date_picker_payment_title">Ödeme Tarihi Seç</string>
+    <string name="debt_date_picker_collection_title">Tahsilat Tarihi Seç</string>
+    <string name="debt_date_picker_close">Kapat</string>
+    <string name="debt_date_picker_confirm">Tarihi seç</string>
+    <string name="debt_currency_picker_title">Para birimi seç</string>
+    <string name="debt_currency_picker_close">Kapat</string>
+
+    <!-- Debts & Receivables: Payment Form Screen -->
+    <string name="debt_payment_form_title_debt">Ödeme ekle</string>
+    <string name="debt_payment_form_title_receivable">Tahsilat ekle</string>
+    <string name="debt_payment_form_nav_back">Geri</string>
+    <string name="debt_payment_form_balance_remaining_debt">Kalan Borç</string>
+    <string name="debt_payment_form_balance_remaining_receivable">Kalan Alacak</string>
+    <string name="debt_payment_form_balance_total">Toplam: %1$s</string>
+    <string name="debt_payment_form_balance_paid_debt">Ödenen: %1$s</string>
+    <string name="debt_payment_form_balance_paid_receivable">Tahsil: %1$s</string>
+    <string name="debt_payment_form_settled_notice">Bu borç / alacak tamamen kapanmıştır. Yeni ödeme eklenemez.</string>
+    <string name="debt_payment_form_amount_label_debt">Ödeme Tutarı *</string>
+    <string name="debt_payment_form_amount_label_receivable">Tahsilat Tutarı *</string>
+    <string name="debt_payment_form_amount_desc_debt">Ödeme tutarı</string>
+    <string name="debt_payment_form_amount_desc_receivable">Tahsilat tutarı</string>
+    <string name="debt_payment_form_max_limit">Maksimum: %1$s</string>
+    <string name="debt_payment_form_date_label_debt">Ödeme Tarihi *</string>
+    <string name="debt_payment_form_date_label_receivable">Tahsilat Tarihi *</string>
+    <string name="debt_payment_form_date_placeholder">Tarih seçin</string>
+    <string name="debt_payment_form_date_desc">Tarih seç</string>
+    <string name="debt_payment_form_info_notice_debt">Bu işlem bir ödeme kaydı oluşturur ve borcun kalan bakiyesini günceller.</string>
+    <string name="debt_payment_form_info_notice_receivable">Bu işlem bir tahsilat kaydı oluşturur ve borcun kalan bakiyesini günceller.</string>
+    <string name="debt_payment_form_submit_debt">+ Ödemeyi kaydet</string>
+    <string name="debt_payment_form_submit_receivable">+ Tahsilatı kaydet</string>
+
+    <!-- Debts & Receivables: Snowball Payoff Plan Screen -->
+    <string name="debt_snowball_title">Borç kapatma planı</string>
+    <string name="debt_snowball_subtitle">Küçük borçlardan başlayarak borçlarını kapat.</string>
+    <string name="debt_snowball_nav_back">Geri</string>
+    <string name="debt_snowball_currency_label">Simülasyon para birimi</string>
+    <string name="debt_snowball_budget_label">Aylık ayırabileceğin bütçe *</string>
+    <string name="debt_snowball_budget_placeholder">0,00</string>
+    <string name="debt_snowball_calculate_button">+ Planı hesapla</string>
+    <string name="debt_snowball_error_title">Bir Hata Oluştu</string>
+    <string name="debt_snowball_empty_title">Uygun Borç Bulunamadı</string>
+    <string name="debt_snowball_empty_desc">Seçilen para biriminde (%1$s) açık ve ödenecek borç kaydı bulunmuyor.</string>
+    <string name="debt_snowball_result_title">Simülasyon sonucu</string>
+    <string name="debt_snowball_total_debt">Toplam borç</string>
+    <string name="debt_snowball_monthly_budget">Aylık bütçe</string>
+    <string name="debt_snowball_approx_prefix">Yaklaşık</string>
+    <string name="debt_snowball_approx_suffix">içinde kapanır</string>
+    <string name="debt_snowball_disclaimer">Faiz ve yeni borçlar hesaba katılmaz. Bu plan otomatik ödeme yapmaz, yol gösterici simülasyondur.</string>
+    <string name="debt_snowball_order_section_title">Kapanma sırası</string>
+    <string name="debt_snowball_settled_in_month">%1$d. ayda kapanır</string>
+    <string name="debt_snowball_monthly_dist_title">Aylık dağılım</string>
+    <string name="debt_snowball_allocation_header">%1$d. ay • %2$s</string>
+    <string name="debt_snowball_allocation_remaining">Kalan: %1$s</string>
+    <string name="debt_snowball_allocation_payment">Ödeme</string>
+    <string name="debt_snowball_missing_debt_fallback">Borç (%1$s)</string>
+
+    <!-- Debts & Receivables: Route Loading & Not Found States -->
+    <string name="debt_route_loading">Borç / alacak bilgileri yükleniyor...</string>
+    <string name="debt_route_not_found_title">Kayıt Bulunamadı</string>
+    <string name="debt_form_route_not_found_desc">Düzenlemek istediğiniz borç / alacak kaydı mevcut değil veya silinmiş.</string>
+    <string name="debt_payment_route_not_found_desc">Ödeme eklemek istediğiniz borç / alacak kaydı mevcut değil veya silinmiş.</string>
+    <string name="debt_route_back_action">Geri dön</string>
+    <string name="debt_route_error_title">Kayıt Yüklenemedi</string>
+
+    <!-- Debts & Receivables: Form Validation Errors -->
+    <string name="debt_error_title_required">Başlık zorunludur.</string>
+    <string name="debt_error_title_too_long">Başlık en fazla 500 karakter olabilir.</string>
+    <string name="debt_error_amount_required">Tutar zorunludur.</string>
+    <string name="debt_error_amount_non_positive">Tutar sıfırdan büyük olmalıdır.</string>
+    <string name="debt_error_amount_invalid">Geçerli bir tutar girin.</string>
+    <string name="debt_error_due_date_required">Vade tarihi seçilmelidir.</string>
+    <string name="debt_error_description_too_long">Açıklama en fazla 500 karakter olabilir.</string>
+    <string name="debt_error_currency_locked_in_edit">Para birimi düzenleme modunda değiştirilemez.</string>
+    <string name="debt_error_generic">Geçersiz giriş.</string>
+
+    <string name="debt_payment_error_amount_required">Ödeme tutarı zorunludur.</string>
+    <string name="debt_payment_error_amount_non_positive">Tutar sıfırdan büyük olmalıdır.</string>
+    <string name="debt_payment_error_amount_invalid">Geçerli bir tutar girin.</string>
+    <string name="debt_payment_error_exceeds_remaining">Ödeme tutarı kalan borcu aşamaz. Maksimum ödeme tutarı: %1$s</string>
+    <string name="debt_payment_error_already_settled">Borç tamamen kapandığı için ödeme yapılamaz.</string>
+    <string name="debt_payment_error_date_required">Ödeme tarihi seçilmelidir.</string>
+    <string name="debt_payment_error_currency_mismatch">Para birimi uyuşmuyor.</string>
+    <string name="debt_payment_error_parent_missing">Borç kaydı bulunamadı.</string>
+
+    <string name="debt_snowball_error_budget_required">Aylık bütçe zorunludur.</string>
+    <string name="debt_snowball_error_budget_non_positive">Aylık bütçe sıfırdan büyük olmalıdır.</string>
+    <string name="debt_snowball_error_budget_max_exceeded">Aylık bütçe çok yüksek.</string>
+    <string name="debt_snowball_error_budget_invalid">Geçerli bir tutar girin.</string>
+
+    <!-- Debts & Receivables: Plurals -->
+    <plurals name="debt_active_debt_count_plural">
+        <item quantity="one">%1$d aktif borç</item>
+        <item quantity="other">%1$d aktif borç</item>
+    </plurals>
+    <plurals name="debt_active_receivable_count_plural">
+        <item quantity="one">%1$d aktif alacak</item>
+        <item quantity="other">%1$d aktif alacak</item>
+    </plurals>
+    <plurals name="debt_settled_count_plural">
+        <item quantity="one">%1$d kapalı kayıt</item>
+        <item quantity="other">%1$d kapalı kayıt</item>
+    </plurals>
+    <plurals name="debt_summary_record_count_plural">
+        <item quantity="one">Toplam %1$d kayıt</item>
+        <item quantity="other">Toplam %1$d kayıt</item>
+    </plurals>
+    <plurals name="debt_summary_person_count_plural">
+        <item quantity="one">%1$d kişi</item>
+        <item quantity="other">%1$d kişi</item>
+    </plurals>
+    <plurals name="debt_upcoming_subtitle_within_7_days_plural">
+        <item quantity="one">Önümüzdeki 7 gün içinde %1$d ödeme</item>
+        <item quantity="other">Önümüzdeki 7 gün içinde %1$d ödeme</item>
+    </plurals>
+    <plurals name="debt_insight_overdue_message_plural">
+        <item quantity="one">%1$d adet vadesi geçmiş borcunuz bulunmaktadır. Gecikme maliyetlerini önlemek için bu ödemeleri önceliklendirmeniz önerilir.</item>
+        <item quantity="other">%1$d adet vadesi geçmiş borcunuz bulunmaktadır. Gecikme maliyetlerini önlemek için bu ödemeleri önceliklendirmeniz önerilir.</item>
+    </plurals>
+    <plurals name="debt_insight_snowball_message_plural">
+        <item quantity="one">Kayıtlı %1$d aktif borcunuz var. En düşük bakiyeli borcu önce kapatıp psikolojik ivme kazanmak için Ödeme Planı\'nı inceleyebilirsiniz.</item>
+        <item quantity="other">Kayıtlı %1$d aktif borcunuz var. En düşük bakiyeli borcu önce kapatıp psikolojik ivme kazanmak için Ödeme Planı\'nı inceleyebilirsiniz.</item>
+    </plurals>
+    <plurals name="debt_snowball_eligible_debts_plural">
+        <item quantity="one">%1$d uygun borç bulundu.</item>
+        <item quantity="other">%1$d uygun borç bulundu.</item>
+    </plurals>
+    <plurals name="debt_snowball_month_count_plural">
+        <item quantity="one">%1$d ay</item>
+        <item quantity="other">%1$d ay</item>
+    </plurals>
 </resources>

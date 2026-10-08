@@ -1,3 +1,10 @@
+@file:Suppress(
+    "ktlint:standard:max-line-length",
+    "ktlint:standard:function-signature",
+    "ktlint:standard:multiline-expression-wrapping",
+    "ktlint:standard:no-wildcard-imports",
+)
+
 package com.feniqo.mobile.presentation.screen
 
 import androidx.compose.foundation.background
@@ -43,6 +50,7 @@ import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.DebtEmptyState
 import com.feniqo.mobile.presentation.component.DebtGroupedSectionCard
+import com.feniqo.mobile.presentation.component.DebtInsightCard
 import com.feniqo.mobile.presentation.component.DebtSnowballEntryCard
 import com.feniqo.mobile.presentation.component.DebtsGraphiteSummaryCard
 import com.feniqo.mobile.presentation.component.ErrorState
@@ -51,14 +59,12 @@ import com.feniqo.mobile.presentation.component.UpcomingPaymentsSection
 import com.feniqo.mobile.presentation.debt.DebtsUiState
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
-import com.feniqo.mobile.presentation.theme.FeniqoTextPrimary
-import com.feniqo.mobile.presentation.theme.FeniqoTextSecondary
-import com.feniqo.mobile.presentation.theme.FeniqoWarmStoneBackground
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Borç ve Alacaklar ana genel bakış ekranı (Panel 01).
- * Grafit özet kartı (#303536), yaklaşan vadeler, borç/alacak grupları,
- * borç kapatma planı yönlendirmesi ve boş durum (Panel 12) ile sunulur.
  */
 @Composable
 fun DebtsScreen(
@@ -82,7 +88,7 @@ fun DebtsScreen(
         ) {
             Spacer(modifier = Modifier.height(FeniqoSpacing.Medium))
 
-            // Üst Başlık & Eylem Bölümü (Panel 01)
+            // Üst Başlık & Eylem Bölümü
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -100,7 +106,7 @@ fun DebtsScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Geri",
+                                    contentDescription = stringResource(Res.string.debt_main_nav_back),
                                     tint = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
@@ -108,7 +114,7 @@ fun DebtsScreen(
                         }
 
                         Text(
-                            text = "Borç ve Alacaklar",
+                            text = stringResource(Res.string.debt_main_title),
                             style = TextStyle(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 22.sp,
@@ -118,7 +124,7 @@ fun DebtsScreen(
                         )
                     }
 
-                    // Panel 01: Sağ üst yeşil '+' dairesel buton (38dp)
+                    val addDebtDesc = stringResource(Res.string.debt_main_add_desc)
                     Box(
                         modifier = Modifier
                             .size(38.dp)
@@ -129,7 +135,7 @@ fun DebtsScreen(
                                 onClick = onAddDebt,
                             )
                             .semantics {
-                                contentDescription = "Yeni kayıt oluştur"
+                                contentDescription = addDebtDesc
                             },
                         contentAlignment = Alignment.Center,
                     ) {
@@ -144,9 +150,8 @@ fun DebtsScreen(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Rehber Alt Açıklama
                 Text(
-                    text = "Kime ne kadar borcunuz olduğunu ve kimden alacağınız olduğunu takip edin.",
+                    text = stringResource(Res.string.debt_main_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.sp,
@@ -164,14 +169,14 @@ fun DebtsScreen(
                 when {
                     state.isLoading -> {
                         LoadingContent(
-                            message = "Borç ve alacaklar yükleniyor...",
+                            message = stringResource(Res.string.debt_main_loading),
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
 
                     state.observationError != null -> {
                         ErrorState(
-                            title = "Borç ve Alacaklar Yüklenemedi",
+                            title = stringResource(Res.string.debt_main_error_title),
                             description = state.observationError.toLocalizedText(),
                             onRetry = onRetry,
                             modifier = Modifier.align(Alignment.Center),
@@ -179,7 +184,6 @@ fun DebtsScreen(
                     }
 
                     state.isEmpty -> {
-                        // Panel 12: Boş Durum
                         DebtEmptyState(
                             onAddDebt = onAddDebt,
                             modifier = Modifier.align(Alignment.Center),
@@ -192,14 +196,26 @@ fun DebtsScreen(
                             verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Large),
                             contentPadding = PaddingValues(bottom = 32.dp),
                         ) {
-                            // 1. Grafit Özet Kartı (#303536, Panel 01)
+                            // 1. Grafit Özet Kartı (#303536)
                             state.summary?.let { summary ->
                                 item(key = "graphite_summary_card") {
                                     DebtsGraphiteSummaryCard(summary = summary)
                                 }
                             }
 
-                            // 2. Yaklaşan Vadeler Bölümü (Panel 01)
+                            // 2. Açıklanabilir Finansal İçgörü Kartı (varsa)
+                            state.insight?.let { insight ->
+                                item(key = "debt_insight_card") {
+                                    DebtInsightCard(
+                                        insight = insight,
+                                        onClick = if (insight.payload is com.feniqo.mobile.presentation.debt.DebtInsightPayload.SnowballSuggestion) {
+                                            onNavigateToSnowballPlan
+                                        } else null,
+                                    )
+                                }
+                            }
+
+                            // 3. Yaklaşan Vadeler Bölümü
                             if (state.upcomingItems.isNotEmpty()) {
                                 item(key = "upcoming_section") {
                                     UpcomingPaymentsSection(
@@ -209,12 +225,16 @@ fun DebtsScreen(
                                 }
                             }
 
-                            // 3. Borçlarım Grup Kartı (Panel 01)
+                            // 4. Borçlarım Grup Kartı
                             if (state.activeDebts.isNotEmpty()) {
                                 item(key = "debts_group_card") {
                                     DebtGroupedSectionCard(
-                                        title = "Borçlarım",
-                                        countText = "${state.activeDebts.size} aktif borç",
+                                        title = stringResource(Res.string.debt_main_my_debts_title),
+                                        countText = pluralStringResource(
+                                            Res.plurals.debt_active_debt_count_plural,
+                                            state.activeDebts.size,
+                                            state.activeDebts.size,
+                                        ),
                                         isDebtSection = true,
                                         items = state.activeDebts,
                                         onItemClick = onDebtClick,
@@ -222,12 +242,16 @@ fun DebtsScreen(
                                 }
                             }
 
-                            // 4. Alacaklarım Grup Kartı (Panel 01)
+                            // 5. Alacaklarım Grup Kartı
                             if (state.activeReceivables.isNotEmpty()) {
                                 item(key = "receivables_group_card") {
                                     DebtGroupedSectionCard(
-                                        title = "Alacaklarım",
-                                        countText = "${state.activeReceivables.size} aktif alacak",
+                                        title = stringResource(Res.string.debt_main_my_receivables_title),
+                                        countText = pluralStringResource(
+                                            Res.plurals.debt_active_receivable_count_plural,
+                                            state.activeReceivables.size,
+                                            state.activeReceivables.size,
+                                        ),
                                         isDebtSection = false,
                                         items = state.activeReceivables,
                                         onItemClick = onDebtClick,
@@ -235,12 +259,16 @@ fun DebtsScreen(
                                 }
                             }
 
-                            // 5. Tamamlananlar / Kapanan Kayıtlar (varsa)
+                            // 6. Tamamlananlar / Kapanan Kayıtlar (varsa)
                             if (state.settledItems.isNotEmpty()) {
                                 item(key = "settled_group_card") {
                                     DebtGroupedSectionCard(
-                                        title = "Tamamlananlar",
-                                        countText = "${state.settledItems.size} kapalı kayıt",
+                                        title = stringResource(Res.string.debt_main_settled_title),
+                                        countText = pluralStringResource(
+                                            Res.plurals.debt_settled_count_plural,
+                                            state.settledItems.size,
+                                            state.settledItems.size,
+                                        ),
                                         isDebtSection = true,
                                         items = state.settledItems,
                                         onItemClick = onDebtClick,
@@ -248,14 +276,14 @@ fun DebtsScreen(
                                 }
                             }
 
-                            // 6. Borç Kapatma Planı Giriş Kartı (Panel 01)
+                            // 7. Borç Kapatma Planı Giriş Kartı
                             if (onNavigateToSnowballPlan != null) {
                                 item(key = "snowball_entry_card") {
                                     DebtSnowballEntryCard(onClick = onNavigateToSnowballPlan)
                                 }
                             }
 
-                            // 7. Panel 01: Alt '+ Yeni kayıt' birincil butonu (56dp)
+                            // 8. Alt '+ Yeni kayıt' birincil butonu (56dp)
                             item(key = "add_debt_button") {
                                 Button(
                                     onClick = onAddDebt,
@@ -266,7 +294,7 @@ fun DebtsScreen(
                                     shape = RoundedCornerShape(14.dp),
                                 ) {
                                     Text(
-                                        text = "+ Yeni kayıt",
+                                        text = stringResource(Res.string.debt_main_add_button),
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         color = Color.White,

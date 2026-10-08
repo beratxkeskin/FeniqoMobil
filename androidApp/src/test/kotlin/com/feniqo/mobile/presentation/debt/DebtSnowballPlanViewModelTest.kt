@@ -182,19 +182,19 @@ class DebtSnowballPlanViewModelTest {
         // 1. Boş bütçe
         viewModel.updateBudgetInput("")
         viewModel.calculatePlan()
-        assertEquals("Aylık bütçe zorunludur.", viewModel.uiState.value.budgetError)
+        assertEquals(DebtSnowballFormFieldError.BUDGET_REQUIRED, viewModel.uiState.value.budgetError)
         assertNull(viewModel.uiState.value.plan)
 
         // 2. Sıfır veya negatif bütçe
         viewModel.updateBudgetInput("0")
         viewModel.calculatePlan()
-        assertEquals("Aylık bütçe sıfırdan büyük olmalıdır.", viewModel.uiState.value.budgetError)
+        assertEquals(DebtSnowballFormFieldError.BUDGET_NON_POSITIVE, viewModel.uiState.value.budgetError)
         assertNull(viewModel.uiState.value.plan)
 
         // 3. Geçersiz format
         viewModel.updateBudgetInput("abc")
         viewModel.calculatePlan()
-        assertEquals("Geçerli bir tutar girin.", viewModel.uiState.value.budgetError)
+        assertEquals(DebtSnowballFormFieldError.BUDGET_INVALID, viewModel.uiState.value.budgetError)
         assertNull(viewModel.uiState.value.plan)
     }
 

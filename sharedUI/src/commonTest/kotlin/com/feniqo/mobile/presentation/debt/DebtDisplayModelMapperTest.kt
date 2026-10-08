@@ -7,6 +7,7 @@ import com.feniqo.mobile.domain.model.DebtType
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.Money
+import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import kotlinx.datetime.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -79,39 +80,27 @@ class DebtDisplayModelMapperTest {
         assertEquals("K", debtModel.avatarInitial)
         assertEquals(DebtType.DEBT, debtModel.type)
         assertEquals(DebtStatus.OPEN, debtModel.status)
-        assertEquals("Borç", debtModel.typeLabel)
         assertTrue(debtModel.isOpen)
         assertFalse(debtModel.isSettled)
         assertEquals(50_000L, debtModel.principalAmount.amountMinor)
-        assertEquals("500,00 ₺", debtModel.formattedPrincipalAmount)
         assertEquals(0L, debtModel.totalPaid.amountMinor)
-        assertEquals("0,00 ₺", debtModel.formattedTotalPaid)
         assertEquals(50_000L, debtModel.remainingAmount.amountMinor)
-        assertEquals("500,00 ₺", debtModel.formattedRemainingAmount)
-        assertEquals("15 Ekim 2026", debtModel.formattedDueDate)
-        assertEquals("15 Eki 2026", debtModel.formattedShortDueDate)
+        assertEquals(LocalDate(2026, 10, 15), debtModel.dueDate)
         assertEquals("Banka borcu", debtModel.description)
         assertTrue(debtModel.dueStatus is DebtDueStatus.OnTime)
-        assertEquals("Zamanında", debtModel.formattedDueStatus)
 
         assertEquals(EntityId("d-2"), receivableModel.id)
         assertEquals("Ahmet'e Verilen Borç", receivableModel.title)
         assertEquals("A", receivableModel.avatarInitial)
         assertEquals(DebtType.RECEIVABLE, receivableModel.type)
         assertEquals(DebtStatus.SETTLED, receivableModel.status)
-        assertEquals("Alacak", receivableModel.typeLabel)
         assertFalse(receivableModel.isOpen)
         assertTrue(receivableModel.isSettled)
         assertEquals(30_000L, receivableModel.principalAmount.amountMinor)
-        assertEquals("300,00 ₺", receivableModel.formattedPrincipalAmount)
         assertEquals(30_000L, receivableModel.totalPaid.amountMinor)
-        assertEquals("300,00 ₺", receivableModel.formattedTotalPaid)
         assertEquals(0L, receivableModel.remainingAmount.amountMinor)
-        assertEquals("0,00 ₺", receivableModel.formattedRemainingAmount)
-        assertEquals("20 Kasım 2026", receivableModel.formattedDueDate)
-        assertEquals("20 Kas 2026", receivableModel.formattedShortDueDate)
+        assertEquals(LocalDate(2026, 11, 20), receivableModel.dueDate)
         assertEquals(DebtDueStatus.Settled, receivableModel.dueStatus)
-        assertEquals("Kapandı", receivableModel.formattedDueStatus)
         assertNull(receivableModel.description)
     }
 
@@ -136,9 +125,7 @@ class DebtDisplayModelMapperTest {
         val model = DebtDisplayModelMapper.mapItem(debt, payments)
         assertEquals(100_000L, model.principalAmount.amountMinor)
         assertEquals(40_000L, model.totalPaid.amountMinor)
-        assertEquals("400,00 ₺", model.formattedTotalPaid)
         assertEquals(60_000L, model.remainingAmount.amountMinor)
-        assertEquals("600,00 ₺", model.formattedRemainingAmount)
         assertTrue(model.isOpen)
         assertFalse(model.isSettled)
     }
@@ -190,7 +177,6 @@ class DebtDisplayModelMapperTest {
         )
         assertEquals(DebtDueStatus.Overdue(1L), overdueStatus)
         assertEquals(-1L, overdueDiff)
-        assertEquals("Gecikti", DebtDisplayModelMapper.formatDueStatusLabel(overdueStatus))
 
         // 2. DueToday: due today
         val (todayStatus, todayDiff) = DebtDisplayModelMapper.calculateDueStatus(
@@ -200,7 +186,6 @@ class DebtDisplayModelMapperTest {
         )
         assertEquals(DebtDueStatus.DueToday, todayStatus)
         assertEquals(0L, todayDiff)
-        assertEquals("Bugün", DebtDisplayModelMapper.formatDueStatusLabel(todayStatus))
 
         // 3. DueSoon: due in 5 days (within 7-day window)
         val (dueSoonStatus, dueSoonDiff) = DebtDisplayModelMapper.calculateDueStatus(
@@ -210,7 +195,6 @@ class DebtDisplayModelMapperTest {
         )
         assertEquals(DebtDueStatus.DueSoon(5L), dueSoonStatus)
         assertEquals(5L, dueSoonDiff)
-        assertEquals("Yaklaşıyor", DebtDisplayModelMapper.formatDueStatusLabel(dueSoonStatus))
 
         // 4. OnTime: due in 15 days (> 7 days)
         val (onTimeStatus, onTimeDiff) = DebtDisplayModelMapper.calculateDueStatus(
@@ -220,7 +204,6 @@ class DebtDisplayModelMapperTest {
         )
         assertEquals(DebtDueStatus.OnTime(15L), onTimeStatus)
         assertEquals(15L, onTimeDiff)
-        assertEquals("Zamanında", DebtDisplayModelMapper.formatDueStatusLabel(onTimeStatus))
 
         // 5. Settled: always Settled regardless of date
         val (settledStatus, settledDiff) = DebtDisplayModelMapper.calculateDueStatus(
@@ -230,7 +213,6 @@ class DebtDisplayModelMapperTest {
         )
         assertEquals(DebtDueStatus.Settled, settledStatus)
         assertEquals(0L, settledDiff)
-        assertEquals("Kapandı", DebtDisplayModelMapper.formatDueStatusLabel(settledStatus))
     }
 
     @Test
@@ -245,29 +227,26 @@ class DebtDisplayModelMapperTest {
     @Test
     fun debtsSummaryCalculator_multiCurrencySafety_separatesForeignCurrencies() {
         val today = LocalDate(2026, 9, 13)
-        val d1 = sampleDebt("d-1", "TRY Borç 1", amountMinor = 125_000L, type = DebtType.DEBT, currency = Currency.TRY) // 1.250 TL
-        val d2 = sampleDebt("d-2", "TRY Alacak 1", amountMinor = 82_000L, type = DebtType.RECEIVABLE, currency = Currency.TRY) // 820 TL
-        val d3 = sampleDebt("d-3", "USD Borç", amountMinor = 50_000L, type = DebtType.DEBT, currency = Currency.USD) // 500 USD (farklı para birimi)
-        val d4 = sampleDebt("d-4", "EUR Alacak", amountMinor = 30_000L, type = DebtType.RECEIVABLE, currency = Currency.EUR) // 300 EUR (farklı para birimi)
+        val d1 = sampleDebt("d-1", "TRY Borç 1", amountMinor = 125_000L, type = DebtType.DEBT, currency = Currency.TRY)
+        val d2 = sampleDebt("d-2", "TRY Alacak 1", amountMinor = 82_000L, type = DebtType.RECEIVABLE, currency = Currency.TRY)
+        val d3 = sampleDebt("d-3", "USD Borç", amountMinor = 50_000L, type = DebtType.DEBT, currency = Currency.USD)
+        val d4 = sampleDebt("d-4", "EUR Alacak", amountMinor = 30_000L, type = DebtType.RECEIVABLE, currency = Currency.EUR)
 
         val mapped = DebtDisplayModelMapper.map(listOf(d1, d2, d3, d4), today = today)
         val summary = DebtsSummaryCalculator.calculate(mapped, baseCurrency = Currency.TRY)
 
         // Only TRY items should be summed
         assertEquals(125_000L, summary.totalDebt.amountMinor)
-        assertEquals("1.250,00 ₺", summary.formattedTotalDebt)
         assertEquals(1, summary.activeDebtCount)
 
         assertEquals(82_000L, summary.totalReceivable.amountMinor)
-        assertEquals("820,00 ₺", summary.formattedTotalReceivable)
         assertEquals(1, summary.activeReceivableCount)
 
         // Net balance = 820 - 1250 = -430 TL
         assertEquals(-43_000L, summary.netBalanceMinor)
-        assertEquals("-430,00 ₺", summary.formattedNetBalance)
         assertTrue(summary.isNetNegative)
         assertFalse(summary.isNetPositive)
-        assertEquals("Borcunuz alacağınızdan fazla.", summary.netStatusText)
+        assertEquals(DebtsNetStatus.DEBT_EXCEEDS, summary.netStatus)
 
         // Excluded currencies
         assertEquals(2, summary.excludedCurrenciesCount)
@@ -283,16 +262,18 @@ class DebtDisplayModelMapperTest {
         val mappedOverdue = DebtDisplayModelMapper.map(listOf(overdueDebt), today = today)
         val uiStateOverdue = DebtDisplayModelMapper.buildUiState(mappedOverdue)
         assertNotNull(uiStateOverdue.insight)
-        assertEquals("Gecikmiş Borç Uyarısı", uiStateOverdue.insight?.title)
-        assertTrue(uiStateOverdue.insight?.message?.contains("1 adet vadesi geçmiş") == true)
+        assertEquals(DebtInsightType.WARNING, uiStateOverdue.insight?.type)
+        val overduePayload = assertNotNull(uiStateOverdue.insight?.payload as? DebtInsightPayload.OverdueDebts)
+        assertEquals(1, overduePayload.count)
 
         // 2. Pending receivable reminder
         val recDebt = sampleDebt("r-1", "Alacak", amountMinor = 820_000L, type = DebtType.RECEIVABLE, dueDate = LocalDate(2026, 9, 20))
         val mappedRec = DebtDisplayModelMapper.map(listOf(recDebt), today = today)
         val uiStateRec = DebtDisplayModelMapper.buildUiState(mappedRec)
         assertNotNull(uiStateRec.insight)
-        assertEquals("Feniqo İçgörü", uiStateRec.insight?.title)
-        assertTrue(uiStateRec.insight?.message?.contains("8.200,00 ₺") == true)
+        assertEquals(DebtInsightType.INFO, uiStateRec.insight?.type)
+        val recPayload = assertNotNull(uiStateRec.insight?.payload as? DebtInsightPayload.PendingReceivables)
+        assertEquals(820_000L, recPayload.totalReceivable.amountMinor)
 
         // 3. Multiple active debts: snowball plan recommendation
         val dA = sampleDebt("dA", "Borç A", amountMinor = 20_000L, dueDate = LocalDate(2026, 10, 1))
@@ -300,7 +281,9 @@ class DebtDisplayModelMapperTest {
         val mappedMultiple = DebtDisplayModelMapper.map(listOf(dA, dB), today = today)
         val uiStateMultiple = DebtDisplayModelMapper.buildUiState(mappedMultiple)
         assertNotNull(uiStateMultiple.insight)
-        assertEquals("Kartopu Planı Önerisi", uiStateMultiple.insight?.title)
+        assertEquals(DebtInsightType.INFO, uiStateMultiple.insight?.type)
+        val snowballPayload = assertNotNull(uiStateMultiple.insight?.payload as? DebtInsightPayload.SnowballSuggestion)
+        assertEquals(2, snowballPayload.debtCount)
 
         // 4. Empty debts: no insight
         val emptyUiState = DebtDisplayModelMapper.buildUiState(emptyList())
@@ -309,15 +292,26 @@ class DebtDisplayModelMapperTest {
 
     @Test
     fun debtsUiState_isEmptyContract() {
-        assertTrue(DebtsUiState(isLoading = false, debts = emptyList(), observationError = null).isEmpty)
-        assertFalse(DebtsUiState(isLoading = true, debts = emptyList(), observationError = null).isEmpty)
-        assertFalse(DebtsUiState(isLoading = false, debts = emptyList(), observationError = com.feniqo.mobile.presentation.common.FinanceUiMessage.GENERIC_ERROR).isEmpty)
-        assertFalse(
+        val emptyState = DebtsUiState(isLoading = false, debts = emptyList(), observationError = null)
+        assertTrue(emptyState.isEmpty)
+
+        val loadingState = DebtsUiState(isLoading = true, debts = emptyList(), observationError = null)
+        assertFalse(loadingState.isEmpty)
+
+        val errorState =
+            DebtsUiState(
+                isLoading = false,
+                debts = emptyList(),
+                observationError = FinanceUiMessage.GENERIC_ERROR,
+            )
+        assertFalse(errorState.isEmpty)
+
+        val populatedState =
             DebtsUiState(
                 isLoading = false,
                 debts = listOf(DebtDisplayModelMapper.mapItem(sampleDebt("d-1"))),
                 observationError = null,
-            ).isEmpty,
-        )
+            )
+        assertFalse(populatedState.isEmpty)
     }
 }

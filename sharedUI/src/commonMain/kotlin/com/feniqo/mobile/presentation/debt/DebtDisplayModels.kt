@@ -12,8 +12,6 @@ import com.feniqo.mobile.domain.model.MoneyDelta
 import com.feniqo.mobile.domain.validation.DebtBalance
 import com.feniqo.mobile.domain.validation.DebtBalanceCalculator
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
-import com.feniqo.mobile.presentation.util.DateFormatter
-import com.feniqo.mobile.presentation.util.MoneyFormatter
 
 /**
  * Borç veya alacağın vade durumunu ifade eden sunum modeli.
@@ -27,21 +25,28 @@ sealed interface DebtDueStatus {
 }
 
 /**
+ * Borç/alacak net bakiye durum sınıflandırması.
+ */
+enum class DebtsNetStatus {
+    DEBT_EXCEEDS,
+    RECEIVABLE_EXCEEDS,
+    BALANCED,
+}
+
+/**
  * Borç ve alacaklar ekranı üçlü finansal özet kartları sunum modelidir.
  */
 data class DebtsSummaryUiModel(
     val totalDebt: Money,
-    val formattedTotalDebt: String,
     val activeDebtCount: Int,
     val totalReceivable: Money,
-    val formattedTotalReceivable: String,
     val activeReceivableCount: Int,
     val netBalanceMinor: Long,
-    val formattedNetBalance: String,
     val isNetPositive: Boolean,
     val isNetNegative: Boolean,
     val isNetZero: Boolean,
-    val netStatusText: String,
+    val netStatus: DebtsNetStatus,
+    val netBalanceDelta: MoneyDelta,
     val baseCurrency: Currency,
     val excludedCurrenciesCount: Int = 0,
     val excludedCurrencies: List<Currency> = emptyList(),
@@ -56,9 +61,23 @@ enum class DebtInsightType {
     SUCCESS,
 }
 
+/**
+ * Açıklanabilir içgörü kartı içerik yükü.
+ */
+sealed interface DebtInsightPayload {
+    data class OverdueDebts(val count: Int) : DebtInsightPayload
+    data class PendingReceivables(val totalReceivable: Money) : DebtInsightPayload
+    data class SnowballSuggestion(val debtCount: Int) : DebtInsightPayload
+    data class SingleDebtTracking(
+        val titleText: String,
+        val remainingAmount: Money,
+        val dueDate: LocalDate,
+    ) : DebtInsightPayload
+    data object AllSettled : DebtInsightPayload
+}
+
 data class DebtInsightUiModel(
-    val title: String,
-    val message: String,
+    val payload: DebtInsightPayload,
     val type: DebtInsightType = DebtInsightType.INFO,
 )
 
@@ -96,23 +115,16 @@ data class DebtDisplayModel(
     val type: DebtType,
     val status: DebtStatus,
     val principalAmount: Money,
-    val formattedPrincipalAmount: String,
     val totalPaid: Money,
-    val formattedTotalPaid: String,
     val remainingAmount: Money,
-    val formattedRemainingAmount: String,
     val currency: Currency,
     val dueDate: LocalDate,
-    val formattedDueDate: String,
     val description: String?,
-    val typeLabel: String,
     val isOpen: Boolean,
     val isSettled: Boolean,
     val avatarInitial: String = DebtDisplayModelMapper.deriveAvatarInitial(title),
     val dueStatus: DebtDueStatus = if (isSettled) DebtDueStatus.Settled else DebtDueStatus.OnTime(0L),
-    val formattedDueStatus: String = DebtDisplayModelMapper.formatDueStatusLabel(dueStatus),
     val daysDiff: Long = 0L,
-    val formattedShortDueDate: String = DateFormatter.formatShortReadableDate(dueDate),
 )
 
 /**
@@ -131,7 +143,7 @@ object DebtDisplayModelMapper {
         }.sortedWith(
             compareBy<DebtDisplayModel> { !it.isOpen }
                 .thenBy { it.dueDate }
-                .thenBy { it.id.value }
+                .thenBy { it.id.value },
         )
     }
 
@@ -141,10 +153,6 @@ object DebtDisplayModelMapper {
         today: LocalDate? = null,
     ): DebtDisplayModel {
         val balance: DebtBalance = DebtBalanceCalculator.calculate(debt, payments)
-        val typeLabel = when (debt.type) {
-            DebtType.DEBT -> "Borç"
-            DebtType.RECEIVABLE -> "Alacak"
-        }
         val isSettled = balance.isSettled
         val isOpen = !isSettled
 
@@ -156,23 +164,16 @@ object DebtDisplayModelMapper {
             type = debt.type,
             status = balance.status,
             principalAmount = balance.principalAmount,
-            formattedPrincipalAmount = MoneyFormatter.format(balance.principalAmount),
             totalPaid = balance.totalPaid,
-            formattedTotalPaid = MoneyFormatter.format(balance.totalPaid),
             remainingAmount = balance.remainingAmount,
-            formattedRemainingAmount = MoneyFormatter.format(balance.remainingAmount),
             currency = debt.amount.currency,
             dueDate = debt.dueDate,
-            formattedDueDate = DateFormatter.formatReadableDate(debt.dueDate),
             description = debt.description,
-            typeLabel = typeLabel,
             isOpen = isOpen,
             isSettled = isSettled,
             avatarInitial = deriveAvatarInitial(debt.title),
             dueStatus = dueStatus,
-            formattedDueStatus = formatDueStatusLabel(dueStatus),
             daysDiff = daysDiff,
-            formattedShortDueDate = DateFormatter.formatShortReadableDate(debt.dueDate),
         )
     }
 
@@ -197,14 +198,6 @@ object DebtDisplayModelMapper {
         return status to daysDiff
     }
 
-    fun formatDueStatusLabel(dueStatus: DebtDueStatus): String = when (dueStatus) {
-        is DebtDueStatus.Overdue -> "Gecikti"
-        is DebtDueStatus.DueToday -> "Bugün"
-        is DebtDueStatus.DueSoon -> "Yaklaşıyor"
-        is DebtDueStatus.OnTime -> "Zamanında"
-        is DebtDueStatus.Settled -> "Kapandı"
-    }
-
     fun deriveAvatarInitial(title: String): String {
         val trimmed = title.trim()
         if (trimmed.isEmpty()) return "?"
@@ -227,7 +220,7 @@ object DebtDisplayModelMapper {
         val upcomingItems = debts.filter { it.isOpen && it.daysDiff <= 7L }
             .sortedWith(
                 compareBy<DebtDisplayModel> { it.daysDiff }
-                    .thenBy { it.dueDate }
+                    .thenBy { it.dueDate },
             )
 
         val summary = DebtsSummaryCalculator.calculate(debts, baseCurrency)
@@ -279,40 +272,27 @@ object DebtsSummaryCalculator {
         val isNetNegative = netBalanceMinor < 0L
         val isNetZero = netBalanceMinor == 0L
 
-        val netStatusText = when {
-            isNetNegative -> "Borcunuz alacağınızdan fazla."
-            isNetPositive -> "Alacağınız borcunuzdan fazla."
-            else -> "Borç ve alacaklarınız dengede."
+        val netStatus = when {
+            isNetNegative -> DebtsNetStatus.DEBT_EXCEEDS
+            isNetPositive -> DebtsNetStatus.RECEIVABLE_EXCEEDS
+            else -> DebtsNetStatus.BALANCED
         }
 
+        val netBalanceDelta = MoneyDelta(amountMinor = netBalanceMinor, currency = baseCurrency)
         val totalDebtMoney = Money(totalDebtMinor, baseCurrency)
         val totalReceivableMoney = Money(totalReceivableMinor, baseCurrency)
 
-        val formattedNetBalance = when {
-            isNetNegative -> {
-                val delta = MoneyDelta(amountMinor = netBalanceMinor, currency = baseCurrency)
-                MoneyFormatter.formatDelta(delta, includeSign = true)
-            }
-            isNetPositive -> {
-                val delta = MoneyDelta(amountMinor = netBalanceMinor, currency = baseCurrency)
-                MoneyFormatter.formatDelta(delta, includeSign = true)
-            }
-            else -> MoneyFormatter.format(Money(0L, baseCurrency))
-        }
-
         return DebtsSummaryUiModel(
             totalDebt = totalDebtMoney,
-            formattedTotalDebt = MoneyFormatter.format(totalDebtMoney),
             activeDebtCount = openDebts.size,
             totalReceivable = totalReceivableMoney,
-            formattedTotalReceivable = MoneyFormatter.format(totalReceivableMoney),
             activeReceivableCount = openReceivables.size,
             netBalanceMinor = netBalanceMinor,
-            formattedNetBalance = formattedNetBalance,
             isNetPositive = isNetPositive,
             isNetNegative = isNetNegative,
             isNetZero = isNetZero,
-            netStatusText = netStatusText,
+            netStatus = netStatus,
+            netBalanceDelta = netBalanceDelta,
             baseCurrency = baseCurrency,
             excludedCurrenciesCount = excludedItems.size,
             excludedCurrencies = excludedCurrencies,
@@ -336,24 +316,21 @@ object DebtInsightBuilder {
         val overdueDebts = activeDebts.filter { it.dueStatus is DebtDueStatus.Overdue }
         if (overdueDebts.isNotEmpty()) {
             return DebtInsightUiModel(
-                title = "Gecikmiş Borç Uyarısı",
-                message = "${overdueDebts.size} adet vadesi geçmiş borcunuz bulunmaktadır. Gecikme maliyetlerini önlemek için bu ödemeleri önceliklendirmeniz önerilir.",
+                payload = DebtInsightPayload.OverdueDebts(overdueDebts.size),
                 type = DebtInsightType.WARNING,
             )
         }
 
         if (activeReceivables.isNotEmpty() && summary != null && summary.totalReceivable.amountMinor > 0L) {
             return DebtInsightUiModel(
-                title = "Feniqo İçgörü",
-                message = "Tahsil edilmeyi bekleyen toplam ${summary.formattedTotalReceivable} alacağınız var. Gecikmeleri önlemek için karşı tarafa hatırlatma yapmayı düşünebilirsiniz.",
+                payload = DebtInsightPayload.PendingReceivables(summary.totalReceivable),
                 type = DebtInsightType.INFO,
             )
         }
 
         if (activeDebts.size >= 2) {
             return DebtInsightUiModel(
-                title = "Kartopu Planı Önerisi",
-                message = "Kayıtlı ${activeDebts.size} aktif borcunuz var. En düşük bakiyeli borcu önce kapatıp psikolojik ivme kazanmak için Ödeme Planı'nı inceleyebilirsiniz.",
+                payload = DebtInsightPayload.SnowballSuggestion(activeDebts.size),
                 type = DebtInsightType.INFO,
             )
         }
@@ -361,16 +338,18 @@ object DebtInsightBuilder {
         if (activeDebts.size == 1) {
             val single = activeDebts.first()
             return DebtInsightUiModel(
-                title = "Düzenli Takip",
-                message = "${single.title} için kalan borcunuz ${single.formattedRemainingAmount}. Vade tarihine (${single.formattedShortDueDate}) kadar planlı ödemelerle bakiyenizi sıfırlayabilirsiniz.",
+                payload = DebtInsightPayload.SingleDebtTracking(
+                    titleText = single.title,
+                    remainingAmount = single.remainingAmount,
+                    dueDate = single.dueDate,
+                ),
                 type = DebtInsightType.INFO,
             )
         }
 
         if (allDebts.all { it.isSettled }) {
             return DebtInsightUiModel(
-                title = "Harika Durum!",
-                message = "Tüm borç ve alacak kayıtlarınız kapandı. Tebrikler, finansal yükümlülükleriniz tamamen kontrol altında.",
+                payload = DebtInsightPayload.AllSettled,
                 type = DebtInsightType.SUCCESS,
             )
         }

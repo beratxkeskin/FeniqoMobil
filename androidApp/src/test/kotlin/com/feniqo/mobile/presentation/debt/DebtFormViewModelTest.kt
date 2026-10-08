@@ -156,7 +156,7 @@ class DebtFormViewModelTest {
         )
         repository.debtsFlow.value = mapOf(debtId to sampleDebt)
 
-        viewModel.loadDebtForEdit(debtId)
+        viewModel.loadDebtForEdit(debtId, decimalSeparator = ',')
         advanceUntilIdle()
 
         val loadState = viewModel.editLoadState.value
@@ -178,7 +178,7 @@ class DebtFormViewModelTest {
 
     @Test
     fun loadDebtForEdit_notFound_setsNotFound() = runTest {
-        viewModel.loadDebtForEdit(EntityId("non-existent"))
+        viewModel.loadDebtForEdit(EntityId("non-existent"), decimalSeparator = ',')
         advanceUntilIdle()
 
         assertEquals(DebtEditLoadState.NotFound, viewModel.editLoadState.value)
@@ -225,9 +225,9 @@ class DebtFormViewModelTest {
 
 
         // 1. Yavaş olanı yükle
-        customViewModel.loadDebtForEdit(slowDebtId)
+        customViewModel.loadDebtForEdit(slowDebtId, decimalSeparator = ',')
         // 2. Hızlı olanı yükle
-        customViewModel.loadDebtForEdit(fastDebtId)
+        customViewModel.loadDebtForEdit(fastDebtId, decimalSeparator = ',')
         advanceUntilIdle()
 
         assertEquals(DebtEditLoadState.Ready(DebtFormDraft.fromDomain(fastDebt), fastDebt.status), customViewModel.editLoadState.value)
@@ -267,7 +267,7 @@ class DebtFormViewModelTest {
             createdAt = Instant.fromEpochMilliseconds(1000L),
         )
         repository.debtsFlow.value = mapOf(debtId to sampleDebt)
-        viewModel.loadDebtForEdit(debtId)
+        viewModel.loadDebtForEdit(debtId, decimalSeparator = ',')
         advanceUntilIdle()
 
         viewModel.updateInput {
@@ -392,7 +392,7 @@ class DebtFormViewModelTest {
             createdAt = Instant.fromEpochMilliseconds(1000L),
         )
         repository.debtsFlow.value = mapOf(debtId to sampleDebt)
-        viewModel.loadDebtForEdit(debtId)
+        viewModel.loadDebtForEdit(debtId, decimalSeparator = ',')
         advanceUntilIdle()
 
         // 1. Request delete
@@ -456,7 +456,7 @@ class DebtFormViewModelTest {
         repository.debtsFlow.value = mapOf(debtId to sampleDebt)
         repository.paymentsFlow.value = mapOf(debtId to payments)
 
-        viewModel.loadDebtForEdit(debtId)
+        viewModel.loadDebtForEdit(debtId, decimalSeparator = ',')
         advanceUntilIdle()
 
         val history = viewModel.uiState.value.paymentsHistory
@@ -494,7 +494,7 @@ class DebtFormViewModelTest {
             ),
         )
 
-        viewModel.loadDebtForEdit(debtId)
+        viewModel.loadDebtForEdit(debtId, decimalSeparator = ',')
         advanceUntilIdle()
         assertEquals(1, viewModel.uiState.value.paymentsHistory.size)
 
@@ -524,7 +524,7 @@ class DebtFormViewModelTest {
         repository.debtsFlow.value = mapOf(debtId to sampleDebt)
         repository.observePaymentsError = RuntimeException("Database error")
 
-        viewModel.loadDebtForEdit(debtId)
+        viewModel.loadDebtForEdit(debtId, decimalSeparator = ',')
         advanceUntilIdle()
 
         assertEquals(DebtEditLoadState.Error(FinanceUiMessage.GENERIC_ERROR), viewModel.editLoadState.value)
@@ -571,12 +571,12 @@ class DebtFormViewModelTest {
             EntityId("d-2") to emptyList(),
         )
 
-        viewModel.loadDebtForEdit(EntityId("d-1"))
+        viewModel.loadDebtForEdit(EntityId("d-1"), decimalSeparator = ',')
         advanceUntilIdle()
         assertEquals(1, viewModel.uiState.value.paymentsHistory.size)
 
         // Borç 2'ye geçildiğinde eski geçmiş hemen temizlenmeli
-        viewModel.loadDebtForEdit(EntityId("d-2"))
+        viewModel.loadDebtForEdit(EntityId("d-2"), decimalSeparator = ',')
         assertTrue(viewModel.uiState.value.paymentsHistory.isEmpty())
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value.paymentsHistory.isEmpty())
@@ -600,7 +600,7 @@ class DebtFormViewModelTest {
         repository.debtsFlow.value = mapOf(debtId to sampleDebt)
         repository.observePaymentsError = CancellationException("Observation cancelled")
 
-        viewModel.loadDebtForEdit(debtId)
+        viewModel.loadDebtForEdit(debtId, decimalSeparator = ',')
         advanceUntilIdle()
 
         // CancellationException generic hataya dönüşmemeli
@@ -627,16 +627,16 @@ class DebtFormViewModelTest {
         )
         repository.debtsFlow.value = mapOf(debtId to sampleDebt)
 
-        viewModel.loadDebtForEdit(debtId)
+        viewModel.loadDebtForEdit(debtId, decimalSeparator = ',')
         advanceUntilIdle()
 
         val initialSummary = viewModel.uiState.value.balanceSummary
         assertTrue(initialSummary != null)
-        assertEquals("20.000,00 ₺", initialSummary?.formattedPrincipalAmount)
-        assertEquals("0,00 ₺", initialSummary?.formattedTotalPaid)
-        assertEquals("20.000,00 ₺", initialSummary?.formattedRemainingAmount)
+        assertEquals(Money(20_000_00L, Currency.TRY), initialSummary?.principalAmount)
+        assertEquals(Money(0L, Currency.TRY), initialSummary?.totalPaid)
+        assertEquals(Money(20_000_00L, Currency.TRY), initialSummary?.remainingAmount)
         assertFalse(initialSummary!!.isSettled)
-        assertEquals("Ödeme Devam Ediyor", initialSummary.statusText)
+        assertEquals(DebtType.DEBT, initialSummary.type)
 
         // Ödeme eklendiğinde reaktif güncellenmeli
         val payment = DebtPayment(
@@ -651,14 +651,13 @@ class DebtFormViewModelTest {
 
         val updatedSummary = viewModel.uiState.value.balanceSummary
         assertTrue(updatedSummary != null)
-        assertEquals("20.000,00 ₺", updatedSummary?.formattedTotalPaid)
-        assertEquals("0,00 ₺", updatedSummary?.formattedRemainingAmount)
+        assertEquals(Money(20_000_00L, Currency.TRY), updatedSummary?.totalPaid)
+        assertEquals(Money(0L, Currency.TRY), updatedSummary?.remainingAmount)
         assertTrue(updatedSummary!!.isSettled)
-        assertEquals("Borç Tamamen Ödendi", updatedSummary.statusText)
     }
 
     @Test
-    fun loadDebtForEdit_receivableBalanceSummary_usesReceivableStatusText() = runTest {
+    fun loadDebtForEdit_receivableBalanceSummary_usesReceivableType() = runTest {
         val debtId = EntityId("d-rec")
         val sampleReceivable = Debt(
             id = debtId,
@@ -674,13 +673,14 @@ class DebtFormViewModelTest {
         )
         repository.debtsFlow.value = mapOf(debtId to sampleReceivable)
 
-        viewModel.loadDebtForEdit(debtId)
+        viewModel.loadDebtForEdit(debtId, decimalSeparator = ',')
         advanceUntilIdle()
 
         val summary = viewModel.uiState.value.balanceSummary
         assertTrue(summary != null)
         assertEquals(DebtType.RECEIVABLE, summary?.type)
-        assertEquals("Tahsilat Devam Ediyor", summary?.statusText)
+        assertEquals(Money(5_000_00L, Currency.TRY), summary?.remainingAmount)
+        assertFalse(summary!!.isSettled)
 
         // Tam tahsilat
         val payment = DebtPayment(
@@ -696,7 +696,7 @@ class DebtFormViewModelTest {
         val settledSummary = viewModel.uiState.value.balanceSummary
         assertTrue(settledSummary != null)
         assertTrue(settledSummary!!.isSettled)
-        assertEquals("Alacak Tamamen Tahsil Edildi", settledSummary.statusText)
+        assertEquals(Money(0L, Currency.TRY), settledSummary?.remainingAmount)
     }
 }
 

@@ -1,14 +1,16 @@
+@file:Suppress(
+    "ktlint:standard:max-line-length",
+    "ktlint:standard:function-signature",
+    "ktlint:standard:multiline-expression-wrapping",
+    "ktlint:standard:no-wildcard-imports",
+)
+
 package com.feniqo.mobile.presentation.debt
 
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -19,12 +21,13 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.domain.model.DebtType
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
 import com.feniqo.mobile.presentation.common.toLocalizedText
+import com.feniqo.mobile.presentation.component.DebtDatePickerSheet
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
-import com.feniqo.mobile.presentation.goal.GoalDebtFormRouteHelper
 import com.feniqo.mobile.presentation.screen.DebtPaymentFormScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -79,22 +82,22 @@ fun DebtPaymentFormScreenRoute(
         when (effectiveLoadState) {
             is DebtPaymentParentLoadState.Loading -> {
                 LoadingContent(
-                    message = "Borç / alacak bilgileri yükleniyor...",
+                    message = debtRouteLoadingText(),
                     modifier = Modifier.fillMaxSize(),
                 )
             }
             is DebtPaymentParentLoadState.NotFound -> {
                 ErrorState(
-                    title = "Kayıt Bulunamadı",
-                    description = "Ödeme eklemek istediğiniz borç / alacak kaydı mevcut değil veya silinmiş.",
+                    title = debtRouteNotFoundTitleText(),
+                    description = debtPaymentRouteNotFoundDescText(),
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
-                    actionLabel = "Geri dön",
+                    actionLabel = debtRouteBackActionText(),
                 )
             }
             is DebtPaymentParentLoadState.Error -> {
                 ErrorState(
-                    title = "Kayıt Yüklenemedi",
+                    title = debtRouteErrorTitleText(),
                     description = effectiveLoadState.message.toLocalizedText(),
                     onRetry = {
                         if (parentDebtId != null) {
@@ -126,15 +129,15 @@ fun DebtPaymentFormScreenRoute(
         }
     }
 
-    // Panel 09: Tarih Seçim Bottom Sheet Modal
     if (showDatePicker) {
         val sheetTitle = if (effectiveLoadState is DebtPaymentParentLoadState.Ready &&
-            effectiveLoadState.debt.type == com.feniqo.mobile.domain.model.DebtType.RECEIVABLE) {
-            "Tahsilat Tarihi Seç"
+            effectiveLoadState.debt.type == DebtType.RECEIVABLE
+        ) {
+            debtDatePickerCollectionTitleText()
         } else {
-            "Ödeme Tarihi Seç"
+            debtDatePickerPaymentTitleText()
         }
-        com.feniqo.mobile.presentation.component.DebtDatePickerSheet(
+        DebtDatePickerSheet(
             selectedDate = uiState.input.paidOn,
             onDismiss = { showDatePicker = false },
             onDateSelected = { date ->

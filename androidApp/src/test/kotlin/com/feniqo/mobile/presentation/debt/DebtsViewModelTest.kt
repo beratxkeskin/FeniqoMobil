@@ -134,9 +134,9 @@ class DebtsViewModelTest {
         assertNull(state.observationError)
         assertEquals(2, state.debts.size)
         assertEquals("d-1", state.debts[0].id.value)
-        assertEquals("Borç", state.debts[0].typeLabel)
+        assertEquals(DebtType.DEBT, state.debts[0].type)
         assertEquals("d-2", state.debts[1].id.value)
-        assertEquals("Alacak", state.debts[1].typeLabel)
+        assertEquals(DebtType.RECEIVABLE, state.debts[1].type)
         assertEquals(1, state.activeDebts.size)
         assertEquals(1, state.activeReceivables.size)
         org.junit.Assert.assertNotNull(state.summary)
@@ -200,7 +200,6 @@ class DebtsViewModelTest {
         val updated = viewModel.uiState.value.debts[0]
         assertEquals(20_000L, updated.totalPaid.amountMinor)
         assertEquals(30_000L, updated.remainingAmount.amountMinor)
-        assertEquals("300,00 ₺", updated.formattedRemainingAmount)
         assertFalse(updated.isSettled)
 
         // Full payment

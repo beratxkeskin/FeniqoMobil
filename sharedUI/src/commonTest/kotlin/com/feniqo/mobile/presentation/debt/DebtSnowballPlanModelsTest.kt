@@ -76,20 +76,61 @@ class DebtSnowballPlanModelsTest {
 
         assertEquals(Currency.TRY, displayModel.currency)
         assertEquals(3, displayModel.totalMonths)
-        assertTrue(displayModel.totalDebtFormatted.contains("5.000"))
-        assertTrue(displayModel.monthlyBudgetFormatted.contains("2.000"))
+        assertEquals(Money(5000_00L, Currency.TRY), displayModel.totalDebtAmount)
+        assertEquals(Money(2000_00L, Currency.TRY), displayModel.monthlyPaymentBudget)
 
         assertEquals(1, displayModel.debtItems.size)
         val item = displayModel.debtItems[0]
         assertEquals("Kredi Kartı Borcu", item.debtTitle)
+        assertEquals(Money(5000_00L, Currency.TRY), item.initialRemainingAmount)
+        assertEquals(Money(5000_00L, Currency.TRY), item.totalAllocatedAmount)
         assertEquals(3, item.settledInMonth)
         assertEquals(1, item.orderIndex)
 
         assertEquals(3, displayModel.monthlyAllocations.size)
         assertEquals(1, displayModel.monthlyAllocations[0].month)
         assertEquals("Kredi Kartı Borcu", displayModel.monthlyAllocations[0].debtTitle)
-        assertTrue(displayModel.monthlyAllocations[0].allocatedFormatted.contains("2.000"))
-        assertTrue(displayModel.monthlyAllocations[0].remainingBalanceFormatted.contains("3.000"))
+        assertEquals(false, displayModel.monthlyAllocations[0].isMissingDebt)
+        assertEquals(Money(2000_00L, Currency.TRY), displayModel.monthlyAllocations[0].allocatedAmount)
+        assertEquals(Money(3000_00L, Currency.TRY), displayModel.monthlyAllocations[0].remainingBalanceAfterPayment)
+    }
+
+    @Test
+    fun toDisplayUiModel_whenDebtMissingFromMap_setsMissingDebtFlag() {
+        val debtId = EntityId("d-missing")
+        val domainPlan =
+            DebtSnowballPlan(
+                currency = Currency.TRY,
+                monthlyPaymentBudget = Money(1000_00L, Currency.TRY),
+                totalMonths = 1,
+                totalDebtAmount = Money(1000_00L, Currency.TRY),
+                debtPlans =
+                    listOf(
+                        DebtSnowballItemPlan(
+                            debtId = debtId,
+                            debtTitle = "Bilinmeyen Borc",
+                            initialRemainingAmount = Money(1000_00L, Currency.TRY),
+                            totalAllocatedAmount = Money(1000_00L, Currency.TRY),
+                            settledInMonth = 1,
+                            orderIndex = 1,
+                        ),
+                    ),
+                monthlyAllocations =
+                    listOf(
+                        DebtSnowballMonthlyAllocation(
+                            month = 1,
+                            debtId = debtId,
+                            allocatedAmount = Money(1000_00L, Currency.TRY),
+                            remainingBalanceAfterPayment = Money(0L, Currency.TRY),
+                        ),
+                    ),
+            )
+
+        val displayModel = domainPlan.toDisplayUiModel(emptyMap())
+        assertEquals(1, displayModel.monthlyAllocations.size)
+        val alloc = displayModel.monthlyAllocations[0]
+        assertNull(alloc.debtTitle)
+        assertTrue(alloc.isMissingDebt)
     }
 
     @Test

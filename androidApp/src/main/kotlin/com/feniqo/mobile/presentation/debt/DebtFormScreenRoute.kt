@@ -1,28 +1,32 @@
+@file:Suppress(
+    "ktlint:standard:max-line-length",
+    "ktlint:standard:function-signature",
+    "ktlint:standard:multiline-expression-wrapping",
+    "ktlint:standard:no-wildcard-imports",
+)
+
 package com.feniqo.mobile.presentation.debt
 
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feniqo.mobile.domain.model.EntityId
-import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.common.currentLocaleDecimalSeparator
 import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
 import com.feniqo.mobile.presentation.common.toLocalizedText
+import com.feniqo.mobile.presentation.component.DebtDatePickerSheet
 import com.feniqo.mobile.presentation.component.DebtDeleteDialog
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
@@ -41,6 +45,8 @@ fun DebtFormScreenRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val editLoadState by viewModel.editLoadState.collectAsStateWithLifecycle()
+    val decimalSeparator = currentLocaleDecimalSeparator()
+    val currentSeparatorState = rememberUpdatedState(decimalSeparator)
 
     var showDatePicker by remember { mutableStateOf(false) }
 
@@ -48,7 +54,7 @@ fun DebtFormScreenRoute(
         if (hasInvalidRouteId) {
             viewModel.setEditLoadInvalidId()
         } else if (initialDebtId != null) {
-            viewModel.loadDebtForEdit(initialDebtId)
+            viewModel.loadDebtForEdit(initialDebtId, currentSeparatorState.value)
         }
     }
 
@@ -81,26 +87,26 @@ fun DebtFormScreenRoute(
         when (effectiveLoadState) {
             is DebtEditLoadState.Loading -> {
                 LoadingContent(
-                    message = "Borç / alacak bilgileri yükleniyor...",
+                    message = debtRouteLoadingText(),
                     modifier = Modifier.fillMaxSize(),
                 )
             }
             is DebtEditLoadState.NotFound -> {
                 ErrorState(
-                    title = "Kayıt Bulunamadı",
-                    description = "Düzenlemek istediğiniz borç / alacak kaydı mevcut değil veya silinmiş.",
+                    title = debtRouteNotFoundTitleText(),
+                    description = debtFormRouteNotFoundDescText(),
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
-                    actionLabel = "Geri dön",
+                    actionLabel = debtRouteBackActionText(),
                 )
             }
             is DebtEditLoadState.Error -> {
                 ErrorState(
-                    title = "Kayıt Yüklenemedi",
+                    title = debtRouteErrorTitleText(),
                     description = effectiveLoadState.message.toLocalizedText(),
                     onRetry = {
                         if (initialDebtId != null) {
-                            viewModel.loadDebtForEdit(initialDebtId)
+                            viewModel.loadDebtForEdit(initialDebtId, decimalSeparator)
                         }
                     },
                     modifier = Modifier.fillMaxSize(),
@@ -129,33 +135,28 @@ fun DebtFormScreenRoute(
                     balanceSummary = uiState.balanceSummary,
                     modifier = Modifier.fillMaxSize(),
                 )
-
             }
         }
     }
 
-
-    // Panel 09: Vade Tarihi Bottom Sheet Seçici
     if (showDatePicker) {
-        com.feniqo.mobile.presentation.component.DebtDatePickerSheet(
+        DebtDatePickerSheet(
             selectedDate = uiState.input.dueDate,
             onDismiss = { showDatePicker = false },
             onDateSelected = { date ->
                 viewModel.updateInput { it.copy(dueDate = date) }
                 showDatePicker = false
             },
-            title = "Vade Tarihi Seç",
+            title = debtDatePickerDefaultTitleText(),
         )
     }
 
-    // Panel 11: Onaylı Silme Diyaloğu (Borç adı ile)
     if (uiState.pendingDeleteConfirmation) {
         DebtDeleteDialog(
-            debtTitle = uiState.input.titleInput.ifBlank { "bu kaydı" },
+            debtTitle = uiState.input.titleInput.ifBlank { debtDeleteDialogDefaultNameText() },
             isSubmitting = uiState.isSubmitting,
             onConfirm = { viewModel.confirmDelete() },
             onDismiss = { viewModel.dismissDelete() },
         )
     }
 }
-

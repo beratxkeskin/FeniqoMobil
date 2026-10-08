@@ -3,6 +3,7 @@ package com.feniqo.mobile.presentation.component
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,21 +18,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.border
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.CreditCard
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Leaderboard
 import androidx.compose.material.icons.outlined.Lightbulb
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Scale
 import androidx.compose.material3.Button
@@ -72,32 +69,68 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.Currency
-import com.feniqo.mobile.domain.model.DebtStatus
 import com.feniqo.mobile.domain.model.DebtType
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.LocalDate
+import com.feniqo.mobile.domain.model.Money
+import com.feniqo.mobile.presentation.common.toLocalizedFormatted
 import com.feniqo.mobile.presentation.debt.DebtDisplayModel
 import com.feniqo.mobile.presentation.debt.DebtDueStatus
-import com.feniqo.mobile.presentation.debt.DebtInsightType
 import com.feniqo.mobile.presentation.debt.DebtInsightUiModel
 import com.feniqo.mobile.presentation.debt.DebtsSummaryUiModel
-import com.feniqo.mobile.presentation.theme.FeniqoExpense
+import com.feniqo.mobile.presentation.debt.resolveTitleAndDescription
+import com.feniqo.mobile.presentation.debt.toLocalizedDebtTypeLabel
+import com.feniqo.mobile.presentation.debt.toLocalizedDueStatusLabel
+import com.feniqo.mobile.presentation.common.toLocalizedNameText
+import com.feniqo.mobile.presentation.common.toLocalizedReadableDate
+import com.feniqo.mobile.presentation.common.toLocalizedShortReadableDate
+import com.feniqo.mobile.presentation.debt.toLocalizedText
 import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
-import com.feniqo.mobile.presentation.theme.FeniqoStatusColor
 import com.feniqo.mobile.presentation.theme.FeniqoTabularNumberStyle
-import com.feniqo.mobile.presentation.theme.FeniqoTextPrimary
-import com.feniqo.mobile.presentation.theme.FeniqoTextSecondary
 import com.feniqo.mobile.presentation.theme.FeniqoTouchTarget
 import com.feniqo.mobile.presentation.theme.FeniqoTrendGreen
-import com.feniqo.mobile.presentation.theme.FeniqoWarmStoneBackground
-import com.feniqo.mobile.presentation.theme.PhoenixGold
-import com.feniqo.mobile.presentation.util.DateFormatter
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.budget_overview_excluded_currency
+import feniqomobil.sharedui.generated.resources.debt_currency_picker_close
+import feniqomobil.sharedui.generated.resources.debt_currency_picker_title
+import feniqomobil.sharedui.generated.resources.debt_date_picker_close
+import feniqomobil.sharedui.generated.resources.debt_date_picker_confirm
+import feniqomobil.sharedui.generated.resources.debt_date_picker_default_title
+import feniqomobil.sharedui.generated.resources.debt_delete_dialog_cancel
+import feniqomobil.sharedui.generated.resources.debt_delete_dialog_confirm
+import feniqomobil.sharedui.generated.resources.debt_delete_dialog_content_desc
+import feniqomobil.sharedui.generated.resources.debt_delete_dialog_desc_general
+import feniqomobil.sharedui.generated.resources.debt_delete_dialog_desc_with_title
+import feniqomobil.sharedui.generated.resources.debt_delete_dialog_title
+import feniqomobil.sharedui.generated.resources.debt_due_status_due_today
+import feniqomobil.sharedui.generated.resources.debt_empty_create_button
+import feniqomobil.sharedui.generated.resources.debt_empty_desc
+import feniqomobil.sharedui.generated.resources.debt_empty_title
+import feniqomobil.sharedui.generated.resources.debt_item_remaining_prefix
+import feniqomobil.sharedui.generated.resources.debt_item_settled_label
+import feniqomobil.sharedui.generated.resources.debt_settled_banner_debt
+import feniqomobil.sharedui.generated.resources.debt_settled_banner_receivable
+import feniqomobil.sharedui.generated.resources.debt_snowball_card_title
+import feniqomobil.sharedui.generated.resources.debt_snowball_subtitle
+import feniqomobil.sharedui.generated.resources.debt_snowball_title
+import feniqomobil.sharedui.generated.resources.debt_summary_my_debts
+import feniqomobil.sharedui.generated.resources.debt_summary_my_receivables
+import feniqomobil.sharedui.generated.resources.debt_summary_net_position
+import feniqomobil.sharedui.generated.resources.debt_summary_person_count_plural
+import feniqomobil.sharedui.generated.resources.debt_summary_record_count_plural
+import feniqomobil.sharedui.generated.resources.debt_upcoming_collapse_desc
+import feniqomobil.sharedui.generated.resources.debt_upcoming_expand_desc
+import feniqomobil.sharedui.generated.resources.debt_upcoming_section_title
+import feniqomobil.sharedui.generated.resources.debt_upcoming_see_all
+import feniqomobil.sharedui.generated.resources.debt_upcoming_show_less
+import feniqomobil.sharedui.generated.resources.debt_upcoming_subtitle_within_7_days_plural
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Referans görseldeki ↗ (sağ üst) kırmızı çapraz ok ikonu.
- * Compose Material Icons'ta AutoMirrored ArrowTopRight bulunmadığı için Canvas ile pürüzsüz çizilir.
  */
 @Composable
 fun ArrowUpRightIcon(
@@ -126,7 +159,6 @@ fun ArrowUpRightIcon(
 
 /**
  * Referans görseldeki ↙ (sol alt) yeşil çapraz ok ikonu.
- * Compose Material Icons'ta AutoMirrored ArrowBottomLeft bulunmadığı için Canvas ile pürüzsüz çizilir.
  */
 @Composable
 fun ArrowDownLeftIcon(
@@ -155,8 +187,6 @@ fun ArrowDownLeftIcon(
 
 /**
  * Referans Görsel 01'deki grafit "Net durum" özet kartıdır.
- * #303536 koyu yüzey, net durum renklendirmesi (negatif kırmızı, pozitif yeşil, nötr beyaz),
- * Borçlarım ve Alacaklarım toplamları, kayıt sayıları ve döviz kodu (TRY) içerir.
  */
 @Composable
 fun DebtsGraphiteSummaryCard(
@@ -167,6 +197,12 @@ fun DebtsGraphiteSummaryCard(
         summary.isNetNegative -> Color(0xFFEF4444)
         summary.isNetPositive -> Color(0xFF10B981)
         else -> Color.White
+    }
+
+    val localizedNetBalance = if (summary.netBalanceMinor == 0L) {
+        Money(0L, summary.baseCurrency).toLocalizedFormatted()
+    } else {
+        summary.netBalanceDelta.toLocalizedFormatted(showPositiveSign = true)
     }
 
     Column(
@@ -192,13 +228,13 @@ fun DebtsGraphiteSummaryCard(
                 // Net Durum Başlığı ve Büyük Tutar
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = "Net durum",
+                        text = stringResource(Res.string.debt_summary_net_position),
                         style = MaterialTheme.typography.labelMedium,
                         color = Color(0xFFCBD5E1),
                         fontSize = 13.sp,
                     )
                     Text(
-                        text = summary.formattedNetBalance,
+                        text = localizedNetBalance,
                         style = MaterialTheme.typography.headlineMedium.merge(FeniqoTabularNumberStyle),
                         fontWeight = FontWeight.Bold,
                         fontSize = 32.sp,
@@ -223,20 +259,24 @@ fun DebtsGraphiteSummaryCard(
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         Text(
-                            text = "Borçlarım",
+                            text = stringResource(Res.string.debt_summary_my_debts),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 12.sp,
                         )
                         Text(
-                            text = summary.formattedTotalDebt,
+                            text = summary.totalDebt.toLocalizedFormatted(),
                             style = MaterialTheme.typography.titleMedium.merge(FeniqoTabularNumberStyle),
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
                             fontSize = 18.sp,
                         )
                         Text(
-                            text = "Toplam ${summary.activeDebtCount} kayıt",
+                            text = pluralStringResource(
+                                Res.plurals.debt_summary_record_count_plural,
+                                summary.activeDebtCount,
+                                summary.activeDebtCount,
+                            ),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 11.sp,
@@ -249,13 +289,13 @@ fun DebtsGraphiteSummaryCard(
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         Text(
-                            text = "Alacaklarım",
+                            text = stringResource(Res.string.debt_summary_my_receivables),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 12.sp,
                         )
                         Text(
-                            text = summary.formattedTotalReceivable,
+                            text = summary.totalReceivable.toLocalizedFormatted(),
                             style = MaterialTheme.typography.titleMedium.merge(FeniqoTabularNumberStyle),
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
@@ -267,7 +307,11 @@ fun DebtsGraphiteSummaryCard(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = "Toplam ${summary.activeReceivableCount} kayıt",
+                                text = pluralStringResource(
+                                    Res.plurals.debt_summary_record_count_plural,
+                                    summary.activeReceivableCount,
+                                    summary.activeReceivableCount,
+                                ),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 11.sp,
@@ -305,7 +349,10 @@ fun DebtsGraphiteSummaryCard(
                         modifier = Modifier.size(16.dp),
                     )
                     Text(
-                        text = "${summary.excludedCurrenciesCount} kayıt farklı para biriminde (${summary.excludedCurrencies.joinToString { it.name }}) olduğu için bu toplama dahil edilmedi.",
+                        text = stringResource(
+                            Res.string.budget_overview_excluded_currency,
+                            summary.excludedCurrenciesCount,
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp,
@@ -317,8 +364,7 @@ fun DebtsGraphiteSummaryCard(
 }
 
 /**
- * Referans görseldeki 3'lü finansal özet kartları bileşeni (Borcunuz, Alacağınız, Net durum).
- * Çoklu para birimi güvenliğini korur; hariç tutulan para birimleri varsa uyarı rozeti gösterir.
+ * 3'lü finansal özet kartları bileşeni.
  */
 @Composable
 fun DebtSummaryCardsRow(
@@ -335,11 +381,15 @@ fun DebtSummaryCardsRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // 1. Toplam Borç Kartı (You owe)
+            // 1. Toplam Borç Kartı
             DebtSummaryCard(
-                title = "Borcunuz",
-                amount = summary.formattedTotalDebt,
-                countText = if (summary.activeDebtCount > 0) "${summary.activeDebtCount} kişi" else "0 kişi",
+                title = stringResource(Res.string.debt_summary_my_debts),
+                amount = summary.totalDebt.toLocalizedFormatted(),
+                countText = pluralStringResource(
+                    Res.plurals.debt_summary_person_count_plural,
+                    summary.activeDebtCount,
+                    summary.activeDebtCount,
+                ),
                 icon = {
                     ArrowUpRightIcon(
                         color = Color(0xFFDC2626),
@@ -353,11 +403,15 @@ fun DebtSummaryCardsRow(
                 modifier = Modifier.weight(1f),
             )
 
-            // 2. Toplam Alacak Kartı (Owed to you)
+            // 2. Toplam Alacak Kartı
             DebtSummaryCard(
-                title = "Alacağınız",
-                amount = summary.formattedTotalReceivable,
-                countText = if (summary.activeReceivableCount > 0) "${summary.activeReceivableCount} kişi" else "0 kişi",
+                title = stringResource(Res.string.debt_summary_my_receivables),
+                amount = summary.totalReceivable.toLocalizedFormatted(),
+                countText = pluralStringResource(
+                    Res.plurals.debt_summary_person_count_plural,
+                    summary.activeReceivableCount,
+                    summary.activeReceivableCount,
+                ),
                 icon = {
                     ArrowDownLeftIcon(
                         color = Color(0xFF16A34A),
@@ -371,18 +425,24 @@ fun DebtSummaryCardsRow(
                 modifier = Modifier.weight(1f),
             )
 
-            // 3. Net Durum Kartı (Net position)
+            // 3. Net Durum Kartı
             val netAmountColor = when {
                 summary.isNetNegative -> Color(0xFFDC2626)
                 summary.isNetPositive -> Color(0xFF16A34A)
                 else -> MaterialTheme.colorScheme.onSurface
             }
 
+            val localizedNet = if (summary.netBalanceMinor == 0L) {
+                Money(0L, summary.baseCurrency).toLocalizedFormatted()
+            } else {
+                summary.netBalanceDelta.toLocalizedFormatted(showPositiveSign = true)
+            }
+
             DebtSummaryCard(
-                title = "Net durum",
-                amount = summary.formattedNetBalance,
+                title = stringResource(Res.string.debt_summary_net_position),
+                amount = localizedNet,
                 amountColor = netAmountColor,
-                countText = summary.netStatusText,
+                countText = summary.netStatus.toLocalizedText(),
                 icon = {
                     Icon(
                         imageVector = Icons.Outlined.Scale,
@@ -419,7 +479,10 @@ fun DebtSummaryCardsRow(
                         modifier = Modifier.size(16.dp),
                     )
                     Text(
-                        text = "${summary.excludedCurrenciesCount} kayıt farklı para biriminde (${summary.excludedCurrencies.joinToString { it.name }}) olduğu için bu toplama dahil edilmedi.",
+                        text = stringResource(
+                            Res.string.budget_overview_excluded_currency,
+                            summary.excludedCurrenciesCount,
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -466,7 +529,6 @@ private fun DebtSummaryCard(
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            // İkon Rozeti (Referans görseldeki gibi yuvarlatılmış kare)
             Box(
                 modifier = Modifier
                     .size(28.dp)
@@ -477,7 +539,6 @@ private fun DebtSummaryCard(
                 icon()
             }
 
-            // Başlık
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodySmall,
@@ -487,7 +548,6 @@ private fun DebtSummaryCard(
                 overflow = TextOverflow.Ellipsis,
             )
 
-            // Tutar
             Text(
                 text = amount,
                 style = MaterialTheme.typography.titleMedium.merge(FeniqoTabularNumberStyle),
@@ -498,7 +558,6 @@ private fun DebtSummaryCard(
                 overflow = TextOverflow.Ellipsis,
             )
 
-            // Alt Bilgi (Sayaç + Chevron)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -526,8 +585,7 @@ private fun DebtSummaryCard(
 }
 
 /**
- * Referans görseldeki "Yaklaşan Vadeler" (Upcoming Payments) kartı bileşenidir.
- * Yalnız açık kayıtlardan ve sistem tarihine göre vadesi 7 gün içinde olan veya gecikmiş kayıtları listeler.
+ * Referans görseldeki "Yaklaşan Vadeler" kartı bileşenidir.
  */
 @Composable
 fun UpcomingPaymentsSection(
@@ -538,12 +596,11 @@ fun UpcomingPaymentsSection(
     if (upcomingItems.isEmpty()) return
 
     var isExpanded by remember { mutableStateOf(false) }
-    val overdueCount = upcomingItems.count { it.dueStatus is DebtDueStatus.Overdue }
-    val subtitle = if (overdueCount > 0) {
-        "$overdueCount gecikmiş, ${upcomingItems.size - overdueCount} yaklaşan ödeme"
-    } else {
-        "Önümüzdeki 7 gün içinde ${upcomingItems.size} ödeme"
-    }
+    val subtitle = pluralStringResource(
+        Res.plurals.debt_upcoming_subtitle_within_7_days_plural,
+        upcomingItems.size,
+        upcomingItems.size,
+    )
 
     Card(
         modifier = modifier
@@ -589,7 +646,7 @@ fun UpcomingPaymentsSection(
 
                     Column {
                         Text(
-                            text = "Yaklaşan Vadeler",
+                            text = stringResource(Res.string.debt_upcoming_section_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -602,7 +659,8 @@ fun UpcomingPaymentsSection(
                     }
                 }
 
-                // Referans görseldeki "See all >" kapsül hap butonu
+                val collapseDesc = stringResource(Res.string.debt_upcoming_collapse_desc)
+                val expandDesc = stringResource(Res.string.debt_upcoming_expand_desc)
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant,
@@ -610,7 +668,7 @@ fun UpcomingPaymentsSection(
                         .clip(RoundedCornerShape(12.dp))
                         .clickable { isExpanded = !isExpanded }
                         .semantics {
-                            contentDescription = if (isExpanded) "Yaklaşan vadeler listesini daralt" else "Yaklaşan vadeler listesini genişlet"
+                            contentDescription = if (isExpanded) collapseDesc else expandDesc
                         },
                 ) {
                     Row(
@@ -619,7 +677,11 @@ fun UpcomingPaymentsSection(
                         horizontalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         Text(
-                            text = if (isExpanded && upcomingItems.size > 2) "Daha az" else "Tümünü gör",
+                            text = if (isExpanded && upcomingItems.size > 2) {
+                                stringResource(Res.string.debt_upcoming_show_less)
+                            } else {
+                                stringResource(Res.string.debt_upcoming_see_all)
+                            },
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -640,7 +702,6 @@ fun UpcomingPaymentsSection(
 
             Spacer(modifier = Modifier.height(FeniqoSpacing.Medium))
 
-            // Liste Elemanları
             val displayedItems = if (isExpanded || upcomingItems.size <= 2) upcomingItems else upcomingItems.take(2)
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -669,6 +730,10 @@ private fun UpcomingPaymentItemRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val remainingFormatted = item.remainingAmount.toLocalizedFormatted()
+    val dueFormatted = item.dueDate.toLocalizedReadableDate()
+    val shortDueFormatted = item.dueDate.toLocalizedShortReadableDate()
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -676,11 +741,10 @@ private fun UpcomingPaymentItemRow(
             .clickable(role = Role.Button, onClick = onClick)
             .padding(vertical = 4.dp)
             .semantics {
-                contentDescription = "Yaklaşan vade: ${item.title}, Kalan: ${item.formattedRemainingAmount}, Vade: ${item.formattedDueDate}"
+                contentDescription = "${item.title}, $remainingFormatted, $dueFormatted"
             },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Takvim İkon Kutusu
         Box(
             modifier = Modifier
                 .size(38.dp)
@@ -698,13 +762,12 @@ private fun UpcomingPaymentItemRow(
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // Yaklaşan Vade Etiketi ve Başlık
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(
-                text = "Yaklaşan vade • ${item.formattedShortDueDate}",
+                text = "${stringResource(Res.string.debt_due_status_due_today)} • $shortDueFormatted",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
@@ -722,9 +785,8 @@ private fun UpcomingPaymentItemRow(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Tutar
         Text(
-            text = item.formattedRemainingAmount,
+            text = remainingFormatted,
             style = MaterialTheme.typography.titleMedium.merge(FeniqoTabularNumberStyle),
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
@@ -742,10 +804,8 @@ private fun UpcomingPaymentItemRow(
     }
 }
 
-
 /**
- * Referans görseldeki "Your Debts" ve "Receivables" için tek bir beyaz kart içinde gruplanmış kart bileşenidir.
- * Kart içinde başlık satırı, ↗/↙ rozeti, "Tümünü gör >" hap butonu ve alt alta dizilmiş liste satırları yer alır.
+ * Gruplanmış borç veya alacak bölüm kartı bileşeni.
  */
 @Composable
 fun DebtGroupedSectionCard(
@@ -774,7 +834,6 @@ fun DebtGroupedSectionCard(
                 .fillMaxWidth()
                 .padding(FeniqoSpacing.Large),
         ) {
-            // Kart Başlığı Satırı
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -820,16 +879,12 @@ fun DebtGroupedSectionCard(
                     }
                 }
 
-                // "Tümünü gör >" hap butonu
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .clickable { isExpanded = !isExpanded }
-                        .semantics {
-                            contentDescription = if (isExpanded) "$title listesini daralt" else "$title listesini genişlet"
-                        },
+                        .clickable { isExpanded = !isExpanded },
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
@@ -837,7 +892,7 @@ fun DebtGroupedSectionCard(
                         horizontalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         Text(
-                            text = if (isExpanded && items.size > 4) "Daha az" else "Tümünü gör",
+                            text = stringResource(Res.string.debt_upcoming_see_all),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -858,7 +913,6 @@ fun DebtGroupedSectionCard(
 
             Spacer(modifier = Modifier.height(FeniqoSpacing.Medium))
 
-            // Liste Satırları (Referans görseldeki gibi tek kartın içine dividers ile gömülür)
             val displayedItems = if (isExpanded || items.size <= 4) items else items.take(4)
             Column(modifier = Modifier.fillMaxWidth()) {
                 displayedItems.forEachIndexed { index, item ->
@@ -880,7 +934,7 @@ fun DebtGroupedSectionCard(
 }
 
 /**
- * Referans görseldeki liste satırı (Grup kartı içinde temiz, minimal satır görünümü).
+ * Referans görseldeki liste satırı.
  */
 @Composable
 fun DebtGroupedItemRow(
@@ -888,6 +942,12 @@ fun DebtGroupedItemRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val remainingFormatted = item.remainingAmount.toLocalizedFormatted()
+    val dueFormatted = item.dueDate.toLocalizedReadableDate()
+    val shortDueFormatted = item.dueDate.toLocalizedShortReadableDate()
+    val typeLabel = item.type.toLocalizedDebtTypeLabel()
+    val dueStatusLabel = item.dueStatus.toLocalizedDueStatusLabel()
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -895,11 +955,10 @@ fun DebtGroupedItemRow(
             .clickable(role = Role.Button, onClick = onClick)
             .padding(vertical = 4.dp)
             .semantics {
-                contentDescription = "${item.title}, ${item.typeLabel}, Kalan: ${item.formattedRemainingAmount}, Vade: ${item.formattedDueDate}, Durum: ${item.formattedDueStatus}"
+                contentDescription = "${item.title}, $typeLabel, $remainingFormatted, $dueFormatted, $dueStatusLabel"
             },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // İkon (Borç ise Kredi Kartı, Alacak ise Kişi)
         val (iconBoxBg, iconTint) = if (item.type == DebtType.DEBT) {
             Pair(Color(0xFFF1EDE6), Color(0xFF475569))
         } else {
@@ -923,7 +982,6 @@ fun DebtGroupedItemRow(
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // Başlık ve Kalan Tutar
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -938,11 +996,11 @@ fun DebtGroupedItemRow(
                 overflow = TextOverflow.Ellipsis,
             )
             val subtext = if (item.isSettled) {
-                "Tamamlandı"
+                stringResource(Res.string.debt_item_settled_label)
             } else if (item.type == DebtType.DEBT) {
-                "Kalan: ${item.formattedRemainingAmount}"
+                stringResource(Res.string.debt_item_remaining_prefix, remainingFormatted)
             } else {
-                item.formattedRemainingAmount
+                remainingFormatted
             }
             Text(
                 text = subtext,
@@ -956,18 +1014,17 @@ fun DebtGroupedItemRow(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Vade Tarihi veya Durum Rozeti
         Column(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             if (item.isSettled) {
-                WarmDueStatusBadge(status = item.dueStatus, label = "Tamamlandı")
+                WarmDueStatusBadge(status = item.dueStatus, label = stringResource(Res.string.debt_item_settled_label))
             } else if (item.dueStatus is DebtDueStatus.Overdue || item.dueStatus is DebtDueStatus.DueToday) {
-                WarmDueStatusBadge(status = item.dueStatus, label = item.formattedDueStatus)
+                WarmDueStatusBadge(status = item.dueStatus, label = dueStatusLabel)
             } else {
                 Text(
-                    text = item.formattedShortDueDate,
+                    text = shortDueFormatted,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.sp,
@@ -987,7 +1044,7 @@ fun DebtGroupedItemRow(
 }
 
 /**
- * Geriye dönük uyumluluk için korunan eski bağımsız liste satırı kartı.
+ * Geriye dönük uyumluluk için liste satırı kartı.
  */
 @Composable
 fun WarmDebtListItem(
@@ -999,10 +1056,7 @@ fun WarmDebtListItem(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(FeniqoRadius.Medium))
-            .clickable(role = Role.Button, onClick = onClick)
-            .semantics {
-                contentDescription = "${item.title}, ${item.typeLabel}, Kalan: ${item.formattedRemainingAmount}, Vade: ${item.formattedDueDate}, Durum: ${item.formattedDueStatus}"
-            },
+            .clickable(role = Role.Button, onClick = onClick),
         shape = RoundedCornerShape(FeniqoRadius.Medium),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
@@ -1017,7 +1071,7 @@ fun WarmDebtListItem(
 }
 
 /**
- * Geriye dönük uyumluluk için korunan bağımsız bölüm başlığı bileşeni.
+ * Geriye dönük uyumluluk için bölüm başlığı bileşeni.
  */
 @Composable
 fun DebtSectionHeader(
@@ -1078,7 +1132,7 @@ fun DebtSectionHeader(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Tümünü gör",
+                        text = stringResource(Res.string.debt_upcoming_see_all),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1097,7 +1151,6 @@ fun DebtSectionHeader(
 
 /**
  * Referans görseldeki "Feniqo İçgörü" kartı.
- * Gerçek verilere dayanan, açıklanabilir finansal içgörü kartıdır.
  */
 @Composable
 fun DebtInsightCard(
@@ -1111,13 +1164,15 @@ fun DebtInsightCard(
         Modifier
     }
 
+    val (title, message) = insight.payload.resolveTitleAndDescription()
+
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
             .then(clickableModifier)
             .semantics {
-                contentDescription = "${insight.title}: ${insight.message}"
+                contentDescription = "$title: $message"
             },
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
@@ -1145,13 +1200,13 @@ fun DebtInsightCard(
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Text(
-                    text = insight.title,
+                    text = title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1F2937),
                 )
                 Text(
-                    text = insight.message,
+                    text = message,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 18.sp,
@@ -1169,44 +1224,17 @@ fun DebtInsightCard(
 }
 
 @Composable
-private fun CompactTypeBadge(
-    type: DebtType,
-    label: String,
-    modifier: Modifier = Modifier,
-) {
-    val (bgColor, textColor) = when (type) {
-        DebtType.DEBT -> Pair(Color(0xFFFEE2E2), Color(0xFFDC2626))
-        DebtType.RECEIVABLE -> Pair(Color(0xFFDCFCE7), Color(0xFF16A34A))
-    }
-
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(6.dp),
-        color = bgColor,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = textColor,
-            fontSize = 11.sp,
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-        )
-    }
-}
-
-@Composable
 private fun WarmDueStatusBadge(
     status: DebtDueStatus,
     label: String,
     modifier: Modifier = Modifier,
 ) {
     val (bgColor, textColor) = when (status) {
-        is DebtDueStatus.Overdue -> Pair(Color(0xFFFEE2E2), Color(0xFFDC2626)) // Kırmızı / Overdue
-        is DebtDueStatus.DueToday -> Pair(Color(0xFFFEF3C7), Color(0xFFD97706)) // Amber / Bugün
-        is DebtDueStatus.DueSoon -> Pair(Color(0xFFFFF0E6), Color(0xFFD96B27)) // Turuncu / Due soon
-        is DebtDueStatus.OnTime -> Pair(Color(0xFFDCFCE7), Color(0xFF16A34A)) // Yeşil / On time
-        is DebtDueStatus.Settled -> Pair(Color(0xFFF1EDE6), Color(0xFF64748B)) // Nötr / Kapandı
+        is DebtDueStatus.Overdue -> Pair(Color(0xFFFEE2E2), Color(0xFFDC2626))
+        is DebtDueStatus.DueToday -> Pair(Color(0xFFFEF3C7), Color(0xFFD97706))
+        is DebtDueStatus.DueSoon -> Pair(Color(0xFFFFF0E6), Color(0xFFD96B27))
+        is DebtDueStatus.OnTime -> Pair(Color(0xFFDCFCE7), Color(0xFF16A34A))
+        is DebtDueStatus.Settled -> Pair(Color(0xFFF1EDE6), Color(0xFF64748B))
     }
 
     Surface(
@@ -1227,7 +1255,6 @@ private fun WarmDueStatusBadge(
 
 /**
  * Geriye dönük uyumluluk için korunan eski DebtCard bileşeni.
- * Yeni warm-luxury liste öğesi görünümüne yönlendirir.
  */
 @Composable
 fun DebtCard(
@@ -1250,6 +1277,7 @@ fun DebtDeleteDialog(
     modifier: Modifier = Modifier,
     debtTitle: String = "",
 ) {
+    val dialogContentDesc = stringResource(Res.string.debt_delete_dialog_content_desc)
     androidx.compose.material3.AlertDialog(
         onDismissRequest = {
             if (!isSubmitting) {
@@ -1257,13 +1285,13 @@ fun DebtDeleteDialog(
             }
         },
         modifier = modifier.semantics {
-            contentDescription = "Borç alacak silme onay diyaloğu"
+            contentDescription = dialogContentDesc
         },
         shape = RoundedCornerShape(16.dp),
         containerColor = MaterialTheme.colorScheme.surface,
         title = {
             Text(
-                text = "Kaydı silmek istiyor musun?",
+                text = stringResource(Res.string.debt_delete_dialog_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -1272,9 +1300,9 @@ fun DebtDeleteDialog(
         },
         text = {
             val descriptionText = if (debtTitle.isNotBlank()) {
-                "$debtTitle kaydını silmek istediğine emin misin?"
+                stringResource(Res.string.debt_delete_dialog_desc_with_title, debtTitle)
             } else {
-                "Bu borç / alacak kaydını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+                stringResource(Res.string.debt_delete_dialog_desc_general)
             }
             Text(
                 text = descriptionText,
@@ -1301,7 +1329,10 @@ fun DebtDeleteDialog(
                         strokeWidth = 2.dp,
                     )
                 } else {
-                    Text("Sil", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = stringResource(Res.string.debt_delete_dialog_confirm),
+                        fontWeight = FontWeight.Bold,
+                    )
                 }
             }
         },
@@ -1313,27 +1344,31 @@ fun DebtDeleteDialog(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 modifier = Modifier.height(44.dp),
             ) {
-                Text("Vazgeç", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium)
+                Text(
+                    text = stringResource(Res.string.debt_delete_dialog_cancel),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Medium,
+                )
             }
         },
     )
 }
 
 /**
- * Referans Görsel 01'deki "Borç kapatma planı" giriş kartı.
- * Grafik ikonu, başlık, rehber alt metin ve chevron içerir.
+ * "Borç kapatma planı" giriş kartı.
  */
 @Composable
 fun DebtSnowballEntryCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val cardDesc = stringResource(Res.string.debt_snowball_card_title)
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .clickable(role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = "Borç kapatma planı" },
+            .semantics { contentDescription = cardDesc },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
@@ -1366,14 +1401,14 @@ fun DebtSnowballEntryCard(
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Text(
-                    text = "Borç kapatma planı",
+                    text = stringResource(Res.string.debt_snowball_title),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 15.sp,
                 )
                 Text(
-                    text = "Borçlarını daha hızlı kapatmak için bir plan oluştur.",
+                    text = stringResource(Res.string.debt_snowball_subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.sp,
@@ -1391,8 +1426,7 @@ fun DebtSnowballEntryCard(
 }
 
 /**
- * Referans Görsel 09'daki takvim modal bottom sheet seçicisidir.
- * Vade tarihi seç, ay gezinimi, takvim ızgarası ve altta "Tarihi seç" butonu içerir.
+ * Vade tarihi modal bottom sheet seçicisidir.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1400,7 +1434,7 @@ fun DebtDatePickerSheet(
     selectedDate: LocalDate?,
     onDateSelected: (LocalDate) -> Unit,
     onDismiss: () -> Unit,
-    title: String = "Vade tarihi seç",
+    title: String = "",
     modifier: Modifier = Modifier,
 ) {
     val initialDate = selectedDate ?: LocalDate(2026, 9, 15)
@@ -1409,6 +1443,8 @@ fun DebtDatePickerSheet(
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = initialUtcMillis,
     )
+
+    val resolvedTitle = title.ifBlank { stringResource(Res.string.debt_date_picker_default_title) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -1432,14 +1468,13 @@ fun DebtDatePickerSheet(
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 28.dp),
         ) {
-            // Başlık ve Kapat Butonu
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = title,
+                    text = resolvedTitle,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -1452,7 +1487,7 @@ fun DebtDatePickerSheet(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
-                        contentDescription = "Kapat",
+                        contentDescription = stringResource(Res.string.debt_date_picker_close),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp),
                     )
@@ -1461,7 +1496,6 @@ fun DebtDatePickerSheet(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Takvim
             DatePicker(
                 state = datePickerState,
                 showModeToggle = false,
@@ -1477,7 +1511,6 @@ fun DebtDatePickerSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Alt Satır: Seçili Tarih ve "Tarihi seç" butonu
             val currentMillis = datePickerState.selectedDateMillis
             val currentLocalDate = currentMillis?.let {
                 LocalDate.fromEpochDays((it / 86_400_000L).toInt())
@@ -1489,7 +1522,7 @@ fun DebtDatePickerSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = DateFormatter.formatReadableDate(currentLocalDate),
+                    text = currentLocalDate.toLocalizedReadableDate(),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -1509,7 +1542,7 @@ fun DebtDatePickerSheet(
                     modifier = Modifier.height(46.dp),
                 ) {
                     Text(
-                        text = "Tarihi seç",
+                        text = stringResource(Res.string.debt_date_picker_confirm),
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                     )
@@ -1520,8 +1553,7 @@ fun DebtDatePickerSheet(
 }
 
 /**
- * Referans Görsel 10'daki para birimi modal bottom sheet seçicisidir.
- * TRY, USD, EUR seçenekleri, radyo ikonları ve para birimi sembolleri içerir.
+ * Para birimi modal bottom sheet seçicisidir.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1554,14 +1586,13 @@ fun DebtCurrencyPickerSheet(
                 .padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Başlık ve Kapat Butonu
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Para birimi seç",
+                    text = stringResource(Res.string.debt_currency_picker_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -1573,7 +1604,7 @@ fun DebtCurrencyPickerSheet(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
-                        contentDescription = "Kapat",
+                        contentDescription = stringResource(Res.string.debt_currency_picker_close),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp),
                     )
@@ -1589,12 +1620,6 @@ fun DebtCurrencyPickerSheet(
                     Currency.USD -> "$"
                     Currency.EUR -> "€"
                     Currency.GBP -> "£"
-                }
-                val name = when (currency) {
-                    Currency.TRY -> "Türk lirası"
-                    Currency.USD -> "Amerikan doları"
-                    Currency.EUR -> "Euro"
-                    Currency.GBP -> "İngiliz sterlini"
                 }
 
                 Surface(
@@ -1618,7 +1643,6 @@ fun DebtCurrencyPickerSheet(
                             .padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        // Radio dairesi
                         Box(
                             modifier = Modifier
                                 .size(20.dp)
@@ -1654,7 +1678,7 @@ fun DebtCurrencyPickerSheet(
                                 fontSize = 15.sp,
                             )
                             Text(
-                                text = name,
+                                text = currency.toLocalizedNameText(),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 13.sp,
@@ -1676,8 +1700,7 @@ fun DebtCurrencyPickerSheet(
 }
 
 /**
- * Referans Görsel 12'deki "Henüz kayıt yok" boş durum bileşeni.
- * Çift yönlü ok ikonu, açıklama ve "İlk kaydını oluştur" butonu içerir.
+ * "Henüz kayıt yok" boş durum bileşeni.
  */
 @Composable
 fun DebtEmptyState(
@@ -1709,7 +1732,7 @@ fun DebtEmptyState(
         Spacer(modifier = Modifier.height(18.dp))
 
         Text(
-            text = "Henüz kayıt yok",
+            text = stringResource(Res.string.debt_empty_title),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
@@ -1719,7 +1742,7 @@ fun DebtEmptyState(
         Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = "Borçlarını ve alacaklarını tek yerde takip et.",
+            text = stringResource(Res.string.debt_empty_desc),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 14.sp,
@@ -1739,7 +1762,7 @@ fun DebtEmptyState(
             ),
         ) {
             Text(
-                text = "İlk kaydını oluştur",
+                text = stringResource(Res.string.debt_empty_create_button),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
@@ -1749,13 +1772,18 @@ fun DebtEmptyState(
 }
 
 /**
- * Referans Görsel 13'teki tamamlanmış borç / alacak bilgi banner'ı.
+ * Tamamlanmış borç / alacak bilgi banner'ı.
  */
 @Composable
 fun DebtSettledBanner(
     isDebt: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val bannerText = if (isDebt) {
+        stringResource(Res.string.debt_settled_banner_debt)
+    } else {
+        stringResource(Res.string.debt_settled_banner_receivable)
+    }
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
@@ -1774,7 +1802,7 @@ fun DebtSettledBanner(
                 modifier = Modifier.size(20.dp),
             )
             Text(
-                text = if (isDebt) "Bu borcun tamamı ödendi." else "Bu alacağın tamamı tahsil edildi.",
+                text = bannerText,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -1782,21 +1810,4 @@ fun DebtSettledBanner(
             )
         }
     }
-}
-
-/**
- * Para birimi sembol uzantısı.
- */
-fun Currency.symbol(): String = when (this) {
-    Currency.TRY -> "₺"
-    Currency.USD -> "$"
-    Currency.EUR -> "€"
-    Currency.GBP -> "£"
-}
-
-fun Currency.symbolName(): String = when (this) {
-    Currency.TRY -> "Türk lirası"
-    Currency.USD -> "Amerikan doları"
-    Currency.EUR -> "Euro"
-    Currency.GBP -> "İngiliz sterlini"
 }

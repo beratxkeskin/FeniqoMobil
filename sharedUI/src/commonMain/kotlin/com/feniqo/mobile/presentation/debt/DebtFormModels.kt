@@ -14,6 +14,7 @@ import com.feniqo.mobile.domain.validation.GoalDebtValidationResult
 import com.feniqo.mobile.domain.validation.GoalDebtValidationRules
 import com.feniqo.mobile.domain.validation.MoneyAmountParser
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.util.DateFormatter
 import com.feniqo.mobile.presentation.util.MoneyFormatter
 
 /**
@@ -41,9 +42,9 @@ data class DebtFormInputErrors(
 ) {
     val hasErrors: Boolean
         get() = titleError != null ||
-                amountError != null ||
-                dueDateError != null ||
-                descriptionError != null
+            amountError != null ||
+            dueDateError != null ||
+            descriptionError != null
 }
 
 /**
@@ -105,10 +106,8 @@ data class DebtFormInput(
                         else -> DebtFormFieldError.AMOUNT_INVALID
                     }
                 }
-
             }
         }
-
 
         // 3. Due Date validation
         val dueDateError = if (dueDate == null) DebtFormFieldError.DUE_DATE_REQUIRED else null
@@ -162,7 +161,7 @@ data class DebtFormDraft(
 
     fun toCreateCommand(): CreateDebtCommand {
         check(isCreateMode) {
-            "Düzenleme taslağından (ID: ${debtId?.value}) create komutu üretilemez."
+            "Cannot produce create command from edit draft (ID: ${debtId?.value})."
         }
         return CreateDebtCommand(
             title = title,
@@ -175,7 +174,7 @@ data class DebtFormDraft(
 
     fun toUpdateCommand(): UpdateDebtCommand {
         val targetId = checkNotNull(debtId) {
-            "Yeni kayıt taslağından update komutu üretilemez; geçerli bir debtId gereklidir."
+            "Cannot produce update command from new draft; valid debtId is required."
         }
         return UpdateDebtCommand(
             id = targetId,
@@ -232,18 +231,18 @@ fun resolveEffectiveDebtEditLoadState(
 data class DebtPaymentHistoryItemUiModel(
     val id: EntityId,
     val amount: Money,
-    val formattedAmount: String,
     val paidOn: LocalDate,
-    val formattedDate: String,
+    val formattedAmount: String = MoneyFormatter.format(amount),
+    val formattedDate: String = DateFormatter.formatReadableDate(paidOn),
 )
 
 fun com.feniqo.mobile.domain.model.DebtPayment.toHistoryItemUiModel(): DebtPaymentHistoryItemUiModel {
     return DebtPaymentHistoryItemUiModel(
         id = id,
         amount = amount,
-        formattedAmount = MoneyFormatter.format(amount),
         paidOn = paidOn,
-        formattedDate = com.feniqo.mobile.presentation.util.DateFormatter.formatReadableDate(paidOn),
+        formattedAmount = MoneyFormatter.format(amount),
+        formattedDate = DateFormatter.formatReadableDate(paidOn),
     )
 }
 
@@ -251,7 +250,7 @@ fun List<com.feniqo.mobile.domain.model.DebtPayment>.toSortedHistoryUiModels(): 
     return this
         .sortedWith(
             compareByDescending<com.feniqo.mobile.domain.model.DebtPayment> { it.paidOn }
-                .thenByDescending { it.id.value }
+                .thenByDescending { it.id.value },
         )
         .map { it.toHistoryItemUiModel() }
 }
@@ -260,11 +259,10 @@ fun List<com.feniqo.mobile.domain.model.DebtPayment>.toSortedHistoryUiModels(): 
  * Düzenleme ekranında gösterilen reaktif bakiye ve durum özeti presentation modeli.
  */
 data class DebtBalanceSummaryUiModel(
-    val formattedPrincipalAmount: String,
-    val formattedTotalPaid: String,
-    val formattedRemainingAmount: String,
+    val principalAmount: Money,
+    val totalPaid: Money,
+    val remainingAmount: Money,
     val isSettled: Boolean,
-    val statusText: String,
     val type: DebtType,
     val progressRatio: Float = 0f,
 )
@@ -290,4 +288,3 @@ sealed interface DebtFormUiEvent {
     data class MutationSuccess(val message: FinanceUiMessage) : DebtFormUiEvent
     data class ShowMessage(val message: FinanceUiMessage) : DebtFormUiEvent
 }
-

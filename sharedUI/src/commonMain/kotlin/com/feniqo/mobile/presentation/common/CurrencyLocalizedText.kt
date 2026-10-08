@@ -1,12 +1,22 @@
-@file:Suppress("ktlint:standard:no-wildcard-imports")
-
 package com.feniqo.mobile.presentation.common
 
 import androidx.compose.runtime.Composable
 import com.feniqo.mobile.domain.model.Currency
-import feniqomobil.sharedui.generated.resources.*
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.currency_eur
+import feniqomobil.sharedui.generated.resources.currency_gbp
+import feniqomobil.sharedui.generated.resources.currency_try
+import feniqomobil.sharedui.generated.resources.currency_usd
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
+
+fun Currency.symbol(): String =
+    when (this) {
+        Currency.TRY -> "₺"
+        Currency.USD -> "$"
+        Currency.EUR -> "€"
+        Currency.GBP -> "£"
+    }
 
 fun Currency.toLocalizedNameResource(): StringResource =
     when (this) {

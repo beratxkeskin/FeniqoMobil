@@ -1,8 +1,14 @@
+@file:Suppress(
+    "ktlint:standard:max-line-length",
+    "ktlint:standard:function-signature",
+    "ktlint:standard:multiline-expression-wrapping",
+    "ktlint:standard:no-wildcard-imports",
+)
+
 package com.feniqo.mobile.presentation.screen
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,12 +19,12 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -76,25 +82,26 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.DebtType
+import com.feniqo.mobile.presentation.common.symbol
+import com.feniqo.mobile.presentation.common.toLocalizedFormatted
 import com.feniqo.mobile.presentation.component.DebtCurrencyPickerSheet
+import com.feniqo.mobile.presentation.component.DebtDatePickerSheet
 import com.feniqo.mobile.presentation.component.DebtSettledBanner
-import com.feniqo.mobile.presentation.component.symbol
 import com.feniqo.mobile.presentation.debt.DebtBalanceSummaryUiModel
 import com.feniqo.mobile.presentation.debt.DebtFormFieldError
 import com.feniqo.mobile.presentation.debt.DebtFormInput
 import com.feniqo.mobile.presentation.debt.DebtFormInputErrors
 import com.feniqo.mobile.presentation.debt.DebtPaymentHistoryItemUiModel
+import com.feniqo.mobile.presentation.debt.toLocalizedDebtTypeLabel
+import com.feniqo.mobile.presentation.common.toLocalizedReadableDate
+import com.feniqo.mobile.presentation.debt.toLocalizedText
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
-import com.feniqo.mobile.presentation.theme.FeniqoTextPrimary
-import com.feniqo.mobile.presentation.theme.FeniqoTextSecondary
-import com.feniqo.mobile.presentation.theme.FeniqoWarmStoneBackground
-import com.feniqo.mobile.presentation.util.DateFormatter
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 /**
- * Borç ve Alacak kayıt oluşturma (Panel 04) ve düzenleme/detay (Panel 02 & 03) ekranı.
- * Grafit bakiye özeti (#303536), ödeme geçmişi, vade ve para birimi seçicileri (Panel 09-10),
- * ve kapanmış kayıt durumu (Panel 13) entegredir.
+ * Borç ve Alacak kayıt oluşturma ve düzenleme/detay ekranı.
  */
 @Composable
 fun DebtFormScreen(
@@ -124,20 +131,24 @@ fun DebtFormScreen(
     val titleFocusRequester = remember { FocusRequester() }
     val amountFocusRequester = remember { FocusRequester() }
     val descriptionFocusRequester = remember { FocusRequester() }
+
     val titleErrorText = when (errors.titleError) {
-        DebtFormFieldError.TITLE_REQUIRED -> "Başlık zorunludur."
-        DebtFormFieldError.TITLE_TOO_LONG -> "Başlık en fazla 500 karakter olabilir."
+        DebtFormFieldError.TITLE_REQUIRED -> stringResource(Res.string.debt_error_title_required)
+        DebtFormFieldError.TITLE_TOO_LONG -> stringResource(Res.string.debt_error_title_too_long)
         null -> null
-        else -> "Geçersiz başlık."
+        else -> stringResource(Res.string.debt_error_generic)
     }
     val amountErrorText = when (errors.amountError) {
-        DebtFormFieldError.AMOUNT_REQUIRED -> "Tutar zorunludur."
-        DebtFormFieldError.AMOUNT_NON_POSITIVE -> "Tutar sıfırdan büyük olmalıdır."
-        DebtFormFieldError.AMOUNT_INVALID -> "Geçerli bir tutar girin."
+        DebtFormFieldError.AMOUNT_REQUIRED -> stringResource(Res.string.debt_error_amount_required)
+        DebtFormFieldError.AMOUNT_NON_POSITIVE -> stringResource(Res.string.debt_error_amount_non_positive)
+        DebtFormFieldError.AMOUNT_INVALID -> stringResource(Res.string.debt_error_amount_invalid)
         null -> null
-        else -> "Geçersiz tutar."
+        else -> stringResource(Res.string.debt_error_generic)
     }
-    val descriptionErrorText = errors.descriptionError?.let { "Açıklama en fazla 500 karakter olabilir." }
+    val descriptionErrorText = errors.descriptionError?.let { stringResource(Res.string.debt_error_description_too_long) }
+    val titleFieldDesc = stringResource(Res.string.debt_form_title_content_desc)
+    val amountFieldDesc = stringResource(Res.string.debt_form_amount_content_desc)
+    val descriptionFieldDesc = stringResource(Res.string.debt_form_description_content_desc)
     val dismissKeyboard = {
         focusManager.clearFocus(force = true)
         keyboardController?.hide()
@@ -181,13 +192,20 @@ fun DebtFormScreen(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Geri",
+                            contentDescription = stringResource(Res.string.debt_form_nav_back),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     Spacer(modifier = Modifier.width(4.dp))
+
+                    val screenTitle = if (isEditMode) {
+                        stringResource(Res.string.debt_form_title_edit)
+                    } else {
+                        stringResource(Res.string.debt_form_title_create)
+                    }
+
                     Text(
-                        text = if (isEditMode) "Kaydı düzenle" else "Yeni kayıt",
+                        text = screenTitle,
                         style = TextStyle(
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp,
@@ -205,7 +223,7 @@ fun DebtFormScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Delete,
-                            contentDescription = "Kaydı sil",
+                            contentDescription = stringResource(Res.string.debt_form_delete_desc),
                             tint = Color(0xFFDC2626),
                         )
                     }
@@ -221,7 +239,6 @@ fun DebtFormScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                // Panel 02: Üst Kayıt Bilgi Kartı (Sadece Düzenleme Modunda)
                 if (isEditMode) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -255,20 +272,19 @@ fun DebtFormScreen(
 
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = input.titleInput.ifBlank { "Borç / Alacak Kaydı" },
+                                    text = input.titleInput.ifBlank { input.type.toLocalizedDebtTypeLabel() },
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = if (isDebt) "Borç" else "Alacak",
+                                    text = input.type.toLocalizedDebtTypeLabel(),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
 
-                            // Durum rozeti (Aktif / Tamamlandı)
                             val isSettled = balanceSummary?.isSettled == true
                             Box(
                                 modifier = Modifier
@@ -277,7 +293,11 @@ fun DebtFormScreen(
                                     .padding(horizontal = 10.dp, vertical = 4.dp),
                             ) {
                                 Text(
-                                    text = if (isSettled) "Tamamlandı" else "Aktif",
+                                    text = if (isSettled) {
+                                        stringResource(Res.string.debt_form_badge_settled)
+                                    } else {
+                                        stringResource(Res.string.debt_form_badge_active)
+                                    },
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = if (isSettled) Color(0xFF166534) else Color(0xFF0369A1),
@@ -287,7 +307,7 @@ fun DebtFormScreen(
                     }
                 }
 
-                // Panel 02: Grafit Bakiye Durum Kartı (#303536)
+                // Grafit Bakiye Durum Kartı (#303536)
                 if (isEditMode && balanceSummary != null) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -299,8 +319,14 @@ fun DebtFormScreen(
                                 .fillMaxWidth()
                                 .padding(16.dp),
                         ) {
+                            val remainingLabel = if (input.type == DebtType.DEBT) {
+                                stringResource(Res.string.debt_payment_form_balance_remaining_debt)
+                            } else {
+                                stringResource(Res.string.debt_payment_form_balance_remaining_receivable)
+                            }
+
                             Text(
-                                text = if (input.type == DebtType.DEBT) "Kalan Borç" else "Kalan Alacak",
+                                text = remainingLabel,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 12.sp,
@@ -309,7 +335,7 @@ fun DebtFormScreen(
                             Spacer(modifier = Modifier.height(4.dp))
 
                             Text(
-                                text = balanceSummary.formattedRemainingAmount,
+                                text = balanceSummary.remainingAmount.toLocalizedFormatted(),
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
@@ -318,7 +344,6 @@ fun DebtFormScreen(
 
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            // İlerleme Çubuğu
                             LinearProgressIndicator(
                                 progress = { balanceSummary.progressRatio },
                                 modifier = Modifier
@@ -337,12 +362,26 @@ fun DebtFormScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
-                                    text = "Toplam: ${balanceSummary.formattedPrincipalAmount}",
+                                    text = stringResource(
+                                        Res.string.debt_payment_form_balance_total,
+                                        balanceSummary.principalAmount.toLocalizedFormatted(),
+                                    ),
                                     fontSize = 11.sp,
                                     color = Color(0xFFD1D5DB),
                                 )
+                                val paidLabel = if (input.type == DebtType.DEBT) {
+                                    stringResource(
+                                        Res.string.debt_payment_form_balance_paid_debt,
+                                        balanceSummary.totalPaid.toLocalizedFormatted(),
+                                    )
+                                } else {
+                                    stringResource(
+                                        Res.string.debt_payment_form_balance_paid_receivable,
+                                        balanceSummary.totalPaid.toLocalizedFormatted(),
+                                    )
+                                }
                                 Text(
-                                    text = "${if (input.type == DebtType.DEBT) "Ödenen" else "Tahsil"}: ${balanceSummary.formattedTotalPaid}",
+                                    text = paidLabel,
                                     fontSize = 11.sp,
                                     color = Color(0xFFD1D5DB),
                                 )
@@ -357,7 +396,7 @@ fun DebtFormScreen(
                     }
                 }
 
-                // Panel 13: Tamamlandı Banner'ı veya + Ödeme/Tahsilat Ekle Butonu
+                // Tamamlandı Banner'ı veya + Ödeme/Tahsilat Ekle Butonu
                 if (isEditMode) {
                     if (balanceSummary?.isSettled == true) {
                         DebtSettledBanner(isDebt = input.type == DebtType.DEBT)
@@ -372,7 +411,11 @@ fun DebtFormScreen(
                             shape = RoundedCornerShape(12.dp),
                         ) {
                             Text(
-                                text = if (input.type == DebtType.DEBT) "+ Ödeme ekle" else "+ Tahsilat ekle",
+                                text = if (input.type == DebtType.DEBT) {
+                                    stringResource(Res.string.debt_payment_form_title_debt)
+                                } else {
+                                    stringResource(Res.string.debt_payment_form_title_receivable)
+                                },
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 14.sp,
                                 color = Color.White,
@@ -383,7 +426,7 @@ fun DebtFormScreen(
 
                 // Kayıt Bilgileri Bölüm Başlığı
                 Text(
-                    text = "Kayıt bilgileri",
+                    text = stringResource(Res.string.debt_form_section_info),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -400,7 +443,6 @@ fun DebtFormScreen(
                             .padding(4.dp),
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        // Borç Sekmesi
                         Box(
                             modifier = Modifier
                                 .weight(1f)
@@ -415,14 +457,13 @@ fun DebtFormScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = "Borç",
+                                text = stringResource(Res.string.debt_type_debt),
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 14.sp,
                                 color = if (input.type == DebtType.DEBT) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
 
-                        // Alacak Sekmesi
                         Box(
                             modifier = Modifier
                                 .weight(1f)
@@ -437,29 +478,21 @@ fun DebtFormScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = "Alacak",
+                                text = stringResource(Res.string.debt_type_receivable),
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 14.sp,
                                 color = if (input.type == DebtType.RECEIVABLE) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Borç: ödeyeceğim · Alacak: tahsil edeceğim",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 4.dp),
-                    )
                 }
 
                 // Başlık / Kişi / Kurum
                 OutlinedTextField(
                     value = input.titleInput,
                     onValueChange = onTitleChange,
-                    label = { Text("Kayıt adı / kişi / kurum *") },
-                    placeholder = { Text("örn. Ahmet Borç, Garanti Kredi Kartı") },
+                    label = { Text(stringResource(Res.string.debt_form_title_label)) },
+                    placeholder = { Text(stringResource(Res.string.debt_form_title_placeholder)) },
                     isError = errors.titleError != null,
                     supportingText = {
                         titleErrorText?.let { Text(text = it, color = MaterialTheme.colorScheme.error) }
@@ -472,7 +505,7 @@ fun DebtFormScreen(
                         .fillMaxWidth()
                         .focusRequester(titleFocusRequester)
                         .semantics {
-                            contentDescription = "Borç kayıt adı"
+                            contentDescription = titleFieldDesc
                             titleErrorText?.let { error(it) }
                         },
                     shape = RoundedCornerShape(12.dp),
@@ -488,8 +521,8 @@ fun DebtFormScreen(
                 OutlinedTextField(
                     value = input.amountInput,
                     onValueChange = onAmountChange,
-                    label = { Text("Toplam tutar *") },
-                    placeholder = { Text("0,00") },
+                    label = { Text(stringResource(Res.string.debt_form_amount_label)) },
+                    placeholder = { Text(stringResource(Res.string.debt_form_amount_placeholder)) },
                     trailingIcon = {
                         Text(
                             text = input.currency.symbol(),
@@ -513,7 +546,7 @@ fun DebtFormScreen(
                         .fillMaxWidth()
                         .focusRequester(amountFocusRequester)
                         .semantics {
-                            contentDescription = "Borç toplam tutarı"
+                            contentDescription = amountFieldDesc
                             amountErrorText?.let { error(it) }
                         },
                     shape = RoundedCornerShape(12.dp),
@@ -525,9 +558,8 @@ fun DebtFormScreen(
                     ),
                 )
 
-                // Para Birimi Seçimi (Panel 10 Sheet entegre)
+                // Para Birimi Seçimi
                 if (isEditMode) {
-                    // Düzenlemede Kilitli Kart
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
@@ -543,7 +575,7 @@ fun DebtFormScreen(
                         ) {
                             Column {
                                 Text(
-                                    text = "Para birimi",
+                                    text = stringResource(Res.string.debt_currency_picker_title),
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -558,13 +590,13 @@ fun DebtFormScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = Icons.Outlined.Lock,
-                                    contentDescription = "Kilitli",
+                                    contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(16.dp),
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "Değiştirilemez",
+                                    text = stringResource(Res.string.debt_form_currency_locked),
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -572,7 +604,6 @@ fun DebtFormScreen(
                         }
                     }
                 } else {
-                    // Yeni Kayıtta Seçilebilir Kart (Panel 10 Sheet tetikler)
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -595,7 +626,7 @@ fun DebtFormScreen(
                         ) {
                             Column {
                                 Text(
-                                    text = "Para birimi",
+                                    text = stringResource(Res.string.debt_currency_picker_title),
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -609,7 +640,7 @@ fun DebtFormScreen(
                             }
                             Icon(
                                 imageVector = Icons.Default.KeyboardArrowDown,
-                                contentDescription = "Para birimi seç",
+                                contentDescription = stringResource(Res.string.debt_form_currency_select_desc),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(20.dp),
                             )
@@ -617,7 +648,7 @@ fun DebtFormScreen(
                     }
                 }
 
-                // Vade Tarihi Kartı (Panel 09 Sheet tetikler)
+                // Vade Tarihi Kartı
                 Column {
                     Card(
                         modifier = Modifier
@@ -644,17 +675,13 @@ fun DebtFormScreen(
                         ) {
                             Column {
                                 Text(
-                                    text = "Vade tarihi *",
+                                    text = stringResource(Res.string.debt_form_due_date_label),
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = if (input.dueDate != null) {
-                                        DateFormatter.formatReadableDate(input.dueDate)
-                                    } else {
-                                        "Tarih seçin"
-                                    },
+                                    text = input.dueDate?.toLocalizedReadableDate() ?: stringResource(Res.string.debt_form_due_date_placeholder),
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = if (input.dueDate != null) MaterialTheme.colorScheme.onSurface else Color(0xFF9CA3AF),
@@ -662,7 +689,7 @@ fun DebtFormScreen(
                             }
                             Icon(
                                 imageVector = Icons.Outlined.DateRange,
-                                contentDescription = "Vade tarihi seç",
+                                contentDescription = stringResource(Res.string.debt_form_due_date_desc),
                                 tint = FeniqoSageGreen,
                                 modifier = Modifier.size(20.dp),
                             )
@@ -670,7 +697,7 @@ fun DebtFormScreen(
                     }
                     if (errors.dueDateError != null) {
                         Text(
-                            text = "Vade tarihi seçilmelidir.",
+                            text = stringResource(Res.string.debt_error_due_date_required),
                             fontSize = 12.sp,
                             color = Color(0xFFDC2626),
                             modifier = Modifier.padding(start = 4.dp, top = 4.dp),
@@ -682,8 +709,8 @@ fun DebtFormScreen(
                 OutlinedTextField(
                     value = input.descriptionInput,
                     onValueChange = onDescriptionChange,
-                    label = { Text("Açıklama (opsiyonel)") },
-                    placeholder = { Text("Not veya detay ekleyin") },
+                    label = { Text(stringResource(Res.string.debt_form_description_label)) },
+                    placeholder = { Text(stringResource(Res.string.debt_form_description_placeholder)) },
                     isError = errors.descriptionError != null,
                     supportingText = {
                         descriptionErrorText?.let { Text(text = it, color = MaterialTheme.colorScheme.error) }
@@ -697,7 +724,7 @@ fun DebtFormScreen(
                         .fillMaxWidth()
                         .focusRequester(descriptionFocusRequester)
                         .semantics {
-                            contentDescription = "Borç açıklaması"
+                            contentDescription = descriptionFieldDesc
                             descriptionErrorText?.let { error(it) }
                         },
                     shape = RoundedCornerShape(12.dp),
@@ -709,10 +736,14 @@ fun DebtFormScreen(
                     ),
                 )
 
-                // Panel 03: Ödeme / Tahsilat Geçmişi Bölümü (Düzenleme Modunda)
+                // Ödeme / Tahsilat Geçmişi Bölümü (Düzenleme Modunda)
                 if (isEditMode) {
                     val isDebt = input.type == DebtType.DEBT
-                    val historyTitle = if (isDebt) "Ödeme geçmişi" else "Tahsilat geçmişi"
+                    val historyTitle = if (isDebt) {
+                        stringResource(Res.string.debt_form_history_title_debt)
+                    } else {
+                        stringResource(Res.string.debt_form_history_title_receivable)
+                    }
 
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -725,7 +756,11 @@ fun DebtFormScreen(
 
                     if (paymentsHistory.isEmpty()) {
                         Text(
-                            text = if (isDebt) "Henüz bir ödeme kaydı bulunmuyor." else "Henüz bir tahsilat kaydı bulunmuyor.",
+                            text = if (isDebt) {
+                                stringResource(Res.string.debt_form_history_empty_debt)
+                            } else {
+                                stringResource(Res.string.debt_form_history_empty_receivable)
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 13.sp,
@@ -769,13 +804,17 @@ fun DebtFormScreen(
 
                                             Column {
                                                 Text(
-                                                    text = item.formattedDate,
+                                                    text = item.paidOn.toLocalizedReadableDate(),
                                                     style = MaterialTheme.typography.bodyMedium,
                                                     fontWeight = FontWeight.Medium,
                                                     color = MaterialTheme.colorScheme.onSurface,
                                                 )
                                                 Text(
-                                                    text = if (isDebt) "Ödeme yapıldı" else "Tahsilat yapıldı",
+                                                    text = if (isDebt) {
+                                                        stringResource(Res.string.debt_form_history_badge_debt)
+                                                    } else {
+                                                        stringResource(Res.string.debt_form_history_badge_receivable)
+                                                    },
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                     fontSize = 11.sp,
@@ -784,7 +823,7 @@ fun DebtFormScreen(
                                         }
 
                                         Text(
-                                            text = "${if (isDebt) "-" else "+"}${item.formattedAmount}",
+                                            text = "${if (isDebt) "-" else "+"}${item.amount.toLocalizedFormatted()}",
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = if (isDebt) Color(0xFFDC2626) else Color(0xFF16A34A),
@@ -795,38 +834,24 @@ fun DebtFormScreen(
                         }
                     }
 
-                    // Panel 03: Alt 'Kaydı sil' Kırmızı Eylem Butonu
                     Spacer(modifier = Modifier.height(8.dp))
                     TextButton(
                         onClick = onRequestDelete,
                         enabled = isEnabled,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Delete,
-                                contentDescription = null,
-                                tint = Color(0xFFDC2626),
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Kaydı sil",
-                                color = Color(0xFFDC2626),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                        }
+                        Text(
+                            text = stringResource(Res.string.debt_form_delete_button),
+                            color = Color(0xFFDC2626),
+                            fontWeight = FontWeight.SemiBold,
+                        )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Birincil Eylem Butonu (56dp, FeniqoSageGreen)
+            // Kaydet / Oluştur Butonu
             Button(
                 onClick = onSubmit,
                 enabled = isEnabled,
@@ -845,7 +870,11 @@ fun DebtFormScreen(
                     )
                 } else {
                     Text(
-                        text = if (isEditMode) "Değişiklikleri kaydet" else "Kaydı oluştur",
+                        text = if (isEditMode) {
+                            stringResource(Res.string.debt_form_save_changes)
+                        } else {
+                            stringResource(Res.string.debt_form_create_record)
+                        },
                         style = TextStyle(
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -855,17 +884,13 @@ fun DebtFormScreen(
                 }
             }
         }
-    }
 
-    // Panel 10: Para Birimi Seçim Bottom Sheet Modal
-    if (showCurrencyPicker) {
-        DebtCurrencyPickerSheet(
-            selectedCurrency = input.currency,
-            onDismiss = { showCurrencyPicker = false },
-            onCurrencySelected = { currency ->
-                onCurrencyChange(currency)
-                showCurrencyPicker = false
-            },
-        )
+        if (showCurrencyPicker) {
+            DebtCurrencyPickerSheet(
+                selectedCurrency = input.currency,
+                onCurrencySelected = onCurrencyChange,
+                onDismiss = { showCurrencyPicker = false },
+            )
+        }
     }
 }

@@ -1,3 +1,10 @@
+@file:Suppress(
+    "ktlint:standard:max-line-length",
+    "ktlint:standard:function-signature",
+    "ktlint:standard:multiline-expression-wrapping",
+    "ktlint:standard:no-wildcard-imports",
+)
+
 package com.feniqo.mobile.presentation.screen
 
 import androidx.compose.foundation.BorderStroke
@@ -45,22 +52,22 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.Currency
+import com.feniqo.mobile.presentation.common.symbol
+import com.feniqo.mobile.presentation.common.toLocalizedFormatted
 import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.EmptyState
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
-import com.feniqo.mobile.presentation.component.symbol
 import com.feniqo.mobile.presentation.debt.DebtSnowballPlanUiState
+import com.feniqo.mobile.presentation.debt.toLocalizedText
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
-import com.feniqo.mobile.presentation.theme.FeniqoTextPrimary
-import com.feniqo.mobile.presentation.theme.FeniqoTextSecondary
-import com.feniqo.mobile.presentation.theme.FeniqoWarmStoneBackground
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Borç Snowball Ödeme Planı Simülasyon Ekranı (Panel 07 & 08).
- * Bütçe girişi, uygun borç sayısı, grafit simülasyon özeti (#303536),
- * borç kapanış sırası ve aylık dağılım listesini sunar.
  */
 @Composable
 fun DebtSnowballPlanScreen(
@@ -95,14 +102,14 @@ fun DebtSnowballPlanScreen(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Geri",
+                        contentDescription = stringResource(Res.string.debt_snowball_nav_back),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
                 Column {
                     Text(
-                        text = "Borç kapatma planı",
+                        text = stringResource(Res.string.debt_snowball_title),
                         style = TextStyle(
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp,
@@ -111,7 +118,7 @@ fun DebtSnowballPlanScreen(
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        text = "Küçük borçlardan başlayarak borçlarını kapat.",
+                        text = stringResource(Res.string.debt_snowball_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp,
@@ -127,7 +134,7 @@ fun DebtSnowballPlanScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                // 1. Simülasyon Girdi Kartı (Panel 07)
+                // 1. Simülasyon Girdi Kartı
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -139,7 +146,7 @@ fun DebtSnowballPlanScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Text(
-                            text = "Simülasyon para birimi",
+                            text = stringResource(Res.string.debt_snowball_currency_label),
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -180,11 +187,12 @@ fun DebtSnowballPlanScreen(
                         }
 
                         // Aylık Bütçe Girdisi
+                        val budgetErrorText = state.budgetError?.toLocalizedText()
                         OutlinedTextField(
                             value = state.budgetInput,
                             onValueChange = onBudgetChange,
-                            label = { Text("Aylık ayırabileceğin bütçe *") },
-                            placeholder = { Text("0,00") },
+                            label = { Text(stringResource(Res.string.debt_snowball_budget_label)) },
+                            placeholder = { Text(stringResource(Res.string.debt_snowball_budget_placeholder)) },
                             trailingIcon = {
                                 Text(
                                     text = state.selectedCurrency.symbol(),
@@ -195,7 +203,7 @@ fun DebtSnowballPlanScreen(
                             },
                             isError = state.budgetError != null,
                             supportingText = {
-                                state.budgetError?.let {
+                                budgetErrorText?.let {
                                     Text(text = it, color = Color(0xFFDC2626))
                                 }
                             },
@@ -213,7 +221,11 @@ fun DebtSnowballPlanScreen(
 
                         // Uygun Borç Bilgisi
                         Text(
-                            text = "${state.eligibleDebtsCount} uygun borç bulundu.",
+                            text = pluralStringResource(
+                                Res.plurals.debt_snowball_eligible_debts_plural,
+                                state.eligibleDebtsCount,
+                                state.eligibleDebtsCount,
+                            ),
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -228,7 +240,7 @@ fun DebtSnowballPlanScreen(
                             shape = RoundedCornerShape(12.dp),
                         ) {
                             Text(
-                                text = "+ Planı hesapla",
+                                text = stringResource(Res.string.debt_snowball_calculate_button),
                                 style = TextStyle(
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.SemiBold,
@@ -243,21 +255,24 @@ fun DebtSnowballPlanScreen(
                     LoadingContent(modifier = Modifier.fillMaxWidth().height(150.dp))
                 } else if (state.observationError != null) {
                     ErrorState(
-                        title = "Bir Hata Oluştu",
+                        title = stringResource(Res.string.debt_snowball_error_title),
                         description = state.observationError.toLocalizedText(),
                         onRetry = onRetry,
                         modifier = Modifier.fillMaxWidth().padding(vertical = FeniqoSpacing.Large),
                     )
                 } else if (state.eligibleDebtsCount == 0) {
                     EmptyState(
-                        title = "Uygun Borç Bulunamadı",
-                        description = "Seçilen para biriminde (${state.selectedCurrency.name}) açık ve ödenecek borç kaydı bulunmuyor.",
+                        title = stringResource(Res.string.debt_snowball_empty_title),
+                        description = stringResource(
+                            Res.string.debt_snowball_empty_desc,
+                            state.selectedCurrency.name,
+                        ),
                         modifier = Modifier.fillMaxWidth().padding(vertical = FeniqoSpacing.Large),
                     )
                 } else if (state.plan != null) {
                     val plan = state.plan
 
-                    // 2. Grafit Simülasyon Sonuç Kartı (#303536, Panel 07)
+                    // 2. Grafit Simülasyon Sonuç Kartı
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
@@ -270,7 +285,7 @@ fun DebtSnowballPlanScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             Text(
-                                text = "Simülasyon sonucu",
+                                text = stringResource(Res.string.debt_snowball_result_title),
                                 fontSize = 12.sp,
                                 color = Color(0xFF9CA3AF),
                             )
@@ -282,13 +297,13 @@ fun DebtSnowballPlanScreen(
                             ) {
                                 Column {
                                     Text(
-                                        text = "Toplam borç",
+                                        text = stringResource(Res.string.debt_snowball_total_debt),
                                         fontSize = 11.sp,
                                         color = Color(0xFF9CA3AF),
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = plan.totalDebtFormatted,
+                                        text = plan.totalDebtAmount.toLocalizedFormatted(),
                                         fontSize = 15.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White,
@@ -297,13 +312,13 @@ fun DebtSnowballPlanScreen(
 
                                 Column {
                                     Text(
-                                        text = "Aylık bütçe",
+                                        text = stringResource(Res.string.debt_snowball_monthly_budget),
                                         fontSize = 11.sp,
                                         color = Color(0xFF9CA3AF),
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = plan.monthlyBudgetFormatted,
+                                        text = plan.monthlyPaymentBudget.toLocalizedFormatted(),
                                         fontSize = 15.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White,
@@ -312,18 +327,22 @@ fun DebtSnowballPlanScreen(
 
                                 Column(horizontalAlignment = Alignment.End) {
                                     Text(
-                                        text = "Yaklaşık",
+                                        text = stringResource(Res.string.debt_snowball_approx_prefix),
                                         fontSize = 11.sp,
                                         color = Color(0xFF9CA3AF),
                                     )
                                     Text(
-                                        text = "${plan.totalMonths} ay",
+                                        text = pluralStringResource(
+                                            Res.plurals.debt_snowball_month_count_plural,
+                                            plan.totalMonths,
+                                            plan.totalMonths,
+                                        ),
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFF22C55E),
                                     )
                                     Text(
-                                        text = "içinde kapanır",
+                                        text = stringResource(Res.string.debt_snowball_approx_suffix),
                                         fontSize = 10.sp,
                                         color = Color(0xFF9CA3AF),
                                     )
@@ -347,7 +366,7 @@ fun DebtSnowballPlanScreen(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = "Faiz ve yeni borçlar hesaba katılmaz. Bu plan otomatik ödeme yapmaz, yol gösterici simülasyondur.",
+                                        text = stringResource(Res.string.debt_snowball_disclaimer),
                                         fontSize = 11.sp,
                                         color = Color(0xFFD1D5DB),
                                         lineHeight = 15.sp,
@@ -357,9 +376,9 @@ fun DebtSnowballPlanScreen(
                         }
                     }
 
-                    // 3. Borç Kapanış Sırası Bölümü (Panel 07)
+                    // 3. Borç Kapanış Sırası Bölümü
                     Text(
-                        text = "Kapanma sırası",
+                        text = stringResource(Res.string.debt_snowball_order_section_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -405,7 +424,7 @@ fun DebtSnowballPlanScreen(
                                             color = MaterialTheme.colorScheme.onSurface,
                                         )
                                         Text(
-                                            text = item.initialRemainingFormatted,
+                                            text = item.initialRemainingAmount.toLocalizedFormatted(),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             fontSize = 12.sp,
@@ -413,7 +432,7 @@ fun DebtSnowballPlanScreen(
                                     }
 
                                     Text(
-                                        text = "${item.settledInMonth}. ayda kapanır",
+                                        text = stringResource(Res.string.debt_snowball_settled_in_month, item.settledInMonth),
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.SemiBold,
                                         color = FeniqoSageGreen,
@@ -423,9 +442,9 @@ fun DebtSnowballPlanScreen(
                         }
                     }
 
-                    // 4. Aylık Dağılım Bölümü (Panel 08)
+                    // 4. Aylık Dağılım Bölümü
                     Text(
-                        text = "Aylık dağılım",
+                        text = stringResource(Res.string.debt_snowball_monthly_dist_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -469,15 +488,27 @@ fun DebtSnowballPlanScreen(
                                         Spacer(modifier = Modifier.width(12.dp))
 
                                         Column {
+                                            val allocationDebtTitle = if (alloc.isMissingDebt || alloc.debtTitle == null) {
+                                                stringResource(Res.string.debt_snowball_missing_debt_fallback, alloc.debtId.value)
+                                            } else {
+                                                alloc.debtTitle
+                                            }
                                             Text(
-                                                text = "${alloc.month}. ay • ${alloc.debtTitle}",
+                                                text = stringResource(
+                                                    Res.string.debt_snowball_allocation_header,
+                                                    alloc.month,
+                                                    allocationDebtTitle,
+                                                ),
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = MaterialTheme.colorScheme.onSurface,
                                                 fontSize = 13.sp,
                                             )
                                             Text(
-                                                text = "Kalan: ${alloc.remainingBalanceFormatted}",
+                                                text = stringResource(
+                                                    Res.string.debt_snowball_allocation_remaining,
+                                                    alloc.remainingBalanceAfterPayment.toLocalizedFormatted(),
+                                                ),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 fontSize = 11.sp,
@@ -487,12 +518,12 @@ fun DebtSnowballPlanScreen(
 
                                     Column(horizontalAlignment = Alignment.End) {
                                         Text(
-                                            text = "Ödeme",
+                                            text = stringResource(Res.string.debt_snowball_allocation_payment),
                                             fontSize = 10.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                         Text(
-                                            text = alloc.allocatedFormatted,
+                                            text = alloc.allocatedAmount.toLocalizedFormatted(),
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = Color(0xFF16A34A),

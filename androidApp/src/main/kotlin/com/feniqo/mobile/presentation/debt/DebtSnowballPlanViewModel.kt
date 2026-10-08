@@ -133,7 +133,7 @@ class DebtSnowballPlanViewModel @Inject constructor(
                     eligibleDebtsCount = count,
                     isLoadingDebts = false,
                     observationError = null,
-                    plan = null, // SSOT değiştiğinde eski plan geçersiz kılınır
+                    plan = null,
                 )
             }
         } catch (e: CancellationException) {
@@ -169,7 +169,7 @@ class DebtSnowballPlanViewModel @Inject constructor(
                     selectedCurrency = currency,
                     eligibleDebtsCount = count,
                     budgetError = null,
-                    plan = null, // Para birimi değiştiğinde eski plan temizlenir
+                    plan = null,
                 )
             }
         } catch (e: CancellationException) {
@@ -190,7 +190,7 @@ class DebtSnowballPlanViewModel @Inject constructor(
             it.copy(
                 budgetInput = input,
                 budgetError = null,
-                plan = null, // Bütçe girdisi değiştiğinde eski plan temizlenir
+                plan = null,
             )
         }
     }
@@ -228,16 +228,15 @@ class DebtSnowballPlanViewModel @Inject constructor(
                 }
             }
             is MoneyAmountParser.ParseResult.Invalid -> {
-                val errorMessage = when (parseResult.error) {
-                    MoneyAmountParser.MoneyParseError.EMPTY -> "Aylık bütçe zorunludur."
-                    MoneyAmountParser.MoneyParseError.NON_POSITIVE -> "Aylık bütçe sıfırdan büyük olmalıdır."
-                    MoneyAmountParser.MoneyParseError.MAX_AMOUNT_EXCEEDED -> "Aylık bütçe çok yüksek."
+                val error = when (parseResult.error) {
+                    MoneyAmountParser.MoneyParseError.EMPTY -> DebtSnowballFormFieldError.BUDGET_REQUIRED
+                    MoneyAmountParser.MoneyParseError.NON_POSITIVE -> DebtSnowballFormFieldError.BUDGET_NON_POSITIVE
+                    MoneyAmountParser.MoneyParseError.MAX_AMOUNT_EXCEEDED -> DebtSnowballFormFieldError.BUDGET_MAX_EXCEEDED
                     MoneyAmountParser.MoneyParseError.INVALID_FORMAT,
-                    MoneyAmountParser.MoneyParseError.EXCESSIVE_DECIMAL_DIGITS -> "Geçerli bir tutar girin."
+                    MoneyAmountParser.MoneyParseError.EXCESSIVE_DECIMAL_DIGITS -> DebtSnowballFormFieldError.BUDGET_INVALID
                 }
-                _uiState.update { it.copy(budgetError = errorMessage, plan = null) }
+                _uiState.update { it.copy(budgetError = error, plan = null) }
             }
         }
     }
 }
-

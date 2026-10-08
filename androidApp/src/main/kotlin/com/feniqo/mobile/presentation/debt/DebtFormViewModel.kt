@@ -3,15 +3,16 @@ package com.feniqo.mobile.presentation.debt
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.repository.RepositoryResult
 import com.feniqo.mobile.domain.usecase.CreateDebtUseCase
 import com.feniqo.mobile.domain.usecase.DeleteDebtUseCase
 import com.feniqo.mobile.domain.usecase.ObserveDebtPaymentsUseCase
 import com.feniqo.mobile.domain.usecase.ObserveDebtUseCase
 import com.feniqo.mobile.domain.usecase.UpdateDebtUseCase
+import com.feniqo.mobile.domain.validation.DebtBalanceCalculator
 import com.feniqo.mobile.presentation.common.CurrentDateProvider
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
-import com.feniqo.mobile.presentation.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -61,7 +62,7 @@ class DebtFormViewModel @Inject constructor(
     private var activeSubmitJob: Job? = null
     private var activeDeleteJob: Job? = null
 
-    fun loadDebtForEdit(id: EntityId) {
+    fun loadDebtForEdit(id: EntityId, decimalSeparator: Char) {
         editLoadJob?.cancel()
         val currentToken = ++editLoadToken
         _editLoadState.value = DebtEditLoadState.Loading
@@ -77,30 +78,24 @@ class DebtFormViewModel @Inject constructor(
                 }.collect { (debt, payments) ->
                     if (editLoadToken == currentToken) {
                         if (debt != null) {
-                            val balance = com.feniqo.mobile.domain.validation.DebtBalanceCalculator.calculate(debt, payments)
+                            val balance = DebtBalanceCalculator.calculate(debt, payments)
                             val draft = DebtFormDraft.fromDomain(debt)
                             val history = payments.toSortedHistoryUiModels()
-                            val statusText = if (balance.isSettled) {
-                                if (debt.type == com.feniqo.mobile.domain.model.DebtType.DEBT) "Borç Tamamen Ödendi" else "Alacak Tamamen Tahsil Edildi"
-                            } else {
-                                if (debt.type == com.feniqo.mobile.domain.model.DebtType.DEBT) "Ödeme Devam Ediyor" else "Tahsilat Devam Ediyor"
-                            }
                             val progressRatio = if (balance.principalAmount.amountMinor > 0L) {
                                 (balance.totalPaid.amountMinor.toFloat() / balance.principalAmount.amountMinor.toFloat()).coerceIn(0f, 1f)
                             } else 0f
                             val summary = DebtBalanceSummaryUiModel(
-                                formattedPrincipalAmount = MoneyFormatter.format(balance.principalAmount),
-                                formattedTotalPaid = MoneyFormatter.format(balance.totalPaid),
-                                formattedRemainingAmount = MoneyFormatter.format(balance.remainingAmount),
+                                principalAmount = balance.principalAmount,
+                                totalPaid = balance.totalPaid,
+                                remainingAmount = balance.remainingAmount,
                                 isSettled = balance.isSettled,
-                                statusText = statusText,
                                 type = debt.type,
                                 progressRatio = progressRatio,
                             )
                             val loadedInput = DebtFormInput(
                                 debtId = debt.id,
                                 titleInput = debt.title,
-                                amountInput = formatMoneyToInput(debt.amount),
+                                amountInput = formatMoneyToInput(debt.amount, decimalSeparator),
                                 currency = debt.amount.currency,
                                 type = debt.type,
                                 dueDate = debt.dueDate,
@@ -137,19 +132,18 @@ class DebtFormViewModel @Inject constructor(
         }
     }
 
-    private fun formatMoneyToInput(money: com.feniqo.mobile.domain.model.Money): String {
+    private fun formatMoneyToInput(money: Money, decimalSeparator: Char): String {
         val digits = money.currency.minorUnitDigits
         val divisor = if (digits == 0) 1L else (1..digits).fold(1L) { acc, _ -> acc * 10L }
         val major = money.amountMinor / divisor
         val minor = money.amountMinor % divisor
         return if (digits > 0 && minor != 0L) {
             val minorStr = minor.toString().padStart(digits, '0').trimEnd('0')
-            "$major,$minorStr"
+            "$major$decimalSeparator$minorStr"
         } else {
             major.toString()
         }
     }
-
 
     fun setEditLoadInvalidId() {
         editLoadJob?.cancel()
@@ -159,19 +153,18 @@ class DebtFormViewModel @Inject constructor(
         _uiState.update { it.copy(paymentsHistory = emptyList(), balanceSummary = null) }
     }
 
-
     fun updateInput(transform: (DebtFormInput) -> DebtFormInput) {
         _uiState.update { state ->
             val updated = transform(state.input)
             val lockedCurrency = if (state.input.isEditMode) state.input.currency else updated.currency
             val lockedDebtId = state.input.debtId
             val protectedInput = updated.copy(
-                    debtId = lockedDebtId,
-                    currency = lockedCurrency,
-                )
+                debtId = lockedDebtId,
+                currency = lockedCurrency,
+            )
             state.copy(
                 input = protectedInput,
-                errors = DebtFormInputErrors(), // Reset errors on user modification
+                errors = DebtFormInputErrors(),
                 hasUnsavedChanges = protectedInput != initialInput,
             )
         }
