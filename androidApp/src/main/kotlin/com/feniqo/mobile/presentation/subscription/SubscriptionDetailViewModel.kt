@@ -26,8 +26,6 @@ import com.feniqo.mobile.domain.usecase.UpdateSubscriptionUseCase
 import com.feniqo.mobile.navigation.SubscriptionDetailRoute
 import com.feniqo.mobile.presentation.common.CurrentDateProvider
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
-import com.feniqo.mobile.presentation.util.DateFormatter
-import com.feniqo.mobile.presentation.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
@@ -39,7 +37,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Month
 import javax.inject.Inject
 
 sealed interface SubscriptionDetailEvent {
@@ -300,18 +297,13 @@ class SubscriptionDetailViewModel @Inject constructor(
         val maxAmount = monthlySums.maxOfOrNull { it.third }?.coerceAtLeast(1L) ?: 1L
 
         return monthlySums.map { (year, monthNum, totalMinor) ->
-            val monthEnum = Month.entries[monthNum - 1]
-            val monthLabel = DateFormatter.formatShortMonth(monthEnum)
             val isCurrent = (year == currentYear && monthNum == currentMonthNum)
             val ratio = if (totalMinor > 0L) (totalMinor.toFloat() / maxAmount.toFloat()).coerceIn(0.15f, 1f) else 0f
-            val formatted = if (totalMinor > 0L) MoneyFormatter.format(Money(totalMinor, currency)) else "0"
 
             SubscriptionMonthlyBarModel(
-                monthLabel = monthLabel,
                 year = year,
                 monthNumber = monthNum,
-                amountMinor = totalMinor,
-                formattedAmount = formatted,
+                amount = Money(totalMinor, currency),
                 isCurrentMonth = isCurrent,
                 ratio = ratio,
             )
@@ -329,8 +321,8 @@ class SubscriptionDetailViewModel @Inject constructor(
             .map { p ->
                 SubscriptionRecentPaymentModel(
                     id = p.id.value,
-                    formattedDate = DateFormatter.formatReadableDate(p.paymentDate),
-                    formattedAmount = MoneyFormatter.format(p.amount),
+                    paymentDate = p.paymentDate,
+                    amount = p.amount,
                     isManual = p.sourceType == com.feniqo.mobile.domain.model.SubscriptionPaymentSourceType.MANUAL,
                 )
             }

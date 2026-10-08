@@ -35,6 +35,16 @@ import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
+import androidx.compose.runtime.rememberUpdatedState
+import com.feniqo.mobile.presentation.common.currentLocaleDecimalSeparator
+import com.feniqo.mobile.presentation.subscription.subscriptionCommonCancelText
+import com.feniqo.mobile.presentation.subscription.subscriptionCommonSelectText
+import com.feniqo.mobile.presentation.subscription.subscriptionRouteBackActionText
+import com.feniqo.mobile.presentation.subscription.subscriptionRouteErrorTitleText
+import com.feniqo.mobile.presentation.subscription.subscriptionRouteLoadingText
+import com.feniqo.mobile.presentation.subscription.subscriptionRouteNotFoundDescText
+import com.feniqo.mobile.presentation.subscription.subscriptionRouteNotFoundTitleText
+
 enum class SubscriptionDatePickerTarget {
     START_DATE,
     END_DATE,
@@ -192,6 +202,8 @@ fun SubscriptionFormScreenRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val editLoadState by viewModel.editLoadState.collectAsStateWithLifecycle()
+    val currentDecimalSeparator = currentLocaleDecimalSeparator()
+    val latestDecimalSeparator by rememberUpdatedState(currentDecimalSeparator)
 
     var input by remember {
         mutableStateOf(
@@ -229,7 +241,7 @@ fun SubscriptionFormScreenRoute(
 
     LaunchedEffect(effectiveEditLoadState) {
         if (effectiveEditLoadState is SubscriptionEditLoadState.Ready && !isEditSeedApplied) {
-            val seededInput = SubscriptionFormInput.fromDraft(effectiveEditLoadState.draft)
+            val seededInput = SubscriptionFormInput.fromDraft(effectiveEditLoadState.draft, decimalSeparator = latestDecimalSeparator)
             input = seededInput
             initialInput = seededInput
             isActive = effectiveEditLoadState.isActive
@@ -262,7 +274,7 @@ fun SubscriptionFormScreenRoute(
                 color = MaterialTheme.colorScheme.background,
             ) {
                 LoadingContent(
-                    message = "Abonelik yükleniyor...",
+                    message = subscriptionRouteLoadingText(),
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -273,11 +285,11 @@ fun SubscriptionFormScreenRoute(
                 color = MaterialTheme.colorScheme.background,
             ) {
                 ErrorState(
-                    title = "Abonelik Bulunamadı",
-                    description = "Düzenlemek istediğiniz abonelik bulunamadı veya silinmiş.",
+                    title = subscriptionRouteNotFoundTitleText(),
+                    description = subscriptionRouteNotFoundDescText(),
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
-                        actionLabel = "Geri dön",
+                    actionLabel = subscriptionRouteBackActionText(),
                 )
             }
         }
@@ -287,11 +299,11 @@ fun SubscriptionFormScreenRoute(
                 color = MaterialTheme.colorScheme.background,
             ) {
                 ErrorState(
-                    title = "Abonelik Yüklenemedi",
+                    title = subscriptionRouteErrorTitleText(),
                     description = effectiveEditLoadState.message.toLocalizedText(),
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
-                        actionLabel = "Geri dön",
+                    actionLabel = subscriptionRouteBackActionText(),
                 )
             }
         }
@@ -435,12 +447,12 @@ fun SubscriptionFormScreenRoute(
                             activeDatePicker = null
                         },
                     ) {
-                        Text("Seç")
+                        Text(subscriptionCommonSelectText())
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { activeDatePicker = null }) {
-                        Text("İptal")
+                        Text(subscriptionCommonCancelText())
                     }
                 },
             ) {
@@ -486,12 +498,12 @@ fun SubscriptionFormScreenRoute(
                             activeDatePicker = null
                         },
                     ) {
-                        Text("Seç")
+                        Text(subscriptionCommonSelectText())
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { activeDatePicker = null }) {
-                        Text("İptal")
+                        Text(subscriptionCommonCancelText())
                     }
                 },
             ) {
@@ -527,7 +539,12 @@ fun SubscriptionFormScreenRoute(
     )
 
     if (isAdvanceRenewalDialogOpen && pendingAdvanceRenewal != null) {
+        val readyDraft = (effectiveEditLoadState as? SubscriptionEditLoadState.Ready)?.draft
+        val resolvedName = readyDraft?.name ?: input.nameInput
+        val resolvedAmount = readyDraft?.amount ?: (input.toDraft() as? SubscriptionFormNormalizationResult.Valid)?.draft?.amount
         SubscriptionAdvanceRenewalDialog(
+            subscriptionName = resolvedName,
+            amount = resolvedAmount,
             nextRenewalDate = pendingAdvanceRenewal.nextRenewalDate,
             isSubmitting = uiState.mutationState.isSubmitting,
             onConfirm = {

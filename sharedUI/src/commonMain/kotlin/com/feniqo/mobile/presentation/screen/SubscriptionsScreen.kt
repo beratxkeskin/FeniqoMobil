@@ -65,6 +65,16 @@ import com.feniqo.mobile.presentation.component.SubscriptionUpcomingSection
 import com.feniqo.mobile.presentation.subscription.SubscriptionsUiState
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTypographyTokens
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.subscription_add_action
+import feniqomobil.sharedui.generated.resources.subscription_amounts_disclaimer
+import feniqomobil.sharedui.generated.resources.subscription_common_back
+import feniqomobil.sharedui.generated.resources.subscription_empty_filter_message
+import feniqomobil.sharedui.generated.resources.subscription_loading_message
+import feniqomobil.sharedui.generated.resources.subscription_more_title
+import feniqomobil.sharedui.generated.resources.subscription_title
+import feniqomobil.sharedui.generated.resources.subscription_workspace_personal
+import org.jetbrains.compose.resources.stringResource
 
 private val FeniqoSageGreen = Color(0xFF2D5A43)
 
@@ -104,13 +114,13 @@ fun SubscriptionsScreen(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                        contentDescription = "Geri dön",
+                        contentDescription = stringResource(Res.string.subscription_common_back),
                         tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Daha Fazla",
+                        text = stringResource(Res.string.subscription_more_title),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -121,7 +131,7 @@ fun SubscriptionsScreen(
 
             // 2. Ekran Başlığı ve Aktif Çalışma Alanı Hapı
             Text(
-                text = "Abonelikler",
+                text = stringResource(Res.string.subscription_title),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -147,7 +157,7 @@ fun SubscriptionsScreen(
                         modifier = Modifier.size(14.dp),
                     )
                     Text(
-                        text = state.activeWorkspaceName ?: "Kişisel",
+                        text = state.activeWorkspaceName ?: stringResource(Res.string.subscription_workspace_personal),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -172,7 +182,7 @@ fun SubscriptionsScreen(
                 when {
                     state.isLoading -> {
                         LoadingContent(
-                            message = "Abonelikler yükleniyor...",
+                            message = stringResource(Res.string.subscription_loading_message),
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
@@ -243,7 +253,7 @@ fun SubscriptionsScreen(
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             Text(
-                                                text = "Bu filtreye uygun abonelik bulunamadı.",
+                                                text = stringResource(Res.string.subscription_empty_filter_message),
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
@@ -298,7 +308,7 @@ fun SubscriptionsScreen(
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = "Abonelik ekle",
+                                            text = stringResource(Res.string.subscription_add_action),
                                             style = MaterialTheme.typography.bodyLarge,
                                             fontWeight = FontWeight.SemiBold,
                                         )
@@ -307,7 +317,7 @@ fun SubscriptionsScreen(
                                     Spacer(modifier = Modifier.height(8.dp))
 
                                     Text(
-                                        text = "Tutarlar kayıtlarına göre hesaplanır.",
+                                        text = stringResource(Res.string.subscription_amounts_disclaimer),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -321,4 +331,3 @@ fun SubscriptionsScreen(
         }
     }
 }
-

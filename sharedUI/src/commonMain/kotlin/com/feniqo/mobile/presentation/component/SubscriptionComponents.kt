@@ -44,8 +44,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import com.feniqo.mobile.presentation.util.ColorParser
-import com.feniqo.mobile.presentation.util.DateFormatter
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,20 +54,67 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.LocalDate
+import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus
 import com.feniqo.mobile.domain.validation.SubscriptionFilter
 import com.feniqo.mobile.domain.validation.SubscriptionRenewalStatus
+import com.feniqo.mobile.presentation.common.toLocalizedFormatted
+import com.feniqo.mobile.presentation.common.toLocalizedReadableDate
 import com.feniqo.mobile.presentation.subscription.SubscriptionActualSpendingUiModel
 import com.feniqo.mobile.presentation.subscription.SubscriptionDisplayModel
 import com.feniqo.mobile.presentation.subscription.SubscriptionEstimatedCostSummaryUiModel
 import com.feniqo.mobile.presentation.subscription.SubscriptionInsightUiModel
-import com.feniqo.mobile.presentation.subscription.displayName
-import com.feniqo.mobile.presentation.theme.FeniqoEmerald
+import com.feniqo.mobile.presentation.subscription.resolveBadgeText
+import com.feniqo.mobile.presentation.subscription.resolveTitleAndDescription
+import com.feniqo.mobile.presentation.subscription.toLocalizedBadgeText
+import com.feniqo.mobile.presentation.subscription.toLocalizedFilterLabel
+import com.feniqo.mobile.presentation.subscription.toLocalizedFrequencySummary
+import com.feniqo.mobile.presentation.subscription.toLocalizedRenewalStatusLabel
 import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
+import com.feniqo.mobile.presentation.util.ColorParser
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.subscription_active_count_plural
+import feniqomobil.sharedui.generated.resources.subscription_actual_spending_title
+import feniqomobil.sharedui.generated.resources.subscription_add_action
+import feniqomobil.sharedui.generated.resources.subscription_advance_renewal_dialog_confirm
+import feniqomobil.sharedui.generated.resources.subscription_advance_renewal_dialog_message
+import feniqomobil.sharedui.generated.resources.subscription_advance_renewal_dialog_title
+import feniqomobil.sharedui.generated.resources.subscription_close_button
+import feniqomobil.sharedui.generated.resources.subscription_common_cancel
+import feniqomobil.sharedui.generated.resources.subscription_common_error_retry
+import feniqomobil.sharedui.generated.resources.subscription_delete_dialog_confirm
+import feniqomobil.sharedui.generated.resources.subscription_delete_dialog_message
+import feniqomobil.sharedui.generated.resources.subscription_delete_dialog_title
+import feniqomobil.sharedui.generated.resources.subscription_detail_not_found_back
+import feniqomobil.sharedui.generated.resources.subscription_detail_not_found_desc
+import feniqomobil.sharedui.generated.resources.subscription_detail_not_found_title
+import feniqomobil.sharedui.generated.resources.subscription_detail_price_change_increased
+import feniqomobil.sharedui.generated.resources.subscription_empty_desc
+import feniqomobil.sharedui.generated.resources.subscription_empty_title
+import feniqomobil.sharedui.generated.resources.subscription_error_default
+import feniqomobil.sharedui.generated.resources.subscription_error_title
+import feniqomobil.sharedui.generated.resources.subscription_form_reminder_dialog_grant
+import feniqomobil.sharedui.generated.resources.subscription_form_reminder_dialog_message
+import feniqomobil.sharedui.generated.resources.subscription_form_reminder_dialog_title
+import feniqomobil.sharedui.generated.resources.subscription_frequency_monthly
+import feniqomobil.sharedui.generated.resources.subscription_hero_estimated_monthly_cost
+import feniqomobil.sharedui.generated.resources.subscription_hero_info_desc_semantics
+import feniqomobil.sharedui.generated.resources.subscription_hero_yearly_approx
+import feniqomobil.sharedui.generated.resources.subscription_overdue_count_plural
+import feniqomobil.sharedui.generated.resources.subscription_payment_recorded_subtitle
+import feniqomobil.sharedui.generated.resources.subscription_payment_recorded_title
+import feniqomobil.sharedui.generated.resources.subscription_section_overdue_title
+import feniqomobil.sharedui.generated.resources.subscription_section_upcoming_subtitle
+import feniqomobil.sharedui.generated.resources.subscription_section_upcoming_title
+import feniqomobil.sharedui.generated.resources.subscription_status_due_today
+import feniqomobil.sharedui.generated.resources.subscription_status_upcoming_days_plural
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
+
 private val FeniqoGraphite = Color(0xFF1E232A)
 private val FeniqoExpenseRed = Color(0xFFE53935)
 private val FeniqoIconReceiptBg = Color(0xFFFFEBEE)
@@ -106,7 +151,7 @@ fun SubscriptionHeroCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Tahmini aylık maliyet",
+                    text = stringResource(Res.string.subscription_hero_estimated_monthly_cost),
                     style = MaterialTheme.typography.titleSmall,
                     color = Color(0xFFE0E0E0),
                     fontWeight = FontWeight.Normal,
@@ -121,7 +166,7 @@ fun SubscriptionHeroCard(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Lightbulb,
-                        contentDescription = "Bilgi",
+                        contentDescription = stringResource(Res.string.subscription_hero_info_desc_semantics),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp),
                     )
@@ -131,19 +176,21 @@ fun SubscriptionHeroCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             // 2. Büyük Tutar ve Para Birimi / Ay
+            val perMonthSuffix = stringResource(Res.string.subscription_frequency_monthly)
             if (estimatedSummaries.isEmpty()) {
+                val zeroAmount = Money(0L, Currency.TRY).toLocalizedFormatted()
                 Row(
                     verticalAlignment = Alignment.Bottom,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Text(
-                        text = "₺0",
+                        text = zeroAmount,
                         style = MaterialTheme.typography.displaySmall,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                     )
                     Text(
-                        text = "TRY / ay",
+                        text = "TRY $perMonthSuffix",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(bottom = 6.dp),
@@ -151,21 +198,22 @@ fun SubscriptionHeroCard(
                 }
             } else {
                 estimatedSummaries.forEach { summary ->
+                    val monthlyCostText = summary.monthlyCost?.toLocalizedFormatted() ?: Money(0L, summary.currency).toLocalizedFormatted()
                     Row(
                         verticalAlignment = Alignment.Bottom,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
-                            text = summary.formattedMonthlyCost,
+                            text = monthlyCostText,
                             style = MaterialTheme.typography.displaySmall,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
                             modifier = Modifier.semantics {
-                                contentDescription = "Tahmini aylık maliyet: ${summary.formattedMonthlyCost}"
+                                contentDescription = monthlyCostText
                             },
                         )
                         Text(
-                            text = "${summary.currency.name} / ay",
+                            text = "${summary.currency.name} $perMonthSuffix",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -195,12 +243,13 @@ fun SubscriptionHeroCard(
                 // Sol Sütun: Yıllık yaklaşık
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Yıllık yaklaşık",
+                        text = stringResource(Res.string.subscription_hero_yearly_approx),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(2.dp))
-                    val yearlyText = estimatedSummaries.firstOrNull()?.formattedYearlyCost ?: "₺0"
+                    val yearlyText = estimatedSummaries.firstOrNull()?.yearlyCost?.toLocalizedFormatted()
+                        ?: Money(0L, Currency.TRY).toLocalizedFormatted()
                     Text(
                         text = yearlyText,
                         style = MaterialTheme.typography.titleLarge,
@@ -231,7 +280,7 @@ fun SubscriptionHeroCard(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "aktif abonelik",
+                        text = pluralStringResource(Res.plurals.subscription_active_count_plural, totalActiveCount, totalActiveCount),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -251,7 +300,8 @@ fun SubscriptionActualSpendingCard(
     onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    val totalActual = actualSpendings.firstOrNull()?.currentMonthActualFormatted ?: "₺0"
+    val totalActual = actualSpendings.firstOrNull()?.currentMonthActual?.toLocalizedFormatted()
+        ?: Money(0L, Currency.TRY).toLocalizedFormatted()
     val isNegativeFormatted = totalActual.startsWith("-") || totalActual.startsWith("−")
     val displayAmount = if (isNegativeFormatted) totalActual else "-$totalActual"
 
@@ -298,7 +348,7 @@ fun SubscriptionActualSpendingCard(
             // Orta: Metin ve Tutar
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Bu ay kaydedilen ödemeler",
+                    text = stringResource(Res.string.subscription_actual_spending_title),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Medium,
@@ -344,25 +394,26 @@ fun SubscriptionUpcomingSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Yaklaşan Ödemeler",
+                text = stringResource(Res.string.subscription_section_upcoming_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = "Sonraki 7 gün (${upcomingPayments.size})",
+                text = stringResource(Res.string.subscription_section_upcoming_subtitle),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
         upcomingPayments.forEach { item ->
+            val upcomingItemClickLabel = item.name
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable(
                         role = Role.Button,
-                        onClickLabel = "${item.name} yaklaşan ödeme detayı",
+                        onClickLabel = upcomingItemClickLabel,
                         onClick = { onSubscriptionClick(item.id) },
                     ),
                 shape = RoundedCornerShape(FeniqoRadius.Medium),
@@ -399,12 +450,17 @@ fun SubscriptionUpcomingSection(
                             overflow = TextOverflow.Ellipsis,
                         )
                         val dueDateText = when (val s = item.renewalStatus) {
-                            SubscriptionRenewalStatus.DueToday -> "Bugün yenileniyor"
-                            is SubscriptionRenewalStatus.Upcoming -> "${s.daysUntilRenewal} gün kaldı (${item.formattedNextRenewalDate})"
-                            else -> item.formattedNextRenewalDate
+                            SubscriptionRenewalStatus.DueToday -> stringResource(Res.string.subscription_status_due_today)
+                            is SubscriptionRenewalStatus.Upcoming -> {
+                                val days = s.daysUntilRenewal.toInt()
+                                val daysText = pluralStringResource(Res.plurals.subscription_status_upcoming_days_plural, days, days)
+                                "$daysText (${item.nextRenewalDate.toLocalizedReadableDate()})"
+                            }
+                            else -> item.nextRenewalDate.toLocalizedReadableDate()
                         }
+                        val categoryPrefix = item.categoryName?.let { "$it • " } ?: ""
                         Text(
-                            text = "${item.categoryName} • $dueDateText",
+                            text = "$categoryPrefix$dueDateText",
                             style = MaterialTheme.typography.bodySmall,
                             color = if (item.renewalStatus is SubscriptionRenewalStatus.DueToday) Color(0xFFD97706) else MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -415,7 +471,7 @@ fun SubscriptionUpcomingSection(
                     Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
 
                     Text(
-                        text = item.formattedAmount,
+                        text = item.amount.toLocalizedFormatted(),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -474,7 +530,7 @@ fun SubscriptionOverdueSection(
                     modifier = Modifier.size(20.dp),
                 )
                 Text(
-                    text = "Gecikmiş Ödemeler (${overduePayments.size})",
+                    text = pluralStringResource(Res.plurals.subscription_overdue_count_plural, overduePayments.size, overduePayments.size),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = FeniqoExpenseRed,
@@ -482,7 +538,7 @@ fun SubscriptionOverdueSection(
             }
 
             Text(
-                text = "Aşağıdaki aboneliklerin yenileme tarihi geçmiş durumda. Ödendiğini onaylayarak bir sonraki vadeye ilerletebilirsiniz.",
+                text = stringResource(Res.string.subscription_section_overdue_title),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -505,13 +561,13 @@ fun SubscriptionOverdueSection(
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            text = "${item.formattedNextRenewalDate} tarihinden beri gecikti",
+                            text = item.renewalStatus.toLocalizedRenewalStatusLabel(),
                             style = MaterialTheme.typography.bodySmall,
                             color = FeniqoExpenseRed,
                         )
                     }
                     Text(
-                        text = item.formattedAmount,
+                        text = item.amount.toLocalizedFormatted(),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -551,7 +607,7 @@ fun SubscriptionFilterRow(
                 ),
             ) {
                 Text(
-                    text = filter.displayName,
+                    text = filter.toLocalizedFilterLabel(),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                     color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
@@ -571,6 +627,8 @@ fun SubscriptionInsightCard(
     modifier: Modifier = Modifier,
 ) {
     val accentColor = if (insight.isWarning) Color(0xFFD97706) else FeniqoSageGreen
+    val (title, description) = insight.payload.resolveTitleAndDescription()
+    val badgeText = insight.payload.resolveBadgeText()
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -611,19 +669,19 @@ fun SubscriptionInsightCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = insight.title,
+                        text = title,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
 
-                    insight.badgeText?.let { badge ->
+                    if (badgeText != null) {
                         Surface(
                             shape = RoundedCornerShape(FeniqoRadius.Small),
                             color = accentColor.copy(alpha = 0.15f),
                         ) {
                             Text(
-                                text = badge,
+                                text = badgeText,
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.SemiBold,
                                 color = accentColor,
@@ -636,7 +694,7 @@ fun SubscriptionInsightCard(
                 Spacer(modifier = Modifier.height(FeniqoSpacing.ExtraSmall))
 
                 Text(
-                    text = insight.description,
+                    text = description,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -687,13 +745,13 @@ fun SubscriptionNotificationPermissionBanner(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Abonelik Hatırlatıcıları",
+                    text = stringResource(Res.string.subscription_form_reminder_dialog_title),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = "Yenilemeden 7 gün önce ve yenileme günü bildirim al.",
+                    text = stringResource(Res.string.subscription_form_reminder_dialog_message),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -709,7 +767,7 @@ fun SubscriptionNotificationPermissionBanner(
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
             ) {
                 Text(
-                    text = "İzin ver",
+                    text = stringResource(Res.string.subscription_form_reminder_dialog_grant),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                 )
@@ -745,7 +803,7 @@ fun SubscriptionAddActionCard(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = "Abonelik ekle",
+            text = stringResource(Res.string.subscription_add_action),
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.SemiBold,
         )
@@ -762,27 +820,22 @@ fun SubscriptionCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val statusDescription = item.lifecycleStatus.name
+    val statusDescription = item.lifecycleStatus.toLocalizedBadgeText()
     val (renewalStatusText, _) = resolveRenewalStatusVisuals(item)
-
-    // Periyot metni: "/ ay", "/ yıl", "/ hafta"
-    val frequencyText = when (item.frequency) {
-        com.feniqo.mobile.domain.model.RecurrenceFrequency.MONTHLY -> "/ ay"
-        com.feniqo.mobile.domain.model.RecurrenceFrequency.YEARLY -> "/ yıl"
-        com.feniqo.mobile.domain.model.RecurrenceFrequency.WEEKLY -> "/ hf"
-        com.feniqo.mobile.domain.model.RecurrenceFrequency.DAILY -> "/ gün"
-    }
+    val frequencyText = toLocalizedFrequencySummary(item.frequency, 1)
+    val cardClickLabel = item.name
+    val cardContentDesc = "${item.name}, ${item.amount.toLocalizedFormatted()} $frequencyText, $renewalStatusText, $statusDescription"
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable(
                 role = Role.Button,
-                onClickLabel = "${item.name} aboneliği",
+                onClickLabel = cardClickLabel,
                 onClick = onClick,
             )
             .semantics {
-                contentDescription = "${item.name}, ${item.categoryName}, ${item.formattedAmount}$frequencyText, $renewalStatusText, $statusDescription"
+                contentDescription = cardContentDesc
             },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
@@ -832,11 +885,7 @@ fun SubscriptionCard(
 
                 Spacer(modifier = Modifier.height(2.dp))
 
-                val renewalDisplay = if (item.renewalStatus is SubscriptionRenewalStatus.DueToday) {
-                    "Bugün yenileniyor"
-                } else {
-                    "Yenileme: ${item.formattedNextRenewalDate}"
-                }
+                val renewalDisplay = item.renewalStatus.toLocalizedRenewalStatusLabel()
 
                 Text(
                     text = renewalDisplay,
@@ -849,7 +898,7 @@ fun SubscriptionCard(
                 if (item.hasPriceIncrease) {
                     Spacer(modifier = Modifier.height(2.dp))
                     SubscriptionPriceIncreaseBadge(
-                        priceIncreaseFormatted = item.priceIncreaseFormatted,
+                        priceIncreaseFormatted = item.priceIncreaseAmount?.toLocalizedFormatted(),
                         basisPoints = item.priceIncreaseBasisPoints,
                     )
                 }
@@ -863,7 +912,7 @@ fun SubscriptionCard(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(
-                    text = "${item.formattedAmount} $frequencyText",
+                    text = "${item.amount.toLocalizedFormatted()} $frequencyText",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = FeniqoExpenseRed,
@@ -879,10 +928,6 @@ fun SubscriptionCard(
         }
     }
 }
-
-            // Sağ Metin Bloğu: Tutar ve Ok
-
-
 
 /**
  * Kategoriye ait yüzde 12 tonal renkli daire avatar ve semantik simgesidir.
@@ -925,37 +970,33 @@ fun SubscriptionStatusBadge(
     lifecycleStatus: SubscriptionLifecycleStatus,
     modifier: Modifier = Modifier,
 ) {
-    val (containerColor, contentColor, text) = when (lifecycleStatus) {
-        SubscriptionLifecycleStatus.ACTIVE -> Triple(
+    val text = lifecycleStatus.toLocalizedBadgeText()
+    val (containerColor, contentColor) = when (lifecycleStatus) {
+        SubscriptionLifecycleStatus.ACTIVE -> Pair(
             FeniqoSageGreen.copy(alpha = 0.15f),
             FeniqoSageGreen,
-            "Aktif",
         )
-        SubscriptionLifecycleStatus.PAUSED -> Triple(
+        SubscriptionLifecycleStatus.PAUSED -> Pair(
             MaterialTheme.colorScheme.surfaceVariant,
             MaterialTheme.colorScheme.onSurfaceVariant,
-            "Duraklatıldı",
         )
-        SubscriptionLifecycleStatus.TRIAL -> Triple(
+        SubscriptionLifecycleStatus.TRIAL -> Pair(
             Color(0xFFF59E0B).copy(alpha = 0.15f),
             Color(0xFFD97706),
-            "Deneme",
         )
-        SubscriptionLifecycleStatus.CANCELLED -> Triple(
+        SubscriptionLifecycleStatus.CANCELLED -> Pair(
             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
             MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-            "İptal",
         )
-        SubscriptionLifecycleStatus.EXPIRED -> Triple(
+        SubscriptionLifecycleStatus.EXPIRED -> Pair(
             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
             MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-            "Süresi Doldu",
         )
     }
 
     Surface(
         modifier = modifier.semantics {
-            contentDescription = "Durum: $text"
+            contentDescription = text
         },
         shape = RoundedCornerShape(FeniqoRadius.Small),
         color = containerColor,
@@ -979,18 +1020,19 @@ fun SubscriptionPriceIncreaseBadge(
     basisPoints: Long?,
     modifier: Modifier = Modifier,
 ) {
+    val defaultPriceIncreaseText = stringResource(Res.string.subscription_detail_price_change_increased)
     val text = when {
         basisPoints != null && basisPoints > 0L -> {
             val pct = basisPoints / 100
             "+%$pct"
         }
         priceIncreaseFormatted != null -> priceIncreaseFormatted
-        else -> "Fiyat Arttı"
+        else -> defaultPriceIncreaseText
     }
 
     Surface(
         modifier = modifier.semantics {
-            contentDescription = "Fiyat artışı: $text"
+            contentDescription = text
         },
         shape = RoundedCornerShape(FeniqoRadius.Small),
         color = Color(0xFF10B981).copy(alpha = 0.12f),
@@ -1017,24 +1059,17 @@ fun SubscriptionPriceIncreaseBadge(
 }
 
 @Composable
-private fun resolveRenewalStatusVisuals(item: SubscriptionDisplayModel): Pair<String, Color> =
-    when (val status = item.renewalStatus) {
-        SubscriptionRenewalStatus.Inactive -> {
-            "Duraklatıldı" to MaterialTheme.colorScheme.onSurfaceVariant
-        }
-        is SubscriptionRenewalStatus.Overdue -> {
-            "${status.daysOverdue} gün gecikti" to FeniqoExpenseRed
-        }
-        SubscriptionRenewalStatus.DueToday -> {
-            "Bugün yenileniyor" to Color(0xFFD97706)
-        }
-        is SubscriptionRenewalStatus.Upcoming -> {
-            "${status.daysUntilRenewal} gün kaldı" to MaterialTheme.colorScheme.primary
-        }
-        is SubscriptionRenewalStatus.Scheduled -> {
-            "Sonraki: ${item.formattedNextRenewalDate}" to MaterialTheme.colorScheme.onSurfaceVariant
-        }
+private fun resolveRenewalStatusVisuals(item: SubscriptionDisplayModel): Pair<String, Color> {
+    val text = item.renewalStatus.toLocalizedRenewalStatusLabel()
+    val color = when (item.renewalStatus) {
+        SubscriptionRenewalStatus.Inactive -> MaterialTheme.colorScheme.onSurfaceVariant
+        is SubscriptionRenewalStatus.Overdue -> FeniqoExpenseRed
+        SubscriptionRenewalStatus.DueToday -> Color(0xFFD97706)
+        is SubscriptionRenewalStatus.Upcoming -> MaterialTheme.colorScheme.primary
+        is SubscriptionRenewalStatus.Scheduled -> MaterialTheme.colorScheme.onSurfaceVariant
     }
+    return text to color
+}
 
 /**
  * Görsel 13 Onaylı Silme Diyaloğu:
@@ -1048,6 +1083,7 @@ fun SubscriptionDeleteDialog(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val dialogDescription = stringResource(Res.string.subscription_delete_dialog_title)
     androidx.compose.material3.BasicAlertDialog(
         onDismissRequest = {
             if (!isSubmitting) {
@@ -1055,7 +1091,7 @@ fun SubscriptionDeleteDialog(
             }
         },
         modifier = modifier.semantics {
-            contentDescription = "Abonelik silme onay diyaloğu"
+            contentDescription = dialogDescription
         },
     ) {
         Surface(
@@ -1087,7 +1123,7 @@ fun SubscriptionDeleteDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Kaydı silmek istiyor musun?",
+                    text = stringResource(Res.string.subscription_delete_dialog_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -1097,7 +1133,7 @@ fun SubscriptionDeleteDialog(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "Feniqo'daki yenileme takibi durdurulur. Hizmet sağlayıcındaki abonelik iptal edilmez.",
+                    text = stringResource(Res.string.subscription_delete_dialog_message),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -1127,7 +1163,7 @@ fun SubscriptionDeleteDialog(
                         Spacer(modifier = Modifier.width(8.dp))
                     }
                     Text(
-                        text = "Kaydı sil",
+                        text = stringResource(Res.string.subscription_delete_dialog_confirm),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                     )
@@ -1149,7 +1185,7 @@ fun SubscriptionDeleteDialog(
                     ),
                 ) {
                     Text(
-                        text = "Vazgeç",
+                        text = stringResource(Res.string.subscription_common_cancel),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -1168,7 +1204,7 @@ fun SubscriptionDeleteDialog(
 @Composable
 fun SubscriptionAdvanceRenewalDialog(
     subscriptionName: String = "",
-    amountFormatted: String = "",
+    amount: Money? = null,
     nextRenewalDate: LocalDate,
     calculatedFollowingRenewalDate: LocalDate? = null,
     isSubmitting: Boolean,
@@ -1176,12 +1212,16 @@ fun SubscriptionAdvanceRenewalDialog(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val formattedCurrentDueDate = DateFormatter.formatReadableDate(nextRenewalDate)
-    val formattedNextDueDate = calculatedFollowingRenewalDate?.let { DateFormatter.formatReadableDate(it) }
+    val formattedCurrentDueDate = nextRenewalDate.toLocalizedReadableDate()
+    val formattedNextDueDate = calculatedFollowingRenewalDate?.toLocalizedReadableDate()
 
-    val isNegativeFormatted = amountFormatted.startsWith("-") || amountFormatted.startsWith("−")
-    val displayAmount = if (amountFormatted.isBlank()) "" else if (isNegativeFormatted) amountFormatted else "-$amountFormatted"
+    val displayAmount = when {
+        amount == null -> ""
+        amount.amountMinor <= 0L -> amount.toLocalizedFormatted()
+        else -> "-${amount.toLocalizedFormatted()}"
+    }
 
+    val dialogDescription = stringResource(Res.string.subscription_advance_renewal_dialog_title)
     androidx.compose.material3.BasicAlertDialog(
         onDismissRequest = {
             if (!isSubmitting) {
@@ -1189,7 +1229,7 @@ fun SubscriptionAdvanceRenewalDialog(
             }
         },
         modifier = modifier.semantics {
-            contentDescription = "Abonelik ödendi onay diyaloğu"
+            contentDescription = dialogDescription
         },
     ) {
         Surface(
@@ -1221,7 +1261,7 @@ fun SubscriptionAdvanceRenewalDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Ödendi olarak kaydedilsin mi?",
+                    text = stringResource(Res.string.subscription_advance_renewal_dialog_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -1273,11 +1313,10 @@ fun SubscriptionAdvanceRenewalDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                val renewalExplainer = if (formattedNextDueDate != null) {
-                    "Ödeme kaydı eklenir; sonraki yenileme $formattedNextDueDate olur. Bankadan para gönderilmez."
-                } else {
-                    "Ödeme kaydı eklenir ve vade bir sonraki döneme ilerletilir. Bankadan para gönderilmez."
-                }
+                val renewalExplainer = stringResource(
+                    Res.string.subscription_advance_renewal_dialog_message,
+                    formattedNextDueDate ?: formattedCurrentDueDate,
+                )
 
                 Text(
                     text = renewalExplainer,
@@ -1310,7 +1349,7 @@ fun SubscriptionAdvanceRenewalDialog(
                         Spacer(modifier = Modifier.width(8.dp))
                     }
                     Text(
-                        text = "Ödendi olarak kaydet",
+                        text = stringResource(Res.string.subscription_advance_renewal_dialog_confirm),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                     )
@@ -1332,7 +1371,7 @@ fun SubscriptionAdvanceRenewalDialog(
                     ),
                 ) {
                     Text(
-                        text = "Vazgeç",
+                        text = stringResource(Res.string.subscription_common_cancel),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -1380,7 +1419,7 @@ fun SubscriptionEmptyState(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Henüz aboneliğin yok",
+                text = stringResource(Res.string.subscription_empty_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -1389,7 +1428,7 @@ fun SubscriptionEmptyState(
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "Takibini yapmak için ilk aboneliğini ekle.",
+                text = stringResource(Res.string.subscription_empty_desc),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -1414,7 +1453,7 @@ fun SubscriptionEmptyState(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "Abonelik ekle",
+                    text = stringResource(Res.string.subscription_add_action),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -1428,7 +1467,7 @@ fun SubscriptionEmptyState(
  */
 @Composable
 fun SubscriptionErrorCard(
-    message: String = "Bir hata oluştu. Lütfen tekrar dene.",
+    message: String = stringResource(Res.string.subscription_error_default),
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1461,7 +1500,7 @@ fun SubscriptionErrorCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Yüklenemedi",
+                    text = stringResource(Res.string.subscription_error_title),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -1483,7 +1522,7 @@ fun SubscriptionErrorCard(
                     modifier = Modifier.height(32.dp),
                 ) {
                     Text(
-                        text = "Tekrar dene",
+                        text = stringResource(Res.string.subscription_common_error_retry),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -1530,13 +1569,13 @@ fun SubscriptionNotFoundCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Abonelik bulunamadı",
+                    text = stringResource(Res.string.subscription_detail_not_found_title),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = "Aradığın abonelik listede yok.",
+                    text = stringResource(Res.string.subscription_detail_not_found_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1552,7 +1591,7 @@ fun SubscriptionNotFoundCard(
                     modifier = Modifier.height(32.dp),
                 ) {
                     Text(
-                        text = "Listeye dön",
+                        text = stringResource(Res.string.subscription_detail_not_found_back),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -1567,8 +1606,8 @@ fun SubscriptionNotFoundCard(
  */
 @Composable
 fun SubscriptionSuccessBanner(
-    message: String = "Ödeme kaydedildi",
-    subtitle: String = "Kayıt başarıyla eklendi.",
+    message: String = stringResource(Res.string.subscription_payment_recorded_title),
+    subtitle: String = stringResource(Res.string.subscription_payment_recorded_subtitle),
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1615,8 +1654,8 @@ fun SubscriptionSuccessBanner(
 
             IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
                 Icon(
-                    imageVector = Icons.Outlined.Add, // Close ikonu veya dönüştürülmüş
-                    contentDescription = "Kapat",
+                    imageVector = Icons.Outlined.Add,
+                    contentDescription = stringResource(Res.string.subscription_close_button),
                     tint = Color(0xFF2E7D32),
                     modifier = Modifier.size(16.dp),
                 )

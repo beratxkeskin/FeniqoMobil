@@ -18,7 +18,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SubscriptionFormInputTest {
-
     private val expenseCategory = Category(
         id = EntityId("cat-exp-1"),
         ownerId = null,
@@ -286,17 +285,19 @@ class SubscriptionFormInputTest {
             nextRenewalDate = LocalDate(2026, 9, 1),
         )
 
-        val input = SubscriptionFormInput.fromDraft(draft)
-        assertEquals(EntityId("sub-seed-1"), input.subscriptionId)
-        assertEquals("iCloud Storage", input.nameInput)
-        assertEquals("29,99", input.amountInput)
-        assertEquals(Currency.TRY, input.currency)
-        assertEquals(EntityId("cat-exp-1"), input.categoryId)
-        assertEquals(RecurrenceFrequency.MONTHLY, input.frequency)
-        assertEquals("1", input.intervalInput)
-        assertEquals(LocalDate(2026, 5, 1), input.startDate)
-        assertEquals(LocalDate(2028, 5, 1), input.endDate)
-        assertEquals(LocalDate(2026, 9, 1), input.nextRenewalDate)
+        val inputTr = SubscriptionFormInput.fromDraft(draft, decimalSeparator = ',')
+        assertEquals(EntityId("sub-seed-1"), inputTr.subscriptionId)
+        assertEquals("iCloud Storage", inputTr.nameInput)
+        assertEquals("29,99", inputTr.amountInput)
+        assertEquals(Currency.TRY, inputTr.currency)
+        assertEquals(EntityId("cat-exp-1"), inputTr.categoryId)
+        assertEquals(RecurrenceFrequency.MONTHLY, inputTr.frequency)
+        assertEquals("1", inputTr.intervalInput)
+        assertEquals(LocalDate(2026, 5, 1), inputTr.startDate)
+        assertEquals(LocalDate(2028, 5, 1), inputTr.endDate)
+        assertEquals(LocalDate(2026, 9, 1), inputTr.nextRenewalDate)
+
+        val inputEn = SubscriptionFormInput.fromDraft(draft, decimalSeparator = '.')
+        assertEquals("29.99", inputEn.amountInput)
     }
 }
-

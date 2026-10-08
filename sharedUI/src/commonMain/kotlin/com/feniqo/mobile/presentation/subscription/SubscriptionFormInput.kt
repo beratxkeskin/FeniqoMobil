@@ -7,9 +7,10 @@ import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.RecurrenceFrequency
 import com.feniqo.mobile.domain.model.Subscription
+import com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.validation.MoneyAmountParser
-import com.feniqo.mobile.presentation.util.MoneyFormatter
+import com.feniqo.mobile.presentation.common.formatMinorUnitsToInputText
 
 /**
  * Abonelik formu alan bazlı doğrulama hataları.
@@ -223,11 +224,19 @@ data class SubscriptionFormInput(
         /**
          * Taslaktan form girdisi tohumlar.
          */
-        fun fromDraft(draft: SubscriptionFormDraft): SubscriptionFormInput =
+        fun fromDraft(
+            draft: SubscriptionFormDraft,
+            decimalSeparator: Char,
+        ): SubscriptionFormInput =
             SubscriptionFormInput(
                 subscriptionId = draft.subscriptionId,
                 nameInput = draft.name,
-                amountInput = MoneyFormatter.formatMinorUnitsToInputText(draft.amount.amountMinor, draft.amount.currency),
+                amountInput =
+                    formatMinorUnitsToInputText(
+                        draft.amount.amountMinor,
+                        draft.amount.currency,
+                        decimalSeparator,
+                    ),
                 currency = draft.amount.currency,
                 categoryId = draft.categoryId,
                 frequency = draft.frequency,
@@ -235,12 +244,12 @@ data class SubscriptionFormInput(
                 startDate = draft.startDate,
                 endDate = draft.endDate,
                 nextRenewalDate = draft.nextRenewalDate,
-                autoRenew = draft.lifecycleStatus != com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.PAUSED &&
-                    draft.lifecycleStatus != com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.CANCELLED,
+                autoRenew =
+                    draft.lifecycleStatus != SubscriptionLifecycleStatus.PAUSED &&
+                        draft.lifecycleStatus != SubscriptionLifecycleStatus.CANCELLED,
                 reminderEnabled = draft.reminderEnabled,
                 websiteUrlInput = draft.websiteUrl ?: "",
                 notesInput = draft.notes ?: "",
             )
     }
 }
-

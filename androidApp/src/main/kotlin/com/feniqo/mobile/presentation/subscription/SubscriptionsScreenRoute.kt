@@ -35,6 +35,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.presentation.screen.SubscriptionsScreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
+import com.feniqo.mobile.presentation.subscription.subscriptionPermissionBannerActionText
+import com.feniqo.mobile.presentation.subscription.subscriptionPermissionBannerDescText
+import com.feniqo.mobile.presentation.subscription.subscriptionPermissionBannerTitleText
 
 /**
  * Android Jetpack Compose Navigation için Subscriptions rotası adaptörüdür.
@@ -127,19 +130,19 @@ fun SubscriptionNotificationPermissionBanner(
             verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
         ) {
             Text(
-                text = "Abonelik hatırlatıcılarını aç",
+                text = subscriptionPermissionBannerTitleText(),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = "Yaklaşan ve vadesi gelen abonelikler için bildirim al.",
+                text = subscriptionPermissionBannerDescText(),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Button(
                 onClick = onRequestPermission,
                 modifier = Modifier.align(Alignment.End),
             ) {
-                Text("Bildirimlere izin ver")
+                Text(subscriptionPermissionBannerActionText())
             }
         }
     }

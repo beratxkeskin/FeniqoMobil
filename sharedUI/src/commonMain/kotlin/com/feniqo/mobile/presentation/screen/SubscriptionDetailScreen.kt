@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.feniqo.mobile.presentation.common.toLocalizedFormatted
 import com.feniqo.mobile.presentation.component.LoadingContent
 import com.feniqo.mobile.presentation.component.SubscriptionDetailActionButtons
 import com.feniqo.mobile.presentation.component.SubscriptionDetailAttributesCard
@@ -38,7 +39,15 @@ import com.feniqo.mobile.presentation.component.SubscriptionNotFoundCard
 import com.feniqo.mobile.presentation.component.SubscriptionRecentPaymentsCard
 import com.feniqo.mobile.presentation.subscription.SubscriptionDetailUiState
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
-
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.subscription_common_back
+import feniqomobil.sharedui.generated.resources.subscription_detail_edit_action
+import feniqomobil.sharedui.generated.resources.subscription_detail_insight_empty
+import feniqomobil.sharedui.generated.resources.subscription_detail_insight_with_payments_plural
+import feniqomobil.sharedui.generated.resources.subscription_detail_loading_message
+import feniqomobil.sharedui.generated.resources.subscription_title
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Görsel 1 Onaylı Abonelik Detay Ekranı.
@@ -65,7 +74,7 @@ fun SubscriptionDetailScreen(
         when {
             uiState.isLoading -> {
                 LoadingContent(
-                    message = "Abonelik detayları yükleniyor...",
+                    message = stringResource(Res.string.subscription_detail_loading_message),
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -101,13 +110,13 @@ fun SubscriptionDetailScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                                contentDescription = "Geri dön",
+                                contentDescription = stringResource(Res.string.subscription_common_back),
                                 tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
 
                         Text(
-                            text = "Abonelikler",
+                            text = stringResource(Res.string.subscription_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -120,7 +129,7 @@ fun SubscriptionDetailScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Edit,
-                            contentDescription = "Aboneliği düzenle",
+                            contentDescription = stringResource(Res.string.subscription_detail_edit_action),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
@@ -150,8 +159,8 @@ fun SubscriptionDetailScreen(
 
                     // 4. 2'li Özet Kartları: Tahmini Yıllık & Kaydedilen Toplam
                     SubscriptionDetailSummaryCards(
-                        yearlyCost = uiState.yearlyCostFormatted,
-                        totalPaid = uiState.totalPaidFormatted,
+                        yearlyCost = uiState.yearlyCost,
+                        totalPaid = uiState.totalPaid,
                     )
 
                     // 5. Üst Aksiyon Butonları: "Ödendi işaretle" ve "Hizmet sitesini aç"
@@ -163,9 +172,17 @@ fun SubscriptionDetailScreen(
                     )
 
                     // Varsa İçgörü Kartı
-                    if (uiState.insightMessage.isNotBlank()) {
-                        SubscriptionDetailInsightCard(insightMessage = uiState.insightMessage)
+                    val insightMessage = if (uiState.totalPaymentsCount > 0 && uiState.totalPaid != null) {
+                        pluralStringResource(
+                            Res.plurals.subscription_detail_insight_with_payments_plural,
+                            uiState.totalPaymentsCount,
+                            uiState.totalPaymentsCount,
+                            uiState.totalPaid?.toLocalizedFormatted() ?: "—",
+                        )
+                    } else {
+                        stringResource(Res.string.subscription_detail_insight_empty)
                     }
+                    SubscriptionDetailInsightCard(insightMessage = insightMessage)
 
                     // 6. Aylık Ödemeler Çubuk Grafiği (Aynı ekranda aşağı kaydırınca)
                     SubscriptionMonthlyPaymentsChart(bars = uiState.monthlyChartBars)
@@ -174,13 +191,13 @@ fun SubscriptionDetailScreen(
                     SubscriptionRecentPaymentsCard(
                         payments = uiState.recentPayments,
                         totalPaymentsCount = uiState.recentPayments.size,
-                        totalPaidFormatted = uiState.totalPaidFormatted,
+                        totalPaid = uiState.totalPaid,
                     )
 
                     // 8. Ek Bilgiler: Web sitesi ve Notlar
                     SubscriptionDetailExtraInfoCard(
                         websiteUrl = uiState.websiteUrl,
-                        notes = uiState.subscription.notes,
+                        notes = uiState.notes,
                         onOpenWebsite = onManageSubscription,
                     )
 

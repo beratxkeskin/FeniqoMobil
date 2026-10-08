@@ -1505,4 +1505,331 @@
         <item quantity="one">%1$d ay</item>
         <item quantity="other">%1$d ay</item>
     </plurals>
+    <!-- Subscriptions: General & Navigation -->
+    <string name="subscription_title">Abonelikler</string>
+    <string name="subscription_nav_more">Daha Fazla</string>
+    <string name="subscription_common_back">Geri dön</string>
+    <string name="subscription_common_cancel">Vazgeç</string>
+    <string name="subscription_common_select">Seç</string>
+    <string name="subscription_common_understood">Anladım</string>
+    <string name="subscription_common_loading">Abonelikler yükleniyor...</string>
+    <string name="subscription_common_error_retry">Tekrar dene</string>
+    <string name="subscription_cost_unavailable">Geçersiz</string>
+    <string name="subscription_amount_calculation_footnote">Tutarlar kayıtlarına göre hesaplanır.</string>
+    <string name="subscription_workspace_personal">Kişisel</string>
+
+    <!-- Subscriptions: Hero & Actual Spending -->
+    <string name="subscription_hero_estimated_monthly_cost">Tahmini aylık maliyet</string>
+    <string name="subscription_hero_info_title">Abonelik Maliyeti Bilgisi</string>
+    <string name="subscription_hero_info_desc">Farklı para birimlerindeki abonelikler birleştirilmeden her para birimi kendi içinde bağımsız hesaplanır.</string>
+    <string name="subscription_hero_yearly_approx">Yıllık yaklaşık</string>
+    <string name="subscription_hero_active_label">Aktif abonelik</string>
+    <string name="subscription_hero_upcoming_label">Yaklaşan ödeme</string>
+    <string name="subscription_hero_info_desc_semantics">Abonelik maliyet bilgisi</string>
+    <string name="subscription_actual_spending_title">Bu ay kaydedilen ödemeler</string>
+    <string name="subscription_trend_increase">Geçen aya göre %1$s artış</string>
+    <string name="subscription_trend_decrease">Geçen aya göre %1$s azalış</string>
+    <string name="subscription_trend_same">Geçen ay ile aynı</string>
+    <string name="subscription_trend_no_prev_data">Geçen ay veri yok</string>
+    <string name="subscription_actual_spending_partial">Bu ay henüz tamamlanmadı</string>
+    <string name="subscription_actual_spending_prev_month">Geçen ay: %1$s</string>
+
+    <!-- Subscriptions: Filters -->
+    <string name="subscription_filter_all">Tümü</string>
+    <string name="subscription_filter_active">Aktif</string>
+    <string name="subscription_filter_upcoming">Yaklaşan</string>
+    <string name="subscription_filter_overdue">Gecikmiş</string>
+    <string name="subscription_filter_paused">Duraklatıldı</string>
+    <string name="subscription_filter_cancelled">İptal</string>
+    <string name="subscription_filter_trial">Deneme</string>
+    <string name="subscription_filter_empty_result">Bu filtreye uygun abonelik bulunamadı.</string>
+
+    <!-- Subscriptions: Cards & Badges & Sections -->
+    <string name="subscription_category_unassigned">Kategorisiz</string>
+    <string name="subscription_category_missing">Bilinmeyen Kategori</string>
+    <string name="subscription_card_previous_price">Önceki: %1$s</string>
+    <string name="subscription_card_price_increase_badge">+%1$s</string>
+    <string name="subscription_card_price_increase_percent_badge">+%%%1$d</string>
+    <string name="subscription_status_inactive">Pasif</string>
+    <string name="subscription_status_due_today">Bugün yenileniyor</string>
+    <string name="subscription_badge_paused">Duraklatıldı</string>
+    <string name="subscription_badge_cancelled">İptal Edildi</string>
+    <string name="subscription_badge_trial">Deneme Süresi</string>
+    <string name="subscription_badge_expired">Süresi Doldu</string>
+    <string name="subscription_card_add_title">Abonelik ekle</string>
+    <string name="subscription_card_add_subtitle">Yeni bir dijital servis veya abonelik tanımlayın</string>
+    <string name="subscription_section_upcoming_title">Yaklaşan Ödemeler</string>
+    <string name="subscription_section_upcoming_subtitle">Sonraki 7 gün</string>
+    <string name="subscription_section_overdue_title">Gecikmiş Ödemeler</string>
+
+    <!-- Subscriptions: Insights -->
+    <string name="subscription_insight_trial_title">Deneme Süresi Bitiyor</string>
+    <string name="subscription_insight_price_increase_title">Fiyat Artışı</string>
+    <string name="subscription_insight_paused_savings_title">Durdurulan Abonelikler</string>
+    <string name="subscription_insight_top_cost_title">En Yüksek Maliyetli Plan</string>
+    <string name="subscription_insight_top_cost_desc">%1$s aylık tahmini %2$s ile en yüksek abonelik harcamanız.</string>
+    <string name="subscription_insight_top_cost_badge">Aylık En Yüksek</string>
+
+    <!-- Subscriptions: Empty State -->
+    <string name="subscription_empty_title">Henüz abonelik eklemediniz</string>
+    <string name="subscription_empty_desc">Tüm dijital servis ve abonelik harcamalarınızı tek yerden takip edin, yenileme tarihlerini kaçırmayın.</string>
+    <string name="subscription_empty_add_button">Abonelik Ekle</string>
+
+    <!-- Subscriptions: Recurrence Frequencies -->
+    <string name="subscription_frequency_daily">Günlük</string>
+    <string name="subscription_frequency_weekly">Haftalık</string>
+    <string name="subscription_frequency_monthly">Aylık</string>
+    <string name="subscription_frequency_yearly">Yıllık</string>
+    <string name="subscription_frequency_unit_daily">/ gün</string>
+    <string name="subscription_frequency_unit_weekly">/ hafta</string>
+    <string name="subscription_frequency_unit_monthly">/ ay</string>
+    <string name="subscription_frequency_unit_yearly">/ yıl</string>
+    <string name="subscription_recurrence_summary_daily_single">Her gün</string>
+    <string name="subscription_recurrence_summary_weekly_single">Her hafta</string>
+    <string name="subscription_recurrence_summary_monthly_single">Her ay</string>
+    <string name="subscription_recurrence_summary_yearly_single">Her yıl</string>
+
+    <!-- Subscriptions: Detail Screen -->
+    <string name="subscription_detail_title">Abonelikler</string>
+    <string name="subscription_detail_loading">Abonelik detayları yükleniyor...</string>
+    <string name="subscription_detail_edit_content_desc">Aboneliği düzenle</string>
+    <string name="subscription_detail_next_renewal">Sonraki yenileme: %1$s</string>
+    <string name="subscription_detail_trial_end">Deneme bitişi: %1$s</string>
+    <string name="subscription_detail_no_category">Kategori Belirtilmedi</string>
+    <string name="subscription_detail_attr_cycle">Döngü</string>
+    <string name="subscription_detail_attr_start_date">Başlangıç</string>
+    <string name="subscription_detail_attr_end_date">Bitiş</string>
+    <string name="subscription_detail_attr_no_end_date">Süresiz</string>
+    <string name="subscription_detail_attr_workspace">Alan</string>
+    <string name="subscription_detail_attr_workspace_personal">Yalnızca ben</string>
+    <string name="subscription_detail_settings_title">Yenileme Takibi ve Hatırlatıcı</string>
+    <string name="subscription_detail_reminder_title">Yenileme Hatırlatıcısı</string>
+    <string name="subscription_detail_reminder_desc">Yenilemeden önce bildirim al</string>
+    <string name="subscription_detail_auto_renew_title">Otomatik Yenileme</string>
+    <string name="subscription_detail_auto_renew_desc">Dönem sonunda otomatik yenilensin</string>
+    <string name="subscription_detail_summary_yearly_title">Tahmini Yıllık</string>
+    <string name="subscription_detail_summary_total_paid_title">Kaydedilen Toplam</string>
+    <string name="subscription_detail_summary_price_change_title">Fiyat Değişimi</string>
+    <string name="subscription_detail_price_change_none">Değişiklik yok</string>
+    <string name="subscription_detail_price_change_increased">Fiyat arttı</string>
+    <string name="subscription_detail_chart_title">Aylık ödemeler</string>
+    <string name="subscription_detail_chart_subtitle">Son 6 ayın gerçekleşen ödeme dağılımı</string>
+    <string name="subscription_detail_chart_current_month">Bu ay</string>
+    <string name="subscription_detail_chart_no_payments">Ödeme kaydı yok</string>
+    <string name="subscription_detail_recent_payments_title">Son ödemeler</string>
+    <string name="subscription_detail_payment_manual">Manuel</string>
+    <string name="subscription_detail_payment_auto">Otomatik</string>
+    <string name="subscription_detail_recent_payments_view_all">Tüm geçmişi gör</string>
+    <string name="subscription_detail_recent_no_payments">Henüz ödeme kaydedilmedi</string>
+    <string name="subscription_detail_insight_title">Feniqo İçgörü</string>
+    <string name="subscription_detail_insight_empty">Bu servis için henüz gerçekleşen ödeme kaydedilmedi. Vadesi geldiğinde ödendi işaretleyerek harcama geçmişinizi oluşturabilirsiniz.</string>
+    <string name="subscription_detail_action_advance_renewal">Ödendi olarak kaydet</string>
+    <string name="subscription_detail_action_manage">Aboneliği yönet</string>
+    <string name="subscription_detail_action_pause">Aboneliği duraklat</string>
+    <string name="subscription_detail_action_resume">Aboneliği devam ettir</string>
+    <string name="subscription_detail_action_cancel">Aboneliği iptal et</string>
+    <string name="subscription_detail_action_delete">Aboneliği sil</string>
+    <string name="subscription_detail_extra_title">Ek Bilgiler</string>
+    <string name="subscription_detail_extra_website">Web sitesi</string>
+    <string name="subscription_detail_extra_notes">Notlar</string>
+    <string name="subscription_detail_not_found_title">Abonelik Bulunamadı</string>
+    <string name="subscription_detail_not_found_desc">Görüntülemek istediğiniz abonelik mevcut değil veya silinmiş.</string>
+    <string name="subscription_detail_not_found_back">Aboneliklere Dön</string>
+
+    <!-- Subscriptions: Form Screen -->
+    <string name="subscription_form_title_create">Yeni abonelik</string>
+    <string name="subscription_form_title_edit">Aboneliği düzenle</string>
+    <string name="subscription_form_nav_back">Abonelikler</string>
+    <string name="subscription_form_delete">Sil</string>
+    <string name="subscription_form_templates_title">Hızlı Şablonlar</string>
+    <string name="subscription_form_name_label">Abonelik Adı</string>
+    <string name="subscription_form_name_placeholder">Örn: Netflix, Spotify...</string>
+    <string name="subscription_form_name_content_desc">Abonelik adı girin</string>
+    <string name="subscription_form_amount_label">Tutar</string>
+    <string name="subscription_form_amount_placeholder">0,00</string>
+    <string name="subscription_form_amount_content_desc">Tutar girin</string>
+    <string name="subscription_form_category_label">Kategori</string>
+    <string name="subscription_form_category_placeholder">Kategori Seçin</string>
+    <string name="subscription_form_category_none">Kategorisiz</string>
+    <string name="subscription_form_category_content_desc">Kategori seçin</string>
+    <string name="subscription_form_frequency_label">Yenileme Sıklığı</string>
+    <string name="subscription_form_interval_label">Tekrar Aralığı</string>
+    <string name="subscription_form_start_date_label">Başlangıç Tarihi</string>
+    <string name="subscription_form_start_date_content_desc">Başlangıç tarihi seçin</string>
+    <string name="subscription_form_end_date_label">Bitiş Tarihi (İsteğe bağlı)</string>
+    <string name="subscription_form_end_date_not_set">Belirtilmedi</string>
+    <string name="subscription_form_end_date_content_desc">Bitiş tarihi seçin</string>
+    <string name="subscription_form_clear_end_date">Temizle</string>
+    <string name="subscription_form_clear_end_date_desc">Bitiş tarihini temizle</string>
+    <string name="subscription_form_reminder_label">Hatırlatıcı Bildirim</string>
+    <string name="subscription_form_reminder_desc">Yenilemeden önce bildirim al</string>
+    <string name="subscription_form_auto_renew_label">Otomatik Yenileme</string>
+    <string name="subscription_form_auto_renew_desc">Dönem sonunda otomatik devam etsin</string>
+    <string name="subscription_form_website_label">Web Sitesi</string>
+    <string name="subscription_form_website_placeholder">https://...</string>
+    <string name="subscription_form_notes_label">Notlar</string>
+    <string name="subscription_form_notes_placeholder">Abonelik hakkında notlar...</string>
+    <string name="subscription_form_save_button">Kaydet</string>
+    <string name="subscription_form_update_button">Değişiklikleri Kaydet</string>
+    <string name="subscription_form_pause_button">Aboneliği Duraklat</string>
+    <string name="subscription_form_resume_button">Aboneliği Devam Ettir</string>
+    <string name="subscription_form_advance_button">Ödendi Olarak Kaydet</string>
+    <string name="subscription_form_delete_button">Kaydı Sil</string>
+
+    <!-- Subscriptions: Form Validation Errors -->
+    <string name="subscription_error_name_required">Abonelik adı zorunludur.</string>
+    <string name="subscription_error_name_too_long">Abonelik adı en fazla 100 karakter olabilir.</string>
+    <string name="subscription_error_amount_required">Tutar zorunludur.</string>
+    <string name="subscription_error_amount_invalid">Geçerli bir tutar girin.</string>
+    <string name="subscription_error_amount_non_positive">Tutar sıfırdan büyük olmalıdır.</string>
+    <string name="subscription_error_amount_too_large">Girilen tutar çok yüksek.</string>
+    <string name="subscription_error_category_not_found">Seçilen kategori bulunamadı.</string>
+    <string name="subscription_error_category_type_mismatch">Abonelik için yalnızca gider kategorisi seçilebilir.</string>
+    <string name="subscription_error_interval_invalid">Geçerli bir aralık girin.</string>
+    <string name="subscription_error_interval_non_positive">Aralık en az 1 olmalıdır.</string>
+    <string name="subscription_error_start_date_required">Başlangıç tarihi zorunludur.</string>
+    <string name="subscription_error_start_date_after_next_renewal">Başlangıç tarihi sonraki yenileme tarihinden sonra olamaz.</string>
+    <string name="subscription_error_end_date_before_start_date">Bitiş tarihi başlangıç tarihinden önce olamaz.</string>
+    <string name="subscription_error_end_date_before_next_renewal">Bitiş tarihi sonraki yenileme tarihinden önce olamaz.</string>
+    <string name="subscription_error_website_too_long">Web sitesi adresi çok uzun.</string>
+    <string name="subscription_error_notes_too_long">Notlar çok uzun.</string>
+
+    <!-- Subscriptions: Dialogs -->
+    <string name="subscription_delete_dialog_title">Aboneliği Sil</string>
+    <string name="subscription_delete_dialog_message">Bu aboneliği ve ilişkili tüm yenileme geçmişini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.</string>
+    <string name="subscription_delete_dialog_cancel">Vazgeç</string>
+    <string name="subscription_delete_dialog_confirm">Sil</string>
+    <string name="subscription_advance_renewal_dialog_title">Ödendi Olarak Kaydet</string>
+    <string name="subscription_advance_renewal_dialog_message">Bu aboneliğin vadesi %1$s tarihine ilerletilecek ve gerçekleşen ödemelere kaydedilecek. Onaylıyor musunuz?</string>
+    <string name="subscription_advance_renewal_dialog_cancel">Vazgeç</string>
+    <string name="subscription_advance_renewal_dialog_confirm">Ödendi Olarak Kaydet</string>
+
+    <!-- Subscriptions: Routes & Permissions -->
+    <string name="subscription_route_loading">Abonelik yükleniyor...</string>
+    <string name="subscription_route_not_found_title">Abonelik Bulunamadı</string>
+    <string name="subscription_route_not_found_desc">Düzenlemek istediğiniz abonelik bulunamadı veya silinmiş.</string>
+    <string name="subscription_route_error_title">Abonelik Yüklenemedi</string>
+    <string name="subscription_route_back_action">Geri dön</string>
+    <string name="subscription_permission_banner_title">Abonelik hatırlatıcılarını aç</string>
+    <string name="subscription_permission_banner_desc">Yaklaşan ve vadesi gelen abonelikler için bildirim al.</string>
+    <string name="subscription_permission_banner_action">Bildirimlere izin ver</string>
+
+    <!-- Subscriptions: Plurals -->
+    <plurals name="subscription_active_count_plural">
+        <item quantity="one">%1$d aktif abonelik</item>
+        <item quantity="other">%1$d aktif abonelik</item>
+    </plurals>
+    <plurals name="subscription_status_overdue_days_plural">
+        <item quantity="one">%1$d gün gecikti</item>
+        <item quantity="other">%1$d gün gecikti</item>
+    </plurals>
+    <plurals name="subscription_status_upcoming_days_plural">
+        <item quantity="one">%1$d gün kaldı</item>
+        <item quantity="other">%1$d gün kaldı</item>
+    </plurals>
+    <plurals name="subscription_overdue_count_plural">
+        <item quantity="one">%1$d gecikmiş ödeme</item>
+        <item quantity="other">%1$d gecikmiş ödeme</item>
+    </plurals>
+    <plurals name="subscription_recurrence_interval_days_plural">
+        <item quantity="one">Her %1$d günde bir</item>
+        <item quantity="other">Her %1$d günde bir</item>
+    </plurals>
+    <plurals name="subscription_recurrence_interval_weeks_plural">
+        <item quantity="one">Her %1$d haftada bir</item>
+        <item quantity="other">Her %1$d haftada bir</item>
+    </plurals>
+    <plurals name="subscription_recurrence_interval_months_plural">
+        <item quantity="one">Her %1$d ayda bir</item>
+        <item quantity="other">Her %1$d ayda bir</item>
+    </plurals>
+    <plurals name="subscription_recurrence_interval_years_plural">
+        <item quantity="one">Her %1$d yılda bir</item>
+        <item quantity="other">Her %1$d yılda bir</item>
+    </plurals>
+    <plurals name="subscription_insight_trial_desc_plural">
+        <item quantity="one">%1$s deneme süresi %2$d gün sonra (%3$s) sona eriyor.</item>
+        <item quantity="other">%1$s deneme süresi %2$d gün sonra (%3$s) sona eriyor.</item>
+    </plurals>
+    <plurals name="subscription_insight_trial_badge_plural">
+        <item quantity="one">%1$d gün kaldı</item>
+        <item quantity="other">%1$d gün kaldı</item>
+    </plurals>
+    <plurals name="subscription_insight_price_increase_desc_plural">
+        <item quantity="one">%1$d aboneliğinizde fiyat artışı tespit edildi. Detayları listeden inceleyebilirsiniz.</item>
+        <item quantity="other">%1$d aboneliğinizde fiyat artışı tespit edildi. Detayları listeden inceleyebilirsiniz.</item>
+    </plurals>
+    <plurals name="subscription_insight_price_increase_badge_plural">
+        <item quantity="one">%1$d servis</item>
+        <item quantity="other">%1$d servis</item>
+    </plurals>
+    <plurals name="subscription_insight_paused_savings_desc_plural">
+        <item quantity="one">%1$d duraklatılmış abonelik ile aylık tahmini %2$s tasarruf sağlıyorsunuz.</item>
+        <item quantity="other">%1$d duraklatılmış abonelik ile aylık tahmini %2$s tasarruf sağlıyorsunuz.</item>
+    </plurals>
+    <plurals name="subscription_insight_paused_savings_badge_plural">
+        <item quantity="one">%1$d duraklatıldı</item>
+        <item quantity="other">%1$d duraklatıldı</item>
+    </plurals>
+    <plurals name="subscription_detail_recent_payments_subtitle_plural">
+        <item quantity="one">%1$d ödeme kaydı • toplam %2$s</item>
+        <item quantity="other">%1$d ödeme kaydı • toplam %2$s</item>
+    </plurals>
+    <plurals name="subscription_detail_insight_with_payments_plural">
+        <item quantity="one">Bu abonelik için toplam %1$d ödeme ile %2$s harcama gerçekleştirdiniz.</item>
+        <item quantity="other">Bu abonelik için toplam %1$d ödeme ile %2$s harcama gerçekleştirdiniz.</item>
+    </plurals>
+    <string name="subscription_add_action">Abonelik ekle</string>
+    <string name="subscription_more_title">Daha Fazla</string>
+    <string name="subscription_empty_filter_message">Bu filtreye uygun abonelik bulunamadı.</string>
+    <string name="subscription_amounts_disclaimer">Tutarlar kayıtlarına göre hesaplanır.</string>
+    <string name="subscription_loading_message">Abonelikler yükleniyor...</string>
+    <string name="subscription_detail_loading_message">Abonelik detayları yükleniyor...</string>
+    <string name="subscription_detail_edit_action">Aboneliği düzenle</string>
+
+    <string name="subscription_form_question">Hangi servisi eklemek\nistiyorsunuz?</string>
+    <string name="subscription_form_quick_pick">Hızlı seçim</string>
+    <string name="subscription_form_other_templates">Diğer şablonlar</string>
+    <string name="subscription_form_show_templates">Hazır abonelik şablonlarını göster</string>
+    <string name="subscription_form_section_info">Abonelik bilgileri</string>
+    <string name="subscription_form_field_name">Servis / abonelik adı</string>
+    <string name="subscription_form_placeholder_name">İnternet</string>
+    <string name="subscription_form_field_category">Kategori (isteğe bağlı)</string>
+    <string name="subscription_form_category_select">Kategori seçin</string>
+    <string name="subscription_form_field_currency">Para birimi</string>
+    <string name="subscription_form_field_amount">Dönemsel tutar</string>
+    <string name="subscription_form_field_cycle">Fatura dönemi</string>
+    <string name="subscription_form_field_start_date">Başlangıç tarihi</string>
+    <string name="subscription_form_field_end_date">Bitiş tarihi</string>
+    <string name="subscription_form_select_date">Tarih seç</string>
+    <string name="subscription_form_no_end_date">Süresiz</string>
+    <string name="subscription_form_info_settings_continue">Ayarlar ve ek bilgiler aşağıda devam ediyor.</string>
+    <string name="subscription_form_section_settings">Abonelik ayarları</string>
+    <string name="subscription_form_renewal_tracking">Yenileme takibi</string>
+    <string name="subscription_form_renewal_tracking_subtitle">Feniqo içinde takip edilir</string>
+    <string name="subscription_form_reminder">Hatırlatıcı</string>
+    <string name="subscription_form_reminder_subtitle">7 gün önce ve yenileme günü</string>
+    <string name="subscription_form_section_extra">Ek bilgiler (isteğe bağlı)</string>
+    <string name="subscription_form_estimated_yearly_cost">Tahmini yıllık maliyet</string>
+    <string name="subscription_form_first_renewal">İlk yenileme</string>
+    <string name="subscription_form_disclaimer">Banka hesabından para çekilmez. Sadece Feniqo içinde takip edilir.</string>
+    <string name="subscription_form_frequency_sheet_subtitle">Yenileme sıklığını ve ilk dönemi seç.</string>
+    <string name="subscription_form_interval">Tekrar aralığı</string>
+    <string name="subscription_form_repeat">Tekrar</string>
+    <string name="subscription_form_apply">Uygula</string>
+    <string name="subscription_form_category_sheet_title">Kategori seç</string>
+    <string name="subscription_form_category_clear">Kategori seçimini kaldır</string>
+    <string name="subscription_form_reminder_dialog_title">Hatırlatıcılar için izin gerekli</string>
+    <string name="subscription_form_reminder_dialog_message">Yenilemeden 7 gün önce ve yenileme günü bildirim al.</string>
+    <string name="subscription_form_reminder_dialog_grant">İzin ver</string>
+    <string name="subscription_form_reminder_dialog_dismiss">Şimdi değil</string>
+    <string name="subscription_form_delete_confirm_dialog_title">Kaydı silmek istiyor musun?</string>
+    <string name="subscription_form_delete_confirm_dialog_message">Feniqo\'daki yenileme takibi durdurulur. Hizmet sağlayıcındaki abonelik iptal edilmez.</string>
+    <string name="subscription_decrease">Azalt</string>
+    <string name="subscription_increase">Artır</string>
+    <string name="subscription_error_title">Bir hata oluştu</string>
+    <string name="subscription_error_default">Abonelikler yüklenirken bir sorun oluştu.</string>
+    <string name="subscription_payment_recorded_title">Ödeme Kaydedildi</string>
+    <string name="subscription_payment_recorded_subtitle">Abonelik ödemesi başarıyla kaydedildi.</string>
+    <string name="subscription_close_button">Kapat</string>
 </resources>

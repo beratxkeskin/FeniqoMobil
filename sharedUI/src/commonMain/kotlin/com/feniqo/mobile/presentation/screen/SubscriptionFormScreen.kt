@@ -12,12 +12,12 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -99,6 +99,11 @@ import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.RecurrenceFrequency
 import com.feniqo.mobile.domain.validation.MoneyAmountParser
+import com.feniqo.mobile.presentation.common.currentLocaleDecimalSeparator
+import com.feniqo.mobile.presentation.common.symbol
+import com.feniqo.mobile.presentation.common.toLocalizedFormatted
+import com.feniqo.mobile.presentation.common.toLocalizedNameText
+import com.feniqo.mobile.presentation.common.toLocalizedReadableDate
 import com.feniqo.mobile.presentation.component.CategorySemanticIconResolver
 import com.feniqo.mobile.presentation.subscription.POPULAR_SUBSCRIPTION_TEMPLATES
 import com.feniqo.mobile.presentation.subscription.PopularSubscriptionTemplate
@@ -106,8 +111,68 @@ import com.feniqo.mobile.presentation.subscription.SubscriptionFormFieldError
 import com.feniqo.mobile.presentation.subscription.SubscriptionFormInput
 import com.feniqo.mobile.presentation.subscription.SubscriptionFormInputErrors
 import com.feniqo.mobile.presentation.subscription.SubscriptionMutationState
-import com.feniqo.mobile.presentation.util.DateFormatter
-import com.feniqo.mobile.presentation.util.MoneyFormatter
+import com.feniqo.mobile.presentation.subscription.toCycleSummaryText
+import com.feniqo.mobile.presentation.subscription.toLocalizedFrequencyLabel
+import com.feniqo.mobile.presentation.subscription.toLocalizedMessage
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.subscription_badge_paused
+import feniqomobil.sharedui.generated.resources.subscription_common_cancel
+import feniqomobil.sharedui.generated.resources.subscription_decrease
+import feniqomobil.sharedui.generated.resources.subscription_filter_active
+import feniqomobil.sharedui.generated.resources.subscription_form_apply
+import feniqomobil.sharedui.generated.resources.subscription_form_category_clear
+import feniqomobil.sharedui.generated.resources.subscription_form_category_select
+import feniqomobil.sharedui.generated.resources.subscription_form_category_sheet_title
+import feniqomobil.sharedui.generated.resources.subscription_form_clear_end_date
+import feniqomobil.sharedui.generated.resources.subscription_form_delete_button
+import feniqomobil.sharedui.generated.resources.subscription_form_delete_confirm_dialog_message
+import feniqomobil.sharedui.generated.resources.subscription_form_delete_confirm_dialog_title
+import feniqomobil.sharedui.generated.resources.subscription_form_disclaimer
+import feniqomobil.sharedui.generated.resources.subscription_form_estimated_yearly_cost
+import feniqomobil.sharedui.generated.resources.subscription_form_field_amount
+import feniqomobil.sharedui.generated.resources.subscription_form_field_category
+import feniqomobil.sharedui.generated.resources.subscription_form_field_currency
+import feniqomobil.sharedui.generated.resources.subscription_form_field_cycle
+import feniqomobil.sharedui.generated.resources.subscription_form_field_end_date
+import feniqomobil.sharedui.generated.resources.subscription_form_field_name
+import feniqomobil.sharedui.generated.resources.subscription_form_field_start_date
+import feniqomobil.sharedui.generated.resources.subscription_form_first_renewal
+import feniqomobil.sharedui.generated.resources.subscription_form_frequency_sheet_subtitle
+import feniqomobil.sharedui.generated.resources.subscription_form_info_settings_continue
+import feniqomobil.sharedui.generated.resources.subscription_form_interval
+import feniqomobil.sharedui.generated.resources.subscription_form_nav_back
+import feniqomobil.sharedui.generated.resources.subscription_form_no_end_date
+import feniqomobil.sharedui.generated.resources.subscription_form_notes_label
+import feniqomobil.sharedui.generated.resources.subscription_form_notes_placeholder
+import feniqomobil.sharedui.generated.resources.subscription_form_other_templates
+import feniqomobil.sharedui.generated.resources.subscription_form_pause_button
+import feniqomobil.sharedui.generated.resources.subscription_form_placeholder_name
+import feniqomobil.sharedui.generated.resources.subscription_form_question
+import feniqomobil.sharedui.generated.resources.subscription_form_quick_pick
+import feniqomobil.sharedui.generated.resources.subscription_form_reminder
+import feniqomobil.sharedui.generated.resources.subscription_form_reminder_dialog_dismiss
+import feniqomobil.sharedui.generated.resources.subscription_form_reminder_dialog_grant
+import feniqomobil.sharedui.generated.resources.subscription_form_reminder_dialog_message
+import feniqomobil.sharedui.generated.resources.subscription_form_reminder_dialog_title
+import feniqomobil.sharedui.generated.resources.subscription_form_reminder_subtitle
+import feniqomobil.sharedui.generated.resources.subscription_form_renewal_tracking
+import feniqomobil.sharedui.generated.resources.subscription_form_renewal_tracking_subtitle
+import feniqomobil.sharedui.generated.resources.subscription_form_repeat
+import feniqomobil.sharedui.generated.resources.subscription_form_resume_button
+import feniqomobil.sharedui.generated.resources.subscription_form_save_button
+import feniqomobil.sharedui.generated.resources.subscription_form_section_extra
+import feniqomobil.sharedui.generated.resources.subscription_form_section_info
+import feniqomobil.sharedui.generated.resources.subscription_form_section_settings
+import feniqomobil.sharedui.generated.resources.subscription_form_select_date
+import feniqomobil.sharedui.generated.resources.subscription_form_show_templates
+import feniqomobil.sharedui.generated.resources.subscription_form_title_create
+import feniqomobil.sharedui.generated.resources.subscription_form_title_edit
+import feniqomobil.sharedui.generated.resources.subscription_form_update_button
+import feniqomobil.sharedui.generated.resources.subscription_form_website_label
+import feniqomobil.sharedui.generated.resources.subscription_form_website_placeholder
+import feniqomobil.sharedui.generated.resources.subscription_increase
+import feniqomobil.sharedui.generated.resources.subscription_workspace_personal
+import org.jetbrains.compose.resources.stringResource
 
 private val FeniqoBackgroundSand = Color(0xFFF7F5F0)
 private val FeniqoSageGreen = Color(0xFF2D5A43)
@@ -156,12 +221,10 @@ fun SubscriptionFormScreen(
     val amountFocusRequester = remember { FocusRequester() }
     val websiteFocusRequester = remember { FocusRequester() }
     val notesFocusRequester = remember { FocusRequester() }
-    val nameErrorText = errors.nameError?.let {
-        if (it == SubscriptionFormFieldError.NAME_TOO_LONG) "Abonelik adı çok uzun." else "Bu alan zorunludur."
-    }
-    val amountErrorText = errors.amountError?.let { "Sıfırdan büyük geçerli bir tutar gir." }
-    val websiteErrorText = errors.websiteUrlError?.let { "Web sitesi adresi çok uzun." }
-    val notesErrorText = errors.notesError?.let { "Not en fazla izin verilen uzunluğu aşıyor." }
+    val nameErrorText = errors.nameError?.toLocalizedMessage()
+    val amountErrorText = errors.amountError?.toLocalizedMessage()
+    val websiteErrorText = errors.websiteUrlError?.toLocalizedMessage()
+    val notesErrorText = errors.notesError?.toLocalizedMessage()
     val dismissKeyboard = {
         focusManager.clearFocus(force = true)
         keyboardController?.hide()
@@ -192,7 +255,7 @@ fun SubscriptionFormScreen(
         MoneyAmountParser.parseToMinorUnits(input.amountInput, input.currency)
     }
 
-    val yearlyCostFormatted = remember(parseResult, input.frequency, input.intervalInput, input.currency) {
+    val yearlyCostMoney = remember(parseResult, input.frequency, input.intervalInput, input.currency) {
         if (parseResult is MoneyAmountParser.ParseResult.Success && parseResult.amountMinor > 0) {
             val interval = input.intervalInput.trim().toIntOrNull() ?: 1
             val yearlyMinor = when (input.frequency) {
@@ -201,16 +264,17 @@ fun SubscriptionFormScreen(
                 RecurrenceFrequency.WEEKLY -> (parseResult.amountMinor * 52) / interval.coerceAtLeast(1)
                 RecurrenceFrequency.DAILY -> (parseResult.amountMinor * 365) / interval.coerceAtLeast(1)
             }
-            MoneyFormatter.format(Money(yearlyMinor, input.currency))
+            Money(yearlyMinor, input.currency)
         } else {
-            "—"
+            null
         }
     }
+    val yearlyCostFormatted = yearlyCostMoney?.toLocalizedFormatted() ?: "—"
 
-    val firstRenewalFormatted = remember(input.startDate, input.nextRenewalDate) {
-        val date = input.nextRenewalDate ?: input.startDate
-        date?.let { DateFormatter.formatReadableDate(it) } ?: "—"
+    val firstRenewalDate = remember(input.startDate, input.nextRenewalDate) {
+        input.nextRenewalDate ?: input.startDate
     }
+    val firstRenewalFormatted = firstRenewalDate?.toLocalizedReadableDate() ?: "—"
 
     Column(
         modifier = modifier
@@ -233,12 +297,16 @@ fun SubscriptionFormScreen(
                 IconButton(onClick = onBack, enabled = isEnabled) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                        contentDescription = "Geri dön",
+                        contentDescription = stringResource(Res.string.subscription_form_nav_back),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
-                    text = if (isEditMode) "Aboneliği düzenle" else "Abonelik ekle",
+                    text = if (isEditMode) {
+                        stringResource(Res.string.subscription_form_title_edit)
+                    } else {
+                        stringResource(Res.string.subscription_form_title_create)
+                    },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -251,7 +319,11 @@ fun SubscriptionFormScreen(
                     color = if (isActive) Color(0xFFE8F5E9) else Color(0xFFFFF3E0),
                 ) {
                     Text(
-                        text = if (isActive) "Aktif" else "Duraklatıldı",
+                        text = if (isActive) {
+                            stringResource(Res.string.subscription_filter_active)
+                        } else {
+                            stringResource(Res.string.subscription_badge_paused)
+                        },
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = if (isActive) FeniqoSageGreen else Color(0xFFD97706),
@@ -287,7 +359,7 @@ fun SubscriptionFormScreen(
                                 .background(FeniqoSageGreen, CircleShape),
                         )
                         Text(
-                            text = "Kişisel",
+                            text = stringResource(Res.string.subscription_workspace_personal),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -297,7 +369,7 @@ fun SubscriptionFormScreen(
 
                 // "Hangi servisi eklemek istiyorsunuz?"
                 Text(
-                    text = "Hangi servisi eklemek\nistiyorsunuz?",
+                    text = stringResource(Res.string.subscription_form_question),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -306,7 +378,7 @@ fun SubscriptionFormScreen(
                 // Hızlı Seçim Şablonları (3'lü Kartlar)
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Hızlı seçim",
+                        text = stringResource(Res.string.subscription_form_quick_pick),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -380,13 +452,13 @@ fun SubscriptionFormScreen(
                                 )
                                 Column {
                                     Text(
-                                        text = "Diğer şablonlar",
+                                        text = stringResource(Res.string.subscription_form_other_templates),
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Text(
-                                        text = "Hazır abonelik şablonlarını göster",
+                                        text = stringResource(Res.string.subscription_form_show_templates),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -405,7 +477,7 @@ fun SubscriptionFormScreen(
 
             // "Abonelik bilgileri" Bölümü
             Text(
-                text = "Abonelik bilgileri",
+                text = stringResource(Res.string.subscription_form_section_info),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -413,9 +485,10 @@ fun SubscriptionFormScreen(
 
             // 1. Servis / Abonelik Adı Alanı
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                val nameFieldLabel = stringResource(Res.string.subscription_form_field_name)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Servis / abonelik adı",
+                        text = nameFieldLabel,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -431,11 +504,11 @@ fun SubscriptionFormScreen(
                         .fillMaxWidth()
                         .focusRequester(nameFocusRequester)
                         .semantics {
-                            contentDescription = "Abonelik adı"
+                            contentDescription = nameFieldLabel
                             nameErrorText?.let { error(it) }
                         },
                     enabled = isEnabled,
-                    placeholder = { Text("İnternet", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    placeholder = { Text(stringResource(Res.string.subscription_form_placeholder_name), color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     singleLine = true,
                     isError = hasNameError,
                     shape = RoundedCornerShape(12.dp),
@@ -451,7 +524,7 @@ fun SubscriptionFormScreen(
                     keyboardActions = KeyboardActions(onNext = { amountFocusRequester.requestFocus() }),
                 )
 
-                if (hasNameError) {
+                if (hasNameError && nameErrorText != null) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -464,7 +537,7 @@ fun SubscriptionFormScreen(
                             modifier = Modifier.size(14.dp),
                         )
                         Text(
-                            text = "Bu alan zorunludur.",
+                            text = nameErrorText,
                             style = MaterialTheme.typography.bodySmall,
                             color = FeniqoExpenseRed,
                         )
@@ -475,7 +548,7 @@ fun SubscriptionFormScreen(
             // 2. Kategori (İsteğe Bağlı) Seçici Kart
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Kategori (isteğe bağlı)",
+                    text = stringResource(Res.string.subscription_form_field_category),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -517,7 +590,7 @@ fun SubscriptionFormScreen(
                             }
 
                             Text(
-                                text = selectedCategory?.name ?: "Kategori seçin",
+                                text = selectedCategory?.name ?: stringResource(Res.string.subscription_form_category_select),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = if (selectedCategory != null) FontWeight.SemiBold else FontWeight.Normal,
                                 color = if (selectedCategory != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -526,7 +599,7 @@ fun SubscriptionFormScreen(
 
                         Icon(
                             imageVector = Icons.Outlined.KeyboardArrowDown,
-                            contentDescription = "Kategori seç",
+                            contentDescription = stringResource(Res.string.subscription_form_category_select),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp),
                         )
@@ -537,25 +610,14 @@ fun SubscriptionFormScreen(
             // 3. Para Birimi Seçici Kart
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Para birimi",
+                    text = stringResource(Res.string.subscription_form_field_currency),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
 
-                val currencySymbol = when (input.currency) {
-                    Currency.TRY -> "₺"
-                    Currency.USD -> "$"
-                    Currency.EUR -> "€"
-                    Currency.GBP -> "£"
-                }
-
-                val currencyFullName = when (input.currency) {
-                    Currency.TRY -> "TRY · Türk lirası"
-                    Currency.USD -> "USD · Amerikan doları"
-                    Currency.EUR -> "EUR · Euro"
-                    Currency.GBP -> "GBP · İngiliz sterlini"
-                }
+                val currencySymbol = input.currency.symbol()
+                val currencyFullName = "${input.currency.name} · ${input.currency.toLocalizedNameText()}"
 
                 Surface(
                     modifier = Modifier
@@ -603,9 +665,10 @@ fun SubscriptionFormScreen(
 
             // 4. Dönemsel Tutar Alanı (Kırmızı ve Büyük)
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                val amountFieldLabel = stringResource(Res.string.subscription_form_field_amount)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Dönemsel tutar",
+                        text = amountFieldLabel,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -614,6 +677,7 @@ fun SubscriptionFormScreen(
                 }
 
                 val hasAmountError = errors.amountError != null
+                val amountPlaceholder = if (currentLocaleDecimalSeparator() == ',') "0,00" else "0.00"
                 OutlinedTextField(
                     value = input.amountInput,
                     onValueChange = onAmountChange,
@@ -621,11 +685,11 @@ fun SubscriptionFormScreen(
                         .fillMaxWidth()
                         .focusRequester(amountFocusRequester)
                         .semantics {
-                            contentDescription = "Abonelik dönemsel tutarı"
+                            contentDescription = amountFieldLabel
                             amountErrorText?.let { error(it) }
                         },
                     enabled = isEnabled,
-                    placeholder = { Text("0,00", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    placeholder = { Text(amountPlaceholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     singleLine = true,
                     isError = hasAmountError,
                     keyboardOptions = KeyboardOptions(
@@ -635,12 +699,7 @@ fun SubscriptionFormScreen(
                     keyboardActions = KeyboardActions(onNext = { websiteFocusRequester.requestFocus() }),
                     shape = RoundedCornerShape(12.dp),
                     prefix = {
-                        val symbol = when (input.currency) {
-                            Currency.TRY -> "₺"
-                            Currency.USD -> "$"
-                            Currency.EUR -> "€"
-                            Currency.GBP -> "£"
-                        }
+                        val symbol = input.currency.symbol()
                         Text(
                             text = "$symbol ",
                             style = MaterialTheme.typography.titleLarge,
@@ -662,7 +721,7 @@ fun SubscriptionFormScreen(
                     ),
                 )
 
-                if (hasAmountError) {
+                if (hasAmountError && amountErrorText != null) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -675,7 +734,7 @@ fun SubscriptionFormScreen(
                             modifier = Modifier.size(14.dp),
                         )
                         Text(
-                            text = "Sıfırdan büyük bir tutar gir.",
+                            text = amountErrorText,
                             style = MaterialTheme.typography.bodySmall,
                             color = FeniqoExpenseRed,
                         )
@@ -686,19 +745,14 @@ fun SubscriptionFormScreen(
             // 5. Fatura Dönemi Seçici Kart
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Fatura dönemi",
+                    text = stringResource(Res.string.subscription_form_field_cycle),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 val interval = input.intervalInput.trim().toIntOrNull() ?: 1
-                val cycleText = when (input.frequency) {
-                    RecurrenceFrequency.MONTHLY -> if (interval == 1) "Her ay" else "Her $interval ayda bir"
-                    RecurrenceFrequency.YEARLY -> if (interval == 1) "Her yıl" else "Her $interval yılda bir"
-                    RecurrenceFrequency.WEEKLY -> if (interval == 1) "Her hafta" else "Her $interval haftada bir"
-                    RecurrenceFrequency.DAILY -> if (interval == 1) "Her gün" else "Her $interval günde bir"
-                }
+                val cycleText = toCycleSummaryText(input.frequency, interval)
 
                 Surface(
                     modifier = Modifier
@@ -755,7 +809,7 @@ fun SubscriptionFormScreen(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        text = "Başlangıç tarihi",
+                        text = stringResource(Res.string.subscription_form_field_start_date),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -784,7 +838,7 @@ fun SubscriptionFormScreen(
                                 modifier = Modifier.size(18.dp),
                             )
                             Text(
-                                text = input.startDate?.let { DateFormatter.formatReadableDate(it) } ?: "Tarih seç",
+                                text = input.startDate?.toLocalizedReadableDate() ?: stringResource(Res.string.subscription_form_select_date),
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurface,
@@ -801,7 +855,7 @@ fun SubscriptionFormScreen(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        text = "Bitiş tarihi",
+                        text = stringResource(Res.string.subscription_form_field_end_date),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -835,7 +889,7 @@ fun SubscriptionFormScreen(
                                     modifier = Modifier.size(18.dp),
                                 )
                                 Text(
-                                    text = input.endDate?.let { DateFormatter.formatReadableDate(it) } ?: "Süresiz",
+                                    text = input.endDate?.toLocalizedReadableDate() ?: stringResource(Res.string.subscription_form_no_end_date),
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -851,7 +905,7 @@ fun SubscriptionFormScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Outlined.Close,
-                                        contentDescription = "Temizle",
+                                        contentDescription = stringResource(Res.string.subscription_form_clear_end_date),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(14.dp),
                                     )
@@ -889,7 +943,7 @@ fun SubscriptionFormScreen(
                             modifier = Modifier.size(18.dp),
                         )
                         Text(
-                            text = "Ayarlar ve ek bilgiler aşağıda devam ediyor.",
+                            text = stringResource(Res.string.subscription_form_info_settings_continue),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -899,7 +953,7 @@ fun SubscriptionFormScreen(
 
             // Görsel 05: "Abonelik ayarları"
             Text(
-                text = "Abonelik ayarları",
+                text = stringResource(Res.string.subscription_form_section_settings),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -944,13 +998,13 @@ fun SubscriptionFormScreen(
                             }
                             Column {
                                 Text(
-                                    text = "Yenileme takibi",
+                                    text = stringResource(Res.string.subscription_form_renewal_tracking),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
-                                    text = "Feniqo içinde takip edilir",
+                                    text = stringResource(Res.string.subscription_form_renewal_tracking_subtitle),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -1003,13 +1057,13 @@ fun SubscriptionFormScreen(
                             }
                             Column {
                                 Text(
-                                    text = "Hatırlatıcı",
+                                    text = stringResource(Res.string.subscription_form_reminder),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
-                                    text = "7 gün önce ve yenileme günü",
+                                    text = stringResource(Res.string.subscription_form_reminder_subtitle),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -1036,7 +1090,7 @@ fun SubscriptionFormScreen(
 
             // Görsel 05: "Ek bilgiler (isteğe bağlı)"
             Text(
-                text = "Ek bilgiler (isteğe bağlı)",
+                text = stringResource(Res.string.subscription_form_section_extra),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -1056,8 +1110,9 @@ fun SubscriptionFormScreen(
                 ) {
                     // Web sitesi
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        val websiteFieldLabel = stringResource(Res.string.subscription_form_website_label)
                         Text(
-                            text = "Web sitesi",
+                            text = websiteFieldLabel,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -1068,11 +1123,11 @@ fun SubscriptionFormScreen(
                                 .fillMaxWidth()
                                 .focusRequester(websiteFocusRequester)
                                 .semantics {
-                                    contentDescription = "Abonelik web sitesi"
+                                    contentDescription = websiteFieldLabel
                                     websiteErrorText?.let { error(it) }
                                 },
                             enabled = isEnabled,
-                            placeholder = { Text("https://...", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                            placeholder = { Text(stringResource(Res.string.subscription_form_website_placeholder), color = MaterialTheme.colorScheme.onSurfaceVariant) },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                             keyboardActions = KeyboardActions(onNext = { notesFocusRequester.requestFocus() }),
@@ -1096,8 +1151,9 @@ fun SubscriptionFormScreen(
 
                     // Notlar
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        val notesFieldLabel = stringResource(Res.string.subscription_form_notes_label)
                         Text(
-                            text = "Notlar",
+                            text = notesFieldLabel,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -1108,11 +1164,11 @@ fun SubscriptionFormScreen(
                                 .fillMaxWidth()
                                 .focusRequester(notesFocusRequester)
                                 .semantics {
-                                    contentDescription = "Abonelik notları"
+                                    contentDescription = notesFieldLabel
                                     notesErrorText?.let { error(it) }
                                 },
                             enabled = isEnabled,
-                            placeholder = { Text("Ev interneti", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                            placeholder = { Text(stringResource(Res.string.subscription_form_notes_placeholder), color = MaterialTheme.colorScheme.onSurfaceVariant) },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }),
@@ -1154,7 +1210,7 @@ fun SubscriptionFormScreen(
                     ) {
                         Column {
                             Text(
-                                text = "Tahmini yıllık maliyet",
+                                text = stringResource(Res.string.subscription_form_estimated_yearly_cost),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color(0xFFB0BEC5),
                             )
@@ -1169,7 +1225,7 @@ fun SubscriptionFormScreen(
 
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
-                                text = "İlk yenileme",
+                                text = stringResource(Res.string.subscription_form_first_renewal),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color(0xFFB0BEC5),
                             )
@@ -1200,7 +1256,7 @@ fun SubscriptionFormScreen(
                                 modifier = Modifier.size(16.dp),
                             )
                             Text(
-                                text = "Banka hesabından para çekilmez. Sadece Feniqo içinde takip edilir.",
+                                text = stringResource(Res.string.subscription_form_disclaimer),
                                 style = MaterialTheme.typography.bodySmall,
                                 fontSize = 11.sp,
                                 color = Color(0xFFCFD8DC),
@@ -1238,7 +1294,7 @@ fun SubscriptionFormScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                         }
                         Text(
-                            text = "Aboneliği kaydet",
+                            text = stringResource(Res.string.subscription_form_save_button),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -1257,7 +1313,7 @@ fun SubscriptionFormScreen(
                         ),
                     ) {
                         Text(
-                            text = "Vazgeç",
+                            text = stringResource(Res.string.subscription_common_cancel),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -1290,7 +1346,7 @@ fun SubscriptionFormScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                         }
                         Text(
-                            text = "Değişiklikleri kaydet",
+                            text = stringResource(Res.string.subscription_form_update_button),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -1316,7 +1372,11 @@ fun SubscriptionFormScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (isActive) "Takibi duraklat" else "Takibi devam ettir",
+                            text = if (isActive) {
+                                stringResource(Res.string.subscription_form_pause_button)
+                            } else {
+                                stringResource(Res.string.subscription_form_resume_button)
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -1342,7 +1402,7 @@ fun SubscriptionFormScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Kaydı sil",
+                            text = stringResource(Res.string.subscription_form_delete_button),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -1379,19 +1439,19 @@ fun SubscriptionFormScreen(
                     IconButton(onClick = { showFrequencySheet = false }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = "Geri",
+                            contentDescription = stringResource(Res.string.subscription_form_nav_back),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     Column {
                         Text(
-                            text = "Fatura dönemi",
+                            text = stringResource(Res.string.subscription_form_field_cycle),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            text = "Yenileme sıklığını ve ilk dönemi seç.",
+                            text = stringResource(Res.string.subscription_form_frequency_sheet_subtitle),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -1404,28 +1464,28 @@ fun SubscriptionFormScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     FrequencyChipItem(
-                        title = "Günlük",
+                        title = RecurrenceFrequency.DAILY.toLocalizedFrequencyLabel(),
                         icon = Icons.Outlined.WbSunny,
                         isSelected = tempFrequency == RecurrenceFrequency.DAILY,
                         onClick = { tempFrequency = RecurrenceFrequency.DAILY },
                         modifier = Modifier.weight(1f),
                     )
                     FrequencyChipItem(
-                        title = "Haftalık",
+                        title = RecurrenceFrequency.WEEKLY.toLocalizedFrequencyLabel(),
                         icon = Icons.Outlined.CalendarMonth,
                         isSelected = tempFrequency == RecurrenceFrequency.WEEKLY,
                         onClick = { tempFrequency = RecurrenceFrequency.WEEKLY },
                         modifier = Modifier.weight(1f),
                     )
                     FrequencyChipItem(
-                        title = "Aylık",
+                        title = RecurrenceFrequency.MONTHLY.toLocalizedFrequencyLabel(),
                         icon = Icons.Outlined.CalendarMonth,
                         isSelected = tempFrequency == RecurrenceFrequency.MONTHLY,
                         onClick = { tempFrequency = RecurrenceFrequency.MONTHLY },
                         modifier = Modifier.weight(1f),
                     )
                     FrequencyChipItem(
-                        title = "Yıllık",
+                        title = RecurrenceFrequency.YEARLY.toLocalizedFrequencyLabel(),
                         icon = Icons.Outlined.CalendarMonth,
                         isSelected = tempFrequency == RecurrenceFrequency.YEARLY,
                         onClick = { tempFrequency = RecurrenceFrequency.YEARLY },
@@ -1436,7 +1496,7 @@ fun SubscriptionFormScreen(
                 // Tekrar aralığı Sayaç: [-] [1] [+] (Pozitif tam sayı!)
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "Tekrar aralığı",
+                        text = stringResource(Res.string.subscription_form_interval),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -1461,7 +1521,7 @@ fun SubscriptionFormScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.Remove,
-                                    contentDescription = "Azalt",
+                                    contentDescription = stringResource(Res.string.subscription_decrease),
                                     tint = if (tempIntervalInt > 1) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -1479,7 +1539,7 @@ fun SubscriptionFormScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.Add,
-                                    contentDescription = "Artır",
+                                    contentDescription = stringResource(Res.string.subscription_increase),
                                     tint = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
@@ -1490,17 +1550,12 @@ fun SubscriptionFormScreen(
                 // Tekrar Açıklaması
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = "Tekrar",
+                        text = stringResource(Res.string.subscription_form_repeat),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
 
-                    val repeatExplanation = when (tempFrequency) {
-                        RecurrenceFrequency.MONTHLY -> if (tempIntervalInt == 1) "Her ay" else "Her $tempIntervalInt ayda bir"
-                        RecurrenceFrequency.YEARLY -> if (tempIntervalInt == 1) "Her yıl" else "Her $tempIntervalInt yılda bir"
-                        RecurrenceFrequency.WEEKLY -> if (tempIntervalInt == 1) "Her hafta" else "Her $tempIntervalInt haftada bir"
-                        RecurrenceFrequency.DAILY -> if (tempIntervalInt == 1) "Her gün" else "Her $tempIntervalInt günde bir"
-                    }
+                    val repeatExplanation = toCycleSummaryText(tempFrequency, tempIntervalInt)
 
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
@@ -1547,7 +1602,7 @@ fun SubscriptionFormScreen(
                     ),
                 ) {
                     Text(
-                        text = "Uygula",
+                        text = stringResource(Res.string.subscription_form_apply),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -1574,7 +1629,7 @@ fun SubscriptionFormScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
-                    text = "Kategori seç",
+                    text = stringResource(Res.string.subscription_form_category_sheet_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -1681,7 +1736,7 @@ fun SubscriptionFormScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Kategori seçimini kaldır",
+                                text = stringResource(Res.string.subscription_form_category_clear),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color(0xFF616161),
@@ -1712,7 +1767,7 @@ fun SubscriptionFormScreen(
             ) {
                 // Para Birimi Seçimi
                 Text(
-                    text = "Para birimi",
+                    text = stringResource(Res.string.subscription_form_field_currency),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -1750,7 +1805,7 @@ fun SubscriptionFormScreen(
 
                 // Hızlı Seçim Şablonları (8 Popüler Abonelik)
                 Text(
-                    text = "Hızlı seçim",
+                    text = stringResource(Res.string.subscription_form_quick_pick),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -1847,7 +1902,7 @@ fun SubscriptionFormScreen(
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "Hatırlatıcılar için izin gerekli",
+                            text = stringResource(Res.string.subscription_form_reminder_dialog_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -1855,7 +1910,7 @@ fun SubscriptionFormScreen(
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Yenilemeden 7 gün önce ve yenileme günü bildirim al.",
+                            text = stringResource(Res.string.subscription_form_reminder_dialog_message),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -1878,7 +1933,7 @@ fun SubscriptionFormScreen(
                             ),
                         ) {
                             Text(
-                                text = "İzin ver",
+                                text = stringResource(Res.string.subscription_form_reminder_dialog_grant),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
                             )
@@ -1896,7 +1951,7 @@ fun SubscriptionFormScreen(
                             ),
                         ) {
                             Text(
-                                text = "Şimdi değil",
+                                text = stringResource(Res.string.subscription_form_reminder_dialog_dismiss),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium,
                             )
@@ -1942,7 +1997,7 @@ fun SubscriptionFormScreen(
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "Kaydı silmek istiyor musun?",
+                            text = stringResource(Res.string.subscription_form_delete_confirm_dialog_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -1950,7 +2005,7 @@ fun SubscriptionFormScreen(
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Feniqo'daki yenileme takibi durdurulur. Hizmet sağlayıcındaki abonelik iptal edilmez.",
+                            text = stringResource(Res.string.subscription_form_delete_confirm_dialog_message),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -1976,7 +2031,7 @@ fun SubscriptionFormScreen(
                             ),
                         ) {
                             Text(
-                                text = "Kaydı sil",
+                                text = stringResource(Res.string.subscription_form_delete_button),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
                             )
@@ -1994,7 +2049,7 @@ fun SubscriptionFormScreen(
                             ),
                         ) {
                             Text(
-                                text = "Vazgeç",
+                                text = stringResource(Res.string.subscription_common_cancel),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium,
                             )

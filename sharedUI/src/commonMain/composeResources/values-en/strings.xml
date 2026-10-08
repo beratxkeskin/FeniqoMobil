@@ -1504,4 +1504,331 @@
         <item quantity="one">%1$d month</item>
         <item quantity="other">%1$d months</item>
     </plurals>
+    <!-- Subscriptions: General & Navigation -->
+    <string name="subscription_title">Subscriptions</string>
+    <string name="subscription_nav_more">More</string>
+    <string name="subscription_common_back">Go back</string>
+    <string name="subscription_common_cancel">Cancel</string>
+    <string name="subscription_common_select">Select</string>
+    <string name="subscription_common_understood">Understood</string>
+    <string name="subscription_common_loading">Loading subscriptions...</string>
+    <string name="subscription_common_error_retry">Try again</string>
+    <string name="subscription_cost_unavailable">Unavailable</string>
+    <string name="subscription_amount_calculation_footnote">Amounts are calculated based on your records.</string>
+    <string name="subscription_workspace_personal">Personal</string>
+
+    <!-- Subscriptions: Hero & Actual Spending -->
+    <string name="subscription_hero_estimated_monthly_cost">Estimated monthly cost</string>
+    <string name="subscription_hero_info_title">Subscription Cost Info</string>
+    <string name="subscription_hero_info_desc">Subscriptions in different currencies are calculated separately without being combined.</string>
+    <string name="subscription_hero_yearly_approx">Yearly approx.</string>
+    <string name="subscription_hero_active_label">Active subscriptions</string>
+    <string name="subscription_hero_upcoming_label">Upcoming payments</string>
+    <string name="subscription_hero_info_desc_semantics">Subscription cost information</string>
+    <string name="subscription_actual_spending_title">Payments recorded this month</string>
+    <string name="subscription_trend_increase">%1$s increase compared to last month</string>
+    <string name="subscription_trend_decrease">%1$s decrease compared to last month</string>
+    <string name="subscription_trend_same">Same as last month</string>
+    <string name="subscription_trend_no_prev_data">No data from last month</string>
+    <string name="subscription_actual_spending_partial">This month is not yet completed</string>
+    <string name="subscription_actual_spending_prev_month">Last month: %1$s</string>
+
+    <!-- Subscriptions: Filters -->
+    <string name="subscription_filter_all">All</string>
+    <string name="subscription_filter_active">Active</string>
+    <string name="subscription_filter_upcoming">Upcoming</string>
+    <string name="subscription_filter_overdue">Overdue</string>
+    <string name="subscription_filter_paused">Paused</string>
+    <string name="subscription_filter_cancelled">Cancelled</string>
+    <string name="subscription_filter_trial">Trial</string>
+    <string name="subscription_filter_empty_result">No subscriptions found matching this filter.</string>
+
+    <!-- Subscriptions: Cards & Badges & Sections -->
+    <string name="subscription_category_unassigned">Uncategorized</string>
+    <string name="subscription_category_missing">Unknown Category</string>
+    <string name="subscription_card_previous_price">Previous: %1$s</string>
+    <string name="subscription_card_price_increase_badge">+%1$s</string>
+    <string name="subscription_card_price_increase_percent_badge">+%1$d%%</string>
+    <string name="subscription_status_inactive">Inactive</string>
+    <string name="subscription_status_due_today">Renews today</string>
+    <string name="subscription_badge_paused">Paused</string>
+    <string name="subscription_badge_cancelled">Cancelled</string>
+    <string name="subscription_badge_trial">Trial</string>
+    <string name="subscription_badge_expired">Expired</string>
+    <string name="subscription_card_add_title">Add subscription</string>
+    <string name="subscription_card_add_subtitle">Define a new digital service or subscription</string>
+    <string name="subscription_section_upcoming_title">Upcoming Payments</string>
+    <string name="subscription_section_upcoming_subtitle">Next 7 days</string>
+    <string name="subscription_section_overdue_title">Overdue Payments</string>
+
+    <!-- Subscriptions: Insights -->
+    <string name="subscription_insight_trial_title">Trial Ending Soon</string>
+    <string name="subscription_insight_price_increase_title">Price Increase</string>
+    <string name="subscription_insight_paused_savings_title">Paused Subscriptions</string>
+    <string name="subscription_insight_top_cost_title">Highest Cost Plan</string>
+    <string name="subscription_insight_top_cost_desc">%1$s is your highest subscription expense with an estimated %2$s monthly.</string>
+    <string name="subscription_insight_top_cost_badge">Highest Monthly</string>
+
+    <!-- Subscriptions: Empty State -->
+    <string name="subscription_empty_title">No subscriptions added yet</string>
+    <string name="subscription_empty_desc">Track all your digital services and subscription expenses in one place, never miss renewal dates.</string>
+    <string name="subscription_empty_add_button">Add Subscription</string>
+
+    <!-- Subscriptions: Recurrence Frequencies -->
+    <string name="subscription_frequency_daily">Daily</string>
+    <string name="subscription_frequency_weekly">Weekly</string>
+    <string name="subscription_frequency_monthly">Monthly</string>
+    <string name="subscription_frequency_yearly">Yearly</string>
+    <string name="subscription_frequency_unit_daily">/ day</string>
+    <string name="subscription_frequency_unit_weekly">/ week</string>
+    <string name="subscription_frequency_unit_monthly">/ month</string>
+    <string name="subscription_frequency_unit_yearly">/ year</string>
+    <string name="subscription_recurrence_summary_daily_single">Every day</string>
+    <string name="subscription_recurrence_summary_weekly_single">Every week</string>
+    <string name="subscription_recurrence_summary_monthly_single">Every month</string>
+    <string name="subscription_recurrence_summary_yearly_single">Every year</string>
+
+    <!-- Subscriptions: Detail Screen -->
+    <string name="subscription_detail_title">Subscriptions</string>
+    <string name="subscription_detail_loading">Loading subscription details...</string>
+    <string name="subscription_detail_edit_content_desc">Edit subscription</string>
+    <string name="subscription_detail_next_renewal">Next renewal: %1$s</string>
+    <string name="subscription_detail_trial_end">Trial ends: %1$s</string>
+    <string name="subscription_detail_no_category">No category specified</string>
+    <string name="subscription_detail_attr_cycle">Cycle</string>
+    <string name="subscription_detail_attr_start_date">Start date</string>
+    <string name="subscription_detail_attr_end_date">End date</string>
+    <string name="subscription_detail_attr_no_end_date">Indefinite</string>
+    <string name="subscription_detail_attr_workspace">Workspace</string>
+    <string name="subscription_detail_attr_workspace_personal">Only me</string>
+    <string name="subscription_detail_settings_title">Renewal Tracking and Reminders</string>
+    <string name="subscription_detail_reminder_title">Renewal Reminder</string>
+    <string name="subscription_detail_reminder_desc">Get notified before renewal</string>
+    <string name="subscription_detail_auto_renew_title">Auto Renewal</string>
+    <string name="subscription_detail_auto_renew_desc">Auto renew at end of period</string>
+    <string name="subscription_detail_summary_yearly_title">Estimated Yearly</string>
+    <string name="subscription_detail_summary_total_paid_title">Total Recorded</string>
+    <string name="subscription_detail_summary_price_change_title">Price Change</string>
+    <string name="subscription_detail_price_change_none">No change</string>
+    <string name="subscription_detail_price_change_increased">Price increased</string>
+    <string name="subscription_detail_chart_title">Monthly payments</string>
+    <string name="subscription_detail_chart_subtitle">Actual payment distribution for last 6 months</string>
+    <string name="subscription_detail_chart_current_month">This month</string>
+    <string name="subscription_detail_chart_no_payments">No payment records</string>
+    <string name="subscription_detail_recent_payments_title">Recent payments</string>
+    <string name="subscription_detail_payment_manual">Manual</string>
+    <string name="subscription_detail_payment_auto">Automatic</string>
+    <string name="subscription_detail_recent_payments_view_all">View all history</string>
+    <string name="subscription_detail_recent_no_payments">No payments recorded yet</string>
+    <string name="subscription_detail_insight_title">Feniqo Insight</string>
+    <string name="subscription_detail_insight_empty">No actual payments recorded for this service yet. You can build your expense history by marking it as paid when due.</string>
+    <string name="subscription_detail_action_advance_renewal">Record as paid</string>
+    <string name="subscription_detail_action_manage">Manage subscription</string>
+    <string name="subscription_detail_action_pause">Pause subscription</string>
+    <string name="subscription_detail_action_resume">Resume subscription</string>
+    <string name="subscription_detail_action_cancel">Cancel subscription</string>
+    <string name="subscription_detail_action_delete">Delete subscription</string>
+    <string name="subscription_detail_extra_title">Additional Information</string>
+    <string name="subscription_detail_extra_website">Website</string>
+    <string name="subscription_detail_extra_notes">Notes</string>
+    <string name="subscription_detail_not_found_title">Subscription Not Found</string>
+    <string name="subscription_detail_not_found_desc">The subscription you want to view does not exist or has been deleted.</string>
+    <string name="subscription_detail_not_found_back">Back to Subscriptions</string>
+
+    <!-- Subscriptions: Form Screen -->
+    <string name="subscription_form_title_create">New subscription</string>
+    <string name="subscription_form_title_edit">Edit subscription</string>
+    <string name="subscription_form_nav_back">Subscriptions</string>
+    <string name="subscription_form_delete">Delete</string>
+    <string name="subscription_form_templates_title">Quick Templates</string>
+    <string name="subscription_form_name_label">Subscription Name</string>
+    <string name="subscription_form_name_placeholder">e.g., Netflix, Spotify...</string>
+    <string name="subscription_form_name_content_desc">Enter subscription name</string>
+    <string name="subscription_form_amount_label">Amount</string>
+    <string name="subscription_form_amount_placeholder">0.00</string>
+    <string name="subscription_form_amount_content_desc">Enter amount</string>
+    <string name="subscription_form_category_label">Category</string>
+    <string name="subscription_form_category_placeholder">Select Category</string>
+    <string name="subscription_form_category_none">Uncategorized</string>
+    <string name="subscription_form_category_content_desc">Select category</string>
+    <string name="subscription_form_frequency_label">Renewal Frequency</string>
+    <string name="subscription_form_interval_label">Repeat Interval</string>
+    <string name="subscription_form_start_date_label">Start Date</string>
+    <string name="subscription_form_start_date_content_desc">Select start date</string>
+    <string name="subscription_form_end_date_label">End Date (Optional)</string>
+    <string name="subscription_form_end_date_not_set">Not specified</string>
+    <string name="subscription_form_end_date_content_desc">Select end date</string>
+    <string name="subscription_form_clear_end_date">Clear</string>
+    <string name="subscription_form_clear_end_date_desc">Clear end date</string>
+    <string name="subscription_form_reminder_label">Reminder Notification</string>
+    <string name="subscription_form_reminder_desc">Get notified before renewal</string>
+    <string name="subscription_form_auto_renew_label">Auto Renewal</string>
+    <string name="subscription_form_auto_renew_desc">Auto renew at end of period</string>
+    <string name="subscription_form_website_label">Website</string>
+    <string name="subscription_form_website_placeholder">https://...</string>
+    <string name="subscription_form_notes_label">Notes</string>
+    <string name="subscription_form_notes_placeholder">Notes about subscription...</string>
+    <string name="subscription_form_save_button">Save</string>
+    <string name="subscription_form_update_button">Save Changes</string>
+    <string name="subscription_form_pause_button">Pause Subscription</string>
+    <string name="subscription_form_resume_button">Resume Subscription</string>
+    <string name="subscription_form_advance_button">Record as Paid</string>
+    <string name="subscription_form_delete_button">Delete Record</string>
+
+    <!-- Subscriptions: Form Validation Errors -->
+    <string name="subscription_error_name_required">Subscription name is required.</string>
+    <string name="subscription_error_name_too_long">Subscription name cannot exceed 100 characters.</string>
+    <string name="subscription_error_amount_required">Amount is required.</string>
+    <string name="subscription_error_amount_invalid">Enter a valid amount.</string>
+    <string name="subscription_error_amount_non_positive">Amount must be greater than zero.</string>
+    <string name="subscription_error_amount_too_large">Entered amount is too large.</string>
+    <string name="subscription_error_category_not_found">Selected category not found.</string>
+    <string name="subscription_error_category_type_mismatch">Only expense categories can be selected for subscriptions.</string>
+    <string name="subscription_error_interval_invalid">Enter a valid interval.</string>
+    <string name="subscription_error_interval_non_positive">Interval must be at least 1.</string>
+    <string name="subscription_error_start_date_required">Start date is required.</string>
+    <string name="subscription_error_start_date_after_next_renewal">Start date cannot be after next renewal date.</string>
+    <string name="subscription_error_end_date_before_start_date">End date cannot be before start date.</string>
+    <string name="subscription_error_end_date_before_next_renewal">End date cannot be before next renewal date.</string>
+    <string name="subscription_error_website_too_long">Website URL is too long.</string>
+    <string name="subscription_error_notes_too_long">Notes are too long.</string>
+
+    <!-- Subscriptions: Dialogs -->
+    <string name="subscription_delete_dialog_title">Delete Subscription</string>
+    <string name="subscription_delete_dialog_message">Are you sure you want to delete this subscription and all associated renewal history? This action cannot be undone.</string>
+    <string name="subscription_delete_dialog_cancel">Cancel</string>
+    <string name="subscription_delete_dialog_confirm">Delete</string>
+    <string name="subscription_advance_renewal_dialog_title">Record as Paid</string>
+    <string name="subscription_advance_renewal_dialog_message">This subscription\'s renewal date will be advanced to %1$s and recorded in actual payments. Do you confirm?</string>
+    <string name="subscription_advance_renewal_dialog_cancel">Cancel</string>
+    <string name="subscription_advance_renewal_dialog_confirm">Record as Paid</string>
+
+    <!-- Subscriptions: Routes & Permissions -->
+    <string name="subscription_route_loading">Loading subscription...</string>
+    <string name="subscription_route_not_found_title">Subscription Not Found</string>
+    <string name="subscription_route_not_found_desc">The subscription you want to edit was not found or has been deleted.</string>
+    <string name="subscription_route_error_title">Failed to Load Subscription</string>
+    <string name="subscription_route_back_action">Go back</string>
+    <string name="subscription_permission_banner_title">Turn on subscription reminders</string>
+    <string name="subscription_permission_banner_desc">Get notified for upcoming and due subscriptions.</string>
+    <string name="subscription_permission_banner_action">Allow notifications</string>
+
+    <!-- Subscriptions: Plurals -->
+    <plurals name="subscription_active_count_plural">
+        <item quantity="one">%1$d active subscription</item>
+        <item quantity="other">%1$d active subscriptions</item>
+    </plurals>
+    <plurals name="subscription_status_overdue_days_plural">
+        <item quantity="one">%1$d day overdue</item>
+        <item quantity="other">%1$d days overdue</item>
+    </plurals>
+    <plurals name="subscription_status_upcoming_days_plural">
+        <item quantity="one">%1$d day left</item>
+        <item quantity="other">%1$d days left</item>
+    </plurals>
+    <plurals name="subscription_overdue_count_plural">
+        <item quantity="one">%1$d overdue payment</item>
+        <item quantity="other">%1$d overdue payments</item>
+    </plurals>
+    <plurals name="subscription_recurrence_interval_days_plural">
+        <item quantity="one">Every %1$d day</item>
+        <item quantity="other">Every %1$d days</item>
+    </plurals>
+    <plurals name="subscription_recurrence_interval_weeks_plural">
+        <item quantity="one">Every %1$d week</item>
+        <item quantity="other">Every %1$d weeks</item>
+    </plurals>
+    <plurals name="subscription_recurrence_interval_months_plural">
+        <item quantity="one">Every %1$d month</item>
+        <item quantity="other">Every %1$d months</item>
+    </plurals>
+    <plurals name="subscription_recurrence_interval_years_plural">
+        <item quantity="one">Every %1$d year</item>
+        <item quantity="other">Every %1$d years</item>
+    </plurals>
+    <plurals name="subscription_insight_trial_desc_plural">
+        <item quantity="one">%1$s trial period ends in %2$d day (%3$s).</item>
+        <item quantity="other">%1$s trial period ends in %2$d days (%3$s).</item>
+    </plurals>
+    <plurals name="subscription_insight_trial_badge_plural">
+        <item quantity="one">%1$d day left</item>
+        <item quantity="other">%1$d days left</item>
+    </plurals>
+    <plurals name="subscription_insight_price_increase_desc_plural">
+        <item quantity="one">Price increase detected in %1$d subscription. You can review details from the list.</item>
+        <item quantity="other">Price increase detected in %1$d subscriptions. You can review details from the list.</item>
+    </plurals>
+    <plurals name="subscription_insight_price_increase_badge_plural">
+        <item quantity="one">%1$d service</item>
+        <item quantity="other">%1$d services</item>
+    </plurals>
+    <plurals name="subscription_insight_paused_savings_desc_plural">
+        <item quantity="one">You are saving an estimated %2$s monthly with %1$d paused subscription.</item>
+        <item quantity="other">You are saving an estimated %2$s monthly with %1$d paused subscriptions.</item>
+    </plurals>
+    <plurals name="subscription_insight_paused_savings_badge_plural">
+        <item quantity="one">%1$d paused</item>
+        <item quantity="other">%1$d paused</item>
+    </plurals>
+    <plurals name="subscription_detail_recent_payments_subtitle_plural">
+        <item quantity="one">%1$d payment record • total %2$s</item>
+        <item quantity="other">%1$d payment records • total %2$s</item>
+    </plurals>
+    <plurals name="subscription_detail_insight_with_payments_plural">
+        <item quantity="one">You have spent %2$s with %1$d total payment for this subscription.</item>
+        <item quantity="other">You have spent %2$s with %1$d total payments for this subscription.</item>
+    </plurals>
+    <string name="subscription_add_action">Add subscription</string>
+    <string name="subscription_more_title">More</string>
+    <string name="subscription_empty_filter_message">No subscriptions found matching this filter.</string>
+    <string name="subscription_amounts_disclaimer">Amounts are calculated based on your records.</string>
+    <string name="subscription_loading_message">Loading subscriptions...</string>
+    <string name="subscription_detail_loading_message">Loading subscription details...</string>
+    <string name="subscription_detail_edit_action">Edit subscription</string>
+
+    <string name="subscription_form_question">Which service would you\nlike to add?</string>
+    <string name="subscription_form_quick_pick">Quick pick</string>
+    <string name="subscription_form_other_templates">Other templates</string>
+    <string name="subscription_form_show_templates">Show ready subscription templates</string>
+    <string name="subscription_form_section_info">Subscription details</string>
+    <string name="subscription_form_field_name">Service / subscription name</string>
+    <string name="subscription_form_placeholder_name">Internet</string>
+    <string name="subscription_form_field_category">Category (optional)</string>
+    <string name="subscription_form_category_select">Select category</string>
+    <string name="subscription_form_field_currency">Currency</string>
+    <string name="subscription_form_field_amount">Billing amount</string>
+    <string name="subscription_form_field_cycle">Billing cycle</string>
+    <string name="subscription_form_field_start_date">Start date</string>
+    <string name="subscription_form_field_end_date">End date</string>
+    <string name="subscription_form_select_date">Select date</string>
+    <string name="subscription_form_no_end_date">No end date</string>
+    <string name="subscription_form_info_settings_continue">Settings and additional info continue below.</string>
+    <string name="subscription_form_section_settings">Subscription settings</string>
+    <string name="subscription_form_renewal_tracking">Renewal tracking</string>
+    <string name="subscription_form_renewal_tracking_subtitle">Tracked inside Feniqo</string>
+    <string name="subscription_form_reminder">Reminder</string>
+    <string name="subscription_form_reminder_subtitle">7 days before and on renewal day</string>
+    <string name="subscription_form_section_extra">Additional info (optional)</string>
+    <string name="subscription_form_estimated_yearly_cost">Estimated yearly cost</string>
+    <string name="subscription_form_first_renewal">First renewal</string>
+    <string name="subscription_form_disclaimer">No money will be charged from your bank. Tracked only in Feniqo.</string>
+    <string name="subscription_form_frequency_sheet_subtitle">Select renewal frequency and initial period.</string>
+    <string name="subscription_form_interval">Repeat interval</string>
+    <string name="subscription_form_repeat">Repeat</string>
+    <string name="subscription_form_apply">Apply</string>
+    <string name="subscription_form_category_sheet_title">Select category</string>
+    <string name="subscription_form_category_clear">Remove category selection</string>
+    <string name="subscription_form_reminder_dialog_title">Permission required for reminders</string>
+    <string name="subscription_form_reminder_dialog_message">Get notifications 7 days before and on the renewal day.</string>
+    <string name="subscription_form_reminder_dialog_grant">Allow</string>
+    <string name="subscription_form_reminder_dialog_dismiss">Not now</string>
+    <string name="subscription_form_delete_confirm_dialog_title">Do you want to delete this record?</string>
+    <string name="subscription_form_delete_confirm_dialog_message">Renewal tracking in Feniqo will stop. The subscription with your service provider will not be cancelled.</string>
+    <string name="subscription_decrease">Decrease</string>
+    <string name="subscription_increase">Increase</string>
+    <string name="subscription_error_title">An error occurred</string>
+    <string name="subscription_error_default">A problem occurred while loading subscriptions.</string>
+    <string name="subscription_payment_recorded_title">Payment Recorded</string>
+    <string name="subscription_payment_recorded_subtitle">Subscription payment has been successfully recorded.</string>
+    <string name="subscription_close_button">Close</string>
 </resources>

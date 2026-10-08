@@ -21,7 +21,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SubscriptionDisplayModelMapperTest {
-
     private val today = LocalDate(2026, 9, 1)
 
     @Test
@@ -85,7 +84,7 @@ class SubscriptionDisplayModelMapperTest {
     }
 
     @Test
-    fun map_formatsFrequencySummariesCorrectly() {
+    fun map_mapsFrequencyAndIntervalCorrectly() {
         val category = sampleCategory("cat-1", "Abonelik")
 
         val dailySingle = sampleSubscription(
@@ -138,14 +137,22 @@ class SubscriptionDisplayModelMapperTest {
         val mappedY1 = SubscriptionDisplayModelMapper.mapItem(yearlySingle, category, today = today)
         val mappedY2 = SubscriptionDisplayModelMapper.mapItem(yearlyMultiple, category, today = today)
 
-        assertEquals("Her gün", mappedD1.formattedFrequency)
-        assertEquals("Her 3 günde bir", mappedD3.formattedFrequency)
-        assertEquals("Her hafta", mappedW1.formattedFrequency)
-        assertEquals("Her 2 haftada bir", mappedW2.formattedFrequency)
-        assertEquals("Her ay", mappedM1.formattedFrequency)
-        assertEquals("Her 6 ayda bir", mappedM6.formattedFrequency)
-        assertEquals("Her yıl", mappedY1.formattedFrequency)
-        assertEquals("Her 2 yılda bir", mappedY2.formattedFrequency)
+        assertEquals(RecurrenceFrequency.DAILY, mappedD1.frequency)
+        assertEquals(1, mappedD1.interval)
+        assertEquals(RecurrenceFrequency.DAILY, mappedD3.frequency)
+        assertEquals(3, mappedD3.interval)
+        assertEquals(RecurrenceFrequency.WEEKLY, mappedW1.frequency)
+        assertEquals(1, mappedW1.interval)
+        assertEquals(RecurrenceFrequency.WEEKLY, mappedW2.frequency)
+        assertEquals(2, mappedW2.interval)
+        assertEquals(RecurrenceFrequency.MONTHLY, mappedM1.frequency)
+        assertEquals(1, mappedM1.interval)
+        assertEquals(RecurrenceFrequency.MONTHLY, mappedM6.frequency)
+        assertEquals(6, mappedM6.interval)
+        assertEquals(RecurrenceFrequency.YEARLY, mappedY1.frequency)
+        assertEquals(1, mappedY1.interval)
+        assertEquals(RecurrenceFrequency.YEARLY, mappedY2.frequency)
+        assertEquals(2, mappedY2.interval)
     }
 
     @Test
@@ -213,14 +220,14 @@ class SubscriptionDisplayModelMapperTest {
         val mappedPresent = SubscriptionDisplayModelMapper.mapItem(withPresentCategory, category, today = today)
 
         // Null category case
-        assertEquals("Kategorisiz", mappedNull.categoryName)
+        assertEquals("", mappedNull.categoryName)
         assertTrue(mappedNull.isCategoryUnassigned)
         assertFalse(mappedNull.isCategoryMissing)
         assertNull(mappedNull.categoryColorHex)
         assertNull(mappedNull.categoryIconKey)
 
         // Missing category case
-        assertEquals("Bilinmeyen Kategori", mappedMissing.categoryName)
+        assertEquals("", mappedMissing.categoryName)
         assertFalse(mappedMissing.isCategoryUnassigned)
         assertTrue(mappedMissing.isCategoryMissing)
         assertNull(mappedMissing.categoryColorHex)
@@ -255,19 +262,15 @@ class SubscriptionDisplayModelMapperTest {
         val mappedWithoutEnd = SubscriptionDisplayModelMapper.mapItem(withoutEndDate, category, today = today)
 
         assertEquals(LocalDate(2026, 1, 1), mappedWithEnd.startDate)
-        assertEquals("1 Ocak 2026", mappedWithEnd.formattedStartDate)
         assertEquals(LocalDate(2026, 12, 31), mappedWithEnd.endDate)
-        assertEquals("31 Aralık 2026", mappedWithEnd.formattedEndDate)
-        assertEquals("1 Eylül 2026", mappedWithEnd.formattedNextRenewalDate)
+        assertEquals(LocalDate(2026, 9, 1), mappedWithEnd.nextRenewalDate)
 
         assertEquals(LocalDate(2026, 1, 1), mappedWithoutEnd.startDate)
-        assertEquals("1 Ocak 2026", mappedWithoutEnd.formattedStartDate)
         assertNull(mappedWithoutEnd.endDate)
-        assertNull(mappedWithoutEnd.formattedEndDate)
     }
 
     @Test
-    fun map_formatsNonTryCurrenciesCorrectly() {
+    fun map_preservesCurrenciesAndMoneyCorrectly() {
         val category = sampleCategory("cat-1", "Bulut")
 
         val trySub = sampleSubscription(
@@ -291,15 +294,13 @@ class SubscriptionDisplayModelMapperTest {
         val mappedEur = SubscriptionDisplayModelMapper.mapItem(eurSub, category, today = today)
 
         assertEquals(Currency.TRY, mappedTry.currency)
-        assertEquals("59,99 ₺", mappedTry.formattedAmount)
+        assertEquals(5999L, mappedTry.amount.amountMinor)
 
         assertEquals(Currency.USD, mappedUsd.currency)
         assertEquals(1500L, mappedUsd.amount.amountMinor)
-        assertEquals("15,00 $", mappedUsd.formattedAmount)
 
         assertEquals(Currency.EUR, mappedEur.currency)
         assertEquals(2550L, mappedEur.amount.amountMinor)
-        assertEquals("25,50 €", mappedEur.formattedAmount)
     }
 
     @Test
