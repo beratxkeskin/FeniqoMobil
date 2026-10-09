@@ -228,7 +228,7 @@ class RecurringTransactionFormRouteTest {
 
         // First ready emission: seed is applied
         if (!isEditSeedApplied) {
-            formInput = RecurringTransactionFormInput.fromDraft(seedDraft)
+            formInput = RecurringTransactionFormInput.fromDraft(seedDraft, decimalSeparator = ',')
             isEditSeedApplied = true
         }
         assertEquals("200", formInput.amountInput)
@@ -242,7 +242,7 @@ class RecurringTransactionFormRouteTest {
 
         // Subsequent ready emission from Room flow: seed must NOT be reapplied
         if (!isEditSeedApplied) {
-            formInput = RecurringTransactionFormInput.fromDraft(seedDraft)
+            formInput = RecurringTransactionFormInput.fromDraft(seedDraft, decimalSeparator = ',')
         }
 
         // Assert user's edits are preserved
@@ -540,7 +540,7 @@ class RecurringTransactionFormRouteTest {
         // First emission: Ready with isActive = true
         val readyState1 = RecurringTransactionEditLoadState.Ready(seedDraft, isActive = true)
         if (!isEditSeedApplied) {
-            formInput = RecurringTransactionFormInput.fromDraft(readyState1.draft)
+            formInput = RecurringTransactionFormInput.fromDraft(readyState1.draft, decimalSeparator = ',')
             localIsActive = readyState1.isActive
             isEditSeedApplied = true
         }
@@ -552,7 +552,7 @@ class RecurringTransactionFormRouteTest {
         // Subsequent Room emission: Ready with isActive = true
         val readyState2 = RecurringTransactionEditLoadState.Ready(seedDraft, isActive = true)
         if (!isEditSeedApplied) {
-            formInput = RecurringTransactionFormInput.fromDraft(readyState2.draft)
+            formInput = RecurringTransactionFormInput.fromDraft(readyState2.draft, decimalSeparator = ',')
             localIsActive = readyState2.isActive
         }
 

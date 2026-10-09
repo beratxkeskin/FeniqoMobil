@@ -81,17 +81,46 @@ import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.PaymentMethod
 import com.feniqo.mobile.domain.model.RecurrenceFrequency
 import com.feniqo.mobile.domain.model.TransactionType
+import com.feniqo.mobile.presentation.common.toLocalizedReadableDate
 import com.feniqo.mobile.presentation.recurring.RecurringTransactionDisplayModel
-import com.feniqo.mobile.presentation.recurring.RecurringTransactionDisplayModelMapper
+import com.feniqo.mobile.presentation.recurring.formatLocalizedRecurringSignedAmount
+import com.feniqo.mobile.presentation.recurring.formatLocalizedRecurrenceSummary
+import com.feniqo.mobile.presentation.recurring.resolveDisplayTitle
+import com.feniqo.mobile.presentation.recurring.toLocalizedFrequencyLabel
 import com.feniqo.mobile.presentation.theme.FeniqoExpense
-import com.feniqo.mobile.presentation.theme.FeniqoPureWhite
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoTabularNumberStyle
-import com.feniqo.mobile.presentation.theme.FeniqoTextPrimary
-import com.feniqo.mobile.presentation.theme.FeniqoTextSecondary
 import com.feniqo.mobile.presentation.theme.FeniqoTrendGreen
+import com.feniqo.mobile.presentation.transaction.toLocalizedText
 import com.feniqo.mobile.presentation.util.ColorParser
-import com.feniqo.mobile.presentation.util.DateFormatter
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.recurring_action_apply
+import feniqomobil.sharedui.generated.resources.recurring_action_apply_selection
+import feniqomobil.sharedui.generated.resources.recurring_action_cancel
+import feniqomobil.sharedui.generated.resources.recurring_action_close
+import feniqomobil.sharedui.generated.resources.recurring_action_decrease_interval
+import feniqomobil.sharedui.generated.resources.recurring_action_delete_rule
+import feniqomobil.sharedui.generated.resources.recurring_action_increase_interval
+import feniqomobil.sharedui.generated.resources.recurring_action_remove_end_date
+import feniqomobil.sharedui.generated.resources.recurring_action_select_date
+import feniqomobil.sharedui.generated.resources.recurring_card_click_label
+import feniqomobil.sharedui.generated.resources.recurring_card_content_desc
+import feniqomobil.sharedui.generated.resources.recurring_card_ended
+import feniqomobil.sharedui.generated.resources.recurring_card_next_date
+import feniqomobil.sharedui.generated.resources.recurring_category_empty
+import feniqomobil.sharedui.generated.resources.recurring_category_picker_title
+import feniqomobil.sharedui.generated.resources.recurring_date_indefinite
+import feniqomobil.sharedui.generated.resources.recurring_delete_dialog_desc
+import feniqomobil.sharedui.generated.resources.recurring_delete_dialog_title
+import feniqomobil.sharedui.generated.resources.recurring_interval_label
+import feniqomobil.sharedui.generated.resources.recurring_overview_subtitle
+import feniqomobil.sharedui.generated.resources.recurring_overview_title
+import feniqomobil.sharedui.generated.resources.recurring_pattern_sheet_title
+import feniqomobil.sharedui.generated.resources.recurring_payment_method_picker_title
+import feniqomobil.sharedui.generated.resources.recurring_status_active
+import feniqomobil.sharedui.generated.resources.recurring_status_badge_desc
+import feniqomobil.sharedui.generated.resources.recurring_status_paused
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Tekrarlayan işlem kuralını onaylı tasarım dilinde (Görsel 01 & 08) listeleyen kart bileşenidir.
@@ -102,47 +131,73 @@ fun RecurringTransactionCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val statusDescription = if (item.isPaused) "Duraklatıldı" else "Aktif"
-    val nextDateText = when {
-        item.isPaused -> null
-        item.formattedNextOccurrenceDate != null -> "Sonraki: ${item.formattedNextOccurrenceDate}"
-        else -> "Tekrar sona erdi"
-    }
+    val statusDescription =
+        if (item.isPaused) {
+            stringResource(Res.string.recurring_status_paused)
+        } else {
+            stringResource(Res.string.recurring_status_active)
+        }
+    val nextDateText =
+        when {
+            item.isPaused -> null
+            item.nextOccurrenceDate != null ->
+                stringResource(
+                    Res.string.recurring_card_next_date,
+                    item.nextOccurrenceDate.toLocalizedReadableDate(),
+                )
+            else -> stringResource(Res.string.recurring_card_ended)
+        }
 
-    val categoryColor = ColorParser.parseHexColorOrNull(item.categoryColorHex)
-        ?: if (item.isCategoryMissing) MaterialTheme.colorScheme.outline else FeniqoSageGreen
+    val categoryColor =
+        ColorParser.parseHexColorOrNull(item.categoryColorHex)
+            ?: if (item.isCategoryMissing) MaterialTheme.colorScheme.outline else FeniqoSageGreen
 
-    // Tutar rengi kuralı: Giderler eksi işaretli ve okunaklı kırmızı (duraklatılmış olsa dahi), Gelirler yeşil.
-    val amountColor = when (item.type) {
-        TransactionType.EXPENSE -> FeniqoExpense
-        TransactionType.INCOME -> FeniqoTrendGreen
-    }
+    val amountColor =
+        when (item.type) {
+            TransactionType.EXPENSE -> FeniqoExpense
+            TransactionType.INCOME -> FeniqoTrendGreen
+        }
+
+    val displayTitle = item.resolveDisplayTitle()
+    val displayFormattedAmount = formatLocalizedRecurringSignedAmount(item.amount, item.type)
+    val formattedFrequency = formatLocalizedRecurrenceSummary(item.frequency, item.interval)
+    val cardClickLabel = stringResource(Res.string.recurring_card_click_label, displayTitle)
+    val cardContentDesc =
+        stringResource(
+            Res.string.recurring_card_content_desc,
+            displayTitle,
+            displayFormattedAmount,
+            formattedFrequency,
+            nextDateText ?: statusDescription,
+        )
 
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(
-                role = Role.Button,
-                onClickLabel = "${item.displayTitle} tekrarlayan işlemi",
-                onClick = onClick,
-            )
-            .semantics {
-                contentDescription = "${item.displayTitle}, ${item.displayFormattedAmount}, ${item.formattedFrequency}, ${nextDateText ?: statusDescription}"
-            },
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clickable(
+                    role = Role.Button,
+                    onClickLabel = cardClickLabel,
+                    onClick = onClick,
+                )
+                .semantics {
+                    contentDescription = cardContentDesc
+                },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Sol: Kategori Tonal İkonu
             CategoryTonalIcon(
                 iconKey = item.categoryIconKey,
                 color = categoryColor,
@@ -151,16 +206,16 @@ fun RecurringTransactionCard(
 
             Spacer(modifier = Modifier.width(14.dp))
 
-            // Orta: Başlık, Tutar, Frekans ve Vade
             Column(
                 modifier = Modifier.weight(1f),
             ) {
                 Text(
-                    text = item.displayTitle,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    ),
+                    text = displayTitle,
+                    style =
+                        MaterialTheme.typography.titleMedium.copy(
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        ),
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -168,21 +223,20 @@ fun RecurringTransactionCard(
 
                 Spacer(modifier = Modifier.height(2.dp))
 
-                // Tutar
                 Text(
-                    text = item.displayFormattedAmount,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                    ).merge(FeniqoTabularNumberStyle),
+                    text = displayFormattedAmount,
+                    style =
+                        MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                        ).merge(FeniqoTabularNumberStyle),
                     color = amountColor,
                 )
 
                 Spacer(modifier = Modifier.height(2.dp))
 
-                // Frekans
                 Text(
-                    text = item.formattedFrequency,
+                    text = formattedFrequency,
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -199,7 +253,6 @@ fun RecurringTransactionCard(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Sağ: Durum Rozeti ve İleri Ok
             Row(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -227,15 +280,17 @@ fun RecurringOverviewGraphiteCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF202E28),
-        ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = Color(0xFF202E28),
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 18.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = 18.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -243,20 +298,22 @@ fun RecurringOverviewGraphiteCard(
                 modifier = Modifier.weight(1f),
             ) {
                 Text(
-                    text = "Düzenini bir kez kur.",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                    ),
+                    text = stringResource(Res.string.recurring_overview_title),
+                    style =
+                        MaterialTheme.typography.titleMedium.copy(
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                        ),
                     color = Color.White,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Gelir ve giderlerin belirlediğin aralıklarla kaydedilsin.",
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp,
-                    ),
+                    text = stringResource(Res.string.recurring_overview_subtitle),
+                    style =
+                        MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp,
+                        ),
                     color = Color(0xFFB0C4B8),
                 )
             }
@@ -264,10 +321,11 @@ fun RecurringOverviewGraphiteCard(
             Spacer(modifier = Modifier.width(16.dp))
 
             Box(
-                modifier = Modifier
-                    .size(46.dp)
-                    .background(Color(0xFF2F443A), shape = CircleShape)
-                    .clearAndSetSemantics { },
+                modifier =
+                    Modifier
+                        .size(46.dp)
+                        .background(Color(0xFF2F443A), shape = CircleShape)
+                        .clearAndSetSemantics { },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -289,33 +347,38 @@ fun RecurringStatusBadge(
     isPaused: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val (containerColor, contentColor, text) = if (isPaused) {
-        Triple(
-            MaterialTheme.colorScheme.surfaceVariant,
-            MaterialTheme.colorScheme.onSurfaceVariant,
-            "Duraklatıldı",
-        )
-    } else {
-        Triple(
-            Color(0xFFE8F5E9),
-            Color(0xFF2E7D32),
-            "Aktif",
-        )
-    }
+    val (containerColor, contentColor, text) =
+        if (isPaused) {
+            Triple(
+                MaterialTheme.colorScheme.surfaceVariant,
+                MaterialTheme.colorScheme.onSurfaceVariant,
+                stringResource(Res.string.recurring_status_paused),
+            )
+        } else {
+            Triple(
+                Color(0xFFE8F5E9),
+                Color(0xFF2E7D32),
+                stringResource(Res.string.recurring_status_active),
+            )
+        }
+
+    val statusBadgeContentDesc = stringResource(Res.string.recurring_status_badge_desc, text)
 
     Surface(
-        modifier = modifier.semantics {
-            contentDescription = "Durum: $text"
-        },
+        modifier =
+            modifier.semantics {
+                contentDescription = statusBadgeContentDesc
+            },
         shape = RoundedCornerShape(12.dp),
         color = containerColor,
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-            ),
+            style =
+                MaterialTheme.typography.labelSmall.copy(
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                ),
             color = contentColor,
             modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
         )
@@ -340,10 +403,11 @@ fun RecurringTransactionDeleteDialog(
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         dragHandle = {
             Surface(
-                modifier = Modifier
-                    .padding(vertical = 12.dp)
-                    .width(36.dp)
-                    .height(4.dp),
+                modifier =
+                    Modifier
+                        .padding(vertical = 12.dp)
+                        .width(36.dp)
+                        .height(4.dp),
                 shape = RoundedCornerShape(2.dp),
                 color = Color(0xFFCBD5E1),
             ) {}
@@ -351,13 +415,13 @@ fun RecurringTransactionDeleteDialog(
         modifier = modifier,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 12.dp)
-                .padding(bottom = 28.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 12.dp)
+                    .padding(bottom = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Sağ üst kapat butonu
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
@@ -368,7 +432,7 @@ fun RecurringTransactionDeleteDialog(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
-                        contentDescription = "Kapat",
+                        contentDescription = stringResource(Res.string.recurring_action_close),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp),
                     )
@@ -377,11 +441,11 @@ fun RecurringTransactionDeleteDialog(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Pembe dairede kırmızı çöp kutusu ikonu
             Box(
-                modifier = Modifier
-                    .size(72.dp)
-                    .background(MaterialTheme.colorScheme.errorContainer, CircleShape),
+                modifier =
+                    Modifier
+                        .size(72.dp)
+                        .background(MaterialTheme.colorScheme.errorContainer, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -395,40 +459,43 @@ fun RecurringTransactionDeleteDialog(
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Kural silinsin mi?",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
+                text = stringResource(Res.string.recurring_delete_dialog_title),
+                style =
+                    MaterialTheme.typography.titleLarge.copy(
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
                 color = MaterialTheme.colorScheme.onSurface,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Bu işlem geri alınamaz.\nGelecekteki otomatik tekrarlar durdurulur.",
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp,
-                ),
+                text = stringResource(Res.string.recurring_delete_dialog_desc),
+                style =
+                    MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp,
+                    ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Kırmızı: Kuralı sil butonu
             Button(
                 onClick = onConfirm,
                 enabled = !isSubmitting,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFDC2626),
-                    contentColor = Color.White,
-                ),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFDC2626),
+                        contentColor = Color.White,
+                    ),
             ) {
                 if (isSubmitting) {
                     CircularProgressIndicator(
@@ -438,37 +505,40 @@ fun RecurringTransactionDeleteDialog(
                     )
                 } else {
                     Text(
-                        text = "Kuralı sil",
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                        ),
+                        text = stringResource(Res.string.recurring_action_delete_rule),
+                        style =
+                            MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                            ),
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Nötr: Vazgeç butonu
             Button(
                 onClick = onDismiss,
                 enabled = !isSubmitting,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = Color(0xFF334155),
-                ),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = Color(0xFF334155),
+                    ),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
             ) {
                 Text(
-                    text = "Vazgeç",
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    ),
+                    text = stringResource(Res.string.recurring_action_cancel),
+                    style =
+                        MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        ),
                 )
             }
         }
@@ -498,10 +568,11 @@ fun RecurrencePatternSheet(
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         dragHandle = {
             Surface(
-                modifier = Modifier
-                    .padding(vertical = 12.dp)
-                    .width(36.dp)
-                    .height(4.dp),
+                modifier =
+                    Modifier
+                        .padding(vertical = 12.dp)
+                        .width(36.dp)
+                        .height(4.dp),
                 shape = RoundedCornerShape(2.dp),
                 color = Color(0xFFCBD5E1),
             ) {}
@@ -509,23 +580,24 @@ fun RecurrencePatternSheet(
         modifier = modifier,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 28.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 28.dp),
         ) {
-            // Başlık ve Kapat Butonu
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Tekrar düzeni",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                    ),
+                    text = stringResource(Res.string.recurring_pattern_sheet_title),
+                    style =
+                        MaterialTheme.typography.titleLarge.copy(
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                        ),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
 
@@ -535,7 +607,7 @@ fun RecurrencePatternSheet(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
-                        contentDescription = "Kapat",
+                        contentDescription = stringResource(Res.string.recurring_action_close),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp),
                     )
@@ -544,31 +616,58 @@ fun RecurrencePatternSheet(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            // 4'lü Sıklık Kartları
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                val items = listOf(
-                    Triple(RecurrenceFrequency.DAILY, "Günlük", Icons.Outlined.CalendarToday),
-                    Triple(RecurrenceFrequency.WEEKLY, "Haftalık", Icons.Outlined.DateRange),
-                    Triple(RecurrenceFrequency.MONTHLY, "Aylık", Icons.Outlined.CalendarMonth),
-                    Triple(RecurrenceFrequency.YEARLY, "Yıllık", Icons.Outlined.EventRepeat),
-                )
+                val items =
+                    listOf(
+                        Triple(
+                            RecurrenceFrequency.DAILY,
+                            RecurrenceFrequency.DAILY.toLocalizedFrequencyLabel(),
+                            Icons.Outlined.CalendarToday,
+                        ),
+                        Triple(
+                            RecurrenceFrequency.WEEKLY,
+                            RecurrenceFrequency.WEEKLY.toLocalizedFrequencyLabel(),
+                            Icons.Outlined.DateRange,
+                        ),
+                        Triple(
+                            RecurrenceFrequency.MONTHLY,
+                            RecurrenceFrequency.MONTHLY.toLocalizedFrequencyLabel(),
+                            Icons.Outlined.CalendarMonth,
+                        ),
+                        Triple(
+                            RecurrenceFrequency.YEARLY,
+                            RecurrenceFrequency.YEARLY.toLocalizedFrequencyLabel(),
+                            Icons.Outlined.EventRepeat,
+                        ),
+                    )
 
                 items.forEach { (freq, label, icon) ->
                     val isSelected = freq == tempFrequency
                     Surface(
                         onClick = { tempFrequency = freq },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(72.dp),
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .height(72.dp),
                         shape = RoundedCornerShape(12.dp),
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                        border = BorderStroke(
-                            1.dp,
-                            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                        ),
+                        color =
+                            if (isSelected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
+                        border =
+                            BorderStroke(
+                                1.dp,
+                                if (isSelected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.outlineVariant
+                                },
+                            ),
                     ) {
                         Column(
                             modifier = Modifier.padding(6.dp),
@@ -584,10 +683,11 @@ fun RecurrencePatternSheet(
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = label,
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = 11.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                ),
+                                style =
+                                    MaterialTheme.typography.labelSmall.copy(
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    ),
                                 color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -597,25 +697,26 @@ fun RecurrencePatternSheet(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Tekrar aralığı başlığı
             Text(
-                text = "Tekrar aralığı",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                ),
+                text = stringResource(Res.string.recurring_interval_label),
+                style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    ),
                 color = MaterialTheme.colorScheme.onSurface,
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Azalt / Aralık Değeri / Artır Kontrolü
+            val decreaseIntervalDesc = stringResource(Res.string.recurring_action_decrease_interval)
+            val increaseIntervalDesc = stringResource(Res.string.recurring_action_increase_interval)
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Eksi butonu
                 Surface(
                     onClick = {
                         if (tempInterval > 1) {
@@ -623,7 +724,12 @@ fun RecurrencePatternSheet(
                             intervalText = tempInterval.toString()
                         }
                     },
-                    modifier = Modifier.size(48.dp),
+                    modifier =
+                        Modifier
+                            .size(48.dp)
+                            .semantics {
+                                contentDescription = decreaseIntervalDesc
+                            },
                     shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     enabled = tempInterval > 1,
@@ -631,10 +737,11 @@ fun RecurrencePatternSheet(
                     Box(contentAlignment = Alignment.Center) {
                         Text(
                             text = "−",
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold,
-                            ),
+                            style =
+                                MaterialTheme.typography.titleLarge.copy(
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Bold,
+                                ),
                             color = if (tempInterval > 1) MaterialTheme.colorScheme.onSurface else Color(0xFFCBD5E1),
                         )
                     }
@@ -642,7 +749,6 @@ fun RecurrencePatternSheet(
 
                 Spacer(modifier = Modifier.width(16.dp))
 
-                // Klavyeyle de yazılabilen aralık alanı
                 OutlinedTextField(
                     value = intervalText,
                     onValueChange = { newValue ->
@@ -655,38 +761,45 @@ fun RecurrencePatternSheet(
                     },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    textStyle = MaterialTheme.typography.titleLarge.copy(
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                    ).merge(FeniqoTabularNumberStyle),
+                    textStyle =
+                        MaterialTheme.typography.titleLarge.copy(
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                        ).merge(FeniqoTabularNumberStyle),
                     modifier = Modifier.width(80.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = FeniqoSageGreen,
-                        unfocusedBorderColor = Color(0xFFE2E8F0),
-                    ),
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = FeniqoSageGreen,
+                            unfocusedBorderColor = Color(0xFFE2E8F0),
+                        ),
                 )
 
                 Spacer(modifier = Modifier.width(16.dp))
 
-                // Artı butonu
                 Surface(
                     onClick = {
                         tempInterval += 1
                         intervalText = tempInterval.toString()
                     },
-                    modifier = Modifier.size(48.dp),
+                    modifier =
+                        Modifier
+                            .size(48.dp)
+                            .semantics {
+                                contentDescription = increaseIntervalDesc
+                            },
                     shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant,
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
                             text = "+",
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold,
-                            ),
+                            style =
+                                MaterialTheme.typography.titleLarge.copy(
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Bold,
+                                ),
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
@@ -695,11 +808,11 @@ fun RecurrencePatternSheet(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Dinamik açıklama metni ("Her 1 ayda bir", vb.)
-            val summaryDescription = RecurringTransactionDisplayModelMapper.formatRecurrenceSummary(
-                frequency = tempFrequency,
-                interval = tempInterval,
-            )
+            val summaryDescription =
+                formatLocalizedRecurrenceSummary(
+                    frequency = tempFrequency,
+                    interval = tempInterval,
+                )
             Text(
                 text = summaryDescription,
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
@@ -710,24 +823,26 @@ fun RecurrencePatternSheet(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Uygula Butonu
             Button(
                 onClick = { onApply(tempFrequency, tempInterval) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = FeniqoSageGreen,
-                    contentColor = Color.White,
-                ),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = FeniqoSageGreen,
+                        contentColor = Color.White,
+                    ),
             ) {
                 Text(
-                    text = "Uygula",
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                    ),
+                    text = stringResource(Res.string.recurring_action_apply),
+                    style =
+                        MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                        ),
                 )
             }
         }
@@ -755,10 +870,11 @@ fun RecurringCategoryPickerSheet(
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         dragHandle = {
             Surface(
-                modifier = Modifier
-                    .padding(vertical = 12.dp)
-                    .width(36.dp)
-                    .height(4.dp),
+                modifier =
+                    Modifier
+                        .padding(vertical = 12.dp)
+                        .width(36.dp)
+                        .height(4.dp),
                 shape = RoundedCornerShape(2.dp),
                 color = Color(0xFFCBD5E1),
             ) {}
@@ -766,10 +882,11 @@ fun RecurringCategoryPickerSheet(
         modifier = modifier,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 28.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 28.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -777,11 +894,12 @@ fun RecurringCategoryPickerSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Kategori seç",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                    ),
+                    text = stringResource(Res.string.recurring_category_picker_title),
+                    style =
+                        MaterialTheme.typography.titleLarge.copy(
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                        ),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
 
@@ -791,7 +909,7 @@ fun RecurringCategoryPickerSheet(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
-                        contentDescription = "Kapat",
+                        contentDescription = stringResource(Res.string.recurring_action_close),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp),
                     )
@@ -802,22 +920,24 @@ fun RecurringCategoryPickerSheet(
 
             if (categories.isEmpty()) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 24.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "Bu tür için tanımlı kategori bulunamadı.",
+                        text = stringResource(Res.string.recurring_category_empty),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             } else {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     categories.forEach { category ->
@@ -831,9 +951,10 @@ fun RecurringCategoryPickerSheet(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 8.dp, vertical = 10.dp),
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 8.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 CategoryTonalIcon(
@@ -846,10 +967,11 @@ fun RecurringCategoryPickerSheet(
 
                                 Text(
                                     text = category.name,
-                                    style = MaterialTheme.typography.bodyLarge.copy(
-                                        fontSize = 15.sp,
-                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                    ),
+                                    style =
+                                        MaterialTheme.typography.bodyLarge.copy(
+                                            fontSize = 15.sp,
+                                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                        ),
                                     color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.weight(1f),
                                 )
@@ -857,10 +979,11 @@ fun RecurringCategoryPickerSheet(
                                 RadioButton(
                                     selected = isSelected,
                                     onClick = { tempCategoryId = category.id },
-                                    colors = RadioButtonDefaults.colors(
-                                        selectedColor = FeniqoSageGreen,
-                                        unselectedColor = Color(0xFFCBD5E1),
-                                    ),
+                                    colors =
+                                        RadioButtonDefaults.colors(
+                                            selectedColor = FeniqoSageGreen,
+                                            unselectedColor = Color(0xFFCBD5E1),
+                                        ),
                                 )
                             }
                         }
@@ -875,21 +998,24 @@ fun RecurringCategoryPickerSheet(
                     tempCategoryId?.let { onCategorySelected(it) }
                 },
                 enabled = tempCategoryId != null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = FeniqoSageGreen,
-                    contentColor = Color.White,
-                ),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = FeniqoSageGreen,
+                        contentColor = Color.White,
+                    ),
             ) {
                 Text(
-                    text = "Seçimi uygula",
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                    ),
+                    text = stringResource(Res.string.recurring_action_apply_selection),
+                    style =
+                        MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                        ),
                 )
             }
         }
@@ -910,13 +1036,14 @@ fun RecurringPaymentMethodPickerSheet(
 ) {
     var tempMethod by remember { mutableStateOf(selectedMethod) }
 
-    val methods = listOf(
-        Pair(PaymentMethod.CASH, Pair("Nakit", Icons.Outlined.AccountBalanceWallet)),
-        Pair(PaymentMethod.CREDIT_CARD, Pair("Kredi kartı", Icons.Outlined.CreditCard)),
-        Pair(PaymentMethod.DEBIT_CARD, Pair("Banka kartı", Icons.Outlined.Payment)),
-        Pair(PaymentMethod.BANK_TRANSFER, Pair("Banka transferi", Icons.AutoMirrored.Outlined.CompareArrows)),
-        Pair(PaymentMethod.OTHER, Pair("Diğer", Icons.Outlined.MoreHoriz)),
-    )
+    val methods =
+        listOf(
+            Pair(PaymentMethod.CASH, Pair(PaymentMethod.CASH.toLocalizedText(), Icons.Outlined.AccountBalanceWallet)),
+            Pair(PaymentMethod.CREDIT_CARD, Pair(PaymentMethod.CREDIT_CARD.toLocalizedText(), Icons.Outlined.CreditCard)),
+            Pair(PaymentMethod.DEBIT_CARD, Pair(PaymentMethod.DEBIT_CARD.toLocalizedText(), Icons.Outlined.Payment)),
+            Pair(PaymentMethod.BANK_TRANSFER, Pair(PaymentMethod.BANK_TRANSFER.toLocalizedText(), Icons.AutoMirrored.Outlined.CompareArrows)),
+            Pair(PaymentMethod.OTHER, Pair(PaymentMethod.OTHER.toLocalizedText(), Icons.Outlined.MoreHoriz)),
+        )
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -924,10 +1051,11 @@ fun RecurringPaymentMethodPickerSheet(
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         dragHandle = {
             Surface(
-                modifier = Modifier
-                    .padding(vertical = 12.dp)
-                    .width(36.dp)
-                    .height(4.dp),
+                modifier =
+                    Modifier
+                        .padding(vertical = 12.dp)
+                        .width(36.dp)
+                        .height(4.dp),
                 shape = RoundedCornerShape(2.dp),
                 color = Color(0xFFCBD5E1),
             ) {}
@@ -935,10 +1063,11 @@ fun RecurringPaymentMethodPickerSheet(
         modifier = modifier,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 28.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 28.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -946,11 +1075,12 @@ fun RecurringPaymentMethodPickerSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Ödeme yöntemi",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                    ),
+                    text = stringResource(Res.string.recurring_payment_method_picker_title),
+                    style =
+                        MaterialTheme.typography.titleLarge.copy(
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                        ),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
 
@@ -960,7 +1090,7 @@ fun RecurringPaymentMethodPickerSheet(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
-                        contentDescription = "Kapat",
+                        contentDescription = stringResource(Res.string.recurring_action_close),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp),
                     )
@@ -984,15 +1114,17 @@ fun RecurringPaymentMethodPickerSheet(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp, vertical = 10.dp),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+                                modifier =
+                                    Modifier
+                                        .size(40.dp)
+                                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
@@ -1007,10 +1139,11 @@ fun RecurringPaymentMethodPickerSheet(
 
                             Text(
                                 text = label,
-                                style = MaterialTheme.typography.bodyLarge.copy(
-                                    fontSize = 15.sp,
-                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                ),
+                                style =
+                                    MaterialTheme.typography.bodyLarge.copy(
+                                        fontSize = 15.sp,
+                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                    ),
                                 color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.weight(1f),
                             )
@@ -1018,10 +1151,11 @@ fun RecurringPaymentMethodPickerSheet(
                             RadioButton(
                                 selected = isSelected,
                                 onClick = { tempMethod = method },
-                                colors = RadioButtonDefaults.colors(
-                                    selectedColor = FeniqoSageGreen,
-                                    unselectedColor = Color(0xFFCBD5E1),
-                                ),
+                                colors =
+                                    RadioButtonDefaults.colors(
+                                        selectedColor = FeniqoSageGreen,
+                                        unselectedColor = Color(0xFFCBD5E1),
+                                    ),
                             )
                         }
                     }
@@ -1032,21 +1166,24 @@ fun RecurringPaymentMethodPickerSheet(
 
             Button(
                 onClick = { onMethodSelected(tempMethod) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = FeniqoSageGreen,
-                    contentColor = Color.White,
-                ),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = FeniqoSageGreen,
+                        contentColor = Color.White,
+                    ),
             ) {
                 Text(
-                    text = "Seçimi uygula",
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                    ),
+                    text = stringResource(Res.string.recurring_action_apply_selection),
+                    style =
+                        MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                        ),
                 )
             }
         }
@@ -1072,21 +1209,23 @@ fun RecurringDatePickerSheet(
     val initialEffectiveDate = initialDate ?: minDate ?: currentDateProvider()
     val initialUtcMillis = initialEffectiveDate.toEpochDays() * 86_400_000L
 
-    val selectableDates = remember(minDate) {
-        if (minDate != null) {
-            val minMillis = minDate.toEpochDays() * 86_400_000L
-            object : SelectableDates {
-                override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis >= minMillis
+    val selectableDates =
+        remember(minDate) {
+            if (minDate != null) {
+                val minMillis = minDate.toEpochDays() * 86_400_000L
+                object : SelectableDates {
+                    override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis >= minMillis
+                }
+            } else {
+                object : SelectableDates {}
             }
-        } else {
-            object : SelectableDates {}
         }
-    }
 
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = initialUtcMillis,
-        selectableDates = selectableDates,
-    )
+    val datePickerState =
+        rememberDatePickerState(
+            initialSelectedDateMillis = initialUtcMillis,
+            selectableDates = selectableDates,
+        )
 
     var isIndefiniteChecked by remember { mutableStateOf(isEndDate && initialDate == null) }
 
@@ -1096,10 +1235,11 @@ fun RecurringDatePickerSheet(
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         dragHandle = {
             Surface(
-                modifier = Modifier
-                    .padding(vertical = 12.dp)
-                    .width(36.dp)
-                    .height(4.dp),
+                modifier =
+                    Modifier
+                        .padding(vertical = 12.dp)
+                        .width(36.dp)
+                        .height(4.dp),
                 shape = RoundedCornerShape(2.dp),
                 color = Color(0xFFCBD5E1),
             ) {}
@@ -1107,12 +1247,12 @@ fun RecurringDatePickerSheet(
         modifier = modifier,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 28.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 28.dp),
         ) {
-            // Başlık ve Kapat Butonu
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1120,10 +1260,11 @@ fun RecurringDatePickerSheet(
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                    ),
+                    style =
+                        MaterialTheme.typography.titleLarge.copy(
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                        ),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
 
@@ -1133,7 +1274,7 @@ fun RecurringDatePickerSheet(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
-                        contentDescription = "Kapat",
+                        contentDescription = stringResource(Res.string.recurring_action_close),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp),
                     )
@@ -1142,11 +1283,18 @@ fun RecurringDatePickerSheet(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Seçili Tarih Kartı
             val selectedMillis = datePickerState.selectedDateMillis
-            val selectedLocalDate = selectedMillis?.let {
-                LocalDate.fromEpochDays((it / 86_400_000L).toInt())
-            } ?: initialEffectiveDate
+            val selectedLocalDate =
+                selectedMillis?.let {
+                    LocalDate.fromEpochDays((it / 86_400_000L).toInt())
+                } ?: initialEffectiveDate
+
+            val dateDisplayString =
+                if (isEndDate && isIndefiniteChecked) {
+                    stringResource(Res.string.recurring_date_indefinite)
+                } else {
+                    selectedLocalDate.toLocalizedReadableDate()
+                }
 
             Surface(
                 shape = RoundedCornerShape(12.dp),
@@ -1166,11 +1314,12 @@ fun RecurringDatePickerSheet(
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = if (isEndDate && isIndefiniteChecked) "Süresiz" else DateFormatter.formatReadableDate(selectedLocalDate),
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        ),
+                        text = dateDisplayString,
+                        style =
+                            MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                            ),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
@@ -1178,45 +1327,47 @@ fun RecurringDatePickerSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Takvim
             if (!isIndefiniteChecked) {
                 DatePicker(
                     state = datePickerState,
                     showModeToggle = false,
                     title = null,
                     headline = null,
-                    colors = DatePickerDefaults.colors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        selectedDayContainerColor = FeniqoSageGreen,
-                        todayDateBorderColor = FeniqoSageGreen,
-                        selectedDayContentColor = Color.White,
-                    ),
+                    colors =
+                        DatePickerDefaults.colors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            selectedDayContainerColor = FeniqoSageGreen,
+                            todayDateBorderColor = FeniqoSageGreen,
+                            selectedDayContentColor = Color.White,
+                        ),
                 )
             }
 
-            // Bitiş tarihi için "Süresiz" Checkbox
             if (isEndDate) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { isIndefiniteChecked = !isIndefiniteChecked },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { isIndefiniteChecked = !isIndefiniteChecked },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Checkbox(
                         checked = isIndefiniteChecked,
                         onCheckedChange = { isIndefiniteChecked = it },
-                        colors = CheckboxDefaults.colors(
-                            checkedColor = FeniqoSageGreen,
-                        ),
+                        colors =
+                            CheckboxDefaults.colors(
+                                checkedColor = FeniqoSageGreen,
+                            ),
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Süresiz",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                        ),
+                        text = stringResource(Res.string.recurring_date_indefinite),
+                        style =
+                            MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                            ),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
@@ -1224,7 +1375,6 @@ fun RecurringDatePickerSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Tarihi seç Butonu
             Button(
                 onClick = {
                     if (isEndDate && isIndefiniteChecked) {
@@ -1233,42 +1383,46 @@ fun RecurringDatePickerSheet(
                         onDateSelected(selectedLocalDate)
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = FeniqoSageGreen,
-                    contentColor = Color.White,
-                ),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = FeniqoSageGreen,
+                        contentColor = Color.White,
+                    ),
             ) {
                 Text(
-                    text = "Tarihi seç",
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                    ),
+                    text = stringResource(Res.string.recurring_action_select_date),
+                    style =
+                        MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                        ),
                 )
             }
 
-            // Bitiş tarihi kaldırma ikincil butonu
             if (isEndDate && initialDate != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(
                     onClick = { onDateSelected(null) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
                     shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Text(
-                        text = "Bitiş tarihini kaldır",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        ),
+                        text = stringResource(Res.string.recurring_action_remove_end_date),
+                        style =
+                            MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
                     )
                 }
             }
@@ -1293,15 +1447,17 @@ fun RecurringSuccessNotification(
         border = BorderStroke(1.dp, Color(0xFFBBF7D0)),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                modifier = Modifier
-                    .size(26.dp)
-                    .background(Color(0xFF16A34A), CircleShape),
+                modifier =
+                    Modifier
+                        .size(26.dp)
+                        .background(Color(0xFF16A34A), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -1316,10 +1472,11 @@ fun RecurringSuccessNotification(
 
             Text(
                 text = message,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                ),
+                style =
+                    MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    ),
                 color = Color(0xFF166534),
                 modifier = Modifier.weight(1f),
             )
@@ -1330,7 +1487,7 @@ fun RecurringSuccessNotification(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Close,
-                    contentDescription = "Kapat",
+                    contentDescription = stringResource(Res.string.recurring_action_close),
                     tint = Color(0xFF166534),
                     modifier = Modifier.size(16.dp),
                 )
@@ -1338,4 +1495,3 @@ fun RecurringSuccessNotification(
         }
     }
 }
-

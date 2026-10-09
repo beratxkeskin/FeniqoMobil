@@ -29,20 +29,16 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -54,11 +50,20 @@ import com.feniqo.mobile.presentation.component.RecurringOverviewGraphiteCard
 import com.feniqo.mobile.presentation.component.RecurringTransactionCard
 import com.feniqo.mobile.presentation.recurring.RecurringTransactionsUiState
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
-import com.feniqo.mobile.presentation.theme.FeniqoSageGreenContainer
-import com.feniqo.mobile.presentation.theme.FeniqoSpacing
-import com.feniqo.mobile.presentation.theme.FeniqoTextPrimary
-import com.feniqo.mobile.presentation.theme.FeniqoTextSecondary
-import com.feniqo.mobile.presentation.theme.FeniqoWarmStoneBackground
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.recurring_action_new_rule
+import feniqomobil.sharedui.generated.resources.recurring_action_retry
+import feniqomobil.sharedui.generated.resources.recurring_disclaimer_no_bank_pull
+import feniqomobil.sharedui.generated.resources.recurring_empty_desc
+import feniqomobil.sharedui.generated.resources.recurring_empty_title
+import feniqomobil.sharedui.generated.resources.recurring_error_desc
+import feniqomobil.sharedui.generated.resources.recurring_error_title
+import feniqomobil.sharedui.generated.resources.recurring_screen_title
+import feniqomobil.sharedui.generated.resources.recurring_section_active_rules
+import feniqomobil.sharedui.generated.resources.recurring_section_paused_rules
+import feniqomobil.sharedui.generated.resources.recurring_top_bar_back
+import feniqomobil.sharedui.generated.resources.recurring_top_bar_back_desc
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Tekrarlayan işlemler (abonelikler ve düzenli ödemeler) liste ekranının onaylı tasarım (Görsel 01, 10, 12) Compose sunumudur.
@@ -77,15 +82,17 @@ fun RecurringTransactionsScreen(
         containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
         ) {
             // 1. Üst Gezinme Barı: "< Daha Fazla", Merkezde "feniqo" Logosu
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
@@ -96,17 +103,18 @@ fun RecurringTransactionsScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = "Geri Dön",
+                            contentDescription = stringResource(Res.string.recurring_top_bar_back_desc),
                             tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(18.dp),
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Daha Fazla",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                            ),
+                            text = stringResource(Res.string.recurring_top_bar_back),
+                            style =
+                                MaterialTheme.typography.bodyMedium.copy(
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                ),
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
@@ -114,11 +122,12 @@ fun RecurringTransactionsScreen(
 
                 Text(
                     text = "feniqo",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = (-0.5).sp,
-                    ),
+                    style =
+                        MaterialTheme.typography.titleLarge.copy(
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.5).sp,
+                        ),
                     color = FeniqoSageGreen,
                 )
 
@@ -154,24 +163,26 @@ fun RecurringTransactionsScreen(
 
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = 20.dp,
-                            end = 20.dp,
-                            top = 8.dp,
-                            bottom = 90.dp,
-                        ),
+                        contentPadding =
+                            PaddingValues(
+                                start = 20.dp,
+                                end = 20.dp,
+                                top = 8.dp,
+                                bottom = 90.dp,
+                            ),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         // Başlık ve Çalışma Alanı
                         item("header_section") {
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Text(
-                                    text = "Tekrarlayan\nişlemler",
-                                    style = MaterialTheme.typography.headlineMedium.copy(
-                                        fontSize = 28.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        lineHeight = 34.sp,
-                                    ),
+                                    text = stringResource(Res.string.recurring_screen_title),
+                                    style =
+                                        MaterialTheme.typography.headlineMedium.copy(
+                                            fontSize = 28.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            lineHeight = 34.sp,
+                                        ),
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
 
@@ -192,11 +203,12 @@ fun RecurringTransactionsScreen(
                         if (activeItems.isNotEmpty()) {
                             item("active_header") {
                                 Text(
-                                    text = "Aktif kurallar",
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontSize = 17.sp,
-                                        fontWeight = FontWeight.Bold,
-                                    ),
+                                    text = stringResource(Res.string.recurring_section_active_rules),
+                                    style =
+                                        MaterialTheme.typography.titleMedium.copy(
+                                            fontSize = 17.sp,
+                                            fontWeight = FontWeight.Bold,
+                                        ),
                                     color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.padding(top = 4.dp),
                                 )
@@ -217,11 +229,12 @@ fun RecurringTransactionsScreen(
                         if (pausedItems.isNotEmpty()) {
                             item("paused_header") {
                                 Text(
-                                    text = "Duraklatılan",
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontSize = 17.sp,
-                                        fontWeight = FontWeight.Bold,
-                                    ),
+                                    text = stringResource(Res.string.recurring_section_paused_rules),
+                                    style =
+                                        MaterialTheme.typography.titleMedium.copy(
+                                            fontSize = 17.sp,
+                                            fontWeight = FontWeight.Bold,
+                                        ),
                                     color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.padding(top = 8.dp),
                                 )
@@ -241,28 +254,32 @@ fun RecurringTransactionsScreen(
                         // Alt Aksiyon Butonu ve Bilgilendirme
                         item("footer_actions") {
                             Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 12.dp),
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 12.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 Button(
                                     onClick = onAddRecurringTransaction,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(52.dp),
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .height(52.dp),
                                     shape = RoundedCornerShape(14.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = FeniqoSageGreen,
-                                        contentColor = Color.White,
-                                    ),
+                                    colors =
+                                        ButtonDefaults.buttonColors(
+                                            containerColor = FeniqoSageGreen,
+                                            contentColor = Color.White,
+                                        ),
                                 ) {
                                     Text(
-                                        text = "+ Yeni kural",
-                                        style = MaterialTheme.typography.bodyLarge.copy(
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Bold,
-                                        ),
+                                        text = stringResource(Res.string.recurring_action_new_rule),
+                                        style =
+                                            MaterialTheme.typography.bodyLarge.copy(
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.Bold,
+                                            ),
                                     )
                                 }
 
@@ -280,7 +297,7 @@ fun RecurringTransactionsScreen(
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = "Banka hesabından para çekilmez.",
+                                        text = stringResource(Res.string.recurring_disclaimer_no_bank_pull),
                                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -304,9 +321,10 @@ private fun RecurringListEmptyState(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier
-            .padding(horizontal = 24.dp)
-            .verticalScroll(rememberScrollState()),
+        modifier =
+            modifier
+                .padding(horizontal = 24.dp)
+                .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(modifier = Modifier.height(12.dp))
@@ -314,12 +332,13 @@ private fun RecurringListEmptyState(
         // Başlık ve Çalışma Alanı
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = "Tekrarlayan\nişlemler",
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    lineHeight = 34.sp,
-                ),
+                text = stringResource(Res.string.recurring_screen_title),
+                style =
+                    MaterialTheme.typography.headlineMedium.copy(
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = 34.sp,
+                    ),
                 color = MaterialTheme.colorScheme.onSurface,
             )
 
@@ -335,9 +354,10 @@ private fun RecurringListEmptyState(
 
         // Yuvarlak İllüstrasyon Kutusu
         Box(
-            modifier = Modifier
-                .size(110.dp)
-                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+            modifier =
+                Modifier
+                    .size(110.dp)
+                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -351,22 +371,24 @@ private fun RecurringListEmptyState(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Henüz bir kuralın yok",
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-            ),
+            text = stringResource(Res.string.recurring_empty_title),
+            style =
+                MaterialTheme.typography.titleLarge.copy(
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                ),
             color = MaterialTheme.colorScheme.onSurface,
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Düzenli gelir ve giderlerin için\nilk tekrar kuralını oluştur.",
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
-            ),
+            text = stringResource(Res.string.recurring_empty_desc),
+            style =
+                MaterialTheme.typography.bodyMedium.copy(
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                ),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
@@ -375,21 +397,24 @@ private fun RecurringListEmptyState(
 
         Button(
             onClick = onAddClick,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
             shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = FeniqoSageGreen,
-                contentColor = Color.White,
-            ),
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = FeniqoSageGreen,
+                    contentColor = Color.White,
+                ),
         ) {
             Text(
-                text = "+ Yeni kural",
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
+                text = stringResource(Res.string.recurring_action_new_rule),
+                style =
+                    MaterialTheme.typography.bodyLarge.copy(
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
             )
         }
 
@@ -407,7 +432,7 @@ private fun RecurringListEmptyState(
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
-                text = "Banka hesabından para çekilmez.",
+                text = stringResource(Res.string.recurring_disclaimer_no_bank_pull),
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -437,9 +462,10 @@ private fun RecurringListErrorState(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
@@ -448,9 +474,10 @@ private fun RecurringListErrorState(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .background(MaterialTheme.colorScheme.errorContainer, CircleShape),
+                        modifier =
+                            Modifier
+                                .size(36.dp)
+                                .background(MaterialTheme.colorScheme.errorContainer, CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
@@ -465,15 +492,16 @@ private fun RecurringListErrorState(
 
                     Column {
                         Text(
-                            text = "Liste yüklenemedi.",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold,
-                            ),
+                            text = stringResource(Res.string.recurring_error_title),
+                            style =
+                                MaterialTheme.typography.bodyMedium.copy(
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                ),
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            text = "Lütfen daha sonra tekrar deneyin.",
+                            text = stringResource(Res.string.recurring_error_desc),
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -486,17 +514,19 @@ private fun RecurringListErrorState(
                     onClick = onRetry,
                     shape = RoundedCornerShape(10.dp),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.onSurface,
-                    ),
+                    colors =
+                        ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                        ),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                 ) {
                     Text(
-                        text = "Tekrar dene",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        ),
+                        text = stringResource(Res.string.recurring_action_retry),
+                        style =
+                            MaterialTheme.typography.labelMedium.copy(
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                            ),
                     )
                 }
             }
@@ -512,51 +542,58 @@ private fun RecurringListLoadingState(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+        modifier =
+            modifier
+                .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         repeat(4) {
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(84.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(84.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+                        modifier =
+                            Modifier
+                                .size(44.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
                     )
                     Spacer(modifier = Modifier.width(14.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Box(
-                            modifier = Modifier
-                                .width(120.dp)
-                                .height(14.dp)
-                                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp)),
+                            modifier =
+                                Modifier
+                                    .width(120.dp)
+                                    .height(14.dp)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp)),
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Box(
-                            modifier = Modifier
-                                .width(80.dp)
-                                .height(12.dp)
-                                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp)),
+                            modifier =
+                                Modifier
+                                    .width(80.dp)
+                                    .height(12.dp)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp)),
                         )
                     }
                     Box(
-                        modifier = Modifier
-                            .width(60.dp)
-                            .height(16.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp)),
+                        modifier =
+                            Modifier
+                                .width(60.dp)
+                                .height(16.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp)),
                     )
                 }
             }

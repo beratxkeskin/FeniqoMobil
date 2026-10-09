@@ -118,7 +118,7 @@ class RecurringTransactionsViewModelTest {
         assertFalse(state.isLoading)
         assertEquals(1, state.items.size)
         assertTrue(state.items[0].isCategoryMissing)
-        assertEquals("Bilinmeyen Kategori", state.items[0].categoryName)
+        assertNull(state.items[0].categoryName)
         assertNull(state.items[0].categoryColorHex)
     }
 

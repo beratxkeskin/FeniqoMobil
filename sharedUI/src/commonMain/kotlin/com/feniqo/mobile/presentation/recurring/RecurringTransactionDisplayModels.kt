@@ -14,8 +14,6 @@ import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.UpdateRecurringTransactionCommand
 import com.feniqo.mobile.domain.validation.RecurrenceScheduleCalculator
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
-import com.feniqo.mobile.presentation.util.DateFormatter
-import com.feniqo.mobile.presentation.util.MoneyFormatter
 
 /**
  * Tekrarlayan işlem mutasyon durum modelidir.
@@ -65,47 +63,25 @@ sealed interface RecurringTransactionUiEvent {
 data class RecurringTransactionDisplayModel(
     val id: EntityId,
     val categoryId: EntityId,
-    val categoryName: String,
+    val categoryName: String?,
     val categoryColorHex: String?,
     val categoryIconKey: String?,
     val isCategoryMissing: Boolean,
     val amount: Money,
-    val formattedAmount: String,
     val currency: Currency,
     val type: TransactionType,
     val frequency: RecurrenceFrequency,
     val interval: Int,
-    val formattedFrequency: String,
     val startDate: LocalDate,
-    val formattedStartDate: String,
     val endDate: LocalDate?,
-    val formattedEndDate: String?,
     val lastGeneratedDate: LocalDate?,
-    val formattedLastGeneratedDate: String?,
     val isNeverGenerated: Boolean,
     val nextOccurrenceDate: LocalDate?,
-    val formattedNextOccurrenceDate: String?,
     val isActive: Boolean,
     val isPaused: Boolean,
     val description: String?,
     val paymentMethod: PaymentMethod,
-    val displayTitle: String = description?.trim()?.takeIf { it.isNotBlank() } ?: categoryName,
-) {
-    val displayFormattedAmount: String
-        get() {
-            val sign = if (type == TransactionType.EXPENSE) "−" else "+"
-            val sym = when (amount.currency) {
-                Currency.TRY -> "₺"
-                Currency.USD -> "$"
-                Currency.EUR -> "€"
-                Currency.GBP -> "£"
-            }
-            val raw = MoneyFormatter.format(amount)
-            val numberPart = raw.replace("₺", "").replace("$", "").replace("€", "").replace("£", "").trim()
-            return "$sign$sym$numberPart"
-        }
-}
-
+)
 
 /**
  * Domain RecurringTransaction listesini deterministik sıralı presentation modellerine dönüştüren saf mapper.
@@ -133,21 +109,10 @@ object RecurringTransactionDisplayModelMapper {
         item: RecurringTransaction,
         category: Category?,
     ): RecurringTransactionDisplayModel {
-        val categoryName = category?.name ?: "Bilinmeyen Kategori"
+        val categoryName = category?.name
         val categoryColorHex = category?.color?.hex
         val categoryIconKey = category?.icon?.key
         val isCategoryMissing = category == null
-
-        val formattedAmount = MoneyFormatter.format(
-            money = item.amount,
-            includeSign = true,
-            type = item.type,
-        )
-
-        val formattedFrequency = formatRecurrenceSummary(
-            frequency = item.rule.frequency,
-            interval = item.rule.interval,
-        )
 
         val nextOccurrenceDate = RecurrenceScheduleCalculator.nextOccurrenceAfter(
             rule = item.rule,
@@ -162,48 +127,19 @@ object RecurringTransactionDisplayModelMapper {
             categoryIconKey = categoryIconKey,
             isCategoryMissing = isCategoryMissing,
             amount = item.amount,
-            formattedAmount = formattedAmount,
             currency = item.amount.currency,
             type = item.type,
             frequency = item.rule.frequency,
             interval = item.rule.interval,
-            formattedFrequency = formattedFrequency,
             startDate = item.rule.startDate,
-            formattedStartDate = DateFormatter.formatReadableDate(item.rule.startDate),
             endDate = item.rule.endDate,
-            formattedEndDate = item.rule.endDate?.let { DateFormatter.formatReadableDate(it) },
             lastGeneratedDate = item.lastGeneratedDate,
-            formattedLastGeneratedDate = item.lastGeneratedDate?.let { DateFormatter.formatReadableDate(it) },
             isNeverGenerated = item.lastGeneratedDate == null,
             nextOccurrenceDate = nextOccurrenceDate,
-            formattedNextOccurrenceDate = nextOccurrenceDate?.let { DateFormatter.formatReadableDate(it) },
             isActive = item.isActive,
             isPaused = !item.isActive,
             description = item.description,
             paymentMethod = item.paymentMethod,
         )
     }
-
-    fun formatRecurrenceSummary(frequency: RecurrenceFrequency, interval: Int): String = when (frequency) {
-        RecurrenceFrequency.DAILY -> if (interval == 1) "Her gün" else "Her $interval günde bir"
-        RecurrenceFrequency.WEEKLY -> if (interval == 1) "Her hafta" else "Her $interval haftada bir"
-        RecurrenceFrequency.MONTHLY -> if (interval == 1) "Her ay" else "Her $interval ayda bir"
-        RecurrenceFrequency.YEARLY -> if (interval == 1) "Her yıl" else "Her $interval yılda bir"
-    }
-}
-
-/**
- * Onaylı tasarım diline göre tutarı işaret ve sembolle biçimlendirir (−₺499,00, +₺45.000,00).
- */
-fun formatRecurringDisplayAmount(money: Money, type: TransactionType): String {
-    val sign = if (type == TransactionType.EXPENSE) "−" else "+"
-    val sym = when (money.currency) {
-        Currency.TRY -> "₺"
-        Currency.USD -> "$"
-        Currency.EUR -> "€"
-        Currency.GBP -> "£"
-    }
-    val raw = MoneyFormatter.format(money)
-    val numberPart = raw.replace("₺", "").replace("$", "").replace("€", "").replace("£", "").trim()
-    return "$sign$sym$numberPart"
 }

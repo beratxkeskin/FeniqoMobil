@@ -250,7 +250,7 @@ class RecurringTransactionFormInputTest {
             endDate = LocalDate(2027, 5, 1),
         )
 
-        val input = RecurringTransactionFormInput.fromDraft(originalDraft)
+        val input = RecurringTransactionFormInput.fromDraft(originalDraft, decimalSeparator = ',')
         assertEquals("3456,7", input.amountInput)
         assertEquals(Currency.TRY, input.currency)
         assertEquals(TransactionType.EXPENSE, input.type)
@@ -267,6 +267,30 @@ class RecurringTransactionFormInputTest {
         val roundTripDraft = reDraftResult.draft
 
         assertEquals(originalDraft, roundTripDraft)
+    }
+
+    @Test
+    fun roundTrip_fromDraftToInputAndBackToDraft_dotSeparator_preservesAllValues() {
+        val originalDraft = RecurringTransactionFormDraft(
+            recurringTransactionId = EntityId("rec-roundtrip-dot"),
+            amount = Money(345670L, Currency.USD),
+            type = TransactionType.EXPENSE,
+            categoryId = EntityId("cat-exp-99"),
+            description = "Monthly SaaS",
+            paymentMethod = PaymentMethod.CREDIT_CARD,
+            frequency = RecurrenceFrequency.MONTHLY,
+            interval = 1,
+            startDate = LocalDate(2026, 5, 1),
+            endDate = null,
+        )
+
+        val input = RecurringTransactionFormInput.fromDraft(originalDraft, decimalSeparator = '.')
+        assertEquals("3456.7", input.amountInput)
+        assertEquals(Currency.USD, input.currency)
+
+        val reDraftResult = input.toDraft()
+        assertTrue(reDraftResult is RecurringTransactionFormNormalizationResult.Valid)
+        assertEquals(originalDraft, reDraftResult.draft)
     }
 
     private fun sampleCategory(id: String, name: String, type: TransactionType) = Category(

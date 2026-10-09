@@ -132,14 +132,22 @@ class RecurringTransactionDisplayModelMapperTest {
         val mappedY1 = RecurringTransactionDisplayModelMapper.mapItem(yearlySingle, category)
         val mappedY2 = RecurringTransactionDisplayModelMapper.mapItem(yearlyMultiple, category)
 
-        assertEquals("Her ay", mappedM1.formattedFrequency)
-        assertEquals("Her 3 ayda bir", mappedM3.formattedFrequency)
-        assertEquals("Her gün", mappedD1.formattedFrequency)
-        assertEquals("Her 5 günde bir", mappedD5.formattedFrequency)
-        assertEquals("Her hafta", mappedW1.formattedFrequency)
-        assertEquals("Her 2 haftada bir", mappedW2.formattedFrequency)
-        assertEquals("Her yıl", mappedY1.formattedFrequency)
-        assertEquals("Her 2 yılda bir", mappedY2.formattedFrequency)
+        assertEquals(RecurrenceFrequency.MONTHLY, mappedM1.frequency)
+        assertEquals(1, mappedM1.interval)
+        assertEquals(RecurrenceFrequency.MONTHLY, mappedM3.frequency)
+        assertEquals(3, mappedM3.interval)
+        assertEquals(RecurrenceFrequency.DAILY, mappedD1.frequency)
+        assertEquals(1, mappedD1.interval)
+        assertEquals(RecurrenceFrequency.DAILY, mappedD5.frequency)
+        assertEquals(5, mappedD5.interval)
+        assertEquals(RecurrenceFrequency.WEEKLY, mappedW1.frequency)
+        assertEquals(1, mappedW1.interval)
+        assertEquals(RecurrenceFrequency.WEEKLY, mappedW2.frequency)
+        assertEquals(2, mappedW2.interval)
+        assertEquals(RecurrenceFrequency.YEARLY, mappedY1.frequency)
+        assertEquals(1, mappedY1.interval)
+        assertEquals(RecurrenceFrequency.YEARLY, mappedY2.frequency)
+        assertEquals(2, mappedY2.interval)
     }
 
     @Test
@@ -161,14 +169,10 @@ class RecurringTransactionDisplayModelMapperTest {
         val mappedWithoutEnd = RecurringTransactionDisplayModelMapper.mapItem(withoutEndDate, category)
 
         assertEquals(LocalDate(2026, 1, 1), mappedWithEnd.startDate)
-        assertEquals("1 Ocak 2026", mappedWithEnd.formattedStartDate)
         assertEquals(LocalDate(2026, 12, 31), mappedWithEnd.endDate)
-        assertEquals("31 Aralık 2026", mappedWithEnd.formattedEndDate)
 
         assertEquals(LocalDate(2026, 1, 1), mappedWithoutEnd.startDate)
-        assertEquals("1 Ocak 2026", mappedWithoutEnd.formattedStartDate)
         assertNull(mappedWithoutEnd.endDate)
-        assertNull(mappedWithoutEnd.formattedEndDate)
     }
 
     @Test
@@ -191,11 +195,9 @@ class RecurringTransactionDisplayModelMapperTest {
 
         assertTrue(mappedNever.isNeverGenerated)
         assertNull(mappedNever.lastGeneratedDate)
-        assertNull(mappedNever.formattedLastGeneratedDate)
 
         assertFalse(mappedGen.isNeverGenerated)
         assertEquals(LocalDate(2026, 8, 1), mappedGen.lastGeneratedDate)
-        assertEquals("1 Ağustos 2026", mappedGen.formattedLastGeneratedDate)
     }
 
     @Test
@@ -213,7 +215,7 @@ class RecurringTransactionDisplayModelMapperTest {
         assertEquals(1, result.size)
         val item = result.first()
         assertTrue(item.isCategoryMissing)
-        assertEquals("Bilinmeyen Kategori", item.categoryName)
+        assertNull(item.categoryName)
         assertNull(item.categoryColorHex)
         assertNull(item.categoryIconKey)
     }
@@ -239,10 +241,12 @@ class RecurringTransactionDisplayModelMapperTest {
         val mappedEur = RecurringTransactionDisplayModelMapper.mapItem(eurRecurring, category)
 
         assertEquals(Currency.USD, mappedUsd.currency)
-        assertEquals("-15,00 $", mappedUsd.formattedAmount)
+        assertEquals(Money(1500L, Currency.USD), mappedUsd.amount)
+        assertEquals(TransactionType.EXPENSE, mappedUsd.type)
 
         assertEquals(Currency.EUR, mappedEur.currency)
-        assertEquals("+25,50 €", mappedEur.formattedAmount)
+        assertEquals(Money(2550L, Currency.EUR), mappedEur.amount)
+        assertEquals(TransactionType.INCOME, mappedEur.type)
     }
 
     @Test

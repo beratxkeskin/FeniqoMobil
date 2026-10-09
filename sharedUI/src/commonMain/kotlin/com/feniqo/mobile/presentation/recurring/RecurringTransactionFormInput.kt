@@ -10,7 +10,7 @@ import com.feniqo.mobile.domain.model.RecurrenceFrequency
 import com.feniqo.mobile.domain.model.Transaction
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.validation.MoneyAmountParser
-import com.feniqo.mobile.presentation.util.MoneyFormatter
+import com.feniqo.mobile.presentation.common.formatMinorUnitsToInputText
 
 /**
  * Tekrarlayan işlem formu alan bazlı doğrulama hataları.
@@ -181,10 +181,18 @@ data class RecurringTransactionFormInput(
         /**
          * Tip güvenli [RecurringTransactionFormDraft] taslağından form girdi modelini tohumlar (seed eder).
          */
-        fun fromDraft(draft: RecurringTransactionFormDraft): RecurringTransactionFormInput =
+        fun fromDraft(
+            draft: RecurringTransactionFormDraft,
+            decimalSeparator: Char,
+        ): RecurringTransactionFormInput =
             RecurringTransactionFormInput(
                 recurringTransactionId = draft.recurringTransactionId,
-                amountInput = MoneyFormatter.formatMinorUnitsToInputText(draft.amount.amountMinor, draft.amount.currency),
+                amountInput =
+                    formatMinorUnitsToInputText(
+                        amountMinor = draft.amount.amountMinor,
+                        currency = draft.amount.currency,
+                        decimalSeparator = decimalSeparator,
+                    ),
                 currency = draft.amount.currency,
                 type = draft.type,
                 categoryId = draft.categoryId,

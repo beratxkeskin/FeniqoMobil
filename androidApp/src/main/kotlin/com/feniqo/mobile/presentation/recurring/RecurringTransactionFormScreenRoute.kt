@@ -15,23 +15,32 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feniqo.mobile.domain.model.Category
+import com.feniqo.mobile.domain.model.CategoryColor
+import com.feniqo.mobile.domain.model.CategoryIcon
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.SetRecurringTransactionActiveCommand
 import com.feniqo.mobile.domain.model.TransactionType
-import com.feniqo.mobile.domain.model.CategoryColor
-import com.feniqo.mobile.domain.model.CategoryIcon
 import com.feniqo.mobile.presentation.category.CategoryDisplayModel
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.common.currentLocaleDecimalSeparator
 import com.feniqo.mobile.presentation.common.rememberGuardedFormExit
 import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.LoadingContent
 import com.feniqo.mobile.presentation.component.RecurringTransactionDeleteDialog
+import com.feniqo.mobile.presentation.recurring.recurringActionDismissText
+import com.feniqo.mobile.presentation.recurring.recurringActionSelectText
+import com.feniqo.mobile.presentation.recurring.recurringRouteBackActionText
+import com.feniqo.mobile.presentation.recurring.recurringRouteErrorTitleText
+import com.feniqo.mobile.presentation.recurring.recurringRouteLoadingText
+import com.feniqo.mobile.presentation.recurring.recurringRouteNotFoundDescText
+import com.feniqo.mobile.presentation.recurring.recurringRouteNotFoundTitleText
 import com.feniqo.mobile.presentation.screen.RecurringTransactionFormScreen
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
@@ -194,6 +203,8 @@ fun RecurringTransactionFormScreenRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val editLoadState by viewModel.editLoadState.collectAsStateWithLifecycle()
+    val currentDecimalSeparator = currentLocaleDecimalSeparator()
+    val latestDecimalSeparator by rememberUpdatedState(currentDecimalSeparator)
 
     var input by remember {
         mutableStateOf(
@@ -228,7 +239,11 @@ fun RecurringTransactionFormScreenRoute(
 
     LaunchedEffect(effectiveEditLoadState) {
         if (effectiveEditLoadState is RecurringTransactionEditLoadState.Ready && !isEditSeedApplied) {
-            val seededInput = RecurringTransactionFormInput.fromDraft(effectiveEditLoadState.draft)
+            val seededInput =
+                RecurringTransactionFormInput.fromDraft(
+                    draft = effectiveEditLoadState.draft,
+                    decimalSeparator = latestDecimalSeparator,
+                )
             input = seededInput
             initialInput = seededInput
             isActive = effectiveEditLoadState.isActive
@@ -260,7 +275,7 @@ fun RecurringTransactionFormScreenRoute(
                 color = MaterialTheme.colorScheme.background,
             ) {
                 LoadingContent(
-                    message = "Tekrarlayan işlem yükleniyor...",
+                    message = recurringRouteLoadingText(),
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -271,11 +286,11 @@ fun RecurringTransactionFormScreenRoute(
                 color = MaterialTheme.colorScheme.background,
             ) {
                 ErrorState(
-                    title = "İşlem Bulunamadı",
-                    description = "Düzenlemek istediğiniz tekrarlayan işlem bulunamadı veya silinmiş.",
+                    title = recurringRouteNotFoundTitleText(),
+                    description = recurringRouteNotFoundDescText(),
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
-                    actionLabel = "Geri dön",
+                    actionLabel = recurringRouteBackActionText(),
                 )
             }
         }
@@ -285,11 +300,11 @@ fun RecurringTransactionFormScreenRoute(
                 color = MaterialTheme.colorScheme.background,
             ) {
                 ErrorState(
-                    title = "İşlem Yüklenemedi",
+                    title = recurringRouteErrorTitleText(),
                     description = effectiveEditLoadState.message.toLocalizedText(),
                     onRetry = onNavigateBack,
                     modifier = Modifier.fillMaxSize(),
-                    actionLabel = "Geri dön",
+                    actionLabel = recurringRouteBackActionText(),
                 )
             }
         }
@@ -407,12 +422,12 @@ fun RecurringTransactionFormScreenRoute(
                             activeDatePicker = null
                         },
                     ) {
-                        Text("Seç")
+                        Text(recurringActionSelectText())
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { activeDatePicker = null }) {
-                        Text("İptal")
+                        Text(recurringActionDismissText())
                     }
                 },
             ) {
@@ -452,12 +467,12 @@ fun RecurringTransactionFormScreenRoute(
                             activeDatePicker = null
                         },
                     ) {
-                        Text("Seç")
+                        Text(recurringActionSelectText())
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { activeDatePicker = null }) {
-                        Text("İptal")
+                        Text(recurringActionDismissText())
                     }
                 },
             ) {
