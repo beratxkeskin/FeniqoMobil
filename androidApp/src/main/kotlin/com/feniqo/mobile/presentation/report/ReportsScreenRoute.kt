@@ -470,27 +470,35 @@ fun DebtSummaryReportRoute(
     modifier: Modifier = Modifier,
     viewModel: ReportsViewModel = hiltViewModel(),
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val maskAmounts = (uiState.contentState as? ReportsContentState.Success)?.maskAmounts ?: false
+    val selectedCurrency = (uiState.contentState as? ReportsContentState.Success)?.expense?.currency
+        ?: uiState.filterState.currency
+
     val debtSummary by viewModel.observeDebtSummary().collectAsStateWithLifecycle(initialValue = null)
 
     val deadlines = debtSummary?.upcomingDeadlines?.map { d ->
         DebtDeadlineUiItem(
             title = d.title,
-            amountFormatted = MoneyFormatter.format(d.amount),
-            dueDateFormatted = ReportSummaryFormatter.formatDateDisplay(d.dueDate),
+            amount = d.amount,
+            dueDate = d.dueDate,
             isReceivable = d.isReceivable,
             isOverdue = d.isOverdue,
+            maskAmounts = maskAmounts,
         )
     } ?: emptyList()
 
+    val totalDebt = debtSummary?.totalDebtRemaining ?: Money(0L, selectedCurrency)
+    val totalReceivable = debtSummary?.totalReceivableRemaining ?: Money(0L, selectedCurrency)
+    val netBalance = debtSummary?.netBalance ?: MoneyDelta(0L, selectedCurrency)
+
     DebtSummaryReportScreen(
-        totalDebtFormatted = MoneyFormatter.format(debtSummary?.totalDebtRemaining ?: Money(0, Currency.TRY)),
-        totalReceivableFormatted = MoneyFormatter.format(debtSummary?.totalReceivableRemaining ?: Money(0, Currency.TRY)),
-        netBalanceFormatted = MoneyFormatter.formatDelta(
-            debtSummary?.netBalance ?: MoneyDelta(0, Currency.TRY),
-            includeSign = true,
-        ),
-        isNetPositive = (debtSummary?.netBalance?.amountMinor ?: 0L) >= 0L,
+        totalDebt = totalDebt,
+        totalReceivable = totalReceivable,
+        netBalance = netBalance,
+        isNetPositive = netBalance.amountMinor >= 0L,
         deadlines = deadlines,
+        maskAmounts = maskAmounts,
         onBackClick = onNavigateBack,
         modifier = modifier,
     )
@@ -505,6 +513,11 @@ fun ForecastReportRoute(
     modifier: Modifier = Modifier,
     viewModel: ReportsViewModel = hiltViewModel(),
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val maskAmounts = (uiState.contentState as? ReportsContentState.Success)?.maskAmounts ?: false
+    val selectedCurrency = (uiState.contentState as? ReportsContentState.Success)?.expense?.currency
+        ?: uiState.filterState.currency
+
     val refDate = viewModel.getCurrentReferenceDate()
     val nextMonth = YearMonth.from(refDate.year, refDate.monthNumber).nextMonth()
     val forecastSummary by viewModel.observeForecastReport(lookaheadMonths = 6).collectAsStateWithLifecycle(initialValue = null)
@@ -513,52 +526,39 @@ fun ForecastReportRoute(
 
     val sources = forecastSummary?.contributingSources?.map { s ->
         ForecastSourceUiItem(
-            title = s.title,
-            amountFormatted = MoneyFormatter.format(s.amount),
-            percentageFormatted = "%${s.percentageBasisPoints / 100}",
-            ratio = s.percentageBasisPoints / 10000f,
+            type = s.type,
+            amount = s.amount,
+            percentageBasisPoints = s.percentageBasisPoints,
         )
-    } ?: listOf(
-        ForecastSourceUiItem(
-            title = "Sabit ve Düzenli Giderler",
-            amountFormatted = MoneyFormatter.format(forecastSummary?.fixedAndPlannedExpenses ?: Money(0, Currency.TRY)),
-            percentageFormatted = "%45",
-            ratio = 0.45f,
-        ),
-        ForecastSourceUiItem(
-            title = "Ortalama Değişken Harcama",
-            amountFormatted = MoneyFormatter.format(forecastSummary?.variableExpensesEstimate ?: Money(0, Currency.TRY)),
-            percentageFormatted = "%55",
-            ratio = 0.55f,
-        ),
-    )
+    } ?: emptyList()
+
+    val expectedDiff = forecastSummary?.expectedDifference ?: MoneyDelta(0L, selectedCurrency)
+    val expectedIncome = forecastSummary?.expectedIncome ?: Money(0L, selectedCurrency)
+    val fixedExpense = forecastSummary?.fixedAndPlannedExpenses ?: Money(0L, selectedCurrency)
+    val variableExpense = forecastSummary?.variableExpensesEstimate ?: Money(0L, selectedCurrency)
+    val dailyAvg = forecastSummary?.dailyVariableAverage ?: Money(0L, selectedCurrency)
+    val activeRecurringCount = forecastSummary?.activeRecurringCount ?: 0
+    val forecastMonth = forecastSummary?.forecastMonth ?: nextMonth
 
     if (showDetail) {
         ForecastDetailReportScreen(
-            forecastMonthLabel = "${ReportSummaryFormatter.monthName(nextMonth.monthNumber)} ${nextMonth.year}",
-            projectedNetFormatted = MoneyFormatter.formatDelta(
-                forecastSummary?.expectedDifference ?: MoneyDelta(0, Currency.TRY),
-                includeSign = true,
-            ),
-            isProjectedNetPositive = (forecastSummary?.expectedDifference?.amountMinor ?: 0L) >= 0L,
             projectionPoints = forecastSummary?.projectionPoints ?: emptyList(),
-            dailyAverageFormatted = MoneyFormatter.format(Money((forecastSummary?.variableExpensesEstimate?.amountMinor ?: 0L) / 30, Currency.TRY)),
-            activeRecurringCount = forecastSummary?.contributingSources?.size ?: 0,
+            dailyAverage = dailyAvg,
+            activeRecurringCount = activeRecurringCount,
+            maskAmounts = maskAmounts,
             onBackClick = { showDetail = false },
             modifier = modifier,
         )
     } else {
         ForecastOverviewReportScreen(
-            forecastMonthLabel = "${ReportSummaryFormatter.monthName(nextMonth.monthNumber)} ${nextMonth.year}",
-            projectedNetFormatted = MoneyFormatter.formatDelta(
-                forecastSummary?.expectedDifference ?: MoneyDelta(0, Currency.TRY),
-                includeSign = true,
-            ),
-            isProjectedNetPositive = (forecastSummary?.expectedDifference?.amountMinor ?: 0L) >= 0L,
-            projectedIncomeFormatted = MoneyFormatter.format(forecastSummary?.expectedIncome ?: Money(0, Currency.TRY)),
-            fixedExpenseFormatted = MoneyFormatter.format(forecastSummary?.fixedAndPlannedExpenses ?: Money(0, Currency.TRY)),
-            variableExpenseFormatted = MoneyFormatter.format(forecastSummary?.variableExpensesEstimate ?: Money(0, Currency.TRY)),
+            forecastMonth = forecastMonth,
+            projectedNet = expectedDiff,
+            isProjectedNetPositive = expectedDiff.amountMinor >= 0L,
+            projectedIncome = expectedIncome,
+            fixedExpense = fixedExpense,
+            variableExpense = variableExpense,
             sources = sources,
+            maskAmounts = maskAmounts,
             onViewDetailClick = { showDetail = true },
             onBackClick = onNavigateBack,
             modifier = modifier,
@@ -575,34 +575,66 @@ fun FinancialInsightsReportRoute(
     modifier: Modifier = Modifier,
     viewModel: ReportsViewModel = hiltViewModel(),
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val maskAmounts = (uiState.contentState as? ReportsContentState.Success)?.maskAmounts ?: false
+
     val insightItems by viewModel.observeFinancialInsights().collectAsStateWithLifecycle(initialValue = emptyList())
-    var selectedInsight by remember { mutableStateOf<FinancialInsightUiItem?>(null) }
+    val categories by viewModel.observeCategories().collectAsStateWithLifecycle(initialValue = emptyList())
+    val categoriesById = remember(categories) { categories.associateBy { it.id } }
+
+    var selectedInsightId by remember { mutableStateOf<String?>(null) }
 
     val uiItems = insightItems.map { item ->
+        val contributingUiTransactions = item.contributingTransactions.map { tx ->
+            val cat = categoriesById[tx.categoryId]
+            val catName = cat?.name ?: if (tx.categoryId == item.categoryId) item.categoryName else null
+            val isCatMissing = cat == null && (tx.categoryId != item.categoryId || item.isCategoryMissing)
+            ReportTransactionUiItem(
+                id = tx.id,
+                description = tx.description,
+                type = tx.type,
+                categoryId = tx.categoryId,
+                categoryName = catName,
+                isCategoryMissing = isCatMissing,
+                date = tx.transactionDate,
+                amount = tx.amount,
+                maskAmounts = maskAmounts,
+            )
+        }
+
         FinancialInsightUiItem(
             id = item.id,
-            title = item.title,
-            subtitle = item.subtitle,
-            amountFormatted = MoneyFormatter.format(item.currentPeriodAmount),
-            deltaFormatted = MoneyFormatter.formatDelta(item.delta, includeSign = true),
-            isPositive = item.delta.amountMinor >= 0,
+            type = item.type,
+            categoryId = item.categoryId,
+            categoryName = item.categoryName,
+            isCategoryMissing = item.isCategoryMissing,
+            changePercentageBasisPoints = item.changePercentageBasisPoints,
+            currentPeriodAmount = item.currentPeriodAmount,
+            previousPeriodAmount = item.previousPeriodAmount,
+            delta = item.delta,
+            isPositive = item.delta.amountMinor >= 0L,
             transactionCount = item.supportingTransactionCount,
-            explanation = item.explanationText,
+            contributingTransactions = contributingUiTransactions,
+            maskAmounts = maskAmounts,
         )
     }
 
+    val selectedInsight = uiItems.find { it.id == selectedInsightId }
+
     if (selectedInsight != null) {
         InsightDetailReportScreen(
-            insight = selectedInsight!!,
-            transactions = emptyList(),
+            insight = selectedInsight,
+            transactions = selectedInsight.contributingTransactions,
+            maskAmounts = maskAmounts,
             onViewTransactionsClick = {},
-            onBackClick = { selectedInsight = null },
+            onBackClick = { selectedInsightId = null },
             modifier = modifier,
         )
     } else {
         FinancialInsightsReportScreen(
             insights = uiItems,
-            onInsightClick = { selectedInsight = it },
+            maskAmounts = maskAmounts,
+            onInsightClick = { selectedInsightId = it.id },
             onBackClick = onNavigateBack,
             modifier = modifier,
         )

@@ -17,10 +17,10 @@ import com.feniqo.mobile.domain.model.DetailedReportInsight
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.FinancialInsightItem
 import com.feniqo.mobile.domain.model.FinancialRhythmSummary
-import kotlinx.datetime.DayOfWeek
 import com.feniqo.mobile.domain.model.ForecastProjectionPoint
 import com.feniqo.mobile.domain.model.ForecastReportSummary
 import com.feniqo.mobile.domain.model.ForecastSourceItem
+import com.feniqo.mobile.domain.model.ForecastSourceType
 import com.feniqo.mobile.domain.model.InsightType
 import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.MerchantSpendingSummary
@@ -53,6 +53,7 @@ import com.feniqo.mobile.domain.repository.TransactionRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.datetime.DayOfWeek
 
 class ObserveDetailedReportOverviewUseCase(
     private val transactionRepository: TransactionRepository,
@@ -667,12 +668,14 @@ class ObserveForecastReportUseCase(
 
             // Sabit ve planlı giderler (Abonelikler + Yinelenen giderler)
             val subExpensesMinor = currencySubs.sumOf { it.amount.amountMinor }
-            val recurExpensesMinor = currencyRecurs.filter { it.type == TransactionType.EXPENSE }
+            val recurExpensesMinor = currencyRecurs
+                .filter { it.type == TransactionType.EXPENSE }
                 .sumOf { it.amount.amountMinor }
             val fixedExpensesMinor = subExpensesMinor + recurExpensesMinor
 
             // Beklenen gelir (Yinelenen gelirler veya maaş ortalaması)
-            val recurIncomeMinor = currencyRecurs.filter { it.type == TransactionType.INCOME }
+            val recurIncomeMinor = currencyRecurs
+                .filter { it.type == TransactionType.INCOME }
                 .sumOf { it.amount.amountMinor }
             val salaryIncomeMinor = currencyTxs
                 .filter { it.type == TransactionType.INCOME }
@@ -680,13 +683,19 @@ class ObserveForecastReportUseCase(
                 .map { it.amount.amountMinor }
                 .average()
                 .toLong()
-            val expectedIncomeMinor = if (recurIncomeMinor > 0) recurIncomeMinor else salaryIncomeMinor.coerceAtLeast(0L)
+            val expectedIncomeMinor = if (recurIncomeMinor > 0) {
+                recurIncomeMinor
+            } else {
+                salaryIncomeMinor.coerceAtLeast(0L)
+            }
 
             // Değişken harcama ortalaması (son 3 ayın ortalama harcaması)
             val pastExpenses = currencyTxs.filter { it.type == TransactionType.EXPENSE }
             val variableAverageMinor = if (pastExpenses.isNotEmpty()) {
                 pastExpenses.sumOf { it.amount.amountMinor } / 3
-            } else 0L
+            } else {
+                0L
+            }
 
             val expectedDifferenceMinor = expectedIncomeMinor - (fixedExpensesMinor + variableAverageMinor)
             val expectedIncomeMoney = Money(expectedIncomeMinor, currency)
@@ -709,13 +718,57 @@ class ObserveForecastReportUseCase(
                 ym = ym.nextMonth()
             }
 
-            val totalAll = (expectedIncomeMinor + fixedExpensesMinor + variableAverageMinor).coerceAtLeast(1L)
-            val sources = listOf(
-                ForecastSourceItem("Maaş ve düzenli gelirler", expectedIncomeMoney, ((expectedIncomeMinor * 10_000) / totalAll).toInt()),
-                ForecastSourceItem("Abonelik ve faturalar", Money(subExpensesMinor, currency), ((subExpensesMinor * 10_000) / totalAll).toInt()),
-                ForecastSourceItem("Yinelenen işlemler", Money(recurExpensesMinor, currency), ((recurExpensesMinor * 10_000) / totalAll).toInt()),
-                ForecastSourceItem("Değişken harcama ortalaması", variableMoney, ((variableAverageMinor * 10_000) / totalAll).toInt()),
+            val totalAll = (
+                expectedIncomeMinor.coerceAtLeast(0L) +
+                    subExpensesMinor.coerceAtLeast(0L) +
+                    recurExpensesMinor.coerceAtLeast(0L) +
+                    variableAverageMinor.coerceAtLeast(0L)
             )
+            val sources = if (totalAll > 0L) {
+                buildList {
+                    if (expectedIncomeMinor > 0L) {
+                        add(
+                            ForecastSourceItem(
+                                type = ForecastSourceType.SALARY_AND_REGULAR_INCOME,
+                                amount = expectedIncomeMoney,
+                                percentageBasisPoints = ((expectedIncomeMinor * 10_000) / totalAll).toInt(),
+                            ),
+                        )
+                    }
+                    if (subExpensesMinor > 0L) {
+                        add(
+                            ForecastSourceItem(
+                                type = ForecastSourceType.SUBSCRIPTIONS_AND_BILLS,
+                                amount = Money(subExpensesMinor, currency),
+                                percentageBasisPoints = ((subExpensesMinor * 10_000) / totalAll).toInt(),
+                            ),
+                        )
+                    }
+                    if (recurExpensesMinor > 0L) {
+                        add(
+                            ForecastSourceItem(
+                                type = ForecastSourceType.RECURRING_TRANSACTIONS,
+                                amount = Money(recurExpensesMinor, currency),
+                                percentageBasisPoints = ((recurExpensesMinor * 10_000) / totalAll).toInt(),
+                            ),
+                        )
+                    }
+                    if (variableAverageMinor > 0L) {
+                        add(
+                            ForecastSourceItem(
+                                type = ForecastSourceType.VARIABLE_EXPENSES_AVERAGE,
+                                amount = variableMoney,
+                                percentageBasisPoints = ((variableAverageMinor * 10_000) / totalAll).toInt(),
+                            ),
+                        )
+                    }
+                }
+            } else {
+                emptyList()
+            }
+
+            val activeCount = currencySubs.size + currencyRecurs.size
+            val dailyVarAvg = Money(variableAverageMinor / 30, currency)
 
             ForecastReportSummary(
                 forecastMonth = nextMonth,
@@ -725,7 +778,8 @@ class ObserveForecastReportUseCase(
                 variableExpensesEstimate = variableMoney,
                 projectionPoints = points,
                 contributingSources = sources,
-                assumptionsText = "Tahminler, son aylarınızdaki işlem geçmişiniz ve kayıtlı tekrar eden ödemeleriniz kullanılarak oluşturulur. Döviz kurları için tahmin yapılmaz, mevcut kur verileri kullanılır.",
+                activeRecurringCount = activeCount,
+                dailyVariableAverage = dailyVarAvg,
             )
         }
     }
@@ -775,24 +829,22 @@ class ObserveFinancialInsightsUseCase(
             val prevInc = prevTxs.filter { it.type == TransactionType.INCOME }.sumOf { it.amount.amountMinor }
             val prevExp = prevTxs.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount.amountMinor }
 
-            val curSavings = if (curInc > 0) ((curInc - curExp) * 100) / curInc else 0
-            val prevSavings = if (prevInc > 0) ((prevInc - prevExp) * 100) / prevInc else 0
+            val curSavings = if (curInc > 0 && curInc > curExp) ((curInc - curExp) * 100) / curInc else 0
+            val prevSavings = if (prevInc > 0 && prevInc > prevExp) ((prevInc - prevExp) * 100) / prevInc else 0
             val savingsDiff = curSavings - prevSavings
 
-            if (savingsDiff >= 0) {
+            if (savingsDiff > 0 && curInc > curExp) {
                 insights.add(
                     FinancialInsightItem(
                         id = "savings_rate",
                         type = InsightType.SAVINGS_RATE_INCREASE,
-                        title = "Tasarruf oranın yükseldi",
-                        subtitle = "Geçen aya göre daha yüksek bir tasarruf oranı yakaladınız.",
+                        changePercentageBasisPoints = (savingsDiff * 100).toInt(),
                         currentPeriodAmount = Money(curInc - curExp, currency),
-                        previousPeriodAmount = Money(prevInc - prevExp, currency),
+                        previousPeriodAmount = Money(maxOf(0L, prevInc - prevExp), currency),
                         delta = MoneyDelta((curInc - curExp) - (prevInc - prevExp), currency),
                         supportingTransactionCount = currentTxs.size,
                         weeklyBreakdown = emptyList(),
                         contributingTransactions = currentTxs.take(5),
-                        explanationText = "Seçilen dönem ile önceki dönem aynı uzunluktadır. Gelirlerinizden kalan tasarruf miktarınız hesaplanmıştır.",
                     )
                 )
             }
@@ -805,41 +857,45 @@ class ObserveFinancialInsightsUseCase(
                 val prevList = prevExpByCat[catId] ?: emptyList()
                 val curTotal = curList.sumOf { it.amount.amountMinor }
                 val prevTotal = prevList.sumOf { it.amount.amountMinor }
-                val catName = categories.find { it.id == catId }?.name ?: "Kategori"
+                val category = categories.find { it.id == catId }
+                val catName = category?.name
 
                 if (prevTotal > 0 && curTotal < prevTotal) {
                     val diff = prevTotal - curTotal
-                    val pct = ((diff * 100) / prevTotal).toInt()
+                    val basisPoints = (((diff * 10_000) / prevTotal)).toInt()
                     insights.add(
                         FinancialInsightItem(
-                            id = "cat_dec_${catId?.value}",
+                            id = "cat_dec_${catId.value}",
                             type = InsightType.CATEGORY_DECREASE,
-                            title = "$catName harcamaları %$pct azaldı",
-                            subtitle = "$catName kategorisindeki harcamalarınız geçen aya göre %$pct daha düşük.",
+                            categoryId = catId,
+                            categoryName = catName,
+                            isCategoryMissing = catName == null,
+                            changePercentageBasisPoints = basisPoints,
                             currentPeriodAmount = Money(curTotal, currency),
                             previousPeriodAmount = Money(prevTotal, currency),
                             delta = MoneyDelta(-diff, currency),
                             supportingTransactionCount = curList.size,
                             weeklyBreakdown = emptyList(),
                             contributingTransactions = curList,
-                            explanationText = "Seçilen dönemdeki tamamlanmış $catName harcamaları dikkate alınır.",
                         )
                     )
                 } else if (prevTotal > 0 && curTotal > prevTotal) {
                     val diff = curTotal - prevTotal
+                    val basisPoints = (((diff * 10_000) / prevTotal)).toInt()
                     insights.add(
                         FinancialInsightItem(
-                            id = "cat_inc_${catId?.value}",
+                            id = "cat_inc_${catId.value}",
                             type = InsightType.CATEGORY_INCREASE,
-                            title = "$catName giderleri arttı",
-                            subtitle = "Geçen aya göre $catName harcamalarınız ${diff / 100} ${currency.name} daha yüksek.",
+                            categoryId = catId,
+                            categoryName = catName,
+                            isCategoryMissing = catName == null,
+                            changePercentageBasisPoints = basisPoints,
                             currentPeriodAmount = Money(curTotal, currency),
                             previousPeriodAmount = Money(prevTotal, currency),
                             delta = MoneyDelta(diff, currency),
                             supportingTransactionCount = curList.size,
                             weeklyBreakdown = emptyList(),
                             contributingTransactions = curList,
-                            explanationText = "Seçilen dönem ile önceki dönem karşılaştırılmıştır.",
                         )
                     )
                 }

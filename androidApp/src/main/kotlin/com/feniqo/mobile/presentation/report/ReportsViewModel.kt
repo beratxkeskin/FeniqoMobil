@@ -2,6 +2,7 @@ package com.feniqo.mobile.presentation.report
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.feniqo.mobile.domain.model.Category
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.DetailedReportInsight
 import com.feniqo.mobile.domain.model.EntityId
@@ -25,7 +26,9 @@ import com.feniqo.mobile.domain.usecase.ObserveReportAvailabilityUseCase
 import com.feniqo.mobile.domain.usecase.ObserveReportSyncStatusUseCase
 import com.feniqo.mobile.presentation.common.CurrentDateProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -35,7 +38,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -304,6 +306,8 @@ class ReportsViewModel @Inject constructor(
         val dateRange = dateRangeCalculator(filterUi.periodPreset, customRange, refDate)
         observeFinancialInsightsUseCase(com.feniqo.mobile.domain.model.ReportPeriod(dateRange.startDate, dateRange.endDate), currency, wsId)
     }
+
+    fun observeCategories(): Flow<List<Category>> = observeCategoriesForHistoryLookupUseCase()
 
     fun applyFilter(filter: ReportFilterUiState) {
         filterState.value = filter

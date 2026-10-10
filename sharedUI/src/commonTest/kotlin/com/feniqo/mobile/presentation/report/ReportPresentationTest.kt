@@ -8,6 +8,8 @@ import com.feniqo.mobile.domain.model.ReportDateRange
 import com.feniqo.mobile.domain.model.ReportPeriodPreset
 import com.feniqo.mobile.domain.model.ReportTypeFilter
 import com.feniqo.mobile.domain.model.TransactionType
+import com.feniqo.mobile.domain.model.ForecastSourceType
+import com.feniqo.mobile.domain.model.InsightType
 import com.feniqo.mobile.domain.model.MoneyDelta
 import com.feniqo.mobile.presentation.util.MoneyFormatter
 import kotlin.test.Test
@@ -346,5 +348,85 @@ class ReportPresentationTest {
         assertNull(missingCatItem.categoryName)
         assertEquals(TransactionType.INCOME, missingCatItem.type)
         assertNull(missingCatItem.description)
+    }
+
+    @Test
+    fun reportSlice4_typedModelsContract_preservesPureTypesWithoutFormattedStrings() {
+        val debtDeadline = DebtDeadlineUiItem(
+            title = "Ahmet Yılmaz",
+            amount = Money(1500_00L, Currency.TRY),
+            dueDate = LocalDate(2026, 10, 15),
+            isReceivable = false,
+            isOverdue = false,
+            maskAmounts = false,
+        )
+        assertEquals("Ahmet Yılmaz", debtDeadline.title)
+        assertEquals(1500_00L, debtDeadline.amount.amountMinor)
+        assertEquals(LocalDate(2026, 10, 15), debtDeadline.dueDate)
+        assertFalse(debtDeadline.isReceivable)
+        assertFalse(debtDeadline.isOverdue)
+        assertFalse(debtDeadline.maskAmounts)
+
+        val forecastSource = ForecastSourceUiItem(
+            type = ForecastSourceType.SALARY_AND_REGULAR_INCOME,
+            amount = Money(45_000_00L, Currency.TRY),
+            percentageBasisPoints = 6500,
+        )
+        assertEquals(ForecastSourceType.SALARY_AND_REGULAR_INCOME, forecastSource.type)
+        assertEquals(45_000_00L, forecastSource.amount.amountMinor)
+        assertEquals(6500, forecastSource.percentageBasisPoints)
+
+        val insightItem = FinancialInsightUiItem(
+            id = "insight-cat-market",
+            type = InsightType.CATEGORY_INCREASE,
+            categoryId = EntityId("cat-market"),
+            categoryName = "Market",
+            isCategoryMissing = false,
+            changePercentageBasisPoints = 2500,
+            currentPeriodAmount = Money(5_000_00L, Currency.TRY),
+            previousPeriodAmount = Money(4_000_00L, Currency.TRY),
+            delta = MoneyDelta(1_000_00L, Currency.TRY),
+            isPositive = false,
+            transactionCount = 12,
+            contributingTransactions = listOf(
+                ReportTransactionUiItem(
+                    id = EntityId("tx-101"),
+                    description = "Haftalık Market",
+                    type = TransactionType.EXPENSE,
+                    categoryId = EntityId("cat-market"),
+                    categoryName = "Market",
+                    isCategoryMissing = false,
+                    date = LocalDate(2026, 9, 20),
+                    amount = Money(1_000_00L, Currency.TRY),
+                    maskAmounts = false,
+                ),
+            ),
+            maskAmounts = false,
+        )
+        assertEquals("insight-cat-market", insightItem.id)
+        assertEquals(InsightType.CATEGORY_INCREASE, insightItem.type)
+        assertEquals("Market", insightItem.categoryName)
+        assertFalse(insightItem.isCategoryMissing)
+        assertEquals(2500, insightItem.changePercentageBasisPoints)
+        assertEquals(1, insightItem.contributingTransactions.size)
+        assertEquals("Haftalık Market", insightItem.contributingTransactions[0].description)
+
+        val missingCatInsight = FinancialInsightUiItem(
+            id = "insight-deleted",
+            type = InsightType.CATEGORY_DECREASE,
+            categoryId = EntityId("cat-old"),
+            categoryName = null,
+            isCategoryMissing = true,
+            changePercentageBasisPoints = -1500,
+            currentPeriodAmount = Money(1_000_00L, Currency.TRY),
+            previousPeriodAmount = Money(2_000_00L, Currency.TRY),
+            delta = MoneyDelta(-1_000_00L, Currency.TRY),
+            isPositive = true,
+            transactionCount = 3,
+            maskAmounts = false,
+        )
+        assertTrue(missingCatInsight.isCategoryMissing)
+        assertNull(missingCatInsight.categoryName)
+        assertEquals(-1500, missingCatInsight.changePercentageBasisPoints)
     }
 }

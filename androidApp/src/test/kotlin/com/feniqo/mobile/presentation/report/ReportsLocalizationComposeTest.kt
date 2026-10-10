@@ -18,6 +18,8 @@ import com.feniqo.mobile.domain.model.FinancialReport
 import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.MoneyDelta
+import com.feniqo.mobile.domain.model.ForecastSourceType
+import com.feniqo.mobile.domain.model.InsightType
 import com.feniqo.mobile.domain.model.RateBasisPoints
 import com.feniqo.mobile.domain.model.ReportDateRange
 import com.feniqo.mobile.domain.model.ReportPeriod
@@ -1200,5 +1202,329 @@ class ReportsLocalizationComposeTest {
         composeRule.onNodeWithText("350.00 ₺").assertDoesNotExist()
         composeRule.onNodeWithText("50.00 ₺").assertDoesNotExist()
         composeRule.onAllNodesWithText("••••")[0].assertIsDisplayed()
+    }
+
+    @Test
+    fun debtSummaryReportScreen_reacts_to_runtime_locale_change_and_masks_amounts() {
+        var languageTag by mutableStateOf("tr")
+        var maskAmounts by mutableStateOf(false)
+        var deadlinesList by mutableStateOf(
+            listOf(
+                DebtDeadlineUiItem(
+                    title = "Ahmet Yılmaz",
+                    amount = Money(5_000_00L, Currency.TRY),
+                    dueDate = LocalDate(2026, 10, 15),
+                    isReceivable = false,
+                    isOverdue = false,
+                    maskAmounts = false,
+                ),
+                DebtDeadlineUiItem(
+                    title = "Mehmet Demir",
+                    amount = Money(2_000_00L, Currency.TRY),
+                    dueDate = LocalDate(2026, 9, 1),
+                    isReceivable = false,
+                    isOverdue = true,
+                    maskAmounts = false,
+                ),
+            ),
+        )
+
+        composeRule.setContent {
+            App(languageTag = languageTag) {
+                DebtSummaryReportScreen(
+                    totalDebt = Money(15_000_00L, Currency.TRY),
+                    totalReceivable = Money(25_000_00L, Currency.TRY),
+                    netBalance = MoneyDelta(10_000_00L, Currency.TRY),
+                    isNetPositive = true,
+                    deadlines = deadlinesList,
+                    maskAmounts = maskAmounts,
+                    onBackClick = {},
+                )
+            }
+        }
+
+        // TR
+        composeRule.onNodeWithText("Borç ve Alacak Özeti").assertIsDisplayed()
+        composeRule.onNodeWithText("Net Pozisyon (Alacak - Borç)").assertIsDisplayed()
+        composeRule.onNodeWithText("Toplam Borç").assertIsDisplayed()
+        composeRule.onNodeWithText("Toplam Alacak").assertIsDisplayed()
+        composeRule.onNodeWithText("Yaklaşan Vadeler").assertIsDisplayed()
+        composeRule.onNodeWithText("Ahmet Yılmaz").assertIsDisplayed()
+        composeRule.onNodeWithText("Mehmet Demir").assertIsDisplayed()
+        composeRule.onNodeWithText("• Gecikmiş").assertIsDisplayed()
+        composeRule.onNodeWithText("15.000,00 ₺").assertIsDisplayed()
+        composeRule.onNodeWithText("25.000,00 ₺").assertIsDisplayed()
+
+        // Switch to EN
+        composeRule.runOnIdle { languageTag = "en" }
+
+        // EN
+        composeRule.onNodeWithText("Debt and Receivable Summary").assertIsDisplayed()
+        composeRule.onNodeWithText("Net Position (Receivables - Debts)").assertIsDisplayed()
+        composeRule.onNodeWithText("Total Debt").assertIsDisplayed()
+        composeRule.onNodeWithText("Total Receivables").assertIsDisplayed()
+        composeRule.onNodeWithText("Upcoming Deadlines").assertIsDisplayed()
+        composeRule.onNodeWithText("Ahmet Yılmaz").assertIsDisplayed()
+        composeRule.onNodeWithText("Mehmet Demir").assertIsDisplayed()
+        composeRule.onNodeWithText("• Overdue").assertIsDisplayed()
+        composeRule.onNodeWithText("15,000.00 ₺").assertIsDisplayed()
+        composeRule.onNodeWithText("25,000.00 ₺").assertIsDisplayed()
+
+        // Empty state
+        composeRule.runOnIdle { deadlinesList = emptyList() }
+        composeRule.onNodeWithText("No open debts or receivables found.").assertIsDisplayed()
+        composeRule.runOnIdle { languageTag = "tr" }
+        composeRule.onNodeWithText("Kayıtlı açık borç veya alacak bulunmuyor.").assertIsDisplayed()
+
+        // Masking
+        composeRule.runOnIdle {
+            deadlinesList = listOf(
+                DebtDeadlineUiItem(
+                    title = "Ahmet Yılmaz",
+                    amount = Money(5_000_00L, Currency.TRY),
+                    dueDate = LocalDate(2026, 10, 15),
+                    isReceivable = false,
+                    isOverdue = false,
+                    maskAmounts = true,
+                ),
+            )
+            maskAmounts = true
+        }
+        composeRule.onNodeWithText("15.000,00 ₺").assertDoesNotExist()
+        composeRule.onNodeWithText("25.000,00 ₺").assertDoesNotExist()
+        composeRule.onAllNodesWithText("••••")[0].assertIsDisplayed()
+    }
+
+    @Test
+    fun forecastReportScreens_react_to_runtime_locale_change_and_masks_amounts() {
+        var languageTag by mutableStateOf("tr")
+        var maskAmounts by mutableStateOf(false)
+        var showDetail by mutableStateOf(false)
+        var sourcesList by mutableStateOf(
+            listOf(
+                ForecastSourceUiItem(
+                    type = ForecastSourceType.SALARY_AND_REGULAR_INCOME,
+                    amount = Money(30_000_00L, Currency.TRY),
+                    percentageBasisPoints = 10000,
+                ),
+            ),
+        )
+
+        composeRule.setContent {
+            App(languageTag = languageTag) {
+                if (!showDetail) {
+                    ForecastOverviewReportScreen(
+                        forecastMonth = YearMonth("2026-10"),
+                        projectedNet = MoneyDelta(12_000_00L, Currency.TRY),
+                        isProjectedNetPositive = true,
+                        projectedIncome = Money(30_000_00L, Currency.TRY),
+                        fixedExpense = Money(10_000_00L, Currency.TRY),
+                        variableExpense = Money(8_000_00L, Currency.TRY),
+                        sources = sourcesList,
+                        maskAmounts = maskAmounts,
+                        onViewDetailClick = { showDetail = true },
+                        onBackClick = {},
+                    )
+                } else {
+                    ForecastDetailReportScreen(
+                        projectionPoints = emptyList(),
+                        dailyAverage = Money(600_00L, Currency.TRY),
+                        activeRecurringCount = 4,
+                        maskAmounts = maskAmounts,
+                        onBackClick = { showDetail = false },
+                    )
+                }
+            }
+        }
+
+        // Overview TR
+        composeRule.onNodeWithText("Gelecek Ay Tahmini").assertIsDisplayed()
+        composeRule.onNodeWithText("Ekim Tahmini Net Bakiye").assertIsDisplayed()
+        composeRule.onNodeWithText("Beklenen Gelir").assertIsDisplayed()
+        composeRule.onNodeWithText("Sabit Gider").assertIsDisplayed()
+        composeRule.onNodeWithText("Değişken Gider").assertIsDisplayed()
+        composeRule.onNodeWithText("Tahmini Oluşturan Kalemler").assertIsDisplayed()
+        composeRule.onNodeWithText("Maaş ve düzenli gelirler").assertIsDisplayed()
+        composeRule.onNodeWithText("Detaylı Projeksiyonu Gör").assertIsDisplayed()
+
+        // Switch to EN
+        composeRule.runOnIdle { languageTag = "en" }
+
+        // Overview EN
+        composeRule.onNodeWithText("Next Month Forecast").assertIsDisplayed()
+        composeRule.onNodeWithText("October Estimated Net Balance").assertIsDisplayed()
+        composeRule.onNodeWithText("Expected Income").assertIsDisplayed()
+        composeRule.onNodeWithText("Fixed Expense").assertIsDisplayed()
+        composeRule.onNodeWithText("Variable Expense").assertIsDisplayed()
+        composeRule.onNodeWithText("Items Comprising Forecast").assertIsDisplayed()
+        composeRule.onNodeWithText("Salary and regular income").assertIsDisplayed()
+        composeRule.onNodeWithText("View Detailed Projection").assertIsDisplayed()
+
+        // Switch to Detail Screen
+        composeRule.runOnIdle { showDetail = true }
+
+        // Detail EN
+        composeRule.onNodeWithText("Projection Detail").assertIsDisplayed()
+        composeRule.onNodeWithText("Calculation Model and Assumptions").assertIsDisplayed()
+        composeRule.onNodeWithText("4 active recurring transactions", substring = true).assertIsDisplayed()
+
+        // Detail TR
+        composeRule.runOnIdle { languageTag = "tr" }
+        composeRule.onNodeWithText("Projeksiyon Detayı").assertIsDisplayed()
+        composeRule.onNodeWithText("Hesaplama Modeli ve Varsayımlar").assertIsDisplayed()
+        composeRule.onNodeWithText("4 aktif yinelenen işlem", substring = true).assertIsDisplayed()
+
+        // Mask amounts in Detail
+        composeRule.runOnIdle { maskAmounts = true }
+        composeRule.onNodeWithText("600,00 ₺", substring = true).assertDoesNotExist()
+        composeRule.onAllNodesWithText("••••", substring = true)[0].assertIsDisplayed()
+    }
+
+    @Test
+    fun financialInsightsReportScreens_react_to_runtime_locale_change_and_masks_amounts() {
+        var languageTag by mutableStateOf("tr")
+        var maskAmounts by mutableStateOf(false)
+        var selectedInsight by mutableStateOf<FinancialInsightUiItem?>(null)
+
+        val item1 = FinancialInsightUiItem(
+            id = "ins-1",
+            type = InsightType.CATEGORY_INCREASE,
+            categoryId = EntityId("cat-market"),
+            categoryName = "Market",
+            isCategoryMissing = false,
+            changePercentageBasisPoints = 2500,
+            currentPeriodAmount = Money(5_000_00L, Currency.TRY),
+            previousPeriodAmount = Money(4_000_00L, Currency.TRY),
+            delta = MoneyDelta(1_000_00L, Currency.TRY),
+            isPositive = false,
+            transactionCount = 10,
+            contributingTransactions = listOf(
+                ReportTransactionUiItem(
+                    id = EntityId("tx-1"),
+                    description = "Haftalık Market",
+                    type = TransactionType.EXPENSE,
+                    categoryId = EntityId("cat-market"),
+                    categoryName = "Market",
+                    isCategoryMissing = false,
+                    date = LocalDate(2026, 9, 20),
+                    amount = Money(1_000_00L, Currency.TRY),
+                    maskAmounts = false,
+                ),
+                ReportTransactionUiItem(
+                    id = EntityId("tx-2"),
+                    description = null,
+                    type = TransactionType.EXPENSE,
+                    categoryId = null,
+                    categoryName = null,
+                    isCategoryMissing = true,
+                    date = LocalDate(2026, 9, 21),
+                    amount = Money(500_00L, Currency.TRY),
+                    maskAmounts = false,
+                ),
+            ),
+            maskAmounts = false,
+        )
+
+        val itemMissingCat = FinancialInsightUiItem(
+            id = "ins-2",
+            type = InsightType.CATEGORY_DECREASE,
+            categoryId = EntityId("cat-old"),
+            categoryName = null,
+            isCategoryMissing = true,
+            changePercentageBasisPoints = -1500,
+            currentPeriodAmount = Money(2_000_00L, Currency.TRY),
+            previousPeriodAmount = Money(3_000_00L, Currency.TRY),
+            delta = MoneyDelta(-1_000_00L, Currency.TRY),
+            isPositive = true,
+            transactionCount = 5,
+            maskAmounts = false,
+        )
+
+        var insightsList by mutableStateOf(listOf(item1, itemMissingCat))
+
+        composeRule.setContent {
+            App(languageTag = languageTag) {
+                if (selectedInsight == null) {
+                    FinancialInsightsReportScreen(
+                        insights = insightsList,
+                        maskAmounts = maskAmounts,
+                        onInsightClick = { selectedInsight = it },
+                        onBackClick = {},
+                    )
+                } else {
+                    InsightDetailReportScreen(
+                        insight = selectedInsight!!,
+                        transactions = selectedInsight!!.contributingTransactions,
+                        maskAmounts = maskAmounts,
+                        onBackClick = { selectedInsight = null },
+                    )
+                }
+            }
+        }
+
+        // List screen TR
+        composeRule.onNodeWithText("Finansal İçgörüler").assertIsDisplayed()
+        composeRule.onNodeWithText("Verilerinize Dayalı Önemli Değişimler").assertIsDisplayed()
+        composeRule.onNodeWithText("Market", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText("Silinmiş kategori", substring = true).assertIsDisplayed()
+
+        // Switch to EN
+        composeRule.runOnIdle { languageTag = "en" }
+
+        // List screen EN
+        composeRule.onNodeWithText("Financial Insights").assertIsDisplayed()
+        composeRule.onNodeWithText("Key Changes Based on Your Data").assertIsDisplayed()
+        composeRule.onNodeWithText("Market", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText("Deleted category", substring = true).assertIsDisplayed()
+
+        // Switch to Detail Screen
+        composeRule.runOnIdle { selectedInsight = item1 }
+
+        // Detail EN
+        composeRule.onNodeWithText("Insight Detail").assertIsDisplayed()
+        composeRule.onNodeWithText("Total Amount").assertIsDisplayed()
+        composeRule.onNodeWithText("Change Rate").assertIsDisplayed()
+        composeRule.onNodeWithText("How Was It Calculated?").assertIsDisplayed()
+        composeRule.onNodeWithText("Contributing Transactions").assertIsDisplayed()
+        composeRule.onNodeWithText("Haftalık Market").assertIsDisplayed()
+        // Missing category fallback on second transaction
+        composeRule.onNodeWithText("Deleted category").assertIsDisplayed()
+        composeRule.onNodeWithText("Expense").assertIsDisplayed()
+
+        // Detail TR
+        composeRule.runOnIdle { languageTag = "tr" }
+        composeRule.onNodeWithText("İçgörü Detayı").assertIsDisplayed()
+        composeRule.onNodeWithText("Toplam Tutar").assertIsDisplayed()
+        composeRule.onNodeWithText("Değişim Oranı").assertIsDisplayed()
+        composeRule.onNodeWithText("Nasıl Hesaplandı?").assertIsDisplayed()
+        composeRule.onNodeWithText("Etkileyen İşlemler").assertIsDisplayed()
+        composeRule.onNodeWithText("Haftalık Market").assertIsDisplayed()
+        composeRule.onNodeWithText("Silinmiş kategori").assertIsDisplayed()
+        composeRule.onNodeWithText("Gider").assertIsDisplayed()
+
+        // Mask amounts in Detail
+        composeRule.runOnIdle { maskAmounts = true }
+        composeRule.onNodeWithText("5.000,00 ₺").assertDoesNotExist()
+        composeRule.onAllNodesWithText("••••")[0].assertIsDisplayed()
+
+        // Empty transactions in Detail Screen
+        composeRule.runOnIdle {
+            selectedInsight = itemMissingCat
+        }
+        composeRule.onNodeWithText("Etkileyen işlem kaydı bulunamadı.").assertIsDisplayed()
+        composeRule.onNodeWithText("Etkileyen İşlemler").assertDoesNotExist()
+
+        composeRule.runOnIdle { languageTag = "en" }
+        composeRule.onNodeWithText("No contributing transactions found.").assertIsDisplayed()
+        composeRule.onNodeWithText("Contributing Transactions").assertDoesNotExist()
+
+        // Empty state in List screen
+        composeRule.runOnIdle {
+            selectedInsight = null
+            insightsList = emptyList()
+        }
+        composeRule.onNodeWithText("No new financial insights found for this period.").assertIsDisplayed()
+        composeRule.runOnIdle { languageTag = "tr" }
+        composeRule.onNodeWithText("Bu dönem için yeni bir finansal içgörü bulunmuyor.").assertIsDisplayed()
     }
 }

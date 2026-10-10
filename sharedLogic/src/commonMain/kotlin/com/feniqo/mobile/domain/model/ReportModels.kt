@@ -268,8 +268,15 @@ data class ForecastProjectionPoint(
     val isForecast: Boolean,
 )
 
+enum class ForecastSourceType {
+    SALARY_AND_REGULAR_INCOME,
+    SUBSCRIPTIONS_AND_BILLS,
+    RECURRING_TRANSACTIONS,
+    VARIABLE_EXPENSES_AVERAGE,
+}
+
 data class ForecastSourceItem(
-    val title: String,
+    val type: ForecastSourceType,
     val amount: Money,
     val percentageBasisPoints: Int,
 )
@@ -282,7 +289,8 @@ data class ForecastReportSummary(
     val variableExpensesEstimate: Money,
     val projectionPoints: List<ForecastProjectionPoint>,
     val contributingSources: List<ForecastSourceItem>,
-    val assumptionsText: String,
+    val activeRecurringCount: Int = 0,
+    val dailyVariableAverage: Money = Money(0, expectedIncome.currency),
 )
 
 enum class InsightType {
@@ -295,13 +303,14 @@ enum class InsightType {
 data class FinancialInsightItem(
     val id: String,
     val type: InsightType,
-    val title: String,
-    val subtitle: String,
+    val categoryId: EntityId? = null,
+    val categoryName: String? = null,
+    val isCategoryMissing: Boolean = categoryName == null && categoryId != null,
+    val changePercentageBasisPoints: Int = 0,
     val currentPeriodAmount: Money,
     val previousPeriodAmount: Money,
     val delta: MoneyDelta,
     val supportingTransactionCount: Int,
-    val weeklyBreakdown: List<WeeklySpendingPoint>,
-    val contributingTransactions: List<Transaction>,
-    val explanationText: String,
+    val weeklyBreakdown: List<WeeklySpendingPoint> = emptyList(),
+    val contributingTransactions: List<Transaction> = emptyList(),
 )

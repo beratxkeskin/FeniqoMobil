@@ -3,6 +3,8 @@ package com.feniqo.mobile.presentation.report
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.FinancialReport
+import com.feniqo.mobile.domain.model.ForecastSourceType
+import com.feniqo.mobile.domain.model.InsightType
 import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.MoneyDelta
@@ -11,7 +13,6 @@ import com.feniqo.mobile.domain.model.ReportFilter
 import com.feniqo.mobile.domain.model.ReportPeriodPreset
 import com.feniqo.mobile.domain.model.ReportTypeFilter
 import com.feniqo.mobile.domain.model.TransactionType
-import com.feniqo.mobile.presentation.common.symbol
 import kotlinx.datetime.DayOfWeek
 
 /**
@@ -196,17 +197,17 @@ data class SubscriptionReportUiItem(
 
 data class DebtDeadlineUiItem(
     val title: String,
-    val amountFormatted: String,
-    val dueDateFormatted: String,
+    val amount: Money,
+    val dueDate: LocalDate,
     val isReceivable: Boolean,
     val isOverdue: Boolean,
+    val maskAmounts: Boolean = false,
 )
 
 data class ForecastSourceUiItem(
-    val title: String,
-    val amountFormatted: String,
-    val percentageFormatted: String,
-    val ratio: Float,
+    val type: ForecastSourceType,
+    val amount: Money,
+    val percentageBasisPoints: Int,
 )
 
 data class ReportTransactionUiItem(
@@ -299,13 +300,18 @@ data class CashFlowMonthUiItem(
 
 data class FinancialInsightUiItem(
     val id: String,
-    val title: String,
-    val subtitle: String,
-    val amountFormatted: String,
-    val deltaFormatted: String,
-    val isPositive: Boolean,
+    val type: InsightType,
+    val categoryId: EntityId? = null,
+    val categoryName: String? = null,
+    val isCategoryMissing: Boolean = categoryName == null && categoryId != null,
+    val changePercentageBasisPoints: Int = 0,
+    val currentPeriodAmount: Money,
+    val previousPeriodAmount: Money,
+    val delta: MoneyDelta,
+    val isPositive: Boolean = delta.amountMinor >= 0L,
     val transactionCount: Int,
-    val explanation: String,
+    val contributingTransactions: List<ReportTransactionUiItem> = emptyList(),
+    val maskAmounts: Boolean = false,
 )
 
 sealed interface ReportsContentState {

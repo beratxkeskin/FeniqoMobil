@@ -2233,4 +2233,71 @@
         <item quantity="one">%1$d Active Subscription</item>
         <item quantity="other">%1$d Active Subscriptions</item>
     </plurals>
+
+    <!-- Reports Localization (Raporlar Dilim 4/4) -->
+    <!-- Debt and Receivable Summary Screen -->
+    <string name="report_debt_title">Debt and Receivable Summary</string>
+    <string name="report_debt_net_position">Net Position (Receivables - Debts)</string>
+    <string name="report_debt_total_debt">Total Debt</string>
+    <string name="report_debt_total_receivable">Total Receivables</string>
+    <string name="report_debt_upcoming_deadlines">Upcoming Deadlines</string>
+    <string name="report_debt_empty">No open debts or receivables found.</string>
+    <string name="report_debt_type_receivable">Receivable</string>
+    <string name="report_debt_type_debt">Debt</string>
+    <string name="report_debt_due_date_format">Due: %1$s</string>
+    <string name="report_debt_overdue_bullet">• Overdue</string>
+
+    <!-- Forecast Overview & Detail Screens -->
+    <string name="report_forecast_overview_title">Next Month Forecast</string>
+    <string name="report_forecast_badge">Forecast</string>
+    <string name="report_forecast_hero_title">%1$s Estimated Net Balance</string>
+    <string name="report_forecast_expected_income">Expected Income</string>
+    <string name="report_forecast_fixed_expense">Fixed Expense</string>
+    <string name="report_forecast_variable_expense">Variable Expense</string>
+    <string name="report_forecast_sources_title">Items Comprising Forecast</string>
+    <string name="report_forecast_sources_empty">Not enough data found to generate forecast.</string>
+    <string name="report_forecast_disclaimer">Forecasts are based on your past spending rhythm and registered recurring payments; they do not constitute definitive results or investment advice.</string>
+    <string name="report_forecast_action_view_detail">View Detailed Projection</string>
+    <string name="report_forecast_source_salary">Salary and regular income</string>
+    <string name="report_forecast_source_subscriptions">Subscriptions and bills</string>
+    <string name="report_forecast_source_recurring">Recurring transactions</string>
+    <string name="report_forecast_source_variable">Variable expenses average</string>
+    <string name="report_forecast_detail_title">Projection Detail</string>
+    <string name="report_forecast_assumptions_title">Calculation Model and Assumptions</string>
+    <string name="report_forecast_assumption_daily_avg">• Past 90-day daily variable spending average: %1$s</string>
+    <string name="report_forecast_assumption_actual_vs_expected">• Completed days are calculated from actual transactions, remaining days from expected flow.</string>
+    <string name="report_forecast_monthly_projection_title">Monthly Projection Progress</string>
+    <string name="report_forecast_month_point_label">%1$s %2$d</string>
+    <string name="report_forecast_point_flow">Income: +%1$s • Expense: -%2$s</string>
+    <plurals name="report_forecast_active_recurring_plural">
+        <item quantity="one">• %1$d active recurring transaction or subscription.</item>
+        <item quantity="other">• %1$d active recurring transactions or subscriptions.</item>
+    </plurals>
+
+    <!-- Financial Insights Screen & Detail -->
+    <string name="report_insights_screen_title">Financial Insights</string>
+    <string name="report_insights_header_subtitle">Key Changes Based on Your Data</string>
+    <string name="report_insights_empty">No new financial insights found for this period.</string>
+    <string name="report_insights_detail_screen_title">Insight Detail</string>
+    <string name="report_insights_total_amount">Total Amount</string>
+    <string name="report_insights_change_rate">Change Rate</string>
+    <string name="report_insights_how_calculated">How Was It Calculated?</string>
+    <string name="report_insights_contributing_transactions_title">Contributing Transactions</string>
+    <string name="report_insights_no_transactions">No contributing transactions found.</string>
+    <string name="report_insight_savings_title">Your savings rate increased</string>
+    <string name="report_insight_savings_subtitle">You achieved a higher savings rate compared to last month.</string>
+    <string name="report_insight_savings_explanation">The selected period and the previous period are of the same length. The savings remaining from your income have been calculated.</string>
+    <string name="report_insight_category_dec_title">%1$s spending decreased by %2$s</string>
+    <string name="report_insight_category_dec_subtitle">Your spending in %1$s is %2$s lower than last period.</string>
+    <string name="report_insight_category_dec_explanation">Completed %1$s spending in the selected period is taken into account.</string>
+    <string name="report_insight_category_inc_title">%1$s expenses increased</string>
+    <string name="report_insight_category_inc_subtitle">Your %1$s expenses are %2$s higher than last period.</string>
+    <string name="report_insight_category_inc_explanation">The selected period was compared with the previous period.</string>
+    <string name="report_insight_subscription_title">Subscription expenses</string>
+    <string name="report_insight_subscription_subtitle">The impact of recurring subscriptions on your budget has been calculated.</string>
+    <string name="report_insight_subscription_explanation">The monthly average cost of active subscriptions has been evaluated.</string>
+    <plurals name="report_insights_analysis_tx_count_plural">
+        <item quantity="one">This analysis is calculated based on %1$d recorded transaction.</item>
+        <item quantity="other">This analysis is calculated based on %1$d recorded transactions.</item>
+    </plurals>
 </resources>

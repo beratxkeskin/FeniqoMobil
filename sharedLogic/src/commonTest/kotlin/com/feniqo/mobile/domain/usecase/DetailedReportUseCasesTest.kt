@@ -12,6 +12,8 @@ import com.feniqo.mobile.domain.model.DebtStatus
 import com.feniqo.mobile.domain.model.DebtType
 import com.feniqo.mobile.domain.model.DetailedReportInsight
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.domain.model.ForecastSourceType
+import com.feniqo.mobile.domain.model.InsightType
 import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.PaymentMethod
@@ -310,6 +312,88 @@ class DetailedReportUseCasesTest {
         assertEquals(2, summary.upcomingDeadlines.size)
     }
 
+    @Test
+    fun observeForecastReport_producesTypedSourcesAndNoAssumptionsText() = runTest {
+        val tx1 = createTx("t1", 5_000_00L, Currency.TRY, TransactionType.INCOME, "c1", LocalDate(2026, 9, 1))
+        val tx2 = createTx("t2", 1_000_00L, Currency.TRY, TransactionType.EXPENSE, "c2", LocalDate(2026, 9, 5))
+        val sub1 = createSub("s1", "Netflix", 200_00L, Currency.TRY, LocalDate(2026, 9, 20))
+        val recur1 = createRecur("r1", 300_00L, Currency.TRY, TransactionType.EXPENSE)
+
+        val useCase = ObserveForecastReportUseCase(
+            transactionRepository = FakeTxRepo(listOf(tx1, tx2)),
+            subscriptionRepository = FakeSubRepo(listOf(sub1)),
+            recurringTransactionRepository = FakeRecurringTxRepo(listOf(recur1)),
+        )
+
+        val summary = useCase(Currency.TRY, null, referenceDate, 6).first()
+
+        assertEquals(4, summary.contributingSources.size)
+        assertEquals(ForecastSourceType.SALARY_AND_REGULAR_INCOME, summary.contributingSources[0].type)
+        assertEquals(ForecastSourceType.SUBSCRIPTIONS_AND_BILLS, summary.contributingSources[1].type)
+        assertEquals(ForecastSourceType.RECURRING_TRANSACTIONS, summary.contributingSources[2].type)
+        assertEquals(ForecastSourceType.VARIABLE_EXPENSES_AVERAGE, summary.contributingSources[3].type)
+        assertEquals(2, summary.activeRecurringCount)
+        assertEquals(YearMonth.from(2026, 10), summary.forecastMonth)
+    }
+
+    @Test
+    fun observeForecastReport_emptyRepositories_producesEmptyContributingSources() = runTest {
+        val useCase = ObserveForecastReportUseCase(
+            transactionRepository = FakeTxRepo(emptyList()),
+            subscriptionRepository = FakeSubRepo(emptyList()),
+            recurringTransactionRepository = FakeRecurringTxRepo(emptyList()),
+        )
+
+        val summary = useCase(Currency.TRY, null, referenceDate, 6).first()
+
+        assertTrue(summary.contributingSources.isEmpty())
+        assertEquals(0, summary.activeRecurringCount)
+        assertEquals(Money.zero(Currency.TRY), summary.expectedIncome)
+        assertEquals(Money.zero(Currency.TRY), summary.fixedAndPlannedExpenses)
+        assertEquals(Money.zero(Currency.TRY), summary.variableExpensesEstimate)
+    }
+
+    @Test
+    fun observeFinancialInsights_producesTypedInsightsWithoutHardcodedTurkish() = runTest {
+        val curTx = createTx("t1", 1_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-1", LocalDate(2026, 9, 5))
+        val prevTx = createTx("t2", 2_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-1", LocalDate(2026, 8, 5))
+        val cat1 = Category(EntityId("cat-1"), EntityId("u1"), null, "Market", TransactionType.EXPENSE, com.feniqo.mobile.domain.model.CategoryColor("#2D5A43"), com.feniqo.mobile.domain.model.CategoryIcon("ic_cart"), false, Instant.fromEpochMilliseconds(0))
+
+        val useCase = ObserveFinancialInsightsUseCase(
+            transactionRepository = FakeTxRepo(listOf(curTx, prevTx)),
+            categoryRepository = FakeCategoryRepo(listOf(cat1)),
+        )
+
+        val insights = useCase(ReportPeriod(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30)), Currency.TRY, null).first()
+        val catInsight = insights.find { it.type == InsightType.CATEGORY_DECREASE }
+
+        assertNotNull(catInsight)
+        assertEquals(EntityId("cat-1"), catInsight.categoryId)
+        assertEquals("Market", catInsight.categoryName)
+        assertFalse(catInsight.isCategoryMissing)
+        assertEquals(5000, catInsight.changePercentageBasisPoints)
+        assertEquals(-1_000_00L, catInsight.delta.amountMinor)
+    }
+
+    @Test
+    fun observeFinancialInsights_missingCategory_producesNullCategoryNameAndTrueFlag() = runTest {
+        val curTx = createTx("t1", 1_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-deleted", LocalDate(2026, 9, 5))
+        val prevTx = createTx("t2", 2_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-deleted", LocalDate(2026, 8, 5))
+
+        val useCase = ObserveFinancialInsightsUseCase(
+            transactionRepository = FakeTxRepo(listOf(curTx, prevTx)),
+            categoryRepository = FakeCategoryRepo(emptyList()),
+        )
+
+        val insights = useCase(ReportPeriod(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30)), Currency.TRY, null).first()
+        val catInsight = insights.find { it.type == InsightType.CATEGORY_DECREASE }
+
+        assertNotNull(catInsight)
+        assertNull(catInsight.categoryName)
+        assertTrue(catInsight.isCategoryMissing)
+        assertEquals(5000, catInsight.changePercentageBasisPoints)
+    }
+
     private fun createTx(
         id: String,
         amountMinor: Long,
@@ -352,6 +436,31 @@ class DetailedReportUseCasesTest {
             endDate = null,
         ),
         nextRenewalDate = renewalDate,
+        isActive = true,
+        createdAt = Instant.fromEpochMilliseconds(1000L),
+    )
+
+    private fun createRecur(
+        id: String,
+        amountMinor: Long,
+        currency: Currency,
+        type: TransactionType = TransactionType.EXPENSE,
+    ): RecurringTransaction = RecurringTransaction(
+        id = EntityId(id),
+        ownerId = EntityId("user-1"),
+        workspaceId = null,
+        amount = Money(amountMinor, currency),
+        type = type,
+        categoryId = EntityId("cat-1"),
+        description = "Test recur $id",
+        paymentMethod = PaymentMethod.CREDIT_CARD,
+        rule = RecurrenceRule(
+            frequency = RecurrenceFrequency.MONTHLY,
+            interval = 1,
+            startDate = LocalDate(2026, 1, 1),
+            endDate = null,
+        ),
+        lastGeneratedDate = null,
         isActive = true,
         createdAt = Instant.fromEpochMilliseconds(1000L),
     )
@@ -418,5 +527,28 @@ class DetailedReportUseCasesTest {
         override suspend fun update(command: com.feniqo.mobile.domain.model.UpdateDebtCommand): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
         override suspend fun addPayment(command: com.feniqo.mobile.domain.model.AddDebtPaymentCommand): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("p"))
         override suspend fun softDelete(id: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+    }
+
+    private class FakeRecurringTxRepo(private val recurs: List<RecurringTransaction> = emptyList()) : RecurringTransactionRepository {
+        override fun observeRecurringTransactions(): Flow<List<RecurringTransaction>> = flowOf(recurs)
+        override fun observeRecurringTransaction(id: EntityId): Flow<RecurringTransaction?> = flowOf(recurs.find { it.id == id })
+        override suspend fun create(command: com.feniqo.mobile.domain.model.CreateRecurringTransactionCommand): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("r"))
+        override suspend fun update(command: com.feniqo.mobile.domain.model.UpdateRecurringTransactionCommand): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        override suspend fun setActive(command: com.feniqo.mobile.domain.model.SetRecurringTransactionActiveCommand): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        override suspend fun softDelete(id: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        override suspend fun generateDueTransactions(
+            throughDate: LocalDate,
+            maxOccurrencesPerRule: Int,
+            maxTotalOccurrences: Int,
+            createdAt: Instant,
+        ): RepositoryResult<com.feniqo.mobile.domain.model.GenerateRecurringTransactionsResult> =
+            RepositoryResult.Success(
+                com.feniqo.mobile.domain.model.GenerateRecurringTransactionsResult(
+                    createdCount = 0,
+                    alreadyGeneratedCount = 0,
+                    staleRecurringIds = emptyList(),
+                    skippedRecurringIds = emptyList(),
+                ),
+            )
     }
 }

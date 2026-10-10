@@ -1,6 +1,5 @@
 package com.feniqo.mobile.presentation.report
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,8 +26,8 @@ import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,8 +39,45 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.ForecastProjectionPoint
+import com.feniqo.mobile.domain.model.Money
+import com.feniqo.mobile.domain.model.MoneyDelta
 import com.feniqo.mobile.domain.model.TransactionType
+import com.feniqo.mobile.domain.model.YearMonth
+import com.feniqo.mobile.presentation.common.localizedMonthName
 import com.feniqo.mobile.presentation.common.toLocalizedReadableDate
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.report_action_back
+import feniqomobil.sharedui.generated.resources.report_category_deleted
+import feniqomobil.sharedui.generated.resources.report_forecast_action_view_detail
+import feniqomobil.sharedui.generated.resources.report_forecast_active_recurring_plural
+import feniqomobil.sharedui.generated.resources.report_forecast_assumption_actual_vs_expected
+import feniqomobil.sharedui.generated.resources.report_forecast_assumption_daily_avg
+import feniqomobil.sharedui.generated.resources.report_forecast_assumptions_title
+import feniqomobil.sharedui.generated.resources.report_forecast_badge
+import feniqomobil.sharedui.generated.resources.report_forecast_detail_title
+import feniqomobil.sharedui.generated.resources.report_forecast_disclaimer
+import feniqomobil.sharedui.generated.resources.report_forecast_expected_income
+import feniqomobil.sharedui.generated.resources.report_forecast_fixed_expense
+import feniqomobil.sharedui.generated.resources.report_forecast_hero_title
+import feniqomobil.sharedui.generated.resources.report_forecast_month_point_label
+import feniqomobil.sharedui.generated.resources.report_forecast_monthly_projection_title
+import feniqomobil.sharedui.generated.resources.report_forecast_overview_title
+import feniqomobil.sharedui.generated.resources.report_forecast_point_flow
+import feniqomobil.sharedui.generated.resources.report_forecast_sources_empty
+import feniqomobil.sharedui.generated.resources.report_forecast_sources_title
+import feniqomobil.sharedui.generated.resources.report_forecast_variable_expense
+import feniqomobil.sharedui.generated.resources.report_insights_analysis_tx_count_plural
+import feniqomobil.sharedui.generated.resources.report_insights_change_rate
+import feniqomobil.sharedui.generated.resources.report_insights_contributing_transactions_title
+import feniqomobil.sharedui.generated.resources.report_insights_detail_screen_title
+import feniqomobil.sharedui.generated.resources.report_insights_empty
+import feniqomobil.sharedui.generated.resources.report_insights_header_subtitle
+import feniqomobil.sharedui.generated.resources.report_insights_how_calculated
+import feniqomobil.sharedui.generated.resources.report_insights_no_transactions
+import feniqomobil.sharedui.generated.resources.report_insights_screen_title
+import feniqomobil.sharedui.generated.resources.report_insights_total_amount
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 // Tasarım Sistemi Renkleri
 private val ColorSageGreen = Color(0xFF2D5A43)
@@ -52,13 +88,14 @@ private val ColorRefinedRed = Color(0xFFC04D43)
 // ==========================================
 @Composable
 fun ForecastOverviewReportScreen(
-    forecastMonthLabel: String,
-    projectedNetFormatted: String,
+    forecastMonth: YearMonth,
+    projectedNet: MoneyDelta,
     isProjectedNetPositive: Boolean,
-    projectedIncomeFormatted: String,
-    fixedExpenseFormatted: String,
-    variableExpenseFormatted: String,
+    projectedIncome: Money,
+    fixedExpense: Money,
+    variableExpense: Money,
     sources: List<ForecastSourceUiItem>,
+    maskAmounts: Boolean = false,
     onViewDetailClick: () -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -84,12 +121,12 @@ fun ForecastOverviewReportScreen(
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Geri",
+                            contentDescription = stringResource(Res.string.report_action_back),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     Text(
-                        text = "Gelecek Ay Tahmini",
+                        text = stringResource(Res.string.report_forecast_overview_title),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -113,7 +150,7 @@ fun ForecastOverviewReportScreen(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Tahmin",
+                            text = stringResource(Res.string.report_forecast_badge),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = ColorSageGreen,
@@ -137,14 +174,17 @@ fun ForecastOverviewReportScreen(
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(
-                                text = "$forecastMonthLabel Tahmini Net Bakiye",
+                                text = stringResource(
+                                    Res.string.report_forecast_hero_title,
+                                    localizedMonthName(forecastMonth.monthNumber),
+                                ),
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Medium,
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = projectedNetFormatted,
+                                text = projectedNet.toLocalizedMaskedText(maskAmounts, showPositiveSign = true),
                                 fontSize = 28.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isProjectedNetPositive) ColorSageGreen else ColorRefinedRed,
@@ -156,16 +196,43 @@ fun ForecastOverviewReportScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 Column {
-                                    Text("Beklenen Gelir", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(projectedIncomeFormatted, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = ColorSageGreen)
+                                    Text(
+                                        text = stringResource(Res.string.report_forecast_expected_income),
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = projectedIncome.toLocalizedMaskedText(maskAmounts),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ColorSageGreen,
+                                    )
                                 }
                                 Column {
-                                    Text("Sabit Gider", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(fixedExpenseFormatted, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                    Text(
+                                        text = stringResource(Res.string.report_forecast_fixed_expense),
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = fixedExpense.toLocalizedMaskedText(maskAmounts),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text("Değişken Gider", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(variableExpenseFormatted, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = ColorRefinedRed)
+                                    Text(
+                                        text = stringResource(Res.string.report_forecast_variable_expense),
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = variableExpense.toLocalizedMaskedText(maskAmounts),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ColorRefinedRed,
+                                    )
                                 }
                             }
                         }
@@ -175,7 +242,7 @@ fun ForecastOverviewReportScreen(
                 // Tahmini Oluşturan Kaynaklar Başlığı
                 item {
                     Text(
-                        text = "Tahmini Oluşturan Kalemler",
+                        text = stringResource(Res.string.report_forecast_sources_title),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -183,41 +250,64 @@ fun ForecastOverviewReportScreen(
                     )
                 }
 
-                items(sources) { source ->
-                    ReportCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = MaterialTheme.colorScheme.surface,
-                        cornerRadius = 14.dp,
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    text = source.title,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                                Text(
-                                    text = source.amountFormatted,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            LinearProgressIndicator(
-                                progress = { source.ratio.coerceIn(0f, 1f) },
+                if (sources.isEmpty()) {
+                    item {
+                        ReportCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            backgroundColor = MaterialTheme.colorScheme.surface,
+                            cornerRadius = 14.dp,
+                        ) {
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(6.dp)
-                                    .clip(RoundedCornerShape(3.dp)),
-                                color = ColorSageGreen,
-                                trackColor = MaterialTheme.colorScheme.secondaryContainer,
-                            )
+                                    .padding(24.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = stringResource(Res.string.report_forecast_sources_empty),
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    items(sources) { source ->
+                        ReportCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            backgroundColor = MaterialTheme.colorScheme.surface,
+                            cornerRadius = 14.dp,
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = source.type.toLocalizedTitle(),
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    Text(
+                                        text = source.amount.toLocalizedMaskedText(maskAmounts),
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                LinearProgressIndicator(
+                                    progress = { (source.percentageBasisPoints / 10000f).coerceIn(0f, 1f) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(6.dp)
+                                        .clip(RoundedCornerShape(3.dp)),
+                                    color = ColorSageGreen,
+                                    trackColor = MaterialTheme.colorScheme.secondaryContainer,
+                                )
+                            }
                         }
                     }
                 }
@@ -241,7 +331,7 @@ fun ForecastOverviewReportScreen(
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                text = "Tahminler geçmiş harcama ritminiz ve kayıtlı düzenli ödemelerinize dayanır; kesin sonuç veya yatırım tavsiyesi teşkil etmez.",
+                                text = stringResource(Res.string.report_forecast_disclaimer),
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 lineHeight = 16.sp,
@@ -263,7 +353,7 @@ fun ForecastOverviewReportScreen(
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
-                                text = "Detaylı Projeksiyonu Gör",
+                                text = stringResource(Res.string.report_forecast_action_view_detail),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
@@ -285,12 +375,10 @@ fun ForecastOverviewReportScreen(
 // ==========================================
 @Composable
 fun ForecastDetailReportScreen(
-    forecastMonthLabel: String,
-    projectedNetFormatted: String,
-    isProjectedNetPositive: Boolean,
     projectionPoints: List<ForecastProjectionPoint>,
-    dailyAverageFormatted: String,
+    dailyAverage: Money,
     activeRecurringCount: Int,
+    maskAmounts: Boolean = false,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -313,12 +401,12 @@ fun ForecastDetailReportScreen(
                 IconButton(onClick = onBackClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Geri",
+                        contentDescription = stringResource(Res.string.report_action_back),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
-                    text = "Projeksiyon Detayı",
+                    text = stringResource(Res.string.report_forecast_detail_title),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -340,26 +428,33 @@ fun ForecastDetailReportScreen(
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(
-                                text = "Hesaplama Modeli ve Varsayımlar",
+                                text = stringResource(Res.string.report_forecast_assumptions_title),
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = "• Geçmiş 90 günlük günlük değişken harcama ortalaması: $dailyAverageFormatted",
+                                text = stringResource(
+                                    Res.string.report_forecast_assumption_daily_avg,
+                                    dailyAverage.toLocalizedMaskedText(maskAmounts),
+                                ),
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "• Aktif yinelenen işlem ve abonelik sayısı: $activeRecurringCount",
+                                text = pluralStringResource(
+                                    Res.plurals.report_forecast_active_recurring_plural,
+                                    activeRecurringCount,
+                                    activeRecurringCount,
+                                ),
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "• Gerçekleşen günler gerçek işlemlerden, kalan günler ise beklenen akıştan hesaplanmıştır.",
+                                text = stringResource(Res.string.report_forecast_assumption_actual_vs_expected),
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
@@ -370,7 +465,7 @@ fun ForecastDetailReportScreen(
                 // Projeksiyon Noktaları Listesi
                 item {
                     Text(
-                        text = "Aylık Projeksiyon İlerlemesi",
+                        text = stringResource(Res.string.report_forecast_monthly_projection_title),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -394,7 +489,11 @@ fun ForecastDetailReportScreen(
                             Column {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        text = "${point.yearMonth.monthNumber}. Ay (${point.yearMonth.year})",
+                                        text = stringResource(
+                                            Res.string.report_forecast_month_point_label,
+                                            localizedMonthName(point.yearMonth.monthNumber),
+                                            point.yearMonth.year,
+                                        ),
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurface,
@@ -406,7 +505,7 @@ fun ForecastDetailReportScreen(
                                             shape = RoundedCornerShape(4.dp),
                                         ) {
                                             Text(
-                                                text = "Tahmin",
+                                                text = stringResource(Res.string.report_forecast_badge),
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = ColorSageGreen,
@@ -417,18 +516,22 @@ fun ForecastDetailReportScreen(
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Gelir: +₺${point.income.amountMinor / 100} • Gider: -₺${point.expense.amountMinor / 100}",
+                                    text = stringResource(
+                                        Res.string.report_forecast_point_flow,
+                                        point.income.toLocalizedMaskedText(maskAmounts),
+                                        point.expense.toLocalizedMaskedText(maskAmounts),
+                                    ),
                                     fontSize = 12.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
 
-                            val netMinor = point.income.amountMinor - point.expense.amountMinor
+                            val netDelta = MoneyDelta.between(point.income, point.expense)
                             Text(
-                                text = "${if (netMinor >= 0) "+" else ""}₺${netMinor / 100}",
+                                text = netDelta.toLocalizedMaskedText(maskAmounts, showPositiveSign = true),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (netMinor >= 0) ColorSageGreen else ColorRefinedRed,
+                                color = if (netDelta.amountMinor >= 0L) ColorSageGreen else ColorRefinedRed,
                             )
                         }
                     }
@@ -448,6 +551,7 @@ fun ForecastDetailReportScreen(
 @Composable
 fun FinancialInsightsReportScreen(
     insights: List<FinancialInsightUiItem>,
+    maskAmounts: Boolean = false,
     onInsightClick: (FinancialInsightUiItem) -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -471,12 +575,12 @@ fun FinancialInsightsReportScreen(
                 IconButton(onClick = onBackClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Geri",
+                        contentDescription = stringResource(Res.string.report_action_back),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
-                    text = "Finansal İçgörüler",
+                    text = stringResource(Res.string.report_insights_screen_title),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -491,93 +595,116 @@ fun FinancialInsightsReportScreen(
             ) {
                 item {
                     Text(
-                        text = "Verilerinize Dayalı Önemli Değişimler",
+                        text = stringResource(Res.string.report_insights_header_subtitle),
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp),
                     )
                 }
 
-                items(insights) { item ->
-                    ReportCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onInsightClick(item) },
-                        backgroundColor = MaterialTheme.colorScheme.surface,
-                        cornerRadius = 16.dp,
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
+                if (insights.isEmpty()) {
+                    item {
+                        ReportCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            backgroundColor = MaterialTheme.colorScheme.surface,
+                            cornerRadius = 14.dp,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                                contentAlignment = Alignment.Center,
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    Surface(
-                                        color = if (item.isPositive) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.errorContainer,
-                                        shape = RoundedCornerShape(8.dp),
-                                    ) {
-                                        Icon(
-                                            imageVector = if (item.isPositive) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
-                                            contentDescription = null,
-                                            tint = if (item.isPositive) ColorSageGreen else ColorRefinedRed,
-                                            modifier = Modifier
-                                                .padding(6.dp)
-                                                .size(16.dp),
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Column {
-                                        Text(
-                                            text = item.title,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                        )
-                                        Text(
-                                            text = item.subtitle,
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Column(horizontalAlignment = Alignment.End) {
-                                        Text(
-                                            text = item.amountFormatted,
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                        )
-                                        Text(
-                                            text = item.deltaFormatted,
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (item.isPositive) ColorSageGreen else ColorRefinedRed,
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Icon(
-                                        imageVector = Icons.Default.ChevronRight,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(16.dp),
-                                    )
-                                }
+                                Text(
+                                    text = stringResource(Res.string.report_insights_empty),
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
+                        }
+                    }
+                } else {
+                    items(insights) { item ->
+                        ReportCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onInsightClick(item) },
+                            backgroundColor = MaterialTheme.colorScheme.surface,
+                            cornerRadius = 16.dp,
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        Surface(
+                                            color = if (item.isPositive) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.errorContainer,
+                                            shape = RoundedCornerShape(8.dp),
+                                        ) {
+                                            Icon(
+                                                imageVector = if (item.isPositive) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                                                contentDescription = null,
+                                                tint = if (item.isPositive) ColorSageGreen else ColorRefinedRed,
+                                                modifier = Modifier
+                                                    .padding(6.dp)
+                                                    .size(16.dp),
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column {
+                                            Text(
+                                                text = item.resolveLocalizedTitle(),
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                            )
+                                            Text(
+                                                text = item.resolveLocalizedSubtitle(),
+                                                fontSize = 12.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    }
 
-                            Spacer(modifier = Modifier.height(10.dp))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text(
+                                                text = item.currentPeriodAmount.toLocalizedMaskedText(item.maskAmounts || maskAmounts),
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                            )
+                                            Text(
+                                                text = item.delta.toLocalizedMaskedText(item.maskAmounts || maskAmounts, showPositiveSign = true),
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (item.isPositive) ColorSageGreen else ColorRefinedRed,
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Icon(
+                                            imageVector = Icons.Default.ChevronRight,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(16.dp),
+                                        )
+                                    }
+                                }
 
-                            Text(
-                                text = item.explanation,
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                lineHeight = 16.sp,
-                            )
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Text(
+                                    text = item.resolveLocalizedExplanation(),
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    lineHeight = 16.sp,
+                                )
+                            }
                         }
                     }
                 }
@@ -596,7 +723,8 @@ fun FinancialInsightsReportScreen(
 @Composable
 fun InsightDetailReportScreen(
     insight: FinancialInsightUiItem,
-    transactions: List<ReportTransactionUiItem> = emptyList(),
+    transactions: List<ReportTransactionUiItem> = insight.contributingTransactions,
+    maskAmounts: Boolean = false,
     onViewTransactionsClick: () -> Unit = {},
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -620,12 +748,12 @@ fun InsightDetailReportScreen(
                 IconButton(onClick = onBackClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Geri",
+                        contentDescription = stringResource(Res.string.report_action_back),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
-                    text = "İçgörü Detayı",
+                    text = stringResource(Res.string.report_insights_detail_screen_title),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -647,14 +775,14 @@ fun InsightDetailReportScreen(
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(
-                                text = insight.title,
+                                text = insight.resolveLocalizedTitle(),
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = insight.subtitle,
+                                text = insight.resolveLocalizedSubtitle(),
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -665,13 +793,26 @@ fun InsightDetailReportScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 Column {
-                                    Text("Toplam Tutar", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(insight.amountFormatted, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                    Text(
+                                        text = stringResource(Res.string.report_insights_total_amount),
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = insight.currentPeriodAmount.toLocalizedMaskedText(insight.maskAmounts || maskAmounts),
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text("Değişim Oranı", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text(
-                                        text = insight.deltaFormatted,
+                                        text = stringResource(Res.string.report_insights_change_rate),
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = insight.delta.toLocalizedMaskedText(insight.maskAmounts || maskAmounts, showPositiveSign = true),
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = if (insight.isPositive) ColorSageGreen else ColorRefinedRed,
@@ -699,7 +840,7 @@ fun InsightDetailReportScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Nasıl Hesaplandı?",
+                                    text = stringResource(Res.string.report_insights_how_calculated),
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -707,14 +848,18 @@ fun InsightDetailReportScreen(
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = insight.explanation,
+                                text = insight.resolveLocalizedExplanation(),
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 lineHeight = 18.sp,
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Bu analiz ${insight.transactionCount} adet kayıtlı işlem üzerinden hesaplanmıştır.",
+                                text = pluralStringResource(
+                                    Res.plurals.report_insights_analysis_tx_count_plural,
+                                    insight.transactionCount,
+                                    insight.transactionCount,
+                                ),
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -722,10 +867,31 @@ fun InsightDetailReportScreen(
                     }
                 }
 
-                if (transactions.isNotEmpty()) {
+                if (transactions.isEmpty()) {
+                    item {
+                        ReportCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            backgroundColor = MaterialTheme.colorScheme.surface,
+                            cornerRadius = 14.dp,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = stringResource(Res.string.report_insights_no_transactions),
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                } else {
                     item {
                         Text(
-                            text = "Etkileyen İşlemler",
+                            text = stringResource(Res.string.report_insights_contributing_transactions_title),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -746,13 +912,25 @@ fun InsightDetailReportScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
-                                Column {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = tx.resolveLocalizedTitle(),
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
+                                    val catLabel = if (tx.isCategoryMissing) {
+                                        stringResource(Res.string.report_category_deleted)
+                                    } else {
+                                        tx.categoryName
+                                    }
+                                    if (!catLabel.isNullOrBlank()) {
+                                        Text(
+                                            text = catLabel,
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
                                     Text(
                                         text = tx.date.toLocalizedReadableDate(),
                                         fontSize = 12.sp,
@@ -761,7 +939,7 @@ fun InsightDetailReportScreen(
                                 }
                                 val isExpense = tx.type == TransactionType.EXPENSE
                                 Text(
-                                    text = (if (isExpense) "-" else "+") + tx.amount.toLocalizedMaskedText(tx.maskAmounts),
+                                    text = (if (isExpense) "-" else "+") + tx.amount.toLocalizedMaskedText(tx.maskAmounts || maskAmounts),
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (isExpense) MaterialTheme.colorScheme.onSurface else ColorSageGreen,

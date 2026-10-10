@@ -29,8 +29,8 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -88,6 +88,16 @@ import feniqomobil.sharedui.generated.resources.report_sub_summary_empty
 import feniqomobil.sharedui.generated.resources.report_sub_summary_hero_title
 import feniqomobil.sharedui.generated.resources.report_sub_summary_renewal_date
 import feniqomobil.sharedui.generated.resources.report_sub_summary_title
+import feniqomobil.sharedui.generated.resources.report_debt_due_date_format
+import feniqomobil.sharedui.generated.resources.report_debt_empty
+import feniqomobil.sharedui.generated.resources.report_debt_net_position
+import feniqomobil.sharedui.generated.resources.report_debt_overdue_bullet
+import feniqomobil.sharedui.generated.resources.report_debt_title
+import feniqomobil.sharedui.generated.resources.report_debt_total_debt
+import feniqomobil.sharedui.generated.resources.report_debt_total_receivable
+import feniqomobil.sharedui.generated.resources.report_debt_type_debt
+import feniqomobil.sharedui.generated.resources.report_debt_type_receivable
+import feniqomobil.sharedui.generated.resources.report_debt_upcoming_deadlines
 import feniqomobil.sharedui.generated.resources.report_sub_summary_upcoming_title
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -886,11 +896,12 @@ fun SubscriptionSummaryReportScreen(
 // ==========================================
 @Composable
 fun DebtSummaryReportScreen(
-    totalDebtFormatted: String,
-    totalReceivableFormatted: String,
-    netBalanceFormatted: String,
+    totalDebt: Money,
+    totalReceivable: Money,
+    netBalance: MoneyDelta,
     isNetPositive: Boolean,
     deadlines: List<DebtDeadlineUiItem>,
+    maskAmounts: Boolean = false,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -913,12 +924,12 @@ fun DebtSummaryReportScreen(
                 IconButton(onClick = onBackClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Geri",
+                        contentDescription = stringResource(Res.string.report_action_back),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
-                    text = "Borç ve Alacak Özeti",
+                    text = stringResource(Res.string.report_debt_title),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -940,14 +951,14 @@ fun DebtSummaryReportScreen(
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(
-                                text = "Net Pozisyon (Alacak - Borç)",
+                                text = stringResource(Res.string.report_debt_net_position),
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Medium,
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = netBalanceFormatted,
+                                text = netBalance.toLocalizedMaskedText(maskAmounts, showPositiveSign = true),
                                 fontSize = 28.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isNetPositive) ColorSageGreen else ColorRefinedRed,
@@ -964,9 +975,9 @@ fun DebtSummaryReportScreen(
                                     shape = RoundedCornerShape(12.dp),
                                 ) {
                                     Column(modifier = Modifier.padding(12.dp)) {
-                                        Text("Toplam Borç", fontSize = 11.sp, color = ColorRefinedRed)
+                                        Text(stringResource(Res.string.report_debt_total_debt), fontSize = 11.sp, color = ColorRefinedRed)
                                         Spacer(modifier = Modifier.height(4.dp))
-                                        Text(totalDebtFormatted, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ColorRefinedRed)
+                                        Text(totalDebt.toLocalizedMaskedText(maskAmounts), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ColorRefinedRed)
                                     }
                                 }
 
@@ -976,9 +987,9 @@ fun DebtSummaryReportScreen(
                                     shape = RoundedCornerShape(12.dp),
                                 ) {
                                     Column(modifier = Modifier.padding(12.dp)) {
-                                        Text("Toplam Alacak", fontSize = 11.sp, color = ColorSageGreen)
+                                        Text(stringResource(Res.string.report_debt_total_receivable), fontSize = 11.sp, color = ColorSageGreen)
                                         Spacer(modifier = Modifier.height(4.dp))
-                                        Text(totalReceivableFormatted, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ColorSageGreen)
+                                        Text(totalReceivable.toLocalizedMaskedText(maskAmounts), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ColorSageGreen)
                                     }
                                 }
                             }
@@ -989,7 +1000,7 @@ fun DebtSummaryReportScreen(
                 // Yaklaşan Vadeler Başlığı
                 item {
                     Text(
-                        text = "Yaklaşan Vadeler",
+                        text = stringResource(Res.string.report_debt_upcoming_deadlines),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -1011,7 +1022,7 @@ fun DebtSummaryReportScreen(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    text = "Kayıtlı açık borç veya alacak bulunmuyor.",
+                                    text = stringResource(Res.string.report_debt_empty),
                                     fontSize = 14.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -1046,7 +1057,7 @@ fun DebtSummaryReportScreen(
                                             shape = RoundedCornerShape(4.dp),
                                         ) {
                                             Text(
-                                                text = if (item.isReceivable) "Alacak" else "Borç",
+                                                text = if (item.isReceivable) stringResource(Res.string.report_debt_type_receivable) else stringResource(Res.string.report_debt_type_debt),
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = if (item.isReceivable) ColorSageGreen else ColorRefinedRed,
@@ -1057,14 +1068,14 @@ fun DebtSummaryReportScreen(
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(
-                                            text = "Vade: ${item.dueDateFormatted}",
+                                            text = stringResource(Res.string.report_debt_due_date_format, item.dueDate.toLocalizedReadableDate()),
                                             fontSize = 12.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                         if (item.isOverdue) {
                                             Spacer(modifier = Modifier.width(6.dp))
                                             Text(
-                                                text = "• Gecikmiş",
+                                                text = stringResource(Res.string.report_debt_overdue_bullet),
                                                 fontSize = 12.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = ColorRefinedRed,
@@ -1074,7 +1085,7 @@ fun DebtSummaryReportScreen(
                                 }
 
                                 Text(
-                                    text = item.amountFormatted,
+                                    text = item.amount.toLocalizedMaskedText(item.maskAmounts || maskAmounts),
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (item.isReceivable) ColorSageGreen else MaterialTheme.colorScheme.onSurface,

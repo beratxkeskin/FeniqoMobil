@@ -1,17 +1,26 @@
 package com.feniqo.mobile.presentation.report
 
 import androidx.compose.runtime.Composable
+import com.feniqo.mobile.domain.model.ForecastSourceType
+import com.feniqo.mobile.domain.model.InsightType
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.MoneyDelta
 import com.feniqo.mobile.domain.model.ReportDateRange
 import com.feniqo.mobile.domain.model.ReportPeriodPreset
 import com.feniqo.mobile.domain.model.ReportTypeFilter
+import com.feniqo.mobile.domain.model.YearMonth
+import com.feniqo.mobile.presentation.common.formatLocalizedRateBasisPoints
 import com.feniqo.mobile.presentation.common.localizedMonthName
 import com.feniqo.mobile.presentation.common.localizedShortMonthName
 import com.feniqo.mobile.presentation.common.toLocalizedFormatted
 import com.feniqo.mobile.presentation.transaction.toLocalizedText
 import com.feniqo.mobile.presentation.util.MoneyFormatter
 import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.report_category_deleted
+import feniqomobil.sharedui.generated.resources.report_comparison_preset_last_vs_two_months_ago
+import feniqomobil.sharedui.generated.resources.report_comparison_preset_this_quarter_vs_last
+import feniqomobil.sharedui.generated.resources.report_comparison_preset_this_vs_last_month
+import feniqomobil.sharedui.generated.resources.report_comparison_preset_this_year_vs_last
 import feniqomobil.sharedui.generated.resources.report_day_friday
 import feniqomobil.sharedui.generated.resources.report_day_monday
 import feniqomobil.sharedui.generated.resources.report_day_saturday
@@ -26,17 +35,10 @@ import feniqomobil.sharedui.generated.resources.report_filter_period_this_month_
 import feniqomobil.sharedui.generated.resources.report_filter_type_all
 import feniqomobil.sharedui.generated.resources.report_filter_type_expense
 import feniqomobil.sharedui.generated.resources.report_filter_type_income
-import feniqomobil.sharedui.generated.resources.report_insight_expense_decreased
-import feniqomobil.sharedui.generated.resources.report_insight_expense_increased
-import feniqomobil.sharedui.generated.resources.report_insight_transaction_count_plural
-import feniqomobil.sharedui.generated.resources.report_comparison_preset_last_vs_two_months_ago
-import feniqomobil.sharedui.generated.resources.report_comparison_preset_this_quarter_vs_last
-import feniqomobil.sharedui.generated.resources.report_comparison_preset_this_vs_last_month
-import feniqomobil.sharedui.generated.resources.report_comparison_preset_this_year_vs_last
-import feniqomobil.sharedui.generated.resources.report_period_preset_custom
-import feniqomobil.sharedui.generated.resources.report_period_preset_last_3_months
-import feniqomobil.sharedui.generated.resources.report_period_preset_last_month
-import feniqomobil.sharedui.generated.resources.report_period_preset_this_month
+import feniqomobil.sharedui.generated.resources.report_forecast_source_recurring
+import feniqomobil.sharedui.generated.resources.report_forecast_source_salary
+import feniqomobil.sharedui.generated.resources.report_forecast_source_subscriptions
+import feniqomobil.sharedui.generated.resources.report_forecast_source_variable
 import feniqomobil.sharedui.generated.resources.report_hub_budget_performance_sub
 import feniqomobil.sharedui.generated.resources.report_hub_budget_performance_title
 import feniqomobil.sharedui.generated.resources.report_hub_cash_flow_sub
@@ -55,11 +57,29 @@ import feniqomobil.sharedui.generated.resources.report_hub_spending_calendar_sub
 import feniqomobil.sharedui.generated.resources.report_hub_spending_calendar_title
 import feniqomobil.sharedui.generated.resources.report_hub_subscription_summary_sub
 import feniqomobil.sharedui.generated.resources.report_hub_subscription_summary_title
+import feniqomobil.sharedui.generated.resources.report_insight_category_dec_explanation
+import feniqomobil.sharedui.generated.resources.report_insight_category_dec_subtitle
+import feniqomobil.sharedui.generated.resources.report_insight_category_dec_title
+import feniqomobil.sharedui.generated.resources.report_insight_category_inc_explanation
+import feniqomobil.sharedui.generated.resources.report_insight_category_inc_subtitle
+import feniqomobil.sharedui.generated.resources.report_insight_category_inc_title
+import feniqomobil.sharedui.generated.resources.report_insight_expense_decreased
+import feniqomobil.sharedui.generated.resources.report_insight_expense_increased
+import feniqomobil.sharedui.generated.resources.report_insight_savings_explanation
+import feniqomobil.sharedui.generated.resources.report_insight_savings_subtitle
+import feniqomobil.sharedui.generated.resources.report_insight_savings_title
+import feniqomobil.sharedui.generated.resources.report_insight_subscription_explanation
+import feniqomobil.sharedui.generated.resources.report_insight_subscription_subtitle
+import feniqomobil.sharedui.generated.resources.report_insight_subscription_title
+import feniqomobil.sharedui.generated.resources.report_insight_transaction_count_plural
+import feniqomobil.sharedui.generated.resources.report_period_preset_custom
+import feniqomobil.sharedui.generated.resources.report_period_preset_last_3_months
+import feniqomobil.sharedui.generated.resources.report_period_preset_last_month
+import feniqomobil.sharedui.generated.resources.report_period_preset_this_month
 import kotlinx.datetime.DayOfWeek
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
-import com.feniqo.mobile.domain.model.YearMonth
 
 @Composable
 fun Money.toLocalizedMaskedText(mask: Boolean): String =
@@ -291,3 +311,60 @@ fun ReportTransactionUiItem.resolveLocalizedTitle(): String =
     } else {
         type.toLocalizedText()
     }
+
+@Composable
+fun ForecastSourceType.toLocalizedTitle(): String =
+    when (this) {
+        ForecastSourceType.SALARY_AND_REGULAR_INCOME -> stringResource(Res.string.report_forecast_source_salary)
+        ForecastSourceType.SUBSCRIPTIONS_AND_BILLS -> stringResource(Res.string.report_forecast_source_subscriptions)
+        ForecastSourceType.RECURRING_TRANSACTIONS -> stringResource(Res.string.report_forecast_source_recurring)
+        ForecastSourceType.VARIABLE_EXPENSES_AVERAGE -> stringResource(Res.string.report_forecast_source_variable)
+    }
+
+@Composable
+fun FinancialInsightUiItem.resolveLocalizedTitle(): String {
+    val catDisplay = if (isCategoryMissing || categoryName == null) {
+        stringResource(Res.string.report_category_deleted)
+    } else {
+        categoryName
+    }
+    val pctText = formatLocalizedRateBasisPoints(kotlin.math.abs(changePercentageBasisPoints))
+    return when (type) {
+        InsightType.SAVINGS_RATE_INCREASE -> stringResource(Res.string.report_insight_savings_title)
+        InsightType.CATEGORY_DECREASE -> stringResource(Res.string.report_insight_category_dec_title, catDisplay, pctText)
+        InsightType.CATEGORY_INCREASE -> stringResource(Res.string.report_insight_category_inc_title, catDisplay)
+        InsightType.SUBSCRIPTION_IMPACT -> stringResource(Res.string.report_insight_subscription_title)
+    }
+}
+
+@Composable
+fun FinancialInsightUiItem.resolveLocalizedSubtitle(): String {
+    val catDisplay = if (isCategoryMissing || categoryName == null) {
+        stringResource(Res.string.report_category_deleted)
+    } else {
+        categoryName
+    }
+    val pctText = formatLocalizedRateBasisPoints(kotlin.math.abs(changePercentageBasisPoints))
+    val diffMoney = delta.toLocalizedMaskedText(maskAmounts, showPositiveSign = false)
+    return when (type) {
+        InsightType.SAVINGS_RATE_INCREASE -> stringResource(Res.string.report_insight_savings_subtitle)
+        InsightType.CATEGORY_DECREASE -> stringResource(Res.string.report_insight_category_dec_subtitle, catDisplay, pctText)
+        InsightType.CATEGORY_INCREASE -> stringResource(Res.string.report_insight_category_inc_subtitle, catDisplay, diffMoney)
+        InsightType.SUBSCRIPTION_IMPACT -> stringResource(Res.string.report_insight_subscription_subtitle)
+    }
+}
+
+@Composable
+fun FinancialInsightUiItem.resolveLocalizedExplanation(): String {
+    val catDisplay = if (isCategoryMissing || categoryName == null) {
+        stringResource(Res.string.report_category_deleted)
+    } else {
+        categoryName
+    }
+    return when (type) {
+        InsightType.SAVINGS_RATE_INCREASE -> stringResource(Res.string.report_insight_savings_explanation)
+        InsightType.CATEGORY_DECREASE -> stringResource(Res.string.report_insight_category_dec_explanation, catDisplay)
+        InsightType.CATEGORY_INCREASE -> stringResource(Res.string.report_insight_category_inc_explanation)
+        InsightType.SUBSCRIPTION_IMPACT -> stringResource(Res.string.report_insight_subscription_explanation)
+    }
+}

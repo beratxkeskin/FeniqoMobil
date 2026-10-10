@@ -2234,4 +2234,71 @@
         <item quantity="one">%1$d Aktif Abonelik</item>
         <item quantity="other">%1$d Aktif Abonelik</item>
     </plurals>
+
+    <!-- Reports Localization (Raporlar Dilim 4/4) -->
+    <!-- Debt and Receivable Summary Screen -->
+    <string name="report_debt_title">Borç ve Alacak Özeti</string>
+    <string name="report_debt_net_position">Net Pozisyon (Alacak - Borç)</string>
+    <string name="report_debt_total_debt">Toplam Borç</string>
+    <string name="report_debt_total_receivable">Toplam Alacak</string>
+    <string name="report_debt_upcoming_deadlines">Yaklaşan Vadeler</string>
+    <string name="report_debt_empty">Kayıtlı açık borç veya alacak bulunmuyor.</string>
+    <string name="report_debt_type_receivable">Alacak</string>
+    <string name="report_debt_type_debt">Borç</string>
+    <string name="report_debt_due_date_format">Vade: %1$s</string>
+    <string name="report_debt_overdue_bullet">• Gecikmiş</string>
+
+    <!-- Forecast Overview & Detail Screens -->
+    <string name="report_forecast_overview_title">Gelecek Ay Tahmini</string>
+    <string name="report_forecast_badge">Tahmin</string>
+    <string name="report_forecast_hero_title">%1$s Tahmini Net Bakiye</string>
+    <string name="report_forecast_expected_income">Beklenen Gelir</string>
+    <string name="report_forecast_fixed_expense">Sabit Gider</string>
+    <string name="report_forecast_variable_expense">Değişken Gider</string>
+    <string name="report_forecast_sources_title">Tahmini Oluşturan Kalemler</string>
+    <string name="report_forecast_sources_empty">Tahmin oluşturacak yeterli veri bulunamadı.</string>
+    <string name="report_forecast_disclaimer">Tahminler geçmiş harcama ritminiz ve kayıtlı düzenli ödemelerinize dayanır; kesin sonuç veya yatırım tavsiyesi teşkil etmez.</string>
+    <string name="report_forecast_action_view_detail">Detaylı Projeksiyonu Gör</string>
+    <string name="report_forecast_source_salary">Maaş ve düzenli gelirler</string>
+    <string name="report_forecast_source_subscriptions">Abonelik ve faturalar</string>
+    <string name="report_forecast_source_recurring">Yinelenen işlemler</string>
+    <string name="report_forecast_source_variable">Değişken harcama ortalaması</string>
+    <string name="report_forecast_detail_title">Projeksiyon Detayı</string>
+    <string name="report_forecast_assumptions_title">Hesaplama Modeli ve Varsayımlar</string>
+    <string name="report_forecast_assumption_daily_avg">• Geçmiş 90 günlük günlük değişken harcama ortalaması: %1$s</string>
+    <string name="report_forecast_assumption_actual_vs_expected">• Gerçekleşen günler gerçek işlemlerden, kalan günler ise beklenen akıştan hesaplanmıştır.</string>
+    <string name="report_forecast_monthly_projection_title">Aylık Projeksiyon İlerlemesi</string>
+    <string name="report_forecast_month_point_label">%1$s %2$d</string>
+    <string name="report_forecast_point_flow">Gelir: +%1$s • Gider: -%2$s</string>
+    <plurals name="report_forecast_active_recurring_plural">
+        <item quantity="one">• %1$d aktif yinelenen işlem veya abonelik bulunuyor.</item>
+        <item quantity="other">• %1$d aktif yinelenen işlem veya abonelik bulunuyor.</item>
+    </plurals>
+
+    <!-- Financial Insights Screen & Detail -->
+    <string name="report_insights_screen_title">Finansal İçgörüler</string>
+    <string name="report_insights_header_subtitle">Verilerinize Dayalı Önemli Değişimler</string>
+    <string name="report_insights_empty">Bu dönem için yeni bir finansal içgörü bulunmuyor.</string>
+    <string name="report_insights_detail_screen_title">İçgörü Detayı</string>
+    <string name="report_insights_total_amount">Toplam Tutar</string>
+    <string name="report_insights_change_rate">Değişim Oranı</string>
+    <string name="report_insights_how_calculated">Nasıl Hesaplandı?</string>
+    <string name="report_insights_contributing_transactions_title">Etkileyen İşlemler</string>
+    <string name="report_insights_no_transactions">Etkileyen işlem kaydı bulunamadı.</string>
+    <string name="report_insight_savings_title">Tasarruf oranın yükseldi</string>
+    <string name="report_insight_savings_subtitle">Geçen aya göre daha yüksek bir tasarruf oranı yakaladınız.</string>
+    <string name="report_insight_savings_explanation">Seçilen dönem ile önceki dönem aynı uzunluktadır. Gelirlerinizden kalan tasarruf miktarınız hesaplanmıştır.</string>
+    <string name="report_insight_category_dec_title">%1$s harcamaları %2$s azaldı</string>
+    <string name="report_insight_category_dec_subtitle">%1$s kategorisindeki harcamalarınız geçen döneme göre %2$s daha düşük.</string>
+    <string name="report_insight_category_dec_explanation">Seçilen dönemdeki tamamlanmış %1$s harcamaları dikkate alınır.</string>
+    <string name="report_insight_category_inc_title">%1$s giderleri arttı</string>
+    <string name="report_insight_category_inc_subtitle">Geçen döneme göre %1$s harcamalarınız %2$s daha yüksek.</string>
+    <string name="report_insight_category_inc_explanation">Seçilen dönem ile önceki dönem karşılaştırılmıştır.</string>
+    <string name="report_insight_subscription_title">Abonelik harcamaları</string>
+    <string name="report_insight_subscription_subtitle">Düzenli aboneliklerinizin bütçenize etkisi hesaplanmıştır.</string>
+    <string name="report_insight_subscription_explanation">Aktif aboneliklerinizin aylık ortalama maliyetleri değerlendirilmiştir.</string>
+    <plurals name="report_insights_analysis_tx_count_plural">
+        <item quantity="one">Bu analiz %1$d adet kayıtlı işlem üzerinden hesaplanmıştır.</item>
+        <item quantity="other">Bu analiz %1$d adet kayıtlı işlem üzerinden hesaplanmıştır.</item>
+    </plurals>
 </resources>
