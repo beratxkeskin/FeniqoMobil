@@ -187,4 +187,65 @@ class ReportPresentationTest {
         val accessible = MoneyFormatter.getAccessibleDescription("Gelir: 42.500 ₺", isMasked = true)
         assertEquals(MoneyFormatter.MASKED_ACCESSIBLE_DESCRIPTION, accessible)
     }
+
+    @Test
+    fun cashFlowMonthUiItem_typedContract_carriesYearMonthAndMoneyWithoutStrings() {
+        val ym = com.feniqo.mobile.domain.model.YearMonth.from(2026, 9)
+        val income = Money(60_000_00L, Currency.TRY)
+        val expense = Money(25_000_00L, Currency.TRY)
+        val net = MoneyDelta(35_000_00L, Currency.TRY)
+
+        val item = CashFlowMonthUiItem(
+            yearMonth = ym,
+            income = income,
+            expense = expense,
+            net = net,
+        )
+
+        assertEquals(2026, item.yearMonth.year)
+        assertEquals(9, item.yearMonth.monthNumber)
+        assertEquals(60_000_00L, item.incomeMinor)
+        assertEquals(25_000_00L, item.expenseMinor)
+        assertTrue(item.isNetPositive)
+        assertFalse(item.maskAmounts)
+    }
+
+    @Test
+    fun weeklyDualBarUiPoint_typedContract_preservesMinorUnits() {
+        val point = WeeklyDualBarUiPoint(
+            weekNumber = 3,
+            incomeMinor = 15_000_00L,
+            expenseMinor = 10_000_00L,
+        )
+        assertEquals(3, point.weekNumber)
+        assertEquals(15_000_00L, point.incomeMinor)
+        assertEquals(10_000_00L, point.expenseMinor)
+    }
+
+    @Test
+    fun categoryDetail_merchantAndComparison_typedModelsContract() {
+        val merchant = MerchantBreakdownUiItem(
+            merchantName = "Kahve Dünyası",
+            amount = Money(450_00L, Currency.TRY),
+            shareBasisPoints = 1500,
+            transactionCount = 4,
+        )
+        assertEquals("Kahve Dünyası", merchant.merchantName)
+        assertEquals(450_00L, merchant.amount.amountMinor)
+        assertEquals(1500, merchant.shareBasisPoints)
+        assertEquals(4, merchant.transactionCount)
+
+        val available: CategoryDetailComparisonUiState = CategoryDetailComparisonUiState.Available(
+            previousMonthExpense = Money(500_00L, Currency.TRY),
+            changePercentageBasisPoints = -1000,
+            isDecreased = true,
+        )
+        assertTrue(available is CategoryDetailComparisonUiState.Available)
+        assertTrue(available.isDecreased)
+        assertEquals(-1000, available.changePercentageBasisPoints)
+
+        assertTrue(CategoryDetailComparisonUiState.Calculating is CategoryDetailComparisonUiState)
+        assertTrue(CategoryDetailComparisonUiState.Unavailable is CategoryDetailComparisonUiState)
+        assertEquals(9, AllReportsHubItem.entries.size)
+    }
 }

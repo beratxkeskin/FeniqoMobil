@@ -32,10 +32,29 @@ import feniqomobil.sharedui.generated.resources.report_period_preset_custom
 import feniqomobil.sharedui.generated.resources.report_period_preset_last_3_months
 import feniqomobil.sharedui.generated.resources.report_period_preset_last_month
 import feniqomobil.sharedui.generated.resources.report_period_preset_this_month
+import feniqomobil.sharedui.generated.resources.report_hub_budget_performance_sub
+import feniqomobil.sharedui.generated.resources.report_hub_budget_performance_title
+import feniqomobil.sharedui.generated.resources.report_hub_cash_flow_sub
+import feniqomobil.sharedui.generated.resources.report_hub_cash_flow_title
+import feniqomobil.sharedui.generated.resources.report_hub_category_sub
+import feniqomobil.sharedui.generated.resources.report_hub_category_title
+import feniqomobil.sharedui.generated.resources.report_hub_debt_summary_sub
+import feniqomobil.sharedui.generated.resources.report_hub_debt_summary_title
+import feniqomobil.sharedui.generated.resources.report_hub_financial_insights_sub
+import feniqomobil.sharedui.generated.resources.report_hub_financial_insights_title
+import feniqomobil.sharedui.generated.resources.report_hub_forecast_sub
+import feniqomobil.sharedui.generated.resources.report_hub_forecast_title
+import feniqomobil.sharedui.generated.resources.report_hub_period_comparison_sub
+import feniqomobil.sharedui.generated.resources.report_hub_period_comparison_title
+import feniqomobil.sharedui.generated.resources.report_hub_spending_calendar_sub
+import feniqomobil.sharedui.generated.resources.report_hub_spending_calendar_title
+import feniqomobil.sharedui.generated.resources.report_hub_subscription_summary_sub
+import feniqomobil.sharedui.generated.resources.report_hub_subscription_summary_title
 import kotlinx.datetime.DayOfWeek
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
+import com.feniqo.mobile.domain.model.YearMonth
 
 @Composable
 fun Money.toLocalizedMaskedText(mask: Boolean): String =
@@ -191,3 +210,60 @@ fun formatLocalizedFilterSummary(
 
     return "$periodText • $typeText • $currencyText • $categoryText"
 }
+
+@Composable
+fun YearMonth.toLocalizedMonthYear(): String {
+    val monthName = localizedMonthName(monthNumber)
+    return "$monthName $year"
+}
+
+fun AllReportsHubItem.toLocalizedTitleRes(): StringResource =
+    when (this) {
+        AllReportsHubItem.CATEGORY_BREAKDOWN -> Res.string.report_hub_category_title
+        AllReportsHubItem.CASH_FLOW -> Res.string.report_hub_cash_flow_title
+        AllReportsHubItem.PERIOD_COMPARISON -> Res.string.report_hub_period_comparison_title
+        AllReportsHubItem.SPENDING_CALENDAR -> Res.string.report_hub_spending_calendar_title
+        AllReportsHubItem.BUDGET_PERFORMANCE -> Res.string.report_hub_budget_performance_title
+        AllReportsHubItem.SUBSCRIPTION_SUMMARY -> Res.string.report_hub_subscription_summary_title
+        AllReportsHubItem.DEBT_SUMMARY -> Res.string.report_hub_debt_summary_title
+        AllReportsHubItem.FORECAST -> Res.string.report_hub_forecast_title
+        AllReportsHubItem.FINANCIAL_INSIGHTS -> Res.string.report_hub_financial_insights_title
+    }
+
+fun AllReportsHubItem.toLocalizedSubtitleRes(): StringResource =
+    when (this) {
+        AllReportsHubItem.CATEGORY_BREAKDOWN -> Res.string.report_hub_category_sub
+        AllReportsHubItem.CASH_FLOW -> Res.string.report_hub_cash_flow_sub
+        AllReportsHubItem.PERIOD_COMPARISON -> Res.string.report_hub_period_comparison_sub
+        AllReportsHubItem.SPENDING_CALENDAR -> Res.string.report_hub_spending_calendar_sub
+        AllReportsHubItem.BUDGET_PERFORMANCE -> Res.string.report_hub_budget_performance_sub
+        AllReportsHubItem.SUBSCRIPTION_SUMMARY -> Res.string.report_hub_subscription_summary_sub
+        AllReportsHubItem.DEBT_SUMMARY -> Res.string.report_hub_debt_summary_sub
+        AllReportsHubItem.FORECAST -> Res.string.report_hub_forecast_sub
+        AllReportsHubItem.FINANCIAL_INSIGHTS -> Res.string.report_hub_financial_insights_sub
+    }
+
+@Composable
+fun formatLocalizedPeriod(preset: ReportPeriodPreset, dateRange: ReportDateRange? = null): String =
+    when (preset) {
+        ReportPeriodPreset.THIS_MONTH -> stringResource(Res.string.report_period_preset_this_month)
+        ReportPeriodPreset.LAST_MONTH -> stringResource(Res.string.report_period_preset_last_month)
+        ReportPeriodPreset.LAST_3_MONTHS -> stringResource(Res.string.report_period_preset_last_3_months)
+        ReportPeriodPreset.CUSTOM -> {
+            if (dateRange != null) {
+                val startShort = localizedShortMonthName(dateRange.startDate.monthNumber)
+                val endShort = localizedShortMonthName(dateRange.endDate.monthNumber)
+                if (dateRange.startDate.year == dateRange.endDate.year) {
+                    if (dateRange.startDate.monthNumber == dateRange.endDate.monthNumber) {
+                        "${dateRange.startDate.dayOfMonth} – ${dateRange.endDate.dayOfMonth} $endShort ${dateRange.endDate.year}"
+                    } else {
+                        "${dateRange.startDate.dayOfMonth} $startShort – ${dateRange.endDate.dayOfMonth} $endShort ${dateRange.endDate.year}"
+                    }
+                } else {
+                    "${dateRange.startDate.dayOfMonth} $startShort ${dateRange.startDate.year} – ${dateRange.endDate.dayOfMonth} $endShort ${dateRange.endDate.year}"
+                }
+            } else {
+                stringResource(Res.string.report_period_preset_custom)
+            }
+        }
+    }

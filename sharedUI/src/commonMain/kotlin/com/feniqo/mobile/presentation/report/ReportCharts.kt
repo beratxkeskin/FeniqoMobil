@@ -37,6 +37,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.Money
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.report_cash_flow_chart_desc
+import feniqomobil.sharedui.generated.resources.report_category_deleted
+import feniqomobil.sharedui.generated.resources.report_donut_chart_desc
+import feniqomobil.sharedui.generated.resources.report_rhythm_week_format
+import feniqomobil.sharedui.generated.resources.report_trend_chart_desc
+import feniqomobil.sharedui.generated.resources.report_weekly_chart_desc
+import org.jetbrains.compose.resources.stringResource
+import kotlin.jvm.JvmName
 import kotlin.math.max
 
 private val SageGreen = Color(0xFF2D5A43)
@@ -46,7 +55,7 @@ private val ExpenseRed = Color(0xFFDC2626)
 fun TrendDualLineChart(
     points: List<MonthlyTrendUiModel>,
     modifier: Modifier = Modifier,
-    accessibleDescription: String = "Aylık gelir ve gider trend grafiği",
+    accessibleDescription: String = stringResource(Res.string.report_trend_chart_desc),
 ) {
     if (points.isEmpty()) return
 
@@ -128,18 +137,18 @@ fun TrendDualLineChart(
 
 @Composable
 fun WeeklyDualBarChart(
-    weeklyData: List<Pair<String, Pair<Long, Long>>>, // (WeekLabel, (IncomeMinor, ExpenseMinor))
+    weeklyPoints: List<WeeklyDualBarUiPoint>,
     modifier: Modifier = Modifier,
-    accessibleDescription: String = "Haftalık gelir ve gider sütun grafiği",
+    accessibleDescription: String = stringResource(Res.string.report_weekly_chart_desc),
 ) {
-    if (weeklyData.isEmpty()) return
+    if (weeklyPoints.isEmpty()) return
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .semantics { contentDescription = accessibleDescription },
     ) {
-        val maxMinor = weeklyData.maxOfOrNull { max(it.second.first, it.second.second) } ?: 1L
+        val maxMinor = weeklyPoints.maxOfOrNull { max(it.incomeMinor, it.expenseMinor) } ?: 1L
         val safeMax = if (maxMinor > 0) maxMinor.toFloat() else 1f
 
         Row(
@@ -149,9 +158,9 @@ fun WeeklyDualBarChart(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.Bottom,
         ) {
-            weeklyData.forEach { (_, pair) ->
-                val incHeightRatio = (pair.first.toFloat() / safeMax).coerceIn(0.05f, 1f)
-                val expHeightRatio = (pair.second.toFloat() / safeMax).coerceIn(0.05f, 1f)
+            weeklyPoints.forEach { pt ->
+                val incHeightRatio = (pt.incomeMinor.toFloat() / safeMax).coerceIn(0.05f, 1f)
+                val expHeightRatio = (pt.expenseMinor.toFloat() / safeMax).coerceIn(0.05f, 1f)
 
                 Row(
                     modifier = Modifier.fillMaxHeight(),
@@ -182,9 +191,9 @@ fun WeeklyDualBarChart(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            weeklyData.forEach { (label, _) ->
+            weeklyPoints.forEach { pt ->
                 Text(
-                    text = label,
+                    text = stringResource(Res.string.report_rhythm_week_format, pt.weekNumber),
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -195,11 +204,11 @@ fun WeeklyDualBarChart(
 
 @Composable
 fun ReportDonutChart(
-    slices: List<Pair<String, Float>>, // (CategoryName, Ratio 0..1)
+    slices: List<Pair<String, Float>>,
     colors: List<Color>,
     centerText: String,
     modifier: Modifier = Modifier,
-    accessibleDescription: String = "Kategori dağılımı pasta grafiği",
+    accessibleDescription: String = stringResource(Res.string.report_donut_chart_desc),
 ) {
     val outlineVariant = MaterialTheme.colorScheme.outlineVariant
 
@@ -249,10 +258,32 @@ fun ReportDonutChart(
 }
 
 @Composable
+@JvmName("ReportDonutChartCategories")
+fun ReportDonutChart(
+    slices: List<CategoryBreakdownUiItem>,
+    colors: List<Color>,
+    centerText: String,
+    modifier: Modifier = Modifier,
+    accessibleDescription: String = stringResource(Res.string.report_donut_chart_desc),
+) {
+    val deletedCategoryLabel = stringResource(Res.string.report_category_deleted)
+    val pairSlices = slices.map {
+        (if (it.isCategoryMissing || it.name == null) deletedCategoryLabel else it.name) to it.shareRatio
+    }
+    ReportDonutChart(
+        slices = pairSlices,
+        colors = colors,
+        centerText = centerText,
+        modifier = modifier,
+        accessibleDescription = accessibleDescription,
+    )
+}
+
+@Composable
 fun BidirectionalCashFlowChart(
     points: List<CashFlowMonthUiItem>,
     modifier: Modifier = Modifier,
-    accessibleDescription: String = "Çift yönlü nakit akışı grafiği",
+    accessibleDescription: String = stringResource(Res.string.report_cash_flow_chart_desc),
 ) {
     if (points.isEmpty()) return
     val outlineVariant = MaterialTheme.colorScheme.outlineVariant
@@ -336,7 +367,7 @@ fun BidirectionalCashFlowChart(
         ) {
             points.forEach { pt ->
                 Text(
-                    text = pt.monthLabel,
+                    text = com.feniqo.mobile.presentation.common.localizedShortMonthName(pt.yearMonth.monthNumber),
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

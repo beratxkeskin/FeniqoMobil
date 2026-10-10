@@ -2079,4 +2079,91 @@
         <item quantity="one">Showing local records. %1$d change is waiting to sync.</item>
         <item quantity="other">Showing local records. %1$d changes are waiting to sync.</item>
     </plurals>
+
+    <!-- Reports Localization (Raporlar Dilim 2/4) -->
+    <!-- Navigation & Common Actions in Reports -->
+    <string name="report_nav_previous_month">Previous month</string>
+    <string name="report_nav_next_month">Next month</string>
+    <string name="report_metric_net">Net</string>
+
+    <!-- Period Summary Screen -->
+    <string name="report_period_summary_title">Period summary</string>
+    <string name="report_period_summary_weekly_title">Income and expense (weekly)</string>
+    <string name="report_period_summary_key_indicators">Key indicators</string>
+    <string name="report_indicator_savings_rate_sub">You saved this portion of your income.</string>
+    <string name="report_indicator_tx_count_title">Transaction count</string>
+    <string name="report_indicator_tx_count_sub">Total transactions this period.</string>
+    <string name="report_indicator_daily_avg_title">Daily average expense</string>
+    <string name="report_indicator_daily_avg_sub">Daily average of total expenses.</string>
+    <string name="report_period_summary_top_categories">Top spending categories</string>
+    <string name="report_rhythm_busiest_day_sub">Day with highest spending this month</string>
+    <string name="report_rhythm_lowest_week_sub">Week with lowest spending</string>
+    <string name="report_action_all_categories">All categories</string>
+    <string name="report_action_compare_period">Compare period</string>
+
+    <!-- All Reports Hub Screen -->
+    <string name="report_hub_title">All reports</string>
+    <string name="report_hub_category_title">Spending analysis &amp; Category breakdown</string>
+    <string name="report_hub_category_sub">View your expenses and income by categories</string>
+    <string name="report_hub_cash_flow_title">Cash flow</string>
+    <string name="report_hub_cash_flow_sub">Track your monthly income and expense movements</string>
+    <string name="report_hub_period_comparison_title">Period comparison</string>
+    <string name="report_hub_period_comparison_sub">Compare different periods in detail</string>
+    <string name="report_hub_spending_calendar_title">Spending calendar</string>
+    <string name="report_hub_spending_calendar_sub">View your spending day by day on the calendar</string>
+    <string name="report_hub_budget_performance_title">Budget performance</string>
+    <string name="report_hub_budget_performance_sub">Track performance against your budgets</string>
+    <string name="report_hub_subscription_summary_title">Subscription summary</string>
+    <string name="report_hub_subscription_summary_sub">View your recurring payments and trend</string>
+    <string name="report_hub_debt_summary_title">Debt and receivable summary</string>
+    <string name="report_hub_debt_summary_sub">Track debts and receivables belonging to you</string>
+    <string name="report_hub_forecast_title">Future period forecast</string>
+    <string name="report_hub_forecast_sub">Review your estimated cash difference for next month</string>
+    <string name="report_hub_financial_insights_title">Financial insights</string>
+    <string name="report_hub_financial_insights_sub">Savings and spending change analyses</string>
+
+    <!-- Category Breakdown Screen -->
+    <string name="report_category_breakdown_total_expense">Total expense</string>
+    <string name="report_category_breakdown_total_income">Total income</string>
+    <string name="report_category_breakdown_empty">No category spending recorded for this period.</string>
+    <plurals name="report_category_transaction_count_plural">
+        <item quantity="one">%1$d transaction</item>
+        <item quantity="other">%1$d transactions</item>
+    </plurals>
+
+    <!-- Category Detail Screen -->
+    <string name="report_category_detail_subtitle">Category spending summary</string>
+    <string name="report_category_detail_total_spending">Total spending</string>
+    <string name="report_category_detail_period_share">Period share %1$s</string>
+    <string name="report_category_detail_weekly_trend">Weekly spending trend</string>
+    <string name="report_category_comparison_calculating">Calculating comparison with previous month</string>
+    <string name="report_category_comparison_decreased">Spending decreased by %1$s compared to last month</string>
+    <string name="report_category_comparison_increased">Spending increased by %1$s compared to last month</string>
+    <string name="report_category_detail_merchant_title">Merchant breakdown</string>
+    <string name="report_category_detail_view_transactions">View transactions</string>
+
+    <!-- Cash Flow Screen -->
+    <string name="report_cash_flow_title">Cash Flow</string>
+    <string name="report_cash_flow_range_3_months">3 Months</string>
+    <string name="report_cash_flow_range_3_months_desc">3-month cash flow</string>
+    <string name="report_cash_flow_range_6_months">6 Months</string>
+    <string name="report_cash_flow_range_6_months_desc">6-month cash flow</string>
+    <string name="report_cash_flow_range_12_months">1 Year</string>
+    <string name="report_cash_flow_range_12_months_desc">1-year cash flow</string>
+    <string name="report_cash_flow_period_title">Period Cash Flow</string>
+    <string name="report_cash_flow_total_income">Total Income</string>
+    <string name="report_cash_flow_total_expense">Total Expense</string>
+    <string name="report_cash_flow_balance_title">Income and Expense Balance</string>
+    <string name="report_cash_flow_avg_income">Monthly Avg. Income</string>
+    <string name="report_cash_flow_avg_expense">Monthly Avg. Expense</string>
+    <string name="report_cash_flow_strongest_month">Strongest: %1$s</string>
+    <string name="report_cash_flow_weakest_month">Weakest: %1$s</string>
+    <string name="report_cash_flow_no_data">No data</string>
+    <string name="report_cash_flow_monthly_distribution">Monthly Distribution</string>
+    <string name="report_cash_flow_net_surplus">Net Surplus</string>
+    <string name="report_cash_flow_net_deficit">Net Deficit</string>
+    <string name="report_cash_flow_chart_desc">Bidirectional cash flow chart</string>
+    <string name="report_weekly_chart_desc">Weekly income and expense bar chart</string>
+    <string name="report_donut_chart_desc">Category breakdown donut chart</string>
+    <string name="report_trend_chart_desc">Monthly income and expense trend chart</string>
 </resources>

@@ -2080,4 +2080,91 @@
         <item quantity="one">Yerel kayıtlarınla gösteriliyor. %1$d değişiklik eşitlenmeyi bekliyor.</item>
         <item quantity="other">Yerel kayıtlarınla gösteriliyor. %1$d değişiklik eşitlenmeyi bekliyor.</item>
     </plurals>
+
+    <!-- Reports Localization (Raporlar Dilim 2/4) -->
+    <!-- Navigation & Common Actions in Reports -->
+    <string name="report_nav_previous_month">Önceki ay</string>
+    <string name="report_nav_next_month">Sonraki ay</string>
+    <string name="report_metric_net">Net</string>
+
+    <!-- Period Summary Screen -->
+    <string name="report_period_summary_title">Dönem özeti</string>
+    <string name="report_period_summary_weekly_title">Gelir ve gider (haftalık)</string>
+    <string name="report_period_summary_key_indicators">Temel göstergeler</string>
+    <string name="report_indicator_savings_rate_sub">Gelirinizin bu kadarını biriktirdiniz.</string>
+    <string name="report_indicator_tx_count_title">İşlem sayısı</string>
+    <string name="report_indicator_tx_count_sub">Bu dönemdeki toplam işlem.</string>
+    <string name="report_indicator_daily_avg_title">Günlük ortalama gider</string>
+    <string name="report_indicator_daily_avg_sub">Toplam giderin günlük ortalaması.</string>
+    <string name="report_period_summary_top_categories">En çok harcama yapılan kategoriler</string>
+    <string name="report_rhythm_busiest_day_sub">Bu ayın en fazla harcama günü</string>
+    <string name="report_rhythm_lowest_week_sub">En az harcama yapılan hafta</string>
+    <string name="report_action_all_categories">Tüm kategoriler</string>
+    <string name="report_action_compare_period">Dönemi karşılaştır</string>
+
+    <!-- All Reports Hub Screen -->
+    <string name="report_hub_title">Tüm raporlar</string>
+    <string name="report_hub_category_title">Harcama analizi &amp; Kategori dağılımı</string>
+    <string name="report_hub_category_sub">Giderlerinizi ve gelirlerinizi kategorilere göre görün</string>
+    <string name="report_hub_cash_flow_title">Nakit akışı</string>
+    <string name="report_hub_cash_flow_sub">Gelir ve gider hareketlerinizi aylık takip edin</string>
+    <string name="report_hub_period_comparison_title">Dönem karşılaştırma</string>
+    <string name="report_hub_period_comparison_sub">Farklı dönemleri detaylı karşılaştırın</string>
+    <string name="report_hub_spending_calendar_title">Harcama takvimi</string>
+    <string name="report_hub_spending_calendar_sub">Gün gün harcamalarınızı takvimde görün</string>
+    <string name="report_hub_budget_performance_title">Bütçe performansı</string>
+    <string name="report_hub_budget_performance_sub">Bütçenize göre gerçekleşmeleri izleyin</string>
+    <string name="report_hub_subscription_summary_title">Abonelik özeti</string>
+    <string name="report_hub_subscription_summary_sub">Düzenli ödemelerinizi ve trendi görüntüleyin</string>
+    <string name="report_hub_debt_summary_title">Borç ve alacak özeti</string>
+    <string name="report_hub_debt_summary_sub">Size ait borç ve alacakları takip edin</string>
+    <string name="report_hub_forecast_title">Gelecek dönem tahmini</string>
+    <string name="report_hub_forecast_sub">Gelecek ayki tahmini nakit farkınızı inceleyin</string>
+    <string name="report_hub_financial_insights_title">Finansal içgörüler</string>
+    <string name="report_hub_financial_insights_sub">Tasarruf ve harcama değişim analizleri</string>
+
+    <!-- Category Breakdown Screen -->
+    <string name="report_category_breakdown_total_expense">Toplam gider</string>
+    <string name="report_category_breakdown_total_income">Toplam gelir</string>
+    <string name="report_category_breakdown_empty">Bu dönemde kayıtlı kategori harcaması yok.</string>
+    <plurals name="report_category_transaction_count_plural">
+        <item quantity="one">%1$d işlem</item>
+        <item quantity="other">%1$d işlem</item>
+    </plurals>
+
+    <!-- Category Detail Screen -->
+    <string name="report_category_detail_subtitle">Kategori harcama özeti</string>
+    <string name="report_category_detail_total_spending">Toplam harcama</string>
+    <string name="report_category_detail_period_share">Dönem payı %1$s</string>
+    <string name="report_category_detail_weekly_trend">Haftalık harcama trendi</string>
+    <string name="report_category_comparison_calculating">Geçen aya göre veri hesaplanıyor</string>
+    <string name="report_category_comparison_decreased">Geçen aya göre harcama %1$s azaldı</string>
+    <string name="report_category_comparison_increased">Geçen aya göre harcama %1$s arttı</string>
+    <string name="report_category_detail_merchant_title">İş yeri kırılımı</string>
+    <string name="report_category_detail_view_transactions">İşlemleri gör</string>
+
+    <!-- Cash Flow Screen -->
+    <string name="report_cash_flow_title">Nakit Akışı</string>
+    <string name="report_cash_flow_range_3_months">3 Ay</string>
+    <string name="report_cash_flow_range_3_months_desc">3 aylık nakit akışı</string>
+    <string name="report_cash_flow_range_6_months">6 Ay</string>
+    <string name="report_cash_flow_range_6_months_desc">6 aylık nakit akışı</string>
+    <string name="report_cash_flow_range_12_months">1 Yıl</string>
+    <string name="report_cash_flow_range_12_months_desc">1 yıllık nakit akışı</string>
+    <string name="report_cash_flow_period_title">Dönem Nakit Akışı</string>
+    <string name="report_cash_flow_total_income">Toplam Gelir</string>
+    <string name="report_cash_flow_total_expense">Toplam Gider</string>
+    <string name="report_cash_flow_balance_title">Gelir ve Gider Dengesi</string>
+    <string name="report_cash_flow_avg_income">Aylık Ort. Gelir</string>
+    <string name="report_cash_flow_avg_expense">Aylık Ort. Gider</string>
+    <string name="report_cash_flow_strongest_month">En Güçlü: %1$s</string>
+    <string name="report_cash_flow_weakest_month">En Zayıf: %1$s</string>
+    <string name="report_cash_flow_no_data">Veri yok</string>
+    <string name="report_cash_flow_monthly_distribution">Aylık Dağılım</string>
+    <string name="report_cash_flow_net_surplus">Net Fazla</string>
+    <string name="report_cash_flow_net_deficit">Net Açık</string>
+    <string name="report_cash_flow_chart_desc">Çift yönlü nakit akışı grafiği</string>
+    <string name="report_weekly_chart_desc">Haftalık gelir ve gider sütun grafiği</string>
+    <string name="report_donut_chart_desc">Kategori dağılımı pasta grafiği</string>
+    <string name="report_trend_chart_desc">Aylık gelir ve gider trend grafiği</string>
 </resources>

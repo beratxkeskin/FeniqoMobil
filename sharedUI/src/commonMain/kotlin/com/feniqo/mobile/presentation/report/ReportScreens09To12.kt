@@ -47,11 +47,39 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.domain.model.Money
+import com.feniqo.mobile.domain.model.MoneyDelta
+import com.feniqo.mobile.domain.model.YearMonth
+import com.feniqo.mobile.presentation.common.localizedMonthName
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.report_action_back
+import feniqomobil.sharedui.generated.resources.report_cash_flow_avg_expense
+import feniqomobil.sharedui.generated.resources.report_cash_flow_avg_income
+import feniqomobil.sharedui.generated.resources.report_cash_flow_balance_title
+import feniqomobil.sharedui.generated.resources.report_cash_flow_monthly_distribution
+import feniqomobil.sharedui.generated.resources.report_cash_flow_net_deficit
+import feniqomobil.sharedui.generated.resources.report_cash_flow_net_surplus
+import feniqomobil.sharedui.generated.resources.report_cash_flow_no_data
+import feniqomobil.sharedui.generated.resources.report_cash_flow_period_title
+import feniqomobil.sharedui.generated.resources.report_cash_flow_range_12_months
+import feniqomobil.sharedui.generated.resources.report_cash_flow_range_12_months_desc
+import feniqomobil.sharedui.generated.resources.report_cash_flow_range_3_months
+import feniqomobil.sharedui.generated.resources.report_cash_flow_range_3_months_desc
+import feniqomobil.sharedui.generated.resources.report_cash_flow_range_6_months
+import feniqomobil.sharedui.generated.resources.report_cash_flow_range_6_months_desc
+import feniqomobil.sharedui.generated.resources.report_cash_flow_strongest_month
+import feniqomobil.sharedui.generated.resources.report_cash_flow_title
+import feniqomobil.sharedui.generated.resources.report_cash_flow_total_expense
+import feniqomobil.sharedui.generated.resources.report_cash_flow_total_income
+import feniqomobil.sharedui.generated.resources.report_cash_flow_weakest_month
+import org.jetbrains.compose.resources.stringResource
 
 // Tasarım Sistemi Renkleri
 private val ColorSageGreen = Color(0xFF2D5A43)
@@ -63,17 +91,18 @@ private val ColorRefinedRed = Color(0xFFC04D43)
 @Composable
 fun CashFlowReportScreen(
     monthlyPoints: List<CashFlowMonthUiItem>,
-    totalIncomeFormatted: String,
-    totalExpenseFormatted: String,
-    netDifferenceFormatted: String,
-    isNetPositive: Boolean,
-    averageIncomeFormatted: String,
-    averageExpenseFormatted: String,
-    strongestMonthLabel: String,
-    weakestMonthLabel: String,
+    totalIncome: Money,
+    totalExpense: Money,
+    netDifference: MoneyDelta,
+    isNetPositive: Boolean = netDifference.amountMinor >= 0L,
+    averageIncome: Money,
+    averageExpense: Money,
+    strongestMonth: YearMonth?,
+    weakestMonth: YearMonth?,
     selectedMonthCount: Int = 6,
     onSelectMonthRange: (Int) -> Unit = {},
     onBackClick: () -> Unit,
+    maskAmounts: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -83,7 +112,7 @@ fun CashFlowReportScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
+                .statusBarsPadding(),
         ) {
             // Top Bar
             Row(
@@ -95,12 +124,12 @@ fun CashFlowReportScreen(
                 IconButton(onClick = onBackClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Geri",
+                        contentDescription = stringResource(Res.string.report_action_back),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
-                    text = "Nakit Akışı",
+                    text = stringResource(Res.string.report_cash_flow_title),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -115,18 +144,24 @@ fun CashFlowReportScreen(
             ) {
                 // Ay Seçim Segmenti (3 Ay / 6 Ay / 12 Ay)
                 item {
+                    val rangeOptions = listOf(
+                        Triple(3, stringResource(Res.string.report_cash_flow_range_3_months), stringResource(Res.string.report_cash_flow_range_3_months_desc)),
+                        Triple(6, stringResource(Res.string.report_cash_flow_range_6_months), stringResource(Res.string.report_cash_flow_range_6_months_desc)),
+                        Triple(12, stringResource(Res.string.report_cash_flow_range_12_months), stringResource(Res.string.report_cash_flow_range_12_months_desc)),
+                    )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        listOf(3 to "3 Ay", 6 to "6 Ay", 12 to "1 Yıl").forEach { (months, label) ->
+                        rangeOptions.forEach { (months, label, desc) ->
                             val isSelected = selectedMonthCount == months
                             Surface(
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(40.dp)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .clickable { onSelectMonthRange(months) },
+                                    .clickable { onSelectMonthRange(months) }
+                                    .semantics { contentDescription = desc },
                                 color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
                                 shape = RoundedCornerShape(12.dp),
                             ) {
@@ -152,14 +187,14 @@ fun CashFlowReportScreen(
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(
-                                text = "Dönem Nakit Akışı",
+                                text = stringResource(Res.string.report_cash_flow_period_title),
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Medium,
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = netDifferenceFormatted,
+                                text = netDifference.toLocalizedMaskedText(maskAmounts, showPositiveSign = true),
                                 fontSize = 28.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isNetPositive) ColorSageGreen else ColorRefinedRed,
@@ -171,20 +206,20 @@ fun CashFlowReportScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 Column {
-                                    Text("Toplam Gelir", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(stringResource(Res.string.report_cash_flow_total_income), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = totalIncomeFormatted,
+                                        text = totalIncome.toLocalizedMaskedText(maskAmounts),
                                         fontSize = 15.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = ColorSageGreen,
                                     )
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text("Toplam Gider", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(stringResource(Res.string.report_cash_flow_total_expense), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = totalExpenseFormatted,
+                                        text = totalExpense.toLocalizedMaskedText(maskAmounts),
                                         fontSize = 15.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = ColorRefinedRed,
@@ -205,7 +240,7 @@ fun CashFlowReportScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = "Gelir ve Gider Dengesi",
+                                    text = stringResource(Res.string.report_cash_flow_balance_title),
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -222,6 +257,20 @@ fun CashFlowReportScreen(
 
                 // İstatistik Karşılaştırma Izgarası
                 item {
+                    val strongestMonthValue = if (strongestMonth != null) {
+                        localizedMonthName(strongestMonth.monthNumber)
+                    } else {
+                        stringResource(Res.string.report_cash_flow_no_data)
+                    }
+                    val strongestText = stringResource(Res.string.report_cash_flow_strongest_month, strongestMonthValue)
+
+                    val weakestMonthValue = if (weakestMonth != null) {
+                        localizedMonthName(weakestMonth.monthNumber)
+                    } else {
+                        stringResource(Res.string.report_cash_flow_no_data)
+                    }
+                    val weakestText = stringResource(Res.string.report_cash_flow_weakest_month, weakestMonthValue)
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -232,16 +281,16 @@ fun CashFlowReportScreen(
                             cornerRadius = 16.dp,
                         ) {
                             Column(modifier = Modifier.padding(14.dp)) {
-                                Text("Aylık Ort. Gelir", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(Res.string.report_cash_flow_avg_income), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = averageIncomeFormatted,
+                                    text = averageIncome.toLocalizedMaskedText(maskAmounts),
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = ColorSageGreen,
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text("En Güçlü: $strongestMonthLabel", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
+                                Text(strongestText, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
                             }
                         }
 
@@ -251,16 +300,16 @@ fun CashFlowReportScreen(
                             cornerRadius = 16.dp,
                         ) {
                             Column(modifier = Modifier.padding(14.dp)) {
-                                Text("Aylık Ort. Gider", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(Res.string.report_cash_flow_avg_expense), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = averageExpenseFormatted,
+                                    text = averageExpense.toLocalizedMaskedText(maskAmounts),
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = ColorRefinedRed,
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text("En Zayıf: $weakestMonthLabel", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
+                                Text(weakestText, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
                             }
                         }
                     }
@@ -269,7 +318,7 @@ fun CashFlowReportScreen(
                 // Aylık Detay Listesi
                 item {
                     Text(
-                        text = "Aylık Dağılım",
+                        text = stringResource(Res.string.report_cash_flow_monthly_distribution),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -278,6 +327,7 @@ fun CashFlowReportScreen(
                 }
 
                 items(monthlyPoints) { month ->
+                    val monthLabel = "${localizedMonthName(month.yearMonth.monthNumber)} ${month.yearMonth.year}"
                     ReportCard(
                         modifier = Modifier.fillMaxWidth(),
                         backgroundColor = MaterialTheme.colorScheme.surface,
@@ -292,7 +342,7 @@ fun CashFlowReportScreen(
                         ) {
                             Column {
                                 Text(
-                                    text = month.monthLabel,
+                                    text = monthLabel,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -300,13 +350,13 @@ fun CashFlowReportScreen(
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Text(
-                                        text = "+${month.incomeFormatted}",
+                                        text = "+${month.income.toLocalizedMaskedText(maskAmounts || month.maskAmounts)}",
                                         fontSize = 12.sp,
                                         color = ColorSageGreen,
                                         fontWeight = FontWeight.Medium,
                                     )
                                     Text(
-                                        text = "-${month.expenseFormatted}",
+                                        text = "-${month.expense.toLocalizedMaskedText(maskAmounts || month.maskAmounts)}",
                                         fontSize = 12.sp,
                                         color = ColorRefinedRed,
                                         fontWeight = FontWeight.Medium,
@@ -316,14 +366,14 @@ fun CashFlowReportScreen(
 
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
-                                    text = month.netFormatted,
+                                    text = month.net.toLocalizedMaskedText(maskAmounts || month.maskAmounts, showPositiveSign = true),
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (month.isNetPositive) ColorSageGreen else ColorRefinedRed,
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = if (month.isNetPositive) "Net Fazla" else "Net Açık",
+                                    text = if (month.isNetPositive) stringResource(Res.string.report_cash_flow_net_surplus) else stringResource(Res.string.report_cash_flow_net_deficit),
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )

@@ -213,14 +213,51 @@ data class CategoryComparisonUiItem(
     val isIncreased: Boolean,
 )
 
-data class CashFlowMonthUiItem(
-    val monthLabel: String,
-    val incomeFormatted: String,
-    val expenseFormatted: String,
-    val netFormatted: String,
-    val isNetPositive: Boolean,
+data class WeeklyDualBarUiPoint(
+    val weekNumber: Int,
     val incomeMinor: Long,
     val expenseMinor: Long,
+)
+
+data class MerchantBreakdownUiItem(
+    val merchantName: String,
+    val amount: Money,
+    val shareBasisPoints: Int,
+    val transactionCount: Int,
+    val maskAmounts: Boolean = false,
+)
+
+sealed interface CategoryDetailComparisonUiState {
+    data object Unavailable : CategoryDetailComparisonUiState
+    data object Calculating : CategoryDetailComparisonUiState
+    data class Available(
+        val previousMonthExpense: Money,
+        val changePercentageBasisPoints: Int,
+        val isDecreased: Boolean,
+    ) : CategoryDetailComparisonUiState
+}
+
+enum class AllReportsHubItem {
+    CATEGORY_BREAKDOWN,
+    CASH_FLOW,
+    PERIOD_COMPARISON,
+    SPENDING_CALENDAR,
+    BUDGET_PERFORMANCE,
+    SUBSCRIPTION_SUMMARY,
+    DEBT_SUMMARY,
+    FORECAST,
+    FINANCIAL_INSIGHTS,
+}
+
+data class CashFlowMonthUiItem(
+    val yearMonth: com.feniqo.mobile.domain.model.YearMonth,
+    val income: Money,
+    val expense: Money,
+    val net: MoneyDelta,
+    val isNetPositive: Boolean = net.amountMinor >= 0L,
+    val incomeMinor: Long = income.amountMinor,
+    val expenseMinor: Long = expense.amountMinor,
+    val maskAmounts: Boolean = false,
 )
 
 data class FinancialInsightUiItem(

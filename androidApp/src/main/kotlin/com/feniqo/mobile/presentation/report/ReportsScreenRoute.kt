@@ -14,6 +14,8 @@ import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.MoneyDelta
+import com.feniqo.mobile.domain.model.ReportDateRange
+import com.feniqo.mobile.domain.model.ReportPeriodPreset
 import com.feniqo.mobile.domain.model.YearMonth
 import com.feniqo.mobile.presentation.util.MoneyFormatter
 
@@ -92,25 +94,23 @@ fun PeriodSummaryReportRoute(
 
     PeriodSummaryScreen(
         currentMonth = YearMonth.from(refDate.year, refDate.monthNumber),
-        incomeFormatted = success.income.toLocalizedMaskedText(success.maskAmounts),
-        expenseFormatted = success.expense.toLocalizedMaskedText(success.maskAmounts),
-        netFormatted = success.net.toLocalizedMaskedText(success.maskAmounts),
+        income = success.income,
+        expense = success.expense,
+        net = success.net,
         isNetPositive = success.isNetPositive,
-        savingsRateFormatted = "%${success.savingsRateBasisPoints / 100}",
+        savingsRateBasisPoints = success.savingsRateBasisPoints,
         transactionCount = success.report.transactionCount,
-        dailyAverageExpenseFormatted = MoneyFormatter.format(
-            Money(dailyAvgMinor, success.report.income.currency)
-        ),
-        weeklyData = emptyList(),
+        dailyAverageExpense = Money(dailyAvgMinor, success.report.income.currency),
+        weeklyPoints = emptyList(),
         topCategories = success.categoryBreakdown,
-        donutSlices = success.categoryBreakdown.map { (it.name ?: "") to it.shareRatio },
         financialRhythm = success.financialRhythm,
-        insightText = success.insightPayload.toLocalizedText(),
+        insightPayload = success.insightPayload,
         onPreviousMonth = {},
         onNextMonth = {},
         onNavigateToCategoryBreakdown = { onNavigateToCategoryDetail("", "") },
         onNavigateToPeriodComparison = {},
         onNavigateBack = onNavigateBack,
+        maskAmounts = success.maskAmounts,
         modifier = modifier,
     )
 }
@@ -161,9 +161,14 @@ fun CategoryBreakdownReportRoute(
     val success = uiState.contentState as? ReportsContentState.Success ?: return
 
     CategoryBreakdownReportScreen(
-        periodLabel = "Bu Ay",
-        totalExpenseFormatted = success.expense.toLocalizedMaskedText(success.maskAmounts),
-        totalIncomeFormatted = success.income.toLocalizedMaskedText(success.maskAmounts),
+        periodPreset = uiState.filterState.periodPreset,
+        customDateRange = if (uiState.filterState.periodPreset == ReportPeriodPreset.CUSTOM &&
+            uiState.filterState.customStartDate != null && uiState.filterState.customEndDate != null
+        ) {
+            ReportDateRange(uiState.filterState.customStartDate!!, uiState.filterState.customEndDate!!)
+        } else null,
+        totalExpense = success.expense,
+        totalIncome = success.income,
         expenseTransactionCount = success.report.transactionCount,
         incomeTransactionCount = 0,
         expenseCategories = success.categoryBreakdown,
@@ -173,6 +178,7 @@ fun CategoryBreakdownReportRoute(
         },
         onChangePeriod = {},
         onNavigateBack = onNavigateBack,
+        maskAmounts = success.maskAmounts,
         modifier = modifier,
     )
 }
@@ -192,19 +198,29 @@ fun CategoryDetailReportRoute(
     val success = uiState.contentState as? ReportsContentState.Success
     val catItem = success?.categoryBreakdown?.find { it.categoryId?.value == categoryId }
 
+    val currency = success?.report?.income?.currency ?: Currency.TRY
+    val isCategoryMissing = catItem?.isCategoryMissing ?: (categoryId.isBlank() || catItem == null)
+    val displayName = if (isCategoryMissing) null else (catItem?.name ?: categoryName.ifBlank { null })
+
     CategoryDetailReportScreen(
-        categoryName = categoryName,
-        categoryDescription = "Kategori harcama özeti",
-        periodLabel = "Bu Ay",
-        totalSpendingFormatted = catItem?.let { it.amount.toLocalizedMaskedText(it.maskAmounts) } ?: "₺0",
+        categoryName = displayName,
+        isCategoryMissing = isCategoryMissing,
+        periodPreset = uiState.filterState.periodPreset,
+        customDateRange = if (uiState.filterState.periodPreset == ReportPeriodPreset.CUSTOM &&
+            uiState.filterState.customStartDate != null && uiState.filterState.customEndDate != null
+        ) {
+            ReportDateRange(uiState.filterState.customStartDate!!, uiState.filterState.customEndDate!!)
+        } else null,
+        totalSpending = catItem?.amount ?: Money.zero(currency),
         transactionCount = catItem?.transactionCount ?: 0,
-        periodShareFormatted = catItem?.let { "%${it.shareBasisPoints / 100}" } ?: "%0",
-        weeklyData = emptyList(),
-        previousMonthComparisonText = "Geçen aya göre veri hesaplanıyor",
+        periodShareBasisPoints = catItem?.shareBasisPoints ?: 0,
+        weeklyTrend = emptyList(),
+        comparisonState = CategoryDetailComparisonUiState.Calculating,
         merchantBreakdown = emptyList(),
         transactions = emptyList(),
         onNavigateToTransactions = {},
         onNavigateBack = onNavigateBack,
+        maskAmounts = success?.maskAmounts ?: false,
         modifier = modifier,
     )
 }
@@ -218,6 +234,10 @@ fun CashFlowReportRoute(
     modifier: Modifier = Modifier,
     viewModel: ReportsViewModel = hiltViewModel(),
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val maskAmounts =
+        (uiState.contentState as? ReportsContentState.Success)?.maskAmounts ?: false
+
     var monthCount by remember { mutableIntStateOf(6) }
     val cashFlowSummary by viewModel.observeCashFlow(monthCount).collectAsStateWithLifecycle(initialValue = null)
 
@@ -225,13 +245,14 @@ fun CashFlowReportRoute(
     val currency = summary?.points?.firstOrNull()?.income?.currency ?: Currency.TRY
     val monthlyUiItems = summary?.points?.map { pt ->
         CashFlowMonthUiItem(
-            monthLabel = "${pt.yearMonth.monthNumber}. Ay (${pt.yearMonth.year})",
-            incomeFormatted = MoneyFormatter.format(pt.income),
-            expenseFormatted = MoneyFormatter.format(pt.expense),
-            netFormatted = MoneyFormatter.formatDelta(pt.net, includeSign = true),
-            isNetPositive = pt.net.amountMinor >= 0,
+            yearMonth = pt.yearMonth,
+            income = pt.income,
+            expense = pt.expense,
+            net = pt.net,
+            isNetPositive = pt.net.amountMinor >= 0L,
             incomeMinor = pt.income.amountMinor,
             expenseMinor = pt.expense.amountMinor,
+            maskAmounts = maskAmounts,
         )
     } ?: emptyList()
 
@@ -242,17 +263,18 @@ fun CashFlowReportRoute(
 
     CashFlowReportScreen(
         monthlyPoints = monthlyUiItems,
-        totalIncomeFormatted = MoneyFormatter.format(Money(totalIncomeMinor, currency)),
-        totalExpenseFormatted = MoneyFormatter.format(Money(totalExpenseMinor, currency)),
-        netDifferenceFormatted = MoneyFormatter.formatDelta(netDiff, includeSign = true),
+        totalIncome = Money(totalIncomeMinor, currency),
+        totalExpense = Money(totalExpenseMinor, currency),
+        netDifference = netDiff,
         isNetPositive = netDiffMinor >= 0L,
-        averageIncomeFormatted = MoneyFormatter.format(summary?.averageIncome ?: Money(0L, currency)),
-        averageExpenseFormatted = MoneyFormatter.format(summary?.averageExpense ?: Money(0L, currency)),
-        strongestMonthLabel = summary?.bestMonth?.let { "${it.monthNumber}. Ay" } ?: "-",
-        weakestMonthLabel = summary?.weakestMonth?.let { "${it.monthNumber}. Ay" } ?: "-",
+        averageIncome = summary?.averageIncome ?: Money.zero(currency),
+        averageExpense = summary?.averageExpense ?: Money.zero(currency),
+        strongestMonth = summary?.bestMonth,
+        weakestMonth = summary?.weakestMonth,
         selectedMonthCount = monthCount,
         onSelectMonthRange = { monthCount = it },
         onBackClick = onNavigateBack,
+        maskAmounts = maskAmounts,
         modifier = modifier,
     )
 }

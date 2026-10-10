@@ -30,7 +30,6 @@ import androidx.compose.material.icons.outlined.CompareArrows
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.Percent
 import androidx.compose.material.icons.outlined.PieChart
-import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.TrackChanges
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -48,9 +47,41 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.feniqo.mobile.domain.model.Money
+import com.feniqo.mobile.domain.model.MoneyDelta
 import com.feniqo.mobile.domain.model.YearMonth
+import com.feniqo.mobile.presentation.common.formatLocalizedRateBasisPoints
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.report_action_all_categories
+import feniqomobil.sharedui.generated.resources.report_action_back
+import feniqomobil.sharedui.generated.resources.report_action_compare_period
+import feniqomobil.sharedui.generated.resources.report_category_breakdown_title
+import feniqomobil.sharedui.generated.resources.report_category_deleted
+import feniqomobil.sharedui.generated.resources.report_hub_title
+import feniqomobil.sharedui.generated.resources.report_indicator_daily_avg_sub
+import feniqomobil.sharedui.generated.resources.report_indicator_daily_avg_title
+import feniqomobil.sharedui.generated.resources.report_indicator_savings_rate_sub
+import feniqomobil.sharedui.generated.resources.report_indicator_tx_count_sub
+import feniqomobil.sharedui.generated.resources.report_indicator_tx_count_title
+import feniqomobil.sharedui.generated.resources.report_metric_expense
+import feniqomobil.sharedui.generated.resources.report_metric_income
+import feniqomobil.sharedui.generated.resources.report_metric_net
+import feniqomobil.sharedui.generated.resources.report_metric_savings_rate
+import feniqomobil.sharedui.generated.resources.report_nav_next_month
+import feniqomobil.sharedui.generated.resources.report_nav_previous_month
+import feniqomobil.sharedui.generated.resources.report_period_summary_key_indicators
+import feniqomobil.sharedui.generated.resources.report_period_summary_title
+import feniqomobil.sharedui.generated.resources.report_period_summary_top_categories
+import feniqomobil.sharedui.generated.resources.report_period_summary_weekly_title
+import feniqomobil.sharedui.generated.resources.report_rhythm_busiest_day_sub
+import feniqomobil.sharedui.generated.resources.report_rhythm_busiest_day_title
+import feniqomobil.sharedui.generated.resources.report_rhythm_lowest_week_sub
+import feniqomobil.sharedui.generated.resources.report_rhythm_lowest_week_title
+import feniqomobil.sharedui.generated.resources.report_rhythm_week_format
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * 02 ve 03 numaralı onaylı tasarım ekranları: Dönem özeti ve kaydırılmış içerik.
@@ -59,23 +90,23 @@ import com.feniqo.mobile.domain.model.YearMonth
 @Composable
 fun PeriodSummaryScreen(
     currentMonth: YearMonth,
-    incomeFormatted: String,
-    expenseFormatted: String,
-    netFormatted: String,
-    isNetPositive: Boolean,
-    savingsRateFormatted: String,
+    income: Money,
+    expense: Money,
+    net: MoneyDelta,
+    isNetPositive: Boolean = net.amountMinor >= 0L,
+    savingsRateBasisPoints: Int,
     transactionCount: Int,
-    dailyAverageExpenseFormatted: String,
-    weeklyData: List<Pair<String, Pair<Long, Long>>>,
-    topCategories: List<CategoryBreakdownUiItem>,
-    donutSlices: List<Pair<String, Float>>,
-    financialRhythm: FinancialRhythmUiModel?,
-    insightText: String,
+    dailyAverageExpense: Money,
+    weeklyPoints: List<WeeklyDualBarUiPoint> = emptyList(),
+    topCategories: List<CategoryBreakdownUiItem> = emptyList(),
+    financialRhythm: FinancialRhythmUiModel? = null,
+    insightPayload: ReportInsightPayload = ReportInsightPayload.None,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onNavigateToCategoryBreakdown: () -> Unit,
     onNavigateToPeriodComparison: () -> Unit,
     onNavigateBack: () -> Unit,
+    maskAmounts: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -91,18 +122,20 @@ fun PeriodSummaryScreen(
                 IconButton(onClick = onNavigateBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                        contentDescription = "Geri",
+                        contentDescription = stringResource(Res.string.report_action_back),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
-                    text = "Dönem özeti",
+                    text = stringResource(Res.string.report_period_summary_title),
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, fontSize = 20.sp),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }
         },
     ) { innerPadding ->
+        val localizedInsight = insightPayload.toLocalizedText()
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -126,19 +159,19 @@ fun PeriodSummaryScreen(
                         IconButton(onClick = onPreviousMonth) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
-                                contentDescription = "Önceki Ay",
+                                contentDescription = stringResource(Res.string.report_nav_previous_month),
                                 tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
                         Text(
-                            text = "${ReportSummaryFormatter.monthName(currentMonth.month)} ${currentMonth.year}",
+                            text = currentMonth.toLocalizedMonthYear(),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         IconButton(onClick = onNextMonth) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-                                contentDescription = "Sonraki Ay",
+                                contentDescription = stringResource(Res.string.report_nav_next_month),
                                 tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
@@ -159,19 +192,19 @@ fun PeriodSummaryScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Column {
-                            Text(text = "Gelir", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(text = stringResource(Res.string.report_metric_income), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(text = incomeFormatted, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.primary)
+                            Text(text = income.toLocalizedMaskedText(maskAmounts), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.primary)
                         }
                         Column {
-                            Text(text = "Gider", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(text = stringResource(Res.string.report_metric_expense), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(text = expenseFormatted, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFFDC2626))
+                            Text(text = expense.toLocalizedMaskedText(maskAmounts), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFFDC2626))
                         }
                         Column {
-                            Text(text = "Net", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(text = stringResource(Res.string.report_metric_net), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(text = netFormatted, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = if (isNetPositive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                            Text(text = net.toLocalizedMaskedText(maskAmounts), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = if (isNetPositive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
                         }
                     }
                 }
@@ -191,20 +224,20 @@ fun PeriodSummaryScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(text = "Gelir ve gider (haftalık)", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                            Text(text = stringResource(Res.string.report_period_summary_weekly_title), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
-                                    Text(text = "Gelir", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(text = stringResource(Res.string.report_metric_income), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFDC2626)))
-                                    Text(text = "Gider", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(text = stringResource(Res.string.report_metric_expense), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         }
                         Spacer(modifier = Modifier.height(14.dp))
-                        WeeklyDualBarChart(weeklyData = weeklyData)
+                        WeeklyDualBarChart(weeklyPoints = weeklyPoints)
                     }
                 }
             }
@@ -218,25 +251,25 @@ fun PeriodSummaryScreen(
                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Text(text = "Temel göstergeler", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                        Text(text = stringResource(Res.string.report_period_summary_key_indicators), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
 
                         IndicatorRow(
                             iconVector = Icons.Outlined.Percent,
-                            title = "Tasarruf oranı",
-                            subtitle = "Gelirinizin bu kadarını biriktirdiniz.",
-                            value = savingsRateFormatted,
+                            title = stringResource(Res.string.report_metric_savings_rate),
+                            subtitle = stringResource(Res.string.report_indicator_savings_rate_sub),
+                            value = formatLocalizedRateBasisPoints(savingsRateBasisPoints),
                         )
                         IndicatorRow(
                             iconVector = Icons.AutoMirrored.Outlined.ReceiptLong,
-                            title = "İşlem sayısı",
-                            subtitle = "Bu dönemdeki toplam işlem.",
+                            title = stringResource(Res.string.report_indicator_tx_count_title),
+                            subtitle = stringResource(Res.string.report_indicator_tx_count_sub),
                             value = transactionCount.toString(),
                         )
                         IndicatorRow(
                             iconVector = Icons.Outlined.CalendarToday,
-                            title = "Günlük ortalama gider",
-                            subtitle = "Toplam giderin günlük ortalaması.",
-                            value = dailyAverageExpenseFormatted,
+                            title = stringResource(Res.string.report_indicator_daily_avg_title),
+                            subtitle = stringResource(Res.string.report_indicator_daily_avg_sub),
+                            value = dailyAverageExpense.toLocalizedMaskedText(maskAmounts),
                         )
                     }
                 }
@@ -252,9 +285,14 @@ fun PeriodSummaryScreen(
                         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(text = "En çok harcama yapılan kategoriler", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                            Text(text = stringResource(Res.string.report_period_summary_top_categories), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
 
                             topCategories.take(3).forEachIndexed { index, item ->
+                                val categoryDisplayName = if (item.isCategoryMissing || item.name == null) {
+                                    stringResource(Res.string.report_category_deleted)
+                                } else {
+                                    item.name
+                                }
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -270,11 +308,11 @@ fun PeriodSummaryScreen(
                                                     Text(text = (index + 1).toString(), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                                 }
                                             }
-                                            Text(text = item.name.orEmpty(), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface)
+                                            Text(text = categoryDisplayName, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface)
                                         }
                                         Column(horizontalAlignment = Alignment.End) {
-                                            Text(text = item.amount.toLocalizedMaskedText(item.maskAmounts), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
-                                            Text(text = "%${item.shareBasisPoints / 100}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Text(text = item.amount.toLocalizedMaskedText(maskAmounts || item.maskAmounts), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                                            Text(text = formatLocalizedRateBasisPoints(item.shareBasisPoints), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         }
                                     }
                                     LinearProgressIndicator(
@@ -291,7 +329,7 @@ fun PeriodSummaryScreen(
             }
 
             // Kategori Dağılımı Donut Grafiği (Ekran 03)
-            if (donutSlices.isNotEmpty()) {
+            if (topCategories.isNotEmpty()) {
                 item("donut_section") {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
@@ -300,7 +338,7 @@ fun PeriodSummaryScreen(
                         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text(text = "Kategori dağılımı", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                            Text(text = stringResource(Res.string.report_category_breakdown_title), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
                             Spacer(modifier = Modifier.height(12.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -308,13 +346,25 @@ fun PeriodSummaryScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 val colors = listOf(Color(0xFFE53935), Color(0xFFD81B60), Color(0xFF8E24AA), Color(0xFF1E88E5), Color(0xFF00897B))
-                                ReportDonutChart(slices = donutSlices, colors = colors, centerText = expenseFormatted)
+                                ReportDonutChart(slices = topCategories, colors = colors, centerText = expense.toLocalizedMaskedText(maskAmounts))
                                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    donutSlices.take(5).forEachIndexed { i, (name, ratio) ->
+                                    topCategories.take(5).forEachIndexed { i, item ->
+                                        val sliceName = if (item.isCategoryMissing || item.name == null) {
+                                            stringResource(Res.string.report_category_deleted)
+                                        } else {
+                                            item.name
+                                        }
                                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                             Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(colors.getOrElse(i) { Color(0xFF2D5A43) }))
-                                            Text(text = name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.width(75.dp))
-                                            Text(text = "%${(ratio * 100).toInt()}", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Text(
+                                                text = sliceName,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.width(75.dp),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                            Text(text = formatLocalizedRateBasisPoints(item.shareBasisPoints), style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         }
                                     }
                                 }
@@ -337,11 +387,11 @@ fun PeriodSummaryScreen(
                                         modifier = Modifier.size(14.dp),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
-                                    Text(text = "En yoğun gün", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(text = stringResource(Res.string.report_rhythm_busiest_day_title), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(text = financialRhythm.busiestDay?.toLocalizedDayName().orEmpty(), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
-                                Text(text = "Bu ayın en fazla harcama günü", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = stringResource(Res.string.report_rhythm_busiest_day_sub), style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                         Surface(modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surface, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
@@ -353,11 +403,11 @@ fun PeriodSummaryScreen(
                                         modifier = Modifier.size(14.dp),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
-                                    Text(text = "En düşük hafta", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(text = stringResource(Res.string.report_rhythm_lowest_week_title), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(text = "${financialRhythm.lowestExpenseWeekNumber}. Hafta", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
-                                Text(text = "En az harcama yapılan hafta", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = stringResource(Res.string.report_rhythm_week_format, financialRhythm.lowestExpenseWeekNumber), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                                Text(text = stringResource(Res.string.report_rhythm_lowest_week_sub), style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -365,7 +415,7 @@ fun PeriodSummaryScreen(
             }
 
             // Feniqo İçgörü Kartı (Ekran 03)
-            if (insightText.isNotBlank()) {
+            if (localizedInsight.isNotBlank()) {
                 item("feniqo_insight") {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
@@ -380,7 +430,7 @@ fun PeriodSummaryScreen(
                                 modifier = Modifier.size(20.dp),
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
-                            Text(text = insightText, style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            Text(text = localizedInsight, style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = MaterialTheme.colorScheme.onPrimaryContainer)
                         }
                     }
                 }
@@ -403,7 +453,7 @@ fun PeriodSummaryScreen(
                                     modifier = Modifier.size(18.dp),
                                     tint = MaterialTheme.colorScheme.onSurface,
                                 )
-                                Text(text = "Tüm kategoriler", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                                Text(text = stringResource(Res.string.report_action_all_categories), style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
                             }
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
@@ -428,7 +478,7 @@ fun PeriodSummaryScreen(
                                     modifier = Modifier.size(18.dp),
                                     tint = MaterialTheme.colorScheme.onSurface,
                                 )
-                                Text(text = "Dönemi karşılaştır", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                                Text(text = stringResource(Res.string.report_action_compare_period), style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
                             }
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
@@ -508,12 +558,12 @@ fun AllReportsHubScreen(
                 IconButton(onClick = onNavigateBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                        contentDescription = "Geri",
+                        contentDescription = stringResource(Res.string.report_action_back),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
-                    text = "Tüm raporlar",
+                    text = stringResource(Res.string.report_hub_title),
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, fontSize = 20.sp),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -528,61 +578,26 @@ fun AllReportsHubScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             item("hub_items") {
+                val hubCards = listOf(
+                    Triple(AllReportsHubItem.CATEGORY_BREAKDOWN, Icons.Outlined.PieChart, onNavigateToCategoryBreakdown),
+                    Triple(AllReportsHubItem.CASH_FLOW, Icons.Outlined.BarChart, onNavigateToCashFlow),
+                    Triple(AllReportsHubItem.PERIOD_COMPARISON, Icons.Outlined.CompareArrows, onNavigateToPeriodComparison),
+                    Triple(AllReportsHubItem.SPENDING_CALENDAR, Icons.Outlined.CalendarMonth, onNavigateToSpendingCalendar),
+                    Triple(AllReportsHubItem.BUDGET_PERFORMANCE, Icons.Outlined.TrackChanges, onNavigateToBudgetPerformance),
+                    Triple(AllReportsHubItem.SUBSCRIPTION_SUMMARY, Icons.Outlined.Autorenew, onNavigateToSubscriptionSummary),
+                    Triple(AllReportsHubItem.DEBT_SUMMARY, Icons.AutoMirrored.Outlined.ReceiptLong, onNavigateToDebtSummary),
+                    Triple(AllReportsHubItem.FORECAST, Icons.Outlined.AutoGraph, onNavigateToForecast),
+                    Triple(AllReportsHubItem.FINANCIAL_INSIGHTS, Icons.Outlined.Lightbulb, onNavigateToFinancialInsights),
+                )
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ReportHubCard(
-                        icon = Icons.Outlined.PieChart,
-                        title = "Harcama analizi & Kategori dağılımı",
-                        subtitle = "Giderlerinizi ve gelirlerinizi kategorilere göre görün",
-                        onClick = onNavigateToCategoryBreakdown,
-                    )
-                    ReportHubCard(
-                        icon = Icons.Outlined.BarChart,
-                        title = "Nakit akışı",
-                        subtitle = "Gelir ve gider hareketlerinizi aylık takip edin",
-                        onClick = onNavigateToCashFlow,
-                    )
-                    ReportHubCard(
-                        icon = Icons.Outlined.CompareArrows,
-                        title = "Dönem karşılaştırma",
-                        subtitle = "Farklı dönemleri detaylı karşılaştırın",
-                        onClick = onNavigateToPeriodComparison,
-                    )
-                    ReportHubCard(
-                        icon = Icons.Outlined.CalendarMonth,
-                        title = "Harcama takvimi",
-                        subtitle = "Gün gün harcamalarınızı takvimde görün",
-                        onClick = onNavigateToSpendingCalendar,
-                    )
-                    ReportHubCard(
-                        icon = Icons.Outlined.TrackChanges,
-                        title = "Bütçe performansı",
-                        subtitle = "Bütçenize göre gerçekleşmeleri izleyin",
-                        onClick = onNavigateToBudgetPerformance,
-                    )
-                    ReportHubCard(
-                        icon = Icons.Outlined.Autorenew,
-                        title = "Abonelik özeti",
-                        subtitle = "Düzenli ödemelerinizi ve trendi görüntüleyin",
-                        onClick = onNavigateToSubscriptionSummary,
-                    )
-                    ReportHubCard(
-                        icon = Icons.AutoMirrored.Outlined.ReceiptLong,
-                        title = "Borç ve alacak özeti",
-                        subtitle = "Size ait borç ve alacakları takip edin",
-                        onClick = onNavigateToDebtSummary,
-                    )
-                    ReportHubCard(
-                        icon = Icons.Outlined.AutoGraph,
-                        title = "Gelecek dönem tahmini",
-                        subtitle = "Gelecek ayki tahmini nakit farkınızı inceleyin",
-                        onClick = onNavigateToForecast,
-                    )
-                    ReportHubCard(
-                        icon = Icons.Outlined.Lightbulb,
-                        title = "Finansal içgörüler",
-                        subtitle = "Tasarruf ve harcama değişim analizleri",
-                        onClick = onNavigateToFinancialInsights,
-                    )
+                    hubCards.forEach { (item, icon, onClick) ->
+                        ReportHubCard(
+                            icon = icon,
+                            title = stringResource(item.toLocalizedTitleRes()),
+                            subtitle = stringResource(item.toLocalizedSubtitleRes()),
+                            onClick = onClick,
+                        )
+                    }
                 }
             }
 

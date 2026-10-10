@@ -153,6 +153,7 @@ class ReportsLocalizationComposeTest {
         composeRule.onNodeWithText("En düşük hafta").assertIsDisplayed()
         composeRule.onNodeWithText("2. Hafta").assertIsDisplayed()
         composeRule.onNodeWithText("Tüm Raporlar Merkezi").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Aylık gelir ve gider trend grafiği").assertIsDisplayed()
 
         // Switch to EN
         composeRule.runOnIdle { languageTag = "en" }
@@ -173,6 +174,7 @@ class ReportsLocalizationComposeTest {
         composeRule.onNodeWithText("Lowest week").assertIsDisplayed()
         composeRule.onNodeWithText("Week 2").assertIsDisplayed()
         composeRule.onNodeWithText("All Reports Hub").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Monthly income and expense trend chart").assertIsDisplayed()
     }
 
     @Test
@@ -505,5 +507,324 @@ class ReportsLocalizationComposeTest {
 
         // EN: Deleted category
         composeRule.onNodeWithText("Deleted category", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun periodSummaryScreen_reacts_to_runtime_locale_change() {
+        var languageTag by mutableStateOf("tr")
+        val month = YearMonth.from(2026, 10)
+        val income = Money(60_000_00L, Currency.TRY)
+        val expense = Money(24_000_00L, Currency.TRY)
+        val net = MoneyDelta(36_000_00L, Currency.TRY)
+
+        val topCategoryMissing = CategoryBreakdownUiItem(
+            categoryId = null,
+            name = null,
+            isCategoryMissing = true,
+            amount = Money(15_000_00L, Currency.TRY),
+            transactionCount = 4,
+            shareBasisPoints = 6250,
+        )
+
+        val rhythm = FinancialRhythmUiModel(
+            busiestDay = DayOfWeek.MONDAY,
+            busiestDayExpense = Money(8_000_00L, Currency.TRY),
+            lowestExpenseWeekNumber = 2,
+            lowestExpenseWeekExpense = Money(2_000_00L, Currency.TRY),
+        )
+
+        composeRule.setContent {
+            App(languageTag = languageTag) {
+                PeriodSummaryScreen(
+                    currentMonth = month,
+                    income = income,
+                    expense = expense,
+                    net = net,
+                    isNetPositive = true,
+                    savingsRateBasisPoints = 6000,
+                    transactionCount = 18,
+                    dailyAverageExpense = Money(800_00L, Currency.TRY),
+                    weeklyPoints = listOf(
+                        WeeklyDualBarUiPoint(1, 15_000_00L, 10_000_00L),
+                        WeeklyDualBarUiPoint(2, 20_000_00L, 5_000_00L),
+                    ),
+                    topCategories = listOf(topCategoryMissing),
+                    financialRhythm = rhythm,
+                    insightPayload = ReportInsightPayload.None,
+                    onPreviousMonth = {},
+                    onNextMonth = {},
+                    onNavigateToCategoryBreakdown = {},
+                    onNavigateToPeriodComparison = {},
+                    onNavigateBack = {},
+                )
+            }
+        }
+
+        // TR assertions
+        composeRule.onNodeWithText("Dönem özeti").assertIsDisplayed()
+        composeRule.onNodeWithText("Ekim 2026").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Gelir")[0].assertIsDisplayed()
+        composeRule.onAllNodesWithText("Gider")[0].assertIsDisplayed()
+        composeRule.onAllNodesWithText("Net")[0].assertIsDisplayed()
+        composeRule.onNodeWithText("Tasarruf oranı").assertIsDisplayed()
+        composeRule.onNodeWithText("%60").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Silinmiş kategori")[0].assertIsDisplayed()
+        composeRule.onNodeWithText("En yoğun gün").assertIsDisplayed()
+        composeRule.onNodeWithText("Pazartesi").assertIsDisplayed()
+        composeRule.onAllNodesWithText("2. Hafta")[0].assertIsDisplayed()
+        composeRule.onNodeWithText("Tüm kategoriler").assertIsDisplayed()
+
+        // Switch to EN
+        composeRule.runOnIdle { languageTag = "en" }
+
+        // EN assertions
+        composeRule.onNodeWithText("Period summary").assertIsDisplayed()
+        composeRule.onNodeWithText("October 2026").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Income")[0].assertIsDisplayed()
+        composeRule.onAllNodesWithText("Expense")[0].assertIsDisplayed()
+        composeRule.onAllNodesWithText("Net")[0].assertIsDisplayed()
+        composeRule.onNodeWithText("Savings rate").assertIsDisplayed()
+        composeRule.onNodeWithText("60%").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Deleted category")[0].assertIsDisplayed()
+        composeRule.onNodeWithText("Busiest day").assertIsDisplayed()
+        composeRule.onNodeWithText("Monday").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Week 2")[0].assertIsDisplayed()
+        composeRule.onNodeWithText("All categories").assertIsDisplayed()
+    }
+
+    @Test
+    fun allReportsHubScreen_cards_react_to_runtime_locale_change() {
+        var languageTag by mutableStateOf("tr")
+
+        composeRule.setContent {
+            App(languageTag = languageTag) {
+                AllReportsHubScreen(
+                    onNavigateToCategoryBreakdown = {},
+                    onNavigateToCashFlow = {},
+                    onNavigateToPeriodComparison = {},
+                    onNavigateToSpendingCalendar = {},
+                    onNavigateToBudgetPerformance = {},
+                    onNavigateToSubscriptionSummary = {},
+                    onNavigateToDebtSummary = {},
+                    onNavigateToForecast = {},
+                    onNavigateToFinancialInsights = {},
+                    onNavigateBack = {},
+                )
+            }
+        }
+
+        // TR assertions
+        composeRule.onNodeWithText("Tüm raporlar").assertIsDisplayed()
+        composeRule.onNodeWithText("Harcama analizi & Kategori dağılımı").assertIsDisplayed()
+        composeRule.onNodeWithText("Nakit akışı").assertIsDisplayed()
+        composeRule.onNodeWithText("Dönem karşılaştırma").assertIsDisplayed()
+        composeRule.onNodeWithText("Harcama takvimi").assertIsDisplayed()
+        composeRule.onNodeWithText("Bütçe performansı").assertIsDisplayed()
+        composeRule.onNodeWithText("Abonelik özeti").assertIsDisplayed()
+        composeRule.onNodeWithText("Borç ve alacak özeti").assertIsDisplayed()
+        composeRule.onNodeWithText("Gelecek dönem tahmini").assertIsDisplayed()
+        composeRule.onNodeWithText("Finansal içgörüler").assertIsDisplayed()
+
+        // Switch to EN
+        composeRule.runOnIdle { languageTag = "en" }
+
+        // EN assertions
+        composeRule.onNodeWithText("All reports").assertIsDisplayed()
+        composeRule.onNodeWithText("Spending analysis & Category breakdown").assertIsDisplayed()
+        composeRule.onNodeWithText("Cash flow").assertIsDisplayed()
+        composeRule.onNodeWithText("Period comparison").assertIsDisplayed()
+        composeRule.onNodeWithText("Spending calendar").assertIsDisplayed()
+        composeRule.onNodeWithText("Budget performance").assertIsDisplayed()
+        composeRule.onNodeWithText("Subscription summary").assertIsDisplayed()
+        composeRule.onNodeWithText("Debt and receivable summary").assertIsDisplayed()
+        composeRule.onNodeWithText("Future period forecast").assertIsDisplayed()
+        composeRule.onNodeWithText("Financial insights").assertIsDisplayed()
+    }
+
+    @Test
+    fun categoryBreakdownReportScreen_reacts_to_runtime_locale_change() {
+        var languageTag by mutableStateOf("tr")
+
+        val catItem = CategoryBreakdownUiItem(
+            categoryId = EntityId("cat-1"),
+            name = "Market",
+            amount = Money(15_000_00L, Currency.TRY),
+            transactionCount = 12,
+            shareBasisPoints = 7500,
+        )
+
+        composeRule.setContent {
+            App(languageTag = languageTag) {
+                CategoryBreakdownReportScreen(
+                    periodPreset = ReportPeriodPreset.THIS_MONTH,
+                    totalExpense = Money(20_000_00L, Currency.TRY),
+                    totalIncome = Money(50_000_00L, Currency.TRY),
+                    expenseTransactionCount = 12,
+                    incomeTransactionCount = 3,
+                    expenseCategories = listOf(catItem),
+                    incomeCategories = emptyList(),
+                    onSelectCategory = { _, _ -> },
+                    onChangePeriod = {},
+                    onNavigateBack = {},
+                )
+            }
+        }
+
+        // TR assertions
+        composeRule.onNodeWithText("Kategori dağılımı").assertIsDisplayed()
+        composeRule.onNodeWithText("Bu Ay").assertIsDisplayed()
+        composeRule.onNodeWithText("Gider").assertIsDisplayed()
+        composeRule.onNodeWithText("Gelir").assertIsDisplayed()
+        composeRule.onNodeWithText("Toplam gider").assertIsDisplayed()
+        composeRule.onAllNodesWithText("12 işlem")[0].assertIsDisplayed()
+        composeRule.onNodeWithText("12 işlem • %75").assertIsDisplayed()
+
+        // Switch to EN
+        composeRule.runOnIdle { languageTag = "en" }
+
+        // EN assertions
+        composeRule.onNodeWithText("Category breakdown").assertIsDisplayed()
+        composeRule.onNodeWithText("This Month").assertIsDisplayed()
+        composeRule.onNodeWithText("Expense").assertIsDisplayed()
+        composeRule.onNodeWithText("Income").assertIsDisplayed()
+        composeRule.onNodeWithText("Total expense").assertIsDisplayed()
+        composeRule.onAllNodesWithText("12 transactions")[0].assertIsDisplayed()
+        composeRule.onNodeWithText("12 transactions • 75%").assertIsDisplayed()
+    }
+
+    @Test
+    fun categoryDetailReportScreen_reacts_to_runtime_locale_change() {
+        var languageTag by mutableStateOf("tr")
+
+        val merchant = MerchantBreakdownUiItem(
+            merchantName = "Kahve Dünyası",
+            amount = Money(450_00L, Currency.TRY),
+            shareBasisPoints = 1500,
+            transactionCount = 3,
+        )
+
+        composeRule.setContent {
+            App(languageTag = languageTag) {
+                CategoryDetailReportScreen(
+                    categoryName = null,
+                    isCategoryMissing = true,
+                    periodPreset = ReportPeriodPreset.THIS_MONTH,
+                    totalSpending = Money(15_000_00L, Currency.TRY),
+                    transactionCount = 5,
+                    periodShareBasisPoints = 2500,
+                    weeklyTrend = emptyList(),
+                    comparisonState = CategoryDetailComparisonUiState.Calculating,
+                    merchantBreakdown = listOf(merchant),
+                    transactions = emptyList(),
+                    onNavigateToTransactions = {},
+                    onNavigateBack = {},
+                )
+            }
+        }
+
+        // TR assertions
+        composeRule.onNodeWithText("Silinmiş kategori").assertIsDisplayed()
+        composeRule.onNodeWithText("Kategori harcama özeti").assertIsDisplayed()
+        composeRule.onNodeWithText("Toplam harcama").assertIsDisplayed()
+        composeRule.onNodeWithText("5 işlem • Dönem payı %25").assertIsDisplayed()
+        composeRule.onNodeWithText("Geçen aya göre veri hesaplanıyor").assertIsDisplayed()
+        composeRule.onNodeWithText("İş yeri kırılımı").assertIsDisplayed()
+        composeRule.onNodeWithText("3 işlem • %15").assertIsDisplayed()
+        composeRule.onNodeWithText("İşlemleri gör").assertIsDisplayed()
+
+        // Switch to EN
+        composeRule.runOnIdle { languageTag = "en" }
+
+        // EN assertions
+        composeRule.onNodeWithText("Deleted category").assertIsDisplayed()
+        composeRule.onNodeWithText("Category spending summary").assertIsDisplayed()
+        composeRule.onNodeWithText("Total spending").assertIsDisplayed()
+        composeRule.onNodeWithText("5 transactions • Period share 25%").assertIsDisplayed()
+        composeRule.onNodeWithText("Calculating comparison with previous month").assertIsDisplayed()
+        composeRule.onNodeWithText("Merchant breakdown").assertIsDisplayed()
+        composeRule.onNodeWithText("3 transactions • 15%").assertIsDisplayed()
+        composeRule.onNodeWithText("View transactions").assertIsDisplayed()
+    }
+
+    @Test
+    fun cashFlowReportScreen_reacts_to_runtime_locale_change() {
+        var languageTag by mutableStateOf("tr")
+        var maskAmounts by mutableStateOf(false)
+
+        val ym = YearMonth.from(2026, 9)
+        val monthItem = CashFlowMonthUiItem(
+            yearMonth = ym,
+            income = Money(50_000_00L, Currency.TRY),
+            expense = Money(20_000_00L, Currency.TRY),
+            net = MoneyDelta(30_000_00L, Currency.TRY),
+        )
+
+        composeRule.setContent {
+            App(languageTag = languageTag) {
+                CashFlowReportScreen(
+                    monthlyPoints = listOf(monthItem),
+                    totalIncome = Money(50_000_00L, Currency.TRY),
+                    totalExpense = Money(20_000_00L, Currency.TRY),
+                    netDifference = MoneyDelta(30_000_00L, Currency.TRY),
+                    isNetPositive = true,
+                    averageIncome = Money(50_000_00L, Currency.TRY),
+                    averageExpense = Money(20_000_00L, Currency.TRY),
+                    strongestMonth = ym,
+                    weakestMonth = null,
+                    selectedMonthCount = 6,
+                    onSelectMonthRange = {},
+                    onBackClick = {},
+                    maskAmounts = maskAmounts,
+                )
+            }
+        }
+
+        // TR assertions
+        composeRule.onNodeWithText("Nakit Akışı").assertIsDisplayed()
+        composeRule.onNodeWithText("3 Ay").assertIsDisplayed()
+        composeRule.onNodeWithText("6 Ay").assertIsDisplayed()
+        composeRule.onNodeWithText("1 Yıl").assertIsDisplayed()
+        composeRule.onNodeWithText("Dönem Nakit Akışı").assertIsDisplayed()
+        composeRule.onNodeWithText("Toplam Gelir").assertIsDisplayed()
+        composeRule.onNodeWithText("Toplam Gider").assertIsDisplayed()
+        composeRule.onNodeWithText("Gelir ve Gider Dengesi").assertIsDisplayed()
+        composeRule.onNodeWithText("Aylık Ort. Gelir").assertIsDisplayed()
+        composeRule.onNodeWithText("Aylık Ort. Gider").assertIsDisplayed()
+        composeRule.onNodeWithText("En Güçlü: Eylül").assertIsDisplayed()
+        composeRule.onNodeWithText("En Zayıf: Veri yok").assertIsDisplayed()
+        composeRule.onNodeWithText("Aylık Dağılım").assertIsDisplayed()
+        composeRule.onNodeWithText("Eylül 2026").assertIsDisplayed()
+        composeRule.onNodeWithText("Net Fazla").assertIsDisplayed()
+
+        // Switch to EN
+        composeRule.runOnIdle { languageTag = "en" }
+
+        // EN assertions
+        composeRule.onNodeWithText("Cash Flow").assertIsDisplayed()
+        composeRule.onNodeWithText("3 Months").assertIsDisplayed()
+        composeRule.onNodeWithText("6 Months").assertIsDisplayed()
+        composeRule.onNodeWithText("1 Year").assertIsDisplayed()
+        composeRule.onNodeWithText("Period Cash Flow").assertIsDisplayed()
+        composeRule.onNodeWithText("Total Income").assertIsDisplayed()
+        composeRule.onNodeWithText("Total Expense").assertIsDisplayed()
+        composeRule.onNodeWithText("Income and Expense Balance").assertIsDisplayed()
+        composeRule.onNodeWithText("Monthly Avg. Income").assertIsDisplayed()
+        composeRule.onNodeWithText("Monthly Avg. Expense").assertIsDisplayed()
+        composeRule.onNodeWithText("Strongest: September").assertIsDisplayed()
+        composeRule.onNodeWithText("Weakest: No data").assertIsDisplayed()
+        composeRule.onNodeWithText("Monthly Distribution").assertIsDisplayed()
+        composeRule.onNodeWithText("September 2026").assertIsDisplayed()
+        composeRule.onNodeWithText("Net Surplus").assertIsDisplayed()
+
+        // Masking: maskAmounts = true
+        composeRule.runOnIdle { maskAmounts = true }
+
+        // Real amounts should not be displayed
+        composeRule.onNodeWithText("50,000.00 ₺").assertDoesNotExist()
+        composeRule.onNodeWithText("20,000.00 ₺").assertDoesNotExist()
+        composeRule.onNodeWithText("30,000.00 ₺").assertDoesNotExist()
+
+        // Masked placeholder is displayed
+        composeRule.onAllNodesWithText("••••")[0].assertIsDisplayed()
     }
 }
