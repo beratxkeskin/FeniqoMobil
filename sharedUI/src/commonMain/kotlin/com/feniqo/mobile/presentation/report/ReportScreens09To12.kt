@@ -56,10 +56,39 @@ import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.MoneyDelta
+import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.YearMonth
+import androidx.compose.ui.text.style.TextAlign
+import com.feniqo.mobile.domain.model.ReportPeriodPreset
+import com.feniqo.mobile.presentation.common.formatLocalizedRateBasisPoints
 import com.feniqo.mobile.presentation.common.localizedMonthName
+import com.feniqo.mobile.presentation.common.toLocalizedReadableDate
 import feniqomobil.sharedui.generated.resources.Res
 import feniqomobil.sharedui.generated.resources.report_action_back
+import feniqomobil.sharedui.generated.resources.report_category_deleted
+import feniqomobil.sharedui.generated.resources.report_comparison_action_change
+import feniqomobil.sharedui.generated.resources.report_comparison_action_change_semantics
+import feniqomobil.sharedui.generated.resources.report_comparison_categories_title
+import feniqomobil.sharedui.generated.resources.report_comparison_category_flow
+import feniqomobil.sharedui.generated.resources.report_comparison_detail_contributing_transactions
+import feniqomobil.sharedui.generated.resources.report_comparison_detail_diff_format
+import feniqomobil.sharedui.generated.resources.report_comparison_detail_expense_decreased
+import feniqomobil.sharedui.generated.resources.report_comparison_detail_expense_increased
+import feniqomobil.sharedui.generated.resources.report_comparison_detail_no_transactions
+import feniqomobil.sharedui.generated.resources.report_comparison_detail_title
+import feniqomobil.sharedui.generated.resources.report_comparison_expense_delta
+import feniqomobil.sharedui.generated.resources.report_comparison_income_delta
+import feniqomobil.sharedui.generated.resources.report_comparison_net_change_title
+import feniqomobil.sharedui.generated.resources.report_comparison_net_declined
+import feniqomobil.sharedui.generated.resources.report_comparison_net_improved
+import feniqomobil.sharedui.generated.resources.report_comparison_savings_rate_delta
+import feniqomobil.sharedui.generated.resources.report_comparison_sheet_apply
+import feniqomobil.sharedui.generated.resources.report_comparison_sheet_title
+import feniqomobil.sharedui.generated.resources.report_comparison_title
+import feniqomobil.sharedui.generated.resources.report_comparison_unavailable_message
+import feniqomobil.sharedui.generated.resources.report_comparison_unavailable_title
+import feniqomobil.sharedui.generated.resources.report_period_preset_last_month
+import feniqomobil.sharedui.generated.resources.report_period_preset_this_month
 import feniqomobil.sharedui.generated.resources.report_cash_flow_avg_expense
 import feniqomobil.sharedui.generated.resources.report_cash_flow_avg_income
 import feniqomobil.sharedui.generated.resources.report_cash_flow_balance_title
@@ -395,16 +424,7 @@ fun CashFlowReportScreen(
 // ==========================================
 @Composable
 fun PeriodComparisonReportScreen(
-    currentPeriodLabel: String,
-    previousPeriodLabel: String,
-    currentNetFormatted: String,
-    previousNetFormatted: String,
-    netDifferenceFormatted: String,
-    isNetImproved: Boolean,
-    incomeDeltaFormatted: String,
-    expenseDeltaFormatted: String,
-    savingsRateDeltaFormatted: String,
-    categoryComparisons: List<CategoryComparisonUiItem>,
+    comparisonState: PeriodComparisonUiState,
     onSelectPeriodClick: () -> Unit,
     onCategoryClick: (CategoryComparisonUiItem) -> Unit,
     onBackClick: () -> Unit,
@@ -431,12 +451,12 @@ fun PeriodComparisonReportScreen(
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Geri",
+                            contentDescription = stringResource(Res.string.report_action_back),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     Text(
-                        text = "Dönem Karşılaştırma",
+                        text = stringResource(Res.string.report_comparison_title),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -447,7 +467,10 @@ fun PeriodComparisonReportScreen(
                     modifier = Modifier
                         .padding(end = 8.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .clickable { onSelectPeriodClick() },
+                        .clickable { onSelectPeriodClick() }
+                        .semantics {
+                            // accessibility description
+                        },
                     color = MaterialTheme.colorScheme.secondaryContainer,
                     shape = RoundedCornerShape(10.dp),
                 ) {
@@ -457,13 +480,13 @@ fun PeriodComparisonReportScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.CompareArrows,
-                            contentDescription = null,
+                            contentDescription = stringResource(Res.string.report_comparison_action_change_semantics),
                             tint = ColorSageGreen,
                             modifier = Modifier.size(16.dp),
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Değiştir",
+                            text = stringResource(Res.string.report_comparison_action_change),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = ColorSageGreen,
@@ -472,208 +495,325 @@ fun PeriodComparisonReportScreen(
                 }
             }
 
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                // Dönem Başlık Rozeti
-                item {
-                    Text(
-                        text = "$currentPeriodLabel  vs  $previousPeriodLabel",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
+            when (comparisonState) {
+                is PeriodComparisonUiState.Unavailable -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        ReportCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            backgroundColor = MaterialTheme.colorScheme.surface,
+                            cornerRadius = 20.dp,
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CompareArrows,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(48.dp),
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = stringResource(Res.string.report_comparison_unavailable_title),
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    textAlign = TextAlign.Center,
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = stringResource(Res.string.report_comparison_unavailable_message),
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                    lineHeight = 18.sp,
+                                )
+                            }
+                        }
+                    }
                 }
 
-                // Net Sonuç Karşılaştırma Hero Kartı
-                item {
-                    ReportCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = MaterialTheme.colorScheme.surface,
-                        cornerRadius = 20.dp,
+                is PeriodComparisonUiState.Available -> {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        Column(modifier = Modifier.padding(20.dp)) {
+                        // Dönem Başlık Rozeti
+                        item {
                             Text(
-                                text = "Net Fark Değişimi",
+                                text = comparisonState.preset.toLocalizedLabel(),
                                 fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 4.dp),
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        }
+
+                        // Net Sonuç Karşılaştırma Hero Kartı
+                        item {
+                            ReportCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                backgroundColor = MaterialTheme.colorScheme.surface,
+                                cornerRadius = 20.dp,
                             ) {
-                                Text(
-                                    text = netDifferenceFormatted,
-                                    fontSize = 26.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isNetImproved) ColorSageGreen else ColorRefinedRed,
-                                )
-                                Surface(
-                                    color = if (isNetImproved) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.errorContainer,
-                                    shape = RoundedCornerShape(8.dp),
-                                ) {
+                                Column(modifier = Modifier.padding(20.dp)) {
+                                    Text(
+                                        text = stringResource(Res.string.report_comparison_net_change_title),
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = FontWeight.Medium,
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Row(
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                         verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     ) {
-                                        Icon(
-                                            imageVector = if (isNetImproved) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
-                                            contentDescription = null,
-                                            tint = if (isNetImproved) ColorSageGreen else ColorRefinedRed,
-                                            modifier = Modifier.size(14.dp),
-                                        )
-                                        Spacer(modifier = Modifier.width(2.dp))
                                         Text(
-                                            text = if (isNetImproved) "İyileşme" else "Azalma",
-                                            fontSize = 11.sp,
+                                            text = comparisonState.netDifference.toLocalizedMaskedText(
+                                                mask = comparisonState.maskAmounts,
+                                                showPositiveSign = true,
+                                            ),
+                                            fontSize = 26.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = if (isNetImproved) ColorSageGreen else ColorRefinedRed,
+                                            color = if (comparisonState.isNetImproved) ColorSageGreen else ColorRefinedRed,
+                                        )
+                                        Surface(
+                                            color = if (comparisonState.isNetImproved) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.errorContainer,
+                                            shape = RoundedCornerShape(8.dp),
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                Icon(
+                                                    imageVector = if (comparisonState.isNetImproved) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                                                    contentDescription = null,
+                                                    tint = if (comparisonState.isNetImproved) ColorSageGreen else ColorRefinedRed,
+                                                    modifier = Modifier.size(14.dp),
+                                                )
+                                                Spacer(modifier = Modifier.width(2.dp))
+                                                Text(
+                                                    text = if (comparisonState.isNetImproved) {
+                                                        stringResource(Res.string.report_comparison_net_improved)
+                                                    } else {
+                                                        stringResource(Res.string.report_comparison_net_declined)
+                                                    },
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (comparisonState.isNetImproved) ColorSageGreen else ColorRefinedRed,
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = stringResource(Res.string.report_period_preset_this_month),
+                                                fontSize = 11.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                            Text(
+                                                text = comparisonState.currentNet.toLocalizedMaskedText(comparisonState.maskAmounts),
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                            )
+                                        }
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text(
+                                                text = stringResource(Res.string.report_period_preset_last_month),
+                                                fontSize = 11.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                            Text(
+                                                text = comparisonState.previousNet.toLocalizedMaskedText(comparisonState.maskAmounts),
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 3 Metrik Kartı
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                ReportCard(
+                                    modifier = Modifier.weight(1f),
+                                    backgroundColor = MaterialTheme.colorScheme.surface,
+                                    cornerRadius = 14.dp,
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Text(
+                                            text = stringResource(Res.string.report_comparison_income_delta),
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = comparisonState.incomeDelta.toLocalizedMaskedText(
+                                                mask = comparisonState.maskAmounts,
+                                                showPositiveSign = true,
+                                            ),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                    }
+                                }
+
+                                ReportCard(
+                                    modifier = Modifier.weight(1f),
+                                    backgroundColor = MaterialTheme.colorScheme.surface,
+                                    cornerRadius = 14.dp,
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Text(
+                                            text = stringResource(Res.string.report_comparison_expense_delta),
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = comparisonState.expenseDelta.toLocalizedMaskedText(
+                                                mask = comparisonState.maskAmounts,
+                                                showPositiveSign = true,
+                                            ),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                    }
+                                }
+
+                                ReportCard(
+                                    modifier = Modifier.weight(1f),
+                                    backgroundColor = MaterialTheme.colorScheme.surface,
+                                    cornerRadius = 14.dp,
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Text(
+                                            text = stringResource(Res.string.report_comparison_savings_rate_delta),
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = formatLocalizedRateBasisPoints(comparisonState.savingsRateDeltaBasisPoints),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface,
                                         )
                                     }
                                 }
                             }
+                        }
 
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
+                        // Kategori Değişimleri Başlığı
+                        item {
+                            Text(
+                                text = stringResource(Res.string.report_comparison_categories_title),
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(top = 8.dp),
+                            )
+                        }
+
+                        // Kategori Değişim Listesi
+                        items(comparisonState.categoryComparisons) { item ->
+                            val categoryTitle = if (item.isCategoryMissing || item.name == null) {
+                                stringResource(Res.string.report_category_deleted)
+                            } else {
+                                item.name
+                            }
+                            ReportCard(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onCategoryClick(item) },
+                                backgroundColor = MaterialTheme.colorScheme.surface,
+                                cornerRadius = 14.dp,
                             ) {
-                                Column {
-                                    Text(currentPeriodLabel, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(currentNetFormatted, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                                }
-                                Column(horizontalAlignment = Alignment.End) {
-                                    Text(previousPeriodLabel, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(previousNetFormatted, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = categoryTitle,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = stringResource(
+                                                Res.string.report_comparison_category_flow,
+                                                item.previousAmount.toLocalizedMaskedText(item.maskAmounts || comparisonState.maskAmounts),
+                                                item.currentAmount.toLocalizedMaskedText(item.maskAmounts || comparisonState.maskAmounts),
+                                            ),
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text(
+                                                text = item.delta.toLocalizedMaskedText(
+                                                    mask = item.maskAmounts || comparisonState.maskAmounts,
+                                                    showPositiveSign = true,
+                                                ),
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (item.isIncreased) ColorRefinedRed else ColorSageGreen,
+                                            )
+                                            Text(
+                                                text = formatLocalizedRateBasisPoints(item.percentageBasisPoints),
+                                                fontSize = 11.sp,
+                                                color = if (item.isIncreased) ColorRefinedRed else ColorSageGreen,
+                                                fontWeight = FontWeight.Medium,
+                                            )
+                                        }
+                                        Icon(
+                                            imageVector = Icons.Default.ChevronRight,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                    }
                                 }
                             }
+                        }
+
+                        item {
+                            Spacer(modifier = Modifier.height(32.dp))
                         }
                     }
-                }
-
-                // 3 Metrik Kartı
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        ReportCard(
-                            modifier = Modifier.weight(1f),
-                            backgroundColor = MaterialTheme.colorScheme.surface,
-                            cornerRadius = 14.dp,
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Text("Gelir Değişimi", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(incomeDeltaFormatted, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                            }
-                        }
-
-                        ReportCard(
-                            modifier = Modifier.weight(1f),
-                            backgroundColor = MaterialTheme.colorScheme.surface,
-                            cornerRadius = 14.dp,
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Text("Gider Değişimi", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(expenseDeltaFormatted, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                            }
-                        }
-
-                        ReportCard(
-                            modifier = Modifier.weight(1f),
-                            backgroundColor = MaterialTheme.colorScheme.surface,
-                            cornerRadius = 14.dp,
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Text("Tasarruf", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(savingsRateDeltaFormatted, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                            }
-                        }
-                    }
-                }
-
-                // Kategori Değişimleri Başlığı
-                item {
-                    Text(
-                        text = "Kategori Bazında Değişimler",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
-                }
-
-                // Kategori Değişim Listesi
-                items(categoryComparisons) { item ->
-                    ReportCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onCategoryClick(item) },
-                        backgroundColor = MaterialTheme.colorScheme.surface,
-                        cornerRadius = 14.dp,
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = item.name,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "${item.previousFormatted} → ${item.currentFormatted}",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                Column(horizontalAlignment = Alignment.End) {
-                                    Text(
-                                        text = item.deltaFormatted,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (item.isIncreased) ColorRefinedRed else ColorSageGreen,
-                                    )
-                                    Text(
-                                        text = item.percentageFormatted,
-                                        fontSize = 11.sp,
-                                        color = if (item.isIncreased) ColorRefinedRed else ColorSageGreen,
-                                        fontWeight = FontWeight.Medium,
-                                    )
-                                }
-                                Icon(
-                                    imageVector = Icons.Default.ChevronRight,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                            }
-                        }
-                    }
-                }
-
-                item {
-                    Spacer(modifier = Modifier.height(32.dp))
                 }
             }
         }
@@ -685,18 +825,26 @@ fun PeriodComparisonReportScreen(
 // ==========================================
 @Composable
 fun ComparisonDetailScreen(
-    categoryName: String,
-    period1Label: String,
-    period2Label: String,
-    period1AmountFormatted: String,
-    period2AmountFormatted: String,
-    deltaAmountFormatted: String,
-    percentageFormatted: String,
+    categoryName: String?,
+    isCategoryMissing: Boolean = categoryName == null,
+    period1Preset: ReportPeriodPreset = ReportPeriodPreset.THIS_MONTH,
+    period2Preset: ReportPeriodPreset = ReportPeriodPreset.LAST_MONTH,
+    period1Amount: Money,
+    period2Amount: Money,
+    deltaAmount: MoneyDelta,
+    percentageBasisPoints: Int,
     isIncrease: Boolean,
     transactions: List<ReportTransactionUiItem>,
+    maskAmounts: Boolean = false,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val displayName = if (isCategoryMissing || categoryName == null) {
+        stringResource(Res.string.report_category_deleted)
+    } else {
+        categoryName
+    }
+
     Surface(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
@@ -715,12 +863,12 @@ fun ComparisonDetailScreen(
                 IconButton(onClick = onBackClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Geri",
+                        contentDescription = stringResource(Res.string.report_action_back),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
-                    text = "$categoryName Değişimi",
+                    text = stringResource(Res.string.report_comparison_detail_title, displayName),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -741,14 +889,22 @@ fun ComparisonDetailScreen(
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(
-                                text = if (isIncrease) "Bu Kategoride Harcama Arttı" else "Bu Kategoride Harcama Düştü",
+                                text = if (isIncrease) {
+                                    stringResource(Res.string.report_comparison_detail_expense_increased)
+                                } else {
+                                    stringResource(Res.string.report_comparison_detail_expense_decreased)
+                                },
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isIncrease) ColorRefinedRed else ColorSageGreen,
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Fark: $deltaAmountFormatted ($percentageFormatted)",
+                                text = stringResource(
+                                    Res.string.report_comparison_detail_diff_format,
+                                    deltaAmount.toLocalizedMaskedText(maskAmounts, showPositiveSign = true),
+                                    formatLocalizedRateBasisPoints(percentageBasisPoints),
+                                ),
                                 fontSize = 14.sp,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 fontWeight = FontWeight.Medium,
@@ -760,12 +916,30 @@ fun ComparisonDetailScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 Column {
-                                    Text(period2Label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(period2AmountFormatted, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                    Text(
+                                        text = period2Preset.toLocalizedLabel(),
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = period2Amount.toLocalizedMaskedText(maskAmounts),
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text(period1Label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(period1AmountFormatted, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                    Text(
+                                        text = period1Preset.toLocalizedLabel(),
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = period1Amount.toLocalizedMaskedText(maskAmounts),
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
                                 }
                             }
                         }
@@ -774,7 +948,7 @@ fun ComparisonDetailScreen(
 
                 item {
                     Text(
-                        text = "Etkileyen İşlemler",
+                        text = stringResource(Res.string.report_comparison_detail_contributing_transactions),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -782,39 +956,64 @@ fun ComparisonDetailScreen(
                     )
                 }
 
-                items(transactions) { tx ->
-                    ReportCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = MaterialTheme.colorScheme.surface,
-                        cornerRadius = 14.dp,
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                if (transactions.isEmpty()) {
+                    item {
+                        ReportCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            backgroundColor = MaterialTheme.colorScheme.surface,
+                            cornerRadius = 14.dp,
                         ) {
-                            Column {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
                                 Text(
-                                    text = tx.title,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = tx.dateFormatted,
-                                    fontSize = 12.sp,
+                                    text = stringResource(Res.string.report_comparison_detail_no_transactions),
+                                    fontSize = 14.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                            Text(
-                                text = (if (tx.isExpense) "-" else "+") + tx.amountFormatted,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (tx.isExpense) MaterialTheme.colorScheme.onSurface else ColorSageGreen,
-                            )
+                        }
+                    }
+                } else {
+                    items(transactions) { tx ->
+                        ReportCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            backgroundColor = MaterialTheme.colorScheme.surface,
+                            cornerRadius = 14.dp,
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Column {
+                                    Text(
+                                        text = tx.resolveLocalizedTitle(),
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = tx.date.toLocalizedReadableDate(),
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                val isExpense = tx.type == TransactionType.EXPENSE
+                                val sign = if (isExpense) "-" else "+"
+                                Text(
+                                    text = sign + tx.amount.toLocalizedMaskedText(tx.maskAmounts || maskAmounts),
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isExpense) MaterialTheme.colorScheme.onSurface else ColorSageGreen,
+                                )
+                            }
                         }
                     }
                 }
@@ -834,17 +1033,18 @@ fun ComparisonDetailScreen(
 @Composable
 fun SelectComparisonPeriodSheet(
     onDismissRequest: () -> Unit,
-    onApplyPreset: (String) -> Unit,
+    onApplyPreset: (ComparisonPeriodPreset) -> Unit,
+    initialPreset: ComparisonPeriodPreset = ComparisonPeriodPreset.THIS_VS_LAST_MONTH,
     modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var selectedOption by remember { mutableStateOf("this_vs_last_month") }
+    var selectedOption by remember { mutableStateOf(initialPreset) }
 
     val options = listOf(
-        "this_vs_last_month" to "Bu Ay  vs  Geçen Ay",
-        "last_month_vs_two_months_ago" to "Geçen Ay  vs  Önceki Ay",
-        "this_quarter_vs_last" to "Bu Çeyrek  vs  Geçen Çeyrek",
-        "this_year_vs_last" to "Bu Yıl  vs  Geçen Yıl",
+        ComparisonPeriodPreset.THIS_VS_LAST_MONTH,
+        ComparisonPeriodPreset.LAST_MONTH_VS_TWO_MONTHS_AGO,
+        ComparisonPeriodPreset.THIS_QUARTER_VS_LAST,
+        ComparisonPeriodPreset.THIS_YEAR_VS_LAST,
     )
 
     ModalBottomSheet(
@@ -859,21 +1059,21 @@ fun SelectComparisonPeriodSheet(
                 .padding(horizontal = 20.dp, vertical = 8.dp),
         ) {
             Text(
-                text = "Karşılaştırma Dönemi Seç",
+                text = stringResource(Res.string.report_comparison_sheet_title),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            options.forEach { (key, label) ->
-                val isSelected = selectedOption == key
+            options.forEach { preset ->
+                val isSelected = selectedOption == preset
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
                         .clip(RoundedCornerShape(14.dp))
-                        .clickable { selectedOption = key },
+                        .clickable { selectedOption = preset },
                     color = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
                     shape = RoundedCornerShape(14.dp),
                 ) {
@@ -885,14 +1085,14 @@ fun SelectComparisonPeriodSheet(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
-                            text = label,
+                            text = preset.toLocalizedLabel(),
                             fontSize = 14.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                             color = if (isSelected) ColorSageGreen else MaterialTheme.colorScheme.onSurface,
                         )
                         RadioButton(
                             selected = isSelected,
-                            onClick = { selectedOption = key },
+                            onClick = { selectedOption = preset },
                             colors = RadioButtonDefaults.colors(
                                 selectedColor = ColorSageGreen,
                                 unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -918,7 +1118,7 @@ fun SelectComparisonPeriodSheet(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
-                        text = "Karşılaştırmayı Uygula",
+                        text = stringResource(Res.string.report_comparison_sheet_apply),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,

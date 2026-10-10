@@ -2166,4 +2166,71 @@
     <string name="report_weekly_chart_desc">Weekly income and expense bar chart</string>
     <string name="report_donut_chart_desc">Category breakdown donut chart</string>
     <string name="report_trend_chart_desc">Monthly income and expense trend chart</string>
+
+    <!-- Period Comparison Screen -->
+    <string name="report_comparison_title">Period Comparison</string>
+    <string name="report_comparison_action_change">Change</string>
+    <string name="report_comparison_action_change_semantics">Change comparison period</string>
+    <string name="report_comparison_vs">%1$s  vs  %2$s</string>
+    <string name="report_comparison_net_change_title">Net Difference Change</string>
+    <string name="report_comparison_net_improved">Improvement</string>
+    <string name="report_comparison_net_declined">Decline</string>
+    <string name="report_comparison_income_delta">Income Change</string>
+    <string name="report_comparison_expense_delta">Expense Change</string>
+    <string name="report_comparison_savings_rate_delta">Savings</string>
+    <string name="report_comparison_categories_title">Category Changes</string>
+    <string name="report_comparison_category_flow">%1$s → %2$s</string>
+    <string name="report_comparison_unavailable_title">Comparison Data Not Available</string>
+    <string name="report_comparison_unavailable_message">There is not enough data available to compare the selected periods.</string>
+    <string name="report_comparison_sheet_title">Select Comparison Period</string>
+    <string name="report_comparison_preset_this_vs_last_month">This Month  vs  Last Month</string>
+    <string name="report_comparison_preset_last_vs_two_months_ago">Last Month  vs  Two Months Ago</string>
+    <string name="report_comparison_preset_this_quarter_vs_last">This Quarter  vs  Last Quarter</string>
+    <string name="report_comparison_preset_this_year_vs_last">This Year  vs  Last Year</string>
+    <string name="report_comparison_sheet_apply">Apply Comparison</string>
+
+    <!-- Comparison Detail Screen -->
+    <string name="report_comparison_detail_title">%1$s Change</string>
+    <string name="report_comparison_detail_expense_increased">Spending Increased in This Category</string>
+    <string name="report_comparison_detail_expense_decreased">Spending Decreased in This Category</string>
+    <string name="report_comparison_detail_diff_format">Difference: %1$s (%2$s)</string>
+    <string name="report_comparison_detail_contributing_transactions">Contributing Transactions</string>
+    <string name="report_comparison_detail_no_transactions">No transactions found for this category.</string>
+
+    <!-- Spending Calendar Screen -->
+    <string name="report_calendar_title">Spending Calendar</string>
+    <string name="report_calendar_prev_month">Previous Month</string>
+    <string name="report_calendar_next_month">Next Month</string>
+    <string name="report_calendar_heat_low">Low</string>
+    <string name="report_calendar_heat_high">High Spending</string>
+    <string name="report_calendar_day_transactions_title">Transactions of the Day</string>
+    <string name="report_calendar_no_transactions">No expense transactions for this day.</string>
+    <string name="report_calendar_day_cell_semantics">%1$s, %2$d transactions, %3$s</string>
+    <plurals name="report_calendar_tx_count_plural">
+        <item quantity="one">%1$d transaction</item>
+        <item quantity="other">%1$d transactions</item>
+    </plurals>
+
+    <!-- Budget Performance Screen -->
+    <string name="report_budget_perf_title">Budget Performance</string>
+    <string name="report_budget_perf_hero_title">Total Budget Usage</string>
+    <string name="report_budget_perf_spent_label">Spent</string>
+    <string name="report_budget_perf_limit_label">Total Limit</string>
+    <string name="report_budget_perf_remaining_label">Remaining Budget</string>
+    <string name="report_budget_perf_exceeded_label">Budget Exceeded</string>
+    <string name="report_budget_perf_categories_title">Category Budgets</string>
+    <string name="report_budget_perf_item_spent">Spent: %1$s</string>
+    <string name="report_budget_perf_item_limit">Limit: %1$s</string>
+    <string name="report_budget_perf_empty">No budgets set for this month.</string>
+
+    <!-- Subscription Summary Screen -->
+    <string name="report_sub_summary_title">Subscription Summary</string>
+    <string name="report_sub_summary_hero_title">Monthly Regular Subscription Load</string>
+    <string name="report_sub_summary_upcoming_title">Upcoming Renewals</string>
+    <string name="report_sub_summary_renewal_date">Renewal: %1$s</string>
+    <string name="report_sub_summary_empty">No active subscriptions registered.</string>
+    <plurals name="report_sub_summary_active_count_plural">
+        <item quantity="one">%1$d Active Subscription</item>
+        <item quantity="other">%1$d Active Subscriptions</item>
+    </plurals>
 </resources>

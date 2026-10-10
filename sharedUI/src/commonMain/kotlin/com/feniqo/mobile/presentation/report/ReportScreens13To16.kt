@@ -42,11 +42,55 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.LocalDate
+import com.feniqo.mobile.domain.model.Money
+import com.feniqo.mobile.domain.model.MoneyDelta
+import com.feniqo.mobile.domain.model.TransactionType
+import com.feniqo.mobile.domain.model.YearMonth
+import com.feniqo.mobile.presentation.common.formatLocalizedRateBasisPoints
+import com.feniqo.mobile.presentation.common.toLocalizedReadableDate
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.report_action_back
+import feniqomobil.sharedui.generated.resources.report_budget_perf_categories_title
+import feniqomobil.sharedui.generated.resources.report_budget_perf_empty
+import feniqomobil.sharedui.generated.resources.report_budget_perf_hero_title
+import feniqomobil.sharedui.generated.resources.report_budget_perf_item_limit
+import feniqomobil.sharedui.generated.resources.report_budget_perf_item_spent
+import feniqomobil.sharedui.generated.resources.report_budget_perf_limit_label
+import feniqomobil.sharedui.generated.resources.report_budget_perf_remaining_label
+import feniqomobil.sharedui.generated.resources.report_budget_perf_spent_label
+import feniqomobil.sharedui.generated.resources.report_budget_perf_title
+import feniqomobil.sharedui.generated.resources.report_calendar_day_cell_semantics
+import feniqomobil.sharedui.generated.resources.report_calendar_day_transactions_title
+import feniqomobil.sharedui.generated.resources.report_calendar_heat_high
+import feniqomobil.sharedui.generated.resources.report_calendar_heat_low
+import feniqomobil.sharedui.generated.resources.report_calendar_next_month
+import feniqomobil.sharedui.generated.resources.report_calendar_no_transactions
+import feniqomobil.sharedui.generated.resources.report_calendar_prev_month
+import feniqomobil.sharedui.generated.resources.report_calendar_title
+import feniqomobil.sharedui.generated.resources.report_calendar_tx_count_plural
+import feniqomobil.sharedui.generated.resources.report_category_deleted
+import feniqomobil.sharedui.generated.resources.report_day_short_fri
+import feniqomobil.sharedui.generated.resources.report_day_short_mon
+import feniqomobil.sharedui.generated.resources.report_day_short_sat
+import feniqomobil.sharedui.generated.resources.report_day_short_sun
+import feniqomobil.sharedui.generated.resources.report_day_short_thu
+import feniqomobil.sharedui.generated.resources.report_day_short_tue
+import feniqomobil.sharedui.generated.resources.report_day_short_wed
+import feniqomobil.sharedui.generated.resources.report_sub_summary_active_count_plural
+import feniqomobil.sharedui.generated.resources.report_sub_summary_empty
+import feniqomobil.sharedui.generated.resources.report_sub_summary_hero_title
+import feniqomobil.sharedui.generated.resources.report_sub_summary_renewal_date
+import feniqomobil.sharedui.generated.resources.report_sub_summary_title
+import feniqomobil.sharedui.generated.resources.report_sub_summary_upcoming_title
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 // Tasarım Sistemi Renkleri
 private val ColorSageGreen = Color(0xFF2D5A43)
@@ -57,16 +101,20 @@ private val ColorRefinedRed = Color(0xFFC04D43)
 // ==========================================
 @Composable
 fun SpendingCalendarReportScreen(
-    monthLabel: String,
+    currentMonth: YearMonth,
     days: List<CalendarDayUiModel>,
     selectedDay: CalendarDayUiModel?,
     dayTransactions: List<ReportTransactionUiItem>,
+    maskAmounts: Boolean = false,
     onSelectDay: (CalendarDayUiModel) -> Unit,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val monthName = com.feniqo.mobile.presentation.common.localizedMonthName(currentMonth.monthNumber)
+    val monthLabel = "$monthName ${currentMonth.year}"
+
     Surface(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
@@ -88,12 +136,12 @@ fun SpendingCalendarReportScreen(
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Geri",
+                            contentDescription = stringResource(Res.string.report_action_back),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     Text(
-                        text = "Harcama Takvimi",
+                        text = stringResource(Res.string.report_calendar_title),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -103,7 +151,11 @@ fun SpendingCalendarReportScreen(
                 // Ay Geçiş Kontrolleri
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onPreviousMonth) {
-                        Icon(imageVector = Icons.Default.ChevronLeft, contentDescription = "Önceki Ay", tint = MaterialTheme.colorScheme.onSurface)
+                        Icon(
+                            imageVector = Icons.Default.ChevronLeft,
+                            contentDescription = stringResource(Res.string.report_calendar_prev_month),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
                     }
                     Text(
                         text = monthLabel,
@@ -112,7 +164,11 @@ fun SpendingCalendarReportScreen(
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     IconButton(onClick = onNextMonth) {
-                        Icon(imageVector = Icons.Default.ChevronRight, contentDescription = "Sonraki Ay", tint = MaterialTheme.colorScheme.onSurface)
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = stringResource(Res.string.report_calendar_next_month),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
                     }
                 }
             }
@@ -131,12 +187,20 @@ fun SpendingCalendarReportScreen(
                         cornerRadius = 20.dp,
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            // Gün Başlıkları (Pzt ... Paz)
+                            // Gün Başlıkları (Pzt ... Paz / Mon ... Sun)
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceAround,
                             ) {
-                                listOf("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz").forEach { dayName ->
+                                listOf(
+                                    stringResource(Res.string.report_day_short_mon),
+                                    stringResource(Res.string.report_day_short_tue),
+                                    stringResource(Res.string.report_day_short_wed),
+                                    stringResource(Res.string.report_day_short_thu),
+                                    stringResource(Res.string.report_day_short_fri),
+                                    stringResource(Res.string.report_day_short_sat),
+                                    stringResource(Res.string.report_day_short_sun),
+                                ).forEach { dayName ->
                                     Text(
                                         text = dayName,
                                         fontSize = 11.sp,
@@ -169,6 +233,14 @@ fun SpendingCalendarReportScreen(
                                             else -> ColorSageGreen
                                         }
 
+                                        val dayExpenseStr = day.expense.toLocalizedMaskedText(day.maskAmounts || maskAmounts)
+                                        val dayA11y = stringResource(
+                                            Res.string.report_calendar_day_cell_semantics,
+                                            day.date.toLocalizedReadableDate(),
+                                            day.transactionCount,
+                                            dayExpenseStr,
+                                        )
+
                                         Box(
                                             modifier = Modifier
                                                 .size(38.dp)
@@ -181,6 +253,9 @@ fun SpendingCalendarReportScreen(
                                                         Modifier
                                                     }
                                                 )
+                                                .semantics {
+                                                    contentDescription = dayA11y
+                                                }
                                                 .clickable { onSelectDay(day) },
                                             contentAlignment = Alignment.Center,
                                         ) {
@@ -192,7 +267,6 @@ fun SpendingCalendarReportScreen(
                                             )
                                         }
                                     }
-                                    // Eğer haftada 7 günden az varsa boşluk bırak
                                     for (i in week.size until 7) {
                                         Spacer(modifier = Modifier.size(38.dp))
                                     }
@@ -207,7 +281,11 @@ fun SpendingCalendarReportScreen(
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text("Az", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    text = stringResource(Res.string.report_calendar_heat_low),
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 listOf(
                                     Color(0xFFF2EFE9),
@@ -225,7 +303,11 @@ fun SpendingCalendarReportScreen(
                                     Spacer(modifier = Modifier.width(4.dp))
                                 }
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Çok Harcama", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    text = stringResource(Res.string.report_calendar_heat_high),
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                     }
@@ -247,19 +329,23 @@ fun SpendingCalendarReportScreen(
                                 ) {
                                     Column {
                                         Text(
-                                            text = "${selectedDay.date.dayOfMonth} $monthLabel",
+                                            text = selectedDay.date.toLocalizedReadableDate(),
                                             fontSize = 15.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSurface,
                                         )
                                         Text(
-                                            text = "${selectedDay.transactionCount} işlem",
+                                            text = pluralStringResource(
+                                                Res.plurals.report_calendar_tx_count_plural,
+                                                selectedDay.transactionCount,
+                                                selectedDay.transactionCount,
+                                            ),
                                             fontSize = 12.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                     Text(
-                                        text = selectedDay.expenseFormatted,
+                                        text = selectedDay.expense.toLocalizedMaskedText(selectedDay.maskAmounts || maskAmounts),
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = ColorRefinedRed,
@@ -271,10 +357,10 @@ fun SpendingCalendarReportScreen(
                 }
 
                 // Günün İşlemleri
-                if (dayTransactions.isNotEmpty()) {
+                if (selectedDay != null) {
                     item {
                         Text(
-                            text = "Günün İşlemleri",
+                            text = stringResource(Res.string.report_calendar_day_transactions_title),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -282,38 +368,68 @@ fun SpendingCalendarReportScreen(
                         )
                     }
 
-                    items(dayTransactions) { tx ->
-                        ReportCard(
-                            modifier = Modifier.fillMaxWidth(),
-                            backgroundColor = MaterialTheme.colorScheme.surface,
-                            cornerRadius = 12.dp,
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
+                    if (dayTransactions.isEmpty()) {
+                        item {
+                            ReportCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                backgroundColor = MaterialTheme.colorScheme.surface,
+                                cornerRadius = 14.dp,
                             ) {
-                                Column {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(20.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
                                     Text(
-                                        text = tx.title,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                    Text(
-                                        text = tx.categoryName,
-                                        fontSize = 12.sp,
+                                        text = stringResource(Res.string.report_calendar_no_transactions),
+                                        fontSize = 13.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
-                                Text(
-                                    text = (if (tx.isExpense) "-" else "+") + tx.amountFormatted,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (tx.isExpense) MaterialTheme.colorScheme.onSurface else ColorSageGreen,
-                                )
+                            }
+                        }
+                    } else {
+                        items(dayTransactions) { tx ->
+                            val catTitle = if (tx.isCategoryMissing || tx.categoryName == null) {
+                                stringResource(Res.string.report_category_deleted)
+                            } else {
+                                tx.categoryName
+                            }
+                            ReportCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                backgroundColor = MaterialTheme.colorScheme.surface,
+                                cornerRadius = 12.dp,
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = tx.resolveLocalizedTitle(),
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                        Text(
+                                            text = catTitle,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    val isExpense = tx.type == TransactionType.EXPENSE
+                                    val sign = if (isExpense) "-" else "+"
+                                    Text(
+                                        text = sign + tx.amount.toLocalizedMaskedText(tx.maskAmounts || maskAmounts),
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isExpense) MaterialTheme.colorScheme.onSurface else ColorSageGreen,
+                                    )
+                                }
                             }
                         }
                     }
@@ -332,17 +448,19 @@ fun SpendingCalendarReportScreen(
 // ==========================================
 @Composable
 fun BudgetPerformanceReportScreen(
-    periodLabel: String,
-    totalBudgetFormatted: String,
-    totalSpentFormatted: String,
-    remainingFormatted: String,
-    usagePercentageFormatted: String,
-    usageRatio: Float,
+    currentMonth: YearMonth,
+    totalBudget: Money,
+    totalSpent: Money,
+    remaining: MoneyDelta,
+    usageBasisPoints: Int,
     isExceeded: Boolean,
     budgetItems: List<BudgetPerformanceUiItem>,
+    maskAmounts: Boolean = false,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val usageRatio = (usageBasisPoints / 10_000f).coerceIn(0f, 1f)
+
     Surface(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
@@ -362,12 +480,12 @@ fun BudgetPerformanceReportScreen(
                 IconButton(onClick = onBackClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Geri",
+                        contentDescription = stringResource(Res.string.report_action_back),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
-                    text = "Bütçe Performansı",
+                    text = stringResource(Res.string.report_budget_perf_title),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -394,7 +512,7 @@ fun BudgetPerformanceReportScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
-                                    text = "Toplam Bütçe Kullanımı",
+                                    text = stringResource(Res.string.report_budget_perf_hero_title),
                                     fontSize = 13.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontWeight = FontWeight.Medium,
@@ -404,7 +522,7 @@ fun BudgetPerformanceReportScreen(
                                     shape = RoundedCornerShape(8.dp),
                                 ) {
                                     Text(
-                                        text = usagePercentageFormatted,
+                                        text = formatLocalizedRateBasisPoints(usageBasisPoints),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = if (isExceeded) ColorRefinedRed else ColorSageGreen,
@@ -416,7 +534,7 @@ fun BudgetPerformanceReportScreen(
                             Spacer(modifier = Modifier.height(12.dp))
 
                             LinearProgressIndicator(
-                                progress = { usageRatio.coerceIn(0f, 1f) },
+                                progress = { usageRatio },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(10.dp)
@@ -432,17 +550,39 @@ fun BudgetPerformanceReportScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 Column {
-                                    Text("Harcanan", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(totalSpentFormatted, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                    Text(
+                                        text = stringResource(Res.string.report_budget_perf_spent_label),
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = totalSpent.toLocalizedMaskedText(maskAmounts),
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
                                 }
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("Toplam Limit", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(totalBudgetFormatted, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                    Text(
+                                        text = stringResource(Res.string.report_budget_perf_limit_label),
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = totalBudget.toLocalizedMaskedText(maskAmounts),
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text("Kalan Bütçe", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text(
-                                        text = remainingFormatted,
+                                        text = stringResource(Res.string.report_budget_perf_remaining_label),
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = remaining.toLocalizedMaskedText(maskAmounts),
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = if (isExceeded) ColorRefinedRed else ColorSageGreen,
@@ -456,7 +596,7 @@ fun BudgetPerformanceReportScreen(
                 // Kategori Bütçeleri Başlığı
                 item {
                     Text(
-                        text = "Kategori Bütçeleri",
+                        text = stringResource(Res.string.report_budget_perf_categories_title),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -464,61 +604,96 @@ fun BudgetPerformanceReportScreen(
                     )
                 }
 
-                // Kategori Bütçe Listesi
-                items(budgetItems) { item ->
-                    ReportCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = MaterialTheme.colorScheme.surface,
-                        cornerRadius = 14.dp,
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    text = item.name,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                                Text(
-                                    text = item.usagePercentageFormatted,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (item.isExceeded) ColorRefinedRed else ColorSageGreen,
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            LinearProgressIndicator(
-                                progress = { item.usageRatio.coerceIn(0f, 1f) },
+                if (budgetItems.isEmpty()) {
+                    item {
+                        ReportCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            backgroundColor = MaterialTheme.colorScheme.surface,
+                            cornerRadius = 14.dp,
+                        ) {
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(6.dp)
-                                    .clip(RoundedCornerShape(3.dp)),
-                                color = if (item.isExceeded) ColorRefinedRed else ColorSageGreen,
-                                trackColor = MaterialTheme.colorScheme.secondaryContainer,
-                            )
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
+                                    .padding(24.dp),
+                                contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    text = "Harcanan: ${item.spentFormatted}",
-                                    fontSize = 12.sp,
+                                    text = stringResource(Res.string.report_budget_perf_empty),
+                                    fontSize = 14.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                                Text(
-                                    text = "Limit: ${item.budgetFormatted}",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            }
+                        }
+                    }
+                } else {
+                    items(budgetItems) { item ->
+                        val catTitle = if (item.isCategoryMissing || item.name == null) {
+                            stringResource(Res.string.report_category_deleted)
+                        } else {
+                            item.name
+                        }
+                        val itemRatio = (item.usageBasisPoints / 10_000f).coerceIn(0f, 1f)
+
+                        ReportCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            backgroundColor = MaterialTheme.colorScheme.surface,
+                            cornerRadius = 14.dp,
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = catTitle,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    Text(
+                                        text = formatLocalizedRateBasisPoints(item.usageBasisPoints),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (item.isExceeded) ColorRefinedRed else ColorSageGreen,
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                LinearProgressIndicator(
+                                    progress = { itemRatio },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(6.dp)
+                                        .clip(RoundedCornerShape(3.dp)),
+                                    color = if (item.isExceeded) ColorRefinedRed else ColorSageGreen,
+                                    trackColor = MaterialTheme.colorScheme.secondaryContainer,
                                 )
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Text(
+                                        text = stringResource(
+                                            Res.string.report_budget_perf_item_spent,
+                                            item.spent.toLocalizedMaskedText(item.maskAmounts || maskAmounts),
+                                        ),
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = stringResource(
+                                            Res.string.report_budget_perf_item_limit,
+                                            item.budget.toLocalizedMaskedText(item.maskAmounts || maskAmounts),
+                                        ),
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
                         }
                     }
@@ -537,9 +712,10 @@ fun BudgetPerformanceReportScreen(
 // ==========================================
 @Composable
 fun SubscriptionSummaryReportScreen(
-    monthlyTotalFormatted: String,
+    monthlyTotal: Money,
     activeSubscriptionCount: Int,
     upcomingSubscriptions: List<SubscriptionReportUiItem>,
+    maskAmounts: Boolean = false,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -562,12 +738,12 @@ fun SubscriptionSummaryReportScreen(
                 IconButton(onClick = onBackClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Geri",
+                        contentDescription = stringResource(Res.string.report_action_back),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Text(
-                    text = "Abonelik Özeti",
+                    text = stringResource(Res.string.report_sub_summary_title),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -589,14 +765,14 @@ fun SubscriptionSummaryReportScreen(
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(
-                                text = "Aylık Düzenli Abonelik Yükü",
+                                text = stringResource(Res.string.report_sub_summary_hero_title),
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Medium,
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = monthlyTotalFormatted,
+                                text = monthlyTotal.toLocalizedMaskedText(maskAmounts),
                                 fontSize = 28.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
@@ -607,7 +783,11 @@ fun SubscriptionSummaryReportScreen(
                                 shape = RoundedCornerShape(8.dp),
                             ) {
                                 Text(
-                                    text = "$activeSubscriptionCount Aktif Abonelik",
+                                    text = pluralStringResource(
+                                        Res.plurals.report_sub_summary_active_count_plural,
+                                        activeSubscriptionCount,
+                                        activeSubscriptionCount,
+                                    ),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = ColorSageGreen,
@@ -621,7 +801,7 @@ fun SubscriptionSummaryReportScreen(
                 // Yaklaşan Yenilemeler Başlığı
                 item {
                     Text(
-                        text = "Yaklaşan Yenilemeler",
+                        text = stringResource(Res.string.report_sub_summary_upcoming_title),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -643,7 +823,7 @@ fun SubscriptionSummaryReportScreen(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    text = "Kayıtlı aktif abonelik bulunmuyor.",
+                                    text = stringResource(Res.string.report_sub_summary_empty),
                                     fontSize = 14.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -673,14 +853,17 @@ fun SubscriptionSummaryReportScreen(
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "Yenilenme: ${sub.renewalDateFormatted}",
+                                        text = stringResource(
+                                            Res.string.report_sub_summary_renewal_date,
+                                            sub.renewalDate.toLocalizedReadableDate(),
+                                        ),
                                         fontSize = 12.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
 
                                 Text(
-                                    text = sub.amountFormatted,
+                                    text = sub.amount.toLocalizedMaskedText(sub.maskAmounts || maskAmounts),
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,

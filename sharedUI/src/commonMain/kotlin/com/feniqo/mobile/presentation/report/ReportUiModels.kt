@@ -10,6 +10,7 @@ import com.feniqo.mobile.domain.model.ReportDateRange
 import com.feniqo.mobile.domain.model.ReportFilter
 import com.feniqo.mobile.domain.model.ReportPeriodPreset
 import com.feniqo.mobile.domain.model.ReportTypeFilter
+import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.presentation.common.symbol
 import kotlinx.datetime.DayOfWeek
 
@@ -156,28 +157,41 @@ sealed interface ReportUiError {
     data object Generic : ReportUiError
 }
 
+enum class ComparisonPeriodPreset {
+    THIS_VS_LAST_MONTH,
+    LAST_MONTH_VS_TWO_MONTHS_AGO,
+    THIS_QUARTER_VS_LAST,
+    THIS_YEAR_VS_LAST,
+}
+
 data class CalendarDayUiModel(
     val dayNumber: Int,
     val date: LocalDate,
-    val expenseFormatted: String,
+    val expense: Money,
     val transactionCount: Int,
     val heatLevel: Int, // 0..4
     val isSelected: Boolean,
+    val maskAmounts: Boolean = false,
 )
 
 data class BudgetPerformanceUiItem(
-    val name: String,
-    val budgetFormatted: String,
-    val spentFormatted: String,
-    val usagePercentageFormatted: String,
-    val usageRatio: Float,
+    val budgetId: EntityId,
+    val categoryId: EntityId?,
+    val name: String?,
+    val isCategoryMissing: Boolean = name == null,
+    val budget: Money,
+    val spent: Money,
+    val usageBasisPoints: Int,
     val isExceeded: Boolean,
+    val maskAmounts: Boolean = false,
 )
 
 data class SubscriptionReportUiItem(
+    val id: EntityId,
     val name: String,
-    val amountFormatted: String,
-    val renewalDateFormatted: String,
+    val amount: Money,
+    val renewalDate: LocalDate,
+    val maskAmounts: Boolean = false,
 )
 
 data class DebtDeadlineUiItem(
@@ -197,21 +211,44 @@ data class ForecastSourceUiItem(
 
 data class ReportTransactionUiItem(
     val id: EntityId,
-    val title: String,
-    val categoryName: String,
-    val dateFormatted: String,
-    val amountFormatted: String,
-    val isExpense: Boolean,
+    val description: String?,
+    val type: TransactionType,
+    val categoryId: EntityId?,
+    val categoryName: String?,
+    val isCategoryMissing: Boolean,
+    val date: LocalDate,
+    val amount: Money,
+    val maskAmounts: Boolean,
 )
 
 data class CategoryComparisonUiItem(
-    val name: String,
-    val currentFormatted: String,
-    val previousFormatted: String,
-    val deltaFormatted: String,
-    val percentageFormatted: String,
+    val categoryId: EntityId? = null,
+    val name: String?,
+    val isCategoryMissing: Boolean = name == null,
+    val currentAmount: Money,
+    val previousAmount: Money,
+    val delta: MoneyDelta,
+    val percentageBasisPoints: Int,
     val isIncreased: Boolean,
+    val maskAmounts: Boolean = false,
 )
+
+sealed interface PeriodComparisonUiState {
+    data object Unavailable : PeriodComparisonUiState
+
+    data class Available(
+        val preset: ComparisonPeriodPreset = ComparisonPeriodPreset.THIS_VS_LAST_MONTH,
+        val currentNet: MoneyDelta,
+        val previousNet: MoneyDelta,
+        val netDifference: MoneyDelta,
+        val isNetImproved: Boolean,
+        val incomeDelta: MoneyDelta,
+        val expenseDelta: MoneyDelta,
+        val savingsRateDeltaBasisPoints: Int,
+        val categoryComparisons: List<CategoryComparisonUiItem>,
+        val maskAmounts: Boolean = false,
+    ) : PeriodComparisonUiState
+}
 
 data class WeeklyDualBarUiPoint(
     val weekNumber: Int,

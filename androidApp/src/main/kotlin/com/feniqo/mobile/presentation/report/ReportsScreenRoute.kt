@@ -16,6 +16,7 @@ import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.MoneyDelta
 import com.feniqo.mobile.domain.model.ReportDateRange
 import com.feniqo.mobile.domain.model.ReportPeriodPreset
+import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.YearMonth
 import com.feniqo.mobile.presentation.util.MoneyFormatter
 
@@ -289,31 +290,13 @@ fun PeriodComparisonReportRoute(
     viewModel: ReportsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val success = uiState.contentState as? ReportsContentState.Success
+    val maskAmounts = (uiState.contentState as? ReportsContentState.Success)?.maskAmounts ?: false
     var showSheet by remember { mutableStateOf(false) }
 
-    val comparisonItems = success?.categoryBreakdown?.map { cb ->
-        CategoryComparisonUiItem(
-            name = cb.name.orEmpty(),
-            currentFormatted = cb.amount.toLocalizedMaskedText(cb.maskAmounts),
-            previousFormatted = "₺0",
-            deltaFormatted = "+${cb.amount.toLocalizedMaskedText(cb.maskAmounts)}",
-            percentageFormatted = "%${cb.shareBasisPoints / 100}",
-            isIncreased = true,
-        )
-    } ?: emptyList()
+    val comparisonState = PeriodComparisonUiState.Unavailable
 
     PeriodComparisonReportScreen(
-        currentPeriodLabel = "Bu Ay",
-        previousPeriodLabel = "Geçen Ay",
-        currentNetFormatted = success?.net?.toLocalizedMaskedText(success.maskAmounts) ?: "₺0",
-        previousNetFormatted = "₺0",
-        netDifferenceFormatted = success?.net?.toLocalizedMaskedText(success.maskAmounts) ?: "₺0",
-        isNetImproved = success?.isNetPositive ?: true,
-        incomeDeltaFormatted = "+${success?.income?.toLocalizedMaskedText(success.maskAmounts) ?: "₺0"}",
-        expenseDeltaFormatted = "+${success?.expense?.toLocalizedMaskedText(success.maskAmounts) ?: "₺0"}",
-        savingsRateDeltaFormatted = success?.let { "%${it.savingsRateBasisPoints / 100}" } ?: "%0",
-        categoryComparisons = comparisonItems,
+        comparisonState = comparisonState,
         onSelectPeriodClick = { showSheet = true },
         onCategoryClick = {},
         onBackClick = onNavigateBack,
@@ -337,6 +320,8 @@ fun SpendingCalendarReportRoute(
     modifier: Modifier = Modifier,
     viewModel: ReportsViewModel = hiltViewModel(),
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val maskAmounts = (uiState.contentState as? ReportsContentState.Success)?.maskAmounts ?: false
     val refDate = viewModel.getCurrentReferenceDate()
     var currentMonth by remember { mutableStateOf(YearMonth.from(refDate.year, refDate.monthNumber)) }
     val calendarSummary by viewModel.observeSpendingCalendar(currentMonth).collectAsStateWithLifecycle(initialValue = null)
@@ -352,20 +337,39 @@ fun SpendingCalendarReportRoute(
             else -> 4
         }
         CalendarDayUiModel(
-            dayNumber = d.date.day,
+            dayNumber = d.date.dayOfMonth,
             date = d.date,
-            expenseFormatted = MoneyFormatter.format(d.expense),
+            expense = d.expense,
             transactionCount = d.transactionCount,
             heatLevel = heat,
             isSelected = selectedDay?.date == d.date,
+            maskAmounts = maskAmounts,
         )
     } ?: emptyList()
 
+    val dayTransactions = selectedDay?.let { sel ->
+        val dayData = calendarSummary?.days?.find { it.date == sel.date }
+        dayData?.transactions?.map { t ->
+            ReportTransactionUiItem(
+                id = t.id,
+                description = t.description,
+                type = t.type,
+                categoryId = t.categoryId,
+                categoryName = t.categoryName,
+                isCategoryMissing = t.isCategoryMissing,
+                date = t.date,
+                amount = t.amount,
+                maskAmounts = maskAmounts,
+            )
+        }
+    } ?: emptyList()
+
     SpendingCalendarReportScreen(
-        monthLabel = "${ReportSummaryFormatter.monthName(currentMonth.monthNumber)} ${currentMonth.year}",
+        currentMonth = currentMonth,
         days = daysUi,
         selectedDay = selectedDay,
-        dayTransactions = emptyList(),
+        dayTransactions = dayTransactions,
+        maskAmounts = maskAmounts,
         onSelectDay = { selectedDay = it },
         onPreviousMonth = { currentMonth = currentMonth.previousMonth() },
         onNextMonth = { currentMonth = currentMonth.nextMonth() },
@@ -383,30 +387,41 @@ fun BudgetPerformanceReportRoute(
     modifier: Modifier = Modifier,
     viewModel: ReportsViewModel = hiltViewModel(),
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val maskAmounts = (uiState.contentState as? ReportsContentState.Success)?.maskAmounts ?: false
     val refDate = viewModel.getCurrentReferenceDate()
     val currentMonth = YearMonth.from(refDate.year, refDate.monthNumber)
     val budgetSummary by viewModel.observeBudgetPerformance(currentMonth).collectAsStateWithLifecycle(initialValue = null)
 
     val items = budgetSummary?.categoryProgressList?.map { b ->
         BudgetPerformanceUiItem(
+            budgetId = b.budgetId,
+            categoryId = b.categoryId,
             name = b.categoryName,
-            budgetFormatted = MoneyFormatter.format(b.budgetAmount),
-            spentFormatted = MoneyFormatter.format(b.spentAmount),
-            usagePercentageFormatted = "%${b.usagePercentageBasisPoints / 100}",
-            usageRatio = b.usagePercentageBasisPoints / 10000f,
+            isCategoryMissing = b.isCategoryMissing,
+            budget = b.budgetAmount,
+            spent = b.spentAmount,
+            usageBasisPoints = b.usagePercentageBasisPoints,
             isExceeded = b.isExceeded,
+            maskAmounts = maskAmounts,
         )
     } ?: emptyList()
 
+    val selectedCurrency = uiState.filterState.currency
+    val totalBudget = budgetSummary?.totalBudget ?: Money.zero(selectedCurrency)
+    val totalSpent = budgetSummary?.totalSpent ?: Money.zero(selectedCurrency)
+    val totalRemaining = budgetSummary?.totalRemaining ?: Money.zero(selectedCurrency)
+    val remainingDelta = MoneyDelta(totalRemaining.amountMinor, totalRemaining.currency)
+
     BudgetPerformanceReportScreen(
-        periodLabel = "${ReportSummaryFormatter.monthName(currentMonth.monthNumber)} ${currentMonth.year}",
-        totalBudgetFormatted = MoneyFormatter.format(budgetSummary?.totalBudget ?: Money(0, Currency.TRY)),
-        totalSpentFormatted = MoneyFormatter.format(budgetSummary?.totalSpent ?: Money(0, Currency.TRY)),
-        remainingFormatted = MoneyFormatter.format(budgetSummary?.totalRemaining ?: Money(0, Currency.TRY)),
-        usagePercentageFormatted = "%${(budgetSummary?.usagePercentageBasisPoints ?: 0) / 100}",
-        usageRatio = (budgetSummary?.usagePercentageBasisPoints ?: 0) / 10000f,
+        currentMonth = currentMonth,
+        totalBudget = totalBudget,
+        totalSpent = totalSpent,
+        remaining = remainingDelta,
+        usageBasisPoints = budgetSummary?.usagePercentageBasisPoints ?: 0,
         isExceeded = (budgetSummary?.budgetsExceededCount ?: 0) > 0,
         budgetItems = items,
+        maskAmounts = maskAmounts,
         onBackClick = onNavigateBack,
         modifier = modifier,
     )
@@ -421,20 +436,26 @@ fun SubscriptionSummaryReportRoute(
     modifier: Modifier = Modifier,
     viewModel: ReportsViewModel = hiltViewModel(),
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val maskAmounts = (uiState.contentState as? ReportsContentState.Success)?.maskAmounts ?: false
+    val selectedCurrency = uiState.filterState.currency
     val subSummary by viewModel.observeSubscriptionSummary().collectAsStateWithLifecycle(initialValue = null)
 
     val upcoming = subSummary?.upcomingPayments?.map { u ->
         SubscriptionReportUiItem(
+            id = u.subscriptionId,
             name = u.name,
-            amountFormatted = MoneyFormatter.format(u.amount),
-            renewalDateFormatted = ReportSummaryFormatter.formatDateDisplay(u.renewalDate),
+            amount = u.amount,
+            renewalDate = u.renewalDate,
+            maskAmounts = maskAmounts,
         )
     } ?: emptyList()
 
     SubscriptionSummaryReportScreen(
-        monthlyTotalFormatted = MoneyFormatter.format(subSummary?.totalMonthlyEstimate ?: Money(0, Currency.TRY)),
+        monthlyTotal = subSummary?.totalMonthlyEstimate ?: Money.zero(selectedCurrency),
         activeSubscriptionCount = subSummary?.activeSubscriptionCount ?: 0,
         upcomingSubscriptions = upcoming,
+        maskAmounts = maskAmounts,
         onBackClick = onNavigateBack,
         modifier = modifier,
     )

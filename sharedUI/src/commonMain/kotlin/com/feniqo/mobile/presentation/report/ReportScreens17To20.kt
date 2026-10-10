@@ -40,6 +40,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.ForecastProjectionPoint
+import com.feniqo.mobile.domain.model.TransactionType
+import com.feniqo.mobile.presentation.common.toLocalizedReadableDate
 
 // Tasarım Sistemi Renkleri
 private val ColorSageGreen = Color(0xFF2D5A43)
@@ -746,22 +748,23 @@ fun InsightDetailReportScreen(
                             ) {
                                 Column {
                                     Text(
-                                        text = tx.title,
+                                        text = tx.resolveLocalizedTitle(),
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Text(
-                                        text = tx.dateFormatted,
+                                        text = tx.date.toLocalizedReadableDate(),
                                         fontSize = 12.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
+                                val isExpense = tx.type == TransactionType.EXPENSE
                                 Text(
-                                    text = (if (tx.isExpense) "-" else "+") + tx.amountFormatted,
+                                    text = (if (isExpense) "-" else "+") + tx.amount.toLocalizedMaskedText(tx.maskAmounts),
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (tx.isExpense) MaterialTheme.colorScheme.onSurface else ColorSageGreen,
+                                    color = if (isExpense) MaterialTheme.colorScheme.onSurface else ColorSageGreen,
                                 )
                             }
                         }

@@ -2167,4 +2167,71 @@
     <string name="report_weekly_chart_desc">Haftalık gelir ve gider sütun grafiği</string>
     <string name="report_donut_chart_desc">Kategori dağılımı pasta grafiği</string>
     <string name="report_trend_chart_desc">Aylık gelir ve gider trend grafiği</string>
+
+    <!-- Period Comparison Screen -->
+    <string name="report_comparison_title">Dönem Karşılaştırma</string>
+    <string name="report_comparison_action_change">Değiştir</string>
+    <string name="report_comparison_action_change_semantics">Karşılaştırma dönemini değiştir</string>
+    <string name="report_comparison_vs">%1$s  vs  %2$s</string>
+    <string name="report_comparison_net_change_title">Net Fark Değişimi</string>
+    <string name="report_comparison_net_improved">İyileşme</string>
+    <string name="report_comparison_net_declined">Azalma</string>
+    <string name="report_comparison_income_delta">Gelir Değişimi</string>
+    <string name="report_comparison_expense_delta">Gider Değişimi</string>
+    <string name="report_comparison_savings_rate_delta">Tasarruf</string>
+    <string name="report_comparison_categories_title">Kategori Bazında Değişimler</string>
+    <string name="report_comparison_category_flow">%1$s → %2$s</string>
+    <string name="report_comparison_unavailable_title">Karşılaştırma Verisi Hazır Değil</string>
+    <string name="report_comparison_unavailable_message">Seçilen dönemler arasında karşılaştırma yapabilmek için henüz yeterli veri bulunmuyor.</string>
+    <string name="report_comparison_sheet_title">Karşılaştırma Dönemi Seç</string>
+    <string name="report_comparison_preset_this_vs_last_month">Bu Ay  vs  Geçen Ay</string>
+    <string name="report_comparison_preset_last_vs_two_months_ago">Geçen Ay  vs  Önceki Ay</string>
+    <string name="report_comparison_preset_this_quarter_vs_last">Bu Çeyrek  vs  Geçen Çeyrek</string>
+    <string name="report_comparison_preset_this_year_vs_last">Bu Yıl  vs  Geçen Yıl</string>
+    <string name="report_comparison_sheet_apply">Karşılaştırmayı Uygula</string>
+
+    <!-- Comparison Detail Screen -->
+    <string name="report_comparison_detail_title">%1$s Değişimi</string>
+    <string name="report_comparison_detail_expense_increased">Bu Kategoride Harcama Arttı</string>
+    <string name="report_comparison_detail_expense_decreased">Bu Kategoride Harcama Düştü</string>
+    <string name="report_comparison_detail_diff_format">Fark: %1$s (%2$s)</string>
+    <string name="report_comparison_detail_contributing_transactions">Etkileyen İşlemler</string>
+    <string name="report_comparison_detail_no_transactions">Bu kategoriye ait işlem bulunamadı.</string>
+
+    <!-- Spending Calendar Screen -->
+    <string name="report_calendar_title">Harcama Takvimi</string>
+    <string name="report_calendar_prev_month">Önceki Ay</string>
+    <string name="report_calendar_next_month">Sonraki Ay</string>
+    <string name="report_calendar_heat_low">Az</string>
+    <string name="report_calendar_heat_high">Çok Harcama</string>
+    <string name="report_calendar_day_transactions_title">Günün İşlemleri</string>
+    <string name="report_calendar_no_transactions">Bu güne ait harcama işlemi yok.</string>
+    <string name="report_calendar_day_cell_semantics">%1$s, %2$d işlem, %3$s</string>
+    <plurals name="report_calendar_tx_count_plural">
+        <item quantity="one">%1$d işlem</item>
+        <item quantity="other">%1$d işlem</item>
+    </plurals>
+
+    <!-- Budget Performance Screen -->
+    <string name="report_budget_perf_title">Bütçe Performansı</string>
+    <string name="report_budget_perf_hero_title">Toplam Bütçe Kullanımı</string>
+    <string name="report_budget_perf_spent_label">Harcanan</string>
+    <string name="report_budget_perf_limit_label">Toplam Limit</string>
+    <string name="report_budget_perf_remaining_label">Kalan Bütçe</string>
+    <string name="report_budget_perf_exceeded_label">Bütçe Aşıldı</string>
+    <string name="report_budget_perf_categories_title">Kategori Bütçeleri</string>
+    <string name="report_budget_perf_item_spent">Harcanan: %1$s</string>
+    <string name="report_budget_perf_item_limit">Limit: %1$s</string>
+    <string name="report_budget_perf_empty">Bu ay için tanımlı bütçe bulunmuyor.</string>
+
+    <!-- Subscription Summary Screen -->
+    <string name="report_sub_summary_title">Abonelik Özeti</string>
+    <string name="report_sub_summary_hero_title">Aylık Düzenli Abonelik Yükü</string>
+    <string name="report_sub_summary_upcoming_title">Yaklaşan Yenilemeler</string>
+    <string name="report_sub_summary_renewal_date">Yenilenme: %1$s</string>
+    <string name="report_sub_summary_empty">Kayıtlı aktif abonelik bulunmuyor.</string>
+    <plurals name="report_sub_summary_active_count_plural">
+        <item quantity="one">%1$d Aktif Abonelik</item>
+        <item quantity="other">%1$d Aktif Abonelik</item>
+    </plurals>
 </resources>

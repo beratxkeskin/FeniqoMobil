@@ -2,6 +2,7 @@ package com.feniqo.mobile.domain.usecase
 
 import com.feniqo.mobile.domain.model.BudgetPerformanceSummary
 import com.feniqo.mobile.domain.model.CalendarDaySpending
+import com.feniqo.mobile.domain.model.CalendarTransactionSummary
 import com.feniqo.mobile.domain.model.CashFlowSummary
 import com.feniqo.mobile.domain.model.Category
 import com.feniqo.mobile.domain.model.CategoryBudgetProgressItem
@@ -379,6 +380,7 @@ class ObserveSpendingCalendarUseCase(
         val catFlow = categoryRepository.observeCategories(workspaceId = workspaceId)
 
         return combine(txFlow, catFlow) { txs, categories ->
+            val categoriesById = categories.associateBy { it.id }
             val currencyTxs = txs.filter { it.amount.currency == currency && it.type == TransactionType.EXPENSE }
             val daysList = mutableListOf<CalendarDaySpending>()
             var maxDayExpense = 0L
@@ -398,8 +400,22 @@ class ObserveSpendingCalendarUseCase(
 
                 val dominantCat = dayTxs.groupBy { it.categoryId }
                     .maxByOrNull { (_, list) -> list.sumOf { it.amount.amountMinor } }
-                val dominantName = categories.find { it.id == dominantCat?.key }?.name
+                val dominantName = dominantCat?.key?.let { categoriesById[it]?.name }
                 val dominantAmount = Money(dominantCat?.value?.sumOf { it.amount.amountMinor } ?: 0L, currency)
+
+                val daySummaries = dayTxs.map { t ->
+                    val category = t.categoryId?.let { categoriesById[it] }
+                    CalendarTransactionSummary(
+                        id = t.id,
+                        description = t.description,
+                        categoryId = t.categoryId,
+                        categoryName = category?.name,
+                        isCategoryMissing = category == null,
+                        date = t.transactionDate,
+                        amount = t.amount,
+                        type = t.type,
+                    )
+                }
 
                 daysList.add(
                     CalendarDaySpending(
@@ -408,7 +424,7 @@ class ObserveSpendingCalendarUseCase(
                         transactionCount = dayTxs.size,
                         dominantCategoryName = dominantName,
                         dominantCategoryExpense = dominantAmount,
-                        transactions = dayTxs,
+                        transactions = daySummaries,
                     )
                 )
             }
@@ -465,7 +481,7 @@ class ObserveBudgetPerformanceReportUseCase(
                     ((spent.amountMinor * 10_000) / b.limit.amountMinor).toInt()
                 } else 0
 
-                val catName = categories.find { it.id == b.categoryId }?.name ?: "Bütçe"
+                val catName = categories.find { it.id == b.categoryId }?.name
                 progressList.add(
                     CategoryBudgetProgressItem(
                         budgetId = b.id,
@@ -511,7 +527,7 @@ class ObserveSubscriptionSummaryReportUseCase(
             val active = subscriptions.filter { it.amount.currency == currency && it.isActive }
             var monthlyTotalMinor = 0L
             val upcoming = mutableListOf<SubscriptionUpcomingItem>()
-            val categoryMap = mutableMapOf<String, Long>()
+            val categoryCostMap = mutableMapOf<EntityId?, Long>()
 
             for (sub in active) {
                 val costMinor = sub.amount.amountMinor
@@ -524,15 +540,21 @@ class ObserveSubscriptionSummaryReportUseCase(
                         renewalDate = sub.nextRenewalDate,
                     )
                 )
-                val catName = categories.find { it.id == sub.categoryId }?.name ?: "Diğer"
-                categoryMap[catName] = (categoryMap[catName] ?: 0L) + costMinor
+                categoryCostMap[sub.categoryId] = (categoryCostMap[sub.categoryId] ?: 0L) + costMinor
             }
 
             upcoming.sortBy { it.renewalDate }
 
-            val distribution = categoryMap.map { (cat, minor) ->
+            val distribution = categoryCostMap.map { (catId, minor) ->
                 val pct = if (monthlyTotalMinor > 0) ((minor * 10_000) / monthlyTotalMinor).toInt() else 0
-                SubscriptionCategoryDistributionItem(cat, Money(minor, currency), pct)
+                val catName = catId?.let { id -> categories.find { it.id == id }?.name }
+                SubscriptionCategoryDistributionItem(
+                    categoryId = catId,
+                    categoryName = catName,
+                    isCategoryMissing = catName == null,
+                    amount = Money(minor, currency),
+                    percentageBasisPoints = pct,
+                )
             }.sortedByDescending { it.amount.amountMinor }
 
             SubscriptionReportSummary(

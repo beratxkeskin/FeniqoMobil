@@ -23,6 +23,7 @@ import com.feniqo.mobile.domain.model.ReportDateRange
 import com.feniqo.mobile.domain.model.ReportPeriod
 import com.feniqo.mobile.domain.model.ReportPeriodPreset
 import com.feniqo.mobile.domain.model.ReportTypeFilter
+import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.YearMonth
 import kotlinx.datetime.DayOfWeek
 import org.junit.Rule
@@ -825,6 +826,379 @@ class ReportsLocalizationComposeTest {
         composeRule.onNodeWithText("30,000.00 ₺").assertDoesNotExist()
 
         // Masked placeholder is displayed
+        composeRule.onAllNodesWithText("••••")[0].assertIsDisplayed()
+    }
+
+    @Test
+    fun periodComparisonReportScreen_availableState_and_presetSheet_react_to_runtime_locale_change() {
+        var languageTag by mutableStateOf("tr")
+        var showSheet by mutableStateOf(false)
+
+        val availableState = PeriodComparisonUiState.Available(
+            preset = ComparisonPeriodPreset.THIS_VS_LAST_MONTH,
+            currentNet = MoneyDelta(30_000_00L, Currency.TRY),
+            previousNet = MoneyDelta(20_000_00L, Currency.TRY),
+            netDifference = MoneyDelta(10_000_00L, Currency.TRY),
+            isNetImproved = true,
+            incomeDelta = MoneyDelta(5_000_00L, Currency.TRY),
+            expenseDelta = MoneyDelta(-5_000_00L, Currency.TRY),
+            savingsRateDeltaBasisPoints = 1200,
+            categoryComparisons = listOf(
+                CategoryComparisonUiItem(
+                    categoryId = EntityId("cat-1"),
+                    name = "Market",
+                    isCategoryMissing = false,
+                    currentAmount = Money(10_000_00L, Currency.TRY),
+                    previousAmount = Money(8_000_00L, Currency.TRY),
+                    delta = MoneyDelta(2_000_00L, Currency.TRY),
+                    percentageBasisPoints = 2500,
+                    isIncreased = true,
+                ),
+            ),
+            maskAmounts = false,
+        )
+
+        composeRule.setContent {
+            App(languageTag = languageTag) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    PeriodComparisonReportScreen(
+                        comparisonState = availableState,
+                        onSelectPeriodClick = { showSheet = true },
+                        onCategoryClick = {},
+                        onBackClick = {},
+                    )
+                    if (showSheet) {
+                        SelectComparisonPeriodSheet(
+                            initialPreset = ComparisonPeriodPreset.THIS_VS_LAST_MONTH,
+                            onApplyPreset = { showSheet = false },
+                            onDismissRequest = { showSheet = false },
+                        )
+                    }
+                }
+            }
+        }
+
+        // TR assertions
+        composeRule.onNodeWithText("Dönem Karşılaştırma").assertIsDisplayed()
+        composeRule.onNodeWithText("Değiştir").assertIsDisplayed()
+        composeRule.onNodeWithText("Bu Ay  vs  Geçen Ay").assertIsDisplayed()
+        composeRule.onNodeWithText("Net Fark Değişimi").assertIsDisplayed()
+        composeRule.onNodeWithText("İyileşme").assertIsDisplayed()
+        composeRule.onNodeWithText("Gelir Değişimi").assertIsDisplayed()
+        composeRule.onNodeWithText("Gider Değişimi").assertIsDisplayed()
+        composeRule.onNodeWithText("Tasarruf").assertIsDisplayed()
+        composeRule.onNodeWithText("%12").assertIsDisplayed()
+        composeRule.onNodeWithText("Kategori Bazında Değişimler").assertIsDisplayed()
+        composeRule.onNodeWithText("Market").assertIsDisplayed()
+
+        // Open preset sheet
+        composeRule.runOnIdle { showSheet = true }
+        composeRule.onNodeWithText("Karşılaştırma Dönemi Seç").assertIsDisplayed()
+        composeRule.onNodeWithText("Karşılaştırmayı Uygula").assertIsDisplayed()
+        composeRule.onNodeWithText("Bu Çeyrek  vs  Geçen Çeyrek").assertIsDisplayed()
+        composeRule.onNodeWithText("Bu Yıl  vs  Geçen Yıl").assertIsDisplayed()
+
+        // Switch to EN
+        composeRule.runOnIdle { languageTag = "en" }
+
+        // EN assertions for sheet
+        composeRule.onNodeWithText("Select Comparison Period").assertIsDisplayed()
+        composeRule.onNodeWithText("Apply Comparison").assertIsDisplayed()
+        composeRule.onNodeWithText("This Quarter  vs  Last Quarter").assertIsDisplayed()
+        composeRule.onNodeWithText("This Year  vs  Last Year").assertIsDisplayed()
+
+        // Close sheet to verify screen in EN
+        composeRule.runOnIdle { showSheet = false }
+        composeRule.onNodeWithText("Period Comparison").assertIsDisplayed()
+        composeRule.onNodeWithText("Change").assertIsDisplayed()
+        composeRule.onNodeWithText("This Month  vs  Last Month").assertIsDisplayed()
+        composeRule.onNodeWithText("Net Difference Change").assertIsDisplayed()
+        composeRule.onNodeWithText("Improvement").assertIsDisplayed()
+        composeRule.onNodeWithText("Income Change").assertIsDisplayed()
+        composeRule.onNodeWithText("Expense Change").assertIsDisplayed()
+        composeRule.onNodeWithText("Savings").assertIsDisplayed()
+        composeRule.onNodeWithText("12%").assertIsDisplayed()
+        composeRule.onNodeWithText("Category Changes").assertIsDisplayed()
+        composeRule.onNodeWithText("Market").assertIsDisplayed()
+    }
+
+    @Test
+    fun periodComparisonReportScreen_unavailableState_displays_honest_localized_message() {
+        var languageTag by mutableStateOf("tr")
+
+        composeRule.setContent {
+            App(languageTag = languageTag) {
+                PeriodComparisonReportScreen(
+                    comparisonState = PeriodComparisonUiState.Unavailable,
+                    onSelectPeriodClick = {},
+                    onCategoryClick = {},
+                    onBackClick = {},
+                )
+            }
+        }
+
+        // TR
+        composeRule.onNodeWithText("Dönem Karşılaştırma").assertIsDisplayed()
+        composeRule.onNodeWithText("Karşılaştırma Verisi Hazır Değil").assertIsDisplayed()
+        composeRule.onNodeWithText("Seçilen dönemler arasında karşılaştırma yapabilmek için henüz yeterli veri bulunmuyor.").assertIsDisplayed()
+
+        // Switch to EN
+        composeRule.runOnIdle { languageTag = "en" }
+
+        // EN
+        composeRule.onNodeWithText("Period Comparison").assertIsDisplayed()
+        composeRule.onNodeWithText("Comparison Data Not Available").assertIsDisplayed()
+        composeRule.onNodeWithText("There is not enough data available to compare the selected periods.").assertIsDisplayed()
+    }
+
+    @Test
+    fun spendingCalendarReportScreen_reacts_to_runtime_locale_change_and_masks_amounts() {
+        var languageTag by mutableStateOf("tr")
+        var maskAmounts by mutableStateOf(false)
+
+        val currentMonth = YearMonth("2026-09")
+        val day = CalendarDayUiModel(
+            date = LocalDate(2026, 9, 17),
+            dayNumber = 17,
+            expense = Money(225_00L, Currency.TRY),
+            transactionCount = 2,
+            heatLevel = 2,
+            isSelected = true,
+            maskAmounts = false,
+        )
+        val txWithCategory = ReportTransactionUiItem(
+            id = EntityId("tx-1"),
+            description = "Kahve",
+            type = TransactionType.EXPENSE,
+            categoryId = EntityId("c-cafe"),
+            categoryName = "Kafe & Restoran",
+            isCategoryMissing = false,
+            date = LocalDate(2026, 9, 17),
+            amount = Money(150_00L, Currency.TRY),
+            maskAmounts = false,
+        )
+        val txDeletedCategoryNoDesc = ReportTransactionUiItem(
+            id = EntityId("tx-2"),
+            description = null,
+            type = TransactionType.EXPENSE,
+            categoryId = null,
+            categoryName = null,
+            isCategoryMissing = true,
+            date = LocalDate(2026, 9, 17),
+            amount = Money(75_00L, Currency.TRY),
+            maskAmounts = false,
+        )
+
+        composeRule.setContent {
+            App(languageTag = languageTag) {
+                SpendingCalendarReportScreen(
+                    currentMonth = currentMonth,
+                    days = listOf(day),
+                    selectedDay = day,
+                    dayTransactions = listOf(txWithCategory, txDeletedCategoryNoDesc),
+                    maskAmounts = maskAmounts,
+                    onSelectDay = {},
+                    onPreviousMonth = {},
+                    onNextMonth = {},
+                    onBackClick = {},
+                )
+            }
+        }
+
+        // TR
+        composeRule.onNodeWithText("Harcama Takvimi").assertIsDisplayed()
+        composeRule.onNodeWithText("Eylül 2026").assertIsDisplayed()
+        composeRule.onNodeWithText("Pzt").assertIsDisplayed()
+        composeRule.onNodeWithText("Paz").assertIsDisplayed()
+        composeRule.onNodeWithText("17 Eylül 2026").assertIsDisplayed()
+        composeRule.onNodeWithText("2 işlem").assertIsDisplayed()
+        composeRule.onNodeWithText("Günün İşlemleri").assertIsDisplayed()
+        // Known category and custom description
+        composeRule.onNodeWithText("Kahve").assertIsDisplayed()
+        composeRule.onNodeWithText("Kafe & Restoran").assertIsDisplayed()
+        // Missing category and fallback localized type title
+        composeRule.onNodeWithText("Silinmiş kategori").assertIsDisplayed()
+        composeRule.onNodeWithText("Gider").assertIsDisplayed()
+        // No raw enum strings leaked
+        composeRule.onNodeWithText("EXPENSE").assertDoesNotExist()
+        composeRule.onNodeWithText("INCOME").assertDoesNotExist()
+        composeRule.onNodeWithText("225,00 ₺").assertIsDisplayed()
+        composeRule.onNodeWithText("-150,00 ₺").assertIsDisplayed()
+        composeRule.onNodeWithText("-75,00 ₺").assertIsDisplayed()
+
+        // Switch to EN
+        composeRule.runOnIdle { languageTag = "en" }
+
+        // EN
+        composeRule.onNodeWithText("Spending Calendar").assertIsDisplayed()
+        composeRule.onNodeWithText("September 2026").assertIsDisplayed()
+        composeRule.onNodeWithText("Mon").assertIsDisplayed()
+        composeRule.onNodeWithText("Sun").assertIsDisplayed()
+        composeRule.onNodeWithText("September 17, 2026").assertIsDisplayed()
+        composeRule.onNodeWithText("2 transactions").assertIsDisplayed()
+        composeRule.onNodeWithText("Transactions of the Day").assertIsDisplayed()
+        // Known category and custom description
+        composeRule.onNodeWithText("Kahve").assertIsDisplayed()
+        composeRule.onNodeWithText("Kafe & Restoran").assertIsDisplayed()
+        // Missing category and fallback localized type title
+        composeRule.onNodeWithText("Deleted category").assertIsDisplayed()
+        composeRule.onNodeWithText("Expense").assertIsDisplayed()
+        // No raw enum strings leaked
+        composeRule.onNodeWithText("EXPENSE").assertDoesNotExist()
+        composeRule.onNodeWithText("INCOME").assertDoesNotExist()
+        composeRule.onNodeWithText("225.00 ₺").assertIsDisplayed()
+        composeRule.onNodeWithText("-150.00 ₺").assertIsDisplayed()
+        composeRule.onNodeWithText("-75.00 ₺").assertIsDisplayed()
+
+        // Mask amounts
+        composeRule.runOnIdle { maskAmounts = true }
+        composeRule.onNodeWithText("225,00 ₺").assertDoesNotExist()
+        composeRule.onNodeWithText("225.00 ₺").assertDoesNotExist()
+        composeRule.onNodeWithText("-150,00 ₺").assertDoesNotExist()
+        composeRule.onNodeWithText("-150.00 ₺").assertDoesNotExist()
+        composeRule.onNodeWithText("-75,00 ₺").assertDoesNotExist()
+        composeRule.onNodeWithText("-75.00 ₺").assertDoesNotExist()
+        composeRule.onAllNodesWithText("••••")[0].assertIsDisplayed()
+    }
+
+    @Test
+    fun budgetPerformanceReportScreen_reacts_to_runtime_locale_change_and_masks_amounts() {
+        var languageTag by mutableStateOf("tr")
+        var maskAmounts by mutableStateOf(false)
+
+        val item = BudgetPerformanceUiItem(
+            budgetId = EntityId("b-1"),
+            categoryId = null,
+            name = null,
+            isCategoryMissing = true,
+            budget = Money(5_000_00L, Currency.TRY),
+            spent = Money(6_000_00L, Currency.TRY),
+            usageBasisPoints = 12000,
+            isExceeded = true,
+            maskAmounts = false,
+        )
+
+        composeRule.setContent {
+            App(languageTag = languageTag) {
+                BudgetPerformanceReportScreen(
+                    currentMonth = YearMonth("2026-09"),
+                    totalBudget = Money(20_000_00L, Currency.TRY),
+                    totalSpent = Money(16_000_00L, Currency.TRY),
+                    remaining = MoneyDelta(4_000_00L, Currency.TRY),
+                    usageBasisPoints = 8000,
+                    isExceeded = false,
+                    budgetItems = listOf(item),
+                    maskAmounts = maskAmounts,
+                    onBackClick = {},
+                )
+            }
+        }
+
+        // TR
+        composeRule.onNodeWithText("Bütçe Performansı").assertIsDisplayed()
+        composeRule.onNodeWithText("Toplam Bütçe Kullanımı").assertIsDisplayed()
+        composeRule.onNodeWithText("%80").assertIsDisplayed()
+        composeRule.onNodeWithText("Harcanan").assertIsDisplayed()
+        composeRule.onNodeWithText("Toplam Limit").assertIsDisplayed()
+        composeRule.onNodeWithText("Kalan Bütçe").assertIsDisplayed()
+        composeRule.onNodeWithText("Kategori Bütçeleri").assertIsDisplayed()
+        composeRule.onNodeWithText("Silinmiş kategori").assertIsDisplayed()
+        composeRule.onNodeWithText("%120").assertIsDisplayed()
+        composeRule.onNodeWithText("Harcanan: 6.000,00 ₺").assertIsDisplayed()
+        composeRule.onNodeWithText("Limit: 5.000,00 ₺").assertIsDisplayed()
+
+        // Switch to EN
+        composeRule.runOnIdle { languageTag = "en" }
+
+        // EN
+        composeRule.onNodeWithText("Budget Performance").assertIsDisplayed()
+        composeRule.onNodeWithText("Total Budget Usage").assertIsDisplayed()
+        composeRule.onNodeWithText("80%").assertIsDisplayed()
+        composeRule.onNodeWithText("Spent").assertIsDisplayed()
+        composeRule.onNodeWithText("Total Limit").assertIsDisplayed()
+        composeRule.onNodeWithText("Remaining Budget").assertIsDisplayed()
+        composeRule.onNodeWithText("Category Budgets").assertIsDisplayed()
+        composeRule.onNodeWithText("Deleted category").assertIsDisplayed()
+        composeRule.onNodeWithText("120%").assertIsDisplayed()
+        composeRule.onNodeWithText("Spent: 6,000.00 ₺").assertIsDisplayed()
+        composeRule.onNodeWithText("Limit: 5,000.00 ₺").assertIsDisplayed()
+
+        // Mask amounts
+        composeRule.runOnIdle { maskAmounts = true }
+        composeRule.onNodeWithText("Spent: 6,000.00 ₺").assertDoesNotExist()
+        composeRule.onNodeWithText("Harcanan: 6.000,00 ₺").assertDoesNotExist()
+        composeRule.onNodeWithText("Limit: 5,000.00 ₺").assertDoesNotExist()
+        composeRule.onNodeWithText("Limit: 5.000,00 ₺").assertDoesNotExist()
+        composeRule.onNodeWithText("Spent: ••••").assertIsDisplayed()
+        composeRule.onNodeWithText("Limit: ••••").assertIsDisplayed()
+    }
+
+    @Test
+    fun subscriptionSummaryReportScreen_reacts_to_runtime_locale_change_and_masks_amounts() {
+        var languageTag by mutableStateOf("tr")
+        var maskAmounts by mutableStateOf(false)
+        var items by mutableStateOf(
+            listOf(
+                SubscriptionReportUiItem(
+                    id = EntityId("sub-1"),
+                    name = "Spotify",
+                    amount = Money(50_00L, Currency.TRY),
+                    renewalDate = LocalDate(2026, 9, 25),
+                    maskAmounts = false,
+                ),
+            ),
+        )
+        var count by mutableStateOf(1)
+
+        composeRule.setContent {
+            App(languageTag = languageTag) {
+                SubscriptionSummaryReportScreen(
+                    monthlyTotal = Money(350_00L, Currency.TRY),
+                    activeSubscriptionCount = count,
+                    upcomingSubscriptions = items,
+                    maskAmounts = maskAmounts,
+                    onBackClick = {},
+                )
+            }
+        }
+
+        // TR
+        composeRule.onNodeWithText("Abonelik Özeti").assertIsDisplayed()
+        composeRule.onNodeWithText("Aylık Düzenli Abonelik Yükü").assertIsDisplayed()
+        composeRule.onNodeWithText("1 Aktif Abonelik").assertIsDisplayed()
+        composeRule.onNodeWithText("Yaklaşan Yenilemeler").assertIsDisplayed()
+        composeRule.onNodeWithText("Spotify").assertIsDisplayed()
+        composeRule.onNodeWithText("Yenilenme: 25 Eylül 2026").assertIsDisplayed()
+        composeRule.onNodeWithText("350,00 ₺").assertIsDisplayed()
+        composeRule.onNodeWithText("50,00 ₺").assertIsDisplayed()
+
+        // Switch to EN
+        composeRule.runOnIdle { languageTag = "en" }
+
+        // EN
+        composeRule.onNodeWithText("Subscription Summary").assertIsDisplayed()
+        composeRule.onNodeWithText("Monthly Regular Subscription Load").assertIsDisplayed()
+        composeRule.onNodeWithText("1 Active Subscription").assertIsDisplayed()
+        composeRule.onNodeWithText("Upcoming Renewals").assertIsDisplayed()
+        composeRule.onNodeWithText("Spotify").assertIsDisplayed()
+        composeRule.onNodeWithText("Renewal: September 25, 2026").assertIsDisplayed()
+        composeRule.onNodeWithText("350.00 ₺").assertIsDisplayed()
+        composeRule.onNodeWithText("50.00 ₺").assertIsDisplayed()
+
+        // Empty state
+        composeRule.runOnIdle {
+            items = emptyList()
+            count = 0
+        }
+        composeRule.onNodeWithText("0 Active Subscriptions").assertIsDisplayed()
+        composeRule.onNodeWithText("No active subscriptions registered.").assertIsDisplayed()
+
+        // Mask amounts
+        composeRule.runOnIdle { maskAmounts = true }
+        composeRule.onNodeWithText("350,00 ₺").assertDoesNotExist()
+        composeRule.onNodeWithText("50,00 ₺").assertDoesNotExist()
+        composeRule.onNodeWithText("350.00 ₺").assertDoesNotExist()
+        composeRule.onNodeWithText("50.00 ₺").assertDoesNotExist()
         composeRule.onAllNodesWithText("••••")[0].assertIsDisplayed()
     }
 }

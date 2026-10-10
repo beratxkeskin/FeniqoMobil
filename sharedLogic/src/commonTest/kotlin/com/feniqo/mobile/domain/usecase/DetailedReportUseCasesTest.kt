@@ -42,6 +42,7 @@ import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -177,7 +178,7 @@ class DetailedReportUseCasesTest {
     @Test
     fun observeSpendingCalendar_calculatesDailyTotals() = runTest {
         val tx1 = createTx("t1", 1_200_00L, Currency.TRY, TransactionType.EXPENSE, "c1", LocalDate(2026, 9, 5))
-        val tx2 = createTx("t2", 800_00L, Currency.TRY, TransactionType.EXPENSE, "c1", LocalDate(2026, 9, 5))
+        val tx2 = createTx("t2", 800_00L, Currency.TRY, TransactionType.EXPENSE, "c_missing", LocalDate(2026, 9, 5))
         val tx3 = createTx("t3", 500_00L, Currency.TRY, TransactionType.EXPENSE, "c2", LocalDate(2026, 9, 12))
 
         val cat1 = Category(EntityId("c1"), EntityId("u1"), null, "Market", TransactionType.EXPENSE, com.feniqo.mobile.domain.model.CategoryColor("#2D5A43"), com.feniqo.mobile.domain.model.CategoryIcon("ic_cart"), false, Instant.fromEpochMilliseconds(0))
@@ -198,6 +199,26 @@ class DetailedReportUseCasesTest {
         assertNotNull(day5)
         assertEquals(2_000_00L, day5.expense.amountMinor)
         assertEquals(2, day5.transactionCount)
+
+        // Known category mapping
+        val txSummaryKnown = day5.transactions.find { it.id == EntityId("t1") }
+        assertNotNull(txSummaryKnown)
+        assertEquals("Market", txSummaryKnown.categoryName)
+        assertFalse(txSummaryKnown.isCategoryMissing)
+        assertEquals(EntityId("c1"), txSummaryKnown.categoryId)
+
+        // Missing / unresolvable category mapping
+        val txSummaryMissing = day5.transactions.find { it.id == EntityId("t2") }
+        assertNotNull(txSummaryMissing)
+        assertNull(txSummaryMissing.categoryName)
+        assertTrue(txSummaryMissing.isCategoryMissing)
+        assertEquals(EntityId("c_missing"), txSummaryMissing.categoryId)
+
+        // Verify domain produces no human fallback strings
+        day5.transactions.forEach { txSummary ->
+            assertFalse(txSummary.categoryName == "Kategorisiz")
+            assertFalse(txSummary.categoryName == "Silinmiş kategori")
+        }
     }
 
     @Test
@@ -241,6 +262,38 @@ class DetailedReportUseCasesTest {
         assertEquals(289_00L, summary.totalMonthlyEstimate.amountMinor)
         assertEquals(2, summary.upcomingPayments.size)
         assertEquals("Netflix", summary.upcomingPayments[0].name)
+    }
+
+    @Test
+    fun observeBudgetPerformance_missingCategory_producesNullCategoryNameAndTrueFlag() = runTest {
+        val b1 = Budget(EntityId("b1"), EntityId("u1"), null, EntityId("c-missing"), YearMonth.from(2026, 9), Money(5_000_00L, Currency.TRY), Instant.fromEpochMilliseconds(0))
+        val useCase = ObserveBudgetPerformanceReportUseCase(
+            budgetRepository = FakeBudgetRepo(listOf(b1)),
+            transactionRepository = FakeTxRepo(emptyList()),
+            categoryRepository = FakeCategoryRepo(emptyList()),
+        )
+
+        val perf = useCase(YearMonth.from(2026, 9), Currency.TRY, null).first()
+        val item = perf.categoryProgressList.first()
+
+        assertNull(item.categoryName)
+        assertTrue(item.isCategoryMissing)
+    }
+
+    @Test
+    fun observeSubscriptionSummary_missingCategory_producesNullCategoryNameWithoutTurkishFallback() = runTest {
+        val s1 = createSub("s1", "Netflix", 229_00L, Currency.TRY, LocalDate(2026, 9, 20))
+        val useCase = ObserveSubscriptionSummaryReportUseCase(
+            subscriptionRepository = FakeSubRepo(listOf(s1)),
+            categoryRepository = FakeCategoryRepo(emptyList()),
+        )
+
+        val summary = useCase(Currency.TRY).first()
+        val dist = summary.categoryDistribution.first()
+
+        assertNull(dist.categoryName)
+        assertTrue(dist.isCategoryMissing)
+        assertNull(dist.categoryId)
     }
 
     @Test

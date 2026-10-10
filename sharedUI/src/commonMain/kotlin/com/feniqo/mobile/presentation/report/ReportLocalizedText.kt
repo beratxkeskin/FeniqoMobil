@@ -9,6 +9,7 @@ import com.feniqo.mobile.domain.model.ReportTypeFilter
 import com.feniqo.mobile.presentation.common.localizedMonthName
 import com.feniqo.mobile.presentation.common.localizedShortMonthName
 import com.feniqo.mobile.presentation.common.toLocalizedFormatted
+import com.feniqo.mobile.presentation.transaction.toLocalizedText
 import com.feniqo.mobile.presentation.util.MoneyFormatter
 import feniqomobil.sharedui.generated.resources.Res
 import feniqomobil.sharedui.generated.resources.report_day_friday
@@ -28,6 +29,10 @@ import feniqomobil.sharedui.generated.resources.report_filter_type_income
 import feniqomobil.sharedui.generated.resources.report_insight_expense_decreased
 import feniqomobil.sharedui.generated.resources.report_insight_expense_increased
 import feniqomobil.sharedui.generated.resources.report_insight_transaction_count_plural
+import feniqomobil.sharedui.generated.resources.report_comparison_preset_last_vs_two_months_ago
+import feniqomobil.sharedui.generated.resources.report_comparison_preset_this_quarter_vs_last
+import feniqomobil.sharedui.generated.resources.report_comparison_preset_this_vs_last_month
+import feniqomobil.sharedui.generated.resources.report_comparison_preset_this_year_vs_last
 import feniqomobil.sharedui.generated.resources.report_period_preset_custom
 import feniqomobil.sharedui.generated.resources.report_period_preset_last_3_months
 import feniqomobil.sharedui.generated.resources.report_period_preset_last_month
@@ -266,4 +271,23 @@ fun formatLocalizedPeriod(preset: ReportPeriodPreset, dateRange: ReportDateRange
                 stringResource(Res.string.report_period_preset_custom)
             }
         }
+    }
+
+fun ComparisonPeriodPreset.toLocalizedResource(): StringResource =
+    when (this) {
+        ComparisonPeriodPreset.THIS_VS_LAST_MONTH -> Res.string.report_comparison_preset_this_vs_last_month
+        ComparisonPeriodPreset.LAST_MONTH_VS_TWO_MONTHS_AGO -> Res.string.report_comparison_preset_last_vs_two_months_ago
+        ComparisonPeriodPreset.THIS_QUARTER_VS_LAST -> Res.string.report_comparison_preset_this_quarter_vs_last
+        ComparisonPeriodPreset.THIS_YEAR_VS_LAST -> Res.string.report_comparison_preset_this_year_vs_last
+    }
+
+@Composable
+fun ComparisonPeriodPreset.toLocalizedLabel(): String = stringResource(toLocalizedResource())
+
+@Composable
+fun ReportTransactionUiItem.resolveLocalizedTitle(): String =
+    if (!description.isNullOrBlank()) {
+        description
+    } else {
+        type.toLocalizedText()
     }

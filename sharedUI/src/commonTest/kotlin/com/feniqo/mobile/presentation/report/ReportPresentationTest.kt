@@ -7,6 +7,7 @@ import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.ReportDateRange
 import com.feniqo.mobile.domain.model.ReportPeriodPreset
 import com.feniqo.mobile.domain.model.ReportTypeFilter
+import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.MoneyDelta
 import com.feniqo.mobile.presentation.util.MoneyFormatter
 import kotlin.test.Test
@@ -247,5 +248,103 @@ class ReportPresentationTest {
         assertTrue(CategoryDetailComparisonUiState.Calculating is CategoryDetailComparisonUiState)
         assertTrue(CategoryDetailComparisonUiState.Unavailable is CategoryDetailComparisonUiState)
         assertEquals(9, AllReportsHubItem.entries.size)
+    }
+
+    @Test
+    fun reportSlice3_typedModelsContract_preservesPureTypesWithoutFormattedStrings() {
+        val comparisonItem = CategoryComparisonUiItem(
+            categoryId = EntityId("cat-1"),
+            name = "Market",
+            currentAmount = Money(2_500_00L, Currency.TRY),
+            previousAmount = Money(2_000_00L, Currency.TRY),
+            delta = MoneyDelta(500_00L, Currency.TRY),
+            percentageBasisPoints = 2500,
+            isIncreased = true,
+        )
+        assertFalse(comparisonItem.isCategoryMissing)
+        assertEquals(500_00L, comparisonItem.delta.amountMinor)
+        assertEquals(2500, comparisonItem.percentageBasisPoints)
+
+        val available = PeriodComparisonUiState.Available(
+            preset = ComparisonPeriodPreset.THIS_VS_LAST_MONTH,
+            currentNet = MoneyDelta(15_000_00L, Currency.TRY),
+            previousNet = MoneyDelta(10_000_00L, Currency.TRY),
+            netDifference = MoneyDelta(5_000_00L, Currency.TRY),
+            isNetImproved = true,
+            incomeDelta = MoneyDelta(8_000_00L, Currency.TRY),
+            expenseDelta = MoneyDelta(3_000_00L, Currency.TRY),
+            savingsRateDeltaBasisPoints = 500,
+            categoryComparisons = listOf(comparisonItem),
+        )
+        assertTrue(available is PeriodComparisonUiState)
+        assertTrue(PeriodComparisonUiState.Unavailable is PeriodComparisonUiState)
+
+        val calDay = CalendarDayUiModel(
+            dayNumber = 15,
+            date = LocalDate(2026, 9, 15),
+            expense = Money(450_00L, Currency.TRY),
+            transactionCount = 3,
+            heatLevel = 2,
+            isSelected = true,
+            maskAmounts = true,
+        )
+        assertEquals(450_00L, calDay.expense.amountMinor)
+        assertEquals(15, calDay.dayNumber)
+        assertTrue(calDay.maskAmounts)
+
+        val budgetItem = BudgetPerformanceUiItem(
+            budgetId = EntityId("b-1"),
+            categoryId = null,
+            name = null,
+            isCategoryMissing = true,
+            budget = Money(5_000_00L, Currency.TRY),
+            spent = Money(4_000_00L, Currency.TRY),
+            usageBasisPoints = 8000,
+            isExceeded = false,
+        )
+        assertTrue(budgetItem.isCategoryMissing)
+        assertNull(budgetItem.name)
+        assertEquals(8000, budgetItem.usageBasisPoints)
+
+        val subItem = SubscriptionReportUiItem(
+            id = EntityId("sub-1"),
+            name = "Netflix",
+            amount = Money(229_00L, Currency.TRY),
+            renewalDate = LocalDate(2026, 9, 20),
+        )
+        assertEquals(229_00L, subItem.amount.amountMinor)
+        assertEquals(LocalDate(2026, 9, 20), subItem.renewalDate)
+
+        val txItem = ReportTransactionUiItem(
+            id = EntityId("tx-1"),
+            description = "Market alışverişi",
+            type = TransactionType.EXPENSE,
+            categoryId = EntityId("cat-1"),
+            categoryName = "Market",
+            isCategoryMissing = false,
+            date = LocalDate(2026, 9, 15),
+            amount = Money(250_00L, Currency.TRY),
+            maskAmounts = false,
+        )
+        assertFalse(txItem.isCategoryMissing)
+        assertEquals(250_00L, txItem.amount.amountMinor)
+        assertEquals(TransactionType.EXPENSE, txItem.type)
+        assertEquals("Market alışverişi", txItem.description)
+
+        val missingCatItem = ReportTransactionUiItem(
+            id = EntityId("tx-2"),
+            description = null,
+            type = TransactionType.INCOME,
+            categoryId = null,
+            categoryName = null,
+            isCategoryMissing = true,
+            date = LocalDate(2026, 9, 16),
+            amount = Money(500_00L, Currency.TRY),
+            maskAmounts = false,
+        )
+        assertTrue(missingCatItem.isCategoryMissing)
+        assertNull(missingCatItem.categoryName)
+        assertEquals(TransactionType.INCOME, missingCatItem.type)
+        assertNull(missingCatItem.description)
     }
 }

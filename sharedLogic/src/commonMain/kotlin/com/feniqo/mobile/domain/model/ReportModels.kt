@@ -171,13 +171,24 @@ data class PeriodComparisonSummary(
     val highlights: List<ComparisonHighlightItem>,
 )
 
+data class CalendarTransactionSummary(
+    val id: EntityId,
+    val description: String?,
+    val categoryId: EntityId?,
+    val categoryName: String?,
+    val isCategoryMissing: Boolean = categoryName == null,
+    val date: LocalDate,
+    val amount: Money,
+    val type: TransactionType,
+)
+
 data class CalendarDaySpending(
     val date: LocalDate,
     val expense: Money,
     val transactionCount: Int,
     val dominantCategoryName: String?,
     val dominantCategoryExpense: Money,
-    val transactions: List<Transaction>,
+    val transactions: List<CalendarTransactionSummary>,
 )
 
 data class SpendingCalendarSummary(
@@ -190,7 +201,8 @@ data class SpendingCalendarSummary(
 data class CategoryBudgetProgressItem(
     val budgetId: EntityId,
     val categoryId: EntityId,
-    val categoryName: String,
+    val categoryName: String?,
+    val isCategoryMissing: Boolean = categoryName == null,
     val budgetAmount: Money,
     val spentAmount: Money,
     val usagePercentageBasisPoints: Int,
@@ -215,7 +227,9 @@ data class SubscriptionUpcomingItem(
 )
 
 data class SubscriptionCategoryDistributionItem(
-    val categoryName: String,
+    val categoryId: EntityId?,
+    val categoryName: String?,
+    val isCategoryMissing: Boolean = categoryName == null,
     val amount: Money,
     val percentageBasisPoints: Int,
 )
