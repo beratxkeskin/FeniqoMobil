@@ -3,6 +3,7 @@ package com.feniqo.mobile.presentation.report
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.feniqo.mobile.domain.model.Currency
+import com.feniqo.mobile.domain.model.DetailedReportInsight
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.FinancialReport
 import com.feniqo.mobile.domain.model.LocalDate
@@ -23,7 +24,6 @@ import com.feniqo.mobile.domain.usecase.ObserveMultiCurrencyReportUseCase
 import com.feniqo.mobile.domain.usecase.ObserveReportAvailabilityUseCase
 import com.feniqo.mobile.domain.usecase.ObserveReportSyncStatusUseCase
 import com.feniqo.mobile.presentation.common.CurrentDateProvider
-import com.feniqo.mobile.presentation.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -102,63 +102,75 @@ class ReportsViewModel @Inject constructor(
             val multiCurrencyUiModels = multiCurrencyList.map { summary ->
                 MultiCurrencyReportUiModel(
                     currency = summary.currency,
-                    title = ReportSummaryFormatter.getCurrencyDisplayName(summary.currency),
-                    symbol = ReportSummaryFormatter.getCurrencySymbol(summary.currency),
-                    incomeFormatted = MoneyFormatter.formatMasked(summary.income, mask = mask),
-                    expenseFormatted = MoneyFormatter.formatMasked(summary.expense, mask = mask),
-                    netFormatted = if (mask) {
-                        MoneyFormatter.MASKED_TEXT
-                    } else {
-                        MoneyFormatter.formatDelta(summary.net, includeSign = true)
-                    },
+                    income = summary.income,
+                    expense = summary.expense,
+                    net = summary.net,
                     isNetPositive = summary.net.amountMinor >= 0,
                     transactionCount = summary.transactionCount,
+                    maskAmounts = mask,
                 )
             }
 
             val monthlyTrendUi = detailedOverview.trendPoints.map { pt ->
                 MonthlyTrendUiModel(
                     yearMonth = pt.yearMonth,
-                    monthLabel = ReportSummaryFormatter.monthAbbreviation(pt.yearMonth.month),
-                    incomeFormatted = MoneyFormatter.formatMasked(pt.income, mask = mask),
-                    expenseFormatted = MoneyFormatter.formatMasked(pt.expense, mask = mask),
-                    netFormatted = if (mask) {
-                        MoneyFormatter.MASKED_TEXT
-                    } else {
-                        MoneyFormatter.formatDelta(pt.net, includeSign = true)
-                    },
+                    income = pt.income,
+                    expense = pt.expense,
+                    net = pt.net,
                     isNetPositive = pt.net.amountMinor >= 0,
                     incomeMinor = pt.income.amountMinor,
                     expenseMinor = pt.expense.amountMinor,
+                    maskAmounts = mask,
                 )
             }
 
             val topCategoryUi = detailedOverview.topCategory?.let { tc ->
                 TopCategoryUiModel(
                     name = tc.categoryName,
-                    amountFormatted = MoneyFormatter.formatMasked(tc.amount, mask = mask),
+                    amount = tc.amount,
                     transactionCount = tc.transactionCount,
+                    isCategoryMissing = tc.categoryName == null,
+                    maskAmounts = mask,
                 )
             }
 
             val financialRhythmUi = FinancialRhythmUiModel(
-                busiestDayName = detailedOverview.financialRhythm.busiestDayName,
-                busiestDayExpenseFormatted = MoneyFormatter.formatMasked(detailedOverview.financialRhythm.busiestDayExpense, mask = mask),
-                lowestExpenseWeekLabel = "${detailedOverview.financialRhythm.lowestExpenseWeekNumber}. Hafta",
-                lowestExpenseWeekExpenseFormatted = MoneyFormatter.formatMasked(detailedOverview.financialRhythm.lowestExpenseWeekExpense, mask = mask),
+                busiestDay = detailedOverview.financialRhythm.busiestDay,
+                busiestDayExpense = detailedOverview.financialRhythm.busiestDayExpense,
+                lowestExpenseWeekNumber = detailedOverview.financialRhythm.lowestExpenseWeekNumber,
+                lowestExpenseWeekExpense = detailedOverview.financialRhythm.lowestExpenseWeekExpense,
+                maskAmounts = mask,
             )
 
             val totalExpenseMinor = report.expense.amountMinor
             val categoryBreakdownUi = report.spendingByCategory.map { cb ->
-                val shareRatio = if (totalExpenseMinor > 0) cb.amount.amountMinor.toFloat() / totalExpenseMinor else 0f
+                val shareBasisPoints = if (totalExpenseMinor > 0L) {
+                    ((cb.amount.amountMinor * 10_000L) / totalExpenseMinor).toInt()
+                } else {
+                    0
+                }
+                val category = ctx.categoriesById[cb.categoryId]
                 CategoryBreakdownUiItem(
                     categoryId = cb.categoryId,
-                    name = ctx.categoriesById[cb.categoryId]?.name ?: "Silinmiş kategori",
-                    amountFormatted = MoneyFormatter.formatMasked(cb.amount, mask = mask),
+                    name = category?.name,
+                    isCategoryMissing = category == null,
+                    amount = cb.amount,
                     transactionCount = cb.transactionCount,
-                    sharePercentageFormatted = "%${(shareRatio * 100).toInt()}",
-                    shareRatio = shareRatio,
+                    shareBasisPoints = shareBasisPoints,
+                    maskAmounts = mask,
                 )
+            }
+
+            val insightPayload: ReportInsightPayload = when (val ins = detailedOverview.insight) {
+                is DetailedReportInsight.ExpenseChanged -> {
+                    ReportInsightPayload.ExpenseChanged(
+                        changeBasisPoints = ins.changeBasisPoints,
+                        difference = ins.difference,
+                    )
+                }
+                is DetailedReportInsight.TransactionCountOnly -> {
+                    ReportInsightPayload.TransactionCountOnly(count = ins.count)
+                }
             }
 
             val contentState: ReportsContentState = when {
@@ -171,22 +183,19 @@ class ReportsViewModel @Inject constructor(
                 else -> {
                     ReportsContentState.Success(
                         report = report,
-                        incomeFormatted = MoneyFormatter.formatMasked(report.income, mask = mask),
-                        expenseFormatted = MoneyFormatter.formatMasked(report.expense, mask = mask),
-                        netFormatted = if (mask) {
-                            MoneyFormatter.MASKED_TEXT
-                        } else {
-                            MoneyFormatter.formatDelta(report.net, includeSign = true)
-                        },
+                        income = report.income,
+                        expense = report.expense,
+                        net = report.net,
                         isNetPositive = report.net.amountMinor >= 0,
-                        savingsRateFormatted = MoneyFormatter.formatBasisPoints(report.savingsRate),
+                        savingsRateBasisPoints = report.savingsRate.value,
                         multiCurrencySummaries = multiCurrencyUiModels,
                         activeFilters = activeChips,
                         monthlyTrend = monthlyTrendUi,
                         topCategory = topCategoryUi,
                         financialRhythm = financialRhythmUi,
-                        feniqoInsightText = detailedOverview.insightText,
+                        insightPayload = insightPayload,
                         categoryBreakdown = categoryBreakdownUi,
+                        maskAmounts = mask,
                     )
                 }
             }
@@ -203,10 +212,12 @@ class ReportsViewModel @Inject constructor(
                 filterState = ctx.filter,
             )
         }
-    }.catch { error ->
+    }.catch { _ ->
         emit(
             ReportsScreenState(
-                contentState = ReportsContentState.Error(error.message ?: "Beklenmeyen bir hata oluştu."),
+                contentState = ReportsContentState.Error(
+                    error = ReportUiError.Generic
+                ),
                 connectionState = ReportConnectionState.Online,
                 filterState = filterState.value,
             )
@@ -300,15 +311,15 @@ class ReportsViewModel @Inject constructor(
 
     fun removeFilterChip(chip: ActiveFilterChipUiModel) {
         filterState.update { current ->
-            when (chip.type) {
-                ActiveFilterType.PERIOD -> current.copy(
+            when (chip) {
+                is ActiveFilterChipUiModel.Period -> current.copy(
                     periodPreset = ReportPeriodPreset.THIS_MONTH,
                     customStartDate = null,
                     customEndDate = null,
                 )
-                ActiveFilterType.TYPE -> current.copy(typeFilter = ReportTypeFilter.ALL)
-                ActiveFilterType.CURRENCY -> current.copy(currency = Currency.TRY)
-                ActiveFilterType.CATEGORY -> current.copy(
+                is ActiveFilterChipUiModel.Type -> current.copy(typeFilter = ReportTypeFilter.ALL)
+                is ActiveFilterChipUiModel.CurrencyChip -> current.copy(currency = Currency.TRY)
+                is ActiveFilterChipUiModel.CategoryChip -> current.copy(
                     selectedCategoryId = null,
                     selectedCategoryName = null,
                 )

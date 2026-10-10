@@ -46,6 +46,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -363,8 +366,33 @@ class ReportsViewModelTest {
         val job = launch { vm.uiState.collect {} }
 
         val breakdown = (vm.uiState.value.contentState as ReportsContentState.Success).categoryBreakdown
-        assertEquals("Market", breakdown.first { it.categoryId == EntityId("cat-1") }.name)
-        assertEquals("Silinmiş kategori", breakdown.first { it.categoryId == EntityId("cat-deleted") }.name)
+        val marketItem = breakdown.first { it.categoryId == EntityId("cat-1") }
+        val deletedItem = breakdown.first { it.categoryId == EntityId("cat-deleted") }
+        assertEquals("Market", marketItem.name)
+        assertFalse(marketItem.isCategoryMissing)
+        assertNull(deletedItem.name)
+        assertTrue(deletedItem.isCategoryMissing)
+        job.cancel()
+    }
+
+    @Test
+    fun missingCategory_topCategorySetsNameNullAndIsCategoryMissingTrue() = runTest(UnconfinedTestDispatcher()) {
+        val txRepo = FakeTransactionRepository()
+        val syncRepo = FakeSyncRepository()
+        val categoryRepo = TestCategoryRepository()
+        txRepo.transactionsFlow.value = listOf(
+            createTx("tx-missing", 30_000, date = LocalDate(2026, 9, 10)).copy(categoryId = EntityId("cat-deleted")),
+        )
+
+        val vm = createViewModel(txRepo, syncRepo, categoryRepo = categoryRepo)
+        val job = launch { vm.uiState.collect {} }
+
+        val success = vm.uiState.value.contentState as ReportsContentState.Success
+        val topCategory = success.topCategory
+        assertNotNull(topCategory)
+        assertNull(topCategory!!.name)
+        assertTrue(topCategory.isCategoryMissing)
+        assertEquals(Money(30_000, Currency.TRY), topCategory.amount)
         job.cancel()
     }
 
@@ -436,8 +464,9 @@ class ReportsViewModelTest {
 
         val state = vm.uiState.value
         val success = state.contentState as ReportsContentState.Success
-        assertTrue("Income display text should be masked", success.incomeFormatted.contains("•") || success.incomeFormatted.contains("*"))
-        assertTrue("Expense display text should be masked", success.expenseFormatted.contains("•") || success.expenseFormatted.contains("*"))
+        assertTrue("maskAmounts should be true", success.maskAmounts)
+        assertEquals(Money(50000, Currency.TRY), success.income)
+        assertEquals(Money(20000, Currency.TRY), success.expense)
         job.cancel()
     }
 
@@ -465,7 +494,7 @@ class ReportsViewModelTest {
         assertEquals(Currency.USD, vm.uiState.value.filterState.currency)
 
         // Remove currency chip
-        vm.removeFilterChip(ActiveFilterChipUiModel("currency", ActiveFilterType.CURRENCY, "USD"))
+        vm.removeFilterChip(ActiveFilterChipUiModel.CurrencyChip(Currency.USD))
         assertEquals(Currency.TRY, vm.uiState.value.filterState.currency)
 
         // Clear all filters

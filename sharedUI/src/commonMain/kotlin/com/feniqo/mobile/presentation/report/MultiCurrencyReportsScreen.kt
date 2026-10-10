@@ -48,6 +48,17 @@ import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.presentation.theme.FeniqoTextPrimary
 import com.feniqo.mobile.presentation.theme.FeniqoTextSecondary
+import com.feniqo.mobile.presentation.common.symbol
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.report_action_back
+import feniqomobil.sharedui.generated.resources.report_metric_expense
+import feniqomobil.sharedui.generated.resources.report_metric_income
+import feniqomobil.sharedui.generated.resources.report_multi_currency_difference
+import feniqomobil.sharedui.generated.resources.report_multi_currency_filter_action
+import feniqomobil.sharedui.generated.resources.report_multi_currency_info_desc
+import feniqomobil.sharedui.generated.resources.report_multi_currency_info_title
+import feniqomobil.sharedui.generated.resources.report_multi_currency_screen_title
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * 23 Çoklu para birimi ekranı.
@@ -75,13 +86,13 @@ fun MultiCurrencyReportsScreen(
                 IconButton(onClick = onNavigateBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                        contentDescription = "Geri",
+                        contentDescription = stringResource(Res.string.report_action_back),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "Çoklu para birimi",
+                    text = stringResource(Res.string.report_multi_currency_screen_title),
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
@@ -128,13 +139,13 @@ fun MultiCurrencyReportsScreen(
 
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Farklı para birimleri birleştirilmez.",
+                                text = stringResource(Res.string.report_multi_currency_info_title),
                                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Kur dönüşümü yapılmaz. Her para birimi ayrı gösterilir.",
+                                text = stringResource(Res.string.report_multi_currency_info_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -164,7 +175,7 @@ fun MultiCurrencyReportsScreen(
                                 color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                                 border = androidx.compose.foundation.BorderStroke(
                                     1.dp,
-                                    if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                                    if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                                 ),
                             ) {
                                 Box(
@@ -204,7 +215,7 @@ fun MultiCurrencyReportsScreen(
                                 tint = Color(0xFF374151),
                             )
                             Text(
-                                text = "Para birimini filtrele",
+                                text = stringResource(Res.string.report_multi_currency_filter_action),
                                 style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
                                 color = Color(0xFF374151),
                             )
@@ -271,7 +282,7 @@ private fun CurrencyReportCard(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = item.symbol,
+                            text = item.currency.symbol(),
                             color = avatarText,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
@@ -279,7 +290,7 @@ private fun CurrencyReportCard(
                     }
 
                     Text(
-                        text = item.title,
+                        text = item.currency.code,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
@@ -301,13 +312,13 @@ private fun CurrencyReportCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Gelir",
+                        text = stringResource(Res.string.report_metric_income),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = item.incomeFormatted,
+                        text = item.income.toLocalizedMaskedText(item.maskAmounts),
                         style = MaterialTheme.typography.bodyLarge.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp,
@@ -318,13 +329,13 @@ private fun CurrencyReportCard(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Gider",
+                        text = stringResource(Res.string.report_metric_expense),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = item.expenseFormatted,
+                        text = item.expense.toLocalizedMaskedText(item.maskAmounts),
                         style = MaterialTheme.typography.bodyLarge.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp,
@@ -335,13 +346,13 @@ private fun CurrencyReportCard(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Fark",
+                        text = stringResource(Res.string.report_multi_currency_difference),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = item.netFormatted,
+                        text = item.net.toLocalizedMaskedText(item.maskAmounts),
                         style = MaterialTheme.typography.bodyLarge.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp,

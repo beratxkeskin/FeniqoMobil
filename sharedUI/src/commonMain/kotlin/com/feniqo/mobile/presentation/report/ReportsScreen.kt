@@ -63,9 +63,49 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.LocalDate
+import com.feniqo.mobile.presentation.common.formatLocalizedRateBasisPoints
 import com.feniqo.mobile.presentation.theme.FeniqoTextPrimary
 import com.feniqo.mobile.presentation.theme.FeniqoTextSecondary
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.report_action_back
+import feniqomobil.sharedui.generated.resources.report_action_open_filters
+import feniqomobil.sharedui.generated.resources.report_action_select_period
+import feniqomobil.sharedui.generated.resources.report_all_reports_hub_subtitle
+import feniqomobil.sharedui.generated.resources.report_all_reports_hub_title
+import feniqomobil.sharedui.generated.resources.report_category_breakdown_title
+import feniqomobil.sharedui.generated.resources.report_category_deleted
+import feniqomobil.sharedui.generated.resources.report_filter_chip_remove_desc
+import feniqomobil.sharedui.generated.resources.report_metric_expense
+import feniqomobil.sharedui.generated.resources.report_metric_income
+import feniqomobil.sharedui.generated.resources.report_metric_savings_rate
+import feniqomobil.sharedui.generated.resources.report_multi_currency_card_title
+import feniqomobil.sharedui.generated.resources.report_multi_currency_count_plural
+import feniqomobil.sharedui.generated.resources.report_net_result_deficit_note
+import feniqomobil.sharedui.generated.resources.report_net_result_surplus_note
+import feniqomobil.sharedui.generated.resources.report_net_result_title
+import feniqomobil.sharedui.generated.resources.report_quick_cash_flow_subtitle
+import feniqomobil.sharedui.generated.resources.report_quick_cash_flow_title
+import feniqomobil.sharedui.generated.resources.report_quick_category_subtitle
+import feniqomobil.sharedui.generated.resources.report_quick_category_title
+import feniqomobil.sharedui.generated.resources.report_quick_period_comparison_subtitle
+import feniqomobil.sharedui.generated.resources.report_quick_period_comparison_title
+import feniqomobil.sharedui.generated.resources.report_quick_reports_title
+import feniqomobil.sharedui.generated.resources.report_quick_spending_calendar_subtitle
+import feniqomobil.sharedui.generated.resources.report_quick_spending_calendar_title
+import feniqomobil.sharedui.generated.resources.report_rhythm_busiest_day_desc
+import feniqomobil.sharedui.generated.resources.report_rhythm_busiest_day_title
+import feniqomobil.sharedui.generated.resources.report_rhythm_lowest_week_desc
+import feniqomobil.sharedui.generated.resources.report_rhythm_lowest_week_title
+import feniqomobil.sharedui.generated.resources.report_rhythm_week_format
+import feniqomobil.sharedui.generated.resources.report_screen_title
+import feniqomobil.sharedui.generated.resources.report_top_category_subtitle
+import feniqomobil.sharedui.generated.resources.report_top_category_title
+import feniqomobil.sharedui.generated.resources.report_trend_expense_legend
+import feniqomobil.sharedui.generated.resources.report_trend_income_legend
+import feniqomobil.sharedui.generated.resources.report_trend_title
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * 21–26 ekranlarının ana stateless Compose ekranı.
@@ -125,13 +165,13 @@ fun ReportsScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = "Geri dön",
+                            contentDescription = stringResource(Res.string.report_action_back),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
 
                     Text(
-                        text = "Raporlar",
+                        text = stringResource(Res.string.report_screen_title),
                         style = MaterialTheme.typography.headlineSmall.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp,
@@ -162,7 +202,7 @@ fun ReportsScreen(
                                 modifier = Modifier.size(16.dp),
                                 tint = MaterialTheme.colorScheme.onSurface,
                             )
-                            val presetText = ReportSummaryFormatter.formatPeriodPreset(state.filterState.periodPreset)
+                            val presetText = state.filterState.periodPreset.toLocalizedLabel()
                             Text(
                                 text = presetText,
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
@@ -170,7 +210,7 @@ fun ReportsScreen(
                             )
                             Icon(
                                 imageVector = Icons.Default.KeyboardArrowDown,
-                                contentDescription = "Dönem seç",
+                                contentDescription = stringResource(Res.string.report_action_select_period),
                                 modifier = Modifier.size(16.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -186,7 +226,7 @@ fun ReportsScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Tune,
-                            contentDescription = "Filtreleri aç",
+                            contentDescription = stringResource(Res.string.report_action_open_filters),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(22.dp),
                         )
@@ -240,7 +280,7 @@ fun ReportsScreen(
                     ) {
                         ReportErrorCard(
                             onRetry = onRetry,
-                            errorMessage = content.message,
+                            errorMessage = content.error.toLocalizedMessage(),
                         )
                     }
                 }
@@ -262,6 +302,10 @@ fun ReportsScreen(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
                                     content.activeFilters.forEach { chip ->
+                                        val removeDesc = stringResource(
+                                            Res.string.report_filter_chip_remove_desc,
+                                            chip.toLocalizedLabel(),
+                                        )
                                         Surface(
                                             modifier = Modifier.clip(RoundedCornerShape(10.dp)),
                                             color = MaterialTheme.colorScheme.surface,
@@ -274,7 +318,7 @@ fun ReportsScreen(
                                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                                             ) {
                                                 Text(
-                                                    text = chip.label,
+                                                    text = chip.toLocalizedLabel(),
                                                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
                                                     color = MaterialTheme.colorScheme.onSurface,
                                                 )
@@ -283,7 +327,9 @@ fun ReportsScreen(
                                                     fontSize = 14.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    modifier = Modifier.clickable { onRemoveFilterChip(chip) },
+                                                    modifier = Modifier
+                                                        .clickable { onRemoveFilterChip(chip) }
+                                                        .semantics { contentDescription = removeDesc },
                                                 )
                                             }
                                         }
@@ -324,13 +370,14 @@ fun ReportsScreen(
                                         modifier = Modifier.padding(20.dp),
                                     ) {
                                         Text(
-                                            text = "Net sonuç",
+                                            text = stringResource(Res.string.report_net_result_title),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = Color(0xFF94A3B8),
                                         )
                                         Spacer(modifier = Modifier.height(6.dp))
+                                        val netFormatted = content.net.toLocalizedMaskedText(content.maskAmounts)
                                         Text(
-                                            text = content.netFormatted,
+                                            text = netFormatted,
                                             style = MaterialTheme.typography.headlineLarge.copy(
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 32.sp,
@@ -339,9 +386,9 @@ fun ReportsScreen(
                                         )
                                         Spacer(modifier = Modifier.height(4.dp))
                                         val statusNote = if (content.isNetPositive) {
-                                            "Gelirleriniz giderlerinizden ${content.netFormatted} fazla."
+                                            stringResource(Res.string.report_net_result_surplus_note, netFormatted)
                                         } else {
-                                            "Giderleriniz gelirlerinizden ${content.netFormatted} fazla."
+                                            stringResource(Res.string.report_net_result_deficit_note, netFormatted)
                                         }
                                         Text(
                                             text = statusNote,
@@ -360,20 +407,25 @@ fun ReportsScreen(
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                             ) {
                                 MetricCard(
-                                    title = "Gelir",
-                                    value = content.incomeFormatted,
+                                    title = stringResource(Res.string.report_metric_income),
+                                    value = content.income.toLocalizedMaskedText(content.maskAmounts),
                                     valueColor = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.weight(1f),
                                 )
                                 MetricCard(
-                                    title = "Gider",
-                                    value = content.expenseFormatted,
+                                    title = stringResource(Res.string.report_metric_expense),
+                                    value = content.expense.toLocalizedMaskedText(content.maskAmounts),
                                     valueColor = Color(0xFFDC2626),
                                     modifier = Modifier.weight(1f),
                                 )
+                                val savingsRateText = if (content.maskAmounts) {
+                                    com.feniqo.mobile.presentation.util.MoneyFormatter.MASKED_TEXT
+                                } else {
+                                    formatLocalizedRateBasisPoints(content.savingsRateBasisPoints)
+                                }
                                 MetricCard(
-                                    title = "Tasarruf oranı",
-                                    value = content.savingsRateFormatted,
+                                    title = stringResource(Res.string.report_metric_savings_rate),
+                                    value = savingsRateText,
                                     valueColor = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.weight(1f),
                                 )
@@ -396,7 +448,7 @@ fun ReportsScreen(
                                             verticalAlignment = Alignment.CenterVertically,
                                         ) {
                                             Text(
-                                                text = "Aylık trend (son 6 ay)",
+                                                text = stringResource(Res.string.report_trend_title),
                                                 style = MaterialTheme.typography.titleMedium.copy(
                                                     fontWeight = FontWeight.Bold,
                                                     fontSize = 15.sp,
@@ -406,11 +458,11 @@ fun ReportsScreen(
                                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                                     Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
-                                                    Text(text = "Gelir", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                    Text(text = stringResource(Res.string.report_trend_income_legend), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                                 }
                                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                                     Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFDC2626)))
-                                                    Text(text = "Gider", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                    Text(text = stringResource(Res.string.report_trend_expense_legend), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                                 }
                                             }
                                         }
@@ -429,7 +481,7 @@ fun ReportsScreen(
                         // 01 Hızlı Raporlar 4'lü Izgara
                         item("quick_reports_title") {
                             Text(
-                                text = "Hızlı raporlar",
+                                text = stringResource(Res.string.report_quick_reports_title),
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp,
@@ -447,15 +499,15 @@ fun ReportsScreen(
                                 ) {
                                     QuickReportTile(
                                         icon = Icons.Outlined.Schedule,
-                                        title = "Kategoriler",
-                                        subtitle = "Harcamalarınızı inceleyin",
+                                        title = stringResource(Res.string.report_quick_category_title),
+                                        subtitle = stringResource(Res.string.report_quick_category_subtitle),
                                         onClick = onNavigateToCategoryBreakdown,
                                         modifier = Modifier.weight(1f),
                                     )
                                     QuickReportTile(
                                         icon = Icons.Outlined.BarChart,
-                                        title = "Nakit akışı",
-                                        subtitle = "Gelir ve gider hareketi",
+                                        title = stringResource(Res.string.report_quick_cash_flow_title),
+                                        subtitle = stringResource(Res.string.report_quick_cash_flow_subtitle),
                                         onClick = onNavigateToCashFlow,
                                         modifier = Modifier.weight(1f),
                                     )
@@ -466,15 +518,15 @@ fun ReportsScreen(
                                 ) {
                                     QuickReportTile(
                                         icon = Icons.Outlined.CompareArrows,
-                                        title = "Dönem karşılaştırma",
-                                        subtitle = "Önceki dönemle kıyasla",
+                                        title = stringResource(Res.string.report_quick_period_comparison_title),
+                                        subtitle = stringResource(Res.string.report_quick_period_comparison_subtitle),
                                         onClick = onNavigateToPeriodComparison,
                                         modifier = Modifier.weight(1f),
                                     )
                                     QuickReportTile(
                                         icon = Icons.Outlined.CalendarMonth,
-                                        title = "Harcama takvimi",
-                                        subtitle = "Gün gün harcamalar",
+                                        title = stringResource(Res.string.report_quick_spending_calendar_title),
+                                        subtitle = stringResource(Res.string.report_quick_spending_calendar_subtitle),
                                         onClick = onNavigateToSpendingCalendar,
                                         modifier = Modifier.weight(1f),
                                     )
@@ -485,6 +537,11 @@ fun ReportsScreen(
                         // 01 En Yüksek Gider Kartı
                         if (content.topCategory != null) {
                             item("top_category_card") {
+                                val categoryName = if (content.topCategory.isCategoryMissing || content.topCategory.name == null) {
+                                    stringResource(Res.string.report_category_deleted)
+                                } else {
+                                    content.topCategory.name
+                                }
                                 Surface(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -510,23 +567,23 @@ fun ReportsScreen(
                                             ) {
                                                 Box(contentAlignment = Alignment.Center) {
                                                     Icon(
-                                                imageVector = Icons.Outlined.BarChart,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(20.dp),
-                                            )
+                                                        imageVector = Icons.Outlined.BarChart,
+                                                        contentDescription = null,
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.size(20.dp),
+                                                    )
                                                 }
                                             }
 
                                             Column {
                                                 Text(
-                                                    text = "En yüksek gider: ${content.topCategory.name}",
+                                                    text = stringResource(Res.string.report_top_category_title, categoryName),
                                                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                                     color = MaterialTheme.colorScheme.onSurface,
                                                 )
                                                 Spacer(modifier = Modifier.height(2.dp))
                                                 Text(
-                                                    text = "Bu ay en fazla harcamanız bu kategoride.",
+                                                    text = stringResource(Res.string.report_top_category_subtitle),
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 )
@@ -538,7 +595,7 @@ fun ReportsScreen(
                                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                                         ) {
                                             Text(
-                                                text = content.topCategory.amountFormatted,
+                                                text = content.topCategory.amount.toLocalizedMaskedText(content.maskAmounts),
                                                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                                                 color = MaterialTheme.colorScheme.onSurface,
                                             )
@@ -560,7 +617,7 @@ fun ReportsScreen(
                                 ) {
                                     Column(modifier = Modifier.padding(16.dp)) {
                                         Text(
-                                            text = "Kategori dağılımı",
+                                            text = stringResource(Res.string.report_category_breakdown_title),
                                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                             color = MaterialTheme.colorScheme.onSurface,
                                         )
@@ -577,12 +634,15 @@ fun ReportsScreen(
                                                 Color(0xFF1E88E5), Color(0xFF00897B), Color(0xFF7CB342),
                                                 Color(0xFFFDD835), Color(0xFFFB8C00), Color(0xFF6D4C41),
                                             )
-                                            val slices = content.categoryBreakdown.map { it.name to it.shareRatio }
+                                            val deletedCategoryLabel = stringResource(Res.string.report_category_deleted)
+                                            val slices = content.categoryBreakdown.map {
+                                                (it.name ?: deletedCategoryLabel) to it.shareRatio
+                                            }
 
                                             ReportDonutChart(
                                                 slices = slices,
                                                 colors = donutColors,
-                                                centerText = content.expenseFormatted,
+                                                centerText = content.expense.toLocalizedMaskedText(content.maskAmounts),
                                             )
 
                                             Spacer(modifier = Modifier.width(12.dp))
@@ -599,14 +659,20 @@ fun ReportsScreen(
                                                                 .clip(CircleShape)
                                                                 .background(donutColors.getOrElse(index) { Color(0xFF2D5A43) }),
                                                         )
+                                                        val categoryDisplayName = item.name ?: deletedCategoryLabel
                                                         Text(
-                                                            text = item.name,
+                                                            text = categoryDisplayName,
                                                             style = MaterialTheme.typography.bodySmall,
                                                             color = MaterialTheme.colorScheme.onSurface,
                                                             modifier = Modifier.width(80.dp),
                                                         )
+                                                        val shareText = if (content.maskAmounts) {
+                                                            com.feniqo.mobile.presentation.util.MoneyFormatter.MASKED_TEXT
+                                                        } else {
+                                                            formatLocalizedRateBasisPoints(item.shareBasisPoints)
+                                                        }
                                                         Text(
-                                                            text = item.sharePercentageFormatted,
+                                                            text = shareText,
                                                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                         )
@@ -622,6 +688,10 @@ fun ReportsScreen(
                         // 03 Finansal Ritim Kartları
                         if (content.financialRhythm != null) {
                             item("financial_rhythm_row") {
+                                val busiestDayText = content.financialRhythm.busiestDay?.toLocalizedDayName() ?: "—"
+                                val lowestWeekText = content.financialRhythm.lowestExpenseWeekNumber?.let {
+                                    stringResource(Res.string.report_rhythm_week_format, it)
+                                } ?: "—"
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -632,123 +702,150 @@ fun ReportsScreen(
                                         color = MaterialTheme.colorScheme.surface,
                                         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                     ) {
-                                         Column(modifier = Modifier.padding(12.dp)) {
-                                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                 Icon(
-                                                     imageVector = Icons.Outlined.CalendarToday,
-                                                     contentDescription = null,
-                                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                     modifier = Modifier.size(13.dp),
-                                                 )
-                                                 Text(text = "En yoğun gün", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                             }
-                                             Spacer(modifier = Modifier.height(4.dp))
-                                             Text(text = content.financialRhythm.busiestDayName, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
-                                             Text(text = "En çok harcama yapılan gün", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                         }
-                                     }
+                                        Column(modifier = Modifier.padding(12.dp)) {
+                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.CalendarToday,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.size(13.dp),
+                                                )
+                                                Text(
+                                                    text = stringResource(Res.string.report_rhythm_busiest_day_title),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = busiestDayText,
+                                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                            )
+                                            Text(
+                                                text = stringResource(Res.string.report_rhythm_busiest_day_desc),
+                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    }
 
-                                     Surface(
-                                         modifier = Modifier.weight(1f),
-                                         shape = RoundedCornerShape(14.dp),
-                                         color = MaterialTheme.colorScheme.surface,
-                                         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                     ) {
-                                         Column(modifier = Modifier.padding(12.dp)) {
-                                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                 Icon(
-                                                     imageVector = Icons.Outlined.BarChart,
-                                                     contentDescription = null,
-                                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                     modifier = Modifier.size(13.dp),
-                                                 )
-                                                 Text(text = "En düşük hafta", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                             }
-                                             Spacer(modifier = Modifier.height(4.dp))
-                                             Text(text = content.financialRhythm.lowestExpenseWeekLabel, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
-                                             Text(text = "En az harcama yapılan hafta", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                         }
-                                     }
-                                 }
-                             }
-                         }
+                                    Surface(
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(14.dp),
+                                        color = MaterialTheme.colorScheme.surface,
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                    ) {
+                                        Column(modifier = Modifier.padding(12.dp)) {
+                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.BarChart,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.size(13.dp),
+                                                )
+                                                Text(
+                                                    text = stringResource(Res.string.report_rhythm_lowest_week_title),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = lowestWeekText,
+                                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                            )
+                                            Text(
+                                                text = stringResource(Res.string.report_rhythm_lowest_week_desc),
+                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
-                         // 03 Feniqo İçgörü Kartı
-                         if (content.feniqoInsightText.isNotBlank()) {
-                             item("insight_card") {
-                                 Surface(
-                                     modifier = Modifier.fillMaxWidth(),
-                                     shape = RoundedCornerShape(16.dp),
-                                     color = MaterialTheme.colorScheme.primaryContainer,
-                                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                 ) {
-                                     Row(
-                                         modifier = Modifier.padding(16.dp),
-                                         verticalAlignment = Alignment.CenterVertically,
-                                         horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                     ) {
-                                         Icon(
-                                             imageVector = Icons.Outlined.Lightbulb,
-                                             contentDescription = null,
-                                             tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                             modifier = Modifier.size(22.dp),
-                                         )
-                                         Text(
-                                             text = content.feniqoInsightText,
-                                             style = MaterialTheme.typography.bodySmall.copy(
-                                                 fontSize = 13.sp,
-                                                 lineHeight = 18.sp,
-                                             ),
-                                             color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                         )
-                                     }
-                                 }
-                             }
-                         }
+                        // 03 Feniqo İçgörü Kartı
+                        if (content.insightPayload != ReportInsightPayload.None) {
+                            item("insight_card") {
+                                val insightLocalizedText = content.insightPayload.toLocalizedText()
+                                if (insightLocalizedText.isNotBlank()) {
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(16.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Lightbulb,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                modifier = Modifier.size(22.dp),
+                                            )
+                                            Text(
+                                                text = insightLocalizedText,
+                                                style = MaterialTheme.typography.bodySmall.copy(
+                                                    fontSize = 13.sp,
+                                                    lineHeight = 18.sp,
+                                                ),
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
-                         // 04 Rapor Merkezi Link Kartı
-                         item("all_reports_link") {
-                             Surface(
-                                 modifier = Modifier
-                                     .fillMaxWidth()
-                                     .clip(RoundedCornerShape(16.dp))
-                                     .clickable(role = Role.Button, onClick = onNavigateToAllReportsHub),
-                                 shape = RoundedCornerShape(16.dp),
-                                 color = Color(0xFF2D5A43),
-                             ) {
-                                 Row(
-                                     modifier = Modifier.padding(16.dp),
-                                     verticalAlignment = Alignment.CenterVertically,
-                                     horizontalArrangement = Arrangement.SpaceBetween,
-                                 ) {
-                                     Row(
-                                         verticalAlignment = Alignment.CenterVertically,
-                                         horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                     ) {
-                                         Icon(
-                                             imageVector = Icons.AutoMirrored.Outlined.MenuBook,
-                                             contentDescription = null,
-                                             tint = Color.White,
-                                             modifier = Modifier.size(22.dp),
-                                         )
-                                         Column {
-                                             Text(
-                                                 text = "Tüm Raporlar Merkezi",
-                                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                                 color = Color.White,
-                                             )
-                                             Text(
-                                                 text = "Bütçe, abonelik, borç, tahmin ve nakit akışı",
-                                                 style = MaterialTheme.typography.bodySmall,
-                                                 color = Color(0xFFD1FAE5),
-                                             )
-                                         }
-                                     }
+                        // 04 Rapor Merkezi Link Kartı
+                        item("all_reports_link") {
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .clickable(role = Role.Button, onClick = onNavigateToAllReportsHub),
+                                shape = RoundedCornerShape(16.dp),
+                                color = Color(0xFF2D5A43),
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Outlined.MenuBook,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(22.dp),
+                                        )
+                                        Column {
+                                            Text(
+                                                text = stringResource(Res.string.report_all_reports_hub_title),
+                                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                                color = Color.White,
+                                            )
+                                            Text(
+                                                text = stringResource(Res.string.report_all_reports_hub_subtitle),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = Color(0xFFD1FAE5),
+                                            )
+                                        }
+                                    }
 
-                                     Text(text = "›", fontSize = 24.sp, color = Color.White)
-                                 }
-                             }
-                         }
+                                    Text(text = "›", fontSize = 24.sp, color = Color.White)
+                                }
+                            }
+                        }
 
                         // 23 Çoklu Para Birimi Geçiş Kartı
                         if (content.multiCurrencySummaries.size > 1) {
@@ -769,13 +866,17 @@ fun ReportsScreen(
                                     ) {
                                         Column {
                                             Text(
-                                                text = "Çoklu para birimi",
+                                                text = stringResource(Res.string.report_multi_currency_card_title),
                                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                                 color = MaterialTheme.colorScheme.onSurface,
                                             )
                                             Spacer(modifier = Modifier.height(2.dp))
                                             Text(
-                                                text = "${content.multiCurrencySummaries.size} farklı para biriminde işlem kaydı var.",
+                                                text = pluralStringResource(
+                                                    Res.plurals.report_multi_currency_count_plural,
+                                                    content.multiCurrencySummaries.size,
+                                                    content.multiCurrencySummaries.size,
+                                                ),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )

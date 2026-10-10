@@ -55,6 +55,30 @@ import com.feniqo.mobile.presentation.theme.FeniqoTextPrimary
 import com.feniqo.mobile.presentation.theme.FeniqoTextSecondary
 import com.feniqo.mobile.presentation.theme.FeniqoWarmStoneBackground
 
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.report_empty_filtered_action_change_period
+import feniqomobil.sharedui.generated.resources.report_empty_filtered_action_clear
+import feniqomobil.sharedui.generated.resources.report_empty_filtered_desc
+import feniqomobil.sharedui.generated.resources.report_empty_filtered_illustration_desc
+import feniqomobil.sharedui.generated.resources.report_empty_filtered_title
+import feniqomobil.sharedui.generated.resources.report_empty_workspace_action_add
+import feniqomobil.sharedui.generated.resources.report_empty_workspace_action_home
+import feniqomobil.sharedui.generated.resources.report_empty_workspace_desc
+import feniqomobil.sharedui.generated.resources.report_empty_workspace_illustration_desc
+import feniqomobil.sharedui.generated.resources.report_empty_workspace_title
+import feniqomobil.sharedui.generated.resources.report_error_action_retry
+import feniqomobil.sharedui.generated.resources.report_error_default_message
+import feniqomobil.sharedui.generated.resources.report_error_title
+import feniqomobil.sharedui.generated.resources.report_filter_chip_remove_desc
+import feniqomobil.sharedui.generated.resources.report_loading_desc
+import feniqomobil.sharedui.generated.resources.report_loading_title
+import feniqomobil.sharedui.generated.resources.report_offline_desc_synced
+import feniqomobil.sharedui.generated.resources.report_offline_info_banner
+import feniqomobil.sharedui.generated.resources.report_offline_pending_plural
+import feniqomobil.sharedui.generated.resources.report_offline_title
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
+
 /**
  * 24 Henüz rapor yok ekran görünümü.
  * Aktif çalışma alanında henüz raporlanabilir hiçbir işlem bulunmadığında gösterilir.
@@ -65,6 +89,7 @@ fun NoReportsEmptyView(
     onNavigateToHome: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val emptyIllustrationCd = stringResource(Res.string.report_empty_workspace_illustration_desc)
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -78,7 +103,7 @@ fun NoReportsEmptyView(
         Box(
             modifier = Modifier
                 .size(160.dp)
-                .semantics { contentDescription = "Boş rapor illüstrasyonu" },
+                .semantics { contentDescription = emptyIllustrationCd },
             contentAlignment = Alignment.Center,
         ) {
             Canvas(modifier = Modifier.size(140.dp)) {
@@ -144,7 +169,7 @@ fun NoReportsEmptyView(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Henüz rapor oluşturacak veri yok",
+            text = stringResource(Res.string.report_empty_workspace_title),
             style = MaterialTheme.typography.titleLarge.copy(
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
@@ -156,7 +181,7 @@ fun NoReportsEmptyView(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "İşlem ekledikçe gelir, gider ve kategori analizlerin burada oluşur.",
+            text = stringResource(Res.string.report_empty_workspace_desc),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -178,7 +203,7 @@ fun NoReportsEmptyView(
             ),
         ) {
             Text(
-                text = "+ İşlem ekle",
+                text = stringResource(Res.string.report_empty_workspace_action_add),
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
             )
         }
@@ -192,7 +217,7 @@ fun NoReportsEmptyView(
                 .height(48.dp),
         ) {
             Text(
-                text = "Ana sayfaya dön",
+                text = stringResource(Res.string.report_empty_workspace_action_home),
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -239,10 +264,11 @@ fun NoFilteredResultsView(
         Spacer(modifier = Modifier.weight(1f))
 
         // Belge + Büyüteç + Yaprak İllüstrasyonu
+        val filteredEmptyIllustrationCd = stringResource(Res.string.report_empty_filtered_illustration_desc)
         Box(
             modifier = Modifier
                 .size(160.dp)
-                .semantics { contentDescription = "Filtre sonucu bulunamadı illüstrasyonu" },
+                .semantics { contentDescription = filteredEmptyIllustrationCd },
             contentAlignment = Alignment.Center,
         ) {
             Canvas(modifier = Modifier.size(140.dp)) {
@@ -323,7 +349,7 @@ fun NoFilteredResultsView(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Bu filtrelerde sonuç yok",
+            text = stringResource(Res.string.report_empty_filtered_title),
             style = MaterialTheme.typography.titleLarge.copy(
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
@@ -335,7 +361,7 @@ fun NoFilteredResultsView(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Seçtiğin dönem ve filtrelerle eşleşen\nişlem bulunamadı.",
+            text = stringResource(Res.string.report_empty_filtered_desc),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -373,7 +399,7 @@ fun NoFilteredResultsView(
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Filtreleri temizle",
+                        text = stringResource(Res.string.report_empty_filtered_action_clear),
                         style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
                     )
                 }
@@ -403,7 +429,7 @@ fun NoFilteredResultsView(
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Dönemi değiştir",
+                        text = stringResource(Res.string.report_empty_filtered_action_change_period),
                         style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
                         color = Color(0xFF1E3A2F),
                     )
@@ -473,17 +499,22 @@ private fun FilterChipRemovable(
             }
 
             Text(
-                text = chip.label,
+                text = chip.toLocalizedLabel(),
                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
                 color = MaterialTheme.colorScheme.onSurface,
             )
 
             // 'x' butonu
+            val removeFilterCd = stringResource(Res.string.report_filter_chip_remove_desc, chip.toLocalizedLabel())
             Box(
                 modifier = Modifier
                     .size(18.dp)
                     .clip(CircleShape)
-                    .clickable(role = Role.Button, onClick = onRemove),
+                    .clickable(
+                        role = Role.Button,
+                        onClickLabel = removeFilterCd,
+                        onClick = onRemove,
+                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -522,13 +553,13 @@ fun ReportLoadingCard(
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Rapor hazırlanıyor",
+                    text = stringResource(Res.string.report_loading_title),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "Raporun hazırlanması birkaç saniye sürebilir. Lütfen bekleyin.",
+                    text = stringResource(Res.string.report_loading_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -596,15 +627,15 @@ fun ReportOfflineStatusSection(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Çevrimdışısın",
+                        text = stringResource(Res.string.report_offline_title),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     val pendingText = if (pendingCount > 0) {
-                        "Yerel kayıtlarınla gösteriliyor. $pendingCount değişiklik eşitlenmeyi bekliyor."
+                        pluralStringResource(Res.plurals.report_offline_pending_plural, pendingCount, pendingCount)
                     } else {
-                        "Bu cihazdaki yerel kayıtlar üzerinden gösteriliyor."
+                        stringResource(Res.string.report_offline_desc_synced)
                     }
                     Text(
                         text = pendingText,
@@ -650,7 +681,7 @@ fun ReportOfflineStatusSection(
                 }
 
                 Text(
-                    text = "Raporlar bu cihazda bulunan yerel kayıtlar üzerinden çalışmaya devam eder. Bağlantı geldiğinde bekleyen değişiklikler otomatik eşitlenir.",
+                    text = stringResource(Res.string.report_offline_info_banner),
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
                     color = MaterialTheme.colorScheme.onTertiaryContainer,
                     modifier = Modifier.weight(1f),
@@ -666,9 +697,13 @@ fun ReportOfflineStatusSection(
 @Composable
 fun ReportErrorCard(
     onRetry: () -> Unit,
+    error: ReportUiError? = null,
     errorMessage: String? = null,
     modifier: Modifier = Modifier,
 ) {
+    val defaultErrorMessage = stringResource(Res.string.report_error_default_message)
+    val displayErrorMessage = error?.toLocalizedMessage() ?: errorMessage ?: defaultErrorMessage
+
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -698,13 +733,13 @@ fun ReportErrorCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Rapor hesaplanamadı",
+                    text = stringResource(Res.string.report_error_title),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = Color(0xFF991B1B),
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = errorMessage ?: "Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar dene.",
+                    text = displayErrorMessage,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -718,7 +753,7 @@ fun ReportErrorCard(
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
             ) {
                 Text(
-                    text = "Tekrar dene",
+                    text = stringResource(Res.string.report_error_action_retry),
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                 )
             }

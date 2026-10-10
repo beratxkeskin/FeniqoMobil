@@ -4,10 +4,14 @@ import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.FinancialReport
 import com.feniqo.mobile.domain.model.LocalDate
+import com.feniqo.mobile.domain.model.Money
+import com.feniqo.mobile.domain.model.MoneyDelta
 import com.feniqo.mobile.domain.model.ReportDateRange
 import com.feniqo.mobile.domain.model.ReportFilter
 import com.feniqo.mobile.domain.model.ReportPeriodPreset
 import com.feniqo.mobile.domain.model.ReportTypeFilter
+import com.feniqo.mobile.presentation.common.symbol
+import kotlinx.datetime.DayOfWeek
 
 /**
  * Rapor filtreleme sheet'i ve UI durumu için sunum modeli.
@@ -51,6 +55,7 @@ data class ReportFilterUiState(
             )
     }
 }
+
 enum class ActiveFilterType {
     PERIOD,
     TYPE,
@@ -58,55 +63,98 @@ enum class ActiveFilterType {
     CATEGORY,
 }
 
-data class ActiveFilterChipUiModel(
-    val id: String,
-    val type: ActiveFilterType,
-    val label: String,
-)
+sealed interface ActiveFilterChipUiModel {
+    val id: String
+    val type: ActiveFilterType
+
+    data class Period(
+        val preset: ReportPeriodPreset,
+        val dateRange: ReportDateRange,
+        override val id: String = "period",
+    ) : ActiveFilterChipUiModel {
+        override val type: ActiveFilterType get() = ActiveFilterType.PERIOD
+    }
+
+    data class Type(
+        val typeFilter: ReportTypeFilter,
+        override val id: String = "type",
+    ) : ActiveFilterChipUiModel {
+        override val type: ActiveFilterType get() = ActiveFilterType.TYPE
+    }
+
+    data class CurrencyChip(
+        val currency: Currency,
+        override val id: String = "currency",
+    ) : ActiveFilterChipUiModel {
+        override val type: ActiveFilterType get() = ActiveFilterType.CURRENCY
+    }
+
+    data class CategoryChip(
+        val categoryId: EntityId?,
+        val categoryName: String,
+        override val id: String = "category",
+    ) : ActiveFilterChipUiModel {
+        override val type: ActiveFilterType get() = ActiveFilterType.CATEGORY
+    }
+}
 
 data class MultiCurrencyReportUiModel(
     val currency: Currency,
-    val title: String,
-    val symbol: String,
-    val incomeFormatted: String,
-    val expenseFormatted: String,
-    val netFormatted: String,
-    val isNetPositive: Boolean,
+    val income: Money,
+    val expense: Money,
+    val net: MoneyDelta,
+    val isNetPositive: Boolean = net.amountMinor >= 0L,
     val transactionCount: Int,
+    val maskAmounts: Boolean = false,
 )
 
 data class MonthlyTrendUiModel(
     val yearMonth: com.feniqo.mobile.domain.model.YearMonth,
-    val monthLabel: String,
-    val incomeFormatted: String,
-    val expenseFormatted: String,
-    val netFormatted: String,
-    val isNetPositive: Boolean,
-    val incomeMinor: Long,
-    val expenseMinor: Long,
+    val income: Money,
+    val expense: Money,
+    val net: MoneyDelta,
+    val isNetPositive: Boolean = net.amountMinor >= 0L,
+    val incomeMinor: Long = income.amountMinor,
+    val expenseMinor: Long = expense.amountMinor,
+    val maskAmounts: Boolean = false,
 )
 
 data class FinancialRhythmUiModel(
-    val busiestDayName: String,
-    val busiestDayExpenseFormatted: String,
-    val lowestExpenseWeekLabel: String,
-    val lowestExpenseWeekExpenseFormatted: String,
+    val busiestDay: DayOfWeek?,
+    val busiestDayExpense: Money,
+    val lowestExpenseWeekNumber: Int,
+    val lowestExpenseWeekExpense: Money,
+    val maskAmounts: Boolean = false,
 )
 
 data class TopCategoryUiModel(
-    val name: String,
-    val amountFormatted: String,
+    val name: String?,
+    val amount: Money,
     val transactionCount: Int,
+    val isCategoryMissing: Boolean = false,
+    val maskAmounts: Boolean = false,
 )
 
 data class CategoryBreakdownUiItem(
     val categoryId: EntityId?,
-    val name: String,
-    val amountFormatted: String,
+    val name: String?,
+    val isCategoryMissing: Boolean = false,
+    val amount: Money,
     val transactionCount: Int,
-    val sharePercentageFormatted: String,
-    val shareRatio: Float,
+    val shareBasisPoints: Int,
+    val shareRatio: Float = shareBasisPoints / 10_000f,
+    val maskAmounts: Boolean = false,
 )
+
+sealed interface ReportInsightPayload {
+    data object None : ReportInsightPayload
+    data class ExpenseChanged(val changeBasisPoints: Int, val difference: MoneyDelta) : ReportInsightPayload
+    data class TransactionCountOnly(val count: Int) : ReportInsightPayload
+}
+
+sealed interface ReportUiError {
+    data object Generic : ReportUiError
+}
 
 data class CalendarDayUiModel(
     val dayNumber: Int,
@@ -194,21 +242,23 @@ sealed interface ReportsContentState {
     ) : ReportsContentState
     data class Success(
         val report: FinancialReport,
-        val incomeFormatted: String,
-        val expenseFormatted: String,
-        val netFormatted: String,
-        val isNetPositive: Boolean,
-        val savingsRateFormatted: String,
+        val income: Money = report.income,
+        val expense: Money = report.expense,
+        val net: MoneyDelta = report.net,
+        val isNetPositive: Boolean = report.net.amountMinor >= 0L,
+        val savingsRateBasisPoints: Int = report.savingsRate.value,
         val multiCurrencySummaries: List<MultiCurrencyReportUiModel>,
         val activeFilters: List<ActiveFilterChipUiModel>,
         val monthlyTrend: List<MonthlyTrendUiModel> = emptyList(),
         val topCategory: TopCategoryUiModel? = null,
         val financialRhythm: FinancialRhythmUiModel? = null,
-        val feniqoInsightText: String = "",
+        val insightPayload: ReportInsightPayload = ReportInsightPayload.None,
         val categoryBreakdown: List<CategoryBreakdownUiItem> = emptyList(),
+        val maskAmounts: Boolean = false,
     ) : ReportsContentState
+
     data class Error(
-        val message: String,
+        val error: ReportUiError = ReportUiError.Generic,
     ) : ReportsContentState
 }
 

@@ -222,7 +222,7 @@ fun CategoryBreakdownReportScreen(
                             )
                         }
 
-                        val slices = currentCategories.map { it.name to it.shareRatio }
+                        val slices = currentCategories.map { (it.name ?: "") to it.shareRatio }
                         val colors = if (isExpense) {
                             listOf(Color(0xFFE53935), Color(0xFFD81B60), Color(0xFF8E24AA), Color(0xFF1E88E5), Color(0xFF00897B))
                         } else {
@@ -245,7 +245,7 @@ fun CategoryBreakdownReportScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .clickable(role = Role.Button) { onSelectCategory(item.categoryId, item.name) },
+                        .clickable(role = Role.Button) { onSelectCategory(item.categoryId, item.name.orEmpty()) },
                     shape = RoundedCornerShape(16.dp),
                     color = MaterialTheme.colorScheme.surface,
                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
@@ -260,20 +260,20 @@ fun CategoryBreakdownReportScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             CategoryTonalIcon(
-                                iconKey = item.name,
+                                iconKey = item.name.orEmpty(),
                                 color = if (isExpense) Color(0xFFDC2626) else Color(0xFF16A34A),
                                 containerSize = 40.dp,
                             )
 
                             Column {
                                 Text(
-                                    text = item.name,
+                                    text = item.name.orEmpty(),
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "${item.transactionCount} işlem • ${item.sharePercentageFormatted}",
+                                    text = "${item.transactionCount} işlem • %${item.shareBasisPoints / 100}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -282,7 +282,7 @@ fun CategoryBreakdownReportScreen(
 
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
-                                text = item.amountFormatted,
+                                text = item.amount.toLocalizedMaskedText(item.maskAmounts),
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 15.sp,

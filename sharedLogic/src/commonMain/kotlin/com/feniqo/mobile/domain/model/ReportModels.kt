@@ -91,11 +91,22 @@ data class WeeklySpendingPoint(
 )
 
 data class FinancialRhythmSummary(
-    val busiestDayName: String,
+    val busiestDay: kotlinx.datetime.DayOfWeek?,
     val busiestDayExpense: Money,
     val lowestExpenseWeekNumber: Int,
     val lowestExpenseWeekExpense: Money,
 )
+
+sealed interface DetailedReportInsight {
+    data class ExpenseChanged(
+        val changeBasisPoints: Int,
+        val difference: MoneyDelta,
+    ) : DetailedReportInsight
+
+    data class TransactionCountOnly(
+        val count: Int,
+    ) : DetailedReportInsight
+}
 
 data class MerchantSpendingSummary(
     val merchantName: String,

@@ -117,7 +117,7 @@ fun TrendDualLineChart(
         ) {
             points.forEach { pt ->
                 Text(
-                    text = pt.monthLabel,
+                    text = com.feniqo.mobile.presentation.common.localizedShortMonthName(pt.yearMonth.monthNumber),
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -10,6 +10,7 @@ import com.feniqo.mobile.domain.model.Debt
 import com.feniqo.mobile.domain.model.DebtPayment
 import com.feniqo.mobile.domain.model.DebtStatus
 import com.feniqo.mobile.domain.model.DebtType
+import com.feniqo.mobile.domain.model.DetailedReportInsight
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.Money
@@ -37,10 +38,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class DetailedReportUseCasesTest {
@@ -68,6 +71,92 @@ class DetailedReportUseCasesTest {
         assertNotNull(result.topCategory)
         assertEquals("Market", result.topCategory!!.categoryName)
         assertEquals(2_000_00L, result.topCategory!!.amount.amountMinor)
+        assertEquals(DetailedReportInsight.TransactionCountOnly(count = 2), result.insight)
+        assertNotNull(result.financialRhythm.busiestDay)
+    }
+
+    @Test
+    fun observeDetailedReportOverview_expenseDecreased_producesTypedExpenseChanged() = runTest {
+        val prevTx = createTx("prev", 5_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 8, 15))
+        val curTx = createTx("cur", 4_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 9, 10))
+
+        val useCase = ObserveDetailedReportOverviewUseCase(
+            transactionRepository = FakeTxRepo(listOf(prevTx, curTx)),
+            categoryRepository = FakeCategoryRepo(emptyList()),
+        )
+
+        val result = useCase(ReportFilter(), null, referenceDate).first()
+        assertTrue(result.insight is DetailedReportInsight.ExpenseChanged)
+        val insight = result.insight as DetailedReportInsight.ExpenseChanged
+        assertEquals(2000, insight.changeBasisPoints)
+        assertEquals(-1_000_00L, insight.difference.amountMinor)
+        assertTrue(insight.difference.amountMinor < 0L)
+    }
+
+    @Test
+    fun observeDetailedReportOverview_expenseIncreased_producesTypedExpenseChanged() = runTest {
+        val prevTx = createTx("prev", 2_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 8, 15))
+        val curTx = createTx("cur", 3_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 9, 10))
+
+        val useCase = ObserveDetailedReportOverviewUseCase(
+            transactionRepository = FakeTxRepo(listOf(prevTx, curTx)),
+            categoryRepository = FakeCategoryRepo(emptyList()),
+        )
+
+        val result = useCase(ReportFilter(), null, referenceDate).first()
+        assertTrue(result.insight is DetailedReportInsight.ExpenseChanged)
+        val insight = result.insight as DetailedReportInsight.ExpenseChanged
+        assertEquals(5000, insight.changeBasisPoints)
+        assertEquals(1_000_00L, insight.difference.amountMinor)
+        assertTrue(insight.difference.amountMinor > 0L)
+    }
+
+    @Test
+    fun observeDetailedReportOverview_previousExpenseZero_producesTransactionCountOnly() = runTest {
+        val curTx1 = createTx("t1", 1_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 9, 5))
+        val curTx2 = createTx("t2", 1_500_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 9, 10))
+
+        val useCase = ObserveDetailedReportOverviewUseCase(
+            transactionRepository = FakeTxRepo(listOf(curTx1, curTx2)),
+            categoryRepository = FakeCategoryRepo(emptyList()),
+        )
+
+        val result = useCase(ReportFilter(), null, referenceDate).first()
+        assertEquals(DetailedReportInsight.TransactionCountOnly(count = 2), result.insight)
+    }
+
+    @Test
+    fun observeDetailedReportOverview_rhythmReturnsDayOfWeekOrNull() = runTest {
+        val useCaseNoExpenses = ObserveDetailedReportOverviewUseCase(
+            transactionRepository = FakeTxRepo(emptyList()),
+            categoryRepository = FakeCategoryRepo(emptyList()),
+        )
+        val emptyResult = useCaseNoExpenses(ReportFilter(), null, referenceDate).first()
+        assertNull(emptyResult.financialRhythm.busiestDay)
+        assertEquals(0L, emptyResult.financialRhythm.busiestDayExpense.amountMinor)
+
+        val mondayTx = createTx("m", 3_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 9, 7)) // Monday
+        val useCaseWithExpense = ObserveDetailedReportOverviewUseCase(
+            transactionRepository = FakeTxRepo(listOf(mondayTx)),
+            categoryRepository = FakeCategoryRepo(emptyList()),
+        )
+        val result = useCaseWithExpense(ReportFilter(), null, referenceDate).first()
+        assertEquals(DayOfWeek.MONDAY, result.financialRhythm.busiestDay)
+        assertEquals(3_000_00L, result.financialRhythm.busiestDayExpense.amountMinor)
+    }
+
+    @Test
+    fun observeDetailedReportOverview_missingCategory_producesNullCategoryName() = runTest {
+        val tx = createTx("t1", 5_000_00L, Currency.TRY, TransactionType.EXPENSE, "deleted-cat", LocalDate(2026, 9, 10))
+        val useCase = ObserveDetailedReportOverviewUseCase(
+            transactionRepository = FakeTxRepo(listOf(tx)),
+            categoryRepository = FakeCategoryRepo(emptyList()),
+        )
+        val result = useCase(ReportFilter(), null, referenceDate).first()
+        assertNotNull(result.topCategory)
+        assertEquals(EntityId("deleted-cat"), result.topCategory!!.categoryId)
+        assertNull(result.topCategory!!.categoryName)
+        assertEquals(5_000_00L, result.topCategory!!.amount.amountMinor)
     }
 
     @Test

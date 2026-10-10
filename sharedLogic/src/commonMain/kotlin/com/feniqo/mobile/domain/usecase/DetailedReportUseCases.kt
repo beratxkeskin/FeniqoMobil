@@ -12,9 +12,11 @@ import com.feniqo.mobile.domain.model.ComparisonHighlightItem
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.DebtDeadlineItem
 import com.feniqo.mobile.domain.model.DebtReportSummary
+import com.feniqo.mobile.domain.model.DetailedReportInsight
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.FinancialInsightItem
 import com.feniqo.mobile.domain.model.FinancialRhythmSummary
+import kotlinx.datetime.DayOfWeek
 import com.feniqo.mobile.domain.model.ForecastProjectionPoint
 import com.feniqo.mobile.domain.model.ForecastReportSummary
 import com.feniqo.mobile.domain.model.ForecastSourceItem
@@ -116,7 +118,7 @@ class ObserveDetailedReportOverviewUseCase(
             val topCategory = currentExpenses.groupBy { it.categoryId }
                 .map { (catId, txs) ->
                     val sum = txs.fold(Money.zero(filter.currency)) { acc, t -> acc + t.amount }
-                    val name = categories.find { it.id == catId }?.name ?: "Kategorisiz"
+                    val name = categories.find { it.id == catId }?.name
                     TopCategorySummary(catId, name, sum, txs.size)
                 }
                 .maxByOrNull { it.amount.amountMinor }
@@ -133,24 +135,23 @@ class ObserveDetailedReportOverviewUseCase(
             }
             val currentExpTotal = currentExpenses.fold(Money.zero(filter.currency)) { acc, t -> acc + t.amount }
             val prevExpTotal = prevMonthTxs.fold(Money.zero(filter.currency)) { acc, t -> acc + t.amount }
-            val insightText = if (prevExpTotal.amountMinor > 0) {
+            val insight: DetailedReportInsight = if (prevExpTotal.amountMinor > 0L) {
                 val diffMinor = currentExpTotal.amountMinor - prevExpTotal.amountMinor
-                val diffMoney = Money(kotlin.math.abs(diffMinor), filter.currency)
-                val pct = ((kotlin.math.abs(diffMinor) * 100) / prevExpTotal.amountMinor).toInt()
-                if (diffMinor <= 0) {
-                    "Giderlerin geçen aya göre %$pct azaldı. Tebrikler! Geçen aya kıyasla ${diffMoney.amountMinor / 100} ${filter.currency.name} daha az harcama yaptınız."
-                } else {
-                    "Giderlerin geçen aya göre %$pct arttı. Geçen aya kıyasla ${diffMoney.amountMinor / 100} ${filter.currency.name} daha fazla harcama yapıldı."
-                }
+                val absDiff = kotlin.math.abs(diffMinor)
+                val changeBasisPoints = rateBasisPoints(absDiff, prevExpTotal.amountMinor)
+                DetailedReportInsight.ExpenseChanged(
+                    changeBasisPoints = changeBasisPoints,
+                    difference = MoneyDelta(diffMinor, filter.currency),
+                )
             } else {
-                "Bu dönemde ${currentExpenses.size} harcama kaydı yapıldı."
+                DetailedReportInsight.TransactionCountOnly(count = currentExpenses.size)
             }
 
             DetailedReportOverviewResult(
                 trendPoints = trendPoints,
                 topCategory = topCategory,
                 financialRhythm = rhythm,
-                insightText = insightText,
+                insight = insight,
             )
         }
     }
@@ -164,14 +165,18 @@ class ObserveDetailedReportOverviewUseCase(
             val dayIdx = (tx.transactionDate.dayOfWeek.ordinal) % 7
             dayTotals[dayIdx] += tx.amount.amountMinor
         }
-        val dayNames = listOf("Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar")
-        var busiestDayIdx = 0
+        var busiestDayIdx: Int? = null
         var maxDayExpense = 0L
         for (i in 0..6) {
             if (dayTotals[i] > maxDayExpense) {
                 maxDayExpense = dayTotals[i]
                 busiestDayIdx = i
             }
+        }
+        val busiestDay = if (maxDayExpense > 0L && busiestDayIdx != null) {
+            DayOfWeek.values()[busiestDayIdx]
+        } else {
+            null
         }
 
         val weekTotals = LongArray(5)
@@ -190,7 +195,7 @@ class ObserveDetailedReportOverviewUseCase(
         if (minWeekExpense == Long.MAX_VALUE) minWeekExpense = 0L
 
         return FinancialRhythmSummary(
-            busiestDayName = dayNames[busiestDayIdx],
+            busiestDay = busiestDay,
             busiestDayExpense = Money(maxDayExpense, currency),
             lowestExpenseWeekNumber = lowestWeekIdx + 1,
             lowestExpenseWeekExpense = Money(minWeekExpense, currency),
@@ -200,7 +205,7 @@ class ObserveDetailedReportOverviewUseCase(
 
 data class TopCategorySummary(
     val categoryId: EntityId?,
-    val categoryName: String,
+    val categoryName: String?,
     val amount: Money,
     val transactionCount: Int,
 )
@@ -209,7 +214,7 @@ data class DetailedReportOverviewResult(
     val trendPoints: List<MonthlyTrendPoint>,
     val topCategory: TopCategorySummary?,
     val financialRhythm: FinancialRhythmSummary,
-    val insightText: String,
+    val insight: DetailedReportInsight,
 )
 
 class ObserveCashFlowUseCase(
@@ -323,7 +328,7 @@ class ObserveCategoryBreakdownUseCase(
         return txs.groupBy { it.categoryId }
             .map { (catId, groupTxs) ->
                 val amount = groupTxs.fold(Money.zero(currency)) { acc, t -> acc + t.amount }
-                val name = categories.find { it.id == catId }?.name ?: "Kategorisiz"
+                val name = categories.find { it.id == catId }?.name
                 val pctBasisPoints = if (totalMinor > 0) {
                     ((amount.amountMinor * 10_000) / totalMinor).toInt()
                 } else 0
@@ -341,7 +346,7 @@ class ObserveCategoryBreakdownUseCase(
 
 data class CategoryBreakdownItem(
     val categoryId: EntityId?,
-    val categoryName: String,
+    val categoryName: String?,
     val amount: Money,
     val transactionCount: Int,
     val sharePercentageBasisPoints: Int,

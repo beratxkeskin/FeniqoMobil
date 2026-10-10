@@ -1,0 +1,509 @@
+package com.feniqo.mobile.presentation.report
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import com.feniqo.mobile.App
+import com.feniqo.mobile.domain.model.Currency
+import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.domain.model.FinancialReport
+import com.feniqo.mobile.domain.model.LocalDate
+import com.feniqo.mobile.domain.model.Money
+import com.feniqo.mobile.domain.model.MoneyDelta
+import com.feniqo.mobile.domain.model.RateBasisPoints
+import com.feniqo.mobile.domain.model.ReportDateRange
+import com.feniqo.mobile.domain.model.ReportPeriod
+import com.feniqo.mobile.domain.model.ReportPeriodPreset
+import com.feniqo.mobile.domain.model.ReportTypeFilter
+import com.feniqo.mobile.domain.model.YearMonth
+import kotlinx.datetime.DayOfWeek
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+@RunWith(RobolectricTestRunner::class)
+@Config(qualifiers = "w1080dp-h3000dp")
+class ReportsLocalizationComposeTest {
+    @get:Rule
+    val composeRule = createComposeRule()
+
+    @Test
+    fun reports_main_screen_success_state_reacts_to_runtime_locale_change() {
+        var languageTag by mutableStateOf("tr")
+
+        val dummyReport =
+            FinancialReport(
+                period = ReportPeriod(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30)),
+                income = Money(50_000_00L, Currency.TRY),
+                expense = Money(20_000_00L, Currency.TRY),
+                net = MoneyDelta(30_000_00L, Currency.TRY),
+                savingsRate = RateBasisPoints(6_000),
+                spendingByCategory = emptyList(),
+                transactionCount = 10,
+            )
+
+        val state =
+            ReportsScreenState(
+                filterState = ReportFilterUiState.Default,
+                connectionState = ReportConnectionState.Online,
+                contentState =
+                    ReportsContentState.Success(
+                        report = dummyReport,
+                        income = Money(50_000_00L, Currency.TRY),
+                        expense = Money(20_000_00L, Currency.TRY),
+                        net = MoneyDelta(30_000_00L, Currency.TRY),
+                        isNetPositive = true,
+                        savingsRateBasisPoints = 6_000,
+                        monthlyTrend =
+                            listOf(
+                                MonthlyTrendUiModel(
+                                    yearMonth = YearMonth("2026-09"),
+                                    income = Money(50_000_00L, Currency.TRY),
+                                    expense = Money(20_000_00L, Currency.TRY),
+                                    net = MoneyDelta(30_000_00L, Currency.TRY),
+                                ),
+                            ),
+                        topCategory =
+                            TopCategoryUiModel(
+                                name = "Market",
+                                amount = Money(15_000_00L, Currency.TRY),
+                                transactionCount = 5,
+                            ),
+                        categoryBreakdown =
+                            listOf(
+                                CategoryBreakdownUiItem(
+                                    categoryId = EntityId("cat-1"),
+                                    name = "Market",
+                                    amount = Money(15_000_00L, Currency.TRY),
+                                    transactionCount = 5,
+                                    shareBasisPoints = 7500,
+                                ),
+                            ),
+                        financialRhythm =
+                            FinancialRhythmUiModel(
+                                busiestDay = DayOfWeek.MONDAY,
+                                busiestDayExpense = Money(8_000_00L, Currency.TRY),
+                                lowestExpenseWeekNumber = 2,
+                                lowestExpenseWeekExpense = Money(2_000_00L, Currency.TRY),
+                            ),
+                        insightPayload =
+                            ReportInsightPayload.ExpenseChanged(
+                                changeBasisPoints = 1500,
+                                difference = MoneyDelta(-3_000_00L, Currency.TRY),
+                            ),
+                        multiCurrencySummaries =
+                            listOf(
+                                MultiCurrencyReportUiModel(
+                                    currency = Currency.TRY,
+                                    income = Money(50_000_00L, Currency.TRY),
+                                    expense = Money(20_000_00L, Currency.TRY),
+                                    net = MoneyDelta(30_000_00L, Currency.TRY),
+                                    transactionCount = 10,
+                                    isNetPositive = true,
+                                ),
+                            ),
+                        activeFilters = emptyList(),
+                        maskAmounts = false,
+                    ),
+            )
+
+        composeRule.setContent {
+            App(languageTag = languageTag) {
+                ReportsScreen(
+                    state = state,
+                    referenceDate = LocalDate(2026, 9, 17),
+                    onApplyFilter = {},
+                    onRemoveFilterChip = {},
+                    onClearFilters = {},
+                    onNavigateToCustomDateRange = {},
+                    onNavigateToMultiCurrency = {},
+                    onSelectCategory = {},
+                    onAddTransaction = {},
+                    onNavigateToHome = {},
+                    onNavigateToSyncStatus = {},
+                    onRetry = {},
+                    onNavigateBack = {},
+                )
+            }
+        }
+
+        // TR: Başlıklar, metrikler, oranlar, ritim ve içgörü
+        composeRule.onNodeWithText("Raporlar").assertIsDisplayed()
+        composeRule.onNodeWithText("Net sonuç").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Gelir")[0].assertIsDisplayed()
+        composeRule.onAllNodesWithText("Gider")[0].assertIsDisplayed()
+        composeRule.onNodeWithText("Tasarruf oranı").assertIsDisplayed()
+        composeRule.onNodeWithText("%60").assertIsDisplayed()
+        composeRule.onNodeWithText("Aylık trend (son 6 ay)").assertIsDisplayed()
+        composeRule.onNodeWithText("Hızlı raporlar").assertIsDisplayed()
+        composeRule.onNodeWithText("Kategoriler").assertIsDisplayed()
+        composeRule.onNodeWithText("Nakit akışı").assertIsDisplayed()
+        composeRule.onNodeWithText("En yoğun gün").assertIsDisplayed()
+        composeRule.onNodeWithText("Pazartesi").assertIsDisplayed()
+        composeRule.onNodeWithText("En düşük hafta").assertIsDisplayed()
+        composeRule.onNodeWithText("2. Hafta").assertIsDisplayed()
+        composeRule.onNodeWithText("Tüm Raporlar Merkezi").assertIsDisplayed()
+
+        // Switch to EN
+        composeRule.runOnIdle { languageTag = "en" }
+
+        // EN: Başlıklar, metrikler, oranlar, ritim ve içgörü
+        composeRule.onNodeWithText("Reports").assertIsDisplayed()
+        composeRule.onNodeWithText("Net result").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Income")[0].assertIsDisplayed()
+        composeRule.onAllNodesWithText("Expense")[0].assertIsDisplayed()
+        composeRule.onNodeWithText("Savings rate").assertIsDisplayed()
+        composeRule.onNodeWithText("60%").assertIsDisplayed()
+        composeRule.onNodeWithText("Monthly trend (last 6 months)").assertIsDisplayed()
+        composeRule.onNodeWithText("Quick reports").assertIsDisplayed()
+        composeRule.onNodeWithText("Categories").assertIsDisplayed()
+        composeRule.onNodeWithText("Cash flow").assertIsDisplayed()
+        composeRule.onNodeWithText("Busiest day").assertIsDisplayed()
+        composeRule.onNodeWithText("Monday").assertIsDisplayed()
+        composeRule.onNodeWithText("Lowest week").assertIsDisplayed()
+        composeRule.onNodeWithText("Week 2").assertIsDisplayed()
+        composeRule.onNodeWithText("All Reports Hub").assertIsDisplayed()
+    }
+
+    @Test
+    fun reports_filter_and_period_picker_sheets_react_to_runtime_locale_change() {
+        var languageTag by mutableStateOf("tr")
+
+        val filterState =
+            ReportFilterUiState(
+                periodPreset = ReportPeriodPreset.THIS_MONTH,
+                typeFilter = ReportTypeFilter.ALL,
+                currency = Currency.TRY,
+                selectedCategoryId = null,
+                selectedCategoryName = null,
+            )
+
+        composeRule.setContent {
+            App(languageTag = languageTag) {
+                ReportFiltersSheetContent(
+                    initialFilter = filterState,
+                    referenceDate = LocalDate(2026, 9, 17),
+                    onApplyFilter = {},
+                    onNavigateToCustomDateRange = {},
+                    onSelectCategory = {},
+                    onDismiss = {},
+                )
+            }
+        }
+
+        // TR: Sheet başlığı, filtre bölümleri, butonlar
+        composeRule.onNodeWithText("Rapor filtreleri").assertIsDisplayed()
+        composeRule.onNodeWithText("Dönem").assertIsDisplayed()
+        composeRule.onNodeWithText("Bu Ay").assertIsDisplayed()
+        composeRule.onNodeWithText("Geçen Ay").assertIsDisplayed()
+        composeRule.onNodeWithText("Son 3 Ay").assertIsDisplayed()
+        composeRule.onNodeWithText("Özel tarih").assertIsDisplayed()
+        composeRule.onNodeWithText("İşlem türü").assertIsDisplayed()
+        composeRule.onNodeWithText("Tümü").assertIsDisplayed()
+        composeRule.onNodeWithText("Gelir").assertIsDisplayed()
+        composeRule.onNodeWithText("Gider").assertIsDisplayed()
+        composeRule.onNodeWithText("Para birimi").assertIsDisplayed()
+        composeRule.onNodeWithText("Kategoriler").assertIsDisplayed()
+        composeRule.onNodeWithText("Tüm kategoriler").assertIsDisplayed()
+        composeRule.onNodeWithText("Aktif filtreler").assertIsDisplayed()
+        composeRule.onNodeWithText("Temizle").assertIsDisplayed()
+        composeRule.onNodeWithText("Raporu uygula").assertIsDisplayed()
+
+        // Switch to EN
+        composeRule.runOnIdle { languageTag = "en" }
+
+        // EN: Sheet başlığı, filtre bölümleri, butonlar
+        composeRule.onNodeWithText("Report filters").assertIsDisplayed()
+        composeRule.onNodeWithText("Period").assertIsDisplayed()
+        composeRule.onNodeWithText("This Month").assertIsDisplayed()
+        composeRule.onNodeWithText("Last Month").assertIsDisplayed()
+        composeRule.onNodeWithText("Last 3 Months").assertIsDisplayed()
+        composeRule.onNodeWithText("Custom date").assertIsDisplayed()
+        composeRule.onNodeWithText("Transaction type").assertIsDisplayed()
+        composeRule.onNodeWithText("All").assertIsDisplayed()
+        composeRule.onNodeWithText("Income").assertIsDisplayed()
+        composeRule.onNodeWithText("Expense").assertIsDisplayed()
+        composeRule.onNodeWithText("Currency").assertIsDisplayed()
+        composeRule.onNodeWithText("Categories").assertIsDisplayed()
+        composeRule.onNodeWithText("All categories").assertIsDisplayed()
+        composeRule.onNodeWithText("Active filters").assertIsDisplayed()
+        composeRule.onNodeWithText("Clear").assertIsDisplayed()
+        composeRule.onNodeWithText("Apply report").assertIsDisplayed()
+    }
+
+    @Test
+    fun reports_empty_error_and_offline_states_react_to_runtime_locale_change() {
+        var languageTag by mutableStateOf("tr")
+        var currentScenario by mutableStateOf(1) // 1: Empty Workspace, 2: Empty Filtered, 3: Error, 4: Offline
+
+        composeRule.setContent {
+            App(languageTag = languageTag) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    when (currentScenario) {
+                        1 -> NoReportsEmptyView(onAddTransaction = {}, onNavigateToHome = {})
+                        2 ->
+                            NoFilteredResultsView(
+                                activeFilters =
+                                    listOf(
+                                        ActiveFilterChipUiModel.Period(
+                                            preset = ReportPeriodPreset.THIS_MONTH,
+                                            dateRange = ReportDateRange(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30)),
+                                        ),
+                                    ),
+                                onRemoveFilter = {},
+                                onClearFilters = {},
+                                onChangePeriod = {},
+                            )
+                        3 ->
+                            ReportErrorCard(
+                                errorMessage = ReportUiError.Generic.toLocalizedMessage(),
+                                onRetry = {},
+                            )
+                        4 ->
+                            OfflineSyncWarningBanner(
+                                pendingOperationCount = 4,
+                                onSyncClick = {},
+                            )
+                    }
+                }
+            }
+        }
+
+        // Scenario 1: Empty Workspace TR -> EN
+        composeRule.onNodeWithText("Henüz rapor oluşturacak veri yok").assertIsDisplayed()
+        composeRule.onNodeWithText("+ İşlem ekle").assertIsDisplayed()
+        composeRule.onNodeWithText("Ana sayfaya dön").assertIsDisplayed()
+        composeRule.runOnIdle { languageTag = "en" }
+        composeRule.onNodeWithText("No data to generate reports yet").assertIsDisplayed()
+        composeRule.onNodeWithText("+ Add transaction").assertIsDisplayed()
+        composeRule.onNodeWithText("Return to home").assertIsDisplayed()
+
+        // Scenario 2: Empty Filtered EN -> TR
+        composeRule.runOnIdle { currentScenario = 2 }
+        composeRule.onNodeWithText("No results for these filters").assertIsDisplayed()
+        composeRule.onNodeWithText("Clear filters").assertIsDisplayed()
+        composeRule.onNodeWithText("Change period").assertIsDisplayed()
+        composeRule.runOnIdle { languageTag = "tr" }
+        composeRule.onNodeWithText("Bu filtrelerde sonuç yok").assertIsDisplayed()
+        composeRule.onNodeWithText("Filtreleri temizle").assertIsDisplayed()
+        composeRule.onNodeWithText("Dönemi değiştir").assertIsDisplayed()
+
+        // Scenario 3: Error TR -> EN
+        composeRule.runOnIdle { currentScenario = 3 }
+        composeRule.onNodeWithText("Rapor hesaplanamadı").assertIsDisplayed()
+        composeRule.onNodeWithText("Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar dene.").assertIsDisplayed()
+        composeRule.onNodeWithText("Tekrar dene").assertIsDisplayed()
+        composeRule.runOnIdle { languageTag = "en" }
+        composeRule.onNodeWithText("Report could not be calculated").assertIsDisplayed()
+        composeRule.onNodeWithText("An unexpected error occurred. Please try again later.").assertIsDisplayed()
+        composeRule.onNodeWithText("Try again").assertIsDisplayed()
+
+        // Scenario 4: Offline Plural EN -> TR
+        composeRule.runOnIdle { currentScenario = 4 }
+        composeRule.onNodeWithText("Showing local records. 4 changes are waiting to sync.").assertIsDisplayed()
+        composeRule.runOnIdle { languageTag = "tr" }
+        composeRule.onNodeWithText("Yerel kayıtlarınla gösteriliyor. 4 değişiklik eşitlenmeyi bekliyor.").assertIsDisplayed()
+    }
+
+    @Test
+    fun missing_category_and_multi_currency_screen_react_to_runtime_locale_change() {
+        var languageTag by mutableStateOf("tr")
+        var isMasked by mutableStateOf(false)
+
+        composeRule.setContent {
+            App(languageTag = languageTag) {
+                val summaries =
+                    listOf(
+                        MultiCurrencyReportUiModel(
+                            currency = Currency.TRY,
+                            income = Money(25_000_00L, Currency.TRY),
+                            expense = Money(10_000_00L, Currency.TRY),
+                            net = MoneyDelta(15_000_00L, Currency.TRY),
+                            transactionCount = 5,
+                            isNetPositive = true,
+                            maskAmounts = isMasked,
+                        ),
+                        MultiCurrencyReportUiModel(
+                            currency = Currency.USD,
+                            income = Money(1_000_00L, Currency.USD),
+                            expense = Money(400_00L, Currency.USD),
+                            net = MoneyDelta(600_00L, Currency.USD),
+                            transactionCount = 2,
+                            isNetPositive = true,
+                            maskAmounts = isMasked,
+                        ),
+                    )
+                MultiCurrencyReportsScreen(
+                    summaries = summaries,
+                    selectedCurrency = Currency.TRY,
+                    onSelectCurrency = {},
+                    onOpenFilterSheet = {},
+                    onNavigateBack = {},
+                )
+            }
+        }
+
+        // TR: Çoklu para birimi başlığı, bilgi metni, sütunlar
+        composeRule.onNodeWithText("Çoklu para birimi").assertIsDisplayed()
+        composeRule.onNodeWithText("Farklı para birimleri birleştirilmez.").assertIsDisplayed()
+        composeRule.onNodeWithText("Kur dönüşümü yapılmaz. Her para birimi ayrı gösterilir.").assertIsDisplayed()
+        composeRule.onNodeWithText("Para birimini filtrele").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Gelir")[0].assertIsDisplayed()
+        composeRule.onAllNodesWithText("Gider")[0].assertIsDisplayed()
+        composeRule.onAllNodesWithText("Fark")[0].assertIsDisplayed()
+
+        // Switch to EN
+        composeRule.runOnIdle { languageTag = "en" }
+
+        // EN: Multi-currency title, banner, difference
+        composeRule.onNodeWithText("Multi-currency").assertIsDisplayed()
+        composeRule.onNodeWithText("Different currencies are not merged.").assertIsDisplayed()
+        composeRule.onNodeWithText("No exchange rate conversion is performed. Each currency is shown separately.").assertIsDisplayed()
+        composeRule.onNodeWithText("Filter currency").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Income")[0].assertIsDisplayed()
+        composeRule.onAllNodesWithText("Expense")[0].assertIsDisplayed()
+        composeRule.onAllNodesWithText("Difference")[0].assertIsDisplayed()
+
+        // Masking test
+        composeRule.runOnIdle { isMasked = true }
+        composeRule.onAllNodesWithText("••••")[0].assertIsDisplayed()
+    }
+
+    @Test
+    fun custom_date_range_screen_reacts_to_runtime_locale_change() {
+        var languageTag by mutableStateOf("tr")
+
+        composeRule.setContent {
+            App(languageTag = languageTag) {
+                CustomDateRangeScreen(
+                    initialStartDate = LocalDate(2026, 9, 1),
+                    initialEndDate = LocalDate(2026, 9, 15),
+                    referenceDate = LocalDate(2026, 9, 17),
+                    onApplyRange = { _, _ -> },
+                    onNavigateBack = {},
+                )
+            }
+        }
+
+        // TR: Başlık, başlangıç/bitiş, butonlar, gün kısaltmaları
+        composeRule.onNodeWithText("Özel tarih aralığı").assertIsDisplayed()
+        composeRule.onNodeWithText("Başlangıç").assertIsDisplayed()
+        composeRule.onNodeWithText("Bitiş").assertIsDisplayed()
+        composeRule.onNodeWithText("Tarihleri uygula").assertIsDisplayed()
+        composeRule.onNodeWithText("Hızlı seçim").assertIsDisplayed()
+        composeRule.onNodeWithText("Bu hafta").assertIsDisplayed()
+        composeRule.onNodeWithText("Bu ay").assertIsDisplayed()
+        composeRule.onNodeWithText("Son 90 gün").assertIsDisplayed()
+        composeRule.onNodeWithText("Pzt").assertIsDisplayed()
+        composeRule.onNodeWithText("Cum").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Önceki Ay").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Sonraki Ay").assertIsDisplayed()
+
+        // Switch to EN
+        composeRule.runOnIdle { languageTag = "en" }
+
+        // EN: Title, start/end, buttons, day abbreviations
+        composeRule.onNodeWithText("Custom date range").assertIsDisplayed()
+        composeRule.onNodeWithText("Start").assertIsDisplayed()
+        composeRule.onNodeWithText("End").assertIsDisplayed()
+        composeRule.onNodeWithText("Apply dates").assertIsDisplayed()
+        composeRule.onNodeWithText("Quick select").assertIsDisplayed()
+        composeRule.onNodeWithText("This week").assertIsDisplayed()
+        composeRule.onNodeWithText("This month").assertIsDisplayed()
+        composeRule.onNodeWithText("Last 90 days").assertIsDisplayed()
+        composeRule.onNodeWithText("Mon").assertIsDisplayed()
+        composeRule.onNodeWithText("Fri").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Previous Month").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Next Month").assertIsDisplayed()
+    }
+
+    @Test
+    fun reports_screen_missing_top_category_reacts_to_runtime_locale_change() {
+        var languageTag by mutableStateOf("tr")
+
+        val dummyReport =
+            FinancialReport(
+                period = ReportPeriod(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30)),
+                income = Money(50_000_00L, Currency.TRY),
+                expense = Money(20_000_00L, Currency.TRY),
+                net = MoneyDelta(30_000_00L, Currency.TRY),
+                savingsRate = RateBasisPoints(6_000),
+                spendingByCategory = emptyList(),
+                transactionCount = 5,
+            )
+
+        val state =
+            ReportsScreenState(
+                filterState = ReportFilterUiState.Default,
+                connectionState = ReportConnectionState.Online,
+                contentState =
+                    ReportsContentState.Success(
+                        report = dummyReport,
+                        income = Money(50_000_00L, Currency.TRY),
+                        expense = Money(20_000_00L, Currency.TRY),
+                        net = MoneyDelta(30_000_00L, Currency.TRY),
+                        isNetPositive = true,
+                        savingsRateBasisPoints = 6_000,
+                        monthlyTrend = emptyList(),
+                        topCategory =
+                            TopCategoryUiModel(
+                                name = null,
+                                amount = Money(20_000_00L, Currency.TRY),
+                                transactionCount = 5,
+                                isCategoryMissing = true,
+                            ),
+                        categoryBreakdown = emptyList(),
+                        financialRhythm =
+                            FinancialRhythmUiModel(
+                                busiestDay = null,
+                                busiestDayExpense = Money.zero(Currency.TRY),
+                                lowestExpenseWeekNumber = 1,
+                                lowestExpenseWeekExpense = Money.zero(Currency.TRY),
+                            ),
+                        insightPayload = ReportInsightPayload.None,
+                        multiCurrencySummaries = emptyList(),
+                        activeFilters = emptyList(),
+                        maskAmounts = false,
+                    ),
+            )
+
+        composeRule.setContent {
+            App(languageTag = languageTag) {
+                ReportsScreen(
+                    state = state,
+                    referenceDate = LocalDate(2026, 9, 17),
+                    onApplyFilter = {},
+                    onRemoveFilterChip = {},
+                    onClearFilters = {},
+                    onNavigateToCustomDateRange = {},
+                    onNavigateToMultiCurrency = {},
+                    onSelectCategory = {},
+                    onAddTransaction = {},
+                    onNavigateToHome = {},
+                    onNavigateToSyncStatus = {},
+                    onRetry = {},
+                    onNavigateBack = {},
+                )
+            }
+        }
+
+        // TR: Silinmiş kategori
+        composeRule.onNodeWithText("Silinmiş kategori", substring = true).assertIsDisplayed()
+
+        // Switch to EN
+        composeRule.runOnIdle { languageTag = "en" }
+
+        // EN: Deleted category
+        composeRule.onNodeWithText("Deleted category", substring = true).assertIsDisplayed()
+    }
+}

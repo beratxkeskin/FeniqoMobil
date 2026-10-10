@@ -26,6 +26,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.presentation.theme.FeniqoTextPrimary
 
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.report_action_back
+import feniqomobil.sharedui.generated.resources.report_system_statuses_title
+import org.jetbrains.compose.resources.stringResource
+
 /**
  * 26 Sistem durumları (Rapor durumu örnekleri) ekranı.
  * Tasarım panosundaki 3 sistem durumunu (Yükleniyor, Çevrimdışı/Senkronizasyon Bekliyor, Hata)
@@ -51,13 +56,13 @@ fun ReportSystemStatusesScreen(
                 IconButton(onClick = onNavigateBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                        contentDescription = "Geri",
+                        contentDescription = stringResource(Res.string.report_action_back),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "Rapor durumu örnekleri",
+                    text = stringResource(Res.string.report_system_statuses_title),
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,

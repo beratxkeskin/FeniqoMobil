@@ -59,6 +59,21 @@ import com.feniqo.mobile.domain.model.ReportTypeFilter
 import com.feniqo.mobile.domain.usecase.CalculateReportDateRangeUseCase
 import com.feniqo.mobile.presentation.theme.FeniqoTextPrimary
 import com.feniqo.mobile.presentation.theme.FeniqoTextSecondary
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.report_action_close
+import feniqomobil.sharedui.generated.resources.report_filter_action_apply
+import feniqomobil.sharedui.generated.resources.report_filter_action_clear
+import feniqomobil.sharedui.generated.resources.report_filter_active_title
+import feniqomobil.sharedui.generated.resources.report_filter_all_categories
+import feniqomobil.sharedui.generated.resources.report_filter_categories_title
+import feniqomobil.sharedui.generated.resources.report_filter_currency_title
+import feniqomobil.sharedui.generated.resources.report_filter_period_title
+import feniqomobil.sharedui.generated.resources.report_filter_sheet_title
+import feniqomobil.sharedui.generated.resources.report_filter_type_title
+import feniqomobil.sharedui.generated.resources.report_period_picker_custom_range_btn
+import feniqomobil.sharedui.generated.resources.report_period_picker_title
+import feniqomobil.sharedui.generated.resources.report_period_preset_custom_date
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * 21 Rapor filtreleri alt sayfası (Bottom Sheet / Modal).
@@ -88,9 +103,7 @@ fun ReportFiltersSheetContent(
         dateRangeCalculator(draftFilter.periodPreset, customRange, referenceDate)
     }
 
-    val summaryText = remember(draftFilter, currentRange) {
-        ReportSummaryFormatter.formatFilterSummary(draftFilter, currentRange)
-    }
+    val summaryText = formatLocalizedFilterSummary(draftFilter, currentRange)
 
     Surface(
         modifier = modifier
@@ -124,7 +137,7 @@ fun ReportFiltersSheetContent(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Rapor filtreleri",
+                    text = stringResource(Res.string.report_filter_sheet_title),
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
@@ -138,7 +151,7 @@ fun ReportFiltersSheetContent(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
-                        contentDescription = "Kapat",
+                        contentDescription = stringResource(Res.string.report_action_close),
                         tint = Color(0xFF4B5563),
                         modifier = Modifier.size(20.dp),
                     )
@@ -149,7 +162,7 @@ fun ReportFiltersSheetContent(
 
             // 1. DÖNEM BÖLÜMÜ
             Text(
-                text = "Dönem",
+                text = stringResource(Res.string.report_filter_period_title),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -159,25 +172,25 @@ fun ReportFiltersSheetContent(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 FilterSelectionChip(
-                    text = "Bu ay",
+                    text = ReportPeriodPreset.THIS_MONTH.toLocalizedLabel(),
                     isSelected = draftFilter.periodPreset == ReportPeriodPreset.THIS_MONTH,
                     onClick = { draftFilter = draftFilter.copy(periodPreset = ReportPeriodPreset.THIS_MONTH) },
                     modifier = Modifier.weight(1f),
                 )
                 FilterSelectionChip(
-                    text = "Geçen ay",
+                    text = ReportPeriodPreset.LAST_MONTH.toLocalizedLabel(),
                     isSelected = draftFilter.periodPreset == ReportPeriodPreset.LAST_MONTH,
                     onClick = { draftFilter = draftFilter.copy(periodPreset = ReportPeriodPreset.LAST_MONTH) },
                     modifier = Modifier.weight(1f),
                 )
                 FilterSelectionChip(
-                    text = "Son 3 ay",
+                    text = ReportPeriodPreset.LAST_3_MONTHS.toLocalizedLabel(),
                     isSelected = draftFilter.periodPreset == ReportPeriodPreset.LAST_3_MONTHS,
                     onClick = { draftFilter = draftFilter.copy(periodPreset = ReportPeriodPreset.LAST_3_MONTHS) },
                     modifier = Modifier.weight(1f),
                 )
                 FilterSelectionChip(
-                    text = "Özel tarih",
+                    text = stringResource(Res.string.report_period_preset_custom_date),
                     isSelected = draftFilter.periodPreset == ReportPeriodPreset.CUSTOM,
                     onClick = {
                         draftFilter = draftFilter.copy(periodPreset = ReportPeriodPreset.CUSTOM)
@@ -191,7 +204,7 @@ fun ReportFiltersSheetContent(
 
             // 2. İŞLEM TÜRÜ BÖLÜMÜ
             Text(
-                text = "İşlem türü",
+                text = stringResource(Res.string.report_filter_type_title),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -201,19 +214,19 @@ fun ReportFiltersSheetContent(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 FilterSelectionChip(
-                    text = "Tümü",
+                    text = ReportTypeFilter.ALL.toLocalizedLabel(),
                     isSelected = draftFilter.typeFilter == ReportTypeFilter.ALL,
                     onClick = { draftFilter = draftFilter.copy(typeFilter = ReportTypeFilter.ALL) },
                     modifier = Modifier.weight(1f),
                 )
                 FilterSelectionChip(
-                    text = "Gelir",
+                    text = ReportTypeFilter.INCOME.toLocalizedLabel(),
                     isSelected = draftFilter.typeFilter == ReportTypeFilter.INCOME,
                     onClick = { draftFilter = draftFilter.copy(typeFilter = ReportTypeFilter.INCOME) },
                     modifier = Modifier.weight(1f),
                 )
                 FilterSelectionChip(
-                    text = "Gider",
+                    text = ReportTypeFilter.EXPENSE.toLocalizedLabel(),
                     isSelected = draftFilter.typeFilter == ReportTypeFilter.EXPENSE,
                     onClick = { draftFilter = draftFilter.copy(typeFilter = ReportTypeFilter.EXPENSE) },
                     modifier = Modifier.weight(1f),
@@ -224,7 +237,7 @@ fun ReportFiltersSheetContent(
 
             // 3. PARA BİRİMİ BÖLÜMÜ
             Text(
-                text = "Para birimi",
+                text = stringResource(Res.string.report_filter_currency_title),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -247,7 +260,7 @@ fun ReportFiltersSheetContent(
 
             // 4. KATEGORİLER BÖLÜMÜ
             Text(
-                text = "Kategoriler",
+                text = stringResource(Res.string.report_filter_categories_title),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -297,7 +310,7 @@ fun ReportFiltersSheetContent(
                         }
 
                         Text(
-                            text = draftFilter.selectedCategoryName ?: "Tüm kategoriler",
+                            text = draftFilter.selectedCategoryName ?: stringResource(Res.string.report_filter_all_categories),
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                             color = MaterialTheme.colorScheme.onSurface,
                         )
@@ -333,7 +346,7 @@ fun ReportFiltersSheetContent(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Aktif filtreler",
+                            text = stringResource(Res.string.report_filter_active_title),
                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
@@ -366,7 +379,7 @@ fun ReportFiltersSheetContent(
                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Text(
-                        text = "Temizle",
+                        text = stringResource(Res.string.report_filter_action_clear),
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = Color(0xFF374151),
                     )
@@ -386,7 +399,7 @@ fun ReportFiltersSheetContent(
                     ),
                 ) {
                     Text(
-                        text = "Raporu uygula",
+                        text = stringResource(Res.string.report_filter_action_apply),
                         style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                     )
                 }
@@ -477,7 +490,7 @@ fun ReportPeriodPickerSheetContent(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Dönem seçin",
+                    text = stringResource(Res.string.report_period_picker_title),
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
@@ -491,7 +504,7 @@ fun ReportPeriodPickerSheetContent(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
-                        contentDescription = "Kapat",
+                        contentDescription = stringResource(Res.string.report_action_close),
                         tint = Color(0xFF4B5563),
                         modifier = Modifier.size(20.dp),
                     )
@@ -501,12 +514,12 @@ fun ReportPeriodPickerSheetContent(
             Spacer(modifier = Modifier.height(16.dp))
 
             val presets = listOf(
-                ReportPeriodPreset.THIS_MONTH to "Bu ay",
-                ReportPeriodPreset.LAST_MONTH to "Geçen ay",
-                ReportPeriodPreset.LAST_3_MONTHS to "Son 3 ay",
+                ReportPeriodPreset.THIS_MONTH,
+                ReportPeriodPreset.LAST_MONTH,
+                ReportPeriodPreset.LAST_3_MONTHS,
             )
 
-            presets.forEach { (preset, label) ->
+            presets.forEach { preset ->
                 val isSelected = currentPreset == preset
                 Surface(
                     onClick = { onSelectPreset(preset) },
@@ -525,7 +538,7 @@ fun ReportPeriodPickerSheetContent(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = label,
+                            text = preset.toLocalizedLabel(),
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                             ),
@@ -558,7 +571,7 @@ fun ReportPeriodPickerSheetContent(
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Özel tarih aralığı belirle")
+                Text(text = stringResource(Res.string.report_period_picker_custom_range_btn))
             }
 
             Spacer(modifier = Modifier.height(16.dp))

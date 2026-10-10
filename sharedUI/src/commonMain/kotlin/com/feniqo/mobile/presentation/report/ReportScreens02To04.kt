@@ -270,11 +270,11 @@ fun PeriodSummaryScreen(
                                                     Text(text = (index + 1).toString(), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                                 }
                                             }
-                                            Text(text = item.name, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface)
+                                            Text(text = item.name.orEmpty(), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface)
                                         }
                                         Column(horizontalAlignment = Alignment.End) {
-                                            Text(text = item.amountFormatted, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
-                                            Text(text = item.sharePercentageFormatted, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Text(text = item.amount.toLocalizedMaskedText(item.maskAmounts), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                                            Text(text = "%${item.shareBasisPoints / 100}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         }
                                     }
                                     LinearProgressIndicator(
@@ -340,7 +340,7 @@ fun PeriodSummaryScreen(
                                     Text(text = "En yoğun gün", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(text = financialRhythm.busiestDayName, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                                Text(text = financialRhythm.busiestDay?.toLocalizedDayName().orEmpty(), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
                                 Text(text = "Bu ayın en fazla harcama günü", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
@@ -356,7 +356,7 @@ fun PeriodSummaryScreen(
                                     Text(text = "En düşük hafta", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(text = financialRhythm.lowestExpenseWeekLabel, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                                Text(text = "${financialRhythm.lowestExpenseWeekNumber}. Hafta", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
                                 Text(text = "En az harcama yapılan hafta", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }

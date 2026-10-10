@@ -54,13 +54,35 @@ import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.ReportDateRange
 import com.feniqo.mobile.domain.usecase.CalculateReportDateRangeUseCase
+import com.feniqo.mobile.presentation.common.localizedMonthName
 import com.feniqo.mobile.presentation.theme.FeniqoTextPrimary
 import com.feniqo.mobile.presentation.theme.FeniqoTextSecondary
 import com.feniqo.mobile.presentation.theme.FeniqoWarmStoneBackground
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.report_action_back
+import feniqomobil.sharedui.generated.resources.report_custom_date_action_apply
+import feniqomobil.sharedui.generated.resources.report_custom_date_end
+import feniqomobil.sharedui.generated.resources.report_custom_date_next_month
+import feniqomobil.sharedui.generated.resources.report_custom_date_prev_month
+import feniqomobil.sharedui.generated.resources.report_custom_date_quick_last_90_days
+import feniqomobil.sharedui.generated.resources.report_custom_date_quick_this_month
+import feniqomobil.sharedui.generated.resources.report_custom_date_quick_this_week
+import feniqomobil.sharedui.generated.resources.report_custom_date_quick_title
+import feniqomobil.sharedui.generated.resources.report_custom_date_select
+import feniqomobil.sharedui.generated.resources.report_custom_date_start
+import feniqomobil.sharedui.generated.resources.report_custom_date_title
+import feniqomobil.sharedui.generated.resources.report_day_short_fri
+import feniqomobil.sharedui.generated.resources.report_day_short_mon
+import feniqomobil.sharedui.generated.resources.report_day_short_sat
+import feniqomobil.sharedui.generated.resources.report_day_short_sun
+import feniqomobil.sharedui.generated.resources.report_day_short_thu
+import feniqomobil.sharedui.generated.resources.report_day_short_tue
+import feniqomobil.sharedui.generated.resources.report_day_short_wed
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * 22 Özel tarih aralığı seçim ekranı.
@@ -95,13 +117,13 @@ fun CustomDateRangeScreen(
                 IconButton(onClick = onNavigateBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                        contentDescription = "Geri",
+                        contentDescription = stringResource(Res.string.report_action_back),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "Özel tarih aralığı",
+                    text = stringResource(Res.string.report_custom_date_title),
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
@@ -137,7 +159,7 @@ fun CustomDateRangeScreen(
                     ),
                 ) {
                     Text(
-                        text = "Tarihleri uygula",
+                        text = stringResource(Res.string.report_custom_date_action_apply),
                         style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                     )
                 }
@@ -152,18 +174,19 @@ fun CustomDateRangeScreen(
                 .verticalScroll(rememberScrollState()),
         ) {
             // BAŞLANGIÇ VE BİTİŞ TARİH KARTLARI
+            val selectPlaceholder = stringResource(Res.string.report_custom_date_select)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 DateSummaryCard(
-                    title = "Başlangıç",
-                    dateText = draftStart?.let { ReportSummaryFormatter.formatDateDisplay(it) } ?: "Seçiniz",
+                    title = stringResource(Res.string.report_custom_date_start),
+                    dateText = draftStart?.let { "${it.dayOfMonth} ${localizedMonthName(it.monthNumber)} ${it.year}" } ?: selectPlaceholder,
                     modifier = Modifier.weight(1f),
                 )
                 DateSummaryCard(
-                    title = "Bitiş",
-                    dateText = draftEnd?.let { ReportSummaryFormatter.formatDateDisplay(it) } ?: "Seçiniz",
+                    title = stringResource(Res.string.report_custom_date_end),
+                    dateText = draftEnd?.let { "${it.dayOfMonth} ${localizedMonthName(it.monthNumber)} ${it.year}" } ?: selectPlaceholder,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -198,13 +221,13 @@ fun CustomDateRangeScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
-                                contentDescription = "Önceki Ay",
+                                contentDescription = stringResource(Res.string.report_custom_date_prev_month),
                                 tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
 
                         Text(
-                            text = "${ReportSummaryFormatter.monthName(viewMonth)} $viewYear",
+                            text = "${localizedMonthName(viewMonth)} $viewYear",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface,
                         )
@@ -221,7 +244,7 @@ fun CustomDateRangeScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-                                contentDescription = "Sonraki Ay",
+                                contentDescription = stringResource(Res.string.report_custom_date_next_month),
                                 tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
@@ -230,7 +253,15 @@ fun CustomDateRangeScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     // Gün Başlıkları (Pzt, Sal, Çar, Per, Cum, Cmt, Paz)
-                    val daysOfWeek = listOf("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz")
+                    val daysOfWeek = listOf(
+                        stringResource(Res.string.report_day_short_mon),
+                        stringResource(Res.string.report_day_short_tue),
+                        stringResource(Res.string.report_day_short_wed),
+                        stringResource(Res.string.report_day_short_thu),
+                        stringResource(Res.string.report_day_short_fri),
+                        stringResource(Res.string.report_day_short_sat),
+                        stringResource(Res.string.report_day_short_sun),
+                    )
                     Row(modifier = Modifier.fillMaxWidth()) {
                         daysOfWeek.forEach { dayName ->
                             Text(
@@ -305,7 +336,7 @@ fun CustomDateRangeScreen(
 
             // HIZLI SEÇİM BÖLÜMÜ
             Text(
-                text = "Hızlı seçim",
+                text = stringResource(Res.string.report_custom_date_quick_title),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -315,7 +346,7 @@ fun CustomDateRangeScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 QuickSelectChip(
-                    text = "Bu hafta",
+                    text = stringResource(Res.string.report_custom_date_quick_this_week),
                     onClick = {
                         val dayOfWeek = referenceDate.dayOfWeek.ordinal
                         val start = referenceDate.minus(dayOfWeek, DateTimeUnit.DAY)
@@ -328,13 +359,13 @@ fun CustomDateRangeScreen(
                     modifier = Modifier.weight(1f),
                 )
                 QuickSelectChip(
-                    text = "Bu ay",
+                    text = stringResource(Res.string.report_custom_date_quick_this_month),
                     onClick = {
                         val start = LocalDate(referenceDate.year, referenceDate.monthNumber, 1)
                         val end = LocalDate(
                             referenceDate.year,
                             referenceDate.monthNumber,
-                            CalculateReportDateRangeUseCase.monthLength(referenceDate.year, referenceDate.monthNumber)
+                            CalculateReportDateRangeUseCase.monthLength(referenceDate.year, referenceDate.monthNumber),
                         )
                         draftStart = start
                         draftEnd = end
@@ -344,7 +375,7 @@ fun CustomDateRangeScreen(
                     modifier = Modifier.weight(1f),
                 )
                 QuickSelectChip(
-                    text = "Son 90 gün",
+                    text = stringResource(Res.string.report_custom_date_quick_last_90_days),
                     onClick = {
                         val start = referenceDate.minus(90, DateTimeUnit.DAY)
                         draftStart = start

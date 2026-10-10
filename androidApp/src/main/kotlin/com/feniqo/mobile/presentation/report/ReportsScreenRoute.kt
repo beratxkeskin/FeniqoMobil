@@ -92,20 +92,20 @@ fun PeriodSummaryReportRoute(
 
     PeriodSummaryScreen(
         currentMonth = YearMonth.from(refDate.year, refDate.monthNumber),
-        incomeFormatted = success.incomeFormatted,
-        expenseFormatted = success.expenseFormatted,
-        netFormatted = success.netFormatted,
+        incomeFormatted = success.income.toLocalizedMaskedText(success.maskAmounts),
+        expenseFormatted = success.expense.toLocalizedMaskedText(success.maskAmounts),
+        netFormatted = success.net.toLocalizedMaskedText(success.maskAmounts),
         isNetPositive = success.isNetPositive,
-        savingsRateFormatted = success.savingsRateFormatted,
+        savingsRateFormatted = "%${success.savingsRateBasisPoints / 100}",
         transactionCount = success.report.transactionCount,
         dailyAverageExpenseFormatted = MoneyFormatter.format(
             Money(dailyAvgMinor, success.report.income.currency)
         ),
         weeklyData = emptyList(),
         topCategories = success.categoryBreakdown,
-        donutSlices = success.categoryBreakdown.map { it.name to it.shareRatio },
+        donutSlices = success.categoryBreakdown.map { (it.name ?: "") to it.shareRatio },
         financialRhythm = success.financialRhythm,
-        insightText = success.feniqoInsightText,
+        insightText = success.insightPayload.toLocalizedText(),
         onPreviousMonth = {},
         onNextMonth = {},
         onNavigateToCategoryBreakdown = { onNavigateToCategoryDetail("", "") },
@@ -162,8 +162,8 @@ fun CategoryBreakdownReportRoute(
 
     CategoryBreakdownReportScreen(
         periodLabel = "Bu Ay",
-        totalExpenseFormatted = success.expenseFormatted,
-        totalIncomeFormatted = success.incomeFormatted,
+        totalExpenseFormatted = success.expense.toLocalizedMaskedText(success.maskAmounts),
+        totalIncomeFormatted = success.income.toLocalizedMaskedText(success.maskAmounts),
         expenseTransactionCount = success.report.transactionCount,
         incomeTransactionCount = 0,
         expenseCategories = success.categoryBreakdown,
@@ -196,9 +196,9 @@ fun CategoryDetailReportRoute(
         categoryName = categoryName,
         categoryDescription = "Kategori harcama özeti",
         periodLabel = "Bu Ay",
-        totalSpendingFormatted = catItem?.amountFormatted ?: "₺0",
+        totalSpendingFormatted = catItem?.let { it.amount.toLocalizedMaskedText(it.maskAmounts) } ?: "₺0",
         transactionCount = catItem?.transactionCount ?: 0,
-        periodShareFormatted = catItem?.sharePercentageFormatted ?: "%0",
+        periodShareFormatted = catItem?.let { "%${it.shareBasisPoints / 100}" } ?: "%0",
         weeklyData = emptyList(),
         previousMonthComparisonText = "Geçen aya göre veri hesaplanıyor",
         merchantBreakdown = emptyList(),
@@ -272,11 +272,11 @@ fun PeriodComparisonReportRoute(
 
     val comparisonItems = success?.categoryBreakdown?.map { cb ->
         CategoryComparisonUiItem(
-            name = cb.name,
-            currentFormatted = cb.amountFormatted,
+            name = cb.name.orEmpty(),
+            currentFormatted = cb.amount.toLocalizedMaskedText(cb.maskAmounts),
             previousFormatted = "₺0",
-            deltaFormatted = "+${cb.amountFormatted}",
-            percentageFormatted = cb.sharePercentageFormatted,
+            deltaFormatted = "+${cb.amount.toLocalizedMaskedText(cb.maskAmounts)}",
+            percentageFormatted = "%${cb.shareBasisPoints / 100}",
             isIncreased = true,
         )
     } ?: emptyList()
@@ -284,13 +284,13 @@ fun PeriodComparisonReportRoute(
     PeriodComparisonReportScreen(
         currentPeriodLabel = "Bu Ay",
         previousPeriodLabel = "Geçen Ay",
-        currentNetFormatted = success?.netFormatted ?: "₺0",
+        currentNetFormatted = success?.net?.toLocalizedMaskedText(success.maskAmounts) ?: "₺0",
         previousNetFormatted = "₺0",
-        netDifferenceFormatted = success?.netFormatted ?: "₺0",
+        netDifferenceFormatted = success?.net?.toLocalizedMaskedText(success.maskAmounts) ?: "₺0",
         isNetImproved = success?.isNetPositive ?: true,
-        incomeDeltaFormatted = "+${success?.incomeFormatted ?: "₺0"}",
-        expenseDeltaFormatted = "+${success?.expenseFormatted ?: "₺0"}",
-        savingsRateDeltaFormatted = success?.savingsRateFormatted ?: "%0",
+        incomeDeltaFormatted = "+${success?.income?.toLocalizedMaskedText(success.maskAmounts) ?: "₺0"}",
+        expenseDeltaFormatted = "+${success?.expense?.toLocalizedMaskedText(success.maskAmounts) ?: "₺0"}",
+        savingsRateDeltaFormatted = success?.let { "%${it.savingsRateBasisPoints / 100}" } ?: "%0",
         categoryComparisons = comparisonItems,
         onSelectPeriodClick = { showSheet = true },
         onCategoryClick = {},
