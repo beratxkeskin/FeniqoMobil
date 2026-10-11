@@ -2,6 +2,8 @@ package com.feniqo.mobile.presentation.profile
 
 import com.feniqo.mobile.domain.model.AppLanguage
 import com.feniqo.mobile.domain.model.Currency
+import com.feniqo.mobile.presentation.profile.ProfileUiError
+import com.feniqo.mobile.presentation.profile.ProfileSignOutError
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.ThemePreference
 import com.feniqo.mobile.domain.model.UserProfile
@@ -114,16 +116,16 @@ class ProfileViewModelTest {
             currency = Currency.USD,
         )
 
-        assertEquals("English · USD", viewModel.uiState.value.languageRegionLabel)
-        assertEquals("USD", viewModel.uiState.value.currencyCode)
+        assertEquals(AppLanguage.EN, viewModel.uiState.value.language)
+        assertEquals(Currency.USD, viewModel.uiState.value.currency)
 
         userSettingsRepository.settings.value = UserSettings(
             language = AppLanguage.TR,
             currency = Currency.TRY,
         )
 
-        assertEquals("Türkçe · TRY", viewModel.uiState.value.languageRegionLabel)
-        assertEquals("TRY", viewModel.uiState.value.currencyCode)
+        assertEquals(AppLanguage.TR, viewModel.uiState.value.language)
+        assertEquals(Currency.TRY, viewModel.uiState.value.currency)
     }
 
     @Test
@@ -140,6 +142,27 @@ class ProfileViewModelTest {
         testScheduler.advanceUntilIdle()
 
         assertEquals(1, repository.signOutCalls)
+        assertEquals(null, viewModel.uiState.value.signOutError)
+    }
+
+    @Test
+    fun sign_out_failure_sets_typed_sign_out_error() = runTest {
+        val repository = FakeAuthRepository().apply {
+            signOutResult = RepositoryResult.Failure(com.feniqo.mobile.domain.model.AppError.Network("network"))
+        }
+        val userSettingsRepository = FakeUserSettingsRepository()
+        val viewModel = ProfileViewModel(
+            authRepository = repository,
+            userSettingsRepository = userSettingsRepository,
+            observeActiveWorkspaceUseCase = ObserveActiveWorkspaceUseCase(FakeWorkspaceRepository()),
+        )
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
+
+        viewModel.signOut()
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(1, repository.signOutCalls)
+        assertEquals(ProfileSignOutError.Failed, viewModel.uiState.value.signOutError)
     }
 
     @Test
@@ -160,7 +183,7 @@ class ProfileViewModelTest {
         viewModel.retryProfile()
         testScheduler.advanceUntilIdle()
 
-        assertEquals("Profil bilgileri yüklenemedi. Lütfen tekrar deneyin.", viewModel.uiState.value.profileErrorMessage)
+        assertEquals(ProfileUiError.LoadFailed, viewModel.uiState.value.profileError)
         assertTrue(viewModel.uiState.value.isProfileEmpty)
         assertFalse(viewModel.uiState.value.isLoading)
 
@@ -173,7 +196,7 @@ class ProfileViewModelTest {
         testScheduler.advanceUntilIdle()
 
         // 4. Akış yeniden başlatılarak veriler başarıyla yükleniyor
-        assertEquals(null, viewModel.uiState.value.profileErrorMessage)
+        assertEquals(null, viewModel.uiState.value.profileError)
         assertEquals("Deniz Yılmaz", viewModel.uiState.value.displayName)
         assertEquals("deniz@feniqo.com", viewModel.uiState.value.email)
         assertFalse(viewModel.uiState.value.isProfileEmpty)
@@ -191,12 +214,13 @@ class ProfileViewModelTest {
         val session = MutableStateFlow<AuthSession?>(null)
         var profileFlowOverride: Flow<UserProfile?>? = null
         var signOutCalls = 0
+        var signOutResult: RepositoryResult<Unit> = RepositoryResult.Success(Unit)
         override fun observeSession(): Flow<AuthSession?> = session
         override fun observeCurrentProfile(): Flow<UserProfile?> = profileFlowOverride ?: profile
         override suspend fun signIn(email: String, password: String) = RepositoryResult.Success(Unit)
         override suspend fun signUp(email: String, password: String, fullName: String?) = RepositoryResult.Success(EntityId("user-1"))
         override suspend fun refreshSession() = RepositoryResult.Success(Unit)
-        override suspend fun signOut(): RepositoryResult<Unit> { signOutCalls++; return RepositoryResult.Success(Unit) }
+        override suspend fun signOut(): RepositoryResult<Unit> { signOutCalls++; return signOutResult }
     }
 
     private class FakeUserSettingsRepository : UserSettingsRepository {

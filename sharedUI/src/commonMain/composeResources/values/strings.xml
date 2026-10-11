@@ -2301,4 +2301,92 @@
         <item quantity="one">Bu analiz %1$d adet kayıtlı işlem üzerinden hesaplanmıştır.</item>
         <item quantity="other">Bu analiz %1$d adet kayıtlı işlem üzerinden hesaplanmıştır.</item>
     </plurals>
+    <!-- Profile Localization -->
+    <string name="profile_title">Profil Merkezi</string>
+    <string name="profile_description">Hesabın, ortak alanların ve eşitleme durumun.</string>
+    <string name="profile_back_content_description">Geri</string>
+    <string name="profile_section_account">Hesap</string>
+    <string name="profile_personal_info_title">Kişisel Bilgiler</string>
+    <string name="profile_personal_info_subtitle">Adını ve profilini düzenle</string>
+    <string name="profile_shared_spaces_title">Ortak Alanlar</string>
+    <string name="profile_personal_space_fallback">Kişisel alan</string>
+    <string name="profile_section_app">Uygulama</string>
+    <string name="profile_app_settings_title">Uygulama Ayarları</string>
+    <string name="profile_app_settings_subtitle">Görünüm, bildirimler, güvenlik ve veri araçları</string>
+    <string name="profile_sign_out_action">Çıkış Yap</string>
+    <string name="profile_retry_action">Tekrar Dene</string>
+    <string name="profile_loading_title">Profiliniz yükleniyor</string>
+    <string name="profile_loading_subtitle">Bilgileriniz getiriliyor...</string>
+    <string name="profile_not_found_title">Profil bilgisi bulunamadı</string>
+    <string name="profile_empty_no_record">%1$s · Profil kaydı oluşturulmadı</string>
+    <string name="profile_empty_no_info">%1$s · Bilgi yok</string>
+    <string name="profile_fallback_subtitle">Hesabım ve profil fotoğrafım</string>
+    <string name="profile_error_load_title">Profil bilgileri yüklenemedi</string>
+    <string name="profile_error_load_message">Profil bilgileri yüklenemedi. Lütfen tekrar deneyin.</string>
+    <string name="profile_error_sign_out_message">Çıkış yapılamadı. Lütfen tekrar deneyin.</string>
+    <string name="profile_account_and_photo_semantics">Hesap ve profil fotoğrafı</string>
+    <string name="profile_open_account_details_content_description">Hesap detaylarını aç</string>
+    <string name="profile_badge_coming_soon">Yakında</string>
+    <string name="profile_open_row_semantics">%1$s aç</string>
+
+    <!-- More Hub Localization -->
+    <string name="more_hub_title">Daha Fazla</string>
+    <string name="more_hub_subtitle">Finansının tüm parçaları, bir arada.</string>
+    <string name="more_hub_active_workspace_content_desc">Aktif çalışma alanı: %1$s</string>
+    <string name="more_hub_workspace_personal_fallback">Kişisel</string>
+    <string name="more_hub_profile_and_account_content_desc">Profil ve hesap</string>
+    <string name="more_hub_section_overview">Genel bakış</string>
+    <string name="more_hub_cell_assets">Varlıklar</string>
+    <string name="more_hub_cell_goals">Hedefler</string>
+    <string name="more_hub_cell_subscriptions">Abonelikler</string>
+    <string name="more_hub_cell_recurring">Tekrarlayan</string>
+    <string name="more_hub_empty_assets">Henüz varlık yok.</string>
+    <string name="more_hub_empty_goals">Henüz aktif hedef yok.</string>
+    <string name="more_hub_empty_subscriptions">Henüz aktif abonelik yok.</string>
+    <string name="more_hub_empty_recurring">Önümüzdeki 30 günde planlı kural yok.</string>
+    <string name="more_hub_error_general">Veriler şu an yüklenemedi.</string>
+    <string name="more_hub_error_net_worth_unreliable">Varlık toplamı güvenle gösterilemiyor.</string>
+    <string name="more_hub_loading">Yükleniyor…</string>
+    <string name="more_hub_subscription_nearest_renewal">%1$s\nEn yakın: %2$s</string>
+    <string name="more_hub_recurring_upcoming_window">%1$s\nÖnümüzdeki 30 gün</string>
+    <string name="more_hub_section_wealth">Varlık yönetimi</string>
+    <string name="more_hub_menu_assets_title">Varlıklar</string>
+    <string name="more_hub_menu_assets_subtitle">Banka, nakit ve yatırımlar</string>
+    <string name="more_hub_menu_goals_title">Hedefler</string>
+    <string name="more_hub_menu_goals_subtitle">Birikimlerini planla</string>
+    <string name="more_hub_menu_debts_title">Borç ve Alacaklar</string>
+    <string name="more_hub_menu_debts_subtitle">Ödemelerini takip et</string>
+    <string name="more_hub_section_money">Para yönetimi</string>
+    <string name="more_hub_menu_subscriptions_title">Abonelikler</string>
+    <string name="more_hub_menu_subscriptions_subtitle">Düzenli abonelik ödemeleri</string>
+    <string name="more_hub_menu_recurring_title">Tekrarlayan İşlemler</string>
+    <string name="more_hub_menu_recurring_subtitle">Planlı gelir ve giderler</string>
+    <string name="more_hub_menu_categories_title">Kategoriler</string>
+    <string name="more_hub_menu_categories_subtitle">Gelir ve giderlerini düzenle</string>
+    <string name="more_hub_section_collaboration">Ortak kullanım</string>
+    <string name="more_hub_shared_spaces_promo_title">Ortak Alanlar</string>
+    <string name="more_hub_shared_spaces_promo_subtitle">Aile ve ekibinle\nbirlikte planla.</string>
+    <string name="more_hub_section_insights">İçgörüler</string>
+    <string name="more_hub_menu_reports_title">Raporlar</string>
+    <string name="more_hub_menu_reports_subtitle">Aylık ve yıllık finansal analizler</string>
+    <string name="more_hub_section_settings">Ayarlar</string>
+    <string name="more_hub_menu_settings_title">Uygulama Ayarları</string>
+    <string name="more_hub_menu_settings_subtitle">Görünüm, güvenlik ve veri araçları</string>
+    <string name="more_hub_profile_hint">Profil ve hesabına sağ üstteki simgeden ulaşabilirsin.</string>
+    <plurals name="more_hub_asset_count_plural">
+        <item quantity="one">%1$d varlık</item>
+        <item quantity="other">%1$d varlık</item>
+    </plurals>
+    <plurals name="more_hub_goal_count_plural">
+        <item quantity="one">%1$d aktif hedef</item>
+        <item quantity="other">%1$d aktif hedef</item>
+    </plurals>
+    <plurals name="more_hub_subscription_count_plural">
+        <item quantity="one">%1$d aktif abonelik</item>
+        <item quantity="other">%1$d aktif abonelik</item>
+    </plurals>
+    <plurals name="more_hub_recurring_rule_count_plural">
+        <item quantity="one">%1$d planlı kural</item>
+        <item quantity="other">%1$d planlı kural</item>
+    </plurals>
 </resources>

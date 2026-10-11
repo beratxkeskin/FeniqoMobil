@@ -48,8 +48,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.feniqo.mobile.presentation.common.toLocalizedFormatted
+import com.feniqo.mobile.presentation.common.toLocalizedReadableDate
+import com.feniqo.mobile.presentation.hub.AssetsOverviewPayload
+import com.feniqo.mobile.presentation.hub.GoalsOverviewPayload
+import com.feniqo.mobile.presentation.hub.MoreHubCardEmptyReason
+import com.feniqo.mobile.presentation.hub.MoreHubCardErrorReason
 import com.feniqo.mobile.presentation.hub.MoreHubOverviewCardState
 import com.feniqo.mobile.presentation.hub.MoreHubUiState
+import com.feniqo.mobile.presentation.hub.RecurringOverviewPayload
+import com.feniqo.mobile.presentation.hub.SubscriptionsOverviewPayload
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreenContainer
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
@@ -58,6 +66,9 @@ import com.feniqo.mobile.presentation.theme.FeniqoTextPrimary
 import com.feniqo.mobile.presentation.theme.FeniqoTextSecondary
 import com.feniqo.mobile.presentation.theme.FeniqoTouchTarget
 import com.feniqo.mobile.presentation.theme.FeniqoWarmStoneBackground
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Onaylı tasarım sunumuna ("01 Daha Fazla" ve "02 Aşağı kaydırınca" tek dikey akışı)
@@ -99,7 +110,7 @@ fun MoreHubScreen(
             item("overview") {
                 Column(verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small)) {
                     Text(
-                        text = "Genel bakış",
+                        text = stringResource(Res.string.more_hub_section_overview),
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 18.sp,
@@ -118,11 +129,11 @@ fun MoreHubScreen(
 
             // 3. Varlık Yönetimi (Varlıklar, Hedefler, Borç ve Alacaklar)
             item("wealth_management") {
-                SectionContainer(title = "Varlık yönetimi") {
+                SectionContainer(title = stringResource(Res.string.more_hub_section_wealth)) {
                     MoreHubMenuCard {
                         MoreHubMenuItemRow(
-                            title = "Varlıklar",
-                            subtitle = "Banka, nakit ve yatırımlar",
+                            title = stringResource(Res.string.more_hub_menu_assets_title),
+                            subtitle = stringResource(Res.string.more_hub_menu_assets_subtitle),
                             icon = { MoreHubWalletIcon() },
                             onClick = onNavigateToAssets,
                         )
@@ -132,8 +143,8 @@ fun MoreHubScreen(
                             modifier = Modifier.padding(horizontal = FeniqoSpacing.Large),
                         )
                         MoreHubMenuItemRow(
-                            title = "Hedefler",
-                            subtitle = "Birikimlerini planla",
+                            title = stringResource(Res.string.more_hub_menu_goals_title),
+                            subtitle = stringResource(Res.string.more_hub_menu_goals_subtitle),
                             icon = { MoreHubTargetIcon() },
                             onClick = onNavigateToGoals,
                         )
@@ -143,8 +154,8 @@ fun MoreHubScreen(
                             modifier = Modifier.padding(horizontal = FeniqoSpacing.Large),
                         )
                         MoreHubMenuItemRow(
-                            title = "Borç ve Alacaklar",
-                            subtitle = "Ödemelerini takip et",
+                            title = stringResource(Res.string.more_hub_menu_debts_title),
+                            subtitle = stringResource(Res.string.more_hub_menu_debts_subtitle),
                             icon = { MoreHubExchangeArrowsIcon() },
                             onClick = onNavigateToDebts,
                         )
@@ -154,11 +165,11 @@ fun MoreHubScreen(
 
             // 4. Para Yönetimi (Abonelikler, Tekrarlayan İşlemler, Kategoriler)
             item("money_management") {
-                SectionContainer(title = "Para yönetimi") {
+                SectionContainer(title = stringResource(Res.string.more_hub_section_money)) {
                     MoreHubMenuCard {
                         MoreHubMenuItemRow(
-                            title = "Abonelikler",
-                            subtitle = "Düzenli abonelik ödemeleri",
+                            title = stringResource(Res.string.more_hub_menu_subscriptions_title),
+                            subtitle = stringResource(Res.string.more_hub_menu_subscriptions_subtitle),
                             icon = { MoreHubCalendarIcon() },
                             onClick = onNavigateToSubscriptions,
                         )
@@ -168,8 +179,8 @@ fun MoreHubScreen(
                             modifier = Modifier.padding(horizontal = FeniqoSpacing.Large),
                         )
                         MoreHubMenuItemRow(
-                            title = "Tekrarlayan İşlemler",
-                            subtitle = "Planlı gelir ve giderler",
+                            title = stringResource(Res.string.more_hub_menu_recurring_title),
+                            subtitle = stringResource(Res.string.more_hub_menu_recurring_subtitle),
                             icon = { MoreHubLoopArrowsIcon() },
                             onClick = onNavigateToRecurringTransactions,
                         )
@@ -179,8 +190,8 @@ fun MoreHubScreen(
                             modifier = Modifier.padding(horizontal = FeniqoSpacing.Large),
                         )
                         MoreHubMenuItemRow(
-                            title = "Kategoriler",
-                            subtitle = "Gelir ve giderlerini düzenle",
+                            title = stringResource(Res.string.more_hub_menu_categories_title),
+                            subtitle = stringResource(Res.string.more_hub_menu_categories_subtitle),
                             icon = { MoreHubTagIcon() },
                             onClick = onNavigateToCategories,
                         )
@@ -190,18 +201,18 @@ fun MoreHubScreen(
 
             // 5. Ortak Kullanım (Ortak Alanlar)
             item("collaboration") {
-                SectionContainer(title = "Ortak kullanım") {
+                SectionContainer(title = stringResource(Res.string.more_hub_section_collaboration)) {
                     MoreHubSharedSpacesCard(onClick = onNavigateToSharedSpaces)
                 }
             }
 
             // 6. İçgörüler (Raporlar)
             item("insights") {
-                SectionContainer(title = "İçgörüler") {
+                SectionContainer(title = stringResource(Res.string.more_hub_section_insights)) {
                     MoreHubMenuCard {
                         MoreHubMenuItemRow(
-                            title = "Raporlar",
-                            subtitle = "Aylık ve yıllık finansal analizler",
+                            title = stringResource(Res.string.more_hub_menu_reports_title),
+                            subtitle = stringResource(Res.string.more_hub_menu_reports_subtitle),
                             icon = { MoreHubBarChartIcon() },
                             onClick = onNavigateToReports,
                         )
@@ -211,11 +222,11 @@ fun MoreHubScreen(
 
             // 7. Ayarlar (Uygulama Ayarları)
             item("settings") {
-                SectionContainer(title = "Ayarlar") {
+                SectionContainer(title = stringResource(Res.string.more_hub_section_settings)) {
                     MoreHubMenuCard {
                         MoreHubMenuItemRow(
-                            title = "Uygulama Ayarları",
-                            subtitle = "Görünüm, güvenlik ve veri araçları",
+                            title = stringResource(Res.string.more_hub_menu_settings_title),
+                            subtitle = stringResource(Res.string.more_hub_menu_settings_subtitle),
                             icon = { MoreHubSettingsGearIcon() },
                             onClick = onNavigateToSettings,
                         )
@@ -265,6 +276,7 @@ private fun MoreHubTopHeader(
                 color = FeniqoSageGreen,
             )
 
+            val profileSemantics = stringResource(Res.string.more_hub_profile_and_account_content_desc)
             Surface(
                 modifier = Modifier
                     .size(FeniqoTouchTarget.Minimum)
@@ -273,7 +285,7 @@ private fun MoreHubTopHeader(
                         role = Role.Button,
                         onClick = onNavigateToProfile,
                     )
-                    .semantics { contentDescription = "Profil ve hesap" },
+                    .semantics { contentDescription = profileSemantics },
                 shape = CircleShape,
                 color = FeniqoSageGreenContainer,
                 contentColor = FeniqoSageGreen,
@@ -291,7 +303,7 @@ private fun MoreHubTopHeader(
 
         // Büyük Başlık
         Text(
-            text = "Daha Fazla",
+            text = stringResource(Res.string.more_hub_title),
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold,
                 fontSize = 28.sp,
@@ -302,7 +314,7 @@ private fun MoreHubTopHeader(
 
         // Alt Metin
         Text(
-            text = "Finansının tüm parçaları, bir arada.",
+            text = stringResource(Res.string.more_hub_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -310,12 +322,14 @@ private fun MoreHubTopHeader(
         Spacer(modifier = Modifier.height(2.dp))
 
         // Aktif Çalışma Alanı Rozeti
-        val currentWorkspace = workspaceName?.trim()?.takeIf { it.isNotBlank() } ?: "Kişisel"
+        val currentWorkspace = workspaceName?.trim()?.takeIf { it.isNotBlank() }
+            ?: stringResource(Res.string.more_hub_workspace_personal_fallback)
+        val workspaceSemantics = stringResource(Res.string.more_hub_active_workspace_content_desc, currentWorkspace)
         Surface(
             shape = RoundedCornerShape(12.dp),
             color = MaterialTheme.colorScheme.surfaceVariant,
             modifier = Modifier.semantics {
-                contentDescription = "Aktif çalışma alanı: $currentWorkspace"
+                contentDescription = workspaceSemantics
             },
         ) {
             Row(
@@ -397,12 +411,12 @@ private fun MoreHubOverviewGraphiteCard(
                 ) {
                     OverviewCell(
                         modifier = Modifier.weight(1f),
-                        title = "Varlıklar",
+                        title = stringResource(Res.string.more_hub_cell_assets),
                         icon = { MoreHubWalletIcon(size = 18.dp) },
-                        cardState = state.assets,
-                        defaultSecondary = null,
                         onClick = onNavigateToAssets,
-                    )
+                    ) {
+                        AssetsOverviewContent(state.assets)
+                    }
                     Box(
                         modifier = Modifier
                             .width(1.dp)
@@ -411,12 +425,12 @@ private fun MoreHubOverviewGraphiteCard(
                     )
                     OverviewCell(
                         modifier = Modifier.weight(1f),
-                        title = "Hedefler",
+                        title = stringResource(Res.string.more_hub_cell_goals),
                         icon = { MoreHubTargetIcon(size = 18.dp) },
-                        cardState = state.goals,
-                        defaultSecondary = "aktif hedef",
                         onClick = onNavigateToGoals,
-                    )
+                    ) {
+                        GoalsOverviewContent(state.goals)
+                    }
                 }
 
                 // Yatay İnce Ayırıcı
@@ -435,12 +449,12 @@ private fun MoreHubOverviewGraphiteCard(
                 ) {
                     OverviewCell(
                         modifier = Modifier.weight(1f),
-                        title = "Abonelikler",
+                        title = stringResource(Res.string.more_hub_cell_subscriptions),
                         icon = { MoreHubCalendarIcon(size = 18.dp) },
-                        cardState = state.subscriptions,
-                        defaultSecondary = "aktif abonelik",
                         onClick = onNavigateToSubscriptions,
-                    )
+                    ) {
+                        SubscriptionsOverviewContent(state.subscriptions)
+                    }
                     Box(
                         modifier = Modifier
                             .width(1.dp)
@@ -449,14 +463,265 @@ private fun MoreHubOverviewGraphiteCard(
                     )
                     OverviewCell(
                         modifier = Modifier.weight(1f),
-                        title = "Tekrarlayan",
+                        title = stringResource(Res.string.more_hub_cell_recurring),
                         icon = { MoreHubLoopArrowsIcon(size = 18.dp) },
-                        cardState = state.recurringTransactions,
-                        defaultSecondary = "planlı kural",
                         onClick = onNavigateToRecurringTransactions,
-                    )
+                    ) {
+                        RecurringOverviewContent(state.recurringTransactions)
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun AssetsOverviewContent(state: MoreHubOverviewCardState<AssetsOverviewPayload>) {
+    when (state) {
+        MoreHubOverviewCardState.Loading -> {
+            Text(
+                text = stringResource(Res.string.more_hub_loading),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFF8C9B9F),
+            )
+        }
+        is MoreHubOverviewCardState.Content -> {
+            val formattedTotals = mutableListOf<String>()
+            for (money in state.data.totals) {
+                formattedTotals.add(money.toLocalizedFormatted())
+            }
+            val primary = formattedTotals.joinToString(" · ")
+            Text(
+                text = primary,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = if (primary.length > 8) 19.sp else 23.sp,
+                ).merge(FeniqoTabularNumberStyle),
+                color = Color.White,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            val secondary = pluralStringResource(
+                Res.plurals.more_hub_asset_count_plural,
+                state.data.assetCount,
+                state.data.assetCount,
+            )
+            Text(
+                text = secondary,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                ),
+                color = Color(0xFF8C9B9F),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        is MoreHubOverviewCardState.Empty -> {
+            Text(
+                text = stringResource(Res.string.more_hub_empty_assets),
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                color = Color(0xFF8C9B9F),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        is MoreHubOverviewCardState.Error -> {
+            val msg = when (state.reason) {
+                MoreHubCardErrorReason.NetWorthUnreliable -> stringResource(Res.string.more_hub_error_net_worth_unreliable)
+                MoreHubCardErrorReason.General -> stringResource(Res.string.more_hub_error_general)
+            }
+            Text(
+                text = msg,
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                color = Color(0xFFFFB4AB),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun GoalsOverviewContent(state: MoreHubOverviewCardState<GoalsOverviewPayload>) {
+    when (state) {
+        MoreHubOverviewCardState.Loading -> {
+            Text(
+                text = stringResource(Res.string.more_hub_loading),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFF8C9B9F),
+            )
+        }
+        is MoreHubOverviewCardState.Content -> {
+            Text(
+                text = state.data.activeGoalCount.toString(),
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 23.sp,
+                ).merge(FeniqoTabularNumberStyle),
+                color = Color.White,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            val secondary = pluralStringResource(
+                Res.plurals.more_hub_goal_count_plural,
+                state.data.activeGoalCount,
+                state.data.activeGoalCount,
+            )
+            Text(
+                text = secondary,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                ),
+                color = Color(0xFF8C9B9F),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        is MoreHubOverviewCardState.Empty -> {
+            Text(
+                text = stringResource(Res.string.more_hub_empty_goals),
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                color = Color(0xFF8C9B9F),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        is MoreHubOverviewCardState.Error -> {
+            Text(
+                text = stringResource(Res.string.more_hub_error_general),
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                color = Color(0xFFFFB4AB),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SubscriptionsOverviewContent(state: MoreHubOverviewCardState<SubscriptionsOverviewPayload>) {
+    when (state) {
+        MoreHubOverviewCardState.Loading -> {
+            Text(
+                text = stringResource(Res.string.more_hub_loading),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFF8C9B9F),
+            )
+        }
+        is MoreHubOverviewCardState.Content -> {
+            Text(
+                text = state.data.activeSubscriptionCount.toString(),
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 23.sp,
+                ).merge(FeniqoTabularNumberStyle),
+                color = Color.White,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            val countText = pluralStringResource(
+                Res.plurals.more_hub_subscription_count_plural,
+                state.data.activeSubscriptionCount,
+                state.data.activeSubscriptionCount,
+            )
+            val secondary = if (state.data.nearestRenewalDate != null) {
+                stringResource(
+                    Res.string.more_hub_subscription_nearest_renewal,
+                    countText,
+                    state.data.nearestRenewalDate.toLocalizedReadableDate(),
+                )
+            } else {
+                countText
+            }
+            Text(
+                text = secondary,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                ),
+                color = Color(0xFF8C9B9F),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        is MoreHubOverviewCardState.Empty -> {
+            Text(
+                text = stringResource(Res.string.more_hub_empty_subscriptions),
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                color = Color(0xFF8C9B9F),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        is MoreHubOverviewCardState.Error -> {
+            Text(
+                text = stringResource(Res.string.more_hub_error_general),
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                color = Color(0xFFFFB4AB),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RecurringOverviewContent(state: MoreHubOverviewCardState<RecurringOverviewPayload>) {
+    when (state) {
+        MoreHubOverviewCardState.Loading -> {
+            Text(
+                text = stringResource(Res.string.more_hub_loading),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFF8C9B9F),
+            )
+        }
+        is MoreHubOverviewCardState.Content -> {
+            Text(
+                text = state.data.upcomingRuleCount.toString(),
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 23.sp,
+                ).merge(FeniqoTabularNumberStyle),
+                color = Color.White,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            val countText = pluralStringResource(
+                Res.plurals.more_hub_recurring_rule_count_plural,
+                state.data.upcomingRuleCount,
+                state.data.upcomingRuleCount,
+            )
+            val secondary = stringResource(Res.string.more_hub_recurring_upcoming_window, countText)
+            Text(
+                text = secondary,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                ),
+                color = Color(0xFF8C9B9F),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        is MoreHubOverviewCardState.Empty -> {
+            Text(
+                text = stringResource(Res.string.more_hub_empty_recurring),
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                color = Color(0xFF8C9B9F),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        is MoreHubOverviewCardState.Error -> {
+            Text(
+                text = stringResource(Res.string.more_hub_error_general),
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                color = Color(0xFFFFB4AB),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -468,10 +733,9 @@ private fun MoreHubOverviewGraphiteCard(
 private fun OverviewCell(
     title: String,
     icon: @Composable () -> Unit,
-    cardState: MoreHubOverviewCardState,
-    defaultSecondary: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
 ) {
     Column(
         modifier = modifier
@@ -506,62 +770,8 @@ private fun OverviewCell(
 
         Spacer(modifier = Modifier.height(2.dp))
 
-        // Değer ve Alt Metin
-        when (cardState) {
-            MoreHubOverviewCardState.Loading -> {
-                Text(
-                    text = "Yükleniyor…",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF8C9B9F),
-                )
-            }
-
-            is MoreHubOverviewCardState.Content -> {
-                Text(
-                    text = cardState.primaryText,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = if (cardState.primaryText.length > 8) 19.sp else 23.sp,
-                    ).merge(FeniqoTabularNumberStyle),
-                    color = Color.White,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                val secondary = cardState.secondaryText ?: defaultSecondary
-                if (!secondary.isNullOrBlank()) {
-                    Text(
-                        text = secondary,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = 12.sp,
-                            lineHeight = 16.sp,
-                        ),
-                        color = Color(0xFF8C9B9F),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-
-            is MoreHubOverviewCardState.Empty -> {
-                Text(
-                    text = cardState.message,
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                    color = Color(0xFF8C9B9F),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-
-            is MoreHubOverviewCardState.Error -> {
-                Text(
-                    text = cardState.message,
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                    color = Color(0xFFFFB4AB),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
+        // Değer ve Alt Metin slotu
+        content()
     }
 }
 
@@ -715,7 +925,7 @@ private fun MoreHubSharedSpacesCard(
                 verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.ExtraSmall),
             ) {
                 Text(
-                    text = "Ortak Alanlar",
+                    text = stringResource(Res.string.more_hub_shared_spaces_promo_title),
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
@@ -723,7 +933,7 @@ private fun MoreHubSharedSpacesCard(
                     color = Color(0xFF1E3A2B),
                 )
                 Text(
-                    text = "Aile ve ekibinle\nbirlikte planla.",
+                    text = stringResource(Res.string.more_hub_shared_spaces_promo_subtitle),
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = 13.sp,
                         lineHeight = 18.sp,
@@ -811,7 +1021,7 @@ private fun MoreHubProfileHintRow(
                 size = 20.dp,
             )
             Text(
-                text = "Profil ve hesabına sağ üstteki simgeden ulaşabilirsin.",
+                text = stringResource(Res.string.more_hub_profile_hint),
                 style = MaterialTheme.typography.bodySmall.copy(
                     fontSize = 13.sp,
                 ),

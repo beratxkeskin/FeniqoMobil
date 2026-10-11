@@ -2300,4 +2300,92 @@
         <item quantity="one">This analysis is calculated based on %1$d recorded transaction.</item>
         <item quantity="other">This analysis is calculated based on %1$d recorded transactions.</item>
     </plurals>
+    <!-- Profile Localization -->
+    <string name="profile_title">Profile Center</string>
+    <string name="profile_description">Your account, shared spaces, and sync status.</string>
+    <string name="profile_back_content_description">Back</string>
+    <string name="profile_section_account">Account</string>
+    <string name="profile_personal_info_title">Personal Information</string>
+    <string name="profile_personal_info_subtitle">Edit your name and profile</string>
+    <string name="profile_shared_spaces_title">Shared Spaces</string>
+    <string name="profile_personal_space_fallback">Personal space</string>
+    <string name="profile_section_app">Application</string>
+    <string name="profile_app_settings_title">App Settings</string>
+    <string name="profile_app_settings_subtitle">Appearance, notifications, security, and data tools</string>
+    <string name="profile_sign_out_action">Sign Out</string>
+    <string name="profile_retry_action">Retry</string>
+    <string name="profile_loading_title">Loading profile</string>
+    <string name="profile_loading_subtitle">Retrieving your details...</string>
+    <string name="profile_not_found_title">Profile not found</string>
+    <string name="profile_empty_no_record">%1$s · No profile record created</string>
+    <string name="profile_empty_no_info">%1$s · No info</string>
+    <string name="profile_fallback_subtitle">My account and profile picture</string>
+    <string name="profile_error_load_title">Failed to load profile</string>
+    <string name="profile_error_load_message">Failed to load profile information. Please try again.</string>
+    <string name="profile_error_sign_out_message">Failed to sign out. Please try again.</string>
+    <string name="profile_account_and_photo_semantics">Account and profile picture</string>
+    <string name="profile_open_account_details_content_description">Open account details</string>
+    <string name="profile_badge_coming_soon">Coming soon</string>
+    <string name="profile_open_row_semantics">Open %1$s</string>
+
+    <!-- More Hub Localization -->
+    <string name="more_hub_title">More</string>
+    <string name="more_hub_subtitle">All pieces of your finances, together.</string>
+    <string name="more_hub_active_workspace_content_desc">Active workspace: %1$s</string>
+    <string name="more_hub_workspace_personal_fallback">Personal</string>
+    <string name="more_hub_profile_and_account_content_desc">Profile and account</string>
+    <string name="more_hub_section_overview">Overview</string>
+    <string name="more_hub_cell_assets">Assets</string>
+    <string name="more_hub_cell_goals">Goals</string>
+    <string name="more_hub_cell_subscriptions">Subscriptions</string>
+    <string name="more_hub_cell_recurring">Recurring</string>
+    <string name="more_hub_empty_assets">No assets yet.</string>
+    <string name="more_hub_empty_goals">No active goals yet.</string>
+    <string name="more_hub_empty_subscriptions">No active subscriptions yet.</string>
+    <string name="more_hub_empty_recurring">No scheduled rules in the next 30 days.</string>
+    <string name="more_hub_error_general">Data could not be loaded at this time.</string>
+    <string name="more_hub_error_net_worth_unreliable">Asset total cannot be displayed safely.</string>
+    <string name="more_hub_loading">Loading…</string>
+    <string name="more_hub_subscription_nearest_renewal">%1$s\nNearest: %2$s</string>
+    <string name="more_hub_recurring_upcoming_window">%1$s\nNext 30 days</string>
+    <string name="more_hub_section_wealth">Wealth management</string>
+    <string name="more_hub_menu_assets_title">Assets</string>
+    <string name="more_hub_menu_assets_subtitle">Bank, cash, and investments</string>
+    <string name="more_hub_menu_goals_title">Goals</string>
+    <string name="more_hub_menu_goals_subtitle">Plan your savings</string>
+    <string name="more_hub_menu_debts_title">Debts and Receivables</string>
+    <string name="more_hub_menu_debts_subtitle">Track your payments</string>
+    <string name="more_hub_section_money">Money management</string>
+    <string name="more_hub_menu_subscriptions_title">Subscriptions</string>
+    <string name="more_hub_menu_subscriptions_subtitle">Recurring subscription payments</string>
+    <string name="more_hub_menu_recurring_title">Recurring Transactions</string>
+    <string name="more_hub_menu_recurring_subtitle">Scheduled income and expenses</string>
+    <string name="more_hub_menu_categories_title">Categories</string>
+    <string name="more_hub_menu_categories_subtitle">Organize your income and expenses</string>
+    <string name="more_hub_section_collaboration">Collaboration</string>
+    <string name="more_hub_shared_spaces_promo_title">Shared Spaces</string>
+    <string name="more_hub_shared_spaces_promo_subtitle">Plan together with\nfamily and team.</string>
+    <string name="more_hub_section_insights">Insights</string>
+    <string name="more_hub_menu_reports_title">Reports</string>
+    <string name="more_hub_menu_reports_subtitle">Monthly and yearly financial analyses</string>
+    <string name="more_hub_section_settings">Settings</string>
+    <string name="more_hub_menu_settings_title">App Settings</string>
+    <string name="more_hub_menu_settings_subtitle">Appearance, security, and data tools</string>
+    <string name="more_hub_profile_hint">You can access your profile and account from the icon on top right.</string>
+    <plurals name="more_hub_asset_count_plural">
+        <item quantity="one">%1$d asset</item>
+        <item quantity="other">%1$d assets</item>
+    </plurals>
+    <plurals name="more_hub_goal_count_plural">
+        <item quantity="one">%1$d active goal</item>
+        <item quantity="other">%1$d active goals</item>
+    </plurals>
+    <plurals name="more_hub_subscription_count_plural">
+        <item quantity="one">%1$d active subscription</item>
+        <item quantity="other">%1$d active subscriptions</item>
+    </plurals>
+    <plurals name="more_hub_recurring_rule_count_plural">
+        <item quantity="one">%1$d scheduled rule</item>
+        <item quantity="other">%1$d scheduled rules</item>
+    </plurals>
 </resources>

@@ -13,10 +13,6 @@ import com.feniqo.mobile.domain.usecase.ObserveSubscriptionsUseCase
 import com.feniqo.mobile.domain.validation.RecurrenceScheduleCalculator
 import com.feniqo.mobile.domain.validation.GoalProgressCalculator
 import com.feniqo.mobile.presentation.common.CurrentDateProvider
-import com.feniqo.mobile.presentation.hub.MoreHubOverviewCardState
-import com.feniqo.mobile.presentation.hub.MoreHubUiState
-import com.feniqo.mobile.presentation.util.DateFormatter
-import com.feniqo.mobile.presentation.util.MoneyFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -44,15 +40,17 @@ class MoreHubViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val assets = observeCard(observeAssetsUseCase()) { items ->
-        if (items.isEmpty()) return@observeCard MoreHubOverviewCardState.Empty("Henüz varlık yok.")
+        if (items.isEmpty()) return@observeCard MoreHubOverviewCardState.Empty(MoreHubCardEmptyReason.NoAssets)
         when (val netWorth = calculateNetWorthUseCase(items)) {
             is NetWorthCalculationResult.Success -> MoreHubOverviewCardState.Content(
-                primaryText = netWorth.totals.joinToString(" · ") { MoneyFormatter.format(it) },
-                secondaryText = "${netWorth.assetCount} varlık",
+                AssetsOverviewPayload(
+                    totals = netWorth.totals,
+                    assetCount = netWorth.assetCount,
+                ),
             )
             NetWorthCalculationResult.InvalidAssetValue,
             NetWorthCalculationResult.Overflow,
-            -> MoreHubOverviewCardState.Error("Varlık toplamı güvenle gösterilemiyor.")
+            -> MoreHubOverviewCardState.Error(MoreHubCardErrorReason.NetWorthUnreliable)
         }
     }
 
@@ -61,11 +59,10 @@ class MoreHubViewModel @Inject constructor(
             GoalProgressCalculator.calculateProgress(it.targetAmount, it.currentAmount).status == GoalStatus.IN_PROGRESS
         }
         if (activeCount == 0) {
-            MoreHubOverviewCardState.Empty("Henüz aktif hedef yok.")
+            MoreHubOverviewCardState.Empty(MoreHubCardEmptyReason.NoActiveGoals)
         } else {
             MoreHubOverviewCardState.Content(
-                primaryText = "$activeCount",
-                secondaryText = "aktif hedef",
+                GoalsOverviewPayload(activeGoalCount = activeCount),
             )
         }
     }
@@ -73,13 +70,14 @@ class MoreHubViewModel @Inject constructor(
     private val subscriptions = observeCard(observeSubscriptionsUseCase()) { items ->
         val active = items.filter { it.isActive }
         if (active.isEmpty()) {
-            MoreHubOverviewCardState.Empty("Henüz aktif abonelik yok.")
+            MoreHubOverviewCardState.Empty(MoreHubCardEmptyReason.NoActiveSubscriptions)
         } else {
             val nearest = active.minByOrNull { it.nextRenewalDate }?.nextRenewalDate
             MoreHubOverviewCardState.Content(
-                primaryText = "${active.size}",
-                secondaryText = nearest?.let { "aktif abonelik\nEn yakın: ${DateFormatter.formatReadableDate(it)}" }
-                    ?: "aktif abonelik",
+                SubscriptionsOverviewPayload(
+                    activeSubscriptionCount = active.size,
+                    nearestRenewalDate = nearest,
+                ),
             )
         }
     }
@@ -95,11 +93,10 @@ class MoreHubViewModel @Inject constructor(
             )
         }
         if (upcomingRuleCount == 0) {
-            MoreHubOverviewCardState.Empty("Önümüzdeki 30 günde planlı kural yok.")
+            MoreHubOverviewCardState.Empty(MoreHubCardEmptyReason.NoUpcomingRecurringRules)
         } else {
             MoreHubOverviewCardState.Content(
-                primaryText = "$upcomingRuleCount",
-                secondaryText = "planlı kural\nÖnümüzdeki 30 gün",
+                RecurringOverviewPayload(upcomingRuleCount = upcomingRuleCount),
             )
         }
     }
@@ -124,15 +121,15 @@ class MoreHubViewModel @Inject constructor(
         initialValue = MoreHubUiState(),
     )
 
-    private fun <T> observeCard(
+    private fun <T, R> observeCard(
         source: Flow<T>,
-        mapper: (T) -> MoreHubOverviewCardState,
-    ): Flow<MoreHubOverviewCardState> = source
+        mapper: (T) -> MoreHubOverviewCardState<R>,
+    ): Flow<MoreHubOverviewCardState<R>> = source
         .map(mapper)
         .onStart { emit(MoreHubOverviewCardState.Loading) }
         .catch { throwable ->
             if (throwable is CancellationException) throw throwable
-            emit(MoreHubOverviewCardState.Error())
+            emit(MoreHubOverviewCardState.Error(MoreHubCardErrorReason.General))
         }
 
     /**

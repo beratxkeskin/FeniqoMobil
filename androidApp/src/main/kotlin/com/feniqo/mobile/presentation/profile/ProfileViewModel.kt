@@ -2,9 +2,6 @@ package com.feniqo.mobile.presentation.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.feniqo.mobile.domain.model.AppLanguage
-import com.feniqo.mobile.domain.model.UserSettings
-import com.feniqo.mobile.domain.model.Workspace
 import com.feniqo.mobile.domain.repository.AuthRepository
 import com.feniqo.mobile.domain.repository.RepositoryResult
 import com.feniqo.mobile.domain.repository.UserSettingsRepository
@@ -21,18 +18,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-data class ProfileUiState(
-    val displayName: String = "",
-    val email: String = "",
-    val workspaceName: String = "Kişisel alan",
-    val currencyCode: String = "TRY",
-    val languageRegionLabel: String = "Türkçe · TRY",
-    val isLoading: Boolean = true,
-    val isProfileEmpty: Boolean = false,
-    val profileErrorMessage: String? = null,
-    val signOutError: String? = null,
-)
-
 /** Room-backed profile, session fallback, active workspace and true retry support for the profile center. */
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
@@ -41,7 +26,7 @@ class ProfileViewModel @Inject constructor(
     observeActiveWorkspaceUseCase: ObserveActiveWorkspaceUseCase,
 ) : ViewModel() {
     private val retryTrigger = MutableStateFlow(0)
-    private val signOutError = MutableStateFlow<String?>(null)
+    private val signOutError = MutableStateFlow<ProfileSignOutError?>(null)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val uiState: StateFlow<ProfileUiState> = retryTrigger.flatMapLatest {
@@ -67,12 +52,6 @@ class ProfileViewModel @Inject constructor(
                 else -> ""
             }
 
-            val languageName = when (settings.language) {
-                AppLanguage.TR -> "Türkçe"
-                AppLanguage.EN -> "English"
-            }
-            val languageRegion = "$languageName · ${settings.currency.code}"
-
             // Veri akışları ilk değerlerini ürettiğinde yükleme bitmiştir.
             // Boş profil: Room'da profil yok ve oturumda geçerli bir e-posta bulunmuyor.
             val isEmpty = profile == null && effectiveEmail.isBlank()
@@ -80,12 +59,12 @@ class ProfileViewModel @Inject constructor(
             ProfileUiState(
                 displayName = effectiveDisplayName,
                 email = effectiveEmail,
-                workspaceName = workspace?.name ?: "Kişisel alan",
-                currencyCode = settings.currency.code,
-                languageRegionLabel = languageRegion,
+                workspaceName = workspace?.name,
+                currency = settings.currency,
+                language = settings.language,
                 isLoading = false,
                 isProfileEmpty = isEmpty,
-                profileErrorMessage = null,
+                profileError = null,
                 signOutError = sError,
             )
         }.catch {
@@ -93,7 +72,7 @@ class ProfileViewModel @Inject constructor(
                 ProfileUiState(
                     isLoading = false,
                     isProfileEmpty = true,
-                    profileErrorMessage = "Profil bilgileri yüklenemedi. Lütfen tekrar deneyin.",
+                    profileError = ProfileUiError.LoadFailed,
                     signOutError = signOutError.value,
                 ),
             )
@@ -111,7 +90,7 @@ class ProfileViewModel @Inject constructor(
     fun signOut() {
         viewModelScope.launch {
             if (authRepository.signOut() is RepositoryResult.Failure) {
-                signOutError.value = "Çıkış yapılamadı. Lütfen tekrar deneyin."
+                signOutError.value = ProfileSignOutError.Failed
             }
         }
     }

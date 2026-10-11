@@ -23,8 +23,8 @@ class MoreHubViewModelTest {
     @Test fun assetSummary_keepsCurrenciesSeparate() = runHubTest { fixture, state ->
         fixture.assets.items.value = listOf(asset("try", 10_000, Currency.TRY), asset("usd", 2_000, Currency.USD))
         val content = state().assets as MoreHubOverviewCardState.Content
-        assertEquals(2, content.primaryText.split(" · ").size)
-        assertEquals("2 varlık", content.secondaryText)
+        assertEquals(2, content.data.totals.size)
+        assertEquals(2, content.data.assetCount)
     }
 
     @Test fun assetOverflow_onlySetsAssetCardToError() = runHubTest { fixture, state ->
@@ -35,24 +35,27 @@ class MoreHubViewModelTest {
 
     @Test fun goals_countOnlyInProgress() = runHubTest { fixture, state ->
         fixture.goals.items.value = listOf(goal("open", 10_000, 1), goal("done", 10_000, 10_000))
-        assertTrue((state().goals as MoreHubOverviewCardState.Content).primaryText.startsWith("1"))
+        val content = state().goals as MoreHubOverviewCardState.Content
+        assertEquals(1, content.data.activeGoalCount)
     }
 
     @Test fun subscriptions_countOnlyActiveAndUseNearestRenewal() = runHubTest { fixture, state ->
         fixture.subscriptions.items.value = listOf(subscription("later", true, LocalDate(2026, 10, 1)), subscription("nearest", true, LocalDate(2026, 9, 15)), subscription("paused", false, LocalDate(2026, 9, 13)))
         val content = state().subscriptions as MoreHubOverviewCardState.Content
-        assertTrue(content.primaryText.startsWith("2"))
-        assertTrue(content.secondaryText.orEmpty().contains("15"))
+        assertEquals(2, content.data.activeSubscriptionCount)
+        assertEquals(LocalDate(2026, 9, 15), content.data.nearestRenewalDate)
     }
 
     @Test fun recurring_countsTodayAndDayThirtyButNotDayThirtyOne() = runHubTest { fixture, state ->
         fixture.recurring.items.value = listOf(recurring("today", LocalDate(2026, 9, 12)), recurring("day30", LocalDate(2026, 10, 12)), recurring("day31", LocalDate(2026, 10, 13)))
-        assertTrue((state().recurringTransactions as MoreHubOverviewCardState.Content).primaryText.startsWith("2"))
+        val content = state().recurringTransactions as MoreHubOverviewCardState.Content
+        assertEquals(2, content.data.upcomingRuleCount)
     }
 
     @Test fun recurring_pastStartWithoutLastGeneration_findsOccurrenceInWindow() = runHubTest { fixture, state ->
         fixture.recurring.items.value = listOf(recurring("weekly", LocalDate(2026, 8, 1), frequency = RecurrenceFrequency.WEEKLY))
-        assertTrue((state().recurringTransactions as MoreHubOverviewCardState.Content).primaryText.startsWith("1"))
+        val content = state().recurringTransactions as MoreHubOverviewCardState.Content
+        assertEquals(1, content.data.upcomingRuleCount)
     }
 
     @Test fun recurring_ignoresInactiveAndExpiredRules() = runHubTest { fixture, state ->

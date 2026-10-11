@@ -22,20 +22,27 @@ import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.feniqo.mobile.domain.model.AppLanguage
+import com.feniqo.mobile.domain.model.Currency
+import com.feniqo.mobile.presentation.localization.localizedLanguageRegionSummary
+import com.feniqo.mobile.presentation.profile.ProfileSignOutError
+import com.feniqo.mobile.presentation.profile.ProfileUiError
 import com.feniqo.mobile.presentation.sync.SyncDisplaySeverity
 import com.feniqo.mobile.presentation.sync.SyncStatusUiState
 import com.feniqo.mobile.presentation.sync.resolveSyncDisplayModel
 import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTypographyTokens
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ProfileScreen(
     displayName: String,
     email: String,
-    workspaceName: String,
+    workspaceName: String?,
     isProfileLoading: Boolean,
-    signOutError: String?,
+    signOutError: ProfileSignOutError?,
     syncStatus: SyncStatusUiState,
     onBack: () -> Unit,
     onOpenAccount: () -> Unit,
@@ -46,12 +53,17 @@ fun ProfileScreen(
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
     isProfileEmpty: Boolean = false,
-    profileErrorMessage: String? = null,
+    profileError: ProfileUiError? = null,
     onRetryProfile: (() -> Unit)? = null,
+    language: AppLanguage? = null,
+    currency: Currency? = null,
     listState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(),
 ) {
     var showSignOutConfirmation by remember { mutableStateOf(false) }
     val sync = resolveSyncDisplayModel(syncStatus)
+    val effectiveWorkspaceName = workspaceName?.trim()?.takeIf { it.isNotBlank() }
+        ?: stringResource(Res.string.profile_personal_space_fallback)
+
     Surface(modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         LazyColumn(
             state = listState,
@@ -60,11 +72,16 @@ fun ProfileScreen(
         ) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Geri") }
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(Res.string.profile_back_content_description),
+                        )
+                    }
                     Column {
-                        Text("Profil Merkezi", style = FeniqoTypographyTokens.DisplayTitle)
+                        Text(stringResource(Res.string.profile_title), style = FeniqoTypographyTokens.DisplayTitle)
                         Text(
-                            "Hesabın, ortak alanların ve eşitleme durumun.",
+                            stringResource(Res.string.profile_description),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -75,12 +92,14 @@ fun ProfileScreen(
                 ProfileSummary(
                     name = displayName,
                     email = email,
-                    workspace = workspaceName,
+                    workspace = effectiveWorkspaceName,
                     loading = isProfileLoading,
                     isEmpty = isProfileEmpty,
-                    errorMessage = profileErrorMessage,
+                    profileError = profileError,
                     onRetry = onRetryProfile,
                     onClick = onOpenAccount,
+                    language = language,
+                    currency = currency,
                 )
             }
             item {
@@ -91,19 +110,19 @@ fun ProfileScreen(
                     pending = syncStatus.pendingCount > 0,
                 )
             }
-            item { Section("Hesap") }
+            item { Section(stringResource(Res.string.profile_section_account)) }
             item {
                 ProfileGroup {
                     ProfileRow(
-                        title = "Kişisel Bilgiler",
-                        subtitle = "Adını ve profilini düzenle",
+                        title = stringResource(Res.string.profile_personal_info_title),
+                        subtitle = stringResource(Res.string.profile_personal_info_subtitle),
                         icon = Icons.Default.Person,
                         tint = MaterialTheme.colorScheme.primary,
                         onClick = onOpenPersonalInfo,
                     )
                     ProfileRow(
-                        title = "Ortak Alanlar",
-                        subtitle = workspaceName,
+                        title = stringResource(Res.string.profile_shared_spaces_title),
+                        subtitle = effectiveWorkspaceName,
                         icon = Icons.Default.Groups,
                         tint = MaterialTheme.colorScheme.tertiary,
                         onClick = onOpenSharedSpaces,
@@ -111,12 +130,12 @@ fun ProfileScreen(
                     )
                 }
             }
-            item { Section("Uygulama") }
+            item { Section(stringResource(Res.string.profile_section_app)) }
             item {
                 ProfileGroup {
                     ProfileRow(
-                        title = "Uygulama Ayarları",
-                        subtitle = "Görünüm, bildirimler, güvenlik ve veri araçları",
+                        title = stringResource(Res.string.profile_app_settings_title),
+                        subtitle = stringResource(Res.string.profile_app_settings_subtitle),
                         icon = Icons.Default.Settings,
                         tint = MaterialTheme.colorScheme.secondary,
                         onClick = onOpenSettings,
@@ -127,7 +146,7 @@ fun ProfileScreen(
             signOutError?.let {
                 item {
                     Text(
-                        it,
+                        stringResource(Res.string.profile_error_sign_out_message),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyMedium,
                     )
@@ -140,7 +159,7 @@ fun ProfileScreen(
                 ) {
                     Icon(Icons.Default.Logout, null, tint = MaterialTheme.colorScheme.error)
                     Spacer(Modifier.width(FeniqoSpacing.Small))
-                    Text("Çıkış Yap", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(Res.string.profile_sign_out_action), color = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -168,23 +187,25 @@ private fun ProfileSummary(
     workspace: String,
     loading: Boolean,
     isEmpty: Boolean = false,
-    errorMessage: String? = null,
+    profileError: ProfileUiError? = null,
     onRetry: (() -> Unit)? = null,
     onClick: (() -> Unit)? = null,
+    language: AppLanguage? = null,
+    currency: Currency? = null,
 ) = Card(
     shape = RoundedCornerShape(FeniqoRadius.Large),
     colors = CardDefaults.cardColors(
-        containerColor = if (errorMessage != null) {
+        containerColor = if (profileError != null) {
             MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f)
         } else {
             MaterialTheme.colorScheme.surfaceContainerLowest
         },
     ),
     elevation = CardDefaults.cardElevation(4.dp),
-    modifier = if (onClick != null && errorMessage == null) {
+    modifier = if (onClick != null && profileError == null) {
         Modifier.clickable(
             role = Role.Button,
-            onClickLabel = "Hesap ve profil fotoğrafı",
+            onClickLabel = stringResource(Res.string.profile_account_and_photo_semantics),
             onClick = onClick,
         )
     } else {
@@ -197,17 +218,17 @@ private fun ProfileSummary(
     ) {
         val initialLetter = when {
             loading -> ""
-            errorMessage != null -> "!"
+            profileError != null -> "!"
             name.isNotBlank() -> name.trim().first().uppercase()
             email.isNotBlank() -> email.trim().first().uppercase()
             else -> "?"
         }
         val avatarContainerColor = when {
-            errorMessage != null -> MaterialTheme.colorScheme.error
+            profileError != null -> MaterialTheme.colorScheme.error
             else -> MaterialTheme.colorScheme.primaryContainer
         }
         val avatarContentColor = when {
-            errorMessage != null -> MaterialTheme.colorScheme.onError
+            profileError != null -> MaterialTheme.colorScheme.onError
             else -> MaterialTheme.colorScheme.onPrimaryContainer
         }
         Box(
@@ -223,11 +244,11 @@ private fun ProfileSummary(
         Spacer(Modifier.width(FeniqoSpacing.Medium))
         Column(Modifier.weight(1f)) {
             val titleText = when {
-                loading -> "Profiliniz yükleniyor"
-                errorMessage != null -> "Profil bilgileri yüklenemedi"
+                loading -> stringResource(Res.string.profile_loading_title)
+                profileError != null -> stringResource(Res.string.profile_error_load_title)
                 name.isNotBlank() -> name
                 email.isNotBlank() -> email
-                else -> "Profil bilgisi bulunamadı"
+                else -> stringResource(Res.string.profile_not_found_title)
             }
             Text(
                 text = titleText,
@@ -236,38 +257,47 @@ private fun ProfileSummary(
                 overflow = TextOverflow.Ellipsis,
             )
             val subtitleText = when {
-                loading -> "Bilgileriniz getiriliyor..."
-                errorMessage != null -> errorMessage
-                isEmpty && email.isNotBlank() -> "$workspace · Profil kaydı oluşturulmadı"
-                isEmpty -> "$workspace · Bilgi yok"
+                loading -> stringResource(Res.string.profile_loading_subtitle)
+                profileError != null -> stringResource(Res.string.profile_error_load_message)
+                isEmpty && email.isNotBlank() -> stringResource(Res.string.profile_empty_no_record, workspace)
+                isEmpty -> stringResource(Res.string.profile_empty_no_info, workspace)
                 name.isNotBlank() && email.isNotBlank() -> email
-                else -> "Hesabım ve profil fotoğrafım"
+                else -> stringResource(Res.string.profile_fallback_subtitle)
             }
             if (subtitleText.isNotBlank()) {
                 Text(
                     text = subtitleText,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (errorMessage != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (profileError != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
             Spacer(Modifier.height(FeniqoSpacing.ExtraSmall))
-            AssistChip(
-                onClick = {},
-                enabled = false,
-                label = { Text(workspace) },
-                leadingIcon = { Icon(Icons.Default.Groups, null, Modifier.size(16.dp)) },
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small)) {
+                AssistChip(
+                    onClick = {},
+                    enabled = false,
+                    label = { Text(workspace) },
+                    leadingIcon = { Icon(Icons.Default.Groups, null, Modifier.size(16.dp)) },
+                )
+                if (language != null && currency != null) {
+                    AssistChip(
+                        onClick = {},
+                        enabled = false,
+                        label = { Text(localizedLanguageRegionSummary(language, currency.code)) },
+                    )
+                }
+            }
         }
-        if (errorMessage != null && onRetry != null) {
+        if (profileError != null && onRetry != null) {
             TextButton(onClick = onRetry) {
-                Text("Tekrar Dene")
+                Text(stringResource(Res.string.profile_retry_action))
             }
         } else if (onClick != null && !loading) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Hesap detaylarını aç",
+                contentDescription = stringResource(Res.string.profile_open_account_details_content_description),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -381,7 +411,7 @@ private fun ProfileRow(
                 if (comingSoon) {
                     Spacer(Modifier.width(FeniqoSpacing.Small))
                     Text(
-                        "Yakında",
+                        stringResource(Res.string.profile_badge_coming_soon),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -390,7 +420,10 @@ private fun ProfileRow(
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (enabled && showArrow) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "$title aç")
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = stringResource(Res.string.profile_open_row_semantics, title),
+            )
         }
     }
     if (!last) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)

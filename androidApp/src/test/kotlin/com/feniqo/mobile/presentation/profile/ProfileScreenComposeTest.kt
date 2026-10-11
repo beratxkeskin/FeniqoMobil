@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.feniqo.mobile.App
+import com.feniqo.mobile.presentation.profile.ProfileUiError
 import com.feniqo.mobile.presentation.screen.ProfileScreen
 import com.feniqo.mobile.presentation.sync.SyncConnectionUiState
 import com.feniqo.mobile.presentation.sync.SyncStatusUiState
@@ -34,7 +35,7 @@ class ProfileScreenComposeTest {
         syncStatus: SyncStatusUiState = SyncStatusUiState.Initial,
         isLoading: Boolean = false,
         isEmpty: Boolean = false,
-        profileError: String? = null,
+        profileError: ProfileUiError? = null,
         onRetry: (() -> Unit)? = null,
         onAccount: () -> Unit = {},
         onPersonalInfo: () -> Unit = {},
@@ -50,7 +51,7 @@ class ProfileScreenComposeTest {
                 workspaceName = "Kişisel alan",
                 isProfileLoading = isLoading,
                 isProfileEmpty = isEmpty,
-                profileErrorMessage = profileError,
+                profileError = profileError,
                 onRetryProfile = onRetry,
                 signOutError = null,
                 syncStatus = syncStatus,
@@ -148,7 +149,7 @@ class ProfileScreenComposeTest {
                 1 -> TestProfile(isEmpty = true)
                 else -> TestProfile(
                     isEmpty = true,
-                    profileError = "Profil bilgileri yüklenemedi. Lütfen tekrar deneyin.",
+                    profileError = ProfileUiError.LoadFailed,
                     onRetry = { retried = true },
                 )
             }
