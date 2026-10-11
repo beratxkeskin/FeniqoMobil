@@ -45,7 +45,7 @@ class WorkspaceCreateViewModel @Inject constructor(
         if (!state.isFormEnabled || submitJob?.isActive == true) return
         val validation = WorkspaceValidationRules.validateCreateWorkspace(state.name, state.type, state.currency, state.description)
         val command = (validation as? WorkspaceValidationResult.Valid)?.value
-        if (command == null) { _uiState.update { it.copy(nameError = "Çalışma alanı adı zorunludur.") }; return }
+        if (command == null) { _uiState.update { it.copy(nameError = WorkspaceCreateFormFieldError.NAME_BLANK) }; return }
         _uiState.update { it.copy(isSubmitting = true, errorMessage = null) }
         submitJob = viewModelScope.launch {
             try {

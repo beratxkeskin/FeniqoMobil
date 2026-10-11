@@ -31,7 +31,6 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.MoreHoriz
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PersonRemove
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.Visibility
@@ -50,7 +49,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,7 +59,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
@@ -72,12 +69,63 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.WorkspaceRole
+import com.feniqo.mobile.domain.model.WorkspaceType
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreenContainer
 import com.feniqo.mobile.presentation.workspace.WorkspaceDetailsUiState
 import com.feniqo.mobile.presentation.workspace.WorkspaceMemberUiModel
+import com.feniqo.mobile.presentation.workspace.resolveDisplayName
+import com.feniqo.mobile.presentation.workspace.resolveWorkspaceMemberInitial
+import com.feniqo.mobile.presentation.workspace.toLocalizedDescriptionResource
+import com.feniqo.mobile.presentation.workspace.toLocalizedResource
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.workspace_back
+import feniqomobil.sharedui.generated.resources.workspace_cancel
+import feniqomobil.sharedui.generated.resources.workspace_close_error
+import feniqomobil.sharedui.generated.resources.workspace_details_action_change_role
+import feniqomobil.sharedui.generated.resources.workspace_details_action_remove_member
+import feniqomobil.sharedui.generated.resources.workspace_details_create_invite_button
+import feniqomobil.sharedui.generated.resources.workspace_details_current_role_label
+import feniqomobil.sharedui.generated.resources.workspace_details_invite_close_button
+import feniqomobil.sharedui.generated.resources.workspace_details_invite_copied_button
+import feniqomobil.sharedui.generated.resources.workspace_details_invite_copied_toast
+import feniqomobil.sharedui.generated.resources.workspace_details_invite_copy_button
+import feniqomobil.sharedui.generated.resources.workspace_details_invite_dialog_desc
+import feniqomobil.sharedui.generated.resources.workspace_details_invite_dialog_title
+import feniqomobil.sharedui.generated.resources.workspace_details_leave_button
+import feniqomobil.sharedui.generated.resources.workspace_details_leave_dialog_confirm
+import feniqomobil.sharedui.generated.resources.workspace_details_leave_dialog_desc
+import feniqomobil.sharedui.generated.resources.workspace_details_leave_dialog_title
+import feniqomobil.sharedui.generated.resources.workspace_details_member_menu_cd
+import feniqomobil.sharedui.generated.resources.workspace_details_member_self_suffix
+import feniqomobil.sharedui.generated.resources.workspace_details_members_plural
+import feniqomobil.sharedui.generated.resources.workspace_details_not_found_desc
+import feniqomobil.sharedui.generated.resources.workspace_details_not_found_title
+import feniqomobil.sharedui.generated.resources.workspace_details_owner_must_transfer_warning
+import feniqomobil.sharedui.generated.resources.workspace_details_permission_editor
+import feniqomobil.sharedui.generated.resources.workspace_details_permission_viewer
+import feniqomobil.sharedui.generated.resources.workspace_details_remove_dialog_confirm
+import feniqomobil.sharedui.generated.resources.workspace_details_remove_dialog_desc
+import feniqomobil.sharedui.generated.resources.workspace_details_remove_dialog_title
+import feniqomobil.sharedui.generated.resources.workspace_details_role_dialog_confirm
+import feniqomobil.sharedui.generated.resources.workspace_details_role_dialog_current
+import feniqomobil.sharedui.generated.resources.workspace_details_role_dialog_title
+import feniqomobil.sharedui.generated.resources.workspace_details_settlement_action_desc
+import feniqomobil.sharedui.generated.resources.workspace_details_settlement_action_title
+import feniqomobil.sharedui.generated.resources.workspace_details_title
+import feniqomobil.sharedui.generated.resources.workspace_details_transfer_confirm_button
+import feniqomobil.sharedui.generated.resources.workspace_details_transfer_confirm_desc
+import feniqomobil.sharedui.generated.resources.workspace_details_transfer_confirm_title
+import feniqomobil.sharedui.generated.resources.workspace_details_transfer_dialog_empty
+import feniqomobil.sharedui.generated.resources.workspace_details_transfer_dialog_title
+import feniqomobil.sharedui.generated.resources.workspace_details_transfer_ownership_button
+import feniqomobil.sharedui.generated.resources.workspace_details_type_personal
+import feniqomobil.sharedui.generated.resources.workspace_details_type_shared
+import feniqomobil.sharedui.generated.resources.workspace_join_security_notice
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Çalışma Alanı Detay Ekranı.
@@ -118,6 +166,7 @@ fun WorkspaceDetailsScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
             // Üst Bar: Geri Dönüş ve Başlık
+            val backText = stringResource(Res.string.workspace_back)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -129,7 +178,7 @@ fun WorkspaceDetailsScreen(
                     enabled = !state.isLeaving && !state.isTransferringOwnership && !state.isRemovingMember,
                     modifier = Modifier
                         .size(44.dp)
-                        .semantics { contentDescription = "Geri dön" },
+                        .semantics { contentDescription = backText },
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -139,7 +188,7 @@ fun WorkspaceDetailsScreen(
                 }
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "Alan detayı",
+                    text = stringResource(Res.string.workspace_details_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -194,12 +243,12 @@ fun WorkspaceDetailsScreen(
                                 }
                             }
                             Text(
-                                text = "Alan bulunamadı",
+                                text = stringResource(Res.string.workspace_details_not_found_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                             )
                             Text(
-                                text = "Bu alan artık mevcut olmayabilir veya erişimin olmayabilir.",
+                                text = stringResource(Res.string.workspace_details_not_found_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
@@ -210,7 +259,7 @@ fun WorkspaceDetailsScreen(
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = FeniqoSageGreen),
                             ) {
-                                Text("Geri dön", fontWeight = FontWeight.Bold)
+                                Text(backText, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -226,9 +275,14 @@ fun WorkspaceDetailsScreen(
                     ) {
                         // 1. Grafit Koyu Hero Kartı (Görsel 02)
                         item(key = "hero_workspace_card") {
+                            val typeName = if (workspace.type == WorkspaceType.SHARED) {
+                                stringResource(Res.string.workspace_details_type_shared)
+                            } else {
+                                stringResource(Res.string.workspace_details_type_personal)
+                            }
                             WorkspaceHeroCard(
                                 name = workspace.name,
-                                typeName = if (workspace.type.name == "SHARED") "Ortak alan" else "Kişisel alan",
+                                typeName = typeName,
                                 currencyCode = workspace.currency.code,
                                 description = workspace.description,
                                 userRole = state.currentUserRole ?: WorkspaceRole.VIEWER,
@@ -238,6 +292,7 @@ fun WorkspaceDetailsScreen(
                         // 2. Sahip Eylemi: Davet Kodu Oluştur
                         if (state.isOwner) {
                             item(key = "create_invite_action") {
+                                val inviteButtonText = stringResource(Res.string.workspace_details_create_invite_button)
                                 Button(
                                     onClick = onCreateInvite,
                                     enabled = state.canCreateInvite,
@@ -249,7 +304,7 @@ fun WorkspaceDetailsScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(52.dp)
-                                        .semantics { contentDescription = "Davet kodu oluştur" },
+                                        .semantics { contentDescription = inviteButtonText },
                                 ) {
                                     if (state.isCreatingInvite) {
                                         CircularProgressIndicator(
@@ -265,7 +320,7 @@ fun WorkspaceDetailsScreen(
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = "Davet kodu oluştur",
+                                            text = inviteButtonText,
                                             style = MaterialTheme.typography.bodyLarge,
                                             fontWeight = FontWeight.SemiBold,
                                         )
@@ -282,7 +337,7 @@ fun WorkspaceDetailsScreen(
                         // 4. Üyeler Başlığı
                         item(key = "members_header") {
                             Text(
-                                text = "Üyeler · ${state.members.size}",
+                                text = pluralStringResource(Res.plurals.workspace_details_members_plural, state.members.size, state.members.size),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onBackground,
@@ -312,6 +367,7 @@ fun WorkspaceDetailsScreen(
                         item(key = "bottom_management_section") {
                             if (state.isOwner) {
                                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    val transferButtonText = stringResource(Res.string.workspace_details_transfer_ownership_button)
                                     OutlinedButton(
                                         onClick = { showOwnershipTransferSheet = true },
                                         enabled = state.canTransferOwnership,
@@ -324,7 +380,7 @@ fun WorkspaceDetailsScreen(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .height(52.dp)
-                                            .semantics { contentDescription = "Sahipliği devret" },
+                                            .semantics { contentDescription = transferButtonText },
                                     ) {
                                         Icon(
                                             imageVector = Icons.Outlined.SwapHoriz,
@@ -334,7 +390,7 @@ fun WorkspaceDetailsScreen(
                                         )
                                         Spacer(modifier = Modifier.width(10.dp))
                                         Text(
-                                            text = "Sahipliği devret",
+                                            text = transferButtonText,
                                             style = MaterialTheme.typography.bodyLarge,
                                             fontWeight = FontWeight.SemiBold,
                                             color = MaterialTheme.colorScheme.onSurface,
@@ -368,7 +424,7 @@ fun WorkspaceDetailsScreen(
                                             )
                                             Spacer(modifier = Modifier.width(10.dp))
                                             Text(
-                                                text = "Ayrılmak için önce sahipliği devretmelisin.",
+                                                text = stringResource(Res.string.workspace_details_owner_must_transfer_warning),
                                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
@@ -396,12 +452,13 @@ fun WorkspaceDetailsScreen(
                                                 modifier = Modifier.size(18.dp),
                                             )
                                             Spacer(modifier = Modifier.width(10.dp))
+                                            val permissionText = if (state.currentUserRole == WorkspaceRole.VIEWER) {
+                                                stringResource(Res.string.workspace_details_permission_viewer)
+                                            } else {
+                                                stringResource(Res.string.workspace_details_permission_editor)
+                                            }
                                             Text(
-                                                text = if (state.currentUserRole == WorkspaceRole.VIEWER) {
-                                                    "Bu alanda görüntüleme yetkin var."
-                                                } else {
-                                                    "Bu alanda kayıt düzenleme yetkin var."
-                                                },
+                                                text = permissionText,
                                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
@@ -410,6 +467,7 @@ fun WorkspaceDetailsScreen(
 
                                     // Alandan Ayrıl Butonu
                                     if (state.canLeave) {
+                                        val leaveButtonText = stringResource(Res.string.workspace_details_leave_button)
                                         OutlinedButton(
                                             onClick = onRequestLeave,
                                             enabled = !state.isLeaving,
@@ -422,7 +480,7 @@ fun WorkspaceDetailsScreen(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .height(52.dp)
-                                                .semantics { contentDescription = "Alandan ayrıl" },
+                                                .semantics { contentDescription = leaveButtonText },
                                         ) {
                                             Icon(
                                                 imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
@@ -432,7 +490,7 @@ fun WorkspaceDetailsScreen(
                                             )
                                             Spacer(modifier = Modifier.width(8.dp))
                                             Text(
-                                                text = "Alandan ayrıl",
+                                                text = leaveButtonText,
                                                 style = MaterialTheme.typography.bodyLarge,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = Color(0xFFDC2626),
@@ -477,7 +535,7 @@ fun WorkspaceDetailsScreen(
     if (state.pendingMemberRemoval != null) {
         WorkspaceMemberRemovalDialog(
             member = state.pendingMemberRemoval,
-            workspaceName = state.workspace?.name ?: "bu",
+            workspaceName = state.workspace?.name ?: "",
             isSubmitting = state.isRemovingMember,
             onConfirm = onConfirmMemberRemoval,
             onDismiss = onDismissMemberRemovalConfirmation,
@@ -504,7 +562,7 @@ fun WorkspaceDetailsScreen(
     // 11 Alandan Ayrılma Onay Diyaloğu
     if (state.showLeaveConfirmation) {
         WorkspaceLeaveDialog(
-            workspaceName = state.workspace?.name ?: "bu",
+            workspaceName = state.workspace?.name ?: "",
             isSubmitting = state.isLeaving,
             onConfirm = onConfirmLeave,
             onDismiss = onDismissLeaveConfirmation,
@@ -611,9 +669,11 @@ private fun HeroRoleBadge(
     role: WorkspaceRole,
     modifier: Modifier = Modifier,
 ) {
+    val roleDisplayName = stringResource(role.toLocalizedResource())
+    val roleContentDescription = stringResource(Res.string.workspace_details_current_role_label, roleDisplayName)
     Surface(
         modifier = modifier.semantics {
-            contentDescription = "Mevcut rolünüz: ${role.toTurkishDisplayName()}"
+            contentDescription = roleContentDescription
         },
         shape = RoundedCornerShape(12.dp),
         color = Color.White.copy(alpha = 0.18f),
@@ -622,10 +682,10 @@ private fun HeroRoleBadge(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val (icon, label) = when (role) {
-                WorkspaceRole.OWNER -> Icons.Outlined.WorkspacePremium to "Sahip"
-                WorkspaceRole.EDITOR -> Icons.Outlined.Edit to "Düzenleyici"
-                WorkspaceRole.VIEWER -> Icons.Outlined.Visibility to "İzleyici"
+            val icon = when (role) {
+                WorkspaceRole.OWNER -> Icons.Outlined.WorkspacePremium
+                WorkspaceRole.EDITOR -> Icons.Outlined.Edit
+                WorkspaceRole.VIEWER -> Icons.Outlined.Visibility
             }
             Icon(
                 imageVector = icon,
@@ -635,7 +695,7 @@ private fun HeroRoleBadge(
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = label,
+                text = roleDisplayName,
                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                 color = Color.White,
             )
@@ -651,12 +711,13 @@ private fun SettlementActionCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val titleText = stringResource(Res.string.workspace_details_settlement_action_title)
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
-            .semantics { contentDescription = "Ödeşme ve transfer önerileri" },
+            .semantics { contentDescription = titleText },
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
@@ -686,14 +747,14 @@ private fun SettlementActionCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Ödeşme ve transfer önerileri",
+                    text = titleText,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "Üye bakiyelerini gör ve önerileri incele",
+                    text = stringResource(Res.string.workspace_details_settlement_action_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -722,7 +783,9 @@ private fun MemberCardItem(
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
-    val initialLetter = member.displayName.firstOrNull()?.uppercase() ?: "Ü"
+    val displayName = member.resolveDisplayName(includeSelfSuffix = true)
+    val plainDisplayName = member.resolveDisplayName(includeSelfSuffix = false)
+    val initialLetter = resolveWorkspaceMemberInitial(displayName)
     val showMenuButton = isOwner && !member.isCurrentUser && member.role != WorkspaceRole.OWNER
 
     Card(
@@ -757,20 +820,15 @@ private fun MemberCardItem(
 
             // Üye Adı ve Rolü
             Column(modifier = Modifier.weight(1f)) {
-                val displayNameWithSelf = if (member.isCurrentUser && !member.displayName.contains("sen", ignoreCase = true)) {
-                    "${member.displayName} (sen)"
-                } else {
-                    member.displayName
-                }
                 Text(
-                    text = displayNameWithSelf,
+                    text = displayName,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = member.role.toTurkishDisplayName(),
+                    text = stringResource(member.role.toLocalizedResource()),
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                     fontWeight = if (member.role == WorkspaceRole.OWNER) FontWeight.Bold else FontWeight.Normal,
                     color = if (member.role == WorkspaceRole.OWNER) Color(0xFF16A34A) else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -779,12 +837,13 @@ private fun MemberCardItem(
 
             // Sahip için 3 nokta menü butonu
             if (showMenuButton) {
+                val menuCd = stringResource(Res.string.workspace_details_member_menu_cd, plainDisplayName)
                 Box {
                     IconButton(
                         onClick = { menuExpanded = true },
                         modifier = Modifier
                             .size(36.dp)
-                            .semantics { contentDescription = "${member.displayName} yönetim menüsü" },
+                            .semantics { contentDescription = menuCd },
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.MoreHoriz,
@@ -798,7 +857,7 @@ private fun MemberCardItem(
                         onDismissRequest = { menuExpanded = false },
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Rolü Değiştir") },
+                            text = { Text(stringResource(Res.string.workspace_details_action_change_role)) },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Outlined.Edit,
@@ -812,7 +871,7 @@ private fun MemberCardItem(
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text("Üyeyi Çıkar", color = Color(0xFFDC2626)) },
+                            text = { Text(stringResource(Res.string.workspace_details_action_remove_member), color = Color(0xFFDC2626)) },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Outlined.PersonRemove,
@@ -875,14 +934,14 @@ private fun WorkspaceInviteCodeDialog(
                 }
 
                 Text(
-                    text = "Davet kodu oluşturuldu",
+                    text = stringResource(Res.string.workspace_details_invite_dialog_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
                 )
 
                 Text(
-                    text = "Bu kod ile başkalarını alanına davet edebilirsin.",
+                    text = stringResource(Res.string.workspace_details_invite_dialog_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -913,6 +972,7 @@ private fun WorkspaceInviteCodeDialog(
                             modifier = Modifier.weight(1f),
                         )
 
+                        val copyCd = stringResource(Res.string.workspace_details_invite_copy_button)
                         IconButton(
                             onClick = {
                                 clipboardManager.setText(AnnotatedString(inviteCode))
@@ -922,7 +982,7 @@ private fun WorkspaceInviteCodeDialog(
                         ) {
                             Icon(
                                 imageVector = if (isCopied) Icons.Outlined.Check else Icons.Outlined.ContentCopy,
-                                contentDescription = "Kodu kopyala",
+                                contentDescription = copyCd,
                                 tint = if (isCopied) Color(0xFF16A34A) else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(20.dp),
                             )
@@ -930,8 +990,13 @@ private fun WorkspaceInviteCodeDialog(
                     }
                 }
 
+                val helperText = if (isCopied) {
+                    stringResource(Res.string.workspace_details_invite_copied_toast)
+                } else {
+                    stringResource(Res.string.workspace_join_security_notice)
+                }
                 Text(
-                    text = if (isCopied) "Kod panoya kopyalandı!" else "Yalnızca güvendiğin kişilerle paylaş.",
+                    text = helperText,
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                     color = if (isCopied) Color(0xFF16A34A) else MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -943,6 +1008,11 @@ private fun WorkspaceInviteCodeDialog(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                val copyButtonText = if (isCopied) {
+                    stringResource(Res.string.workspace_details_invite_copied_button)
+                } else {
+                    stringResource(Res.string.workspace_details_invite_copy_button)
+                }
                 Button(
                     onClick = {
                         clipboardManager.setText(AnnotatedString(inviteCode))
@@ -953,7 +1023,7 @@ private fun WorkspaceInviteCodeDialog(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        text = if (isCopied) "Kopyalandı" else "Kodu kopyala",
+                        text = copyButtonText,
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                     )
@@ -969,7 +1039,7 @@ private fun WorkspaceInviteCodeDialog(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        text = "Kapat",
+                        text = stringResource(Res.string.workspace_details_invite_close_button),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                     )
@@ -992,13 +1062,14 @@ private fun WorkspaceRoleChangeDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val initialLetter = member.displayName.firstOrNull()?.uppercase() ?: "Ü"
+    val memberName = member.resolveDisplayName()
+    val initialLetter = resolveWorkspaceMemberInitial(memberName)
 
     AlertDialog(
         onDismissRequest = { if (!isSubmitting) onDismiss() },
         title = {
             Text(
-                text = "Üye rolünü değiştir",
+                text = stringResource(Res.string.workspace_details_role_dialog_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -1034,12 +1105,13 @@ private fun WorkspaceRoleChangeDialog(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = member.displayName,
+                                text = memberName,
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
                             )
+                            val currentRoleDisplayName = stringResource(member.role.toLocalizedResource())
                             Text(
-                                text = "Mevcut rol: ${member.role.toTurkishDisplayName()}",
+                                text = stringResource(Res.string.workspace_details_role_dialog_current, currentRoleDisplayName),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -1048,18 +1120,20 @@ private fun WorkspaceRoleChangeDialog(
                 }
 
                 // Düzenleyici Seçeneği
+                val editorDesc = WorkspaceRole.EDITOR.toLocalizedDescriptionResource()?.let { stringResource(it) } ?: ""
                 RoleRadioItem(
-                    title = "Düzenleyici",
-                    subtext = "Kayıtları düzenleyebilir.",
+                    title = stringResource(WorkspaceRole.EDITOR.toLocalizedResource()),
+                    subtext = editorDesc,
                     icon = Icons.Outlined.Edit,
                     isSelected = selectedRole == WorkspaceRole.EDITOR,
                     onClick = { onSelectRole(WorkspaceRole.EDITOR) },
                 )
 
                 // İzleyici Seçeneği
+                val viewerDesc = WorkspaceRole.VIEWER.toLocalizedDescriptionResource()?.let { stringResource(it) } ?: ""
                 RoleRadioItem(
-                    title = "İzleyici",
-                    subtext = "Kayıtları görüntüleyebilir.",
+                    title = stringResource(WorkspaceRole.VIEWER.toLocalizedResource()),
+                    subtext = viewerDesc,
                     icon = Icons.Outlined.Visibility,
                     isSelected = selectedRole == WorkspaceRole.VIEWER,
                     onClick = { onSelectRole(WorkspaceRole.VIEWER) },
@@ -1086,7 +1160,7 @@ private fun WorkspaceRoleChangeDialog(
                         )
                     } else {
                         Text(
-                            text = "Değişikliği onayla",
+                            text = stringResource(Res.string.workspace_details_role_dialog_confirm),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold,
                         )
@@ -1104,7 +1178,7 @@ private fun WorkspaceRoleChangeDialog(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        text = "Vazgeç",
+                        text = stringResource(Res.string.workspace_cancel),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                     )
@@ -1187,7 +1261,8 @@ private fun WorkspaceMemberRemovalDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val initialLetter = member.displayName.firstOrNull()?.uppercase() ?: "Ü"
+    val memberName = member.resolveDisplayName()
+    val initialLetter = resolveWorkspaceMemberInitial(memberName)
 
     AlertDialog(
         onDismissRequest = { if (!isSubmitting) onDismiss() },
@@ -1216,7 +1291,7 @@ private fun WorkspaceMemberRemovalDialog(
                 }
 
                 Text(
-                    text = "Üye çıkarılsın mı?",
+                    text = stringResource(Res.string.workspace_details_remove_dialog_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
@@ -1247,7 +1322,7 @@ private fun WorkspaceMemberRemovalDialog(
                         }
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = member.displayName,
+                            text = memberName,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                         )
@@ -1255,7 +1330,7 @@ private fun WorkspaceMemberRemovalDialog(
                 }
 
                 Text(
-                    text = "Bu üye $workspaceName alanına erişimini kaybedecek.",
+                    text = stringResource(Res.string.workspace_details_remove_dialog_desc, workspaceName),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -1282,7 +1357,7 @@ private fun WorkspaceMemberRemovalDialog(
                         )
                     } else {
                         Text(
-                            text = "Üyeyi çıkar",
+                            text = stringResource(Res.string.workspace_details_remove_dialog_confirm),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold,
                         )
@@ -1300,7 +1375,7 @@ private fun WorkspaceMemberRemovalDialog(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        text = "Vazgeç",
+                        text = stringResource(Res.string.workspace_cancel),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                     )
@@ -1329,7 +1404,7 @@ private fun WorkspaceOwnershipTransferDialog(
         onDismissRequest = { if (!isSubmitting) onDismiss() },
         title = {
             Text(
-                text = "Sahipliği kime devretmek istiyorsun?",
+                text = stringResource(Res.string.workspace_details_transfer_dialog_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -1341,14 +1416,15 @@ private fun WorkspaceOwnershipTransferDialog(
             ) {
                 if (eligibleMembers.isEmpty()) {
                     Text(
-                        text = "Sahipliği devretmek için alanda en az bir aktif üye bulunmalıdır.",
+                        text = stringResource(Res.string.workspace_details_transfer_dialog_empty),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 } else {
                     eligibleMembers.forEach { member ->
                         val isChecked = member.userId == selectedMember?.userId
-                        val initialLetter = member.displayName.firstOrNull()?.uppercase() ?: "Ü"
+                        val memberName = member.resolveDisplayName()
+                        val initialLetter = resolveWorkspaceMemberInitial(memberName)
 
                         Card(
                             modifier = Modifier
@@ -1387,7 +1463,7 @@ private fun WorkspaceOwnershipTransferDialog(
                                 }
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
-                                    text = member.displayName,
+                                    text = memberName,
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Bold,
                                 )
@@ -1396,6 +1472,7 @@ private fun WorkspaceOwnershipTransferDialog(
                     }
 
                     selectedMember?.let { target ->
+                        val targetName = target.resolveDisplayName()
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
@@ -1409,13 +1486,13 @@ private fun WorkspaceOwnershipTransferDialog(
                                 verticalArrangement = Arrangement.spacedBy(4.dp),
                             ) {
                                 Text(
-                                    text = "Sahiplik ${target.displayName}'a devredilsin mi?",
+                                    text = stringResource(Res.string.workspace_details_transfer_confirm_title, targetName),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
-                                    text = "${target.displayName} alan sahibi olacak. Sen düzenleyici olacaksın.",
+                                    text = stringResource(Res.string.workspace_details_transfer_confirm_desc, targetName),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -1455,7 +1532,7 @@ private fun WorkspaceOwnershipTransferDialog(
                             )
                         } else {
                             Text(
-                                text = "Sahipliği devret",
+                                text = stringResource(Res.string.workspace_details_transfer_confirm_button),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
                             )
@@ -1474,7 +1551,7 @@ private fun WorkspaceOwnershipTransferDialog(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        text = "Vazgeç",
+                        text = stringResource(Res.string.workspace_cancel),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                     )
@@ -1522,22 +1599,24 @@ private fun WorkspaceLeaveDialog(
                 }
 
                 Text(
-                    text = "Alandan ayrılmak istiyor musun?",
+                    text = stringResource(Res.string.workspace_details_leave_dialog_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
                 )
 
-                Text(
-                    text = workspaceName,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = FeniqoSageGreen,
-                    textAlign = TextAlign.Center,
-                )
+                if (workspaceName.isNotBlank()) {
+                    Text(
+                        text = workspaceName,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = FeniqoSageGreen,
+                        textAlign = TextAlign.Center,
+                    )
+                }
 
                 Text(
-                    text = "Bu alandaki kayıtlara erişimini kaybedeceksin.",
+                    text = stringResource(Res.string.workspace_details_leave_dialog_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -1564,7 +1643,7 @@ private fun WorkspaceLeaveDialog(
                         )
                     } else {
                         Text(
-                            text = "Alandan ayrıl",
+                            text = stringResource(Res.string.workspace_details_leave_dialog_confirm),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold,
                         )
@@ -1582,7 +1661,7 @@ private fun WorkspaceLeaveDialog(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        text = "Vazgeç",
+                        text = stringResource(Res.string.workspace_cancel),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                     )
@@ -1603,6 +1682,7 @@ private fun DetailsErrorBanner(
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val closeErrorCd = stringResource(Res.string.workspace_close_error)
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -1635,7 +1715,7 @@ private fun DetailsErrorBanner(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Close,
-                    contentDescription = "Hata mesajını kapat",
+                    contentDescription = closeErrorCd,
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.size(16.dp),
                 )
@@ -1665,10 +1745,4 @@ private fun DialogRadioCircle(isSelected: Boolean) {
             }
         }
     }
-}
-
-private fun WorkspaceRole.toTurkishDisplayName(): String = when (this) {
-    WorkspaceRole.OWNER -> "Sahip"
-    WorkspaceRole.EDITOR -> "Düzenleyici"
-    WorkspaceRole.VIEWER -> "İzleyici"
 }

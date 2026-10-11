@@ -38,7 +38,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,12 +47,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.Currency
@@ -63,6 +60,33 @@ import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreenContainer
 import com.feniqo.mobile.presentation.workspace.WorkspaceCreateUiState
+import com.feniqo.mobile.presentation.workspace.toLocalizedDescriptionResource
+import com.feniqo.mobile.presentation.workspace.toLocalizedDisplayNameResource
+import com.feniqo.mobile.presentation.workspace.toLocalizedResource
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.workspace_apply_selection
+import feniqomobil.sharedui.generated.resources.workspace_back
+import feniqomobil.sharedui.generated.resources.workspace_close_error
+import feniqomobil.sharedui.generated.resources.workspace_create_currency_cd
+import feniqomobil.sharedui.generated.resources.workspace_create_currency_dialog_title
+import feniqomobil.sharedui.generated.resources.workspace_create_currency_item_cd
+import feniqomobil.sharedui.generated.resources.workspace_create_currency_label
+import feniqomobil.sharedui.generated.resources.workspace_create_description_cd
+import feniqomobil.sharedui.generated.resources.workspace_create_description_label
+import feniqomobil.sharedui.generated.resources.workspace_create_description_optional
+import feniqomobil.sharedui.generated.resources.workspace_create_description_placeholder
+import feniqomobil.sharedui.generated.resources.workspace_create_hero_subtitle
+import feniqomobil.sharedui.generated.resources.workspace_create_hero_title
+import feniqomobil.sharedui.generated.resources.workspace_create_name_cd
+import feniqomobil.sharedui.generated.resources.workspace_create_name_label
+import feniqomobil.sharedui.generated.resources.workspace_create_name_placeholder
+import feniqomobil.sharedui.generated.resources.workspace_create_submit_button
+import feniqomobil.sharedui.generated.resources.workspace_create_title
+import feniqomobil.sharedui.generated.resources.workspace_create_type_cd
+import feniqomobil.sharedui.generated.resources.workspace_create_type_dialog_title
+import feniqomobil.sharedui.generated.resources.workspace_create_type_item_cd
+import feniqomobil.sharedui.generated.resources.workspace_create_type_label
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Yeni Çalışma Alanı Oluşturma Ekranı.
@@ -93,6 +117,7 @@ fun WorkspaceCreateScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
             // Üst Bar: Geri Butonu & Başlık
+            val backText = stringResource(Res.string.workspace_back)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -104,7 +129,7 @@ fun WorkspaceCreateScreen(
                     enabled = state.isFormEnabled,
                     modifier = Modifier
                         .size(44.dp)
-                        .semantics { contentDescription = "Geri dön" },
+                        .semantics { contentDescription = backText },
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -114,7 +139,7 @@ fun WorkspaceCreateScreen(
                 }
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "Alan oluştur",
+                    text = stringResource(Res.string.workspace_create_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -165,7 +190,7 @@ fun WorkspaceCreateScreen(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         Text(
-                            text = "Yeni ortak alan",
+                            text = stringResource(Res.string.workspace_create_hero_title),
                             style = MaterialTheme.typography.headlineSmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 22.sp,
@@ -176,7 +201,7 @@ fun WorkspaceCreateScreen(
                         Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
-                            text = "Birlikte daha düzenli, daha kolay.",
+                            text = stringResource(Res.string.workspace_create_hero_subtitle),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -187,19 +212,21 @@ fun WorkspaceCreateScreen(
                 item(key = "workspace_name_field") {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = "Alan adı",
+                            text = stringResource(Res.string.workspace_create_name_label),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
+                        val nameErrorText = state.nameError?.toLocalizedResource()?.let { stringResource(it) }
+                        val nameContentDescription = stringResource(Res.string.workspace_create_name_cd)
                         OutlinedTextField(
                             value = state.name,
                             onValueChange = onNameChanged,
                             enabled = state.isFormEnabled,
                             singleLine = true,
-                            placeholder = { Text("Evimiz") },
+                            placeholder = { Text(stringResource(Res.string.workspace_create_name_placeholder)) },
                             isError = state.nameError != null,
-                            supportingText = state.nameError?.let { errorText ->
+                            supportingText = nameErrorText?.let { errorText ->
                                 { Text(text = errorText, color = MaterialTheme.colorScheme.error) }
                             },
                             shape = RoundedCornerShape(12.dp),
@@ -209,7 +236,7 @@ fun WorkspaceCreateScreen(
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .semantics { contentDescription = "Çalışma alanı adı alanı" },
+                                .semantics { contentDescription = nameContentDescription },
                         )
                     }
                 }
@@ -219,24 +246,26 @@ fun WorkspaceCreateScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "Açıklama ",
+                                text = stringResource(Res.string.workspace_create_description_label),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "(isteğe bağlı)",
+                                text = stringResource(Res.string.workspace_create_description_optional),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
+                        val descriptionContentDescription = stringResource(Res.string.workspace_create_description_cd)
                         OutlinedTextField(
                             value = state.description,
                             onValueChange = onDescriptionChanged,
                             enabled = state.isFormEnabled,
                             minLines = 2,
                             maxLines = 3,
-                            placeholder = { Text("Ev giderlerimizi birlikte takip ediyoruz.") },
+                            placeholder = { Text(stringResource(Res.string.workspace_create_description_placeholder)) },
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = FeniqoSageGreen,
@@ -244,37 +273,40 @@ fun WorkspaceCreateScreen(
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .semantics { contentDescription = "Çalışma alanı açıklaması alanı" },
+                                .semantics { contentDescription = descriptionContentDescription },
                         )
                     }
                 }
 
                 // 3. Alan Türü Seçici Satırı
                 item(key = "workspace_type_selector") {
+                    val currentTypeDisplayName = stringResource(state.type.toLocalizedResource())
                     SelectorRowCard(
                         icon = Icons.Outlined.Group,
-                        title = "Alan türü",
-                        selectedValue = state.type.toTurkishDisplayName(),
+                        title = stringResource(Res.string.workspace_create_type_label),
+                        selectedValue = currentTypeDisplayName,
                         onClick = { if (state.isFormEnabled) showTypePicker = true },
                         enabled = state.isFormEnabled,
-                        contentDescription = "Alan türü seç, şu an: ${state.type.toTurkishDisplayName()}",
+                        contentDescription = stringResource(Res.string.workspace_create_type_cd, currentTypeDisplayName),
                     )
                 }
 
                 // 4. Para Birimi Seçici Satırı
                 item(key = "workspace_currency_selector") {
+                    val currencyDisplayName = stringResource(state.currency.toLocalizedDisplayNameResource())
                     SelectorRowCard(
                         icon = Icons.Outlined.AccountBalanceWallet,
-                        title = "Para birimi",
-                        selectedValue = "${state.currency.code} · ${state.currency.toTurkishDisplayName()}",
+                        title = stringResource(Res.string.workspace_create_currency_label),
+                        selectedValue = "${state.currency.code} · $currencyDisplayName",
                         onClick = { if (state.isFormEnabled) showCurrencyPicker = true },
                         enabled = state.isFormEnabled,
-                        contentDescription = "Para birimi seç, şu an: ${state.currency.code}",
+                        contentDescription = stringResource(Res.string.workspace_create_currency_cd, state.currency.code),
                     )
                 }
             }
 
             // 5. Oluştur Butonu
+            val submitButtonText = stringResource(Res.string.workspace_create_submit_button)
             Button(
                 onClick = onSubmit,
                 enabled = state.isFormEnabled,
@@ -286,7 +318,7 @@ fun WorkspaceCreateScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp)
-                    .semantics { contentDescription = "Alanı oluştur" },
+                    .semantics { contentDescription = submitButtonText },
             ) {
                 if (state.isSubmitting) {
                     CircularProgressIndicator(
@@ -296,7 +328,7 @@ fun WorkspaceCreateScreen(
                     )
                 } else {
                     Text(
-                        text = "Alanı oluştur",
+                        text = submitButtonText,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -419,7 +451,7 @@ private fun WorkspaceCurrencyPickerDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Para birimini seç",
+                text = stringResource(Res.string.workspace_create_currency_dialog_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -431,6 +463,7 @@ private fun WorkspaceCurrencyPickerDialog(
             ) {
                 Currency.entries.forEach { currency ->
                     val isChecked = currency == selected
+                    val currencyDisplayName = stringResource(currency.toLocalizedDisplayNameResource())
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -438,7 +471,7 @@ private fun WorkspaceCurrencyPickerDialog(
                             .clickable { selected = currency }
                             .semantics {
                                 this.selected = isChecked
-                                contentDescription = "${currency.code}, ${currency.toTurkishDisplayName()}"
+                                contentDescription = "${currency.code}, $currencyDisplayName"
                             },
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(
@@ -486,7 +519,7 @@ private fun WorkspaceCurrencyPickerDialog(
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
-                                    text = currency.toTurkishDisplayName(),
+                                    text = currencyDisplayName,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -504,7 +537,7 @@ private fun WorkspaceCurrencyPickerDialog(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = "Seçimi uygula",
+                    text = stringResource(Res.string.workspace_apply_selection),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                 )
@@ -529,7 +562,7 @@ private fun WorkspaceTypePickerDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Alan türünü seç",
+                text = stringResource(Res.string.workspace_create_type_dialog_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -541,6 +574,9 @@ private fun WorkspaceTypePickerDialog(
             ) {
                 WorkspaceType.entries.forEach { type ->
                     val isChecked = type == selected
+                    val typeDisplayName = stringResource(type.toLocalizedResource())
+                    val typeDesc = stringResource(type.toLocalizedDescriptionResource())
+                    val itemContentDescription = stringResource(Res.string.workspace_create_type_item_cd, typeDisplayName)
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -548,7 +584,7 @@ private fun WorkspaceTypePickerDialog(
                             .clickable { selected = type }
                             .semantics {
                                 this.selected = isChecked
-                                contentDescription = "Alan türü ${type.toTurkishDisplayName()}"
+                                contentDescription = itemContentDescription
                             },
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(
@@ -588,13 +624,13 @@ private fun WorkspaceTypePickerDialog(
 
                             Column {
                                 Text(
-                                    text = type.toTurkishDisplayName(),
+                                    text = typeDisplayName,
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
-                                    text = if (type == WorkspaceType.SHARED) "Ortak harcama ve bütçe takibi" else "Yalnızca bireysel kayıtlar",
+                                    text = typeDesc,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -612,7 +648,7 @@ private fun WorkspaceTypePickerDialog(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = "Seçimi uygula",
+                    text = stringResource(Res.string.workspace_apply_selection),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                 )
@@ -655,6 +691,7 @@ private fun CreateErrorBanner(
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val closeErrorCd = stringResource(Res.string.workspace_close_error)
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -687,25 +724,13 @@ private fun CreateErrorBanner(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Close,
-                    contentDescription = "Hata mesajını kapat",
+                    contentDescription = closeErrorCd,
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.size(16.dp),
                 )
             }
         }
     }
-}
-
-private fun WorkspaceType.toTurkishDisplayName(): String = when (this) {
-    WorkspaceType.SHARED -> "Ortak"
-    WorkspaceType.PERSONAL -> "Kişisel"
-}
-
-private fun Currency.toTurkishDisplayName(): String = when (this) {
-    Currency.TRY -> "Türk lirası"
-    Currency.USD -> "ABD doları"
-    Currency.EUR -> "Euro"
-    Currency.GBP -> "İngiliz sterlini"
 }
 
 private fun Currency.symbol(): String = when (this) {

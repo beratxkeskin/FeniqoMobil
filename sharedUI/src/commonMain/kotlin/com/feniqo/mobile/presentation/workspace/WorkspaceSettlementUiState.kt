@@ -1,5 +1,6 @@
 package com.feniqo.mobile.presentation.workspace
 
+import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.WorkspaceRole
@@ -19,11 +20,10 @@ enum class MemberBalanceStatus {
  */
 data class WorkspaceMemberBalanceUiModel(
     val userId: EntityId,
-    val displayName: String,
+    val displayName: String? = null,
     val role: WorkspaceRole?,
     val isCurrentUser: Boolean,
     val netAmountMinor: Long,
-    val formattedAmount: String,
     val status: MemberBalanceStatus,
 )
 
@@ -32,12 +32,12 @@ data class WorkspaceMemberBalanceUiModel(
  */
 data class WorkspaceSettlementTransferUiModel(
     val fromUserId: EntityId,
-    val fromDisplayName: String,
+    val fromDisplayName: String? = null,
+    val fromIsCurrentUser: Boolean,
     val toUserId: EntityId,
-    val toDisplayName: String,
+    val toDisplayName: String? = null,
+    val toIsCurrentUser: Boolean,
     val amount: Money,
-    val formattedAmount: String,
-    val suggestionText: String,
 )
 
 /**
@@ -49,10 +49,10 @@ data class WorkspaceSettlementUiState(
     val workspaceName: String = "",
     val memberCount: Int = 0,
     val isCurrentUserMember: Boolean = false,
+    val currency: Currency = Currency.TRY,
     val memberBalances: List<WorkspaceMemberBalanceUiModel> = emptyList(),
     val suggestedTransfers: List<WorkspaceSettlementTransferUiModel> = emptyList(),
     val totalExpenseAmount: Money? = null,
-    val formattedTotalExpense: String = "",
     val hasExcludedExpenses: Boolean = false,
     val errorMessage: FinanceUiMessage? = null,
 ) {

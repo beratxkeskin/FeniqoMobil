@@ -52,14 +52,14 @@ class WorkspaceJoinViewModel @Inject constructor(
 
         val trimmedCode = state.inviteCode.trim()
         if (trimmedCode.isBlank()) {
-            _uiState.update { it.copy(codeError = "Davet kodu boş olamaz.") }
+            _uiState.update { it.copy(codeError = WorkspaceJoinFormFieldError.CODE_BLANK) }
             return
         }
 
         val inviteCode = try {
             WorkspaceInviteCode(trimmedCode)
-        } catch (e: IllegalArgumentException) {
-            _uiState.update { it.copy(codeError = e.message ?: "Geçersiz davet kodu.") }
+        } catch (_: IllegalArgumentException) {
+            _uiState.update { it.copy(codeError = WorkspaceJoinFormFieldError.CODE_INVALID) }
             return
         }
 

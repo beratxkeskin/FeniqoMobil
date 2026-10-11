@@ -1,7 +1,6 @@
 package com.feniqo.mobile.presentation.screen
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,7 +42,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -52,7 +50,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.feniqo.mobile.domain.model.Currency
+import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
+import com.feniqo.mobile.presentation.common.toLocalizedFormatted
 import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreenContainer
@@ -60,6 +61,33 @@ import com.feniqo.mobile.presentation.workspace.MemberBalanceStatus
 import com.feniqo.mobile.presentation.workspace.WorkspaceMemberBalanceUiModel
 import com.feniqo.mobile.presentation.workspace.WorkspaceSettlementTransferUiModel
 import com.feniqo.mobile.presentation.workspace.WorkspaceSettlementUiState
+import com.feniqo.mobile.presentation.workspace.resolveDisplayName
+import com.feniqo.mobile.presentation.workspace.resolveWorkspaceMemberDisplayName
+import com.feniqo.mobile.presentation.workspace.resolveWorkspaceMemberInitial
+import com.feniqo.mobile.presentation.workspace.toLocalizedResource
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.workspace_back
+import feniqomobil.sharedui.generated.resources.workspace_close_error
+import feniqomobil.sharedui.generated.resources.workspace_settlement_balances_header
+import feniqomobil.sharedui.generated.resources.workspace_settlement_balances_subtitle
+import feniqomobil.sharedui.generated.resources.workspace_settlement_disclaimer_footnote
+import feniqomobil.sharedui.generated.resources.workspace_settlement_disclaimer_notice
+import feniqomobil.sharedui.generated.resources.workspace_settlement_empty_desc
+import feniqomobil.sharedui.generated.resources.workspace_settlement_empty_title
+import feniqomobil.sharedui.generated.resources.workspace_settlement_excluded_warning_close
+import feniqomobil.sharedui.generated.resources.workspace_settlement_excluded_warning_desc
+import feniqomobil.sharedui.generated.resources.workspace_settlement_excluded_warning_title
+import feniqomobil.sharedui.generated.resources.workspace_settlement_member_self_suffix
+import feniqomobil.sharedui.generated.resources.workspace_settlement_not_member_title
+import feniqomobil.sharedui.generated.resources.workspace_settlement_title
+import feniqomobil.sharedui.generated.resources.workspace_settlement_transfer_payer_arrow_cd
+import feniqomobil.sharedui.generated.resources.workspace_settlement_transfer_suggestion_other
+import feniqomobil.sharedui.generated.resources.workspace_settlement_transfer_suggestion_self
+import feniqomobil.sharedui.generated.resources.workspace_settlement_transfers_empty_desc
+import feniqomobil.sharedui.generated.resources.workspace_settlement_transfers_empty_title
+import feniqomobil.sharedui.generated.resources.workspace_settlement_transfers_header
+import org.jetbrains.compose.resources.stringResource
+import kotlin.math.abs
 
 /**
  * Ortak Alan Ödeşme Ekranı.
@@ -85,6 +113,7 @@ fun WorkspaceSettlementScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
             // Üst Bar: Geri Butonu & Başlık
+            val backText = stringResource(Res.string.workspace_back)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -95,7 +124,7 @@ fun WorkspaceSettlementScreen(
                     onClick = onBack,
                     modifier = Modifier
                         .size(44.dp)
-                        .semantics { contentDescription = "Geri dön" },
+                        .semantics { contentDescription = backText },
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -105,7 +134,7 @@ fun WorkspaceSettlementScreen(
                 }
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "Ödeşme",
+                    text = stringResource(Res.string.workspace_settlement_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -153,7 +182,7 @@ fun WorkspaceSettlementScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             Text(
-                                text = "Bu çalışma alanının üyesi değilsiniz.",
+                                text = stringResource(Res.string.workspace_settlement_not_member_title),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
@@ -162,7 +191,7 @@ fun WorkspaceSettlementScreen(
                                 onClick = onBack,
                                 colors = ButtonDefaults.buttonColors(containerColor = FeniqoSageGreen),
                             ) {
-                                Text("Geri dön")
+                                Text(backText)
                             }
                         }
                     }
@@ -194,13 +223,13 @@ fun WorkspaceSettlementScreen(
                                 }
                             }
                             Text(
-                                text = "Hesaplanacak ortak gider bulunamadı.",
+                                text = stringResource(Res.string.workspace_settlement_empty_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 textAlign = TextAlign.Center,
                             )
                             Text(
-                                text = "Ortak giderler eklendiğinde net üye bakiyeleri ve transfer önerileri burada görünecektir.",
+                                text = stringResource(Res.string.workspace_settlement_empty_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
@@ -216,7 +245,7 @@ fun WorkspaceSettlementScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         contentPadding = PaddingValues(bottom = 16.dp),
                     ) {
-                        // Alan adı ve Para birimi alt başlığı
+                        // Alan adı alt başlığı
                         item(key = "workspace_meta_header") {
                             if (state.workspaceName.isNotBlank()) {
                                 Text(
@@ -233,7 +262,7 @@ fun WorkspaceSettlementScreen(
                         item(key = "balances_section_header") {
                             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(
-                                    text = "Üye bakiyeleri",
+                                    text = stringResource(Res.string.workspace_settlement_balances_header),
                                     style = MaterialTheme.typography.headlineSmall.copy(
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 24.sp,
@@ -241,7 +270,7 @@ fun WorkspaceSettlementScreen(
                                     color = MaterialTheme.colorScheme.onBackground,
                                 )
                                 Text(
-                                    text = "Ortak gider paylaşımına göre",
+                                    text = stringResource(Res.string.workspace_settlement_balances_subtitle),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -253,13 +282,16 @@ fun WorkspaceSettlementScreen(
                             items = state.memberBalances,
                             key = { it.userId.value },
                         ) { balance ->
-                            MemberBalanceRowCard(balance = balance)
+                            MemberBalanceRowCard(
+                                balance = balance,
+                                currency = state.currency,
+                            )
                         }
 
                         // 3. Transfer Önerileri Başlığı
                         item(key = "transfers_section_header") {
                             Text(
-                                text = "Transfer önerileri",
+                                text = stringResource(Res.string.workspace_settlement_transfers_header),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onBackground,
@@ -302,7 +334,7 @@ fun WorkspaceSettlementScreen(
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Text(
-                                        text = "Bunlar hesaplanan önerilerdir; uygulama para göndermez.",
+                                        text = stringResource(Res.string.workspace_settlement_disclaimer_notice),
                                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
@@ -313,7 +345,7 @@ fun WorkspaceSettlementScreen(
                         // 6. Dipnot
                         item(key = "settlement_footnote") {
                             Text(
-                                text = "Tutarlar bu alanın geçerli ortak giderlerinden hesaplanır.",
+                                text = stringResource(Res.string.workspace_settlement_disclaimer_footnote),
                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
                                 textAlign = TextAlign.Center,
@@ -335,9 +367,11 @@ fun WorkspaceSettlementScreen(
 @Composable
 private fun MemberBalanceRowCard(
     balance: WorkspaceMemberBalanceUiModel,
+    currency: Currency,
     modifier: Modifier = Modifier,
 ) {
-    val initialLetter = balance.displayName.firstOrNull()?.uppercase() ?: "Ü"
+    val displayName = balance.resolveDisplayName(includeSelfSuffix = true)
+    val initialLetter = resolveWorkspaceMemberInitial(displayName)
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -371,23 +405,14 @@ private fun MemberBalanceRowCard(
 
             // Üye Adı ve Durumu
             Column(modifier = Modifier.weight(1f)) {
-                val displayNameWithSelf = if (balance.isCurrentUser && !balance.displayName.contains("sen", ignoreCase = true)) {
-                    "${balance.displayName} (sen)"
-                } else {
-                    balance.displayName
-                }
                 Text(
-                    text = displayNameWithSelf,
+                    text = displayName,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
-                val statusText = when (balance.status) {
-                    MemberBalanceStatus.CREDITOR -> "Alacaklı"
-                    MemberBalanceStatus.DEBTOR -> "Borçlu"
-                    MemberBalanceStatus.SETTLED -> "Dengede"
-                }
+                val statusText = stringResource(balance.status.toLocalizedResource())
                 Text(
                     text = statusText,
                     style = MaterialTheme.typography.bodySmall,
@@ -402,8 +427,15 @@ private fun MemberBalanceRowCard(
                 MemberBalanceStatus.SETTLED -> MaterialTheme.colorScheme.onSurfaceVariant
             }
 
+            val absAmount = Money(abs(balance.netAmountMinor), currency).toLocalizedFormatted()
+            val formattedAmount = when (balance.status) {
+                MemberBalanceStatus.CREDITOR -> "+$absAmount"
+                MemberBalanceStatus.DEBTOR -> "-$absAmount"
+                MemberBalanceStatus.SETTLED -> absAmount
+            }
+
             Text(
-                text = balance.formattedAmount,
+                text = formattedAmount,
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp,
@@ -423,11 +455,32 @@ private fun SuggestedTransferRowCard(
     transfer: WorkspaceSettlementTransferUiModel,
     modifier: Modifier = Modifier,
 ) {
-    val fromInitial = transfer.fromDisplayName.firstOrNull()?.uppercase() ?: "B"
-    val toInitial = transfer.toDisplayName.firstOrNull()?.uppercase() ?: "A"
+    val fromDisplayName = resolveWorkspaceMemberDisplayName(
+        userId = transfer.fromUserId,
+        displayName = transfer.fromDisplayName,
+        isCurrentUser = transfer.fromIsCurrentUser,
+        includeSelfSuffix = false,
+    )
+    val toDisplayName = resolveWorkspaceMemberDisplayName(
+        userId = transfer.toUserId,
+        displayName = transfer.toDisplayName,
+        isCurrentUser = transfer.toIsCurrentUser,
+        includeSelfSuffix = false,
+    )
+    val fromInitial = resolveWorkspaceMemberInitial(fromDisplayName)
+    val toInitial = resolveWorkspaceMemberInitial(toDisplayName)
+    val formattedAmount = transfer.amount.toLocalizedFormatted()
+
+    val suggestionCd = if (transfer.fromIsCurrentUser) {
+        stringResource(Res.string.workspace_settlement_transfer_suggestion_self, toDisplayName, formattedAmount)
+    } else {
+        stringResource(Res.string.workspace_settlement_transfer_suggestion_other, fromDisplayName, toDisplayName, formattedAmount)
+    }
 
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = suggestionCd },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
@@ -463,7 +516,7 @@ private fun SuggestedTransferRowCard(
 
                 Column {
                     Text(
-                        text = transfer.fromDisplayName,
+                        text = fromDisplayName,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -471,7 +524,7 @@ private fun SuggestedTransferRowCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        text = transfer.formattedAmount,
+                        text = formattedAmount,
                         style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
                         color = Color(0xFFDC2626),
                     )
@@ -481,7 +534,7 @@ private fun SuggestedTransferRowCard(
             // Orta: Yön Oku
             Icon(
                 imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
-                contentDescription = "ödeyecek kişi yönü",
+                contentDescription = stringResource(Res.string.workspace_settlement_transfer_payer_arrow_cd),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .padding(horizontal = 12.dp)
@@ -512,7 +565,7 @@ private fun SuggestedTransferRowCard(
                 Spacer(modifier = Modifier.width(10.dp))
 
                 Text(
-                    text = transfer.toDisplayName,
+                    text = toDisplayName,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -562,7 +615,7 @@ private fun AllSettledBalancedCard(
             }
 
             Text(
-                text = "Hesaplar dengede",
+                text = stringResource(Res.string.workspace_settlement_transfers_empty_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -570,7 +623,7 @@ private fun AllSettledBalancedCard(
             )
 
             Text(
-                text = "Ödeşme önerisi bulunmuyor. Üyeler arasındaki net ödeşme bakiyeleri sıfır.",
+                text = stringResource(Res.string.workspace_settlement_transfers_empty_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -609,12 +662,12 @@ private fun ExcludedExpensesWarningBanner(
             Spacer(modifier = Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Bazı giderler hesaplamaya dahil edilemedi.",
+                    text = stringResource(Res.string.workspace_settlement_excluded_warning_title),
                     style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
                 Text(
-                    text = "Eksik veriler nedeniyle tutarlar değişebilir.",
+                    text = stringResource(Res.string.workspace_settlement_excluded_warning_desc),
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                     color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
                 )
@@ -625,7 +678,7 @@ private fun ExcludedExpensesWarningBanner(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Close,
-                    contentDescription = "Uyarıyı kapat",
+                    contentDescription = stringResource(Res.string.workspace_settlement_excluded_warning_close),
                     tint = MaterialTheme.colorScheme.onSecondaryContainer,
                     modifier = Modifier.size(16.dp),
                 )
@@ -643,6 +696,7 @@ private fun SettlementErrorBanner(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val closeErrorCd = stringResource(Res.string.workspace_close_error)
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -674,7 +728,7 @@ private fun SettlementErrorBanner(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Close,
-                    contentDescription = "Hata mesajını kapat",
+                    contentDescription = closeErrorCd,
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.size(16.dp),
                 )

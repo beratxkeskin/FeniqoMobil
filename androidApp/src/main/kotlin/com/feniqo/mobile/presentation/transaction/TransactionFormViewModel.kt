@@ -356,20 +356,14 @@ class TransactionFormViewModel @Inject constructor(
                         val currentUserId = session?.userId
                         val uiMembers = members.map { member ->
                             val isCurrentUser = currentUserId != null && member.userId == currentUserId
-                            val displayName = if (isCurrentUser) {
-                                "Siz"
-                            } else {
-                                "Kullanıcı ${member.userId.value.take(8)}"
-                            }
                             WorkspaceMemberUiModel(
                                 userId = member.userId,
-                                displayName = displayName,
+                                displayName = null,
                                 role = member.role,
                                 isCurrentUser = isCurrentUser,
                             )
                         }.sortedWith(
                             compareByDescending<WorkspaceMemberUiModel> { it.isCurrentUser }
-                                .thenBy { it.displayName }
                                 .thenBy { it.userId.value },
                         )
                         uiMembers to currentUserId
@@ -396,11 +390,9 @@ class TransactionFormViewModel @Inject constructor(
 
                                     val departedMembers = departedUserIds.map { departedId ->
                                         val existingName = state.workspaceMembers.find { it.userId == departedId }?.displayName
-                                            ?.removeSuffix(" (Ayrıldı)")
-                                        val name = existingName ?: "Kullanıcı ${departedId.value.take(8)}"
                                         WorkspaceMemberUiModel(
                                             userId = departedId,
-                                            displayName = "$name (Ayrıldı)",
+                                            displayName = existingName,
                                             role = com.feniqo.mobile.domain.model.WorkspaceRole.VIEWER,
                                             isCurrentUser = (departedId == currentUserId),
                                             isActive = false,

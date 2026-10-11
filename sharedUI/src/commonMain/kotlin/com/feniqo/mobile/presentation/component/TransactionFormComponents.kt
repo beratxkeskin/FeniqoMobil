@@ -59,9 +59,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import com.feniqo.mobile.domain.model.TransactionSplitMode
-import com.feniqo.mobile.presentation.transaction.CustomSplitUiHelper
-import com.feniqo.mobile.presentation.transaction.TransactionFormFieldError
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -80,18 +77,22 @@ import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.PaymentMethod
+import com.feniqo.mobile.domain.model.TransactionSplitMode
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoStatusColor
+import com.feniqo.mobile.presentation.transaction.CustomSplitUiHelper
 import com.feniqo.mobile.presentation.transaction.InstallmentDisplayModel
 import com.feniqo.mobile.presentation.transaction.TransactionCategoryOptionUiModel
+import com.feniqo.mobile.presentation.transaction.TransactionFormFieldError
 import com.feniqo.mobile.presentation.transaction.toLocalizedText
 import com.feniqo.mobile.presentation.util.ColorParser
 import com.feniqo.mobile.presentation.util.MoneyFormatter
 import com.feniqo.mobile.presentation.workspace.WorkspaceMemberUiModel
+import com.feniqo.mobile.presentation.workspace.resolveDisplayName
 import feniqomobil.sharedui.generated.resources.Res
 import feniqomobil.sharedui.generated.resources.transaction_form_add_category_semantics
 import feniqomobil.sharedui.generated.resources.transaction_form_amount_semantics
@@ -1274,10 +1275,11 @@ fun TransactionSplitSection(
                         verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
                     ) {
                         members.forEach { member ->
+                            val memberDisplayName = member.resolveDisplayName(includeSelfSuffix = false)
                             val isSelected = member.userId == selectedPaidByUserId
                             val payerSelectionDescription = stringResource(
                                 Res.string.transaction_form_split_payer_selection_semantics,
-                                member.displayName,
+                                memberDisplayName,
                             )
                             FilterChip(
                                 selected = isSelected,
@@ -1285,7 +1287,7 @@ fun TransactionSplitSection(
                                 enabled = enabled && member.isActive,
                                 label = {
                                     Text(
-                                        text = member.displayName,
+                                        text = memberDisplayName,
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                     )
@@ -1310,6 +1312,7 @@ fun TransactionSplitSection(
                     )
 
                     members.forEach { member ->
+                        val memberDisplayName = member.resolveDisplayName(includeSelfSuffix = false)
                         val isParticipant = member.userId in selectedParticipantUserIds
                         val isPayer = member.userId == selectedPaidByUserId
                         val participantDescription = stringResource(
@@ -1318,11 +1321,11 @@ fun TransactionSplitSection(
                             } else {
                                 Res.string.transaction_form_split_participant_unselected_semantics
                             },
-                            member.displayName,
+                            memberDisplayName,
                         )
                         val shareAmountDescription = stringResource(
                             Res.string.transaction_form_split_share_amount_semantics,
-                            member.displayName,
+                            memberDisplayName,
                         )
 
                         Column(
@@ -1361,7 +1364,7 @@ fun TransactionSplitSection(
                                         modifier = Modifier.size(24.dp),
                                     )
                                     Text(
-                                        text = member.displayName,
+                                        text = memberDisplayName,
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = if (enabled && member.isActive) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                                     )

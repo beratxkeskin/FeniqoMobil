@@ -271,8 +271,12 @@ class WorkspaceDetailsViewModelTest {
         assertTrue(state.canLeave)
 
         val currentMemberUi = state.members.first { it.isCurrentUser }
-        assertEquals("Siz", currentMemberUi.displayName)
+        assertNull(currentMemberUi.displayName)
         assertEquals(WorkspaceRole.EDITOR, currentMemberUi.role)
+
+        val otherMemberUi = state.members.first { !it.isCurrentUser }
+        assertNull(otherMemberUi.displayName)
+        assertEquals(WorkspaceRole.OWNER, otherMemberUi.role)
 
         collectJob.cancel()
     }

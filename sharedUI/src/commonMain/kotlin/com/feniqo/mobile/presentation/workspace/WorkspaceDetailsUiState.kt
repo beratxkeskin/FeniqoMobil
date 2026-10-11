@@ -8,7 +8,7 @@ import com.feniqo.mobile.presentation.common.FinanceUiMessage
 
 data class WorkspaceMemberUiModel(
     val userId: EntityId,
-    val displayName: String,
+    val displayName: String? = null,
     val role: WorkspaceRole,
     val isCurrentUser: Boolean,
     val isActive: Boolean = true,

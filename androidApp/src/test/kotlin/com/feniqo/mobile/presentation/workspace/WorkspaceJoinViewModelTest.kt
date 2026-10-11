@@ -80,7 +80,7 @@ class WorkspaceJoinViewModelTest {
         advanceUntilIdle()
 
         assertEquals(0, repo.joinCalls)
-        assertNotNull(vm.uiState.value.codeError)
+        assertEquals(WorkspaceJoinFormFieldError.CODE_BLANK, vm.uiState.value.codeError)
         assertFalse(vm.uiState.value.isSubmitting)
     }
 

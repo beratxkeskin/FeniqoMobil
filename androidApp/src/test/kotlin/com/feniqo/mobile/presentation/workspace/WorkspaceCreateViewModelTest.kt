@@ -53,7 +53,8 @@ class WorkspaceCreateViewModelTest {
     @Test fun blank_name_is_rejected_without_repository_call() = runTest {
         val repo = FakeRepository(); val vm = WorkspaceCreateViewModel(CreateWorkspaceUseCase(repo))
         vm.submit(); advanceUntilIdle()
-        assertEquals(0, repo.createCalls); assertTrue(vm.uiState.value.nameError != null)
+        assertEquals(0, repo.createCalls)
+        assertEquals(WorkspaceCreateFormFieldError.NAME_BLANK, vm.uiState.value.nameError)
     }
 
     @Test fun successful_submit_normalizes_description_and_emits_navigation() = runTest {

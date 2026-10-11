@@ -1254,10 +1254,21 @@ class TransactionFormViewModelTest {
         assertTrue(state.isSharedExpense)
         assertEquals(2, state.workspaceMembers.size)
         // Current user (user-1) comes first
-        assertEquals(EntityId("user-1"), state.workspaceMembers[0].userId)
-        assertTrue(state.workspaceMembers[0].isCurrentUser)
-        assertEquals(EntityId("user-2"), state.workspaceMembers[1].userId)
-        assertFalse(state.workspaceMembers[1].isCurrentUser)
+        val currentMember = state.workspaceMembers[0]
+        assertEquals(EntityId("user-1"), currentMember.userId)
+        assertTrue(currentMember.isCurrentUser)
+        assertNull(currentMember.displayName)
+        assertTrue(currentMember.isActive)
+
+        val otherMember = state.workspaceMembers[1]
+        assertEquals(EntityId("user-2"), otherMember.userId)
+        assertFalse(otherMember.isCurrentUser)
+        assertNull(otherMember.displayName)
+        assertTrue(otherMember.isActive)
+
+        assertTrue(state.workspaceMembers.none { it.displayName?.contains("Siz") == true })
+        assertTrue(state.workspaceMembers.none { it.displayName?.contains("Kullanıcı") == true })
+        assertTrue(state.workspaceMembers.none { it.displayName?.contains("Ayrıldı") == true })
 
         collectJob.cancel()
     }
@@ -2182,6 +2193,9 @@ class TransactionFormViewModelTest {
         val departedMember = viewModel.uiState.value.workspaceMembers.find { it.userId == user2 }
         assertNotNull(departedMember)
         assertFalse(departedMember!!.isActive)
+        assertNull(departedMember.displayName)
+        assertTrue(viewModel.uiState.value.workspaceMembers.none { it.displayName?.contains("Ayrıldı") == true })
+        assertTrue(viewModel.uiState.value.workspaceMembers.none { it.displayName?.contains("Kullanıcı") == true })
 
         // Submission must be blocked
         assertFalse(viewModel.uiState.value.canSubmitSplit)
@@ -2238,6 +2252,8 @@ class TransactionFormViewModelTest {
         val departedPayer = viewModel.uiState.value.workspaceMembers.find { it.userId == user1 }
         assertNotNull(departedPayer)
         assertFalse(departedPayer!!.isActive)
+        assertNull(departedPayer.displayName)
+        assertTrue(viewModel.uiState.value.workspaceMembers.none { it.displayName?.contains("Ayrıldı") == true })
 
         // Submit blocked
         assertFalse(viewModel.uiState.value.canSubmitSplit)

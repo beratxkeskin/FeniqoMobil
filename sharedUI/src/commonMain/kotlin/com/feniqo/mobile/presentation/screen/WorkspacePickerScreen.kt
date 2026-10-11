@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,7 +23,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.Info
@@ -58,12 +56,32 @@ import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.common.toLocalizedText
-import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreenContainer
-import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.workspace.WorkspacePickerItemUiModel
 import com.feniqo.mobile.presentation.workspace.WorkspacePickerUiState
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.workspace_back
+import feniqomobil.sharedui.generated.resources.workspace_close_error
+import feniqomobil.sharedui.generated.resources.workspace_picker_create_button
+import feniqomobil.sharedui.generated.resources.workspace_picker_empty_description
+import feniqomobil.sharedui.generated.resources.workspace_picker_empty_title
+import feniqomobil.sharedui.generated.resources.workspace_picker_info_note
+import feniqomobil.sharedui.generated.resources.workspace_picker_item_select_cd
+import feniqomobil.sharedui.generated.resources.workspace_picker_item_selected_badge
+import feniqomobil.sharedui.generated.resources.workspace_picker_item_selected_cd
+import feniqomobil.sharedui.generated.resources.workspace_picker_item_view_details
+import feniqomobil.sharedui.generated.resources.workspace_picker_item_view_details_cd
+import feniqomobil.sharedui.generated.resources.workspace_picker_join_button
+import feniqomobil.sharedui.generated.resources.workspace_picker_nav_title
+import feniqomobil.sharedui.generated.resources.workspace_picker_personal_mode_select_cd
+import feniqomobil.sharedui.generated.resources.workspace_picker_personal_mode_selected_cd
+import feniqomobil.sharedui.generated.resources.workspace_picker_personal_mode_subtitle
+import feniqomobil.sharedui.generated.resources.workspace_picker_personal_mode_title
+import feniqomobil.sharedui.generated.resources.workspace_picker_section_workspaces
+import feniqomobil.sharedui.generated.resources.workspace_picker_subtitle
+import feniqomobil.sharedui.generated.resources.workspace_picker_title
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Ortak Alanlar (Workspace) seçici ekranı.
@@ -91,6 +109,8 @@ fun WorkspacePickerScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
             // Üst Bar: Geri Dönüş
+            val backText = stringResource(Res.string.workspace_back)
+            val navTitle = stringResource(Res.string.workspace_picker_nav_title)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -101,7 +121,7 @@ fun WorkspacePickerScreen(
                     onClick = onNavigateBack,
                     modifier = Modifier
                         .size(44.dp)
-                        .semantics { contentDescription = "Geri dön" },
+                        .semantics { contentDescription = backText },
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -111,7 +131,7 @@ fun WorkspacePickerScreen(
                 }
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "Daha Fazla",
+                    text = navTitle,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -150,7 +170,7 @@ fun WorkspacePickerScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Ortak Alanlar",
+                                text = stringResource(Res.string.workspace_picker_title),
                                 style = MaterialTheme.typography.headlineMedium.copy(
                                     fontSize = 26.sp,
                                     fontWeight = FontWeight.Bold,
@@ -159,7 +179,7 @@ fun WorkspacePickerScreen(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Birlikte planla, net takip et.",
+                                text = stringResource(Res.string.workspace_picker_subtitle),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -195,7 +215,7 @@ fun WorkspacePickerScreen(
                 // 2. Alanların Bölüm Başlığı
                 item(key = "workspaces_section_header") {
                     Text(
-                        text = "Alanların",
+                        text = stringResource(Res.string.workspace_picker_section_workspaces),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground,
@@ -262,7 +282,7 @@ fun WorkspacePickerScreen(
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = "Alan seçimin, görüntülenen kayıtları değiştirir.",
+                                text = stringResource(Res.string.workspace_picker_info_note),
                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -272,6 +292,8 @@ fun WorkspacePickerScreen(
             }
 
             // 5. Alt Eylem Butonları
+            val createButtonText = stringResource(Res.string.workspace_picker_create_button)
+            val joinButtonText = stringResource(Res.string.workspace_picker_join_button)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -289,7 +311,7 @@ fun WorkspacePickerScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp)
-                        .semantics { contentDescription = "Alan oluştur" },
+                        .semantics { contentDescription = createButtonText },
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Add,
@@ -298,7 +320,7 @@ fun WorkspacePickerScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Alan oluştur",
+                        text = createButtonText,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -316,7 +338,7 @@ fun WorkspacePickerScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp)
-                        .semantics { contentDescription = "Davet koduyla katıl" },
+                        .semantics { contentDescription = joinButtonText },
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.VpnKey,
@@ -326,7 +348,7 @@ fun WorkspacePickerScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Davet koduyla katıl",
+                        text = joinButtonText,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -358,6 +380,12 @@ private fun PersonalModeCard(
         MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
     }
 
+    val cdText = if (isActive) {
+        stringResource(Res.string.workspace_picker_personal_mode_selected_cd)
+    } else {
+        stringResource(Res.string.workspace_picker_personal_mode_select_cd)
+    }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -369,7 +397,7 @@ private fun PersonalModeCard(
             )
             .semantics {
                 selected = isActive
-                contentDescription = if (isActive) "Kişisel mod, şu an seçili" else "Kişisel mod, seçmek için dokun"
+                contentDescription = cdText
             },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = cardBg),
@@ -401,14 +429,14 @@ private fun PersonalModeCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Kişisel",
+                    text = stringResource(Res.string.workspace_picker_personal_mode_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "Yalnızca kendi kayıtların",
+                    text = stringResource(Res.string.workspace_picker_personal_mode_subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -445,6 +473,12 @@ private fun WorkspaceItemCard(
         MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
     }
 
+    val itemCdText = if (isActive) {
+        stringResource(Res.string.workspace_picker_item_selected_cd, workspace.name)
+    } else {
+        stringResource(Res.string.workspace_picker_item_select_cd, workspace.name)
+    }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -456,7 +490,7 @@ private fun WorkspaceItemCard(
             )
             .semantics {
                 selected = isActive
-                contentDescription = if (isActive) "${workspace.name}, seçili alan" else "${workspace.name}, seçmek için dokun"
+                contentDescription = itemCdText
             },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = cardBg),
@@ -508,7 +542,7 @@ private fun WorkspaceItemCard(
                             color = MaterialTheme.colorScheme.primaryContainer,
                         ) {
                             Text(
-                                text = "Seçili alan",
+                                text = stringResource(Res.string.workspace_picker_item_selected_badge),
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF16A34A),
@@ -521,6 +555,7 @@ private fun WorkspaceItemCard(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 // Detayları Gör butonu (Karta tıklamaktan bağımsızdır)
+                val viewDetailsCd = stringResource(Res.string.workspace_picker_item_view_details_cd, workspace.name)
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
@@ -529,11 +564,11 @@ private fun WorkspaceItemCard(
                             onClick = onDetails,
                         )
                         .padding(vertical = 2.dp, horizontal = 2.dp)
-                        .semantics { contentDescription = "${workspace.name} detaylarını gör" },
+                        .semantics { contentDescription = viewDetailsCd },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "Detayları gör",
+                        text = stringResource(Res.string.workspace_picker_item_view_details),
                         style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -637,7 +672,7 @@ private fun EmptyWorkspaceListCard(
             }
 
             Text(
-                text = "Henüz ortak alanın yok",
+                text = stringResource(Res.string.workspace_picker_empty_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -645,7 +680,7 @@ private fun EmptyWorkspaceListCard(
             )
 
             Text(
-                text = "Harcamalarını birlikte takip etmek için bir alan oluştur veya davet koduyla katıl.",
+                text = stringResource(Res.string.workspace_picker_empty_description),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -669,7 +704,7 @@ private fun EmptyWorkspaceListCard(
                     modifier = Modifier.weight(1f),
                 ) {
                     Text(
-                        text = "Alan oluştur",
+                        text = stringResource(Res.string.workspace_picker_create_button),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                     )
@@ -686,7 +721,7 @@ private fun EmptyWorkspaceListCard(
                     modifier = Modifier.weight(1f),
                 ) {
                     Text(
-                        text = "Davet koduyla katıl",
+                        text = stringResource(Res.string.workspace_picker_join_button),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                     )
@@ -706,6 +741,7 @@ private fun PickerErrorBanner(
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val closeErrorCd = stringResource(Res.string.workspace_close_error)
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -738,7 +774,7 @@ private fun PickerErrorBanner(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Close,
-                    contentDescription = "Hata mesajını kapat",
+                    contentDescription = closeErrorCd,
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.size(16.dp),
                 )

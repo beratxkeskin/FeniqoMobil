@@ -206,13 +206,15 @@ class WorkspaceSettlementViewModelTest {
 
         assertEquals(20000L, user1Balance.netAmountMinor)
         assertEquals(MemberBalanceStatus.CREDITOR, user1Balance.status)
-        assertEquals("Siz", user1Balance.displayName)
+        assertNull(user1Balance.displayName)
 
         assertEquals(-10000L, user2Balance.netAmountMinor)
         assertEquals(MemberBalanceStatus.DEBTOR, user2Balance.status)
+        assertNull(user2Balance.displayName)
 
         assertEquals(-10000L, user3Balance.netAmountMinor)
         assertEquals(MemberBalanceStatus.DEBTOR, user3Balance.status)
+        assertNull(user3Balance.displayName)
 
         assertEquals(30000L, state.totalExpenseAmount?.amountMinor)
         job.cancel()
@@ -243,10 +245,14 @@ class WorkspaceSettlementViewModelTest {
         assertEquals(otherUserId1, transfer1.fromUserId)
         assertEquals(currentUserId, transfer1.toUserId)
         assertEquals(10000L, transfer1.amount.amountMinor)
+        assertNull(transfer1.fromDisplayName)
+        assertNull(transfer1.toDisplayName)
 
         assertEquals(otherUserId2, transfer2.fromUserId)
         assertEquals(currentUserId, transfer2.toUserId)
         assertEquals(10000L, transfer2.amount.amountMinor)
+        assertNull(transfer2.fromDisplayName)
+        assertNull(transfer2.toDisplayName)
 
         job.cancel()
     }

@@ -102,14 +102,9 @@ class WorkspaceDetailsViewModel @Inject constructor(
                             val currentUserId = session?.userId
                             val memberUiModels = members.map { member ->
                                 val isCurrentUser = currentUserId != null && member.userId == currentUserId
-                                val displayName = if (isCurrentUser) {
-                                    "Siz"
-                                } else {
-                                    "Kullanıcı ${member.userId.value.take(8)}"
-                                }
                                 WorkspaceMemberUiModel(
                                     userId = member.userId,
-                                    displayName = displayName,
+                                    displayName = null,
                                     role = member.role,
                                     isCurrentUser = isCurrentUser,
                                 )

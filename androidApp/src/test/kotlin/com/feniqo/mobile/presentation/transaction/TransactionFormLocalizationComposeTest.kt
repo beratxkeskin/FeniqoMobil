@@ -7,8 +7,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import com.feniqo.mobile.App
@@ -114,22 +116,40 @@ class TransactionFormLocalizationComposeTest {
     @Test
     fun split_editor_reacts_to_runtime_locale_change() {
         var languageTag by mutableStateOf("tr")
-        val memberId = EntityId("member")
-        val member =
+        val currentUserId = EntityId("user-1-owner")
+        val otherUserId = EntityId("user-2-fallback")
+        val departedUserId = EntityId("user-3-departed")
+        val members = listOf(
             WorkspaceMemberUiModel(
-                userId = memberId,
-                displayName = "Ayşe",
-                role = WorkspaceRole.EDITOR,
+                userId = currentUserId,
+                displayName = null,
+                role = WorkspaceRole.OWNER,
                 isCurrentUser = true,
-            )
+                isActive = true,
+            ),
+            WorkspaceMemberUiModel(
+                userId = otherUserId,
+                displayName = null,
+                role = WorkspaceRole.EDITOR,
+                isCurrentUser = false,
+                isActive = true,
+            ),
+            WorkspaceMemberUiModel(
+                userId = departedUserId,
+                displayName = null,
+                role = WorkspaceRole.VIEWER,
+                isCurrentUser = false,
+                isActive = false,
+            ),
+        )
 
         composeRule.setContent {
             App(languageTag = languageTag) {
                 TransactionSplitSection(
-                    members = listOf(member),
+                    members = members,
                     isLoading = false,
-                    selectedPaidByUserId = memberId,
-                    selectedParticipantUserIds = setOf(memberId),
+                    selectedPaidByUserId = currentUserId,
+                    selectedParticipantUserIds = setOf(currentUserId, otherUserId, departedUserId),
                     onPaidByUserSelected = {},
                     onParticipantToggled = {},
                     errorText = null,
@@ -141,18 +161,32 @@ class TransactionFormLocalizationComposeTest {
             }
         }
 
+        // TR
         composeRule.onNodeWithText("Gider paylaşımı").assertIsDisplayed()
         composeRule.onNodeWithText("Paylaşım şekli").assertExists()
-        composeRule.onNodeWithContentDescription("Ayşe ödeyen kişi seçimi").assertExists()
+        composeRule.onAllNodesWithText("Siz")[0].assertIsDisplayed()
+        composeRule.onAllNodesWithText("Kullanıcı user-2-f")[0].assertIsDisplayed()
+        composeRule.onAllNodesWithText("Kullanıcı user-3-d")[0].assertIsDisplayed()
+        composeRule.onNodeWithText("Ayrıldı").assertExists()
+        composeRule.onNodeWithContentDescription("Siz ödeyen kişi seçimi").assertExists()
 
+        // Switch to EN
         composeRule.runOnIdle { languageTag = "en" }
 
+        // EN
         composeRule.onNodeWithText("Expense sharing").assertIsDisplayed()
         composeRule.onNodeWithText("Split method").assertExists()
-        composeRule.onNodeWithContentDescription("Select Ayşe as payer").assertExists()
+        composeRule.onAllNodesWithText("You")[0].assertIsDisplayed()
+        composeRule.onAllNodesWithText("User user-2-f")[0].assertIsDisplayed()
+        composeRule.onAllNodesWithText("User user-3-d")[0].assertIsDisplayed()
+        composeRule.onNodeWithText("Left workspace").assertExists()
+        composeRule.onNodeWithContentDescription("Select You as payer").assertExists()
 
-        composeRule.runOnIdle { languageTag = "tr" }
-        composeRule.onNodeWithText("Gider paylaşımı").assertIsDisplayed()
+        // Verify no leftover Turkish strings in EN
+        composeRule.onAllNodesWithText("Siz").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Kullanıcı user-2-f").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Kullanıcı user-3-d").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Ayrıldı").assertCountEquals(0)
     }
 
     @Test

@@ -48,6 +48,20 @@ import com.feniqo.mobile.presentation.common.toLocalizedText
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreenContainer
 import com.feniqo.mobile.presentation.workspace.WorkspaceJoinUiState
+import com.feniqo.mobile.presentation.workspace.toLocalizedResource
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.workspace_back
+import feniqomobil.sharedui.generated.resources.workspace_close_error
+import feniqomobil.sharedui.generated.resources.workspace_join_code_cd
+import feniqomobil.sharedui.generated.resources.workspace_join_code_label
+import feniqomobil.sharedui.generated.resources.workspace_join_code_placeholder
+import feniqomobil.sharedui.generated.resources.workspace_join_connection_notice
+import feniqomobil.sharedui.generated.resources.workspace_join_hero_subtitle
+import feniqomobil.sharedui.generated.resources.workspace_join_hero_title
+import feniqomobil.sharedui.generated.resources.workspace_join_security_notice
+import feniqomobil.sharedui.generated.resources.workspace_join_submit_button
+import feniqomobil.sharedui.generated.resources.workspace_join_title
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Davet Koduyla Alana Katılma Ekranı.
@@ -72,6 +86,7 @@ fun WorkspaceJoinScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
             // Üst Bar: Geri Dönüş ve Başlık
+            val backText = stringResource(Res.string.workspace_back)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -83,7 +98,7 @@ fun WorkspaceJoinScreen(
                     enabled = state.isFormEnabled,
                     modifier = Modifier
                         .size(44.dp)
-                        .semantics { contentDescription = "Geri dön" },
+                        .semantics { contentDescription = backText },
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -93,7 +108,7 @@ fun WorkspaceJoinScreen(
                 }
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "Alana katıl",
+                    text = stringResource(Res.string.workspace_join_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -143,7 +158,7 @@ fun WorkspaceJoinScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
-                            text = "Davet kodun hazır mı?",
+                            text = stringResource(Res.string.workspace_join_hero_title),
                             style = MaterialTheme.typography.headlineSmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 22.sp,
@@ -154,7 +169,7 @@ fun WorkspaceJoinScreen(
                         Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
-                            text = "Sana iletilen kodu girerek ortak alana katıl.",
+                            text = stringResource(Res.string.workspace_join_hero_subtitle),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -166,19 +181,21 @@ fun WorkspaceJoinScreen(
                 item(key = "invite_code_input") {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = "Davet kodu",
+                            text = stringResource(Res.string.workspace_join_code_label),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
+                        val codeErrorText = state.codeError?.toLocalizedResource()?.let { stringResource(it) }
+                        val codeContentDescription = stringResource(Res.string.workspace_join_code_cd)
                         OutlinedTextField(
                             value = state.inviteCode,
                             onValueChange = onInviteCodeChanged,
                             enabled = state.isFormEnabled,
                             singleLine = true,
-                            placeholder = { Text("Davet kodunu gir") },
+                            placeholder = { Text(stringResource(Res.string.workspace_join_code_placeholder)) },
                             isError = state.codeError != null,
-                            supportingText = state.codeError?.let { errorText ->
+                            supportingText = codeErrorText?.let { errorText ->
                                 { Text(text = errorText, color = MaterialTheme.colorScheme.error) }
                             },
                             shape = RoundedCornerShape(12.dp),
@@ -188,13 +205,14 @@ fun WorkspaceJoinScreen(
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .semantics { contentDescription = "Davet kodu giriş alanı" },
+                                .semantics { contentDescription = codeContentDescription },
                         )
                     }
                 }
 
                 // Katıl Butonu
                 item(key = "join_submit_button") {
+                    val submitText = stringResource(Res.string.workspace_join_submit_button)
                     Button(
                         onClick = onSubmit,
                         enabled = state.isFormEnabled,
@@ -206,7 +224,7 @@ fun WorkspaceJoinScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp)
-                            .semantics { contentDescription = "Katıl" },
+                            .semantics { contentDescription = submitText },
                     ) {
                         if (state.isSubmitting) {
                             CircularProgressIndicator(
@@ -216,7 +234,7 @@ fun WorkspaceJoinScreen(
                             )
                         } else {
                             Text(
-                                text = "Katıl",
+                                text = submitText,
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.SemiBold,
                             )
@@ -245,7 +263,7 @@ fun WorkspaceJoinScreen(
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = "Kodu yalnızca güvendiğin kişilerden al.",
+                                text = stringResource(Res.string.workspace_join_security_notice),
                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -270,7 +288,7 @@ fun WorkspaceJoinScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Katılmak için internet bağlantısı gerekir.",
+                    text = stringResource(Res.string.workspace_join_connection_notice),
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                 )
@@ -289,6 +307,7 @@ private fun JoinErrorBanner(
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val closeErrorCd = stringResource(Res.string.workspace_close_error)
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -321,7 +340,7 @@ private fun JoinErrorBanner(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Close,
-                    contentDescription = "Hata mesajını kapat",
+                    contentDescription = closeErrorCd,
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.size(16.dp),
                 )
