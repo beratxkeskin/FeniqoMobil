@@ -2516,4 +2516,89 @@
         <item quantity="one">%1$d üye</item>
         <item quantity="other">%1$d üye</item>
     </plurals>
+    <!-- Settings: TopBar & Common -->
+    <string name="settings_back">Geri</string>
+
+    <!-- Settings: Appearance (appearance_*) -->
+    <string name="appearance_title">Görünüm</string>
+    <string name="appearance_theme_section_title">Uygulama temasını seç</string>
+    <string name="appearance_theme_section_subtitle">Cihazının görünümüne en uygun temayı belirle.</string>
+    <string name="appearance_theme_system_title">Sistem</string>
+    <string name="appearance_theme_system_subtitle">Cihaz temasını kullanır.</string>
+    <string name="appearance_theme_light_title">Açık</string>
+    <string name="appearance_theme_light_subtitle">Her zaman açık tema.</string>
+    <string name="appearance_theme_dark_title">Koyu</string>
+    <string name="appearance_theme_dark_subtitle">Her zaman koyu tema.</string>
+    <string name="appearance_mask_amounts_title">Tutarları gizle</string>
+    <string name="appearance_mask_amounts_subtitle">Tutarlar gizlendiğinde bakiyeler maskelenir.</string>
+    <string name="appearance_mask_amounts_preview_title">Toplam bakiye (Örnek)</string>
+    <string name="appearance_mask_amounts_preview_value">₺12.450,00</string>
+
+    <!-- Settings: Notifications (notifications_*) -->
+    <string name="notifications_title">Bildirimler</string>
+    <string name="notifications_permission_granted_title">Bildirim izni açık</string>
+    <string name="notifications_permission_denied_title">Sistem bildirimine izin vermiyor.</string>
+    <string name="notifications_permission_granted_subtitle">Uygulama bildirim gönderebilir.</string>
+    <string name="notifications_permission_denied_subtitle">Tercihlerin korunur; bildirim almak için aç.</string>
+    <string name="notifications_permission_open_button">Aç</string>
+    <string name="notifications_allow_title">Bildirimlere izin ver</string>
+    <string name="notifications_allow_subtitle_enabled">Uygulama içi bildirimler açık</string>
+    <string name="notifications_allow_subtitle_disabled">Tüm bildirimler susturuldu</string>
+    <string name="notifications_categories_header">Bildirim kategorileri</string>
+    <string name="notifications_category_debts_title">Borç ve alacak vadeleri</string>
+    <string name="notifications_category_debts_subtitle">Yaklaşan ödeme ve tahsilat hatırlatmaları</string>
+    <string name="notifications_category_subscriptions_title">Abonelik yenilemeleri</string>
+    <string name="notifications_category_subscriptions_subtitle">Yenilenme tarihi yaklaşan servisler</string>
+    <string name="notifications_category_recurring_title">Tekrarlayan işlemler</string>
+    <string name="notifications_category_recurring_subtitle">Planlanmış periyodik gelir ve giderler</string>
+    <string name="notifications_category_budgets_title">Bütçe uyarıları</string>
+    <string name="notifications_category_budgets_subtitle">%80 limit yaklaşımı ve aşım bildirimleri</string>
+    <string name="notifications_timing_privacy_header">Zamanlama ve Gizlilik</string>
+    <string name="notifications_reminder_time_title">Hatırlatma zamanı</string>
+    <string name="notifications_reminder_offset_same_day">Gününde</string>
+    <string name="notifications_reminder_offset_one_day_before">1 gün önce</string>
+    <string name="notifications_reminder_offset_three_days_before">3 gün önce</string>
+    <string name="notifications_quiet_hours_title">Sessiz saatler</string>
+    <string name="notifications_quiet_hours_disabled">Kapalı</string>
+    <string name="notifications_hide_amounts_title">Bildirimlerde tutarları gizle</string>
+    <string name="notifications_hide_amounts_subtitle">Kilit ekranı ve bildirimlerde bakiyeleri maskele</string>
+    <string name="notifications_sheet_title">Hatırlatma tercihleri</string>
+    <string name="notifications_sheet_reminder_time_label">Hatırlatma zamanı</string>
+    <string name="notifications_sheet_notification_time_label">Bildirim saati:</string>
+    <string name="notifications_sheet_quiet_hours_label">Sessiz saatler</string>
+    <string name="notifications_sheet_quiet_hours_enable_title">Sessiz saatleri etkinleştir</string>
+    <string name="notifications_sheet_quiet_hours_enable_subtitle">Bu aralıkta bildirimler sessiz saatlerin sonuna ertelenir.</string>
+    <string name="notifications_sheet_quiet_hours_start">Başlangıç</string>
+    <string name="notifications_sheet_quiet_hours_end">Bitiş</string>
+    <string name="notifications_sheet_save_button">Kaydet</string>
+
+    <!-- Settings: Security & Privacy (security_privacy_*) -->
+    <string name="security_privacy_title">Güvenlik ve gizlilik</string>
+    <string name="security_privacy_card_lock_enabled">Uygulama kilidi açık</string>
+    <string name="security_privacy_card_lock_disabled">Uygulama kilidi kapalı</string>
+    <string name="security_privacy_card_desc_available">Biyometri veya cihaz ekran kilidiyle doğrulama.</string>
+    <string name="security_privacy_card_desc_unavailable">Cihazınızda ekran kilidi tanımlı değil.</string>
+    <string name="security_privacy_row_app_lock_title">Uygulama kilidi</string>
+    <string name="security_privacy_row_app_lock_subtitle">Biyometri veya cihaz şifresi ile koru</string>
+    <string name="security_privacy_row_auto_lock_title">Otomatik kilit</string>
+    <string name="security_privacy_autolock_immediately">Anında</string>
+    <string name="security_privacy_autolock_30_seconds">30 saniye sonra</string>
+    <string name="security_privacy_autolock_1_minute">1 dakika sonra</string>
+    <string name="security_privacy_autolock_5_minutes">5 dakika sonra</string>
+    <string name="security_privacy_row_hide_amounts_title">Bildirimlerde tutarları gizle</string>
+    <string name="security_privacy_row_hide_amounts_subtitle">Kilit ekranında bakiyeleri maskele</string>
+    <string name="security_privacy_row_change_password_title">Parolayı değiştir</string>
+    <string name="security_privacy_row_change_password_subtitle">Hesap giriş şifrenizi güncelleyin</string>
+    <string name="security_privacy_dialog_timeout_title">Otomatik kilit süresi</string>
+    <string name="security_privacy_dialog_close_button">Kapat</string>
+    <string name="security_privacy_autolock_save_error">Otomatik kilit süresi kaydedilemedi.</string>
+    <string name="security_privacy_lock_pref_save_error">Uygulama kilidi tercihi kaydedilemedi.</string>
+    <string name="security_privacy_auth_failed_error">Doğrulama tamamlanamadı.</string>
+    <string name="security_privacy_auth_none_enrolled_error">Cihaz ayarlarından biyometri veya ekran kilidi tanımlayın.</string>
+    <string name="security_privacy_auth_unavailable_error">Bu cihazda güvenli sistem doğrulaması kullanılamıyor.</string>
+
+    <!-- App Lock Screen (app_lock_*) -->
+    <string name="app_lock_title">Feniqo kilitli</string>
+    <string name="app_lock_default_description">Devam etmek için biyometri veya cihaz ekran kilidinizle doğrulayın.</string>
+    <string name="app_lock_unlock_button">Kilidi Aç</string>
 </resources>

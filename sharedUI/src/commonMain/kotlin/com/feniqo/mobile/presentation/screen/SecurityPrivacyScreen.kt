@@ -19,11 +19,28 @@ import com.feniqo.mobile.domain.repository.AutoLockTimeout
 import com.feniqo.mobile.presentation.component.SettingsGroupCard
 import com.feniqo.mobile.presentation.component.SettingsRowItem
 import com.feniqo.mobile.presentation.component.SettingsTopBar
+import com.feniqo.mobile.presentation.settings.toLocalizedResource
 import com.feniqo.mobile.presentation.theme.FeniqoGraphite
 import com.feniqo.mobile.presentation.theme.FeniqoPureWhite
 import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.security_privacy_card_desc_available
+import feniqomobil.sharedui.generated.resources.security_privacy_card_desc_unavailable
+import feniqomobil.sharedui.generated.resources.security_privacy_card_lock_disabled
+import feniqomobil.sharedui.generated.resources.security_privacy_card_lock_enabled
+import feniqomobil.sharedui.generated.resources.security_privacy_dialog_close_button
+import feniqomobil.sharedui.generated.resources.security_privacy_dialog_timeout_title
+import feniqomobil.sharedui.generated.resources.security_privacy_row_app_lock_subtitle
+import feniqomobil.sharedui.generated.resources.security_privacy_row_app_lock_title
+import feniqomobil.sharedui.generated.resources.security_privacy_row_auto_lock_title
+import feniqomobil.sharedui.generated.resources.security_privacy_row_change_password_subtitle
+import feniqomobil.sharedui.generated.resources.security_privacy_row_change_password_title
+import feniqomobil.sharedui.generated.resources.security_privacy_row_hide_amounts_subtitle
+import feniqomobil.sharedui.generated.resources.security_privacy_row_hide_amounts_title
+import feniqomobil.sharedui.generated.resources.security_privacy_title
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * 09 Güvenlik ve Gizlilik Ekranı.
@@ -56,7 +73,7 @@ fun SecurityPrivacyScreen(
         ) {
             item {
                 SettingsTopBar(
-                    title = "Güvenlik ve gizlilik",
+                    title = stringResource(Res.string.security_privacy_title),
                     onBack = onBack,
                 )
             }
@@ -90,13 +107,20 @@ fun SecurityPrivacyScreen(
                         Spacer(modifier = Modifier.width(FeniqoSpacing.Medium))
                         Column {
                             Text(
-                                text = if (biometricLockEnabled) "Uygulama kilidi açık" else "Uygulama kilidi kapalı",
+                                text = if (biometricLockEnabled) {
+                                    stringResource(Res.string.security_privacy_card_lock_enabled)
+                                } else {
+                                    stringResource(Res.string.security_privacy_card_lock_disabled)
+                                },
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                 color = FeniqoPureWhite,
                             )
                             Text(
-                                text = if (biometricLockAvailable) "Biyometri veya cihaz ekran kilidiyle doğrulama."
-                                else "Cihazınızda ekran kilidi tanımlı değil.",
+                                text = if (biometricLockAvailable) {
+                                    stringResource(Res.string.security_privacy_card_desc_available)
+                                } else {
+                                    stringResource(Res.string.security_privacy_card_desc_unavailable)
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = FeniqoPureWhite.copy(alpha = 0.7f),
                             )
@@ -109,8 +133,8 @@ fun SecurityPrivacyScreen(
             item {
                 SettingsGroupCard {
                     SettingsRowItem(
-                        title = "Uygulama kilidi",
-                        subtitle = "Biyometri veya cihaz şifresi ile koru",
+                        title = stringResource(Res.string.security_privacy_row_app_lock_title),
+                        subtitle = stringResource(Res.string.security_privacy_row_app_lock_subtitle),
                         icon = Icons.Outlined.Fingerprint,
                         trailingContent = {
                             Switch(
@@ -123,15 +147,15 @@ fun SecurityPrivacyScreen(
                     )
                     if (biometricLockEnabled) {
                         SettingsRowItem(
-                            title = "Otomatik kilit",
-                            subtitle = autoLockTimeout.toLabel(),
+                            title = stringResource(Res.string.security_privacy_row_auto_lock_title),
+                            subtitle = stringResource(autoLockTimeout.toLocalizedResource()),
                             icon = Icons.Outlined.Timer,
                             onClick = { showTimeoutDialog = true },
                         )
                     }
                     SettingsRowItem(
-                        title = "Bildirimlerde tutarları gizle",
-                        subtitle = "Kilit ekranında bakiyeleri maskele",
+                        title = stringResource(Res.string.security_privacy_row_hide_amounts_title),
+                        subtitle = stringResource(Res.string.security_privacy_row_hide_amounts_subtitle),
                         icon = Icons.Outlined.VisibilityOff,
                         trailingContent = {
                             Switch(
@@ -142,8 +166,8 @@ fun SecurityPrivacyScreen(
                         },
                     )
                     SettingsRowItem(
-                        title = "Parolayı değiştir",
-                        subtitle = "Hesap giriş şifrenizi güncelleyin",
+                        title = stringResource(Res.string.security_privacy_row_change_password_title),
+                        subtitle = stringResource(Res.string.security_privacy_row_change_password_subtitle),
                         icon = Icons.Outlined.Key,
                         showDivider = false,
                         onClick = onNavigateToChangePassword,
@@ -157,7 +181,7 @@ fun SecurityPrivacyScreen(
     if (showTimeoutDialog) {
         AlertDialog(
             onDismissRequest = { showTimeoutDialog = false },
-            title = { Text("Otomatik kilit süresi") },
+            title = { Text(stringResource(Res.string.security_privacy_dialog_timeout_title)) },
             text = {
                 Column {
                     AutoLockTimeout.entries.forEach { timeout ->
@@ -167,12 +191,11 @@ fun SecurityPrivacyScreen(
                                 .clickable {
                                     onAutoLockTimeoutChange(timeout)
                                     showTimeoutDialog = false
-                                }
-                                .padding(vertical = 12.dp),
+                                }.padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = timeout.toLabel(),
+                                text = stringResource(timeout.toLocalizedResource()),
                                 style = MaterialTheme.typography.bodyLarge,
                                 modifier = Modifier.weight(1f),
                             )
@@ -190,16 +213,9 @@ fun SecurityPrivacyScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showTimeoutDialog = false }) {
-                    Text("Kapat")
+                    Text(stringResource(Res.string.security_privacy_dialog_close_button))
                 }
             },
         )
     }
-}
-
-private fun AutoLockTimeout.toLabel(): String = when (this) {
-    AutoLockTimeout.IMMEDIATELY -> "Anında"
-    AutoLockTimeout.AFTER_30_SECONDS -> "30 saniye sonra"
-    AutoLockTimeout.AFTER_1_MINUTE -> "1 dakika sonra"
-    AutoLockTimeout.AFTER_5_MINUTES -> "5 dakika sonra"
 }

@@ -27,6 +27,7 @@ import com.feniqo.mobile.security.AndroidBiometricAuthenticator
 import com.feniqo.mobile.security.AppLockAuthenticationAction
 import com.feniqo.mobile.security.AppLockViewModel
 import com.feniqo.mobile.security.DeviceAuthenticationAvailability
+import com.feniqo.mobile.presentation.settings.toLocalizedMessage
 import com.feniqo.mobile.domain.model.AppLanguage
 import com.feniqo.mobile.domain.model.UserSettings
 import com.feniqo.mobile.domain.repository.UserSettingsRepository
@@ -105,7 +106,7 @@ class MainActivity : FragmentActivity() {
                 com.feniqo.mobile.demo.DemoGate {
                     if (authState == AppAuthState.Authenticated && appLockState.isLocked) {
                         AppLockScreen(
-                            errorMessage = appLockState.errorMessage,
+                            errorMessage = appLockState.error?.toLocalizedMessage(),
                             onUnlock = { authenticate(AppLockAuthenticationAction.UNLOCK) },
                         )
                     } else {

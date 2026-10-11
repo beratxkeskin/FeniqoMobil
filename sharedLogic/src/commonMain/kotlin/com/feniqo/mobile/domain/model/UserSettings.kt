@@ -16,10 +16,10 @@ enum class FirstDayOfWeekPreference(val label: String) {
     SUNDAY("Pazar"),
 }
 
-enum class ReminderTimeOffset(val daysBefore: Int, val label: String) {
-    SAME_DAY(0, "Gününde"),
-    ONE_DAY_BEFORE(1, "1 gün önce"),
-    THREE_DAYS_BEFORE(3, "3 gün önce"),
+enum class ReminderTimeOffset(val daysBefore: Int) {
+    SAME_DAY(0),
+    ONE_DAY_BEFORE(1),
+    THREE_DAYS_BEFORE(3),
 }
 
 data class NotificationPreferences(

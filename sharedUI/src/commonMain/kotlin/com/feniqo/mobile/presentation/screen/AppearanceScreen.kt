@@ -13,6 +13,14 @@ import com.feniqo.mobile.presentation.component.SettingsTopBar
 import com.feniqo.mobile.presentation.component.ThemeSelectionCard
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.appearance_theme_section_subtitle
+import feniqomobil.sharedui.generated.resources.appearance_theme_section_title
+import feniqomobil.sharedui.generated.resources.appearance_title
+import com.feniqo.mobile.presentation.settings.toSubtitleResource
+import com.feniqo.mobile.presentation.settings.toTitleResource
+import org.jetbrains.compose.resources.stringResource
+
 /**
  * 04 Görünüm Ekranı.
  * Sistem, Açık ve Koyu tema seçenekleri ile tutarları gizleme tercihi ve önizleme kutusu.
@@ -39,7 +47,7 @@ fun AppearanceScreen(
         ) {
             item {
                 SettingsTopBar(
-                    title = "Görünüm",
+                    title = stringResource(Res.string.appearance_title),
                     onBack = onBack,
                 )
             }
@@ -47,13 +55,13 @@ fun AppearanceScreen(
             item {
                 Column {
                     Text(
-                        text = "Uygulama temasını seç",
+                        text = stringResource(Res.string.appearance_theme_section_title),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Cihazının görünümüne en uygun temayı belirle.",
+                        text = stringResource(Res.string.appearance_theme_section_subtitle),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -66,30 +74,16 @@ fun AppearanceScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
                 ) {
-                    ThemeSelectionCard(
-                        themePreference = ThemePreference.SYSTEM,
-                        currentSelection = currentTheme,
-                        title = "Sistem",
-                        subtitle = "Cihaz temasını kullanır.",
-                        onSelect = onThemeSelect,
-                        modifier = Modifier.weight(1f),
-                    )
-                    ThemeSelectionCard(
-                        themePreference = ThemePreference.LIGHT,
-                        currentSelection = currentTheme,
-                        title = "Açık",
-                        subtitle = "Her zaman açık tema.",
-                        onSelect = onThemeSelect,
-                        modifier = Modifier.weight(1f),
-                    )
-                    ThemeSelectionCard(
-                        themePreference = ThemePreference.DARK,
-                        currentSelection = currentTheme,
-                        title = "Koyu",
-                        subtitle = "Her zaman koyu tema.",
-                        onSelect = onThemeSelect,
-                        modifier = Modifier.weight(1f),
-                    )
+                    ThemePreference.entries.forEach { pref ->
+                        ThemeSelectionCard(
+                            themePreference = pref,
+                            currentSelection = currentTheme,
+                            title = stringResource(pref.toTitleResource()),
+                            subtitle = stringResource(pref.toSubtitleResource()),
+                            onSelect = onThemeSelect,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
             }
 

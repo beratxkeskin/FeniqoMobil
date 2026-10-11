@@ -25,6 +25,10 @@ import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTouchTarget
 
+import com.feniqo.mobile.presentation.settings.toLocalizedResource
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
+
 /**
  * 07 Bildirimler Ekranı, 08 Hatırlatma Tercihleri ve 21 Bildirim İzni Kapalı Durumu.
  */
@@ -53,7 +57,7 @@ fun NotificationsScreen(
         ) {
             item {
                 SettingsTopBar(
-                    title = "Bildirimler",
+                    title = stringResource(Res.string.notifications_title),
                     onBack = onBack,
                 )
             }
@@ -70,8 +74,12 @@ fun NotificationsScreen(
             item {
                 SettingsGroupCard {
                     SettingsRowItem(
-                        title = "Bildirimlere izin ver",
-                        subtitle = if (preferences.enabled) "Uygulama içi bildirimler açık" else "Tüm bildirimler susturuldu",
+                        title = stringResource(Res.string.notifications_allow_title),
+                        subtitle = if (preferences.enabled) {
+                            stringResource(Res.string.notifications_allow_subtitle_enabled)
+                        } else {
+                            stringResource(Res.string.notifications_allow_subtitle_disabled)
+                        },
                         icon = Icons.Outlined.NotificationsActive,
                         trailingContent = {
                             Switch(
@@ -88,15 +96,15 @@ fun NotificationsScreen(
             // Kategori Switch'leri
             item {
                 Text(
-                    text = "Bildirim kategorileri",
+                    text = stringResource(Res.string.notifications_categories_header),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
                 )
                 SettingsGroupCard {
                     SettingsRowItem(
-                        title = "Borç ve alacak vadeleri",
-                        subtitle = "Yaklaşan ödeme ve tahsilat hatırlatmaları",
+                        title = stringResource(Res.string.notifications_category_debts_title),
+                        subtitle = stringResource(Res.string.notifications_category_debts_subtitle),
                         icon = Icons.Outlined.AccountBalance,
                         trailingContent = {
                             Switch(
@@ -108,8 +116,8 @@ fun NotificationsScreen(
                         },
                     )
                     SettingsRowItem(
-                        title = "Abonelik yenilemeleri",
-                        subtitle = "Yenilenme tarihi yaklaşan servisler",
+                        title = stringResource(Res.string.notifications_category_subscriptions_title),
+                        subtitle = stringResource(Res.string.notifications_category_subscriptions_subtitle),
                         icon = Icons.Outlined.EventRepeat,
                         trailingContent = {
                             Switch(
@@ -121,8 +129,8 @@ fun NotificationsScreen(
                         },
                     )
                     SettingsRowItem(
-                        title = "Tekrarlayan işlemler",
-                        subtitle = "Planlanmış periyodik gelir ve giderler",
+                        title = stringResource(Res.string.notifications_category_recurring_title),
+                        subtitle = stringResource(Res.string.notifications_category_recurring_subtitle),
                         icon = Icons.Outlined.Autorenew,
                         trailingContent = {
                             Switch(
@@ -134,8 +142,8 @@ fun NotificationsScreen(
                         },
                     )
                     SettingsRowItem(
-                        title = "Bütçe uyarıları",
-                        subtitle = "%80 limit yaklaşımı ve aşım bildirimleri",
+                        title = stringResource(Res.string.notifications_category_budgets_title),
+                        subtitle = stringResource(Res.string.notifications_category_budgets_subtitle),
                         icon = Icons.Outlined.Assessment,
                         trailingContent = {
                             Switch(
@@ -153,15 +161,16 @@ fun NotificationsScreen(
             // Zaman ve Gizlilik Tercihleri
             item {
                 Text(
-                    text = "Zamanlama ve Gizlilik",
+                    text = stringResource(Res.string.notifications_timing_privacy_header),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
                 )
                 SettingsGroupCard {
-                    val timeString = "${preferences.reminderOffset.label} • ${preferences.reminderHour.toString().padStart(2, '0')}:${preferences.reminderMinute.toString().padStart(2, '0')}"
+                    val offsetLabel = stringResource(preferences.reminderOffset.toLocalizedResource())
+                    val timeString = "$offsetLabel • ${preferences.reminderHour.toString().padStart(2, '0')}:${preferences.reminderMinute.toString().padStart(2, '0')}"
                     SettingsRowItem(
-                        title = "Hatırlatma zamanı",
+                        title = stringResource(Res.string.notifications_reminder_time_title),
                         subtitle = timeString,
                         icon = Icons.Outlined.Schedule,
                         onClick = { showReminderPreferencesSheet = true },
@@ -169,17 +178,17 @@ fun NotificationsScreen(
                     val quietString = if (preferences.quietHoursEnabled) {
                         "${preferences.quietHoursStartHour.toString().padStart(2, '0')}:${preferences.quietHoursStartMinute.toString().padStart(2, '0')} – ${preferences.quietHoursEndHour.toString().padStart(2, '0')}:${preferences.quietHoursEndMinute.toString().padStart(2, '0')}"
                     } else {
-                        "Kapalı"
+                        stringResource(Res.string.notifications_quiet_hours_disabled)
                     }
                     SettingsRowItem(
-                        title = "Sessiz saatler",
+                        title = stringResource(Res.string.notifications_quiet_hours_title),
                         subtitle = quietString,
                         icon = Icons.Outlined.Bedtime,
                         onClick = { showReminderPreferencesSheet = true },
                     )
                     SettingsRowItem(
-                        title = "Bildirimlerde tutarları gizle",
-                        subtitle = "Kilit ekranı ve bildirimlerde bakiyeleri maskele",
+                        title = stringResource(Res.string.notifications_hide_amounts_title),
+                        subtitle = stringResource(Res.string.notifications_hide_amounts_subtitle),
                         icon = Icons.Outlined.VisibilityOff,
                         trailingContent = {
                             Switch(
@@ -215,12 +224,15 @@ fun NotificationsScreen(
                 verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
             ) {
                 Text(
-                    text = "Hatırlatma tercihleri",
+                    text = stringResource(Res.string.notifications_sheet_title),
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 )
 
                 // Hatırlatma Zamanı Çipleri
-                Text("Hatırlatma zamanı", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
+                Text(
+                    text = stringResource(Res.string.notifications_sheet_reminder_time_label),
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(FeniqoSpacing.Small),
@@ -230,7 +242,7 @@ fun NotificationsScreen(
                         FilterChip(
                             selected = selected,
                             onClick = { offset = opt },
-                            label = { Text(opt.label) },
+                            label = { Text(stringResource(opt.toLocalizedResource())) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = FeniqoSageGreen,
                                 selectedLabelColor = Color.White,
@@ -252,7 +264,7 @@ fun NotificationsScreen(
                         Icon(Icons.Outlined.AccessTime, null, tint = FeniqoSageGreen)
                         Spacer(modifier = Modifier.width(FeniqoSpacing.Medium))
                         Text(
-                            text = "Bildirim saati:",
+                            text = stringResource(Res.string.notifications_sheet_notification_time_label),
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.weight(1f),
                         )
@@ -269,7 +281,10 @@ fun NotificationsScreen(
                 }
 
                 // Sessiz Saatler
-                Text("Sessiz saatler", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
+                Text(
+                    text = stringResource(Res.string.notifications_sheet_quiet_hours_label),
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                )
                 SettingsGroupCard {
                     Row(
                         modifier = Modifier
@@ -278,8 +293,15 @@ fun NotificationsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Sessiz saatleri etkinleştir", style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium))
-                            Text("Bu aralıkta bildirimler sessiz saatlerin sonuna ertelenir.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                text = stringResource(Res.string.notifications_sheet_quiet_hours_enable_title),
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                            )
+                            Text(
+                                text = stringResource(Res.string.notifications_sheet_quiet_hours_enable_subtitle),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                         Switch(
                             checked = quietEnabled,
@@ -296,15 +318,31 @@ fun NotificationsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Column {
-                                Text("Başlangıç", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    text = stringResource(Res.string.notifications_sheet_quiet_hours_start),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                                 TextButton(onClick = { quietStartHour = (quietStartHour + 1) % 24 }) {
-                                    Text("${quietStartHour.toString().padStart(2, '0')}:00", fontWeight = FontWeight.Bold, color = FeniqoSageGreen)
+                                    Text(
+                                        text = "${quietStartHour.toString().padStart(2, '0')}:00",
+                                        fontWeight = FontWeight.Bold,
+                                        color = FeniqoSageGreen,
+                                    )
                                 }
                             }
                             Column {
-                                Text("Bitiş", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    text = stringResource(Res.string.notifications_sheet_quiet_hours_end),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                                 TextButton(onClick = { quietEndHour = (quietEndHour + 1) % 24 }) {
-                                    Text("${quietEndHour.toString().padStart(2, '0')}:00", fontWeight = FontWeight.Bold, color = FeniqoSageGreen)
+                                    Text(
+                                        text = "${quietEndHour.toString().padStart(2, '0')}:00",
+                                        fontWeight = FontWeight.Bold,
+                                        color = FeniqoSageGreen,
+                                    )
                                 }
                             }
                         }
@@ -321,7 +359,7 @@ fun NotificationsScreen(
                                 quietHoursEnabled = quietEnabled,
                                 quietHoursStartHour = quietStartHour,
                                 quietHoursEndHour = quietEndHour,
-                            )
+                            ),
                         )
                         showReminderPreferencesSheet = false
                     },
@@ -331,7 +369,10 @@ fun NotificationsScreen(
                         .fillMaxWidth()
                         .height(FeniqoTouchTarget.PrimaryAction),
                 ) {
-                    Text("Kaydet", fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = stringResource(Res.string.notifications_sheet_save_button),
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
                 Spacer(modifier = Modifier.height(FeniqoSpacing.Large))
             }

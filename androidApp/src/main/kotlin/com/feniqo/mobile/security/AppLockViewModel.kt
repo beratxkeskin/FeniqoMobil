@@ -12,6 +12,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import com.feniqo.mobile.presentation.settings.AppLockUiError
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -19,7 +20,7 @@ data class AppLockUiState(
     val settings: SecuritySettings? = null,
     val availability: DeviceAuthenticationAvailability = DeviceAuthenticationAvailability.UNAVAILABLE,
     val isLocked: Boolean = false,
-    val errorMessage: String? = null,
+    val error: AppLockUiError? = null,
 )
 
 enum class AppLockAuthenticationAction {
@@ -71,16 +72,19 @@ class AppLockViewModel @Inject constructor(
     }
 
     fun onAuthenticationSucceeded(action: AppLockAuthenticationAction) {
-        mutableState.update { it.copy(isLocked = false, errorMessage = null) }
+        mutableState.update { it.copy(isLocked = false, error = null) }
         if (action == AppLockAuthenticationAction.ENABLE) {
             setEnabled(enabled = true)
         }
     }
 
-    fun onAuthenticationError(message: String?) {
-        mutableState.update {
-            it.copy(errorMessage = message ?: unavailableMessage(it.availability))
+    fun onAuthenticationError(message: String? = null) {
+        val error = when (mutableState.value.availability) {
+            DeviceAuthenticationAvailability.AVAILABLE -> AppLockUiError.AuthenticationFailed
+            DeviceAuthenticationAvailability.NONE_ENROLLED -> AppLockUiError.AuthenticationNoneEnrolled
+            DeviceAuthenticationAvailability.UNAVAILABLE -> AppLockUiError.AuthenticationUnavailable
         }
+        mutableState.update { it.copy(error = error) }
     }
 
     fun disableLock() = setEnabled(enabled = false)
@@ -88,28 +92,20 @@ class AppLockViewModel @Inject constructor(
     fun setAutoLockTimeout(timeout: AutoLockTimeout) {
         viewModelScope.launch {
             if (repository.setAutoLockTimeout(timeout) is RepositoryResult.Failure) {
-                mutableState.update { it.copy(errorMessage = "Otomatik kilit süresi kaydedilemedi.") }
+                mutableState.update { it.copy(error = AppLockUiError.AutoLockTimeoutSaveFailed) }
             }
         }
     }
 
     fun clearError() {
-        mutableState.update { it.copy(errorMessage = null) }
+        mutableState.update { it.copy(error = null) }
     }
 
     private fun setEnabled(enabled: Boolean) {
         viewModelScope.launch {
             if (repository.setBiometricLockEnabled(enabled) is RepositoryResult.Failure) {
-                mutableState.update { it.copy(errorMessage = "Uygulama kilidi tercihi kaydedilemedi.") }
+                mutableState.update { it.copy(error = AppLockUiError.BiometricPreferenceSaveFailed) }
             }
         }
-    }
-
-    private fun unavailableMessage(availability: DeviceAuthenticationAvailability): String = when (availability) {
-        DeviceAuthenticationAvailability.AVAILABLE -> "Doğrulama tamamlanamadı."
-        DeviceAuthenticationAvailability.NONE_ENROLLED ->
-            "Cihaz ayarlarından biyometri veya ekran kilidi tanımlayın."
-        DeviceAuthenticationAvailability.UNAVAILABLE ->
-            "Bu cihazda güvenli sistem doğrulaması kullanılamıyor."
     }
 }

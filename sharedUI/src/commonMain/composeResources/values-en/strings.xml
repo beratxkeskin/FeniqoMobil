@@ -2515,4 +2515,89 @@
         <item quantity="one">%1$d member</item>
         <item quantity="other">%1$d members</item>
     </plurals>
+    <!-- Settings: TopBar & Common -->
+    <string name="settings_back">Back</string>
+
+    <!-- Settings: Appearance (appearance_*) -->
+    <string name="appearance_title">Appearance</string>
+    <string name="appearance_theme_section_title">Choose app theme</string>
+    <string name="appearance_theme_section_subtitle">Select the theme that best fits your device.</string>
+    <string name="appearance_theme_system_title">System</string>
+    <string name="appearance_theme_system_subtitle">Follows device theme.</string>
+    <string name="appearance_theme_light_title">Light</string>
+    <string name="appearance_theme_light_subtitle">Always light theme.</string>
+    <string name="appearance_theme_dark_title">Dark</string>
+    <string name="appearance_theme_dark_subtitle">Always dark theme.</string>
+    <string name="appearance_mask_amounts_title">Hide amounts</string>
+    <string name="appearance_mask_amounts_subtitle">Balances are masked when amounts are hidden.</string>
+    <string name="appearance_mask_amounts_preview_title">Total balance (Sample)</string>
+    <string name="appearance_mask_amounts_preview_value">₺12,450.00</string>
+
+    <!-- Settings: Notifications (notifications_*) -->
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_permission_granted_title">Notification permission enabled</string>
+    <string name="notifications_permission_denied_title">System notifications are disabled.</string>
+    <string name="notifications_permission_granted_subtitle">The app can send notifications.</string>
+    <string name="notifications_permission_denied_subtitle">Your preferences are saved; enable to receive notifications.</string>
+    <string name="notifications_permission_open_button">Enable</string>
+    <string name="notifications_allow_title">Allow notifications</string>
+    <string name="notifications_allow_subtitle_enabled">In-app notifications enabled</string>
+    <string name="notifications_allow_subtitle_disabled">All notifications silenced</string>
+    <string name="notifications_categories_header">Notification categories</string>
+    <string name="notifications_category_debts_title">Debt and receivable due dates</string>
+    <string name="notifications_category_debts_subtitle">Upcoming payment and collection reminders</string>
+    <string name="notifications_category_subscriptions_title">Subscription renewals</string>
+    <string name="notifications_category_subscriptions_subtitle">Services approaching renewal date</string>
+    <string name="notifications_category_recurring_title">Recurring transactions</string>
+    <string name="notifications_category_recurring_subtitle">Scheduled periodic income and expenses</string>
+    <string name="notifications_category_budgets_title">Budget alerts</string>
+    <string name="notifications_category_budgets_subtitle">80% limit warning and exceed notifications</string>
+    <string name="notifications_timing_privacy_header">Timing and Privacy</string>
+    <string name="notifications_reminder_time_title">Reminder time</string>
+    <string name="notifications_reminder_offset_same_day">On the day</string>
+    <string name="notifications_reminder_offset_one_day_before">1 day before</string>
+    <string name="notifications_reminder_offset_three_days_before">3 days before</string>
+    <string name="notifications_quiet_hours_title">Quiet hours</string>
+    <string name="notifications_quiet_hours_disabled">Off</string>
+    <string name="notifications_hide_amounts_title">Hide amounts in notifications</string>
+    <string name="notifications_hide_amounts_subtitle">Mask balances on lock screen and in notifications</string>
+    <string name="notifications_sheet_title">Reminder preferences</string>
+    <string name="notifications_sheet_reminder_time_label">Reminder time</string>
+    <string name="notifications_sheet_notification_time_label">Notification time:</string>
+    <string name="notifications_sheet_quiet_hours_label">Quiet hours</string>
+    <string name="notifications_sheet_quiet_hours_enable_title">Enable quiet hours</string>
+    <string name="notifications_sheet_quiet_hours_enable_subtitle">During this period, notifications are deferred until quiet hours end.</string>
+    <string name="notifications_sheet_quiet_hours_start">Start</string>
+    <string name="notifications_sheet_quiet_hours_end">End</string>
+    <string name="notifications_sheet_save_button">Save</string>
+
+    <!-- Settings: Security & Privacy (security_privacy_*) -->
+    <string name="security_privacy_title">Security and privacy</string>
+    <string name="security_privacy_card_lock_enabled">App lock is on</string>
+    <string name="security_privacy_card_lock_disabled">App lock is off</string>
+    <string name="security_privacy_card_desc_available">Authenticate with biometrics or screen lock.</string>
+    <string name="security_privacy_card_desc_unavailable">No screen lock configured on this device.</string>
+    <string name="security_privacy_row_app_lock_title">App lock</string>
+    <string name="security_privacy_row_app_lock_subtitle">Protect with biometrics or device passcode</string>
+    <string name="security_privacy_row_auto_lock_title">Auto-lock</string>
+    <string name="security_privacy_autolock_immediately">Immediately</string>
+    <string name="security_privacy_autolock_30_seconds">After 30 seconds</string>
+    <string name="security_privacy_autolock_1_minute">After 1 minute</string>
+    <string name="security_privacy_autolock_5_minutes">After 5 minutes</string>
+    <string name="security_privacy_row_hide_amounts_title">Hide amounts in notifications</string>
+    <string name="security_privacy_row_hide_amounts_subtitle">Mask balances on lock screen</string>
+    <string name="security_privacy_row_change_password_title">Change password</string>
+    <string name="security_privacy_row_change_password_subtitle">Update your account login password</string>
+    <string name="security_privacy_dialog_timeout_title">Auto-lock timeout</string>
+    <string name="security_privacy_dialog_close_button">Close</string>
+    <string name="security_privacy_autolock_save_error">Could not save auto-lock timeout.</string>
+    <string name="security_privacy_lock_pref_save_error">Could not save app lock preference.</string>
+    <string name="security_privacy_auth_failed_error">Authentication could not be completed.</string>
+    <string name="security_privacy_auth_none_enrolled_error">Set up biometrics or screen lock in device settings.</string>
+    <string name="security_privacy_auth_unavailable_error">Secure system authentication is not available on this device.</string>
+
+    <!-- App Lock Screen (app_lock_*) -->
+    <string name="app_lock_title">Feniqo is locked</string>
+    <string name="app_lock_default_description">Verify with biometrics or your device screen lock to continue.</string>
+    <string name="app_lock_unlock_button">Unlock</string>
 </resources>

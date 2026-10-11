@@ -34,7 +34,17 @@ import com.feniqo.mobile.presentation.theme.FeniqoSageGreenContainer
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTouchTarget
 import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.appearance_mask_amounts_preview_title
+import feniqomobil.sharedui.generated.resources.appearance_mask_amounts_preview_value
+import feniqomobil.sharedui.generated.resources.appearance_mask_amounts_subtitle
+import feniqomobil.sharedui.generated.resources.appearance_mask_amounts_title
 import feniqomobil.sharedui.generated.resources.format_preview_title
+import feniqomobil.sharedui.generated.resources.notifications_permission_denied_subtitle
+import feniqomobil.sharedui.generated.resources.notifications_permission_denied_title
+import feniqomobil.sharedui.generated.resources.notifications_permission_granted_subtitle
+import feniqomobil.sharedui.generated.resources.notifications_permission_granted_title
+import feniqomobil.sharedui.generated.resources.notifications_permission_open_button
+import feniqomobil.sharedui.generated.resources.settings_back
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -57,7 +67,7 @@ fun SettingsTopBar(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Geri",
+                    contentDescription = stringResource(Res.string.settings_back),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -446,12 +456,12 @@ fun AmountMaskingSection(
                 Spacer(modifier = Modifier.width(FeniqoSpacing.Medium))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Tutarları gizle",
+                        text = stringResource(Res.string.appearance_mask_amounts_title),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        text = "Tutarlar gizlendiğinde bakiyeler maskelenir.",
+                        text = stringResource(Res.string.appearance_mask_amounts_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -480,13 +490,13 @@ fun AmountMaskingSection(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Toplam bakiye (Örnek)",
+                        text = stringResource(Res.string.appearance_mask_amounts_preview_title),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = if (maskAmounts) "••••" else "₺12.450,00",
+                        text = if (maskAmounts) "••••" else stringResource(Res.string.appearance_mask_amounts_preview_value),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
@@ -586,12 +596,20 @@ fun NotificationPermissionCard(
             Spacer(modifier = Modifier.width(FeniqoSpacing.Medium))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (isPermissionGranted) "Bildirim izni açık" else "Sistem bildirimine izin vermiyor.",
+                    text = if (isPermissionGranted) {
+                        stringResource(Res.string.notifications_permission_granted_title)
+                    } else {
+                        stringResource(Res.string.notifications_permission_denied_title)
+                    },
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                     color = FeniqoPureWhite,
                 )
                 Text(
-                    text = if (isPermissionGranted) "Uygulama bildirim gönderebilir." else "Tercihlerin korunur; bildirim almak için aç.",
+                    text = if (isPermissionGranted) {
+                        stringResource(Res.string.notifications_permission_granted_subtitle)
+                    } else {
+                        stringResource(Res.string.notifications_permission_denied_subtitle)
+                    },
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                     color = FeniqoPureWhite.copy(alpha = 0.7f),
                 )
@@ -603,7 +621,10 @@ fun NotificationPermissionCard(
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                 ) {
-                    Text("Aç", style = MaterialTheme.typography.labelMedium)
+                    Text(
+                        stringResource(Res.string.notifications_permission_open_button),
+                        style = MaterialTheme.typography.labelMedium,
+                    )
                 }
             }
         }

@@ -5,6 +5,7 @@ import com.feniqo.mobile.domain.repository.DatabaseProtectionStatus
 import com.feniqo.mobile.domain.repository.RepositoryResult
 import com.feniqo.mobile.domain.repository.SecurityRepository
 import com.feniqo.mobile.domain.repository.SecuritySettings
+import com.feniqo.mobile.presentation.settings.AppLockUiError
 import com.feniqo.mobile.presentation.sync.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -72,8 +73,22 @@ class AppLockViewModelTest {
         viewModel.onAuthenticationError(null)
 
         assertEquals(
-            "Cihaz ayarlarından biyometri veya ekran kilidi tanımlayın.",
-            viewModel.state.value.errorMessage,
+            AppLockUiError.AuthenticationNoneEnrolled,
+            viewModel.state.value.error,
+        )
+    }
+
+    @Test
+    fun authenticationError_withPlatformMessage_mapsToTypedErrorWithoutRetainingMessage() = runTest {
+        val viewModel = AppLockViewModel(FakeSecurityRepository(settings(enabled = false)))
+        testScheduler.advanceUntilIdle()
+        viewModel.setAvailability(DeviceAuthenticationAvailability.AVAILABLE)
+
+        viewModel.onAuthenticationError("Biometric authentication failed from platform")
+
+        assertEquals(
+            AppLockUiError.AuthenticationFailed,
+            viewModel.state.value.error,
         )
     }
 

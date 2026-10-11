@@ -18,6 +18,13 @@ import androidx.compose.ui.Modifier
 import com.feniqo.mobile.domain.repository.AutoLockTimeout
 import com.feniqo.mobile.presentation.component.EmptyState
 import com.feniqo.mobile.presentation.component.LoadingContent
+import com.feniqo.mobile.presentation.settings.toLocalizedResource
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.app_lock_default_description
+import feniqomobil.sharedui.generated.resources.app_lock_title
+import feniqomobil.sharedui.generated.resources.app_lock_unlock_button
+import feniqomobil.sharedui.generated.resources.security_privacy_dialog_timeout_title
+import org.jetbrains.compose.resources.stringResource
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.ThemeMode
 import kotlinx.coroutines.launch
@@ -120,26 +127,19 @@ fun ThemeSettingsPlaceholderScreen(
             enabled = biometricLockAvailable || biometricLockEnabled,
         )
         if (biometricLockEnabled) {
-            Text("Otomatik kilit süresi", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(Res.string.security_privacy_dialog_timeout_title), style = MaterialTheme.typography.titleMedium)
             AutoLockTimeout.entries.forEach { timeout ->
                 Button(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { onAutoLockTimeoutChange(timeout) },
                     enabled = timeout != autoLockTimeout,
                 ) {
-                    Text(timeout.label())
+                    Text(stringResource(timeout.toLocalizedResource()))
                 }
             }
         }
 
     }
-}
-
-private fun AutoLockTimeout.label(): String = when (this) {
-    AutoLockTimeout.IMMEDIATELY -> "Anında"
-    AutoLockTimeout.AFTER_30_SECONDS -> "30 saniye sonra"
-    AutoLockTimeout.AFTER_1_MINUTE -> "1 dakika sonra"
-    AutoLockTimeout.AFTER_5_MINUTES -> "5 dakika sonra"
 }
 
 @Composable
@@ -158,9 +158,12 @@ fun AppLockScreen(
                 .padding(FeniqoSpacing.Screen),
             verticalArrangement = Arrangement.Center,
         ) {
-            Text("Feniqo kilitli", style = MaterialTheme.typography.headlineMedium)
             Text(
-                errorMessage ?: "Devam etmek için biyometri veya cihaz ekran kilidinizle doğrulayın.",
+                text = stringResource(Res.string.app_lock_title),
+                style = MaterialTheme.typography.headlineMedium,
+            )
+            Text(
+                text = errorMessage ?: stringResource(Res.string.app_lock_default_description),
                 modifier = Modifier.padding(top = FeniqoSpacing.Medium),
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -170,7 +173,7 @@ fun AppLockScreen(
                     .padding(top = FeniqoSpacing.Large),
                 onClick = onUnlock,
             ) {
-                Text("Kilidi Aç")
+                Text(stringResource(Res.string.app_lock_unlock_button))
             }
         }
     }
