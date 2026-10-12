@@ -2601,4 +2601,142 @@
     <string name="app_lock_title">Feniqo kilitli</string>
     <string name="app_lock_default_description">Devam etmek için biyometri veya cihaz ekran kilidinizle doğrulayın.</string>
     <string name="app_lock_unlock_button">Kilidi Aç</string>
+
+    <!-- Settings: Email Settings (email_settings_*) -->
+    <string name="email_settings_title">E-posta</string>
+    <string name="email_settings_address_label">E-posta adresi</string>
+    <string name="email_settings_status_verified">Doğrulandı</string>
+    <string name="email_settings_status_pending">Doğrulama bekleniyor</string>
+    <string name="email_settings_status_unknown">Durum alınamadı</string>
+    <string name="email_settings_unspecified">Belirtilmemiş</string>
+    <string name="email_settings_pending_info">Bağlantıyı e-postandan onayladığında durum güncellenir.</string>
+    <string name="email_settings_resend_button">Doğrulama e-postasını tekrar gönder</string>
+    <string name="email_settings_resend_success">Doğrulama e-postası başarıyla gönderildi. Lütfen gelen kutunuzu kontrol edin.</string>
+    <string name="email_settings_change_email_title">E-posta adresini değiştir</string>
+    <string name="email_settings_change_email_description">Yeni bir e-posta adresiyle devam etmek istiyorsan, mevcut adresini değiştirebilirsin.</string>
+    <string name="email_settings_footer_note">Bu e-posta, hesabına erişim ve önemli bildirimler için kullanılır.</string>
+
+    <!-- Settings: Help Center Categories (help_category_*) -->
+    <string name="help_category_account_login">Hesap ve giriş</string>
+    <string name="help_category_transactions_categories">İşlemler ve kategoriler</string>
+    <string name="help_category_backup_sync">Yedekleme ve senkronizasyon</string>
+    <string name="help_category_privacy_security">Gizlilik ve güvenlik</string>
+
+    <!-- Settings: Help Center Articles (help_article_*) -->
+    <string name="help_article_acc_1_title">Hesap nasıl oluşturulur?</string>
+    <string name="help_article_acc_1_p1">Karşılama ekranından Kayıt Ol'u seç. E-posta adresini ve güçlü bir parola girdikten sonra hesabını oluşturabilirsin.</string>
+    <string name="help_article_acc_1_p2">E-posta doğrulama iletisi geldiyse bağlantıyı açıp uygulamaya dön. Doğrulama tamamlandığında aynı e-posta ve parolayla giriş yapabilirsin.</string>
+    <string name="help_article_acc_2_title">Parolamı unuttum, ne yapmalıyım?</string>
+    <string name="help_article_acc_2_p1">Giriş ekranındaki Parolamı Unuttum bağlantısını aç ve hesap e-posta adresini gir.</string>
+    <string name="help_article_acc_2_p2">E-postadaki güvenli bağlantı Feniqo'yu parola yenileme ekranında açar. Yeni parolanı kaydettikten sonra giriş ekranından devam edebilirsin. Bağlantı süresi dolmuşsa yeni bir ileti iste.</string>
+
+    <string name="help_article_txn_1_title">Gelir ve gider nasıl eklenir?</string>
+    <string name="help_article_txn_1_p1">Alt çubuktaki + düğmesine dokunup Gider veya Gelir'i seç. Tutarı, işlem adını, kategoriyi ve tarihi doldurup kaydet.</string>
+    <string name="help_article_txn_1_p2">Kayıt önce cihazındaki güvenli yerel veritabanına yazılır. İnternet yoksa kullanmaya devam edebilir, bağlantı geri geldiğinde eşitlemenin tamamlanmasını bekleyebilirsin.</string>
+    <string name="help_article_txn_2_title">Özel kategori nasıl oluşturulur?</string>
+    <string name="help_article_txn_2_p1">Daha Fazla > Kategoriler bölümüne gir ve yeni kategori eylemini seç. Gelir veya gider türünü, adı, rengi ve ikonu belirleyip kaydet.</string>
+    <string name="help_article_txn_2_p2">Kullanılmış özel kategoriler veri bütünlüğünü korumak için kalıcı olarak silinmek yerine arşivlenebilir.</string>
+
+    <string name="help_article_sync_1_title">Çevrimdışı kayıtlar ne zaman eşitlenir?</string>
+    <string name="help_article_sync_1_p1">Çevrimdışıyken yaptığın değişiklikler cihazda saklanır ve eşitleme kuyruğuna eklenir. Ağ geri geldiğinde uygulama bunları güvenli sırayla göndermeyi dener.</string>
+    <string name="help_article_sync_1_p2">Bekleyen, başarısız veya çakışan kayıtları Profil Merkezi ya da Veri Yönetimi içindeki senkronizasyon durumundan inceleyebilirsin. Çakışmalar kullanıcı kararı olmadan sessizce ezilmez.</string>
+    <string name="help_article_sync_2_title">Verilerimi nasıl yedekleyebilirim?</string>
+    <string name="help_article_sync_2_p1">Uygulama Ayarları > Veri Yönetimi bölümünden kişisel kategori ve işlemlerini JSON yedeği olarak dışa aktarabilirsin.</string>
+    <string name="help_article_sync_2_p2">Yedek; parola, oturum anahtarı, makbuz yolu veya senkronizasyon metadata'sı içermez. İçe aktarmadan önce dosyanın özeti gösterilir ve açık onayın istenir.</string>
+
+    <string name="help_article_sec_1_title">Hesap verilerim güvende mi?</string>
+    <string name="help_article_sec_1_p1">Finansal veriler kullanıcı ve çalışma alanı sahipliği kurallarıyla ayrılır. Mobil uygulamada service-role anahtarı bulunmaz; uzak erişim doğrulanmış kullanıcı oturumuyla yapılır.</string>
+    <string name="help_article_sec_1_p2">Uygulama hassas finansal içeriği, parolayı, tokenı veya makbuz metnini günlük kayıtlarına yazmaz.</string>
+    <string name="help_article_sec_2_title">Verilerim nasıl saklanıyor?</string>
+    <string name="help_article_sec_2_p1">Ekranlar veriyi doğrudan ağdan değil, cihazdaki Room veritabanından okur. Yerel değişiklik ve eşitleme kuyruğu aynı veritabanı işlemi içinde kaydedilir.</string>
+    <string name="help_article_sec_2_p2">Silme işlemleri cihazlar arası tutarlılık için soft-delete olarak eşitlenir. Aynı kayıt iki cihazda değişirse iki kopya karar verene kadar korunur.</string>
+    <string name="help_article_status_published">Yayında</string>
+
+    <!-- Settings: Help Center UI (help_center_*) -->
+    <string name="help_center_title">Yardım merkezi</string>
+    <string name="help_center_subtitle">Sorularına hızlıca yanıt bul, ihtiyacın olduğunda bizimle iletişime geç.</string>
+    <string name="help_center_search_placeholder">Nasıl yardımcı olabiliriz?</string>
+    <string name="help_center_search_clear">Temizle</string>
+    <string name="help_center_search_empty">Eşleşen yardım içeriği bulunamadı.</string>
+    <string name="help_center_category_expand">Aç</string>
+    <string name="help_center_category_collapse">Kapat</string>
+    <string name="help_center_feedback_card_title">Sorununu bildirebilirsin</string>
+    <string name="help_center_feedback_card_subtitle">Yaşadığın bir sorun mu var? Ekibimize bildir, birlikte çözelim.</string>
+    <string name="help_article_screen_title">Yardım merkezi</string>
+    <string name="help_article_not_found_title">Yardım içeriği bulunamadı</string>
+    <string name="help_article_not_found_desc">Yardım merkezine dönerek yayımlanmış bir başlık seçebilirsin.</string>
+    <string name="help_article_back_button">Geri dön</string>
+    <string name="help_article_send_feedback_button">Geri bildirim gönder</string>
+
+    <!-- Settings: Legal Info (legal_info_*) -->
+    <string name="legal_info_title">Gizlilik ve hukuki bilgiler</string>
+    <string name="legal_info_intro">Feniqo'da şeffaflık senin için önemli. Hukuki belgeler hazır olduğunda bu bölümden erişebilirsin.</string>
+    <string name="legal_info_privacy_title">Gizlilik politikası</string>
+    <string name="legal_info_privacy_subtitle">Henüz onaylı belge sunulmadı. Bağlantı hazır olduğunda bu bölümden erişilebilir.</string>
+    <string name="legal_info_terms_title">Kullanım koşulları</string>
+    <string name="legal_info_terms_subtitle">Henüz onaylı belge sunulmadı. Bağlantı hazır olduğunda bu bölümden erişilebilir.</string>
+    <string name="legal_info_badge_pending">Onaylı metin bekleniyor</string>
+    <string name="legal_info_badge_approved">Onaylandı</string>
+    <string name="legal_info_licenses_section_title">Açık kaynak lisanslar</string>
+    <string name="legal_info_licenses_section_desc">Uygulamada kullanılan açık kaynak yazılımlar.</string>
+    <string name="legal_info_licenses_row_title">Açık kaynak lisanslar</string>
+    <string name="legal_info_licenses_row_desc">Kullanılan temel açık kaynak bileşenleri ve lisansları</string>
+    <string name="legal_info_licenses_badge_view">Görüntüle</string>
+    <string name="legal_info_licenses_dialog_title">Açık kaynak lisanslar</string>
+    <string name="legal_info_licenses_dialog_intro">FeniqoMobil aşağıdaki temel açık kaynak projelerden yararlanır. Lisansların tam metinleri ilgili proje dağıtımlarında ve kaynak depolarında yer alır.</string>
+    <string name="legal_info_license_kotlin">Kotlin — Apache License 2.0</string>
+    <string name="legal_info_license_compose_androidx">Jetpack Compose ve AndroidX — Apache License 2.0</string>
+    <string name="legal_info_license_kotlinx">Kotlinx Coroutines, Serialization ve DateTime — Apache License 2.0</string>
+    <string name="legal_info_license_ktor">Ktor — Apache License 2.0</string>
+    <string name="legal_info_license_room">Room — Apache License 2.0</string>
+    <string name="legal_info_license_supabase">Supabase Kotlin — MIT License</string>
+    <string name="legal_info_license_sqlcipher">SQLCipher Community Edition — BSD-style License</string>
+    <string name="legal_info_licenses_dialog_close">Tamam</string>
+
+    <!-- Settings: Help & About (help_about_*) -->
+    <string name="help_about_title">Yardım ve hakkında</string>
+    <string name="help_about_tagline">Daha bilinçli bir finansal yaşam.</string>
+    <string name="help_about_section_support">DESTEK</string>
+    <string name="help_about_section_legal">HUKUKİ</string>
+    <string name="help_about_row_help_center_title">Yardım merkezi</string>
+    <string name="help_about_row_help_center_subtitle">Sıkça sorulan sorular ve rehberler</string>
+    <string name="help_about_row_feedback_title">Geri bildirim gönder</string>
+    <string name="help_about_row_feedback_subtitle">Uygulama deneyimini iyileştirmemize yardım et</string>
+    <string name="help_about_row_bug_title">Hata bildir</string>
+    <string name="help_about_row_bug_subtitle">Karşılaştığın bir sorunu bizimle paylaş</string>
+    <string name="help_about_row_privacy_title">Gizlilik politikası</string>
+    <string name="help_about_row_privacy_subtitle">Verilerinizin nasıl korunduğunu öğrenin</string>
+    <string name="help_about_row_terms_title">Kullanım koşulları</string>
+    <string name="help_about_row_terms_subtitle">Hizmet şartları ve kurallar</string>
+    <string name="help_about_row_licenses_title">Açık kaynak lisansları</string>
+    <string name="help_about_row_licenses_subtitle">Kullanılan açık kaynak kütüphaneler</string>
+    <string name="help_about_version_label">Sürüm bilgisi</string>
+    <string name="help_about_version_format">Sürüm %1$s</string>
+
+    <!-- Settings: Feedback Screen & Sharing (feedback_*) -->
+    <string name="feedback_title_bug">Hata bildir</string>
+    <string name="feedback_title_suggestion">Geri bildirim gönder</string>
+    <string name="feedback_desc_bug">Karşılaştığın bir sorunu bizimle paylaş. Ekran görüntüsü ve adımları eklemen çözmemizi hızlandırır.</string>
+    <string name="feedback_desc_suggestion">Deneyimini bizimle paylaş. Önerilerin ve geri bildirimlerin Feniqo'yu daha iyi hale getirmemize yardımcı olur.</string>
+    <string name="feedback_type_suggestion">Öneri</string>
+    <string name="feedback_type_bug">Hata</string>
+    <string name="feedback_subject_label">Konu</string>
+    <string name="feedback_subject_placeholder">Kısa bir başlık yaz</string>
+    <string name="feedback_message_label">Mesaj</string>
+    <string name="feedback_message_placeholder">Detaylarını bizimle paylaş...</string>
+    <string name="feedback_character_count_format">%1$d/%2$d</string>
+    <string name="feedback_attachment_label">Ekran görüntüsü (isteğe bağlı)</string>
+    <string name="feedback_attachment_default_name">Ekran görüntüsü</string>
+    <string name="feedback_attachment_remove">Kaldır</string>
+    <string name="feedback_attachment_add">Ekle</string>
+    <string name="feedback_warning_title">Parola ve finansal ayrıntı paylaşma</string>
+    <string name="feedback_warning_desc">Güvenliğin için lütfen parola, kart bilgileri, bakiye gibi hassas finansal bilgileri gönderme.</string>
+    <string name="feedback_share_button">Geri bildirimi paylaş</string>
+    <string name="feedback_footer_note">Feniqo sunucusuna otomatik gönderilmez. Cihazındaki paylaşım seçenekleri (e-posta, mesajlaşma vb.) üzerinden iletilmek üzere hazırlanır.</string>
+    <string name="feedback_share_subject_bug_format">[Feniqo Geri Bildirim] Hata: %1$s</string>
+    <string name="feedback_share_subject_suggestion_format">[Feniqo Geri Bildirim] Öneri: %1$s</string>
+    <string name="feedback_share_chooser_title">Geri bildirimi paylaş</string>
+    <string name="feedback_share_no_app_error">Paylaşım yapabilecek uygun bir uygulama bulunamadı.</string>
+    <string name="feedback_attachment_fallback_filename">ekran_goruntusu.png</string>
+
 </resources>

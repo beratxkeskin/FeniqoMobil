@@ -24,6 +24,15 @@ jobs:
     steps:
       - name: Checkout clean repository state
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Enforce localization catalogs and new-source policy
+        shell: pwsh
+        env:
+          LOCALIZATION_DIFF_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          LOCALIZATION_DIFF_HEAD: ${{ github.sha }}
+        run: ./scripts/ci/check-localization-policy.ps1
 
       - name: Reject tracked secrets and local-only files
         shell: pwsh

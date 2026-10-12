@@ -1,6 +1,5 @@
 package com.feniqo.mobile.presentation.screen
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,7 +12,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -26,6 +24,8 @@ import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTouchTarget
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Pano A3: E-posta Durum ve Yönetim Ekranı.
@@ -55,7 +55,7 @@ fun EmailSettingsScreen(
                 .padding(horizontal = FeniqoSpacing.Screen, vertical = FeniqoSpacing.Medium),
         ) {
             SettingsTopBar(
-                title = "E-posta",
+                title = stringResource(Res.string.email_settings_title),
                 onBack = onBack,
             )
 
@@ -88,18 +88,30 @@ fun EmailSettingsScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
-                                    text = "E-posta adresi",
+                                    text = stringResource(Res.string.email_settings_address_label),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
 
                                 val (statusText, statusBg, statusColor) = when (verificationStatus) {
                                     EmailVerificationStatus.VERIFIED ->
-                                        Triple("Doğrulandı", Color(0xFF2E7D32).copy(alpha = 0.12f), Color(0xFF2E7D32))
+                                        Triple(
+                                            stringResource(Res.string.email_settings_status_verified),
+                                            Color(0xFF2E7D32).copy(alpha = 0.12f),
+                                            Color(0xFF2E7D32),
+                                        )
                                     EmailVerificationStatus.PENDING_VERIFICATION ->
-                                        Triple("Doğrulama bekleniyor", Color(0xFFE65100).copy(alpha = 0.12f), Color(0xFFE65100))
+                                        Triple(
+                                            stringResource(Res.string.email_settings_status_pending),
+                                            Color(0xFFE65100).copy(alpha = 0.12f),
+                                            Color(0xFFE65100),
+                                        )
                                     EmailVerificationStatus.UNKNOWN ->
-                                        Triple("Durum alınamadı", Color(0xFF757575).copy(alpha = 0.12f), Color(0xFF757575))
+                                        Triple(
+                                            stringResource(Res.string.email_settings_status_unknown),
+                                            Color(0xFF757575).copy(alpha = 0.12f),
+                                            Color(0xFF757575),
+                                        )
                                 }
 
                                 Surface(
@@ -118,7 +130,7 @@ fun EmailSettingsScreen(
                             Spacer(modifier = Modifier.height(6.dp))
 
                             Text(
-                                text = currentEmail.ifBlank { "Belirtilmemiş" },
+                                text = currentEmail.ifBlank { stringResource(Res.string.email_settings_unspecified) },
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
@@ -148,7 +160,7 @@ fun EmailSettingsScreen(
                                 )
                                 Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
                                 Text(
-                                    text = "Bağlantıyı e-postandan onayladığında durum güncellenir.",
+                                    text = stringResource(Res.string.email_settings_pending_info),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -184,7 +196,7 @@ fun EmailSettingsScreen(
                                 )
                                 Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
                                 Text(
-                                    text = "Doğrulama e-postasını tekrar gönder",
+                                    text = stringResource(Res.string.email_settings_resend_button),
                                     fontWeight = FontWeight.SemiBold,
                                 )
                             }
@@ -196,7 +208,7 @@ fun EmailSettingsScreen(
                 if (verificationSentSuccess) {
                     item {
                         Text(
-                            text = "Doğrulama e-postası başarıyla gönderildi. Lütfen gelen kutunuzu kontrol edin.",
+                            text = stringResource(Res.string.email_settings_resend_success),
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFF2E7D32),
                             modifier = Modifier.padding(horizontal = 4.dp),
@@ -223,7 +235,7 @@ fun EmailSettingsScreen(
                 item {
                     SettingsGroupCard {
                         SettingsRowItem(
-                            title = "E-posta adresini değiştir",
+                            title = stringResource(Res.string.email_settings_change_email_title),
                             icon = Icons.Outlined.Mail,
                             showDivider = false,
                             onClick = onNavigateToChangeEmail,
@@ -233,7 +245,7 @@ fun EmailSettingsScreen(
 
                 item {
                     Text(
-                        text = "Yeni bir e-posta adresiyle devam etmek istiyorsan, mevcut adresini değiştirebilirsin.",
+                        text = stringResource(Res.string.email_settings_change_email_description),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 4.dp),
@@ -256,7 +268,7 @@ fun EmailSettingsScreen(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "Bu e-posta, hesabına erişim ve önemli bildirimler için kullanılır.",
+                    text = stringResource(Res.string.email_settings_footer_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

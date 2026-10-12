@@ -182,6 +182,34 @@ sonra mevcut repository yazma akışına girebilir. Para birimi OCR metninden ta
   tamamlanmadan recovery durumu `Idle` olamaz; temizleme başarısızsa navigasyon fail-closed
   biçimde `PasswordRecovery` dalında kalır.
 
+### 9.1 Localization sınırı
+
+```text
+Domain/ViewModel tipli durum + ham değerler
+                  |
+                  v
+Platform UI localization kaynağı + locale-aware formatter
+                  |
+                  v
+Kullanıcıya gösterilen metin
+```
+
+- `sharedLogic` ve ViewModel katmanları kullanıcıya hazır cümle veya locale'e göre biçimlendirilmiş
+  değer üretmez. UI state; enum/sealed durum, stable ID, `Money`, `LocalDate`, `YearMonth`, sayı ve
+  boolean gibi saf değerleri taşır.
+- Compose yüzeyleri metni `sharedUI` Compose Multiplatform kaynaklarından çözer. Türkçe varsayılan
+  katalog ile İngilizce katalog aynı anahtar, kaynak türü, çoğul miktarı ve placeholder sözleşmesine
+  sahiptir.
+- Android platform yüzeyleri aynı tipli durumu platform sınırında çözer; domain veya ViewModel'e
+  Android `Context`, resource kimliği ya da hazır kullanıcı metni sızdırmaz.
+- Çevrilebilir metin veri/navigasyon kimliği değildir. Navigasyon ve seçimler dil bağımsız stable ID
+  veya enum taşır.
+- Dil çalışma zamanında değişebildiği için çözümlenmiş kullanıcı metni uzun yaşayan state içinde
+  cache'lenmez. Kaydedilmemiş form taslağı locale değişiminde korunur; yalnız gösterim yeniden
+  biçimlendirilir.
+- CI, katalog eşliğini ve yeni belirgin hardcoded kullanıcı metinlerini hızlı statik kapıyla denetler.
+  Ekran davranışı ise riskle orantılı hedefli TR→EN runtime testiyle doğrulanır.
+
 ## 10. Test sınırları
 
 ### Merchant tanıma sınırı

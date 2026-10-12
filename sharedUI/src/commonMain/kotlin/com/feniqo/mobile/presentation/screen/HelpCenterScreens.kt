@@ -18,10 +18,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.presentation.component.SettingsGroupCard
 import com.feniqo.mobile.presentation.component.SettingsRowItem
 import com.feniqo.mobile.presentation.component.SettingsTopBar
@@ -31,75 +29,114 @@ import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreenContainer
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTouchTarget
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
+
+enum class HelpArticleStatus {
+    PUBLISHED,
+}
 
 data class HelpCategory(
     val id: String,
-    val title: String,
+    val titleRes: StringResource,
     val articles: List<HelpArticle>,
 )
 
 data class HelpArticle(
     val id: String,
-    val title: String,
-    val paragraphs: List<String>,
-    val status: String = "Yayında",
+    val titleRes: StringResource,
+    val paragraphResList: List<StringResource>,
+    val status: HelpArticleStatus = HelpArticleStatus.PUBLISHED,
 )
 
 internal val publishedHelpCategories = listOf(
     HelpCategory(
         id = "account_login",
-        title = "Hesap ve giriş",
+        titleRes = Res.string.help_category_account_login,
         articles = listOf(
-            HelpArticle("acc_1", "Hesap nasıl oluşturulur?", listOf(
-                "Karşılama ekranından Kayıt Ol'u seç. E-posta adresini ve güçlü bir parola girdikten sonra hesabını oluşturabilirsin.",
-                "E-posta doğrulama iletisi geldiyse bağlantıyı açıp uygulamaya dön. Doğrulama tamamlandığında aynı e-posta ve parolayla giriş yapabilirsin.",
-            )),
-            HelpArticle("acc_2", "Parolamı unuttum, ne yapmalıyım?", listOf(
-                "Giriş ekranındaki Parolamı Unuttum bağlantısını aç ve hesap e-posta adresini gir.",
-                "E-postadaki güvenli bağlantı Feniqo'yu parola yenileme ekranında açar. Yeni parolanı kaydettikten sonra giriş ekranından devam edebilirsin. Bağlantı süresi dolmuşsa yeni bir ileti iste.",
-            )),
+            HelpArticle(
+                id = "acc_1",
+                titleRes = Res.string.help_article_acc_1_title,
+                paragraphResList = listOf(
+                    Res.string.help_article_acc_1_p1,
+                    Res.string.help_article_acc_1_p2,
+                ),
+            ),
+            HelpArticle(
+                id = "acc_2",
+                titleRes = Res.string.help_article_acc_2_title,
+                paragraphResList = listOf(
+                    Res.string.help_article_acc_2_p1,
+                    Res.string.help_article_acc_2_p2,
+                ),
+            ),
         ),
     ),
     HelpCategory(
         id = "transactions_categories",
-        title = "İşlemler ve kategoriler",
+        titleRes = Res.string.help_category_transactions_categories,
         articles = listOf(
-            HelpArticle("txn_1", "Gelir ve gider nasıl eklenir?", listOf(
-                "Alt çubuktaki + düğmesine dokunup Gider veya Gelir'i seç. Tutarı, işlem adını, kategoriyi ve tarihi doldurup kaydet.",
-                "Kayıt önce cihazındaki güvenli yerel veritabanına yazılır. İnternet yoksa kullanmaya devam edebilir, bağlantı geri geldiğinde eşitlemenin tamamlanmasını bekleyebilirsin.",
-            )),
-            HelpArticle("txn_2", "Özel kategori nasıl oluşturulur?", listOf(
-                "Daha Fazla > Kategoriler bölümüne gir ve yeni kategori eylemini seç. Gelir veya gider türünü, adı, rengi ve ikonu belirleyip kaydet.",
-                "Kullanılmış özel kategoriler veri bütünlüğünü korumak için kalıcı olarak silinmek yerine arşivlenebilir.",
-            )),
+            HelpArticle(
+                id = "txn_1",
+                titleRes = Res.string.help_article_txn_1_title,
+                paragraphResList = listOf(
+                    Res.string.help_article_txn_1_p1,
+                    Res.string.help_article_txn_1_p2,
+                ),
+            ),
+            HelpArticle(
+                id = "txn_2",
+                titleRes = Res.string.help_article_txn_2_title,
+                paragraphResList = listOf(
+                    Res.string.help_article_txn_2_p1,
+                    Res.string.help_article_txn_2_p2,
+                ),
+            ),
         ),
     ),
     HelpCategory(
         id = "backup_sync",
-        title = "Yedekleme ve senkronizasyon",
+        titleRes = Res.string.help_category_backup_sync,
         articles = listOf(
-            HelpArticle("sync_1", "Çevrimdışı kayıtlar ne zaman eşitlenir?", listOf(
-                "Çevrimdışıyken yaptığın değişiklikler cihazda saklanır ve eşitleme kuyruğuna eklenir. Ağ geri geldiğinde uygulama bunları güvenli sırayla göndermeyi dener.",
-                "Bekleyen, başarısız veya çakışan kayıtları Profil Merkezi ya da Veri Yönetimi içindeki senkronizasyon durumundan inceleyebilirsin. Çakışmalar kullanıcı kararı olmadan sessizce ezilmez.",
-            )),
-            HelpArticle("sync_2", "Verilerimi nasıl yedekleyebilirim?", listOf(
-                "Uygulama Ayarları > Veri Yönetimi bölümünden kişisel kategori ve işlemlerini JSON yedeği olarak dışa aktarabilirsin.",
-                "Yedek; parola, oturum anahtarı, makbuz yolu veya senkronizasyon metadata'sı içermez. İçe aktarmadan önce dosyanın özeti gösterilir ve açık onayın istenir.",
-            )),
+            HelpArticle(
+                id = "sync_1",
+                titleRes = Res.string.help_article_sync_1_title,
+                paragraphResList = listOf(
+                    Res.string.help_article_sync_1_p1,
+                    Res.string.help_article_sync_1_p2,
+                ),
+            ),
+            HelpArticle(
+                id = "sync_2",
+                titleRes = Res.string.help_article_sync_2_title,
+                paragraphResList = listOf(
+                    Res.string.help_article_sync_2_p1,
+                    Res.string.help_article_sync_2_p2,
+                ),
+            ),
         ),
     ),
     HelpCategory(
         id = "privacy_security",
-        title = "Gizlilik ve güvenlik",
+        titleRes = Res.string.help_category_privacy_security,
         articles = listOf(
-            HelpArticle("sec_1", "Hesap verilerim güvende mi?", listOf(
-                "Finansal veriler kullanıcı ve çalışma alanı sahipliği kurallarıyla ayrılır. Mobil uygulamada service-role anahtarı bulunmaz; uzak erişim doğrulanmış kullanıcı oturumuyla yapılır.",
-                "Uygulama hassas finansal içeriği, parolayı, tokenı veya makbuz metnini günlük kayıtlarına yazmaz.",
-            )),
-            HelpArticle("sec_2", "Verilerim nasıl saklanıyor?", listOf(
-                "Ekranlar veriyi doğrudan ağdan değil, cihazdaki Room veritabanından okur. Yerel değişiklik ve eşitleme kuyruğu aynı veritabanı işlemi içinde kaydedilir.",
-                "Silme işlemleri cihazlar arası tutarlılık için soft-delete olarak eşitlenir. Aynı kayıt iki cihazda değişirse iki kopya karar verene kadar korunur.",
-            )),
+            HelpArticle(
+                id = "sec_1",
+                titleRes = Res.string.help_article_sec_1_title,
+                paragraphResList = listOf(
+                    Res.string.help_article_sec_1_p1,
+                    Res.string.help_article_sec_1_p2,
+                ),
+            ),
+            HelpArticle(
+                id = "sec_2",
+                titleRes = Res.string.help_article_sec_2_title,
+                paragraphResList = listOf(
+                    Res.string.help_article_sec_2_p1,
+                    Res.string.help_article_sec_2_p2,
+                ),
+            ),
         ),
     ),
 )
@@ -112,7 +149,7 @@ internal val publishedHelpCategories = listOf(
 @Composable
 fun HelpCenterScreen(
     onBack: () -> Unit,
-    onArticleClick: (articleTitle: String) -> Unit,
+    onArticleClick: (articleId: String) -> Unit,
     onNavigateToFeedback: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -121,10 +158,18 @@ fun HelpCenterScreen(
 
     val categories = remember { publishedHelpCategories }
 
-    val filteredArticles = remember(searchQuery) {
-        if (searchQuery.isBlank()) emptyList()
-        else categories.flatMap { it.articles }.filter {
-            it.title.contains(searchQuery.trim(), ignoreCase = true)
+    // Çözülmüş başlıklarla arama için mapping
+    val articlesWithTitles = categories.flatMap { it.articles }.map { article ->
+        Triple(article, stringResource(article.titleRes), stringResource(article.status.toLocalizedStatusRes()))
+    }
+
+    val filteredArticles = remember(searchQuery, articlesWithTitles) {
+        if (searchQuery.isBlank()) {
+            emptyList()
+        } else {
+            articlesWithTitles.filter { (_, title, _) ->
+                title.contains(searchQuery.trim(), ignoreCase = true)
+            }
         }
     }
 
@@ -166,25 +211,25 @@ fun HelpCenterScreen(
                         }
                         Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
                         Text(
-                            text = "Yardım merkezi",
+                            text = stringResource(Res.string.help_center_title),
                             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Sorularına hızlıca yanıt bul, ihtiyacın olduğunda bizimle iletişime geç.",
+                            text = stringResource(Res.string.help_center_subtitle),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
 
-                // Arama Kutusu ("Nasıl yardımcı olabiliriz?")
+                // Arama Kutusu
                 item {
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        placeholder = { Text("Nasıl yardımcı olabiliriz?") },
+                        placeholder = { Text(stringResource(Res.string.help_center_search_placeholder)) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Outlined.Search,
@@ -195,7 +240,10 @@ fun HelpCenterScreen(
                         trailingIcon = {
                             if (searchQuery.isNotEmpty()) {
                                 IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(Icons.Outlined.Close, contentDescription = "Temizle")
+                                    Icon(
+                                        imageVector = Icons.Outlined.Close,
+                                        contentDescription = stringResource(Res.string.help_center_search_clear),
+                                    )
                                 }
                             }
                         },
@@ -221,14 +269,14 @@ fun HelpCenterScreen(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    text = "Eşleşen yardım içeriği bulunamadı.",
+                                    text = stringResource(Res.string.help_center_search_empty),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
                     } else {
-                        items(filteredArticles) { article ->
+                        items(filteredArticles) { (article, title, statusText) ->
                             Card(
                                 shape = RoundedCornerShape(FeniqoRadius.Medium),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -238,7 +286,7 @@ fun HelpCenterScreen(
                                 ),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { onArticleClick(article.title) },
+                                    .clickable { onArticleClick(article.id) },
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -249,10 +297,21 @@ fun HelpCenterScreen(
                                     Icon(Icons.Outlined.Description, null, tint = FeniqoSageGreen)
                                     Spacer(modifier = Modifier.width(FeniqoSpacing.Medium))
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(article.title, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold))
-                                        Text(article.status, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(
+                                            text = title,
+                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                        )
+                                        Text(
+                                            text = statusText,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
                                     }
-                                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
                                 }
                             }
                         }
@@ -283,13 +342,15 @@ fun HelpCenterScreen(
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Text(
-                                            text = category.title,
+                                            text = stringResource(category.titleRes),
                                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                                             color = MaterialTheme.colorScheme.onSurface,
                                         )
                                         Icon(
                                             imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                            contentDescription = if (isExpanded) "Kapat" else "Aç",
+                                            contentDescription = stringResource(
+                                                if (isExpanded) Res.string.help_center_category_collapse else Res.string.help_center_category_expand,
+                                            ),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
@@ -307,7 +368,7 @@ fun HelpCenterScreen(
                                                     color = MaterialTheme.colorScheme.surfaceContainerLowest,
                                                     modifier = Modifier
                                                         .fillMaxWidth()
-                                                        .clickable { onArticleClick(article.title) },
+                                                        .clickable { onArticleClick(article.id) },
                                                 ) {
                                                     Row(
                                                         modifier = Modifier
@@ -324,11 +385,11 @@ fun HelpCenterScreen(
                                                         Spacer(modifier = Modifier.width(FeniqoSpacing.Medium))
                                                         Column(modifier = Modifier.weight(1f)) {
                                                             Text(
-                                                                text = article.title,
+                                                                text = stringResource(article.titleRes),
                                                                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                                                             )
                                                             Text(
-                                                                text = article.status,
+                                                                text = stringResource(article.status.toLocalizedStatusRes()),
                                                                 style = MaterialTheme.typography.bodySmall,
                                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                             )
@@ -342,7 +403,7 @@ fun HelpCenterScreen(
                                                 }
                                             }
 
-                                            // Destek kartı (yalnızca Gizlilik ve güvenlik altında veya alt kısımda)
+                                            // Destek kartı (yalnızca Gizlilik ve güvenlik altında)
                                             if (category.id == "privacy_security") {
                                                 Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
                                                 Surface(
@@ -367,12 +428,12 @@ fun HelpCenterScreen(
                                                         Spacer(modifier = Modifier.width(FeniqoSpacing.Medium))
                                                         Column(modifier = Modifier.weight(1f)) {
                                                             Text(
-                                                                text = "Sorununu bildirebilirsin",
+                                                                text = stringResource(Res.string.help_center_feedback_card_title),
                                                                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                                                 color = MaterialTheme.colorScheme.onSurface,
                                                             )
                                                             Text(
-                                                                text = "Yaşadığın bir sorun mu var? Ekibimize bildir, birlikte çözelim.",
+                                                                text = stringResource(Res.string.help_center_feedback_card_subtitle),
                                                                 style = MaterialTheme.typography.bodySmall,
                                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                             )
@@ -402,13 +463,13 @@ fun HelpCenterScreen(
  */
 @Composable
 fun HelpArticleStatusScreen(
-    articleTitle: String,
+    articleId: String,
     onBack: () -> Unit,
     onNavigateToFeedback: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val article = remember(articleTitle) {
-        publishedHelpCategories.flatMap { it.articles }.firstOrNull { it.title == articleTitle }
+    val article = remember(articleId) {
+        publishedHelpCategories.flatMap { it.articles }.firstOrNull { it.id == articleId }
     }
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -420,7 +481,7 @@ fun HelpArticleStatusScreen(
                 .padding(horizontal = FeniqoSpacing.Screen, vertical = FeniqoSpacing.Medium),
         ) {
             SettingsTopBar(
-                title = "Yardım merkezi",
+                title = stringResource(Res.string.help_center_title),
                 onBack = onBack,
             )
 
@@ -433,31 +494,35 @@ fun HelpArticleStatusScreen(
                 verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
                 contentPadding = PaddingValues(vertical = FeniqoSpacing.ExtraLarge),
             ) {
-                item { Box(
-                    modifier = Modifier
-                        .size(120.dp)
-                        .clip(CircleShape)
-                        .background(FeniqoSageGreenContainer),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Article,
-                        contentDescription = null,
-                        tint = FeniqoSageGreen,
-                        modifier = Modifier.size(56.dp),
-                    )
-                } }
+                item {
+                    Box(
+                        modifier = Modifier
+                            .size(120.dp)
+                            .clip(CircleShape)
+                            .background(FeniqoSageGreenContainer),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Article,
+                            contentDescription = null,
+                            tint = FeniqoSageGreen,
+                            modifier = Modifier.size(56.dp),
+                        )
+                    }
+                }
 
-                item { Text(
-                    text = article?.title ?: "Yardım içeriği bulunamadı",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface,
-                ) }
+                item {
+                    Text(
+                        text = if (article != null) stringResource(article.titleRes) else stringResource(Res.string.help_article_not_found_title),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
 
                 if (article != null) {
-                    items(article.paragraphs) { paragraph ->
+                    items(article.paragraphResList) { paragraphRes ->
                         Text(
-                            text = paragraph,
+                            text = stringResource(paragraphRes),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -465,7 +530,7 @@ fun HelpArticleStatusScreen(
                 } else {
                     item {
                         Text(
-                            text = "Yardım merkezine dönerek yayımlanmış bir başlık seçebilirsin.",
+                            text = stringResource(Res.string.help_article_not_found_desc),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -489,7 +554,7 @@ fun HelpArticleStatusScreen(
                         .fillMaxWidth()
                         .height(FeniqoTouchTarget.PrimaryAction),
                 ) {
-                    Text("Geri dön", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(Res.string.help_article_back_button), fontWeight = FontWeight.SemiBold)
                 }
 
                 OutlinedButton(
@@ -502,7 +567,7 @@ fun HelpArticleStatusScreen(
                         contentColor = MaterialTheme.colorScheme.onSurface,
                     ),
                 ) {
-                    Text("Geri bildirim gönder", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(Res.string.help_article_send_feedback_button), fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -531,7 +596,7 @@ fun LegalInfoScreen(
                 .padding(horizontal = FeniqoSpacing.Screen, vertical = FeniqoSpacing.Medium),
         ) {
             SettingsTopBar(
-                title = "Gizlilik ve hukuki bilgiler",
+                title = stringResource(Res.string.legal_info_title),
                 onBack = onBack,
             )
 
@@ -542,7 +607,7 @@ fun LegalInfoScreen(
             ) {
                 item {
                     Text(
-                        text = "Feniqo'da şeffaflık senin için önemli. Hukuki belgeler hazır olduğunda bu bölümden erişebilirsin.",
+                        text = stringResource(Res.string.legal_info_intro),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -551,23 +616,23 @@ fun LegalInfoScreen(
                 // Hukuki Belgeler Grubu
                 item {
                     SettingsGroupCard {
-                        SettingsRowItem(
-                            title = "Gizlilik politikası",
-                            subtitle = "Henüz onaylı belge sunulmadı. Bağlantı hazır olduğunda bu bölümden erişilebilir.",
-                            badgeText = "Onaylı metin bekleniyor",
-                            badgeColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            icon = Icons.Outlined.Policy,
-                            onClick = {},
-                        )
-                        SettingsRowItem(
-                            title = "Kullanım koşulları",
-                            subtitle = "Henüz onaylı belge sunulmadı. Bağlantı hazır olduğunda bu bölümden erişilebilir.",
-                            badgeText = "Onaylı metin bekleniyor",
-                            badgeColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            icon = Icons.Outlined.Description,
-                            showDivider = false,
-                            onClick = {},
-                        )
+                        defaultLegalDocuments.forEachIndexed { index, doc ->
+                            SettingsRowItem(
+                                title = stringResource(doc.titleRes),
+                                subtitle = stringResource(doc.subtitleRes),
+                                badgeText = stringResource(doc.status.toBadgeRes()),
+                                badgeColor = when (doc.status) {
+                                    LegalDocumentStatus.APPROVED -> FeniqoSageGreen
+                                    LegalDocumentStatus.PENDING_APPROVAL -> MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                                icon = when (doc.type) {
+                                    LegalDocumentType.PRIVACY_POLICY -> Icons.Outlined.Policy
+                                    LegalDocumentType.TERMS_OF_SERVICE -> Icons.Outlined.Description
+                                },
+                                showDivider = index != defaultLegalDocuments.lastIndex,
+                                onClick = {},
+                            )
+                        }
                     }
                 }
 
@@ -575,13 +640,13 @@ fun LegalInfoScreen(
                 item {
                     Column {
                         Text(
-                            text = "Açık kaynak lisanslar",
+                            text = stringResource(Res.string.legal_info_licenses_section_title),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Uygulamada kullanılan açık kaynak yazılımlar.",
+                            text = stringResource(Res.string.legal_info_licenses_section_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -591,9 +656,9 @@ fun LegalInfoScreen(
                 item {
                     SettingsGroupCard {
                         SettingsRowItem(
-                            title = "Açık kaynak lisanslar",
-                            subtitle = "Kullanılan temel açık kaynak bileşenleri ve lisansları",
-                            badgeText = "Görüntüle",
+                            title = stringResource(Res.string.legal_info_licenses_row_title),
+                            subtitle = stringResource(Res.string.legal_info_licenses_row_desc),
+                            badgeText = stringResource(Res.string.legal_info_licenses_badge_view),
                             badgeColor = FeniqoSageGreen,
                             icon = Icons.Outlined.Code,
                             showDivider = false,
@@ -608,35 +673,96 @@ fun LegalInfoScreen(
     if (showLicensesDialog) {
         AlertDialog(
             onDismissRequest = { showLicensesDialog = false },
-            title = { Text("Açık kaynak lisanslar") },
+            title = { Text(stringResource(Res.string.legal_info_licenses_dialog_title)) },
             text = {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     item {
                         Text(
-                            "FeniqoMobil aşağıdaki temel açık kaynak projelerden yararlanır. Lisansların tam metinleri ilgili proje dağıtımlarında ve kaynak depolarında yer alır.",
+                            stringResource(Res.string.legal_info_licenses_dialog_intro),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
-                    items(
-                        listOf(
-                            "Kotlin — Apache License 2.0",
-                            "Jetpack Compose ve AndroidX — Apache License 2.0",
-                            "Kotlinx Coroutines, Serialization ve DateTime — Apache License 2.0",
-                            "Ktor — Apache License 2.0",
-                            "Room — Apache License 2.0",
-                            "Supabase Kotlin — MIT License",
-                            "SQLCipher Community Edition — BSD-style License",
-                        ),
-                    ) { notice ->
-                        Text("• $notice", style = MaterialTheme.typography.bodySmall)
+                    items(publishedOpenSourceLicenses, key = { it.id }) { license ->
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(5.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.onSurfaceVariant),
+                            )
+                            Text(
+                                text = stringResource(license.textRes),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                     }
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showLicensesDialog = false }) {
-                    Text("Tamam", color = FeniqoSageGreen)
+                    Text(stringResource(Res.string.legal_info_licenses_dialog_close), color = FeniqoSageGreen)
                 }
             },
         )
     }
 }
+
+enum class LegalDocumentStatus {
+    APPROVED,
+    PENDING_APPROVAL,
+}
+
+enum class LegalDocumentType {
+    PRIVACY_POLICY,
+    TERMS_OF_SERVICE,
+}
+
+data class LegalDocumentItem(
+    val type: LegalDocumentType,
+    val titleRes: StringResource,
+    val subtitleRes: StringResource,
+    val status: LegalDocumentStatus = LegalDocumentStatus.PENDING_APPROVAL,
+)
+
+fun LegalDocumentStatus.toBadgeRes(): StringResource = when (this) {
+    LegalDocumentStatus.APPROVED -> Res.string.legal_info_badge_approved
+    LegalDocumentStatus.PENDING_APPROVAL -> Res.string.legal_info_badge_pending
+}
+
+val defaultLegalDocuments: List<LegalDocumentItem> = listOf(
+    LegalDocumentItem(
+        type = LegalDocumentType.PRIVACY_POLICY,
+        titleRes = Res.string.legal_info_privacy_title,
+        subtitleRes = Res.string.legal_info_privacy_subtitle,
+        status = LegalDocumentStatus.PENDING_APPROVAL,
+    ),
+    LegalDocumentItem(
+        type = LegalDocumentType.TERMS_OF_SERVICE,
+        titleRes = Res.string.legal_info_terms_title,
+        subtitleRes = Res.string.legal_info_terms_subtitle,
+        status = LegalDocumentStatus.PENDING_APPROVAL,
+    ),
+)
+
+data class OpenSourceLicenseItem(
+    val id: String,
+    val textRes: StringResource,
+)
+
+val publishedOpenSourceLicenses: List<OpenSourceLicenseItem> = listOf(
+    OpenSourceLicenseItem("kotlin", Res.string.legal_info_license_kotlin),
+    OpenSourceLicenseItem("compose_androidx", Res.string.legal_info_license_compose_androidx),
+    OpenSourceLicenseItem("kotlinx", Res.string.legal_info_license_kotlinx),
+    OpenSourceLicenseItem("ktor", Res.string.legal_info_license_ktor),
+    OpenSourceLicenseItem("room", Res.string.legal_info_license_room),
+    OpenSourceLicenseItem("supabase", Res.string.legal_info_license_supabase),
+    OpenSourceLicenseItem("sqlcipher", Res.string.legal_info_license_sqlcipher),
+)
+
+private fun HelpArticleStatus.toLocalizedStatusRes(): StringResource =
+    when (this) {
+        HelpArticleStatus.PUBLISHED -> Res.string.help_article_status_published
+    }

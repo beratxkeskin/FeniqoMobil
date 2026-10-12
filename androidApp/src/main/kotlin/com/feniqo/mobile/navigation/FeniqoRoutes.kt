@@ -443,7 +443,7 @@ data object EmailSettingsRoute : FeniqoRoute
 data object HelpCenterRoute : FeniqoRoute
 
 @Serializable
-data class HelpArticleStatusRoute(val articleTitle: String) : FeniqoRoute
+data class HelpArticleStatusRoute(val articleId: String) : FeniqoRoute
 
 @Serializable
 data object LegalInfoRoute : FeniqoRoute

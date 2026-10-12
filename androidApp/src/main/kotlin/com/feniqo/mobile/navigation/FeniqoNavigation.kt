@@ -1187,8 +1187,8 @@ fun MainNavHost(
             }
             composable<HelpCenterRoute> {
                 HelpCenterScreenRoute(
-                    onNavigateToArticle = { articleTitle ->
-                        navController.navigate(HelpArticleStatusRoute(articleTitle)) { launchSingleTop = true }
+                    onNavigateToArticle = { articleId ->
+                        navController.navigate(HelpArticleStatusRoute(articleId)) { launchSingleTop = true }
                     },
                     onNavigateToFeedback = {
                         navController.navigate(FeedbackRoute(isBug = false)) { launchSingleTop = true }
@@ -1199,7 +1199,7 @@ fun MainNavHost(
             composable<HelpArticleStatusRoute> { backStackEntry ->
                 val route = backStackEntry.toRoute<HelpArticleStatusRoute>()
                 HelpArticleStatusScreenRoute(
-                    articleTitle = route.articleTitle,
+                    articleId = route.articleId,
                     onNavigateToFeedback = {
                         navController.navigate(FeedbackRoute(isBug = false)) { launchSingleTop = true }
                     },

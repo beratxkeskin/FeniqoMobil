@@ -29,6 +29,8 @@ import com.feniqo.mobile.domain.repository.PersonalBackupImportOutcome
 import com.feniqo.mobile.presentation.localization.localizedSettingsLabels
 import com.feniqo.mobile.presentation.localization.localizedAccountPasswordUpdated
 import com.feniqo.mobile.presentation.localization.localizedEmailVerificationResendSuccess
+import com.feniqo.mobile.presentation.localization.localizedFeedbackShareStrings
+import com.feniqo.mobile.presentation.localization.resolveFeedbackShareSubject
 import com.feniqo.mobile.domain.model.ThemePreference
 import com.feniqo.mobile.domain.repository.AutoLockTimeout
 import android.graphics.Bitmap
@@ -688,7 +690,7 @@ fun HelpAboutScreenRoute(
     }
 
     HelpAboutScreen(
-        appVersion = "Sürüm $versionName",
+        appVersion = versionName,
         onBack = onBack,
         onNavigateToFeedback = onNavigateToFeedback,
         onOpenHelpCenter = onNavigateToHelpCenter,
@@ -845,7 +847,7 @@ fun DeleteAccountScreenRoute(
  */
 @Composable
 fun HelpCenterScreenRoute(
-    onNavigateToArticle: (articleTitle: String) -> Unit,
+    onNavigateToArticle: (articleId: String) -> Unit,
     onNavigateToFeedback: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -863,13 +865,13 @@ fun HelpCenterScreenRoute(
  */
 @Composable
 fun HelpArticleStatusScreenRoute(
-    articleTitle: String,
+    articleId: String,
     onNavigateToFeedback: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     HelpArticleStatusScreen(
-        articleTitle = articleTitle,
+        articleId = articleId,
         onBack = onBack,
         onNavigateToFeedback = onNavigateToFeedback,
         modifier = modifier,
@@ -900,6 +902,7 @@ fun FeedbackScreenRoute(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val shareStrings = localizedFeedbackShareStrings()
     var attachmentUri by remember { mutableStateOf<Uri?>(null) }
     var attachmentName by remember { mutableStateOf<String?>(null) }
 
@@ -907,16 +910,22 @@ fun FeedbackScreenRoute(
         contract = ActivityResultContracts.GetContent(),
     ) { uri: Uri? ->
         attachmentUri = uri
-        attachmentName = uri?.lastPathSegment ?: if (uri != null) "ekran_goruntusu.png" else null
+        attachmentName = uri?.lastPathSegment ?: if (uri != null) shareStrings.defaultAttachmentFallback else null
     }
 
     FeedbackScreen(
         initialIsBug = initialIsBug,
         onBack = onBack,
         onShareFeedback = { isBug, subject, message ->
+            val resolvedSubject = resolveFeedbackShareSubject(
+                isBug = isBug,
+                subject = subject,
+                bugFormat = shareStrings.bugSubjectFormat,
+                suggestionFormat = shareStrings.suggestionSubjectFormat,
+            )
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = if (attachmentUri != null) "image/*" else "text/plain"
-                putExtra(Intent.EXTRA_SUBJECT, "[Feniqo Geri Bildirim] ${if (isBug) "Hata" else "Öneri"}: $subject")
+                putExtra(Intent.EXTRA_SUBJECT, resolvedSubject)
                 putExtra(Intent.EXTRA_TEXT, message)
                 attachmentUri?.let { uri ->
                     putExtra(Intent.EXTRA_STREAM, uri)
@@ -924,9 +933,9 @@ fun FeedbackScreenRoute(
                 }
             }
             runCatching {
-                context.startActivity(Intent.createChooser(intent, "Geri bildirimi paylaş"))
+                context.startActivity(Intent.createChooser(intent, shareStrings.chooserTitle))
             }.onFailure {
-                Toast.makeText(context, "Paylaşım yapabilecek uygun bir uygulama bulunamadı.", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, shareStrings.noAppErrorMessage, Toast.LENGTH_LONG).show()
             }
         },
         onPickAttachment = { filePickerLauncher.launch("image/*") },

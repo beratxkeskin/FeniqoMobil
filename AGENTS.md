@@ -61,6 +61,27 @@ Supabase işi için ayrıca:
 - Staging işlemi öncesinde bağlı proje kimliğini doğrula; production ile aynı olduğunu varsayma.
 - Gizli yerel dosyaları (`local.properties`, `.env`, Supabase `.temp`) commit etme.
 
+### Localization geliştirme sözleşmesi
+
+- Kullanıcıya görünen yeni metinleri Kotlin/Swift koduna doğrudan yazma; ilgili platformun
+  localization kataloğuna aynı değişiklikte ekle.
+- Compose kaynaklarında varsayılan Türkçe ve İngilizce katalog anahtarlarını, kaynak türlerini,
+  çoğul miktarlarını ve format placeholder sözleşmelerini birebir eş tut.
+- ViewModel, domain, repository ve kalıcı modeller kullanıcıya hazır Türkçe/İngilizce cümle,
+  önceden biçimlendirilmiş tarih/para/yüzde veya çevrilebilir başlık taşımaz. Durum ve hataları
+  enum, sealed interface veya saf tipli payload olarak UI sınırına ilet.
+- Kullanıcıya görünen metni navigasyon kimliği, karşılaştırma değeri veya iş kuralı olarak kullanma;
+  dil bağımsız stable ID ve tipli durum kullan.
+- `contentDescription`, snackbar, toast, dialog, bildirim, paylaşım seçici, boş/yükleme/hata durumu
+  ve platform izin metinlerini de localization kapsamına dahil et.
+- Tarih, saat, sayı, para, yüzde ve çoğul gösterimini seçili locale'e göre UI sınırında biçimlendir;
+  para için küçük birimde `Long` kuralını koru.
+- Yeni veya davranışı değişen kullanıcı yüzeyi için en az bir hedefli localization doğrulaması ekle;
+  mümkünse aynı kompozisyon üzerinde çalışma zamanı TR→EN geçişini doğrula.
+- `scripts/ci/check-localization-policy.ps1` kontrolünü geçmeden localization kapsamını tamamlandı
+  sayma. Gerçekten dil bağımsız teknik literal gerekiyorsa istisnayı kod içinde gizlemek yerine
+  incelemede açıkça gerekçelendir ve denetimi dar biçimde güncelle.
+
 ## 5. Dosya ve migration disiplini
 
 - Mevcut kullanıcı değişikliklerini koru; ilgisiz dosyaları düzeltme veya yeniden biçimlendirme.

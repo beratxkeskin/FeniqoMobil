@@ -11,7 +11,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -22,6 +21,10 @@ import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTouchTarget
+import feniqomobil.sharedui.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
+
+const val FEEDBACK_MESSAGE_MAX_LENGTH = 1000
 
 /**
  * 12 Yardım ve Hakkında Ekranı ve 24 Geri Bildirim Formu.
@@ -50,7 +53,7 @@ fun HelpAboutScreen(
         ) {
             item {
                 SettingsTopBar(
-                    title = "Yardım ve hakkında",
+                    title = stringResource(Res.string.help_about_title),
                     onBack = onBack,
                 )
             }
@@ -82,7 +85,7 @@ fun HelpAboutScreen(
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Daha bilinçli bir finansal yaşam.",
+                        text = stringResource(Res.string.help_about_tagline),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -92,27 +95,27 @@ fun HelpAboutScreen(
             // DESTEK Grubu
             item {
                 Text(
-                    text = "DESTEK",
+                    text = stringResource(Res.string.help_about_section_support),
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
                 )
                 SettingsGroupCard {
                     SettingsRowItem(
-                        title = "Yardım merkezi",
-                        subtitle = "Sıkça sorulan sorular ve rehberler",
+                        title = stringResource(Res.string.help_about_row_help_center_title),
+                        subtitle = stringResource(Res.string.help_about_row_help_center_subtitle),
                         icon = Icons.Outlined.HelpCenter,
                         onClick = onOpenHelpCenter,
                     )
                     SettingsRowItem(
-                        title = "Geri bildirim gönder",
-                        subtitle = "Uygulama deneyimini iyileştirmemize yardım et",
+                        title = stringResource(Res.string.help_about_row_feedback_title),
+                        subtitle = stringResource(Res.string.help_about_row_feedback_subtitle),
                         icon = Icons.Outlined.RateReview,
                         onClick = { onNavigateToFeedback(false) },
                     )
                     SettingsRowItem(
-                        title = "Hata bildir",
-                        subtitle = "Karşılaştığın bir sorunu bizimle paylaş",
+                        title = stringResource(Res.string.help_about_row_bug_title),
+                        subtitle = stringResource(Res.string.help_about_row_bug_subtitle),
                         icon = Icons.Outlined.BugReport,
                         showDivider = false,
                         onClick = { onNavigateToFeedback(true) },
@@ -123,27 +126,27 @@ fun HelpAboutScreen(
             // HUKUKİ Grubu
             item {
                 Text(
-                    text = "HUKUKİ",
+                    text = stringResource(Res.string.help_about_section_legal),
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
                 )
                 SettingsGroupCard {
                     SettingsRowItem(
-                        title = "Gizlilik politikası",
-                        subtitle = "Verilerinizin nasıl korunduğunu öğrenin",
+                        title = stringResource(Res.string.help_about_row_privacy_title),
+                        subtitle = stringResource(Res.string.help_about_row_privacy_subtitle),
                         icon = Icons.Outlined.Policy,
                         onClick = onOpenPrivacyPolicy,
                     )
                     SettingsRowItem(
-                        title = "Kullanım koşulları",
-                        subtitle = "Hizmet şartları ve kurallar",
+                        title = stringResource(Res.string.help_about_row_terms_title),
+                        subtitle = stringResource(Res.string.help_about_row_terms_subtitle),
                         icon = Icons.Outlined.Description,
                         onClick = onOpenTermsOfService,
                     )
                     SettingsRowItem(
-                        title = "Açık kaynak lisansları",
-                        subtitle = "Kullanılan açık kaynak kütüphaneler",
+                        title = stringResource(Res.string.help_about_row_licenses_title),
+                        subtitle = stringResource(Res.string.help_about_row_licenses_subtitle),
                         icon = Icons.Outlined.Code,
                         showDivider = false,
                         onClick = onOpenOpenSourceLicenses,
@@ -155,8 +158,8 @@ fun HelpAboutScreen(
             item {
                 SettingsGroupCard {
                     SettingsRowItem(
-                        title = "Sürüm bilgisi",
-                        subtitle = appVersion,
+                        title = stringResource(Res.string.help_about_version_label),
+                        subtitle = stringResource(Res.string.help_about_version_format, appVersion),
                         icon = Icons.Outlined.Info,
                         showChevron = false,
                         showDivider = false,
@@ -199,7 +202,7 @@ fun FeedbackScreen(
                 .padding(horizontal = FeniqoSpacing.Screen, vertical = FeniqoSpacing.Medium),
         ) {
             SettingsTopBar(
-                title = if (isBug) "Hata bildir" else "Geri bildirim gönder",
+                title = stringResource(if (isBug) Res.string.feedback_title_bug else Res.string.feedback_title_suggestion),
                 onBack = onBack,
             )
 
@@ -210,11 +213,7 @@ fun FeedbackScreen(
             ) {
                 item {
                     Text(
-                        text = if (isBug) {
-                            "Karşılaştığın bir sorunu bizimle paylaş. Ekran görüntüsü ve adımları eklemen çözmemizi hızlandırır."
-                        } else {
-                            "Deneyimini bizimle paylaş. Önerilerin ve geri bildirimlerin Feniqo'yu daha iyi hale getirmemize yardımcı olur."
-                        },
+                        text = stringResource(if (isBug) Res.string.feedback_desc_bug else Res.string.feedback_desc_suggestion),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -251,7 +250,7 @@ fun FeedbackScreen(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "Öneri",
+                                    text = stringResource(Res.string.feedback_type_suggestion),
                                     fontWeight = FontWeight.SemiBold,
                                     color = if (!isBug) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -284,7 +283,7 @@ fun FeedbackScreen(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "Hata",
+                                    text = stringResource(Res.string.feedback_type_bug),
                                     fontWeight = FontWeight.SemiBold,
                                     color = if (isBug) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -297,7 +296,7 @@ fun FeedbackScreen(
                 item {
                     Column {
                         Text(
-                            text = "Konu",
+                            text = stringResource(Res.string.feedback_subject_label),
                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                             color = MaterialTheme.colorScheme.onSurface,
                         )
@@ -305,7 +304,7 @@ fun FeedbackScreen(
                         OutlinedTextField(
                             value = subject,
                             onValueChange = { subject = it },
-                            placeholder = { Text("Kısa bir başlık yaz") },
+                            placeholder = { Text(stringResource(Res.string.feedback_subject_placeholder)) },
                             singleLine = true,
                             shape = RoundedCornerShape(FeniqoRadius.Medium),
                             modifier = Modifier.fillMaxWidth(),
@@ -318,19 +317,19 @@ fun FeedbackScreen(
                     }
                 }
 
-                // Mesaj Alanı ve Sayaç (0/1000)
+                // Mesaj Alanı ve Sayaç
                 item {
                     Column {
                         Text(
-                            text = "Mesaj",
+                            text = stringResource(Res.string.feedback_message_label),
                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         OutlinedTextField(
                             value = message,
-                            onValueChange = { if (it.length <= 1000) message = it },
-                            placeholder = { Text("Detaylarını bizimle paylaş...") },
+                            onValueChange = { if (it.length <= FEEDBACK_MESSAGE_MAX_LENGTH) message = it },
+                            placeholder = { Text(stringResource(Res.string.feedback_message_placeholder)) },
                             minLines = 4,
                             maxLines = 8,
                             shape = RoundedCornerShape(FeniqoRadius.Medium),
@@ -343,7 +342,11 @@ fun FeedbackScreen(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "${message.length}/1000",
+                            text = stringResource(
+                                Res.string.feedback_character_count_format,
+                                message.length,
+                                FEEDBACK_MESSAGE_MAX_LENGTH,
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.align(Alignment.End),
@@ -355,7 +358,7 @@ fun FeedbackScreen(
                 item {
                     Column {
                         Text(
-                            text = "Ekran görüntüsü (isteğe bağlı)",
+                            text = stringResource(Res.string.feedback_attachment_label),
                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                             color = MaterialTheme.colorScheme.onSurface,
                         )
@@ -366,7 +369,7 @@ fun FeedbackScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             if (hasAttachment) {
-                                // Ekli dosya kartı + kaldır butonu
+                                val fallbackAttachmentName = stringResource(Res.string.feedback_attachment_default_name)
                                 Card(
                                     shape = RoundedCornerShape(FeniqoRadius.Medium),
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
@@ -379,7 +382,7 @@ fun FeedbackScreen(
                                         Icon(Icons.Outlined.Image, null, tint = FeniqoSageGreen, modifier = Modifier.size(20.dp))
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = (attachmentName ?: "Ekran görüntüsü").take(16),
+                                            text = (attachmentName ?: fallbackAttachmentName).take(16),
                                             style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
@@ -387,7 +390,11 @@ fun FeedbackScreen(
                                             onClick = onRemoveAttachment,
                                             modifier = Modifier.size(24.dp),
                                         ) {
-                                            Icon(Icons.Outlined.Close, contentDescription = "Kaldır", tint = MaterialTheme.colorScheme.error)
+                                            Icon(
+                                                Icons.Outlined.Close,
+                                                contentDescription = stringResource(Res.string.feedback_attachment_remove),
+                                                tint = MaterialTheme.colorScheme.error,
+                                            )
                                         }
                                     }
                                 }
@@ -401,7 +408,7 @@ fun FeedbackScreen(
                             ) {
                                 Icon(Icons.Outlined.Add, null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Ekle")
+                                Text(stringResource(Res.string.feedback_attachment_add))
                             }
                         }
                     }
@@ -428,13 +435,13 @@ fun FeedbackScreen(
                             Spacer(modifier = Modifier.width(FeniqoSpacing.Medium))
                             Column {
                                 Text(
-                                    text = "Parola ve finansal ayrıntı paylaşma",
+                                    text = stringResource(Res.string.feedback_warning_title),
                                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                     color = MaterialTheme.colorScheme.onErrorContainer,
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "Güvenliğin için lütfen parola, kart bilgileri, bakiye gibi hassas finansal bilgileri gönderme.",
+                                    text = stringResource(Res.string.feedback_warning_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.9f),
                                 )
@@ -463,7 +470,7 @@ fun FeedbackScreen(
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
-                Text("Geri bildirimi paylaş", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(Res.string.feedback_share_button), fontWeight = FontWeight.SemiBold)
             }
 
             // Alt Bilgilendirme Notu
@@ -481,7 +488,7 @@ fun FeedbackScreen(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "Feniqo sunucusuna otomatik gönderilmez. Cihazındaki paylaşım seçenekleri (e-posta, mesajlaşma vb.) üzerinden iletilmek üzere hazırlanır.",
+                    text = stringResource(Res.string.feedback_footer_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -2600,4 +2600,142 @@
     <string name="app_lock_title">Feniqo is locked</string>
     <string name="app_lock_default_description">Verify with biometrics or your device screen lock to continue.</string>
     <string name="app_lock_unlock_button">Unlock</string>
+
+    <!-- Settings: Email Settings (email_settings_*) -->
+    <string name="email_settings_title">Email</string>
+    <string name="email_settings_address_label">Email address</string>
+    <string name="email_settings_status_verified">Verified</string>
+    <string name="email_settings_status_pending">Pending verification</string>
+    <string name="email_settings_status_unknown">Status unavailable</string>
+    <string name="email_settings_unspecified">Not specified</string>
+    <string name="email_settings_pending_info">The status will update once you confirm the link in your email.</string>
+    <string name="email_settings_resend_button">Resend verification email</string>
+    <string name="email_settings_resend_success">Verification email sent successfully. Please check your inbox.</string>
+    <string name="email_settings_change_email_title">Change email address</string>
+    <string name="email_settings_change_email_description">If you want to continue with a new email address, you can change your current address.</string>
+    <string name="email_settings_footer_note">This email is used for accessing your account and important notifications.</string>
+
+    <!-- Settings: Help Center Categories (help_category_*) -->
+    <string name="help_category_account_login">Account and login</string>
+    <string name="help_category_transactions_categories">Transactions and categories</string>
+    <string name="help_category_backup_sync">Backup and synchronization</string>
+    <string name="help_category_privacy_security">Privacy and security</string>
+
+    <!-- Settings: Help Center Articles (help_article_*) -->
+    <string name="help_article_acc_1_title">How do I create an account?</string>
+    <string name="help_article_acc_1_p1">Select Sign Up from the welcome screen. You can create your account after entering your email address and a strong password.</string>
+    <string name="help_article_acc_1_p2">If you receive a verification email, open the link and return to the app. Once verified, you can sign in with the same email and password.</string>
+    <string name="help_article_acc_2_title">I forgot my password, what should I do?</string>
+    <string name="help_article_acc_2_p1">Open the Forgot Password link on the sign-in screen and enter your account email address.</string>
+    <string name="help_article_acc_2_p2">The secure link in the email opens Feniqo on the reset password screen. After saving your new password, you can proceed from the sign-in screen. If the link has expired, request a new one.</string>
+
+    <string name="help_article_txn_1_title">How do I add income and expense?</string>
+    <string name="help_article_txn_1_p1">Tap the + button on the bottom bar and select Expense or Income. Fill in the amount, title, category, and date, then save.</string>
+    <string name="help_article_txn_1_p2">The record is first saved to the secure local database on your device. You can keep using the app offline and wait for sync when the connection is restored.</string>
+    <string name="help_article_txn_2_title">How do I create a custom category?</string>
+    <string name="help_article_txn_2_p1">Go to More > Categories and select the add category action. Set the income or expense type, name, color, and icon, then save.</string>
+    <string name="help_article_txn_2_p2">Used custom categories can be archived instead of permanently deleted to preserve data integrity.</string>
+
+    <string name="help_article_sync_1_title">When are offline records synced?</string>
+    <string name="help_article_sync_1_p1">Changes made offline are stored on your device and added to the sync queue. When the network is restored, the app attempts to send them in safe order.</string>
+    <string name="help_article_sync_1_p2">You can inspect pending, failed, or conflicting records from the sync status in Profile Hub or Data Management. Conflicts are never silently overwritten without user decision.</string>
+    <string name="help_article_sync_2_title">How can I back up my data?</string>
+    <string name="help_article_sync_2_p1">You can export your personal categories and transactions as a JSON backup from App Settings > Data Management.</string>
+    <string name="help_article_sync_2_p2">The backup does not contain passwords, session keys, receipt paths, or sync metadata. Before importing, a summary of the file is displayed and your explicit confirmation is requested.</string>
+
+    <string name="help_article_sec_1_title">Is my account data safe?</string>
+    <string name="help_article_sec_1_p1">Financial data is isolated by user and workspace ownership rules. The mobile app contains no service-role key; remote access requires an authenticated user session.</string>
+    <string name="help_article_sec_1_p2">The app never writes sensitive financial content, passwords, tokens, or receipt text into log files.</string>
+    <string name="help_article_sec_2_title">How is my data stored?</string>
+    <string name="help_article_sec_2_p1">Screens read data from the on-device Room database, not directly from the network. Local mutations and the sync queue are saved within the same database transaction.</string>
+    <string name="help_article_sec_2_p2">Deletions are synced as soft-deletes for cross-device consistency. If the same record changes on two devices, both copies are preserved until decided.</string>
+    <string name="help_article_status_published">Published</string>
+
+    <!-- Settings: Help Center UI (help_center_*) -->
+    <string name="help_center_title">Help center</string>
+    <string name="help_center_subtitle">Find quick answers to your questions, contact us when you need.</string>
+    <string name="help_center_search_placeholder">How can we help?</string>
+    <string name="help_center_search_clear">Clear</string>
+    <string name="help_center_search_empty">No matching help content found.</string>
+    <string name="help_center_category_expand">Expand</string>
+    <string name="help_center_category_collapse">Collapse</string>
+    <string name="help_center_feedback_card_title">You can report your issue</string>
+    <string name="help_center_feedback_card_subtitle">Having an issue? Let our team know, we'll solve it together.</string>
+    <string name="help_article_screen_title">Help center</string>
+    <string name="help_article_not_found_title">Help content not found</string>
+    <string name="help_article_not_found_desc">You can return to the help center and select a published topic.</string>
+    <string name="help_article_back_button">Go back</string>
+    <string name="help_article_send_feedback_button">Send feedback</string>
+
+    <!-- Settings: Legal Info (legal_info_*) -->
+    <string name="legal_info_title">Privacy and legal info</string>
+    <string name="legal_info_intro">Transparency matters to you at Feniqo. You can access legal documents here once they are ready.</string>
+    <string name="legal_info_privacy_title">Privacy policy</string>
+    <string name="legal_info_privacy_subtitle">No approved document has been provided yet. It will be accessible here once the link is ready.</string>
+    <string name="legal_info_terms_title">Terms of service</string>
+    <string name="legal_info_terms_subtitle">No approved document has been provided yet. It will be accessible here once the link is ready.</string>
+    <string name="legal_info_badge_pending">Awaiting approved text</string>
+    <string name="legal_info_badge_approved">Approved</string>
+    <string name="legal_info_licenses_section_title">Open source licenses</string>
+    <string name="legal_info_licenses_section_desc">Open source software used in the app.</string>
+    <string name="legal_info_licenses_row_title">Open source licenses</string>
+    <string name="legal_info_licenses_row_desc">Core open source components and their licenses</string>
+    <string name="legal_info_licenses_badge_view">View</string>
+    <string name="legal_info_licenses_dialog_title">Open source licenses</string>
+    <string name="legal_info_licenses_dialog_intro">FeniqoMobil utilizes the following core open source projects. Full license texts are available in their respective project distributions and source repositories.</string>
+    <string name="legal_info_license_kotlin">Kotlin — Apache License 2.0</string>
+    <string name="legal_info_license_compose_androidx">Jetpack Compose and AndroidX — Apache License 2.0</string>
+    <string name="legal_info_license_kotlinx">Kotlinx Coroutines, Serialization and DateTime — Apache License 2.0</string>
+    <string name="legal_info_license_ktor">Ktor — Apache License 2.0</string>
+    <string name="legal_info_license_room">Room — Apache License 2.0</string>
+    <string name="legal_info_license_supabase">Supabase Kotlin — MIT License</string>
+    <string name="legal_info_license_sqlcipher">SQLCipher Community Edition — BSD-style License</string>
+    <string name="legal_info_licenses_dialog_close">OK</string>
+
+    <!-- Settings: Help & About (help_about_*) -->
+    <string name="help_about_title">Help and about</string>
+    <string name="help_about_tagline">A more conscious financial life.</string>
+    <string name="help_about_section_support">SUPPORT</string>
+    <string name="help_about_section_legal">LEGAL</string>
+    <string name="help_about_row_help_center_title">Help center</string>
+    <string name="help_about_row_help_center_subtitle">Frequently asked questions and guides</string>
+    <string name="help_about_row_feedback_title">Send feedback</string>
+    <string name="help_about_row_feedback_subtitle">Help us improve the app experience</string>
+    <string name="help_about_row_bug_title">Report a bug</string>
+    <string name="help_about_row_bug_subtitle">Share an issue you encountered with us</string>
+    <string name="help_about_row_privacy_title">Privacy policy</string>
+    <string name="help_about_row_privacy_subtitle">Learn how your data is protected</string>
+    <string name="help_about_row_terms_title">Terms of service</string>
+    <string name="help_about_row_terms_subtitle">Terms of service and rules</string>
+    <string name="help_about_row_licenses_title">Open source licenses</string>
+    <string name="help_about_row_licenses_subtitle">Open source libraries used</string>
+    <string name="help_about_version_label">Version info</string>
+    <string name="help_about_version_format">Version %1$s</string>
+
+    <!-- Settings: Feedback Screen & Sharing (feedback_*) -->
+    <string name="feedback_title_bug">Report a bug</string>
+    <string name="feedback_title_suggestion">Send feedback</string>
+    <string name="feedback_desc_bug">Share an issue you encountered with us. Adding a screenshot and steps will help us resolve it faster.</string>
+    <string name="feedback_desc_suggestion">Share your experience with us. Your suggestions and feedback help us make Feniqo better.</string>
+    <string name="feedback_type_suggestion">Suggestion</string>
+    <string name="feedback_type_bug">Bug</string>
+    <string name="feedback_subject_label">Subject</string>
+    <string name="feedback_subject_placeholder">Write a short title</string>
+    <string name="feedback_message_label">Message</string>
+    <string name="feedback_message_placeholder">Share the details with us...</string>
+    <string name="feedback_character_count_format">%1$d/%2$d</string>
+    <string name="feedback_attachment_label">Screenshot (optional)</string>
+    <string name="feedback_attachment_default_name">Screenshot</string>
+    <string name="feedback_attachment_remove">Remove</string>
+    <string name="feedback_attachment_add">Add</string>
+    <string name="feedback_warning_title">Do not share passwords or financial details</string>
+    <string name="feedback_warning_desc">For your security, please do not send sensitive financial information such as passwords, card details, or balances.</string>
+    <string name="feedback_share_button">Share feedback</string>
+    <string name="feedback_footer_note">Not automatically sent to the Feniqo server. Prepared to be sent via sharing options on your device (email, messaging, etc.).</string>
+    <string name="feedback_share_subject_bug_format">[Feniqo Feedback] Bug: %1$s</string>
+    <string name="feedback_share_subject_suggestion_format">[Feniqo Feedback] Suggestion: %1$s</string>
+    <string name="feedback_share_chooser_title">Share feedback</string>
+    <string name="feedback_share_no_app_error">No suitable app found to share.</string>
+    <string name="feedback_attachment_fallback_filename">screenshot.png</string>
+
 </resources>
