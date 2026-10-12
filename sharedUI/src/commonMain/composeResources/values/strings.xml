@@ -2739,4 +2739,130 @@
     <string name="feedback_share_no_app_error">Paylaşım yapabilecek uygun bir uygulama bulunamadı.</string>
     <string name="feedback_attachment_fallback_filename">ekran_goruntusu.png</string>
 
+    <!-- Settings: Account & Profile Route (profile_route_*, account_*, profile_photo_*) -->
+    <string name="profile_route_default_user_name">Feniqo Kullanıcısı</string>
+    <string name="account_login_method_email">E-posta</string>
+    <string name="account_login_method_account">Hesap</string>
+    <string name="account_screen_title">Profil fotoğrafı</string>
+    <string name="account_screen_subtitle">Hesap ayarlarınla ilgili bilgiler burada yer alır.</string>
+    <string name="account_row_personal_info">Kişisel bilgiler</string>
+    <string name="account_row_personal_info_subtitle">Ad ve profil detayları</string>
+    <string name="account_row_email">E-posta</string>
+    <string name="account_row_login_method">Giriş yöntemi</string>
+    <string name="account_row_change_password">Parolayı değiştir</string>
+    <string name="account_row_change_password_subtitle">Hesap giriş şifrenizi güncelleyin</string>
+    <string name="account_row_delete_account">Hesabı sil</string>
+    <string name="profile_photo_content_description">Profil fotoğrafı</string>
+    <string name="profile_photo_change_action">Fotoğrafı değiştir</string>
+    <string name="profile_photo_action_gallery">Galeriden seç</string>
+    <string name="profile_photo_action_camera">Fotoğraf çek</string>
+    <string name="profile_photo_action_remove">Fotoğrafı kaldır</string>
+    <string name="profile_photo_stored_locally">Yalnızca bu cihazda saklanır.</string>
+    <string name="profile_photo_read_failed">Görsel yüklenemedi veya okunamadı.</string>
+    <string name="profile_photo_camera_storage_failed">Kamera için güvenli depolama alanı hazırlanamadı.</string>
+    <string name="profile_photo_camera_permission_required">Kamera ile fotoğraf çekebilmek için kamera izni vermelisiniz.</string>
+    <string name="profile_photo_removed">Profil fotoğrafı kaldırıldı.</string>
+    <string name="profile_photo_saved">Profil fotoğrafı kaydedildi.</string>
+    <string name="profile_photo_save_failed">Fotoğraf kaydedilemedi.</string>
+    <string name="profile_photo_corrupted">Görsel yüklenemedi veya bozuk.</string>
+    <string name="profile_photo_save_retry">Fotoğraf kaydedilemedi. Lütfen tekrar deneyin.</string>
+    <string name="profile_photo_process_error">Fotoğraf işlenirken hata oluştu.</string>
+    <string name="profile_personal_info_saved">Değişiklikler kaydedildi.</string>
+    <string name="profile_error_name_too_short">Görünen ad en az %1$d karakter olmalıdır.</string>
+    <string name="profile_error_save_failed">Kişisel bilgiler kaydedilemedi. Bağlantınızı ve eşitleme durumunu kontrol edip tekrar deneyin.</string>
+
+    <!-- Settings: Personal Info Screen (personal_info_*) -->
+    <string name="personal_info_title">Kişisel bilgiler</string>
+    <string name="personal_info_change_photo">Fotoğrafı değiştir</string>
+    <string name="personal_info_name_label">Görünen ad</string>
+    <string name="personal_info_name_placeholder">Adınızı veya tam adınızı girin</string>
+    <string name="personal_info_email_label">E-posta</string>
+    <string name="personal_info_change_email_title">E-postayı değiştir</string>
+    <string name="personal_info_change_email_subtitle">Doğrulanmış yeni adres belirle</string>
+    <string name="personal_info_save_button">Değişiklikleri kaydet</string>
+
+    <!-- Settings: Photo Preview Screen (photo_preview_*) -->
+    <string name="photo_preview_title">Fotoğraf önizleme</string>
+    <string name="photo_preview_zoom_out">Uzaklaştır</string>
+    <string name="photo_preview_zoom_in">Yakınlaştır</string>
+    <string name="photo_preview_reselect">Yeniden seç</string>
+    <string name="photo_preview_save">Fotoğrafı kaydet</string>
+
+    <!-- Settings: Data Management Screen (data_management_*) -->
+    <string name="data_management_title">Veri yönetimi</string>
+    <string name="data_management_section_export">DIŞA AKTARMA</string>
+    <string name="data_management_export_csv_title">İşlemleri CSV olarak kaydet</string>
+    <string name="data_management_export_csv_subtitle">Aktif alandaki işlemleri CSV dosyasına kaydeder.</string>
+    <string name="data_management_section_backup">YEDEKLEME</string>
+    <string name="data_management_backup_create_title">JSON yedeği oluştur</string>
+    <string name="data_management_backup_create_subtitle">Kişisel verilerini cihazına kaydet.</string>
+    <string name="data_management_backup_import_title">JSON yedeğini içe aktar</string>
+    <string name="data_management_backup_import_subtitle">Daha önce oluşturduğun yedek dosyasını yükle.</string>
+    <string name="data_management_backup_info">Yedek kapsamı işlem öncesinde gösterilir.</string>
+    <string name="data_management_section_sync">SENKRONİZASYON</string>
+    <string name="data_management_sync_status_title">Senkronizasyon durumu</string>
+    <string name="data_management_sync_status_subtitle">Mevcut durumu görüntüle.</string>
+    <string name="data_management_sync_info">Yedek dosyası ile senkronizasyon farklı işlemlerdir.</string>
+    <string name="data_management_scope_title">JSON yedeği</string>
+    <string name="data_management_scope_subtitle">Kişisel alandaki kategori ve işlemler dahil edilir.</string>
+    <string name="data_management_scope_receipt_note">Makbuz dosyaları dahil değildir.</string>
+    <string name="data_management_scope_save_button">Dosyaya kaydet</string>
+    <string name="data_management_import_confirm_body">Kişisel alana yeni kayıtlar eklenecek. Mevcut kayıtlar değiştirilmeyecek.</string>
+    <string name="data_management_import_confirm_action">İçe aktar</string>
+    <string name="data_management_import_dismiss_action">Vazgeç</string>
+
+    <!-- Settings: Backup Import/Export Messages (backup_*) -->
+    <string name="backup_export_csv_default_filename">feniqo-islemler.csv</string>
+    <string name="backup_export_json_default_filename">feniqo-yedek.json</string>
+    <string name="backup_export_csv_success">İşlemler CSV olarak kaydedildi.</string>
+    <string name="backup_export_csv_failed">CSV dışa aktarılamadı.</string>
+    <string name="backup_export_failed">Yedek oluşturulamadı.</string>
+    <string name="backup_export_write_failed">Yedek dosyaya yazılamadı.</string>
+    <string name="backup_export_success_format">JSON yedeği başarıyla kaydedildi (%1$s, %2$s).</string>
+    <string name="backup_import_read_or_large_error">Yedek dosyası okunamadı veya çok büyük.</string>
+    <string name="backup_import_success_format">%1$s ve %2$s içe aktarıldı.</string>
+    <string name="backup_counts_summary_format">%1$s, %2$s</string>
+    <string name="backup_import_error_personal_scope_required">İçe aktarmak için önce kişisel alana geçin.</string>
+    <string name="backup_import_error_auth_session_required">İçe aktarmak için oturum açmanız gerekiyor.</string>
+    <string name="backup_import_error_too_large">Yedek dosyası 10 MiB sınırını aşıyor.</string>
+    <string name="backup_import_error_version_unsupported">Bu yedek sürümü desteklenmiyor.</string>
+    <string name="backup_import_error_failed">Yedek içe aktarılamadı; hiçbir kayıt eklenmedi.</string>
+    <string name="backup_import_error_invalid_file">Geçersiz veya desteklenmeyen Feniqo yedek dosyası.</string>
+    <plurals name="backup_category_count_plural">
+        <item quantity="one">%1$d kategori</item>
+        <item quantity="other">%1$d kategori</item>
+    </plurals>
+    <plurals name="backup_transaction_count_plural">
+        <item quantity="one">%1$d işlem</item>
+        <item quantity="other">%1$d işlem</item>
+    </plurals>
+
+    <!-- Settings: Sync Status Screen & Components (sync_*) -->
+    <string name="sync_status_title">Senkronizasyon</string>
+    <string name="sync_legacy_quarantine_title">Eski eşitleme verisi korunuyor</string>
+    <string name="sync_legacy_quarantine_body">Bazı eski eşitleme kayıtlarının hangi hesaba ait olduğu doğrulanamadı. Kayıtlar silinmedi ve otomatik olarak gönderilmeyecek.</string>
+    <string name="sync_pending_changes_title">Bekleyen değişiklikler</string>
+    <string name="sync_no_pending_changes">Bekleyen değişiklik yok</string>
+    <string name="sync_last_sync_title">Son başarılı eşitleme</string>
+    <string name="sync_never_synced">Henüz eşitlenmedi</string>
+    <string name="sync_last_sync_datetime_format">%1$s.%2$s.%3$s %4$s:%5$s</string>
+    <string name="sync_conflict_info_note">Çakışan kayıtlar kararın olmadan değiştirilmez.</string>
+    <string name="sync_retry_button">Yeniden dene</string>
+    <string name="sync_header_syncing_title">Eşitleniyor...</string>
+    <string name="sync_header_syncing_subtitle">Değişiklikler sunucuya aktarılıyor.</string>
+    <string name="sync_header_offline_title">Çevrimdışı</string>
+    <string name="sync_header_offline_subtitle">Bağlantı bekleniyor.</string>
+    <string name="sync_header_synced_title">Eşitlendi</string>
+    <string name="sync_header_synced_subtitle">Verileriniz güncel.</string>
+    <string name="sync_conflict_detected_subtitle">Olası bir çakışma tespit edildi.</string>
+    <string name="sync_conflict_inspect_action">İncele</string>
+    <plurals name="sync_pending_changes_plural">
+        <item quantity="one">%1$d yerel değişiklik aktarılmayı bekliyor</item>
+        <item quantity="other">%1$d yerel değişiklik aktarılmayı bekliyor</item>
+    </plurals>
+    <plurals name="sync_conflict_count_plural">
+        <item quantity="one">%1$d kayıt inceleme bekliyor.</item>
+        <item quantity="other">%1$d kayıt inceleme bekliyor.</item>
+    </plurals>
+
 </resources>

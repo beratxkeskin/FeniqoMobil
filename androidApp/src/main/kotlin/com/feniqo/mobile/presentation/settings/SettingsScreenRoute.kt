@@ -62,6 +62,31 @@ import com.feniqo.mobile.presentation.screen.SyncStatusScreen
 import com.feniqo.mobile.presentation.sync.SyncConnectionUiState
 import com.feniqo.mobile.presentation.sync.SyncStatusViewModel
 import com.feniqo.mobile.presentation.theme.ThemeMode
+import androidx.compose.runtime.rememberUpdatedState
+import com.feniqo.mobile.presentation.settings.AccountLoginMethod
+import com.feniqo.mobile.presentation.settings.formatLocalizedLastSync
+import com.feniqo.mobile.presentation.settings.localizedBackupExportCsvDefaultFilename
+import com.feniqo.mobile.presentation.settings.localizedBackupExportCsvFailed
+import com.feniqo.mobile.presentation.settings.localizedBackupExportCsvSuccess
+import com.feniqo.mobile.presentation.settings.localizedBackupExportFailed
+import com.feniqo.mobile.presentation.settings.localizedBackupExportJsonDefaultFilename
+import com.feniqo.mobile.presentation.settings.localizedBackupExportWriteFailed
+import com.feniqo.mobile.presentation.settings.localizedBackupImportReadOrLargeError
+import com.feniqo.mobile.presentation.settings.localizedProfilePersonalInfoSaved
+import com.feniqo.mobile.presentation.settings.localizedProfilePhotoCameraPermissionRequired
+import com.feniqo.mobile.presentation.settings.localizedProfilePhotoCameraStorageFailed
+import com.feniqo.mobile.presentation.settings.localizedProfilePhotoCorrupted
+import com.feniqo.mobile.presentation.settings.localizedProfilePhotoLoadFailed
+import com.feniqo.mobile.presentation.settings.localizedProfilePhotoProcessError
+import com.feniqo.mobile.presentation.settings.localizedProfilePhotoRemoved
+import com.feniqo.mobile.presentation.settings.localizedProfilePhotoSaveFailed
+import com.feniqo.mobile.presentation.settings.localizedProfilePhotoSaveRetry
+import com.feniqo.mobile.presentation.settings.localizedProfilePhotoSaved
+import com.feniqo.mobile.presentation.settings.mapBackupFailureReasonToUiError
+import com.feniqo.mobile.presentation.settings.resolveLocalizedBackupExportSuccess
+import com.feniqo.mobile.presentation.settings.resolveLocalizedBackupImportSuccess
+import com.feniqo.mobile.presentation.settings.resolveLocalizedMessage
+import com.feniqo.mobile.presentation.settings.toLocalizedText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -130,6 +155,16 @@ fun AccountScreenRoute(
     val userId = uiState.profile?.id?.value.orEmpty()
     val effectiveUserId = userId.ifBlank { "current_user" }
 
+    val photoLoadFailedMessage = localizedProfilePhotoLoadFailed()
+    val cameraStorageFailedMessage = localizedProfilePhotoCameraStorageFailed()
+    val cameraPermissionRequiredMessage = localizedProfilePhotoCameraPermissionRequired()
+    val photoRemovedMessage = localizedProfilePhotoRemoved()
+
+    val currentPhotoLoadFailedMessage by rememberUpdatedState(photoLoadFailedMessage)
+    val currentCameraStorageFailedMessage by rememberUpdatedState(cameraStorageFailedMessage)
+    val currentCameraPermissionRequiredMessage by rememberUpdatedState(cameraPermissionRequiredMessage)
+    val currentPhotoRemovedMessage by rememberUpdatedState(photoRemovedMessage)
+
     // Avatar dosyasını diskten oku
     var avatarVersion by remember { mutableStateOf(0) }
     val avatarBitmap = remember(effectiveUserId, avatarVersion) {
@@ -148,7 +183,7 @@ fun AccountScreenRoute(
             if (draftFile != null) {
                 onNavigateToPhotoPreview(draftFile.name)
             } else {
-                Toast.makeText(context, "Görsel yüklenemedi veya okunamadı.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, currentPhotoLoadFailedMessage, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -177,7 +212,7 @@ fun AccountScreenRoute(
             pendingCameraUri = uri
             takePictureLauncher.launch(uri)
         } else {
-            Toast.makeText(context, "Kamera için güvenli depolama alanı hazırlanamadı.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, currentCameraStorageFailedMessage, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -187,15 +222,21 @@ fun AccountScreenRoute(
         if (isGranted) {
             launchCamera()
         } else {
-            Toast.makeText(context, "Kamera ile fotoğraf çekebilmek için kamera izni vermelisiniz.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, currentCameraPermissionRequiredMessage, Toast.LENGTH_SHORT).show()
         }
     }
 
+    val loginMethod = if (uiState.displayEmail.isNotBlank()) {
+        AccountLoginMethod.EMAIL
+    } else {
+        AccountLoginMethod.ACCOUNT
+    }
+
     AccountScreen(
-        displayName = uiState.profile?.fullName?.trim()?.ifBlank { null } ?: "Feniqo Kullanıcısı",
+        displayName = uiState.profile?.fullName?.trim()?.ifBlank { null },
         email = uiState.displayEmail,
         emailVerificationStatus = uiState.emailVerificationStatus,
-        loginMethod = if (uiState.displayEmail.isNotBlank()) "E-posta" else "Hesap",
+        loginMethod = loginMethod,
         avatarBitmap = avatarBitmap,
         onBack = onBack,
         onNavigateToPersonalInfo = onNavigateToPersonalInfo,
@@ -219,7 +260,7 @@ fun AccountScreenRoute(
             val removed = avatarManager.removeAvatar(effectiveUserId)
             if (removed) {
                 avatarVersion++
-                Toast.makeText(context, "Profil fotoğrafı kaldırıldı.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, currentPhotoRemovedMessage, Toast.LENGTH_SHORT).show()
             }
         },
         modifier = modifier,
@@ -244,6 +285,16 @@ fun PersonalInfoScreenRoute(
     val context = LocalContext.current
     val userId = uiState.profile?.id?.value.orEmpty()
 
+    val photoSavedMessage = localizedProfilePhotoSaved()
+    val photoSaveFailedMessage = localizedProfilePhotoSaveFailed()
+    val personalInfoSavedMessage = localizedProfilePersonalInfoSaved()
+    val profileErrorMessage = uiState.profileError?.toLocalizedText()
+
+    val currentPhotoSavedMessage by rememberUpdatedState(photoSavedMessage)
+    val currentPhotoSaveFailedMessage by rememberUpdatedState(photoSaveFailedMessage)
+    val currentPersonalInfoSavedMessage by rememberUpdatedState(personalInfoSavedMessage)
+    val currentProfileErrorMessage by rememberUpdatedState(profileErrorMessage)
+
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
     ) { uri: Uri? ->
@@ -251,7 +302,7 @@ fun PersonalInfoScreenRoute(
             val saved = avatarManager.saveAvatarFromUri(userId, uri)
             Toast.makeText(
                 context,
-                if (saved) "Profil fotoğrafı kaydedildi." else "Fotoğraf kaydedilemedi.",
+                if (saved) currentPhotoSavedMessage else currentPhotoSaveFailedMessage,
                 Toast.LENGTH_SHORT,
             ).show()
         }
@@ -259,13 +310,13 @@ fun PersonalInfoScreenRoute(
 
     LaunchedEffect(uiState.profileSaveSuccess) {
         if (uiState.profileSaveSuccess) {
-            Toast.makeText(context, "Değişiklikler kaydedildi.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, currentPersonalInfoSavedMessage, Toast.LENGTH_SHORT).show()
             viewModel.clearProfileStatus()
         }
     }
 
     LaunchedEffect(uiState.profileError) {
-        uiState.profileError?.let { error ->
+        currentProfileErrorMessage?.let { error ->
             Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
             viewModel.clearProfileStatus()
         }
@@ -442,6 +493,22 @@ fun DataManagementScreenRoute(
     val scope = rememberCoroutineScope()
     var pendingBackup by remember { mutableStateOf<PendingBackupImport?>(null) }
 
+    val defaultCsvFilename = localizedBackupExportCsvDefaultFilename()
+    val defaultJsonFilename = localizedBackupExportJsonDefaultFilename()
+    val csvSavedMessage = localizedBackupExportCsvSuccess()
+    val csvFailedMessage = localizedBackupExportCsvFailed()
+    val backupExportFailedMessage = localizedBackupExportFailed()
+    val backupExportWriteFailedMessage = localizedBackupExportWriteFailed()
+    val backupImportReadOrLargeErrorMessage = localizedBackupImportReadOrLargeError()
+
+    val currentDefaultCsvFilename by rememberUpdatedState(defaultCsvFilename)
+    val currentDefaultJsonFilename by rememberUpdatedState(defaultJsonFilename)
+    val currentCsvSavedMessage by rememberUpdatedState(csvSavedMessage)
+    val currentCsvFailedMessage by rememberUpdatedState(csvFailedMessage)
+    val currentBackupExportFailedMessage by rememberUpdatedState(backupExportFailedMessage)
+    val currentBackupExportWriteFailedMessage by rememberUpdatedState(backupExportWriteFailedMessage)
+    val currentBackupImportReadOrLargeErrorMessage by rememberUpdatedState(backupImportReadOrLargeErrorMessage)
+
     LaunchedEffect(Unit) {
         viewModel.refreshBackupScope()
     }
@@ -461,7 +528,7 @@ fun DataManagementScreenRoute(
                 }.isSuccess
                 Toast.makeText(
                     context,
-                    if (saved) "İşlemler CSV olarak kaydedildi." else "CSV dışa aktarılamadı.",
+                    if (saved) currentCsvSavedMessage else currentCsvFailedMessage,
                     Toast.LENGTH_LONG,
                 ).show()
             }
@@ -475,7 +542,7 @@ fun DataManagementScreenRoute(
             scope.launch {
                 when (val result = viewModel.exportJsonBackup()) {
                     is BackupExportResult.Failure -> {
-                        Toast.makeText(context, "Yedek oluşturulamadı: ${result.reason}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, currentBackupExportFailedMessage, Toast.LENGTH_LONG).show()
                     }
                     is BackupExportResult.Success -> {
                         val written = runCatching {
@@ -485,12 +552,15 @@ fun DataManagementScreenRoute(
                                 } ?: error("output_stream_unavailable")
                             }
                         }.isSuccess
-                        Toast.makeText(
-                            context,
-                            if (written) "JSON yedeği başarıyla kaydedildi (${result.scope.categoryCount} kategori, ${result.scope.transactionCount} işlem)."
-                            else "Yedek dosyaya yazılamadı.",
-                            Toast.LENGTH_LONG,
-                        ).show()
+                        val message = if (written) {
+                            resolveLocalizedBackupExportSuccess(
+                                result.scope.categoryCount,
+                                result.scope.transactionCount,
+                            )
+                        } else {
+                            currentBackupExportWriteFailedMessage
+                        }
+                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -505,15 +575,14 @@ fun DataManagementScreenRoute(
                 val raw = runCatching {
                     withContext(Dispatchers.IO) { context.readBoundedUtf8(uri) }
                 }.getOrElse {
-                    Toast.makeText(context, "Yedek dosyası okunamadı veya çok büyük.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, currentBackupImportReadOrLargeErrorMessage, Toast.LENGTH_LONG).show()
                     return@launch
                 }
                 when (val preview = viewModel.previewBackup(raw)) {
-                    is BackupPreviewResult.Invalid -> Toast.makeText(
-                        context,
-                        backupFailureMessage(preview.reason),
-                        Toast.LENGTH_LONG,
-                    ).show()
+                    is BackupPreviewResult.Invalid -> {
+                        val errorMessage = mapBackupFailureReasonToUiError(preview.reason).resolveLocalizedMessage()
+                        Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                    }
                     is BackupPreviewResult.Valid -> pendingBackup = PendingBackupImport(
                         raw = raw,
                         categoryCount = preview.categoryCount,
@@ -529,8 +598,8 @@ fun DataManagementScreenRoute(
         transactionScopeCount = uiState.backupScope.transactionCount,
         pendingImport = pendingBackup?.let { PendingBackupInfo(it.categoryCount, it.transactionCount) },
         onBack = onBack,
-        onExportCsv = { createCsvLauncher.launch("feniqo-islemler.csv") },
-        onExportJsonBackup = { createJsonBackupLauncher.launch("feniqo-yedek.json") },
+        onExportCsv = { createCsvLauncher.launch(currentDefaultCsvFilename) },
+        onExportJsonBackup = { createJsonBackupLauncher.launch(currentDefaultJsonFilename) },
         onSelectBackupFile = { openBackupLauncher.launch(arrayOf("application/json", "text/json", "text/plain")) },
         onConfirmImport = {
             val current = pendingBackup
@@ -539,8 +608,12 @@ fun DataManagementScreenRoute(
                 scope.launch {
                     val message = when (val result = viewModel.importBackup(current.raw)) {
                         is PersonalBackupImportOutcome.Success ->
-                            "${result.categoryCount} kategori ve ${result.transactionCount} işlem içe aktarıldı."
-                        is PersonalBackupImportOutcome.Failure -> backupFailureMessage(result.reason)
+                            resolveLocalizedBackupImportSuccess(
+                                result.categoryCount,
+                                result.transactionCount,
+                            )
+                        is PersonalBackupImportOutcome.Failure ->
+                            mapBackupFailureReasonToUiError(result.reason).resolveLocalizedMessage()
                     }
                     Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                     viewModel.refreshBackupScope()
@@ -568,10 +641,7 @@ fun SyncStatusScreenRoute(
         isOnline = syncState.connectionState == SyncConnectionUiState.ONLINE,
         isSyncing = syncState.isSyncing,
         pendingChangesCount = syncState.pendingCount,
-        lastSyncFormatted = syncState.lastSuccessfulSyncAtEpochMillis?.let { epochMillis ->
-            java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.getDefault())
-                .format(java.util.Date(epochMillis))
-        } ?: "Henüz eşitlenmedi",
+        lastSyncFormatted = formatLocalizedLastSync(syncState.lastSuccessfulSyncAtEpochMillis),
         conflictCount = syncState.conflictCount,
         hasLegacyQuarantinedData = syncState.hasLegacyQuarantinedData,
         onBack = onBack,
@@ -612,6 +682,16 @@ fun PhotoPreviewScreenRoute(
     val userId = uiState.profile?.id?.value.orEmpty()
     val effectiveUserId = userId.ifBlank { "current_user" }
 
+    val photoCorruptedMessage = localizedProfilePhotoCorrupted()
+    val photoSavedMessage = localizedProfilePhotoSaved()
+    val photoSaveRetryMessage = localizedProfilePhotoSaveRetry()
+    val photoProcessErrorMessage = localizedProfilePhotoProcessError()
+
+    val currentPhotoCorruptedMessage by rememberUpdatedState(photoCorruptedMessage)
+    val currentPhotoSavedMessage by rememberUpdatedState(photoSavedMessage)
+    val currentPhotoSaveRetryMessage by rememberUpdatedState(photoSaveRetryMessage)
+    val currentPhotoProcessErrorMessage by rememberUpdatedState(photoProcessErrorMessage)
+
     val draftFile = remember(draftFileName) {
         val safeName = draftFileName.substringAfterLast("/").substringAfterLast("\\")
         File(File(context.cacheDir, "camera"), safeName)
@@ -627,7 +707,7 @@ fun PhotoPreviewScreenRoute(
 
     LaunchedEffect(sourceBitmap) {
         if (sourceBitmap == null) {
-            Toast.makeText(context, "Görsel yüklenemedi veya bozuk.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, currentPhotoCorruptedMessage, Toast.LENGTH_SHORT).show()
             onBack()
         }
     }
@@ -656,15 +736,15 @@ fun PhotoPreviewScreenRoute(
                 val saved = avatarManager.saveAvatarBitmap(effectiveUserId, cropped)
                 if (saved) {
                     draftFile.delete()
-                    Toast.makeText(context, "Profil fotoğrafı kaydedildi.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, currentPhotoSavedMessage, Toast.LENGTH_SHORT).show()
                     onSaveSuccess()
                 } else {
                     isSaving = false
-                    Toast.makeText(context, "Fotoğraf kaydedilemedi. Lütfen tekrar deneyin.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, currentPhotoSaveRetryMessage, Toast.LENGTH_SHORT).show()
                 }
             }.onFailure {
                 isSaving = false
-                Toast.makeText(context, "Fotoğraf işlenirken hata oluştu.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, currentPhotoProcessErrorMessage, Toast.LENGTH_SHORT).show()
             }
         },
         modifier = modifier,
@@ -1060,13 +1140,4 @@ private fun Context.readBoundedUtf8(uri: Uri): String {
         }
         output.toString(Charsets.UTF_8.name())
     }
-}
-
-private fun backupFailureMessage(reason: String): String = when (reason) {
-    "backup_personal_scope_required" -> "İçe aktarmak için önce kişisel alana geçin."
-    "auth_session_required" -> "İçe aktarmak için oturum açmanız gerekiyor."
-    "backup_too_large" -> "Yedek dosyası 10 MiB sınırını aşıyor."
-    "backup_version_unsupported" -> "Bu yedek sürümü desteklenmiyor."
-    "backup_import_failed" -> "Yedek içe aktarılamadı; hiçbir kayıt eklenmedi."
-    else -> "Geçersiz veya desteklenmeyen Feniqo yedek dosyası."
 }

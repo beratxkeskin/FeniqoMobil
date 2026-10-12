@@ -30,7 +30,6 @@ import com.feniqo.mobile.presentation.theme.FeniqoGraphite
 import com.feniqo.mobile.presentation.theme.FeniqoPureWhite
 import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
-import com.feniqo.mobile.presentation.theme.FeniqoSageGreenContainer
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTouchTarget
 import feniqomobil.sharedui.generated.resources.Res
@@ -45,6 +44,16 @@ import feniqomobil.sharedui.generated.resources.notifications_permission_granted
 import feniqomobil.sharedui.generated.resources.notifications_permission_granted_title
 import feniqomobil.sharedui.generated.resources.notifications_permission_open_button
 import feniqomobil.sharedui.generated.resources.settings_back
+import feniqomobil.sharedui.generated.resources.sync_conflict_count_plural
+import feniqomobil.sharedui.generated.resources.sync_conflict_detected_subtitle
+import feniqomobil.sharedui.generated.resources.sync_conflict_inspect_action
+import feniqomobil.sharedui.generated.resources.sync_header_offline_subtitle
+import feniqomobil.sharedui.generated.resources.sync_header_offline_title
+import feniqomobil.sharedui.generated.resources.sync_header_synced_subtitle
+import feniqomobil.sharedui.generated.resources.sync_header_synced_title
+import feniqomobil.sharedui.generated.resources.sync_header_syncing_subtitle
+import feniqomobil.sharedui.generated.resources.sync_header_syncing_title
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -83,79 +92,6 @@ fun SettingsTopBar(
             modifier = Modifier.weight(1f),
         )
         actions()
-    }
-}
-
-/** 01 Ayarlar üstündeki kompakt grafit profil kartı. */
-@Composable
-fun SettingsGraphiteProfileCard(
-    displayName: String,
-    email: String,
-    onManageProfile: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        shape = RoundedCornerShape(FeniqoRadius.Large),
-        colors = CardDefaults.cardColors(containerColor = FeniqoGraphite),
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(role = Role.Button, onClick = onManageProfile),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(FeniqoSpacing.Large),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(CircleShape)
-                    .background(FeniqoSageGreenContainer),
-                contentAlignment = Alignment.Center,
-            ) {
-                val initials = displayName.trim().split(" ")
-                    .mapNotNull { it.firstOrNull()?.uppercase() }
-                    .take(2)
-                    .joinToString("")
-                    .ifBlank { "F" }
-                Text(
-                    text = initials,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = FeniqoSageGreen,
-                )
-            }
-            Spacer(modifier = Modifier.width(FeniqoSpacing.Medium))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = displayName.ifBlank { "Feniqo Kullanıcısı" },
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = FeniqoPureWhite,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (email.isNotBlank()) {
-                    Text(
-                        text = email,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = FeniqoPureWhite.copy(alpha = 0.7f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "Profili yönet",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = FeniqoPureWhite.copy(alpha = 0.85f),
-                )
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Profili yönet",
-                tint = FeniqoPureWhite.copy(alpha = 0.7f),
-            )
-        }
     }
 }
 
@@ -259,7 +195,7 @@ fun SettingsRowItem(
             } else if (showChevron) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = "$title aç",
+                    contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -323,7 +259,7 @@ fun SettingsDangerItem(
             if (showChevron) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = "$title aç",
+                    contentDescription = null,
                     tint = errorColor,
                 )
             }
@@ -639,14 +575,14 @@ fun SyncStatusHeaderCard(
     modifier: Modifier = Modifier,
 ) {
     val title = when {
-        isSyncing -> "Eşitleniyor..."
-        !isOnline -> "Çevrimdışı"
-        else -> "Eşitlendi"
+        isSyncing -> stringResource(Res.string.sync_header_syncing_title)
+        !isOnline -> stringResource(Res.string.sync_header_offline_title)
+        else -> stringResource(Res.string.sync_header_synced_title)
     }
     val subtitle = when {
-        isSyncing -> "Değişiklikler sunucuya aktarılıyor."
-        !isOnline -> "Bağlantı bekleniyor."
-        else -> "Verileriniz güncel."
+        isSyncing -> stringResource(Res.string.sync_header_syncing_subtitle)
+        !isOnline -> stringResource(Res.string.sync_header_offline_subtitle)
+        else -> stringResource(Res.string.sync_header_synced_subtitle)
     }
     val icon = when {
         isSyncing -> Icons.Default.Sync
@@ -725,18 +661,26 @@ fun ConflictAlertCard(
             Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "$conflictCount kayıt inceleme bekliyor.",
+                    text = pluralStringResource(
+                        Res.plurals.sync_conflict_count_plural,
+                        conflictCount,
+                        conflictCount,
+                    ),
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
                 Text(
-                    text = "Olası bir çakışma tespit edildi.",
+                    text = stringResource(Res.string.sync_conflict_detected_subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
                 )
             }
             TextButton(onClick = onInspectConflict) {
-                Text("İncele", color = FeniqoSageGreen, fontWeight = FontWeight.Bold)
+                Text(
+                    text = stringResource(Res.string.sync_conflict_inspect_action),
+                    color = FeniqoSageGreen,
+                    fontWeight = FontWeight.Bold,
+                )
             }
         }
     }

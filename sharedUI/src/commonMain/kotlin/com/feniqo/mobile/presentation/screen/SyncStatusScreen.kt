@@ -1,18 +1,39 @@
 package com.feniqo.mobile.presentation.screen
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.outlined.FormatListNumbered
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.Sync
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.semantics.semantics
 import com.feniqo.mobile.presentation.component.ConflictAlertCard
 import com.feniqo.mobile.presentation.component.SettingsGroupCard
 import com.feniqo.mobile.presentation.component.SettingsRowItem
@@ -22,6 +43,19 @@ import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTouchTarget
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.sync_conflict_info_note
+import feniqomobil.sharedui.generated.resources.sync_last_sync_title
+import feniqomobil.sharedui.generated.resources.sync_legacy_quarantine_body
+import feniqomobil.sharedui.generated.resources.sync_legacy_quarantine_title
+import feniqomobil.sharedui.generated.resources.sync_never_synced
+import feniqomobil.sharedui.generated.resources.sync_no_pending_changes
+import feniqomobil.sharedui.generated.resources.sync_pending_changes_plural
+import feniqomobil.sharedui.generated.resources.sync_pending_changes_title
+import feniqomobil.sharedui.generated.resources.sync_retry_button
+import feniqomobil.sharedui.generated.resources.sync_status_title
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * 11 Senkronizasyon Durum Ekranı.
@@ -50,7 +84,7 @@ fun SyncStatusScreen(
                 .padding(horizontal = FeniqoSpacing.Screen, vertical = FeniqoSpacing.Medium),
         ) {
             SettingsTopBar(
-                title = "Senkronizasyon",
+                title = stringResource(Res.string.sync_status_title),
                 onBack = onBack,
             )
 
@@ -77,8 +111,16 @@ fun SyncStatusScreen(
                 item {
                     SettingsGroupCard {
                         SettingsRowItem(
-                            title = "Bekleyen değişiklikler",
-                            subtitle = if (pendingChangesCount > 0) "$pendingChangesCount yerel değişiklik aktarılmayı bekliyor" else "Bekleyen değişiklik yok",
+                            title = stringResource(Res.string.sync_pending_changes_title),
+                            subtitle = if (pendingChangesCount > 0) {
+                                pluralStringResource(
+                                    Res.plurals.sync_pending_changes_plural,
+                                    pendingChangesCount,
+                                    pendingChangesCount,
+                                )
+                            } else {
+                                stringResource(Res.string.sync_no_pending_changes)
+                            },
                             icon = Icons.Outlined.FormatListNumbered,
                             badgeText = pendingChangesCount.toString(),
                             badgeColor = if (pendingChangesCount > 0) Color(0xFFD97706) else FeniqoSageGreen,
@@ -86,8 +128,8 @@ fun SyncStatusScreen(
                             showChevron = false,
                         )
                         SettingsRowItem(
-                            title = "Son başarılı eşitleme",
-                            subtitle = lastSyncFormatted.ifBlank { "Henüz eşitlenmedi" },
+                            title = stringResource(Res.string.sync_last_sync_title),
+                            subtitle = lastSyncFormatted.ifBlank { stringResource(Res.string.sync_never_synced) },
                             icon = Icons.Outlined.Schedule,
                             showDivider = false,
                             onClick = null,
@@ -118,7 +160,7 @@ fun SyncStatusScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Çakışan kayıtlar kararın olmadan değiştirilmez.",
+                            text = stringResource(Res.string.sync_conflict_info_note),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -145,7 +187,7 @@ fun SyncStatusScreen(
                 } else {
                     Icon(Icons.Outlined.Sync, null)
                     Spacer(modifier = Modifier.width(FeniqoSpacing.Small))
-                    Text("Yeniden dene", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(Res.string.sync_retry_button), fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -184,14 +226,14 @@ fun LegacyQuarantineWarningCard(
             Spacer(modifier = Modifier.width(FeniqoSpacing.Medium))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Eski eşitleme verisi korunuyor",
+                    text = stringResource(Res.string.sync_legacy_quarantine_title),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Bazı eski eşitleme kayıtlarının hangi hesaba ait olduğu doğrulanamadı. Kayıtlar silinmedi ve otomatik olarak gönderilmeyecek.",
+                    text = stringResource(Res.string.sync_legacy_quarantine_body),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

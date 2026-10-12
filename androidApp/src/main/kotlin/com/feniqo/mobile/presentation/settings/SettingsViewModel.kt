@@ -57,7 +57,7 @@ data class SettingsUiState(
     val backupScope: PersonalBackupScope = PersonalBackupScope(0, 0),
     val isSavingProfile: Boolean = false,
     val profileSaveSuccess: Boolean = false,
-    val profileError: String? = null,
+    val profileError: PersonalProfileUiError? = null,
     val passwordError: AccountSecurityUiMessage? = null,
     val passwordSuccess: Boolean = false,
     val isChangingPassword: Boolean = false,
@@ -83,7 +83,7 @@ class SettingsViewModel @Inject constructor(
 
     private val isSavingProfile = MutableStateFlow(false)
     private val profileSaveSuccess = MutableStateFlow(false)
-    private val profileError = MutableStateFlow<String?>(null)
+    private val profileError = MutableStateFlow<PersonalProfileUiError?>(null)
 
     private val passwordError = MutableStateFlow<AccountSecurityUiMessage?>(null)
     private val passwordSuccess = MutableStateFlow(false)
@@ -98,7 +98,7 @@ class SettingsViewModel @Inject constructor(
     private data class FormOperationState(
         val isSavingProfile: Boolean,
         val profileSaveSuccess: Boolean,
-        val profileError: String?,
+        val profileError: PersonalProfileUiError?,
         val passwordError: AccountSecurityUiMessage?,
         val passwordSuccess: Boolean,
         val isChangingPassword: Boolean,
@@ -261,14 +261,14 @@ class SettingsViewModel @Inject constructor(
             try {
                 val nameValid = com.feniqo.mobile.domain.validation.AuthValidationRules.validateFullName(fullName)
                 if (nameValid is com.feniqo.mobile.domain.validation.AuthValidationResult.Invalid) {
-                    profileError.value = "Görünen ad en az ${com.feniqo.mobile.domain.validation.AuthValidationRules.MIN_FULL_NAME_LENGTH} karakter olmalıdır."
+                    profileError.value = PersonalProfileUiError.NAME_TOO_SHORT
                     return@launch
                 }
 
                 val normalized = com.feniqo.mobile.domain.validation.AuthValidationRules.normalizeFullName(fullName)
                 when (authRepository.updateFullName(normalized)) {
                     is RepositoryResult.Success -> profileSaveSuccess.value = true
-                    is RepositoryResult.Failure -> profileError.value = "Kişisel bilgiler kaydedilemedi. Bağlantınızı ve eşitleme durumunu kontrol edip tekrar deneyin."
+                    is RepositoryResult.Failure -> profileError.value = PersonalProfileUiError.SAVE_FAILED
                 }
             } finally {
                 isSavingProfile.value = false
@@ -446,7 +446,7 @@ class SettingsViewModel @Inject constructor(
 private data class FiveFlags(
     val sp: Boolean,
     val pss: Boolean,
-    val pe: String?,
+    val pe: PersonalProfileUiError?,
     val pwe: AccountSecurityUiMessage?,
     val pws: Boolean,
 )

@@ -2738,4 +2738,130 @@
     <string name="feedback_share_no_app_error">No suitable app found to share.</string>
     <string name="feedback_attachment_fallback_filename">screenshot.png</string>
 
+    <!-- Settings: Account & Profile Route (profile_route_*, account_*, profile_photo_*) -->
+    <string name="profile_route_default_user_name">Feniqo User</string>
+    <string name="account_login_method_email">Email</string>
+    <string name="account_login_method_account">Account</string>
+    <string name="account_screen_title">Profile photo</string>
+    <string name="account_screen_subtitle">Information about your account settings is shown here.</string>
+    <string name="account_row_personal_info">Personal information</string>
+    <string name="account_row_personal_info_subtitle">Name and profile details</string>
+    <string name="account_row_email">Email</string>
+    <string name="account_row_login_method">Sign-in method</string>
+    <string name="account_row_change_password">Change password</string>
+    <string name="account_row_change_password_subtitle">Update your account sign-in password</string>
+    <string name="account_row_delete_account">Delete account</string>
+    <string name="profile_photo_content_description">Profile photo</string>
+    <string name="profile_photo_change_action">Change photo</string>
+    <string name="profile_photo_action_gallery">Choose from gallery</string>
+    <string name="profile_photo_action_camera">Take photo</string>
+    <string name="profile_photo_action_remove">Remove photo</string>
+    <string name="profile_photo_stored_locally">Stored on this device only.</string>
+    <string name="profile_photo_read_failed">Image could not be loaded or read.</string>
+    <string name="profile_photo_camera_storage_failed">Could not prepare secure storage for camera.</string>
+    <string name="profile_photo_camera_permission_required">Camera permission is required to take photos.</string>
+    <string name="profile_photo_removed">Profile photo removed.</string>
+    <string name="profile_photo_saved">Profile photo saved.</string>
+    <string name="profile_photo_save_failed">Could not save photo.</string>
+    <string name="profile_photo_corrupted">Image could not be loaded or is corrupted.</string>
+    <string name="profile_photo_save_retry">Could not save photo. Please try again.</string>
+    <string name="profile_photo_process_error">Error occurred while processing photo.</string>
+    <string name="profile_personal_info_saved">Changes saved.</string>
+    <string name="profile_error_name_too_short">Display name must be at least %1$d characters.</string>
+    <string name="profile_error_save_failed">Failed to save personal info. Check your connection and sync status, then try again.</string>
+
+    <!-- Settings: Personal Info Screen (personal_info_*) -->
+    <string name="personal_info_title">Personal information</string>
+    <string name="personal_info_change_photo">Change photo</string>
+    <string name="personal_info_name_label">Display name</string>
+    <string name="personal_info_name_placeholder">Enter your name or full name</string>
+    <string name="personal_info_email_label">Email</string>
+    <string name="personal_info_change_email_title">Change email</string>
+    <string name="personal_info_change_email_subtitle">Set a new verified address</string>
+    <string name="personal_info_save_button">Save changes</string>
+
+    <!-- Settings: Photo Preview Screen (photo_preview_*) -->
+    <string name="photo_preview_title">Photo preview</string>
+    <string name="photo_preview_zoom_out">Zoom out</string>
+    <string name="photo_preview_zoom_in">Zoom in</string>
+    <string name="photo_preview_reselect">Choose again</string>
+    <string name="photo_preview_save">Save photo</string>
+
+    <!-- Settings: Data Management Screen (data_management_*) -->
+    <string name="data_management_title">Data management</string>
+    <string name="data_management_section_export">EXPORT</string>
+    <string name="data_management_export_csv_title">Save transactions as CSV</string>
+    <string name="data_management_export_csv_subtitle">Saves transactions in the active space to a CSV file.</string>
+    <string name="data_management_section_backup">BACKUP</string>
+    <string name="data_management_backup_create_title">Create JSON backup</string>
+    <string name="data_management_backup_create_subtitle">Save your personal data to your device.</string>
+    <string name="data_management_backup_import_title">Import JSON backup</string>
+    <string name="data_management_backup_import_subtitle">Load a previously created backup file.</string>
+    <string name="data_management_backup_info">Backup scope is displayed before the operation.</string>
+    <string name="data_management_section_sync">SYNC</string>
+    <string name="data_management_sync_status_title">Sync status</string>
+    <string name="data_management_sync_status_subtitle">View current status.</string>
+    <string name="data_management_sync_info">Backup files and synchronization are separate operations.</string>
+    <string name="data_management_scope_title">JSON backup</string>
+    <string name="data_management_scope_subtitle">Categories and transactions in personal space are included.</string>
+    <string name="data_management_scope_receipt_note">Receipt files are not included.</string>
+    <string name="data_management_scope_save_button">Save to file</string>
+    <string name="data_management_import_confirm_body">New records will be added to personal space. Existing records will not be modified.</string>
+    <string name="data_management_import_confirm_action">Import</string>
+    <string name="data_management_import_dismiss_action">Cancel</string>
+
+    <!-- Settings: Backup Import/Export Messages (backup_*) -->
+    <string name="backup_export_csv_default_filename">feniqo-transactions.csv</string>
+    <string name="backup_export_json_default_filename">feniqo-backup.json</string>
+    <string name="backup_export_csv_success">Transactions saved as CSV.</string>
+    <string name="backup_export_csv_failed">Failed to export CSV.</string>
+    <string name="backup_export_failed">Backup could not be created.</string>
+    <string name="backup_export_write_failed">Could not write backup to file.</string>
+    <string name="backup_export_success_format">JSON backup saved successfully (%1$s, %2$s).</string>
+    <string name="backup_import_read_or_large_error">Backup file could not be read or is too large.</string>
+    <string name="backup_import_success_format">Imported %1$s and %2$s.</string>
+    <string name="backup_counts_summary_format">%1$s, %2$s</string>
+    <string name="backup_import_error_personal_scope_required">Switch to personal space first before importing.</string>
+    <string name="backup_import_error_auth_session_required">You need to be signed in to import.</string>
+    <string name="backup_import_error_too_large">Backup file exceeds the 10 MiB limit.</string>
+    <string name="backup_import_error_version_unsupported">This backup version is not supported.</string>
+    <string name="backup_import_error_failed">Backup import failed; no records were added.</string>
+    <string name="backup_import_error_invalid_file">Invalid or unsupported Feniqo backup file.</string>
+    <plurals name="backup_category_count_plural">
+        <item quantity="one">%1$d category</item>
+        <item quantity="other">%1$d categories</item>
+    </plurals>
+    <plurals name="backup_transaction_count_plural">
+        <item quantity="one">%1$d transaction</item>
+        <item quantity="other">%1$d transactions</item>
+    </plurals>
+
+    <!-- Settings: Sync Status Screen & Components (sync_*) -->
+    <string name="sync_status_title">Synchronization</string>
+    <string name="sync_legacy_quarantine_title">Legacy sync data preserved</string>
+    <string name="sync_legacy_quarantine_body">Some legacy sync records could not be verified for account ownership. Records were not deleted and will not be sent automatically.</string>
+    <string name="sync_pending_changes_title">Pending changes</string>
+    <string name="sync_no_pending_changes">No pending changes</string>
+    <string name="sync_last_sync_title">Last successful sync</string>
+    <string name="sync_never_synced">Not synced yet</string>
+    <string name="sync_last_sync_datetime_format">%2$s/%1$s/%3$s %4$s:%5$s</string>
+    <string name="sync_conflict_info_note">Conflicting records are not modified without your decision.</string>
+    <string name="sync_retry_button">Retry</string>
+    <string name="sync_header_syncing_title">Syncing...</string>
+    <string name="sync_header_syncing_subtitle">Changes are being uploaded to the server.</string>
+    <string name="sync_header_offline_title">Offline</string>
+    <string name="sync_header_offline_subtitle">Waiting for connection.</string>
+    <string name="sync_header_synced_title">Synced</string>
+    <string name="sync_header_synced_subtitle">Your data is up to date.</string>
+    <string name="sync_conflict_detected_subtitle">A potential conflict was detected.</string>
+    <string name="sync_conflict_inspect_action">Inspect</string>
+    <plurals name="sync_pending_changes_plural">
+        <item quantity="one">%1$d local change waiting to be synced</item>
+        <item quantity="other">%1$d local changes waiting to be synced</item>
+    </plurals>
+    <plurals name="sync_conflict_count_plural">
+        <item quantity="one">%1$d record waiting for review.</item>
+        <item quantity="other">%1$d records waiting for review.</item>
+    </plurals>
+
 </resources>

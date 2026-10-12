@@ -1,26 +1,84 @@
 package com.feniqo.mobile.presentation.screen
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.outlined.FileDownload
+import androidx.compose.material.icons.outlined.FileUpload
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.ReceiptLong
+import androidx.compose.material.icons.outlined.SaveAlt
+import androidx.compose.material.icons.outlined.Sync
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.feniqo.mobile.presentation.component.SettingsGroupCard
 import com.feniqo.mobile.presentation.component.SettingsRowItem
 import com.feniqo.mobile.presentation.component.SettingsTopBar
-import com.feniqo.mobile.presentation.theme.FeniqoRadius
+import com.feniqo.mobile.presentation.settings.formatLocalizedBackupCounts
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
 import com.feniqo.mobile.presentation.theme.FeniqoTouchTarget
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.backup_category_count_plural
+import feniqomobil.sharedui.generated.resources.backup_transaction_count_plural
+import feniqomobil.sharedui.generated.resources.data_management_backup_create_subtitle
+import feniqomobil.sharedui.generated.resources.data_management_backup_create_title
+import feniqomobil.sharedui.generated.resources.data_management_backup_import_subtitle
+import feniqomobil.sharedui.generated.resources.data_management_backup_import_title
+import feniqomobil.sharedui.generated.resources.data_management_backup_info
+import feniqomobil.sharedui.generated.resources.data_management_export_csv_subtitle
+import feniqomobil.sharedui.generated.resources.data_management_export_csv_title
+import feniqomobil.sharedui.generated.resources.data_management_import_confirm_action
+import feniqomobil.sharedui.generated.resources.data_management_import_confirm_body
+import feniqomobil.sharedui.generated.resources.data_management_import_dismiss_action
+import feniqomobil.sharedui.generated.resources.data_management_scope_receipt_note
+import feniqomobil.sharedui.generated.resources.data_management_scope_save_button
+import feniqomobil.sharedui.generated.resources.data_management_scope_subtitle
+import feniqomobil.sharedui.generated.resources.data_management_scope_title
+import feniqomobil.sharedui.generated.resources.data_management_section_backup
+import feniqomobil.sharedui.generated.resources.data_management_section_export
+import feniqomobil.sharedui.generated.resources.data_management_section_sync
+import feniqomobil.sharedui.generated.resources.data_management_sync_info
+import feniqomobil.sharedui.generated.resources.data_management_sync_status_subtitle
+import feniqomobil.sharedui.generated.resources.data_management_sync_status_title
+import feniqomobil.sharedui.generated.resources.data_management_title
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * 10 Veri Yönetimi Ekranı, 22 Yedek Kapsamı ve 23 İçe Aktarma Onayı.
@@ -55,7 +113,7 @@ fun DataManagementScreen(
         ) {
             item {
                 SettingsTopBar(
-                    title = "Veri yönetimi",
+                    title = stringResource(Res.string.data_management_title),
                     onBack = onBack,
                 )
             }
@@ -63,15 +121,15 @@ fun DataManagementScreen(
             // DIŞA AKTARMA
             item {
                 Text(
-                    text = "DIŞA AKTARMA",
+                    text = stringResource(Res.string.data_management_section_export),
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
                 )
                 SettingsGroupCard {
                     SettingsRowItem(
-                        title = "İşlemleri CSV olarak kaydet",
-                        subtitle = "Aktif alandaki işlemleri CSV dosyasına kaydeder.",
+                        title = stringResource(Res.string.data_management_export_csv_title),
+                        subtitle = stringResource(Res.string.data_management_export_csv_subtitle),
                         icon = Icons.Outlined.FileDownload,
                         showDivider = false,
                         onClick = onExportCsv,
@@ -82,21 +140,21 @@ fun DataManagementScreen(
             // YEDEKLEME
             item {
                 Text(
-                    text = "YEDEKLEME",
+                    text = stringResource(Res.string.data_management_section_backup),
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
                 )
                 SettingsGroupCard {
                     SettingsRowItem(
-                        title = "JSON yedeği oluştur",
-                        subtitle = "Kişisel verilerini cihazına kaydet.",
+                        title = stringResource(Res.string.data_management_backup_create_title),
+                        subtitle = stringResource(Res.string.data_management_backup_create_subtitle),
                         icon = Icons.Outlined.SaveAlt,
                         onClick = { showScopeSheet = true },
                     )
                     SettingsRowItem(
-                        title = "JSON yedeğini içe aktar",
-                        subtitle = "Daha önce oluşturduğun yedek dosyasını yükle.",
+                        title = stringResource(Res.string.data_management_backup_import_title),
+                        subtitle = stringResource(Res.string.data_management_backup_import_subtitle),
                         icon = Icons.Outlined.FileUpload,
                         showDivider = false,
                         onClick = onSelectBackupFile,
@@ -115,7 +173,7 @@ fun DataManagementScreen(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Yedek kapsamı işlem öncesinde gösterilir.",
+                        text = stringResource(Res.string.data_management_backup_info),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -125,16 +183,16 @@ fun DataManagementScreen(
             // SENKRONİZASYON
             item {
                 Text(
-                    text = "SENKRONİZASYON",
+                    text = stringResource(Res.string.data_management_section_sync),
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
                 )
                 SettingsGroupCard {
                     SettingsRowItem(
-                        title = "Senkronizasyon durumu",
-                        subtitle = "Mevcut durumu görüntüle.",
-                        icon = Icons.Outlined.CloudSync,
+                        title = stringResource(Res.string.data_management_sync_status_title),
+                        subtitle = stringResource(Res.string.data_management_sync_status_subtitle),
+                        icon = Icons.Outlined.Sync,
                         showDivider = false,
                         onClick = onNavigateToSyncStatus,
                     )
@@ -152,7 +210,7 @@ fun DataManagementScreen(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Yedek dosyası ile senkronizasyon farklı işlemlerdir.",
+                        text = stringResource(Res.string.data_management_sync_info),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -174,11 +232,11 @@ fun DataManagementScreen(
                 verticalArrangement = Arrangement.spacedBy(FeniqoSpacing.Medium),
             ) {
                 Text(
-                    text = "JSON yedeği",
+                    text = stringResource(Res.string.data_management_scope_title),
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 )
                 Text(
-                    text = "Kişisel alandaki kategori ve işlemler dahil edilir.",
+                    text = stringResource(Res.string.data_management_scope_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -193,7 +251,11 @@ fun DataManagementScreen(
                         Icon(Icons.Outlined.Folder, null, tint = FeniqoSageGreen)
                         Spacer(modifier = Modifier.width(FeniqoSpacing.Medium))
                         Text(
-                            text = "$categoryScopeCount kategori",
+                            text = pluralStringResource(
+                                Res.plurals.backup_category_count_plural,
+                                categoryScopeCount,
+                                categoryScopeCount,
+                            ),
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                             modifier = Modifier.weight(1f),
                         )
@@ -214,7 +276,11 @@ fun DataManagementScreen(
                         Icon(Icons.Outlined.ReceiptLong, null, tint = FeniqoSageGreen)
                         Spacer(modifier = Modifier.width(FeniqoSpacing.Medium))
                         Text(
-                            text = "$transactionScopeCount işlem",
+                            text = pluralStringResource(
+                                Res.plurals.backup_transaction_count_plural,
+                                transactionScopeCount,
+                                transactionScopeCount,
+                            ),
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                             modifier = Modifier.weight(1f),
                         )
@@ -236,7 +302,7 @@ fun DataManagementScreen(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Makbuz dosyaları dahil değildir.",
+                        text = stringResource(Res.string.data_management_scope_receipt_note),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -253,7 +319,10 @@ fun DataManagementScreen(
                         .fillMaxWidth()
                         .height(FeniqoTouchTarget.PrimaryAction),
                 ) {
-                    Text("Dosyaya kaydet", fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = stringResource(Res.string.data_management_scope_save_button),
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
                 Spacer(modifier = Modifier.height(FeniqoSpacing.Large))
             }
@@ -280,13 +349,13 @@ fun DataManagementScreen(
             },
             title = {
                 Text(
-                    text = "${backup.categoryCount} kategori, ${backup.transactionCount} işlem",
+                    text = formatLocalizedBackupCounts(backup.categoryCount, backup.transactionCount),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 )
             },
             text = {
                 Text(
-                    text = "Kişisel alana yeni kayıtlar eklenecek. Mevcut kayıtlar değiştirilmeyecek.",
+                    text = stringResource(Res.string.data_management_import_confirm_body),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             },
@@ -295,12 +364,12 @@ fun DataManagementScreen(
                     onClick = onConfirmImport,
                     colors = ButtonDefaults.buttonColors(containerColor = FeniqoSageGreen),
                 ) {
-                    Text("İçe aktar")
+                    Text(stringResource(Res.string.data_management_import_confirm_action))
                 }
             },
             dismissButton = {
                 TextButton(onClick = onDismissImport) {
-                    Text("Vazgeç")
+                    Text(stringResource(Res.string.data_management_import_dismiss_action))
                 }
             },
         )

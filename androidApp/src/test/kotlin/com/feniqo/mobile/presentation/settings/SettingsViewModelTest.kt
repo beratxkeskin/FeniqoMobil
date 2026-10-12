@@ -61,7 +61,7 @@ class SettingsViewModelTest {
         viewModel.savePersonalInfo("A")
         testScheduler.advanceUntilIdle()
 
-        assertNotNull(viewModel.uiState.value.profileError)
+        assertEquals(PersonalProfileUiError.NAME_TOO_SHORT, viewModel.uiState.value.profileError)
         assertEquals(false, viewModel.uiState.value.profileSaveSuccess)
 
         // Geçerli görünen ad

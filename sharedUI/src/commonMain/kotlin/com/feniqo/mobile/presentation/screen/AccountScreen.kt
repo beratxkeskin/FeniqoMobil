@@ -1,35 +1,90 @@
 package com.feniqo.mobile.presentation.screen
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LockReset
+import androidx.compose.material.icons.outlined.Mail
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.feniqo.mobile.domain.model.EmailVerificationStatus
 import com.feniqo.mobile.presentation.component.SettingsDangerItem
 import com.feniqo.mobile.presentation.component.SettingsGroupCard
 import com.feniqo.mobile.presentation.component.SettingsRowItem
 import com.feniqo.mobile.presentation.component.SettingsTopBar
+import com.feniqo.mobile.presentation.settings.AccountLoginMethod
+import com.feniqo.mobile.presentation.settings.toLocalizedText
 import com.feniqo.mobile.presentation.theme.FeniqoPureWhite
 import com.feniqo.mobile.presentation.theme.FeniqoRadius
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreen
 import com.feniqo.mobile.presentation.theme.FeniqoSageGreenContainer
 import com.feniqo.mobile.presentation.theme.FeniqoSpacing
-import com.feniqo.mobile.presentation.theme.FeniqoTouchTarget
+import feniqomobil.sharedui.generated.resources.Res
+import feniqomobil.sharedui.generated.resources.account_login_method_account
+import feniqomobil.sharedui.generated.resources.account_login_method_email
+import feniqomobil.sharedui.generated.resources.account_row_change_password
+import feniqomobil.sharedui.generated.resources.account_row_change_password_subtitle
+import feniqomobil.sharedui.generated.resources.account_row_delete_account
+import feniqomobil.sharedui.generated.resources.account_row_email
+import feniqomobil.sharedui.generated.resources.account_row_login_method
+import feniqomobil.sharedui.generated.resources.account_row_personal_info
+import feniqomobil.sharedui.generated.resources.account_row_personal_info_subtitle
+import feniqomobil.sharedui.generated.resources.account_screen_subtitle
+import feniqomobil.sharedui.generated.resources.account_screen_title
+import feniqomobil.sharedui.generated.resources.email_settings_status_pending
+import feniqomobil.sharedui.generated.resources.email_settings_status_unknown
+import feniqomobil.sharedui.generated.resources.email_settings_status_verified
+import feniqomobil.sharedui.generated.resources.email_settings_unspecified
+import feniqomobil.sharedui.generated.resources.profile_photo_action_camera
+import feniqomobil.sharedui.generated.resources.profile_photo_action_gallery
+import feniqomobil.sharedui.generated.resources.profile_photo_action_remove
+import feniqomobil.sharedui.generated.resources.profile_photo_change_action
+import feniqomobil.sharedui.generated.resources.profile_photo_content_description
+import feniqomobil.sharedui.generated.resources.profile_photo_stored_locally
+import feniqomobil.sharedui.generated.resources.profile_route_default_user_name
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * 02 Hesabım Ekranı ve 16 Fotoğraf Seçim Sheet'i.
@@ -37,10 +92,10 @@ import com.feniqo.mobile.presentation.theme.FeniqoTouchTarget
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountScreen(
-    displayName: String,
+    displayName: String? = null,
     email: String,
-    emailVerificationStatus: com.feniqo.mobile.domain.model.EmailVerificationStatus,
-    loginMethod: String,
+    emailVerificationStatus: EmailVerificationStatus,
+    loginMethod: AccountLoginMethod = AccountLoginMethod.EMAIL,
     onBack: () -> Unit,
     onNavigateToPersonalInfo: () -> Unit,
     onNavigateToChangeEmail: () -> Unit,
@@ -50,9 +105,11 @@ fun AccountScreen(
     onTakePhoto: () -> Unit,
     onRemovePhoto: () -> Unit,
     modifier: Modifier = Modifier,
-    avatarBitmap: androidx.compose.ui.graphics.ImageBitmap? = null,
+    avatarBitmap: ImageBitmap? = null,
 ) {
     var showPhotoSheet by remember { mutableStateOf(false) }
+    val effectiveDisplayName = displayName?.trim()?.ifBlank { null }
+        ?: stringResource(Res.string.profile_route_default_user_name)
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -67,7 +124,7 @@ fun AccountScreen(
         ) {
             item {
                 SettingsTopBar(
-                    title = "Profil fotoğrafı",
+                    title = stringResource(Res.string.account_screen_title),
                     onBack = onBack,
                 )
             }
@@ -89,14 +146,14 @@ fun AccountScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         if (avatarBitmap != null) {
-                            androidx.compose.foundation.Image(
+                            Image(
                                 bitmap = avatarBitmap,
-                                contentDescription = "Profil fotoğrafı",
-                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                contentDescription = stringResource(Res.string.profile_photo_content_description),
+                                contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize(),
                             )
                         } else {
-                            val initials = displayName.trim().split(" ")
+                            val initials = effectiveDisplayName.split(" ")
                                 .mapNotNull { it.firstOrNull()?.uppercase() }
                                 .take(2)
                                 .joinToString("")
@@ -120,7 +177,7 @@ fun AccountScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.CameraAlt,
-                                contentDescription = "Fotoğrafı değiştir",
+                                contentDescription = stringResource(Res.string.profile_photo_change_action),
                                 tint = FeniqoPureWhite,
                                 modifier = Modifier.size(18.dp),
                             )
@@ -130,13 +187,13 @@ fun AccountScreen(
                     Spacer(modifier = Modifier.height(FeniqoSpacing.Medium))
 
                     Text(
-                        text = displayName,
+                        text = effectiveDisplayName,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Hesap ayarlarınla ilgili bilgiler burada yer alır.",
+                        text = stringResource(Res.string.account_screen_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -146,39 +203,39 @@ fun AccountScreen(
             // Hesap Satırları
             item {
                 val (badgeText, badgeColor) = when (emailVerificationStatus) {
-                    com.feniqo.mobile.domain.model.EmailVerificationStatus.VERIFIED ->
-                        "Doğrulandı" to Color(0xFF2E7D32)
-                    com.feniqo.mobile.domain.model.EmailVerificationStatus.PENDING_VERIFICATION ->
-                        "Doğrulama bekleniyor" to Color(0xFFE65100)
-                    com.feniqo.mobile.domain.model.EmailVerificationStatus.UNKNOWN ->
-                        "Durum alınamadı" to Color(0xFF757575)
+                    EmailVerificationStatus.VERIFIED ->
+                        stringResource(Res.string.email_settings_status_verified) to Color(0xFF2E7D32)
+                    EmailVerificationStatus.PENDING_VERIFICATION ->
+                        stringResource(Res.string.email_settings_status_pending) to Color(0xFFE65100)
+                    EmailVerificationStatus.UNKNOWN ->
+                        stringResource(Res.string.email_settings_status_unknown) to Color(0xFF757575)
                 }
 
                 SettingsGroupCard {
                     SettingsRowItem(
-                        title = "Kişisel bilgiler",
-                        subtitle = "Ad ve profil detayları",
+                        title = stringResource(Res.string.account_row_personal_info),
+                        subtitle = stringResource(Res.string.account_row_personal_info_subtitle),
                         icon = Icons.Outlined.Person,
                         onClick = onNavigateToPersonalInfo,
                     )
                     SettingsRowItem(
-                        title = "E-posta",
-                        subtitle = email.ifBlank { "Belirtilmemiş" },
+                        title = stringResource(Res.string.account_row_email),
+                        subtitle = email.ifBlank { stringResource(Res.string.email_settings_unspecified) },
                         icon = Icons.Outlined.Mail,
                         badgeText = badgeText,
                         badgeColor = badgeColor,
                         onClick = onNavigateToChangeEmail,
                     )
                     SettingsRowItem(
-                        title = "Giriş yöntemi",
-                        subtitle = loginMethod,
+                        title = stringResource(Res.string.account_row_login_method),
+                        subtitle = loginMethod.toLocalizedText(),
                         icon = Icons.Outlined.Key,
                         showChevron = false,
                         onClick = null,
                     )
                     SettingsRowItem(
-                        title = "Parolayı değiştir",
-                        subtitle = "Hesap giriş şifrenizi güncelleyin",
+                        title = stringResource(Res.string.account_row_change_password),
+                        subtitle = stringResource(Res.string.account_row_change_password_subtitle),
                         icon = Icons.Outlined.LockReset,
                         showDivider = false,
                         onClick = onNavigateToChangePassword,
@@ -190,7 +247,7 @@ fun AccountScreen(
             item {
                 Spacer(modifier = Modifier.height(FeniqoSpacing.Small))
                 SettingsDangerItem(
-                    title = "Hesabı sil",
+                    title = stringResource(Res.string.account_row_delete_account),
                     icon = Icons.Outlined.DeleteOutline,
                     onClick = onNavigateToDeleteAccount,
                 )
@@ -214,7 +271,7 @@ fun AccountScreen(
             ) {
                 SettingsGroupCard {
                     SettingsRowItem(
-                        title = "Galeriden seç",
+                        title = stringResource(Res.string.profile_photo_action_gallery),
                         icon = Icons.Outlined.Image,
                         onClick = {
                             showPhotoSheet = false
@@ -222,7 +279,7 @@ fun AccountScreen(
                         },
                     )
                     SettingsRowItem(
-                        title = "Fotoğraf çek",
+                        title = stringResource(Res.string.profile_photo_action_camera),
                         icon = Icons.Outlined.CameraAlt,
                         showDivider = false,
                         onClick = {
@@ -233,7 +290,7 @@ fun AccountScreen(
                 }
 
                 SettingsDangerItem(
-                    title = "Fotoğrafı kaldır",
+                    title = stringResource(Res.string.profile_photo_action_remove),
                     icon = Icons.Outlined.Delete,
                     showChevron = true,
                     onClick = {
@@ -258,7 +315,7 @@ fun AccountScreen(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Yalnızca bu cihazda saklanır.",
+                        text = stringResource(Res.string.profile_photo_stored_locally),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
