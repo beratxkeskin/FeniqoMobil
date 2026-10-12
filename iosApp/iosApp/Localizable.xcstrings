@@ -1,0 +1,74 @@
+{
+  "sourceLanguage" : "tr",
+  "strings" : {
+    "ios_shell_brand_accessibility_label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Feniqo, financial management app"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Feniqo, finansal yönetim uygulaması"
+          }
+        }
+      }
+    },
+    "ios_shell_description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Feniqo is currently progressing Android-first. The iOS version will be available after secure session, local database, and product screens are completed."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Feniqo şu anda Android öncelikli ilerliyor. iOS sürümü güvenli oturum, yerel veritabanı ve ürün ekranları tamamlandıktan sonra kullanıma açılacak."
+          }
+        }
+      }
+    },
+    "ios_shell_status_accessibility_hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status information indicating that development of the iOS application is in progress."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS uygulamasının geliştirme aşamasında olduğunu belirten durum bilgisi."
+          }
+        }
+      }
+    },
+    "ios_shell_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS app under development"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS uygulaması geliştirme aşamasında"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

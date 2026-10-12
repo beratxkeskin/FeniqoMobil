@@ -168,6 +168,38 @@ foreach ($pair in $catalogPairs) {
     }
 }
 
+$iosCatalogRelativePath = 'iosApp/iosApp/Localizable.xcstrings'
+$iosCatalogAbsolutePath = Join-Path $repositoryRoot $iosCatalogRelativePath
+$totalIosKeys = 0
+
+if (-not (Test-Path -LiteralPath $iosCatalogAbsolutePath)) {
+    $failures.Add("${iosCatalogRelativePath}: iOS String Catalog bulunamadı; dosya zorunludur.")
+} else {
+    try {
+        $json = Get-Content -LiteralPath $iosCatalogAbsolutePath -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($json.strings) {
+            $keyNames = $json.strings.psobject.Properties.Name
+            $totalIosKeys = $keyNames.Count
+            foreach ($k in $keyNames) {
+                $item = $json.strings.$k
+                $trVal = $item.localizations.tr.stringUnit.value
+                $enVal = $item.localizations.en.stringUnit.value
+                if ([string]::IsNullOrWhiteSpace($trVal)) {
+                    $failures.Add("iOS Localizable.xcstrings içinde '${k}' için TR çevirisi eksik")
+                }
+                if ([string]::IsNullOrWhiteSpace($enVal)) {
+                    $failures.Add("iOS Localizable.xcstrings içinde '${k}' için EN çevirisi eksik")
+                }
+            }
+        }
+        if ($totalIosKeys -eq 0) {
+            $failures.Add("iOS Localizable.xcstrings içinde tanımlı yerelleştirme anahtarı bulunamadı.")
+        }
+    } catch {
+        $failures.Add("iOS Localizable.xcstrings geçerli JSON/String Catalog olarak okunamadı: $($_.Exception.Message)")
+    }
+}
+
 function Test-GitRef {
     param([string]$Ref)
 
@@ -293,5 +325,5 @@ if ($failures.Count -gt 0) {
 
 Write-Output (
     "Localization politika kontrolü geçti: " +
-    "Toplam $totalTrCount TR ve $totalEnCount EN kaynak eş, placeholder sözleşmeleri uyumlu."
+    "Toplam $totalTrCount TR ve $totalEnCount EN XML kaynak eş, $totalIosKeys iOS String Catalog anahtarı eş, placeholder sözleşmeleri uyumlu."
 )
