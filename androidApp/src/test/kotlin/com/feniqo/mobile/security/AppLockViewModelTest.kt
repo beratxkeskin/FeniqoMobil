@@ -70,7 +70,7 @@ class AppLockViewModelTest {
         testScheduler.advanceUntilIdle()
         viewModel.setAvailability(DeviceAuthenticationAvailability.NONE_ENROLLED)
 
-        viewModel.onAuthenticationError(null)
+        viewModel.onAuthenticationError()
 
         assertEquals(
             AppLockUiError.AuthenticationNoneEnrolled,
@@ -79,12 +79,12 @@ class AppLockViewModelTest {
     }
 
     @Test
-    fun authenticationError_withPlatformMessage_mapsToTypedErrorWithoutRetainingMessage() = runTest {
+    fun authenticationError_mapsToTypedErrorWithoutAcceptingPlatformMessage() = runTest {
         val viewModel = AppLockViewModel(FakeSecurityRepository(settings(enabled = false)))
         testScheduler.advanceUntilIdle()
         viewModel.setAvailability(DeviceAuthenticationAvailability.AVAILABLE)
 
-        viewModel.onAuthenticationError("Biometric authentication failed from platform")
+        viewModel.onAuthenticationError()
 
         assertEquals(
             AppLockUiError.AuthenticationFailed,

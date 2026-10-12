@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">FeniqoMobil</string>
+    <string name="biometric_prompt_title">Unlock Feniqo</string>
+    <string name="biometric_prompt_subtitle">Verify with biometrics or screen lock</string>
+    <string name="notification_subscription_reminder_title">Subscription Reminder</string>
+    <string name="notification_subscription_channel_name">Subscription Reminders</string>
+    <string name="notification_subscription_channel_description">Upcoming and due subscription payment notifications</string>
+    <string name="notification_subscription_upcoming_content">Your %1$s subscription will renew in 7 days.</string>
+    <string name="notification_subscription_due_today_content">Your %1$s subscription renews today.</string>
+    <string name="notification_subscription_trial_ending_soon_content">Your %1$s trial will end in 3 days.</string>
+</resources>

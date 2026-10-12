@@ -81,6 +81,7 @@ class SubscriptionPaymentReminderWorker @AssistedInject constructor(
                     notifier.notifyReminder(
                         candidate = candidate,
                         hideAmounts = notificationPrefs.hideAmountsInNotifications,
+                        language = settings.language,
                     )
                 }
             }

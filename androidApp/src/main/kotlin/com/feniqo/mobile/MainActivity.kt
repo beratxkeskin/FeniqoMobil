@@ -60,7 +60,9 @@ class MainActivity : FragmentActivity() {
             onSuccess = {
                 appLockViewModel.onAuthenticationSucceeded(pendingAuthenticationAction)
             },
-            onError = appLockViewModel::onAuthenticationError,
+            onError = {
+                appLockViewModel.onAuthenticationError()
+            },
         )
     }
 
@@ -83,15 +85,17 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             val themeMode by themePreferences.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
-            val userSettings by
-                userSettingsRepository.observeSettings().collectAsState(initial = UserSettings())
+            val userSettingsOrNull by
+                userSettingsRepository.observeSettings().collectAsState(initial = null)
             val authState by rootNavViewModel.authState.collectAsStateWithLifecycle()
             val syncStatus by syncStatusViewModel.uiState.collectAsStateWithLifecycle()
             val appLockState by appLockViewModel.state.collectAsStateWithLifecycle()
 
+            val userSettings = userSettingsOrNull ?: return@setContent
+
             LaunchedEffect(authState, appLockState.isLocked) {
                 if (authState == AppAuthState.Authenticated && appLockState.isLocked) {
-                    authenticate(AppLockAuthenticationAction.UNLOCK)
+                    authenticate(AppLockAuthenticationAction.UNLOCK, userSettings.language)
                 }
             }
 
@@ -107,7 +111,7 @@ class MainActivity : FragmentActivity() {
                     if (authState == AppAuthState.Authenticated && appLockState.isLocked) {
                         AppLockScreen(
                             errorMessage = appLockState.error?.toLocalizedMessage(),
-                            onUnlock = { authenticate(AppLockAuthenticationAction.UNLOCK) },
+                            onUnlock = { authenticate(AppLockAuthenticationAction.UNLOCK, userSettings.language) },
                         )
                     } else {
                         FeniqoNavigation(
@@ -129,7 +133,7 @@ class MainActivity : FragmentActivity() {
                                     ?: com.feniqo.mobile.domain.repository.AutoLockTimeout.AFTER_1_MINUTE,
                             onBiometricLockChange = { enabled ->
                                 if (enabled) {
-                                    authenticate(AppLockAuthenticationAction.ENABLE)
+                                    authenticate(AppLockAuthenticationAction.ENABLE, userSettings.language)
                                 } else {
                                     appLockViewModel.disableLock()
                                 }
@@ -169,10 +173,13 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    private fun authenticate(action: AppLockAuthenticationAction) {
+    private fun authenticate(
+        action: AppLockAuthenticationAction,
+        language: AppLanguage,
+    ) {
         pendingAuthenticationAction = action
         appLockViewModel.clearError()
-        biometricAuthenticator.authenticate()
+        biometricAuthenticator.authenticate(language)
     }
 }
 

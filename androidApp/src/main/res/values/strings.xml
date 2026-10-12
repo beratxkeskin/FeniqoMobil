@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">FeniqoMobil</string>
+    <string name="biometric_prompt_title">Feniqo kilidini aç</string>
+    <string name="biometric_prompt_subtitle">Biyometri veya cihaz ekran kilidinizle doğrulayın</string>
+    <string name="notification_subscription_reminder_title">Abonelik Hatırlatıcı</string>
+    <string name="notification_subscription_channel_name">Abonelik Hatırlatıcıları</string>
+    <string name="notification_subscription_channel_description">Yaklaşan ve vadesi gelen abonelik ödeme bildirimleri</string>
+    <string name="notification_subscription_upcoming_content">%1$s aboneliğiniz 7 gün sonra yenilenecek.</string>
+    <string name="notification_subscription_due_today_content">%1$s aboneliğiniz bugün yenileniyor.</string>
+    <string name="notification_subscription_trial_ending_soon_content">%1$s deneme süreniz 3 gün sonra sona erecek.</string>
 </resources>

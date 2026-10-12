@@ -85,17 +85,20 @@ class SubscriptionPaymentReminderWorkerTest {
     ) : SubscriptionPaymentReminderNotifier {
         val notifiedCandidates = mutableListOf<SubscriptionPaymentReminderCandidate>()
         var lastHideAmounts: Boolean = false
+        var lastLanguage: com.feniqo.mobile.domain.model.AppLanguage? = null
 
         override fun canPostNotifications(): Boolean = hasPermission
 
         override suspend fun notifyReminder(
             candidate: SubscriptionPaymentReminderCandidate,
             hideAmounts: Boolean,
+            language: com.feniqo.mobile.domain.model.AppLanguage,
         ) {
             if (shouldThrowOnNotify) {
                 throw RuntimeException("Bildirim servisi hatası")
             }
             lastHideAmounts = hideAmounts
+            lastLanguage = language
             notifiedCandidates.add(candidate)
         }
     }
@@ -198,8 +201,20 @@ class SubscriptionPaymentReminderWorkerTest {
         val receiptDao = FakeReceiptDao()
         val notifier = FakeSubscriptionPaymentReminderNotifier(hasPermission = true)
         val timeProvider = FakeRecurringTimeProvider(fixedToday, fixedInstant)
+        val userSettingsRepo = FakeUserSettingsRepository().apply {
+            settings.value = com.feniqo.mobile.domain.model.UserSettings(
+                language = com.feniqo.mobile.domain.model.AppLanguage.EN,
+            )
+        }
 
-        val worker = buildWorker(observeUseCase, planUseCase, receiptDao, notifier, timeProvider)
+        val worker = buildWorker(
+            observeSubscriptionsUseCase = observeUseCase,
+            planSubscriptionPaymentRemindersUseCase = planUseCase,
+            receiptDao = receiptDao,
+            notifier = notifier,
+            timeProvider = timeProvider,
+            userSettingsRepository = userSettingsRepo,
+        )
 
         val result = worker.doWork()
 
@@ -211,6 +226,7 @@ class SubscriptionPaymentReminderWorkerTest {
         assertEquals(EntityId("sub-1"), notified.subscriptionId)
         assertEquals("Netflix", notified.subscriptionName)
         assertEquals(SubscriptionReminderKind.DUE_TODAY, notified.reminderKind)
+        assertEquals(com.feniqo.mobile.domain.model.AppLanguage.EN, notifier.lastLanguage)
     }
 
     @Test

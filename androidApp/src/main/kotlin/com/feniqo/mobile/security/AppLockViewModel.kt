@@ -78,7 +78,7 @@ class AppLockViewModel @Inject constructor(
         }
     }
 
-    fun onAuthenticationError(message: String? = null) {
+    fun onAuthenticationError() {
         val error = when (mutableState.value.availability) {
             DeviceAuthenticationAvailability.AVAILABLE -> AppLockUiError.AuthenticationFailed
             DeviceAuthenticationAvailability.NONE_ENROLLED -> AppLockUiError.AuthenticationNoneEnrolled

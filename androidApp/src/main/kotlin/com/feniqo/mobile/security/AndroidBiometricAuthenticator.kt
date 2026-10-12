@@ -4,6 +4,9 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import com.feniqo.mobile.R
+import com.feniqo.mobile.domain.model.AppLanguage
+import com.feniqo.mobile.util.localizedContext
 
 enum class DeviceAuthenticationAvailability {
     AVAILABLE,
@@ -14,7 +17,7 @@ enum class DeviceAuthenticationAvailability {
 class AndroidBiometricAuthenticator(
     private val activity: FragmentActivity,
     private val onSuccess: () -> Unit,
-    private val onError: (String?) -> Unit,
+    private val onError: () -> Unit,
 ) {
     fun availability(): DeviceAuthenticationAvailability = when (
         BiometricManager.from(activity).canAuthenticate(AllowedAuthenticators)
@@ -24,12 +27,13 @@ class AndroidBiometricAuthenticator(
         else -> DeviceAuthenticationAvailability.UNAVAILABLE
     }
 
-    fun authenticate() {
+    fun authenticate(appLanguage: AppLanguage) {
         if (availability() != DeviceAuthenticationAvailability.AVAILABLE) {
-            onError(null)
+            onError()
             return
         }
 
+        val localized = activity.localizedContext(appLanguage)
         val prompt = BiometricPrompt(
             activity,
             ContextCompat.getMainExecutor(activity),
@@ -39,18 +43,18 @@ class AndroidBiometricAuthenticator(
                 }
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    onError(errString.toString())
+                    onError()
                 }
 
                 override fun onAuthenticationFailed() {
-                    onError("Doğrulama eşleşmedi. Tekrar deneyin.")
+                    onError()
                 }
             },
         )
         prompt.authenticate(
             BiometricPrompt.PromptInfo.Builder()
-                .setTitle("Feniqo kilidini aç")
-                .setSubtitle("Biyometri veya cihaz ekran kilidinizle doğrulayın")
+                .setTitle(localized.getString(R.string.biometric_prompt_title))
+                .setSubtitle(localized.getString(R.string.biometric_prompt_subtitle))
                 .setAllowedAuthenticators(AllowedAuthenticators)
                 .build(),
         )

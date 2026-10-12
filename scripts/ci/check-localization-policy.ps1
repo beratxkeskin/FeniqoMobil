@@ -7,10 +7,18 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
-$catalogPaths = @{
-    tr = 'sharedUI/src/commonMain/composeResources/values/strings.xml'
-    en = 'sharedUI/src/commonMain/composeResources/values-en/strings.xml'
-}
+$catalogPairs = @(
+    @{
+        Scope = 'Compose'
+        tr = 'sharedUI/src/commonMain/composeResources/values/strings.xml'
+        en = 'sharedUI/src/commonMain/composeResources/values-en/strings.xml'
+    },
+    @{
+        Scope = 'Android Platform'
+        tr = 'androidApp/src/main/res/values/strings.xml'
+        en = 'androidApp/src/main/res/values-en/strings.xml'
+    }
+)
 $failures = [System.Collections.Generic.List[string]]::new()
 
 function Get-PlaceholderSignature {
@@ -118,37 +126,44 @@ function Read-LocalizationCatalog {
     return $entries
 }
 
-$trEntries = Read-LocalizationCatalog 'tr' $catalogPaths.tr
-$enEntries = Read-LocalizationCatalog 'en' $catalogPaths.en
+$totalTrCount = 0
+$totalEnCount = 0
 
-$allEntryKeys = @($trEntries.Keys + $enEntries.Keys | Sort-Object -Unique)
-foreach ($entryKey in $allEntryKeys) {
-    if (-not $trEntries.ContainsKey($entryKey)) {
-        $failures.Add("TR kataloğunda eksik kaynak: $entryKey")
-        continue
-    }
-    if (-not $enEntries.ContainsKey($entryKey)) {
-        $failures.Add("EN kataloğunda eksik kaynak: $entryKey")
-        continue
-    }
+foreach ($pair in $catalogPairs) {
+    $trEntries = Read-LocalizationCatalog 'tr' $pair.tr
+    $enEntries = Read-LocalizationCatalog 'en' $pair.en
+    $totalTrCount += $trEntries.Count
+    $totalEnCount += $enEntries.Count
 
-    $trVariants = $trEntries[$entryKey].Variants
-    $enVariants = $enEntries[$entryKey].Variants
-    $variantKeys = @($trVariants.Keys + $enVariants.Keys | Sort-Object -Unique)
-    foreach ($variantKey in $variantKeys) {
-        if (-not $trVariants.ContainsKey($variantKey)) {
-            $failures.Add("TR kataloğunda eksik varyant: ${entryKey}[${variantKey}]")
+    $allEntryKeys = @($trEntries.Keys + $enEntries.Keys | Sort-Object -Unique)
+    foreach ($entryKey in $allEntryKeys) {
+        if (-not $trEntries.ContainsKey($entryKey)) {
+            $failures.Add("$($pair.Scope) TR kataloğunda eksik kaynak: $entryKey")
             continue
         }
-        if (-not $enVariants.ContainsKey($variantKey)) {
-            $failures.Add("EN kataloğunda eksik varyant: ${entryKey}[${variantKey}]")
+        if (-not $enEntries.ContainsKey($entryKey)) {
+            $failures.Add("$($pair.Scope) EN kataloğunda eksik kaynak: $entryKey")
             continue
         }
-        if ($trVariants[$variantKey] -cne $enVariants[$variantKey]) {
-            $failures.Add(
-                "Placeholder uyumsuzluğu ${entryKey}[${variantKey}]: " +
-                "TR='$($trVariants[$variantKey])', EN='$($enVariants[$variantKey])'"
-            )
+
+        $trVariants = $trEntries[$entryKey].Variants
+        $enVariants = $enEntries[$entryKey].Variants
+        $variantKeys = @($trVariants.Keys + $enVariants.Keys | Sort-Object -Unique)
+        foreach ($variantKey in $variantKeys) {
+            if (-not $trVariants.ContainsKey($variantKey)) {
+                $failures.Add("$($pair.Scope) TR kataloğunda eksik varyant: ${entryKey}[${variantKey}]")
+                continue
+            }
+            if (-not $enVariants.ContainsKey($variantKey)) {
+                $failures.Add("$($pair.Scope) EN kataloğunda eksik varyant: ${entryKey}[${variantKey}]")
+                continue
+            }
+            if ($trVariants[$variantKey] -cne $enVariants[$variantKey]) {
+                $failures.Add(
+                    "$($pair.Scope) placeholder uyumsuzluğu ${entryKey}[${variantKey}]: " +
+                    "TR='$($trVariants[$variantKey])', EN='$($enVariants[$variantKey])'"
+                )
+            }
         }
     }
 }
@@ -278,5 +293,5 @@ if ($failures.Count -gt 0) {
 
 Write-Output (
     "Localization politika kontrolü geçti: " +
-    "$($trEntries.Count) TR ve $($enEntries.Count) EN kaynak eş, placeholder sözleşmeleri uyumlu."
+    "Toplam $totalTrCount TR ve $totalEnCount EN kaynak eş, placeholder sözleşmeleri uyumlu."
 )

@@ -1,5 +1,6 @@
 package com.feniqo.mobile.sync
 
+import com.feniqo.mobile.domain.model.AppLanguage
 import com.feniqo.mobile.domain.model.SubscriptionPaymentReminderCandidate
 
 /**
@@ -15,9 +16,11 @@ interface SubscriptionPaymentReminderNotifier {
     /**
      * Vadesi gelen veya yaklaşan abonelik hatırlatıcısını sistem bildirim çubuğunda yayınlar.
      * @param hideAmounts Kullanıcı ayarlarında bildirimlerde tutar gizleme aktif ise tutarı maskeler.
+     * @param language Bildirim metinlerinin çözüleceği seçili uygulama dili.
      */
     suspend fun notifyReminder(
         candidate: SubscriptionPaymentReminderCandidate,
         hideAmounts: Boolean = false,
+        language: AppLanguage,
     )
 }

@@ -9,8 +9,11 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.feniqo.mobile.R
+import com.feniqo.mobile.domain.model.AppLanguage
 import com.feniqo.mobile.domain.model.SubscriptionPaymentReminderCandidate
 import com.feniqo.mobile.domain.model.SubscriptionReminderKind
+import com.feniqo.mobile.util.localizedContext
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -25,10 +28,6 @@ class AndroidSubscriptionPaymentReminderNotifier @Inject constructor(
 
     private val notificationManager: NotificationManager? by lazy {
         context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-    }
-
-    init {
-        createNotificationChannel()
     }
 
     override fun canPostNotifications(): Boolean {
@@ -50,26 +49,37 @@ class AndroidSubscriptionPaymentReminderNotifier @Inject constructor(
     override suspend fun notifyReminder(
         candidate: SubscriptionPaymentReminderCandidate,
         hideAmounts: Boolean,
+        language: AppLanguage,
     ) {
         val manager = notificationManager ?: return
         if (!canPostNotifications()) {
             return
         }
 
-        createNotificationChannel()
+        createNotificationChannel(language)
 
+        val localized = context.localizedContext(language)
         val contentText = when (candidate.reminderKind) {
             SubscriptionReminderKind.UPCOMING ->
-                "${candidate.subscriptionName} aboneliğiniz 7 gün sonra yenilenecek."
+                localized.getString(
+                    R.string.notification_subscription_upcoming_content,
+                    candidate.subscriptionName,
+                )
             SubscriptionReminderKind.DUE_TODAY ->
-                "${candidate.subscriptionName} aboneliğiniz bugün yenileniyor."
+                localized.getString(
+                    R.string.notification_subscription_due_today_content,
+                    candidate.subscriptionName,
+                )
             SubscriptionReminderKind.TRIAL_ENDING_SOON ->
-                "${candidate.subscriptionName} deneme süreniz 3 gün sonra sona erecek."
+                localized.getString(
+                    R.string.notification_subscription_trial_ending_soon_content,
+                    candidate.subscriptionName,
+                )
         }
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("Abonelik Hatırlatıcı")
+            .setContentTitle(localized.getString(R.string.notification_subscription_reminder_title))
             .setContentText(contentText)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
@@ -78,14 +88,15 @@ class AndroidSubscriptionPaymentReminderNotifier @Inject constructor(
         manager.notify(candidate.stableKey, NOTIFICATION_ID, notification)
     }
 
-    private fun createNotificationChannel() {
+    internal fun createNotificationChannel(language: AppLanguage) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val localized = context.localizedContext(language)
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                CHANNEL_NAME,
+                localized.getString(R.string.notification_subscription_channel_name),
                 NotificationManager.IMPORTANCE_DEFAULT,
             ).apply {
-                description = CHANNEL_DESCRIPTION
+                description = localized.getString(R.string.notification_subscription_channel_description)
             }
             notificationManager?.createNotificationChannel(channel)
         }
@@ -93,8 +104,6 @@ class AndroidSubscriptionPaymentReminderNotifier @Inject constructor(
 
     companion object {
         const val CHANNEL_ID = "subscription_payment_reminders"
-        const val CHANNEL_NAME = "Abonelik Hatırlatıcıları"
-        const val CHANNEL_DESCRIPTION = "Yaklaşan ve vadesi gelen abonelik ödeme bildirimleri"
         const val NOTIFICATION_ID = 1001
     }
 }
