@@ -18,7 +18,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class TransactionSplitMapperTest {
-
     private val ownerId = EntityId("user-owner")
     private val member1Id = EntityId("user-1")
     private val member2Id = EntityId("user-2")
@@ -26,15 +25,16 @@ class TransactionSplitMapperTest {
     private val categoryId = EntityId("category-1")
     private val now = Instant.parse("2026-09-17T00:00:00Z")
 
-    private val syncMetadata = SyncMetadata(
-        syncStatus = SyncStatus.SYNCED.name,
-        updatedAtEpochMillis = now.toEpochMilliseconds(),
-        localUpdatedAtEpochMillis = now.toEpochMilliseconds(),
-        deletedAtEpochMillis = null,
-        version = 1L,
-        baseVersion = 1L,
-        lastSyncError = null,
-    )
+    private val syncMetadata =
+        SyncMetadata(
+            syncStatus = SyncStatus.SYNCED.name,
+            updatedAtEpochMillis = now.toEpochMilliseconds(),
+            localUpdatedAtEpochMillis = now.toEpochMilliseconds(),
+            deletedAtEpochMillis = null,
+            version = 1L,
+            baseVersion = 1L,
+            lastSyncError = null,
+        )
 
     private fun sampleExpenseTransaction(
         splitMode: TransactionSplitMode = TransactionSplitMode.EQUAL,
@@ -53,21 +53,23 @@ class TransactionSplitMapperTest {
         installment = null,
         createdAt = now,
         paidByUserId = ownerId,
-        participantUserIds = if (splitMode == TransactionSplitMode.CUSTOM) {
-            shares.map { it.userId }
-        } else {
-            listOf(ownerId, member1Id)
-        },
+        participantUserIds =
+            if (splitMode == TransactionSplitMode.CUSTOM) {
+                shares.map { it.userId }
+            } else {
+                listOf(ownerId, member1Id)
+            },
         splitMode = splitMode,
         participantShares = shares,
     )
 
     @Test
     fun equalDomainToEntityToDomain_isPreserved() {
-        val domain = sampleExpenseTransaction(
-            splitMode = TransactionSplitMode.EQUAL,
-            shares = emptyList(),
-        )
+        val domain =
+            sampleExpenseTransaction(
+                splitMode = TransactionSplitMode.EQUAL,
+                shares = emptyList(),
+            )
 
         val entity = domain.toEntity(syncMetadata)
         assertEquals("EQUAL", entity.splitMode)
@@ -82,15 +84,17 @@ class TransactionSplitMapperTest {
 
     @Test
     fun custom50_30_20_domainToEntityToDomain_isPreserved() {
-        val shares = listOf(
-            TransactionParticipantShare(ownerId, 5_000L),
-            TransactionParticipantShare(member1Id, 3_000L),
-            TransactionParticipantShare(member2Id, 2_000L),
-        )
-        val domain = sampleExpenseTransaction(
-            splitMode = TransactionSplitMode.CUSTOM,
-            shares = shares,
-        )
+        val shares =
+            listOf(
+                TransactionParticipantShare(ownerId, 5_000L),
+                TransactionParticipantShare(member1Id, 3_000L),
+                TransactionParticipantShare(member2Id, 2_000L),
+            )
+        val domain =
+            sampleExpenseTransaction(
+                splitMode = TransactionSplitMode.CUSTOM,
+                shares = shares,
+            )
 
         val entity = domain.toEntity(syncMetadata)
         assertEquals("CUSTOM", entity.splitMode)
@@ -104,15 +108,17 @@ class TransactionSplitMapperTest {
     @Test
     fun customShares_storedInCanonicalOrder() {
         // user-2, user-owner, user-1 sırasız
-        val uncanonicalShares = listOf(
-            TransactionParticipantShare(member2Id, 2_000L),
-            TransactionParticipantShare(ownerId, 5_000L),
-            TransactionParticipantShare(member1Id, 3_000L),
-        )
-        val domain = sampleExpenseTransaction(
-            splitMode = TransactionSplitMode.CUSTOM,
-            shares = uncanonicalShares,
-        )
+        val uncanonicalShares =
+            listOf(
+                TransactionParticipantShare(member2Id, 2_000L),
+                TransactionParticipantShare(ownerId, 5_000L),
+                TransactionParticipantShare(member1Id, 3_000L),
+            )
+        val domain =
+            sampleExpenseTransaction(
+                splitMode = TransactionSplitMode.CUSTOM,
+                shares = uncanonicalShares,
+            )
 
         val entity = domain.toEntity(syncMetadata)
         // user-1, user-2, user-owner alfabetik artan sıraya dizilmiş olmalı
@@ -124,10 +130,11 @@ class TransactionSplitMapperTest {
 
     @Test
     fun malformedCustomJson_producesInvalidSentinelWithoutThrowing() {
-        val corruptEntity = sampleExpenseTransaction().toEntity(syncMetadata).copy(
-            splitMode = "CUSTOM",
-            participantSharesJson = "[corrupted json",
-        )
+        val corruptEntity =
+            sampleExpenseTransaction().toEntity(syncMetadata).copy(
+                splitMode = "CUSTOM",
+                participantSharesJson = "[corrupted json",
+            )
 
         // Exception fırlatmamalı; kontrollü invalid sentinel üretmeli
         val domain = corruptEntity.toDomain()
@@ -137,10 +144,11 @@ class TransactionSplitMapperTest {
 
     @Test
     fun unknownSplitMode_producesInvalidSentinelInsteadOfDefaultingToEqual() {
-        val unknownEntity = sampleExpenseTransaction().toEntity(syncMetadata).copy(
-            splitMode = "PERCENTAGE",
-            participantSharesJson = "[]",
-        )
+        val unknownEntity =
+            sampleExpenseTransaction().toEntity(syncMetadata).copy(
+                splitMode = "PERCENTAGE",
+                participantSharesJson = "[]",
+            )
 
         val domain = unknownEntity.toDomain()
         assertEquals(TransactionSplitMode.CUSTOM, domain.splitMode)
@@ -149,10 +157,11 @@ class TransactionSplitMapperTest {
 
     @Test
     fun equalWithNonEmptyShares_producesInvalidSentinelInsteadOfSilentlyAcceptingEqual() {
-        val invalidEqualEntity = sampleExpenseTransaction().toEntity(syncMetadata).copy(
-            splitMode = "EQUAL",
-            participantSharesJson = """[{"userId":"user-1","amountMinor":5000}]""",
-        )
+        val invalidEqualEntity =
+            sampleExpenseTransaction().toEntity(syncMetadata).copy(
+                splitMode = "EQUAL",
+                participantSharesJson = """[{"userId":"user-1","amountMinor":5000}]""",
+            )
 
         val domain = invalidEqualEntity.toDomain()
         // Sessizce EQUAL yapılmamalı, hatalı split olarak işaretlenmeli
@@ -163,31 +172,32 @@ class TransactionSplitMapperTest {
     @Test
     fun legacyV18DefaultFields_producesEqualSplitBehavior() {
         // v18'den gelen kayıtlarda default split_mode = 'EQUAL' ve participant_shares_json = '[]'
-        val legacyEntity = TransactionEntity(
-            id = "tx-legacy",
-            ownerId = "user-owner",
-            workspaceId = "workspace-1",
-            paidByUserId = "user-owner",
-            participantUserIdsJson = """["user-owner","user-1"]""",
-            amountMinor = 10_000L,
-            currencyCode = "TRY",
-            typeCode = "EXPENSE",
-            categoryId = "category-1",
-            description = "Legacy v18 transaction",
-            searchText = "legacy",
-            paymentMethodCode = "CASH",
-            transactionDate = "2026-09-17",
-            receiptPath = null,
-            installmentNumber = null,
-            totalInstallments = null,
-            installmentGroupId = null,
-            createdAtEpochMillis = now.toEpochMilliseconds(),
-            note = null,
-            sync = syncMetadata,
-            // default değerler:
-            splitMode = "EQUAL",
-            participantSharesJson = "[]",
-        )
+        val legacyEntity =
+            TransactionEntity(
+                id = "tx-legacy",
+                ownerId = "user-owner",
+                workspaceId = "workspace-1",
+                paidByUserId = "user-owner",
+                participantUserIdsJson = """["user-owner","user-1"]""",
+                amountMinor = 10_000L,
+                currencyCode = "TRY",
+                typeCode = "EXPENSE",
+                categoryId = "category-1",
+                description = "Legacy v18 transaction",
+                searchText = "legacy",
+                paymentMethodCode = "CASH",
+                transactionDate = "2026-09-17",
+                receiptPath = null,
+                installmentNumber = null,
+                totalInstallments = null,
+                installmentGroupId = null,
+                createdAtEpochMillis = now.toEpochMilliseconds(),
+                note = null,
+                sync = syncMetadata,
+                // default değerler:
+                splitMode = "EQUAL",
+                participantSharesJson = "[]",
+            )
 
         val domain = legacyEntity.toDomain()
         assertEquals(TransactionSplitMode.EQUAL, domain.splitMode)

@@ -2,10 +2,16 @@ package com.feniqo.mobile.presentation.transaction
 
 import com.feniqo.mobile.domain.model.Category
 import com.feniqo.mobile.domain.model.Currency
+import com.feniqo.mobile.domain.model.DISALLOWED_STANDALONE_GENERIC_TOKENS
 import com.feniqo.mobile.domain.model.LocalDate
+import com.feniqo.mobile.domain.model.Merchant
+import com.feniqo.mobile.domain.model.MerchantRecognitionResult
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.Transaction
+import com.feniqo.mobile.domain.model.TransactionMerchantEligibility
 import com.feniqo.mobile.domain.model.TransactionType
+import com.feniqo.mobile.domain.model.TurkishDescriptionNormalizer
+import com.feniqo.mobile.domain.usecase.StarterMerchantCatalog
 import com.feniqo.mobile.presentation.util.DateFormatter
 import com.feniqo.mobile.presentation.util.MoneyFormatter
 
@@ -14,11 +20,97 @@ import com.feniqo.mobile.presentation.util.MoneyFormatter
  */
 object TransactionsDisplayModelBuilder {
 
+    /**
+     * Ham işlem ve katalog verisinden güvenli, tipli merchant presentation modeli çözümler.
+     *
+     * Kurallar:
+     * - confidence >= MIN_LOGO_CONFIDENCE (75), katalog merchant'ı bulunmuş ve
+     *   katalog sürümü uyumluysa (trx.catalogVersion <= merchant.catalogVersion) çözümlenir.
+     * - 75 altındaki tahminler fail-safe olarak null döner (merchant adı/kimliği sızdırılmaz).
+     * - transaction catalogVersion > merchant catalogVersion ise future/bilinmeyen kabul edilerek null döner.
+     * - Katalogda bulunamayan merchantId için null döner.
+     */
+    fun resolveMerchantDisplay(
+        transaction: Transaction,
+        catalog: List<Merchant> = StarterMerchantCatalog.merchants,
+    ): TransactionMerchantDisplayModel? {
+        val info = transaction.merchantInfo ?: return null
+        if (info.confidence < MerchantRecognitionResult.MIN_LOGO_CONFIDENCE) {
+            return null
+        }
+        val merchant = catalog.firstOrNull { it.id == info.merchantId.value } ?: return null
+        if (info.catalogVersion > merchant.catalogVersion) {
+            return null
+        }
+        return TransactionMerchantDisplayModel(
+            merchantId = info.merchantId,
+            displayName = merchant.displayName,
+            verifiedLogoKey = merchant.verifiedLogoKey,
+            canShowMerchantLogo = true,
+        )
+    }
+
+    /**
+     * Tekil Transaction -> TransactionDisplayModel merkezi dönüşüm fonksiyonu.
+     * Liste, Detay, Dashboard ve Başarı ekranı bu tekil saf fonksiyonu kullanır.
+     */
+    fun buildItem(
+        transaction: Transaction,
+        category: Category?,
+        fallbackCategoryName: String = "Bilinmeyen kategori",
+        catalog: List<Merchant> = StarterMerchantCatalog.merchants,
+    ): TransactionDisplayModel {
+        val merchantDisplay = resolveMerchantDisplay(transaction, catalog)
+        val description = transaction.description
+        val canCorrectMerchant = transaction.workspaceId == null &&
+            !description.isNullOrBlank() &&
+            run {
+                val norm = TurkishDescriptionNormalizer.normalize(description)
+                norm.isNotBlank() &&
+                    norm.length <= Transaction.MAX_DESCRIPTION_LENGTH &&
+                    norm !in DISALLOWED_STANDALONE_GENERIC_TOKENS &&
+                    !TransactionMerchantEligibility.isExcluded(norm)
+            }
+        return TransactionDisplayModel(
+            id = transaction.id,
+            amount = transaction.amount,
+            formattedAmount = MoneyFormatter.format(
+                money = transaction.amount,
+                includeSign = true,
+                type = transaction.type,
+            ),
+            type = transaction.type,
+            categoryId = transaction.categoryId,
+            categoryName = category?.name ?: fallbackCategoryName,
+            isCategoryUnavailable = category == null,
+            categoryColorHex = category?.color?.hex,
+            categoryIconKey = category?.icon?.key,
+            description = transaction.description,
+            paymentMethod = transaction.paymentMethod,
+            transactionDate = transaction.transactionDate,
+            installment = transaction.installment?.let { inst ->
+                InstallmentDisplayModel(
+                    number = inst.number,
+                    total = inst.total,
+                    badgeText = "${inst.number}/${inst.total}",
+                )
+            },
+            hasReceipt = transaction.receiptPath != null,
+            note = transaction.note,
+            syncStatus = transaction.syncStatus,
+            canEdit = true,
+            canDelete = true,
+            merchant = merchantDisplay,
+            canCorrectMerchant = canCorrectMerchant,
+        )
+    }
+
     fun build(
         transactions: List<Transaction>,
         categoryHistory: List<Category>,
         today: LocalDate,
         sortOrder: TransactionSortOrder = TransactionSortOrder.NEWEST,
+        catalog: List<Merchant> = StarterMerchantCatalog.merchants,
     ): List<DateGroupedTransactionsDisplayModel> {
         if (transactions.isEmpty()) return emptyList()
 
@@ -59,35 +151,11 @@ object TransactionsDisplayModelBuilder {
 
         for (trx in sortedTransactions) {
             val category = categoryMap[trx.categoryId]
-            val displayModel = TransactionDisplayModel(
-                id = trx.id,
-                amount = trx.amount,
-                formattedAmount = MoneyFormatter.format(
-                    money = trx.amount,
-                    includeSign = true,
-                    type = trx.type,
-                ),
-                type = trx.type,
-                categoryId = trx.categoryId,
-                categoryName = category?.name ?: "Bilinmeyen kategori",
-                isCategoryUnavailable = category == null,
-                categoryColorHex = category?.color?.hex,
-                categoryIconKey = category?.icon?.key,
-                description = trx.description,
-                paymentMethod = trx.paymentMethod,
-                transactionDate = trx.transactionDate,
-                installment = trx.installment?.let { inst ->
-                    InstallmentDisplayModel(
-                        number = inst.number,
-                        total = inst.total,
-                        badgeText = "${inst.number}/${inst.total}",
-                    )
-                },
-                hasReceipt = trx.receiptPath != null,
-                note = trx.note,
-                syncStatus = trx.syncStatus,
-                canEdit = true,
-                canDelete = true,
+            val displayModel = buildItem(
+                transaction = trx,
+                category = category,
+                fallbackCategoryName = "Bilinmeyen kategori",
+                catalog = catalog,
             )
 
             val list = groupedMap.getOrPut(trx.transactionDate) { mutableListOf() }

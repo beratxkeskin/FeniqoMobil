@@ -8,10 +8,10 @@ import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.UpdateAssetCommand
+import kotlinx.datetime.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
-import kotlinx.datetime.Instant
 
 class AssetValidationRulesTest {
     @Test
@@ -42,16 +42,31 @@ class AssetValidationRulesTest {
 
     @Test
     fun apply_update_preserves_identity_and_owner_fields() {
-        val existing = Asset(
-            id = EntityId("asset-1"), ownerId = EntityId("owner-1"), workspaceId = null,
-            name = "Nakit", type = AssetType.CASH, currentValue = Money(1000, Currency.TRY),
-            quantity = null, purchaseUnitPrice = null, trackingSymbol = null, autoTrack = false,
-            createdAt = Instant.parse("2026-09-08T00:00:00Z"),
-        )
-        val result = AssetValidationRules.applyUpdate(existing, UpdateAssetCommand(
-            id = existing.id, name = "  Güncel Nakit ", type = AssetType.CASH,
-            currentValue = Money(2500, Currency.TRY), quantity = AssetQuantity(25, 0),
-        ))
+        val existing =
+            Asset(
+                id = EntityId("asset-1"),
+                ownerId = EntityId("owner-1"),
+                workspaceId = null,
+                name = "Nakit",
+                type = AssetType.CASH,
+                currentValue = Money(1000, Currency.TRY),
+                quantity = null,
+                purchaseUnitPrice = null,
+                trackingSymbol = null,
+                autoTrack = false,
+                createdAt = Instant.parse("2026-09-08T00:00:00Z"),
+            )
+        val result =
+            AssetValidationRules.applyUpdate(
+                existing,
+                UpdateAssetCommand(
+                    id = existing.id,
+                    name = "  Güncel Nakit ",
+                    type = AssetType.CASH,
+                    currentValue = Money(2500, Currency.TRY),
+                    quantity = AssetQuantity(25, 0),
+                ),
+            )
         val valid = assertIs<AssetValidationResult.Valid<Asset>>(result)
         assertEquals(existing.id, valid.value.id)
         assertEquals(existing.ownerId, valid.value.ownerId)

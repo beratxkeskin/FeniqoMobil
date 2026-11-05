@@ -7,7 +7,6 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class SecondWaveModelsTest {
-
     @Test
     fun recurrence_rule_rejects_an_end_before_its_start() {
         assertFailsWith<IllegalArgumentException> {
@@ -62,30 +61,32 @@ class SecondWaveModelsTest {
         val expense = Money(12_500, Currency.TRY)
         val balance = MoneyDelta.between(income, expense)
 
-        val dashboard = DashboardSummary(
-            month = YearMonth("2026-08"),
-            income = income,
-            expense = expense,
-            balance = balance,
-            savingsRate = RateBasisPoints(-2_500),
-            topExpenseCategory = null,
-            recentTransactionIds = emptyList(),
-            moneyScore = null,
-        )
+        val dashboard =
+            DashboardSummary(
+                month = YearMonth("2026-08"),
+                income = income,
+                expense = expense,
+                balance = balance,
+                savingsRate = RateBasisPoints(-2_500),
+                topExpenseCategory = null,
+                recentTransactionIds = emptyList(),
+                moneyScore = null,
+            )
 
         assertEquals(-2_500, dashboard.balance.amountMinor)
     }
 
     @Test
     fun money_score_must_equal_its_breakdown() {
-        val score = MoneyScore(
-            total = 75,
-            savings = 25,
-            budget = 20,
-            debt = 15,
-            goal = 15,
-            level = MoneyScoreLevel.HEALTHY,
-        )
+        val score =
+            MoneyScore(
+                total = 75,
+                savings = 25,
+                budget = 20,
+                debt = 15,
+                goal = 15,
+                level = MoneyScoreLevel.HEALTHY,
+            )
 
         assertEquals(75, score.total)
         assertFailsWith<IllegalArgumentException> {
@@ -105,22 +106,24 @@ class SecondWaveModelsTest {
 
     @Test
     fun subscription_reuses_recurrence_rule_and_allows_a_missing_category() {
-        val subscription = Subscription(
-            id = EntityId("subscription-1"),
-            ownerId = EntityId("user-1"),
-            workspaceId = null,
-            name = "Müzik",
-            amount = Money(5999, Currency.TRY),
-            categoryId = null,
-            renewalRule = RecurrenceRule(
-                frequency = RecurrenceFrequency.MONTHLY,
-                startDate = LocalDate(2026, 8, 5),
-                endDate = null,
-            ),
-            nextRenewalDate = LocalDate(2026, 9, 5),
-            isActive = true,
-            createdAt = NOW,
-        )
+        val subscription =
+            Subscription(
+                id = EntityId("subscription-1"),
+                ownerId = EntityId("user-1"),
+                workspaceId = null,
+                name = "Müzik",
+                amount = Money(5999, Currency.TRY),
+                categoryId = null,
+                renewalRule =
+                    RecurrenceRule(
+                        frequency = RecurrenceFrequency.MONTHLY,
+                        startDate = LocalDate(2026, 8, 5),
+                        endDate = null,
+                    ),
+                nextRenewalDate = LocalDate(2026, 9, 5),
+                isActive = true,
+                createdAt = NOW,
+            )
 
         assertTrue(subscription.isActive)
         assertEquals(null, subscription.categoryId)
@@ -137,11 +140,12 @@ class SecondWaveModelsTest {
                 name = longName,
                 amount = Money(5999, Currency.TRY),
                 categoryId = null,
-                renewalRule = RecurrenceRule(
-                    frequency = RecurrenceFrequency.MONTHLY,
-                    startDate = LocalDate(2026, 8, 5),
-                    endDate = null,
-                ),
+                renewalRule =
+                    RecurrenceRule(
+                        frequency = RecurrenceFrequency.MONTHLY,
+                        startDate = LocalDate(2026, 8, 5),
+                        endDate = null,
+                    ),
                 nextRenewalDate = LocalDate(2026, 9, 5),
                 isActive = true,
                 createdAt = NOW,
@@ -152,22 +156,24 @@ class SecondWaveModelsTest {
     @Test
     fun subscription_accepts_name_with_exact_max_length() {
         val exactName = "s".repeat(Subscription.MAX_NAME_LENGTH)
-        val subscription = Subscription(
-            id = EntityId("subscription-1"),
-            ownerId = EntityId("user-1"),
-            workspaceId = null,
-            name = exactName,
-            amount = Money(5999, Currency.TRY),
-            categoryId = null,
-            renewalRule = RecurrenceRule(
-                frequency = RecurrenceFrequency.MONTHLY,
-                startDate = LocalDate(2026, 8, 5),
-                endDate = null,
-            ),
-            nextRenewalDate = LocalDate(2026, 9, 5),
-            isActive = true,
-            createdAt = NOW,
-        )
+        val subscription =
+            Subscription(
+                id = EntityId("subscription-1"),
+                ownerId = EntityId("user-1"),
+                workspaceId = null,
+                name = exactName,
+                amount = Money(5999, Currency.TRY),
+                categoryId = null,
+                renewalRule =
+                    RecurrenceRule(
+                        frequency = RecurrenceFrequency.MONTHLY,
+                        startDate = LocalDate(2026, 8, 5),
+                        endDate = null,
+                    ),
+                nextRenewalDate = LocalDate(2026, 9, 5),
+                isActive = true,
+                createdAt = NOW,
+            )
         assertEquals(Subscription.MAX_NAME_LENGTH, subscription.name.length)
     }
 

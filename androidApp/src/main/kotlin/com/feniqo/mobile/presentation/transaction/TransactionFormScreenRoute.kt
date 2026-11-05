@@ -78,6 +78,9 @@ fun TransactionFormScreenRoute(
         onPaidByUserSelected = viewModel::onPaidByUserSelected,
         onParticipantToggled = viewModel::onParticipantToggled,
         onSplitDetailsApplied = viewModel::onSplitDetailsApplied,
+        onKnownMerchantSelected = viewModel::onKnownMerchantSelected,
+        onUseTransactionNameSelected = viewModel::onUseTransactionNameSelected,
+        onClearMerchantDecision = viewModel::onClearMerchantDecision,
         modifier = modifier,
     )
 

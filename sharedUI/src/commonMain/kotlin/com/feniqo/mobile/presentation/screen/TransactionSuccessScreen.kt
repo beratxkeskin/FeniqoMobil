@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.TransactionType
-import com.feniqo.mobile.presentation.component.CategorySemanticIconResolver
+import com.feniqo.mobile.presentation.component.MerchantLogo
 import com.feniqo.mobile.presentation.component.ResponsiveLabelValueRow
 import com.feniqo.mobile.presentation.theme.*
 import com.feniqo.mobile.presentation.transaction.TransactionDisplayModel
@@ -264,7 +264,6 @@ private fun TransactionSummaryCard(
     modifier: Modifier = Modifier,
 ) {
     val categoryColor = ColorParser.parseHexColorOrNull(transaction.categoryColorHex) ?: MaterialTheme.colorScheme.primary
-    val categoryIcon = CategorySemanticIconResolver.resolve(transaction.categoryIconKey)
     val amountColor = if (transaction.type == TransactionType.EXPENSE) FeniqoExpense else FeniqoEmerald
     val categoryName = if (transaction.isCategoryUnavailable) {
         stringResource(Res.string.transaction_unknown_category)
@@ -294,20 +293,18 @@ private fun TransactionSummaryCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(categoryColor.copy(alpha = 0.14f)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = categoryIcon,
-                            contentDescription = null,
-                            tint = categoryColor,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
+                    val fallbackLabel = transaction.merchant?.displayName
+                        ?: transaction.description?.takeIf { it.isNotBlank() }
+                        ?: categoryName
+                    MerchantLogo(
+                        verifiedLogoKey = transaction.merchant?.verifiedLogoKey,
+                        canShowMerchantLogo = transaction.merchant?.canShowMerchantLogo == true,
+                        categoryIconKey = transaction.categoryIconKey,
+                        categoryColor = categoryColor,
+                        fallbackLabel = fallbackLabel,
+                        size = 36.dp,
+                        contentDescription = null,
+                    )
 
                     Text(
                         text = categoryName,

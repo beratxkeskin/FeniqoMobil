@@ -18,11 +18,12 @@ data class TransactionWithTags(
     @Relation(
         parentColumn = "id",
         entityColumn = "id",
-        associateBy = Junction(
-            value = TransactionTagCrossRef::class,
-            parentColumn = "transaction_id",
-            entityColumn = "tag_id",
-        ),
+        associateBy =
+            Junction(
+                value = TransactionTagCrossRef::class,
+                parentColumn = "transaction_id",
+                entityColumn = "tag_id",
+            ),
     )
     val tags: List<TagEntity>,
 )
@@ -68,7 +69,10 @@ interface TransactionDao {
           AND deleted_at_epoch_ms IS NULL
         """,
     )
-    fun observeByIdAndOwner(id: String, ownerId: String): Flow<TransactionEntity?>
+    fun observeByIdAndOwner(
+        id: String,
+        ownerId: String,
+    ): Flow<TransactionEntity?>
 
     @Query(
         """
@@ -78,7 +82,10 @@ interface TransactionDao {
           AND deleted_at_epoch_ms IS NULL
         """,
     )
-    suspend fun getByIdAndOwner(id: String, ownerId: String): TransactionEntity?
+    suspend fun getByIdAndOwner(
+        id: String,
+        ownerId: String,
+    ): TransactionEntity?
 
     @Query(
         """
@@ -148,7 +155,10 @@ interface TagDao {
         ORDER BY normalized_name
         """,
     )
-    fun observeAll(ownerId: String, workspaceId: String?): Flow<List<TagEntity>>
+    fun observeAll(
+        ownerId: String,
+        workspaceId: String?,
+    ): Flow<List<TagEntity>>
 
     @Query("SELECT * FROM tags WHERE id = :id AND deleted_at_epoch_ms IS NULL")
     fun observeById(id: String): Flow<TagEntity?>

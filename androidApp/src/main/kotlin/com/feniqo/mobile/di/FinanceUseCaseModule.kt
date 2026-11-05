@@ -45,8 +45,12 @@ object FinanceUseCaseModule {
     @Singleton
     fun provideBackupImportPlanner(
         entityIdGenerator: com.feniqo.mobile.domain.model.EntityIdGenerator,
+        userMerchantVerificationRepository: com.feniqo.mobile.domain.repository.UserMerchantVerificationRepository,
     ): com.feniqo.mobile.data.backup.BackupImportPlanner =
-        com.feniqo.mobile.data.backup.BackupImportPlanner(entityIdGenerator)
+        com.feniqo.mobile.data.backup.BackupImportPlanner(
+            idGenerator = entityIdGenerator,
+            userMerchantVerificationRepository = userMerchantVerificationRepository,
+        )
 
     @Provides
     @Singleton

@@ -13,7 +13,6 @@ import com.feniqo.mobile.data.local.entity.SyncConflictEntity
 import com.feniqo.mobile.data.local.entity.SyncCursorEntity
 import com.feniqo.mobile.data.local.entity.SyncMetadata
 import com.feniqo.mobile.data.local.entity.SyncUserStateEntity
-import com.feniqo.mobile.data.local.entity.TagEntity
 import com.feniqo.mobile.data.local.entity.TransactionEntity
 import com.feniqo.mobile.data.local.entity.UserProfileEntity
 import com.feniqo.mobile.data.local.entity.WorkspaceEntity
@@ -32,7 +31,6 @@ import com.feniqo.mobile.data.remote.core.RemoteWorkspaceScope
 import com.feniqo.mobile.data.remote.core.SubscriptionRemoteQuery
 import com.feniqo.mobile.data.remote.core.TransactionRemoteQuery
 import com.feniqo.mobile.data.remote.dto.BudgetDto
-
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.DebtDto
 import com.feniqo.mobile.data.remote.dto.DebtPaymentDto
@@ -70,29 +68,63 @@ class GoalDebtRemoteSyncTest {
         val cursors = mutableMapOf<String, SyncCursorEntity>()
 
         override suspend fun getProfileRow(id: String): UserProfileEntity? = null
+
         override suspend fun getCategoryRow(id: String): CategoryEntity? = null
+
         override suspend fun getTransactionRow(id: String): TransactionEntity? = null
+
         override suspend fun getRecurringTransactionRow(id: String): RecurringTransactionEntity? = null
+
         override suspend fun getSubscriptionRow(id: String): SubscriptionEntity? = null
 
         override suspend fun getGoalRow(id: String): GoalEntity? = goals[id]
+
         override suspend fun getGoalContributionRow(id: String): GoalContributionEntity? = goalContributions[id]
+
         override suspend fun getDebtRow(id: String): DebtEntity? = debts[id]
+
         override suspend fun getDebtPaymentRow(id: String): DebtPaymentEntity? = debtPayments[id]
+
         override suspend fun getWorkspaceRow(id: String): WorkspaceEntity? = null
-        override suspend fun getWorkspaceMemberRow(workspaceId: String, userId: String): WorkspaceMemberEntity? = null
+
+        override suspend fun getWorkspaceMemberRow(
+            workspaceId: String,
+            userId: String,
+        ): WorkspaceMemberEntity? = null
+
         override suspend fun getWorkspaceMemberRows(workspaceId: String): List<WorkspaceMemberEntity> = emptyList()
+
         override suspend fun getAllKnownLiveWorkspaceIds(): List<String> = emptyList()
-        override suspend fun getFirstOutboxOperationId(syncScopeKey: String, entityTypeCode: String, entityId: String): String? = null
-        override suspend fun countOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
+
+        override suspend fun getFirstOutboxOperationId(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+        ): String? = null
+
+        override suspend fun countOutboxRows(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+        ): Int = 0
 
         override suspend fun upsertProfileRow(entity: UserProfileEntity) {}
+
         override suspend fun upsertWorkspaceRows(entities: List<WorkspaceEntity>) {}
+
         override suspend fun upsertWorkspaceMemberRows(entities: List<WorkspaceMemberEntity>) {}
-        override suspend fun clearActiveWorkspaceIfMatches(profileId: String, workspaceId: String): Int = 0
+
+        override suspend fun clearActiveWorkspaceIfMatches(
+            profileId: String,
+            workspaceId: String,
+        ): Int = 0
+
         override suspend fun upsertCategoryRows(entities: List<CategoryEntity>) {}
+
         override suspend fun upsertTransactionRows(entities: List<TransactionEntity>) {}
+
         override suspend fun upsertRecurringTransactionRows(entities: List<RecurringTransactionEntity>) {}
+
         override suspend fun upsertSubscriptionRows(entities: List<SubscriptionEntity>) {}
 
         override suspend fun upsertGoalRows(entities: List<GoalEntity>) {
@@ -119,53 +151,267 @@ class GoalDebtRemoteSyncTest {
             cursors.forEach { this.cursors[it.entityTypeCode] = it }
         }
 
-        override suspend fun deleteConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
-        override suspend fun markProfileConflict(entityId: String, error: String): Int = 1
-        override suspend fun markCategoryConflict(entityId: String, error: String): Int = 1
-        override suspend fun markTransactionConflict(entityId: String, error: String): Int = 1
-        override suspend fun markRecurringTransactionConflict(entityId: String, error: String): Int = 1
-        override suspend fun markSubscriptionConflict(entityId: String, error: String): Int = 1
-        override suspend fun markGoalConflict(entityId: String, error: String): Int = 1
-        override suspend fun markGoalContributionConflict(entityId: String, error: String): Int = 1
-        override suspend fun markDebtConflict(entityId: String, error: String): Int = 1
-        override suspend fun markDebtPaymentConflict(entityId: String, error: String): Int = 1
-        override suspend fun deleteOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
-        override suspend fun deleteOtherOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String, keptOperationId: String): Int = 0
-        override suspend fun resetConflictOperation(syncScopeKey: String, operationId: String, operationTypeCode: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun rebaseProfileForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun rebaseCategoryForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun rebaseTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun rebaseRecurringTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun rebaseSubscriptionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getActiveWorkspaceTailOperation(syncScopeKey: String, workspaceId: String): com.feniqo.mobile.data.local.entity.SyncOperationEntity? = null
-        override suspend fun markWorkspaceConflict(entityId: String, error: String): Int = 0
-        override suspend fun getAllWorkspaceOperations(syncScopeKey: String, workspaceId: String): List<com.feniqo.mobile.data.local.entity.SyncOperationEntity> = emptyList()
-        override suspend fun deleteSpecificWorkspaceOperations(syncScopeKey: String, workspaceId: String, operationIds: List<String>): Int = 0
-        override suspend fun rebaseWorkspaceForRetry(workspaceId: String, syncStatus: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun resetWorkspaceConflictOperation(syncScopeKey: String, operationId: String, operationTypeCode: String, payloadJson: String?, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): SyncConflictEntity? = null
+        override suspend fun deleteConflictRow(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+        ): Int = 0
+
+        override suspend fun markProfileConflict(
+            entityId: String,
+            error: String,
+        ): Int = 1
+
+        override suspend fun markCategoryConflict(
+            entityId: String,
+            error: String,
+        ): Int = 1
+
+        override suspend fun markTransactionConflict(
+            entityId: String,
+            error: String,
+        ): Int = 1
+
+        override suspend fun markRecurringTransactionConflict(
+            entityId: String,
+            error: String,
+        ): Int = 1
+
+        override suspend fun markSubscriptionConflict(
+            entityId: String,
+            error: String,
+        ): Int = 1
+
+        override suspend fun markGoalConflict(
+            entityId: String,
+            error: String,
+        ): Int = 1
+
+        override suspend fun markGoalContributionConflict(
+            entityId: String,
+            error: String,
+        ): Int = 1
+
+        override suspend fun markDebtConflict(
+            entityId: String,
+            error: String,
+        ): Int = 1
+
+        override suspend fun markDebtPaymentConflict(
+            entityId: String,
+            error: String,
+        ): Int = 1
+
+        override suspend fun getUserMerchantVerificationRow(
+            id: String,
+        ): com.feniqo.mobile.data.local.entity.UserMerchantVerificationEntity? = null
+
+        override suspend fun getUserMerchantVerificationOutboxRow(
+            syncScopeKey: String,
+            entityId: String,
+            operationId: String,
+        ): com.feniqo.mobile.data.local.entity.SyncOperationEntity? = null
+
+        override suspend fun getActiveMerchantVerificationTailCandidates(
+            syncScopeKey: String,
+            entityId: String,
+        ): List<com.feniqo.mobile.data.local.entity.SyncOperationEntity> = emptyList()
+
+        override suspend fun upsertUserMerchantVerificationRows(
+            entities: List<com.feniqo.mobile.data.local.entity.UserMerchantVerificationEntity>,
+        ) = Unit
+
+        override suspend fun upsertUserMerchantVerificationRow(entity: com.feniqo.mobile.data.local.entity.UserMerchantVerificationEntity) =
+            Unit
+
+        override suspend fun markUserMerchantVerificationConflict(
+            scopeKey: String,
+            entityId: String,
+            error: String,
+        ): Int = 1
+
+        override suspend fun deleteOutboxRows(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+        ): Int = 0
+
+        override suspend fun deleteOtherOutboxRows(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+            keptOperationId: String,
+        ): Int = 0
+
+        override suspend fun resetConflictOperation(
+            syncScopeKey: String,
+            operationId: String,
+            operationTypeCode: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun rebaseProfileForRetry(
+            entityId: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun rebaseCategoryForRetry(
+            entityId: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun rebaseTransactionForRetry(
+            entityId: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun rebaseRecurringTransactionForRetry(
+            entityId: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun rebaseSubscriptionForRetry(
+            entityId: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun getActiveWorkspaceTailOperation(
+            syncScopeKey: String,
+            workspaceId: String,
+        ): com.feniqo.mobile.data.local.entity.SyncOperationEntity? = null
+
+        override suspend fun markWorkspaceConflict(
+            entityId: String,
+            error: String,
+        ): Int = 0
+
+        override suspend fun getAllWorkspaceOperations(
+            syncScopeKey: String,
+            workspaceId: String,
+        ): List<com.feniqo.mobile.data.local.entity.SyncOperationEntity> = emptyList()
+
+        override suspend fun deleteSpecificWorkspaceOperations(
+            syncScopeKey: String,
+            workspaceId: String,
+            operationIds: List<String>,
+        ): Int = 0
+
+        override suspend fun rebaseWorkspaceForRetry(
+            workspaceId: String,
+            syncStatus: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun resetWorkspaceConflictOperation(
+            syncScopeKey: String,
+            operationId: String,
+            operationTypeCode: String,
+            payloadJson: String?,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun getAllUserMerchantVerificationOperations(
+            syncScopeKey: String,
+            verificationId: String,
+        ): List<com.feniqo.mobile.data.local.entity.SyncOperationEntity> = emptyList()
+
+        override suspend fun deleteSpecificUserMerchantVerificationOperations(
+            syncScopeKey: String,
+            verificationId: String,
+            operationIds: List<String>,
+        ): Int = 0
+
+        override suspend fun rebaseUserMerchantVerificationForRetry(
+            verificationId: String,
+            syncScopeKey: String,
+            syncStatus: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun resetUserMerchantVerificationConflictOperation(
+            syncScopeKey: String,
+            operationId: String,
+            operationTypeCode: String,
+            payloadJson: String?,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun getConflictRow(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+        ): SyncConflictEntity? = null
     }
 
-    private class FakeSyncStateDao(private val cursors: MutableMap<String, SyncCursorEntity>) : SyncStateDao {
-        override suspend fun getCursor(syncScopeKey: String, entityTypeCode: String): SyncCursorEntity? = cursors[entityTypeCode]
+    private class FakeSyncStateDao(
+        private val cursors: MutableMap<String, SyncCursorEntity>,
+    ) : SyncStateDao {
+        override suspend fun getCursor(
+            syncScopeKey: String,
+            entityTypeCode: String,
+        ): SyncCursorEntity? = cursors[entityTypeCode]
+
         override suspend fun getWorkspaceMemberCursors(syncScopeKey: String): List<SyncCursorEntity> =
             cursors.filterKeys { it.startsWith("WORKSPACE_MEMBER:") }.values.toList()
-        override suspend fun getConflict(syncScopeKey: String, entityId: String): SyncConflictEntity? = null
-        override suspend fun getConflict(syncScopeKey: String, entityTypeCode: String, entityId: String): SyncConflictEntity? = null
-        override suspend fun getConflictsByEntityType(syncScopeKey: String, entityTypeCode: String): List<SyncConflictEntity> = emptyList()
+
+        override suspend fun getConflict(
+            syncScopeKey: String,
+            entityId: String,
+        ): SyncConflictEntity? = null
+
+        override suspend fun getConflict(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+        ): SyncConflictEntity? = null
+
+        override suspend fun getConflictsByEntityType(
+            syncScopeKey: String,
+            entityTypeCode: String,
+        ): List<SyncConflictEntity> = emptyList()
+
         override suspend fun getAllConflicts(syncScopeKey: String): List<SyncConflictEntity> = emptyList()
-        override suspend fun upsertCursor(cursor: SyncCursorEntity) { cursors[cursor.entityTypeCode] = cursor }
+
+        override suspend fun upsertCursor(cursor: SyncCursorEntity) {
+            cursors[cursor.entityTypeCode] = cursor
+        }
+
         override fun observeConflicts(syncScopeKey: String): Flow<List<SyncConflictEntity>> = flowOf(emptyList())
+
         override fun observeConflictCount(syncScopeKey: String): Flow<Int> = flowOf(0)
+
         override suspend fun getConflictCount(syncScopeKey: String): Int = 0
+
         override suspend fun upsertConflict(conflict: SyncConflictEntity) {}
+
         override fun observeLegacyQuarantineCursorCount(): Flow<Int> = flowOf(0)
+
         override suspend fun getLegacyQuarantineCursorCount(): Int = 0
+
         override fun observeLegacyQuarantineConflictCount(): Flow<Int> = flowOf(0)
+
         override suspend fun getLegacyQuarantineConflictCount(): Int = 0
-        override suspend fun deleteConflict(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
+
+        override suspend fun deleteConflict(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+        ): Int = 0
+
         override fun observeLastSuccessfulSyncAt(userId: String): Flow<Long?> = flowOf(null)
+
         override suspend fun getUserState(userId: String): SyncUserStateEntity? = null
+
         override suspend fun upsertUserState(state: SyncUserStateEntity) {}
     }
 
@@ -177,387 +423,451 @@ class GoalDebtRemoteSyncTest {
         val debtPayments: List<DebtPaymentDto> = emptyList(),
     ) : CoreRemoteDataSource {
         override suspend fun fetchProfile(userId: String): ProfileDto? = profile
+
         override suspend fun fetchCategories(query: CategoryRemoteQuery): RemotePage<CategoryDto> = RemotePage(emptyList(), query.page, 0)
-        override suspend fun fetchTransactions(query: TransactionRemoteQuery): RemotePage<TransactionDto> = RemotePage(emptyList(), query.page, 0)
+
+        override suspend fun fetchTransactions(query: TransactionRemoteQuery): RemotePage<TransactionDto> =
+            RemotePage(emptyList(), query.page, 0)
+
         override suspend fun fetchBudgets(query: BudgetRemoteQuery): RemotePage<BudgetDto> = RemotePage(emptyList(), query.page, 0)
-        override suspend fun fetchRecurringTransactions(query: RecurringTransactionRemoteQuery): RemotePage<RecurringTransactionDto> = RemotePage(emptyList(), query.page, 0)
-        override suspend fun fetchSubscriptions(query: SubscriptionRemoteQuery): RemotePage<SubscriptionDto> = RemotePage(emptyList(), query.page, 0)
+
+        override suspend fun fetchRecurringTransactions(query: RecurringTransactionRemoteQuery): RemotePage<RecurringTransactionDto> =
+            RemotePage(emptyList(), query.page, 0)
+
+        override suspend fun fetchSubscriptions(query: SubscriptionRemoteQuery): RemotePage<SubscriptionDto> =
+            RemotePage(emptyList(), query.page, 0)
+
         override suspend fun fetchGoals(query: GoalRemoteQuery): RemotePage<GoalDto> = RemotePage(goals, query.page, goals.size.toLong())
-        override suspend fun fetchGoalContributions(query: GoalContributionRemoteQuery): RemotePage<GoalContributionDto> = RemotePage(goalContributions, query.page, goalContributions.size.toLong())
+
+        override suspend fun fetchGoalContributions(query: GoalContributionRemoteQuery): RemotePage<GoalContributionDto> =
+            RemotePage(goalContributions, query.page, goalContributions.size.toLong())
+
         override suspend fun fetchDebts(query: DebtRemoteQuery): RemotePage<DebtDto> = RemotePage(debts, query.page, debts.size.toLong())
-        override suspend fun fetchDebtPayments(query: DebtPaymentRemoteQuery): RemotePage<DebtPaymentDto> = RemotePage(debtPayments, query.page, debtPayments.size.toLong())
+
+        override suspend fun fetchDebtPayments(query: DebtPaymentRemoteQuery): RemotePage<DebtPaymentDto> =
+            RemotePage(debtPayments, query.page, debtPayments.size.toLong())
+
         override suspend fun fetchWorkspaces(page: RemotePageRequest): RemotePage<WorkspaceDto> = RemotePage(emptyList(), page, 0)
-        override suspend fun fetchWorkspaceMembers(workspaceId: String, page: RemotePageRequest): RemotePage<WorkspaceMemberDto> = RemotePage(emptyList(), page, 0)
-        override suspend fun fetchTags(scope: RemoteWorkspaceScope, page: RemotePageRequest): RemotePage<TagDto> = RemotePage(emptyList(), page, 0)
+
+        override suspend fun fetchWorkspaceMembers(
+            workspaceId: String,
+            page: RemotePageRequest,
+        ): RemotePage<WorkspaceMemberDto> = RemotePage(emptyList(), page, 0)
+
+        override suspend fun fetchTags(
+            scope: RemoteWorkspaceScope,
+            page: RemotePageRequest,
+        ): RemotePage<TagDto> = RemotePage(emptyList(), page, 0)
+
+        override suspend fun fetchMerchantVerifications(
+            query: com.feniqo.mobile.data.remote.core.UserMerchantVerificationRemoteQuery,
+        ): RemotePage<com.feniqo.mobile.data.remote.dto.UserMerchantVerificationDto> = RemotePage(emptyList(), query.page, 0)
+
         override suspend fun fetchTransactionTags(transactionId: String): List<TransactionTagDto> = emptyList()
+
         override suspend fun upsertProfile(dto: ProfileDto) = Unit
+
         override suspend fun upsertCategory(dto: CategoryDto) = Unit
+
         override suspend fun upsertTransaction(dto: TransactionDto) = Unit
+
         override suspend fun upsertBudget(dto: BudgetDto) = Unit
+
         override suspend fun upsertTag(dto: TagDto) = Unit
+
         override suspend fun upsertTransactionTag(dto: TransactionTagDto) = Unit
     }
 
-
     @Test
-    fun initial_sync_applies_goals_and_debts_and_advances_cursors() = runTest {
-        val goal = GoalDto(
-            id = "g-1",
-            userId = "user-1",
-            workspaceId = null,
-            name = "Ev Peşinatı",
-            targetAmountMinor = 500_000L,
-            currentAmountMinor = 50_000L,
-            currency = "TRY",
-            targetDate = "2027-06-30",
-            colorHex = "#2E7D32",
-            iconKey = "savings",
-            createdAt = "2026-09-01T10:00:00Z",
-            updatedAt = "2026-09-01T10:00:00Z",
-            deletedAt = null,
-            version = 1L,
-        )
-        val contrib = GoalContributionDto(
-            id = "c-1",
-            goalId = "g-1",
-            amountMinor = 50_000L,
-            currency = "TRY",
-            direction = "ADD",
-            occurredOn = "2026-09-01",
-            note = "İlkik",
-            createdAt = "2026-09-01T10:00:00Z",
-            deletedAt = null,
-            version = 1L,
-        )
-        val debt = DebtDto(
-            id = "d-1",
-            userId = "user-1",
-            workspaceId = null,
-            title = "Kredi",
-            amountMinor = 100_000L,
-            currency = "TRY",
-            type = "DEBT",
-            dueDate = "2027-01-01",
-            status = "OPEN",
-            description = null,
-            createdAt = "2026-09-01T10:00:00Z",
-            updatedAt = "2026-09-01T10:00:00Z",
-            deletedAt = null,
-            version = 1L,
-        )
-        val payment = DebtPaymentDto(
-            id = "p-1",
-            debtId = "d-1",
-            amountMinor = 10_000L,
-            currency = "TRY",
-            paidOn = "2026-09-02",
-            createdAt = "2026-09-02T10:00:00Z",
-            deletedAt = null,
-            version = 1L,
-        )
+    fun initial_sync_applies_goals_and_debts_and_advances_cursors() =
+        runTest {
+            val goal =
+                GoalDto(
+                    id = "g-1",
+                    userId = "user-1",
+                    workspaceId = null,
+                    name = "Ev Peşinatı",
+                    targetAmountMinor = 500_000L,
+                    currentAmountMinor = 50_000L,
+                    currency = "TRY",
+                    targetDate = "2027-06-30",
+                    colorHex = "#2E7D32",
+                    iconKey = "savings",
+                    createdAt = "2026-09-01T10:00:00Z",
+                    updatedAt = "2026-09-01T10:00:00Z",
+                    deletedAt = null,
+                    version = 1L,
+                )
+            val contrib =
+                GoalContributionDto(
+                    id = "c-1",
+                    goalId = "g-1",
+                    amountMinor = 50_000L,
+                    currency = "TRY",
+                    direction = "ADD",
+                    occurredOn = "2026-09-01",
+                    note = "İlkik",
+                    createdAt = "2026-09-01T10:00:00Z",
+                    deletedAt = null,
+                    version = 1L,
+                )
+            val debt =
+                DebtDto(
+                    id = "d-1",
+                    userId = "user-1",
+                    workspaceId = null,
+                    title = "Kredi",
+                    amountMinor = 100_000L,
+                    currency = "TRY",
+                    type = "DEBT",
+                    dueDate = "2027-01-01",
+                    status = "OPEN",
+                    description = null,
+                    createdAt = "2026-09-01T10:00:00Z",
+                    updatedAt = "2026-09-01T10:00:00Z",
+                    deletedAt = null,
+                    version = 1L,
+                )
+            val payment =
+                DebtPaymentDto(
+                    id = "p-1",
+                    debtId = "d-1",
+                    amountMinor = 10_000L,
+                    currency = "TRY",
+                    paidOn = "2026-09-02",
+                    createdAt = "2026-09-02T10:00:00Z",
+                    deletedAt = null,
+                    version = 1L,
+                )
 
-        val remote = FakeRemoteDataSource(
-            goals = listOf(goal),
-            goalContributions = listOf(contrib),
-            debts = listOf(debt),
-            debtPayments = listOf(payment),
-        )
-        val dao = FakeRemoteSyncDao()
-        val sync = InitialRemoteSync(remote, dao) { 1000L }
+            val remote =
+                FakeRemoteDataSource(
+                    goals = listOf(goal),
+                    goalContributions = listOf(contrib),
+                    debts = listOf(debt),
+                    debtPayments = listOf(payment),
+                )
+            val dao = FakeRemoteSyncDao()
+            val sync = InitialRemoteSync(remote, dao) { 1000L }
 
-        val result = sync.pullFor(EntityId(USER_ID), USER_SCOPE)
-        assertEquals(1, result.goalCount)
-        assertEquals(1, result.goalContributionCount)
-        assertEquals(1, result.debtCount)
-        assertEquals(1, result.debtPaymentCount)
+            val result = sync.pullFor(EntityId(USER_ID), USER_SCOPE)
+            assertEquals(1, result.goalCount)
+            assertEquals(1, result.goalContributionCount)
+            assertEquals(1, result.debtCount)
+            assertEquals(1, result.debtPaymentCount)
 
-        assertEquals("g-1", dao.goals["g-1"]?.id)
-        assertEquals("c-1", dao.goalContributions["c-1"]?.id)
-        assertEquals("d-1", dao.debts["d-1"]?.id)
-        assertEquals("p-1", dao.debtPayments["p-1"]?.id)
-        assertNotNull(dao.cursors["GOAL"])
-        assertNotNull(dao.cursors["GOAL_CONTRIBUTION"])
-        assertNotNull(dao.cursors["DEBT"])
-        assertNotNull(dao.cursors["DEBT_PAYMENT"])
-    }
-
-    @Test
-    fun initial_sync_fail_closed_when_live_child_has_no_parent_in_snapshot() = runTest {
-        val orphanedContrib = GoalContributionDto(
-            id = "c-orphan",
-            goalId = "g-missing",
-            amountMinor = 10_000L,
-            currency = "TRY",
-            direction = "ADD",
-            occurredOn = "2026-09-01",
-            note = null,
-            createdAt = "2026-09-01T10:00:00Z",
-            deletedAt = null,
-            version = 1L,
-        )
-
-        val remote = FakeRemoteDataSource(
-            goals = emptyList(), // Missing parent!
-            goalContributions = listOf(orphanedContrib),
-        )
-        val dao = FakeRemoteSyncDao()
-        val sync = InitialRemoteSync(remote, dao) { 1000L }
-
-        assertFailsWith<IllegalStateException> {
-            sync.pullFor(EntityId(USER_ID), USER_SCOPE)
+            assertEquals("g-1", dao.goals["g-1"]?.id)
+            assertEquals("c-1", dao.goalContributions["c-1"]?.id)
+            assertEquals("d-1", dao.debts["d-1"]?.id)
+            assertEquals("p-1", dao.debtPayments["p-1"]?.id)
+            assertNotNull(dao.cursors["GOAL"])
+            assertNotNull(dao.cursors["GOAL_CONTRIBUTION"])
+            assertNotNull(dao.cursors["DEBT"])
+            assertNotNull(dao.cursors["DEBT_PAYMENT"])
         }
 
-        // Nothing was written and cursor was not advanced
-        assertTrue(dao.goals.isEmpty())
-        assertTrue(dao.goalContributions.isEmpty())
-        assertNull(dao.cursors["GOAL_CONTRIBUTION"])
-    }
-
     @Test
-    fun incremental_sync_fail_closed_when_parent_goal_not_in_room() = runTest {
-        val contrib = GoalContributionDto(
-            id = "c-orphan-incremental",
-            goalId = "g-nonexistent",
-            amountMinor = 10_000L,
-            currency = "TRY",
-            direction = "ADD",
-            occurredOn = "2026-09-01",
-            note = null,
-            createdAt = "2026-09-01T10:00:00Z",
-            deletedAt = null,
-            version = 1L,
-        )
+    fun initial_sync_fail_closed_when_live_child_has_no_parent_in_snapshot() =
+        runTest {
+            val orphanedContrib =
+                GoalContributionDto(
+                    id = "c-orphan",
+                    goalId = "g-missing",
+                    amountMinor = 10_000L,
+                    currency = "TRY",
+                    direction = "ADD",
+                    occurredOn = "2026-09-01",
+                    note = null,
+                    createdAt = "2026-09-01T10:00:00Z",
+                    deletedAt = null,
+                    version = 1L,
+                )
 
-        val remote = FakeRemoteDataSource(goalContributions = listOf(contrib))
-        val dao = FakeRemoteSyncDao()
-        val syncStateDao = FakeSyncStateDao(dao.cursors)
-        val sync = IncrementalRemoteSync(remote, dao, syncStateDao) { 1000L }
+            val remote =
+                FakeRemoteDataSource(
+                    goals = emptyList(), // Missing parent!
+                    goalContributions = listOf(orphanedContrib),
+                )
+            val dao = FakeRemoteSyncDao()
+            val sync = InitialRemoteSync(remote, dao) { 1000L }
 
-        assertFailsWith<IllegalStateException> {
-            sync.pullFor(EntityId(USER_ID), USER_SCOPE)
+            assertFailsWith<IllegalStateException> {
+                sync.pullFor(EntityId(USER_ID), USER_SCOPE)
+            }
+
+            // Nothing was written and cursor was not advanced
+            assertTrue(dao.goals.isEmpty())
+            assertTrue(dao.goalContributions.isEmpty())
+            assertNull(dao.cursors["GOAL_CONTRIBUTION"])
         }
 
-        // Batch rejected
-        assertTrue(dao.goalContributions.isEmpty())
-        assertNull(dao.cursors["GOAL_CONTRIBUTION"])
-    }
-
     @Test
-    fun incremental_sync_applies_goal_and_debt_when_parents_exist() = runTest {
-        val dao = FakeRemoteSyncDao()
-        // Pre-insert parent goal and debt
-        dao.goals["g-1"] = GoalEntity(
-            id = "g-1",
-            ownerId = USER_ID,
-            workspaceId = null,
-            name = "Hedef",
-            targetAmountMinor = 100_000L,
-            currentAmountMinor = 20_000L,
-            currencyCode = "TRY",
-            targetDate = "2026-12-31",
-            colorHex = "#2E7D32",
-            iconKey = "savings",
-            createdAtEpochMillis = 1000L,
-            sync = SyncMetadata(
-                syncStatus = "SYNCED",
-                updatedAtEpochMillis = 1000L,
-                localUpdatedAtEpochMillis = 1000L,
-                deletedAtEpochMillis = null,
-                version = 1L,
-                baseVersion = 1L,
-                lastSyncError = null,
-            ),
-        )
-        dao.debts["d-1"] = DebtEntity(
-            id = "d-1",
-            ownerId = USER_ID,
-            workspaceId = null,
-            title = "Borç",
-            amountMinor = 50_000L,
-            currencyCode = "TRY",
-            typeCode = "DEBT",
-            dueDate = "2026-10-15",
-            statusCode = "OPEN",
-            description = null,
-            createdAtEpochMillis = 1000L,
-            sync = SyncMetadata(
-                syncStatus = "SYNCED",
-                updatedAtEpochMillis = 1000L,
-                localUpdatedAtEpochMillis = 1000L,
-                deletedAtEpochMillis = null,
-                version = 1L,
-                baseVersion = 1L,
-                lastSyncError = null,
-            ),
-        )
+    fun incremental_sync_fail_closed_when_parent_goal_not_in_room() =
+        runTest {
+            val contrib =
+                GoalContributionDto(
+                    id = "c-orphan-incremental",
+                    goalId = "g-nonexistent",
+                    amountMinor = 10_000L,
+                    currency = "TRY",
+                    direction = "ADD",
+                    occurredOn = "2026-09-01",
+                    note = null,
+                    createdAt = "2026-09-01T10:00:00Z",
+                    deletedAt = null,
+                    version = 1L,
+                )
 
-        val contrib = GoalContributionDto(
-            id = "c-1",
-            goalId = "g-1",
-            amountMinor = 10_000L,
-            currency = "TRY",
-            direction = "ADD",
-            occurredOn = "2026-09-01",
-            note = null,
-            createdAt = "2026-09-01T10:00:00Z",
-            deletedAt = null,
-            version = 1L,
-        )
-        val payment = DebtPaymentDto(
-            id = "p-1",
-            debtId = "d-1",
-            amountMinor = 50_000L,
-            currency = "TRY",
-            paidOn = "2026-09-02",
-            createdAt = "2026-09-02T10:00:00Z",
-            deletedAt = null,
-            version = 1L,
-        )
+            val remote = FakeRemoteDataSource(goalContributions = listOf(contrib))
+            val dao = FakeRemoteSyncDao()
+            val syncStateDao = FakeSyncStateDao(dao.cursors)
+            val sync = IncrementalRemoteSync(remote, dao, syncStateDao) { 1000L }
 
-        val remote = FakeRemoteDataSource(
-            goalContributions = listOf(contrib),
-            debtPayments = listOf(payment),
-        )
-        val syncStateDao = FakeSyncStateDao(dao.cursors)
-        val sync = IncrementalRemoteSync(remote, dao, syncStateDao) { 2000L }
+            assertFailsWith<IllegalStateException> {
+                sync.pullFor(EntityId(USER_ID), USER_SCOPE)
+            }
 
-        val result = sync.pullFor(EntityId(USER_ID), USER_SCOPE)
-        assertEquals(3, result.appliedCount)
-
-        assertEquals(0, result.conflictCount)
-        assertEquals("c-1", dao.goalContributions["c-1"]?.id)
-        assertEquals("p-1", dao.debtPayments["p-1"]?.id)
-    }
-
-    @Test
-    fun incremental_sync_batch_atomicity_rejects_all_when_orphan_contribution_exists() = runTest {
-        val dao = FakeRemoteSyncDao()
-        dao.goals["g-1"] = GoalEntity(
-            id = "g-1",
-            ownerId = USER_ID,
-            workspaceId = null,
-            name = "Hedef",
-            targetAmountMinor = 100_000L,
-            currentAmountMinor = 20_000L,
-            currencyCode = "TRY",
-            targetDate = "2026-12-31",
-            colorHex = "#2E7D32",
-            iconKey = "savings",
-            createdAtEpochMillis = 1000L,
-            sync = SyncMetadata(
-                syncStatus = "SYNCED",
-                updatedAtEpochMillis = 1000L,
-                localUpdatedAtEpochMillis = 1000L,
-                deletedAtEpochMillis = null,
-                version = 1L,
-                baseVersion = 1L,
-                lastSyncError = null,
-            ),
-        )
-
-        val validContrib = GoalContributionDto(
-            id = "c-valid",
-            goalId = "g-1",
-            amountMinor = 10_000L,
-            currency = "TRY",
-            direction = "ADD",
-            occurredOn = "2026-09-01",
-            note = null,
-            createdAt = "2026-09-01T10:00:00Z",
-            deletedAt = null,
-            version = 1L,
-        )
-        val orphanContrib = GoalContributionDto(
-            id = "c-orphan",
-            goalId = "g-nonexistent",
-            amountMinor = 10_000L,
-            currency = "TRY",
-            direction = "ADD",
-            occurredOn = "2026-09-01",
-            note = null,
-            createdAt = "2026-09-01T10:00:01Z",
-            deletedAt = null,
-            version = 1L,
-        )
-
-        val remote = FakeRemoteDataSource(
-            goalContributions = listOf(validContrib, orphanContrib),
-        )
-        val syncStateDao = FakeSyncStateDao(dao.cursors)
-        val sync = IncrementalRemoteSync(remote, dao, syncStateDao) { 2000L }
-
-        assertFailsWith<IllegalStateException> {
-            sync.pullFor(EntityId(USER_ID), USER_SCOPE)
+            // Batch rejected
+            assertTrue(dao.goalContributions.isEmpty())
+            assertNull(dao.cursors["GOAL_CONTRIBUTION"])
         }
 
-        // Entire batch rejected: valid child not written, cursor not advanced
-        assertNull(dao.goalContributions["c-valid"])
-        assertNull(dao.goalContributions["c-orphan"])
-        assertTrue(dao.goalContributions.isEmpty())
-        assertNull(dao.cursors["GOAL_CONTRIBUTION"])
-    }
-
     @Test
-    fun incremental_sync_batch_atomicity_rejects_all_when_orphan_debt_payment_exists() = runTest {
-        val dao = FakeRemoteSyncDao()
-        dao.debts["d-1"] = DebtEntity(
-            id = "d-1",
-            ownerId = USER_ID,
-            workspaceId = null,
-            title = "Borç",
-            amountMinor = 50_000L,
-            currencyCode = "TRY",
-            typeCode = "DEBT",
-            dueDate = "2026-10-15",
-            statusCode = "OPEN",
-            description = null,
-            createdAtEpochMillis = 1000L,
-            sync = SyncMetadata(
-                syncStatus = "SYNCED",
-                updatedAtEpochMillis = 1000L,
-                localUpdatedAtEpochMillis = 1000L,
-                deletedAtEpochMillis = null,
-                version = 1L,
-                baseVersion = 1L,
-                lastSyncError = null,
-            ),
-        )
+    fun incremental_sync_applies_goal_and_debt_when_parents_exist() =
+        runTest {
+            val dao = FakeRemoteSyncDao()
+            // Pre-insert parent goal and debt
+            dao.goals["g-1"] =
+                GoalEntity(
+                    id = "g-1",
+                    ownerId = USER_ID,
+                    workspaceId = null,
+                    name = "Hedef",
+                    targetAmountMinor = 100_000L,
+                    currentAmountMinor = 20_000L,
+                    currencyCode = "TRY",
+                    targetDate = "2026-12-31",
+                    colorHex = "#2E7D32",
+                    iconKey = "savings",
+                    createdAtEpochMillis = 1000L,
+                    sync =
+                        SyncMetadata(
+                            syncStatus = "SYNCED",
+                            updatedAtEpochMillis = 1000L,
+                            localUpdatedAtEpochMillis = 1000L,
+                            deletedAtEpochMillis = null,
+                            version = 1L,
+                            baseVersion = 1L,
+                            lastSyncError = null,
+                        ),
+                )
+            dao.debts["d-1"] =
+                DebtEntity(
+                    id = "d-1",
+                    ownerId = USER_ID,
+                    workspaceId = null,
+                    title = "Borç",
+                    amountMinor = 50_000L,
+                    currencyCode = "TRY",
+                    typeCode = "DEBT",
+                    dueDate = "2026-10-15",
+                    statusCode = "OPEN",
+                    description = null,
+                    createdAtEpochMillis = 1000L,
+                    sync =
+                        SyncMetadata(
+                            syncStatus = "SYNCED",
+                            updatedAtEpochMillis = 1000L,
+                            localUpdatedAtEpochMillis = 1000L,
+                            deletedAtEpochMillis = null,
+                            version = 1L,
+                            baseVersion = 1L,
+                            lastSyncError = null,
+                        ),
+                )
 
-        val validPayment = DebtPaymentDto(
-            id = "p-valid",
-            debtId = "d-1",
-            amountMinor = 10_000L,
-            currency = "TRY",
-            paidOn = "2026-09-02",
-            createdAt = "2026-09-02T10:00:00Z",
-            deletedAt = null,
-            version = 1L,
-        )
-        val orphanPayment = DebtPaymentDto(
-            id = "p-orphan",
-            debtId = "d-nonexistent",
-            amountMinor = 10_000L,
-            currency = "TRY",
-            paidOn = "2026-09-02",
-            createdAt = "2026-09-02T10:00:01Z",
-            deletedAt = null,
-            version = 1L,
-        )
+            val contrib =
+                GoalContributionDto(
+                    id = "c-1",
+                    goalId = "g-1",
+                    amountMinor = 10_000L,
+                    currency = "TRY",
+                    direction = "ADD",
+                    occurredOn = "2026-09-01",
+                    note = null,
+                    createdAt = "2026-09-01T10:00:00Z",
+                    deletedAt = null,
+                    version = 1L,
+                )
+            val payment =
+                DebtPaymentDto(
+                    id = "p-1",
+                    debtId = "d-1",
+                    amountMinor = 50_000L,
+                    currency = "TRY",
+                    paidOn = "2026-09-02",
+                    createdAt = "2026-09-02T10:00:00Z",
+                    deletedAt = null,
+                    version = 1L,
+                )
 
-        val remote = FakeRemoteDataSource(
-            debtPayments = listOf(validPayment, orphanPayment),
-        )
-        val syncStateDao = FakeSyncStateDao(dao.cursors)
-        val sync = IncrementalRemoteSync(remote, dao, syncStateDao) { 2000L }
+            val remote =
+                FakeRemoteDataSource(
+                    goalContributions = listOf(contrib),
+                    debtPayments = listOf(payment),
+                )
+            val syncStateDao = FakeSyncStateDao(dao.cursors)
+            val sync = IncrementalRemoteSync(remote, dao, syncStateDao) { 2000L }
 
-        assertFailsWith<IllegalStateException> {
-            sync.pullFor(EntityId(USER_ID), USER_SCOPE)
+            val result = sync.pullFor(EntityId(USER_ID), USER_SCOPE)
+            assertEquals(3, result.appliedCount)
+
+            assertEquals(0, result.conflictCount)
+            assertEquals("c-1", dao.goalContributions["c-1"]?.id)
+            assertEquals("p-1", dao.debtPayments["p-1"]?.id)
         }
 
-        // Entire batch rejected: valid payment not written, cursor not advanced
-        assertNull(dao.debtPayments["p-valid"])
-        assertNull(dao.debtPayments["p-orphan"])
-        assertTrue(dao.debtPayments.isEmpty())
-        assertNull(dao.cursors["DEBT_PAYMENT"])
-    }
+    @Test
+    fun incremental_sync_batch_atomicity_rejects_all_when_orphan_contribution_exists() =
+        runTest {
+            val dao = FakeRemoteSyncDao()
+            dao.goals["g-1"] =
+                GoalEntity(
+                    id = "g-1",
+                    ownerId = USER_ID,
+                    workspaceId = null,
+                    name = "Hedef",
+                    targetAmountMinor = 100_000L,
+                    currentAmountMinor = 20_000L,
+                    currencyCode = "TRY",
+                    targetDate = "2026-12-31",
+                    colorHex = "#2E7D32",
+                    iconKey = "savings",
+                    createdAtEpochMillis = 1000L,
+                    sync =
+                        SyncMetadata(
+                            syncStatus = "SYNCED",
+                            updatedAtEpochMillis = 1000L,
+                            localUpdatedAtEpochMillis = 1000L,
+                            deletedAtEpochMillis = null,
+                            version = 1L,
+                            baseVersion = 1L,
+                            lastSyncError = null,
+                        ),
+                )
+
+            val validContrib =
+                GoalContributionDto(
+                    id = "c-valid",
+                    goalId = "g-1",
+                    amountMinor = 10_000L,
+                    currency = "TRY",
+                    direction = "ADD",
+                    occurredOn = "2026-09-01",
+                    note = null,
+                    createdAt = "2026-09-01T10:00:00Z",
+                    deletedAt = null,
+                    version = 1L,
+                )
+            val orphanContrib =
+                GoalContributionDto(
+                    id = "c-orphan",
+                    goalId = "g-nonexistent",
+                    amountMinor = 10_000L,
+                    currency = "TRY",
+                    direction = "ADD",
+                    occurredOn = "2026-09-01",
+                    note = null,
+                    createdAt = "2026-09-01T10:00:01Z",
+                    deletedAt = null,
+                    version = 1L,
+                )
+
+            val remote =
+                FakeRemoteDataSource(
+                    goalContributions = listOf(validContrib, orphanContrib),
+                )
+            val syncStateDao = FakeSyncStateDao(dao.cursors)
+            val sync = IncrementalRemoteSync(remote, dao, syncStateDao) { 2000L }
+
+            assertFailsWith<IllegalStateException> {
+                sync.pullFor(EntityId(USER_ID), USER_SCOPE)
+            }
+
+            // Entire batch rejected: valid child not written, cursor not advanced
+            assertNull(dao.goalContributions["c-valid"])
+            assertNull(dao.goalContributions["c-orphan"])
+            assertTrue(dao.goalContributions.isEmpty())
+            assertNull(dao.cursors["GOAL_CONTRIBUTION"])
+        }
+
+    @Test
+    fun incremental_sync_batch_atomicity_rejects_all_when_orphan_debt_payment_exists() =
+        runTest {
+            val dao = FakeRemoteSyncDao()
+            dao.debts["d-1"] =
+                DebtEntity(
+                    id = "d-1",
+                    ownerId = USER_ID,
+                    workspaceId = null,
+                    title = "Borç",
+                    amountMinor = 50_000L,
+                    currencyCode = "TRY",
+                    typeCode = "DEBT",
+                    dueDate = "2026-10-15",
+                    statusCode = "OPEN",
+                    description = null,
+                    createdAtEpochMillis = 1000L,
+                    sync =
+                        SyncMetadata(
+                            syncStatus = "SYNCED",
+                            updatedAtEpochMillis = 1000L,
+                            localUpdatedAtEpochMillis = 1000L,
+                            deletedAtEpochMillis = null,
+                            version = 1L,
+                            baseVersion = 1L,
+                            lastSyncError = null,
+                        ),
+                )
+
+            val validPayment =
+                DebtPaymentDto(
+                    id = "p-valid",
+                    debtId = "d-1",
+                    amountMinor = 10_000L,
+                    currency = "TRY",
+                    paidOn = "2026-09-02",
+                    createdAt = "2026-09-02T10:00:00Z",
+                    deletedAt = null,
+                    version = 1L,
+                )
+            val orphanPayment =
+                DebtPaymentDto(
+                    id = "p-orphan",
+                    debtId = "d-nonexistent",
+                    amountMinor = 10_000L,
+                    currency = "TRY",
+                    paidOn = "2026-09-02",
+                    createdAt = "2026-09-02T10:00:01Z",
+                    deletedAt = null,
+                    version = 1L,
+                )
+
+            val remote =
+                FakeRemoteDataSource(
+                    debtPayments = listOf(validPayment, orphanPayment),
+                )
+            val syncStateDao = FakeSyncStateDao(dao.cursors)
+            val sync = IncrementalRemoteSync(remote, dao, syncStateDao) { 2000L }
+
+            assertFailsWith<IllegalStateException> {
+                sync.pullFor(EntityId(USER_ID), USER_SCOPE)
+            }
+
+            // Entire batch rejected: valid payment not written, cursor not advanced
+            assertNull(dao.debtPayments["p-valid"])
+            assertNull(dao.debtPayments["p-orphan"])
+            assertTrue(dao.debtPayments.isEmpty())
+            assertNull(dao.cursors["DEBT_PAYMENT"])
+        }
 }

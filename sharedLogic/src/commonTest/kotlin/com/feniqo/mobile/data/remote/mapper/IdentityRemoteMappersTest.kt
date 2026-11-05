@@ -7,24 +7,25 @@ import com.feniqo.mobile.domain.model.AppLanguage
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.ThemePreference
 import com.feniqo.mobile.domain.model.WorkspaceRole
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 class IdentityRemoteMappersTest {
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test
     fun decodes_profile_snake_case_and_maps_domain_values() {
-        val dto = json.decodeFromString<ProfileDto>(
-            """{"id":"user-1","email":"user@example.com","full_name":" Feniqo User ","currency":"try","theme":"dark","lang":"tr","created_at":"2026-08-13T10:00:00Z","unknown":"ignored"}""",
-        )
+        val dto =
+            json.decodeFromString<ProfileDto>(
+                """{"id":"user-1","email":"user@example.com","full_name":" Feniqo User ","currency":"try","theme":"dark","lang":"tr","created_at":"2026-08-13T10:00:00Z","unknown":"ignored"}""",
+            )
 
         val profile = dto.toDomain()
 
@@ -37,12 +38,13 @@ class IdentityRemoteMappersTest {
 
     @Test
     fun encodes_domain_names_as_supabase_snake_case() {
-        val dto = ProfileDto(
-            id = "user-1",
-            email = "user@example.com",
-            fullName = "Feniqo User",
-            createdAt = "2026-08-13T10:00:00Z",
-        )
+        val dto =
+            ProfileDto(
+                id = "user-1",
+                email = "user@example.com",
+                fullName = "Feniqo User",
+                createdAt = "2026-08-13T10:00:00Z",
+            )
 
         val encoded = json.encodeToString(dto)
 
@@ -53,7 +55,8 @@ class IdentityRemoteMappersTest {
 
     @Test
     fun decodes_workspace_and_member_d1_schema_and_maps_to_domain_and_entity() {
-        val wsJson = """
+        val wsJson =
+            """
             {
                 "id": "ws-100",
                 "name": "  Şirket Ana Çalışma Alanı 🚀  ",
@@ -67,7 +70,7 @@ class IdentityRemoteMappersTest {
                 "deleted_at": "2026-09-06T13:00:00Z",
                 "version": 3
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val wsDto = json.decodeFromString<WorkspaceDto>(wsJson)
         val wsDomain = wsDto.toDomain()
@@ -95,7 +98,8 @@ class IdentityRemoteMappersTest {
         assertEquals(1788699600000L, wsEntity.sync.deletedAtEpochMillis) // 13:00:00Z
         assertNull(wsEntity.sync.baseVersion)
 
-        val memberJson = """
+        val memberJson =
+            """
             {
                 "workspace_id": "ws-100",
                 "user_id": "user-viewer-1",
@@ -105,7 +109,7 @@ class IdentityRemoteMappersTest {
                 "deleted_at": null,
                 "version": 1
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val memberDto = json.decodeFromString<WorkspaceMemberDto>(memberJson)
         val memberDomain = memberDto.toDomain()
@@ -153,7 +157,8 @@ class IdentityRemoteMappersTest {
 
     @Test
     fun rejects_missing_or_invalid_required_fields_in_workspace_and_member() {
-        val validWsJson = """
+        val validWsJson =
+            """
             {
                 "id": "ws-1",
                 "name": "Test Workspace",
@@ -165,7 +170,7 @@ class IdentityRemoteMappersTest {
                 "updated_at": "2026-09-06T12:00:00Z",
                 "version": 1
             }
-        """.trimIndent()
+            """.trimIndent()
 
         // Eksik normalized_name decode hatası
         assertFailsWith<Exception> {
@@ -200,7 +205,8 @@ class IdentityRemoteMappersTest {
             zeroVersionWsDto.toEntity(1_000L)
         }
 
-        val validMemberJson = """
+        val validMemberJson =
+            """
             {
                 "workspace_id": "ws-1",
                 "user_id": "user-1",
@@ -209,7 +215,7 @@ class IdentityRemoteMappersTest {
                 "updated_at": "2026-09-06T12:00:00Z",
                 "version": 1
             }
-        """.trimIndent()
+            """.trimIndent()
 
         // Eksik updated_at decode hatası
         assertFailsWith<Exception> {
@@ -256,6 +262,3 @@ class IdentityRemoteMappersTest {
         }
     }
 }
-
-
-

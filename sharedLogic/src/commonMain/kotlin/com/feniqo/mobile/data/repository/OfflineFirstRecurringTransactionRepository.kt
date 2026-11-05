@@ -2,6 +2,10 @@ package com.feniqo.mobile.data.repository
 
 import com.feniqo.mobile.data.local.dao.CategoryDao
 import com.feniqo.mobile.data.local.dao.GenerateRecurringOccurrenceResult
+import com.feniqo.mobile.domain.usecase.MerchantRecognitionEngine
+import com.feniqo.mobile.domain.usecase.TransactionMerchantAttributionResolver
+import com.feniqo.mobile.domain.usecase.TransactionMerchantResolutionResult
+import com.feniqo.mobile.domain.repository.UserMerchantVerificationRepository
 import com.feniqo.mobile.data.local.dao.RecurringTransactionDao
 import com.feniqo.mobile.data.local.outbox.OfflineWriteQueue
 import com.feniqo.mobile.data.mapper.newSyncMetadata
@@ -45,6 +49,7 @@ class OfflineFirstRecurringTransactionRepository(
     private val recurringTransactionDao: RecurringTransactionDao,
     private val offlineWriteQueue: OfflineWriteQueue,
     private val entityIdGenerator: EntityIdGenerator,
+    private val userMerchantVerificationRepository: UserMerchantVerificationRepository,
     private val json: Json = Json {
         encodeDefaults = true
         explicitNulls = true
@@ -53,6 +58,7 @@ class OfflineFirstRecurringTransactionRepository(
     private val planDueRecurringOccurrencesUseCase: PlanDueRecurringOccurrencesUseCase = PlanDueRecurringOccurrencesUseCase(),
     private val activeWorkspaceScope: ActiveWorkspaceScope = PersonalActiveWorkspaceScope,
     private val nowEpochMillisProvider: () -> Long = { kotlin.time.Clock.System.now().toEpochMilliseconds() },
+    private val merchantRecognitionEngine: MerchantRecognitionEngine = MerchantRecognitionEngine(),
 ) : RecurringTransactionRepository {
 
     override fun observeRecurringTransactions(): Flow<List<RecurringTransaction>> =
@@ -279,6 +285,20 @@ class OfflineFirstRecurringTransactionRepository(
                 val newTransactionId = entityIdGenerator.nextId()
                 val transactionTitle = recurring.description?.trim()?.takeIf { it.isNotBlank() }
                     ?: category.name.trim().take(Transaction.MAX_TITLE_LENGTH)
+                val resolvedResult =
+                    TransactionMerchantAttributionResolver.resolveWithDecision(
+                        description = transactionTitle,
+                        verificationRepository = userMerchantVerificationRepository,
+                        engine = merchantRecognitionEngine,
+                    )
+                val merchantInfo =
+                    when (resolvedResult) {
+                        is TransactionMerchantResolutionResult.Success -> resolvedResult.merchantInfo
+                        is TransactionMerchantResolutionResult.InvalidVerification -> {
+                            skippedRecurringIds.add(recurringId)
+                            continue
+                        }
+                    }
                 val transaction = Transaction(
                     id = newTransactionId,
                     ownerId = session.userId,
@@ -293,6 +313,7 @@ class OfflineFirstRecurringTransactionRepository(
                     installment = null,
                     createdAt = createdAt,
                     note = null,
+                    merchantInfo = merchantInfo,
                 )
 
                 val dto = transaction.toDto()

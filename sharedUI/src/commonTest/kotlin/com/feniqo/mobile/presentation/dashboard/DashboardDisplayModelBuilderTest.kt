@@ -8,6 +8,9 @@ import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.DashboardSummary
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.LocalDate
+import com.feniqo.mobile.domain.model.Merchant
+import com.feniqo.mobile.domain.model.MerchantAlias
+import com.feniqo.mobile.domain.model.MerchantMatchSource
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.MoneyDelta
 import com.feniqo.mobile.domain.model.MoneyScore
@@ -15,6 +18,7 @@ import com.feniqo.mobile.domain.model.MoneyScoreLevel
 import com.feniqo.mobile.domain.model.PaymentMethod
 import com.feniqo.mobile.domain.model.RateBasisPoints
 import com.feniqo.mobile.domain.model.Transaction
+import com.feniqo.mobile.domain.model.TransactionMerchantInfo
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.YearMonth
 import kotlinx.datetime.Instant
@@ -57,6 +61,7 @@ class DashboardDisplayModelBuilderTest {
         type: TransactionType = TransactionType.EXPENSE,
         categoryId: String = "cat-market",
         date: LocalDate = LocalDate(2026, 8, 1),
+        merchantInfo: TransactionMerchantInfo? = null,
     ) = Transaction(
         id = EntityId(id),
         ownerId = EntityId("user-1"),
@@ -70,6 +75,7 @@ class DashboardDisplayModelBuilderTest {
         receiptPath = null,
         installment = null,
         createdAt = Instant.parse("2026-08-01T10:00:00Z"),
+        merchantInfo = merchantInfo,
     )
 
     @Test
@@ -358,5 +364,155 @@ class DashboardDisplayModelBuilderTest {
         assertEquals("İnternet", bill.title)
         assertEquals("18", bill.dayNumber)
         assertEquals("EYL", bill.monthShort)
+    }
+
+    private val testDashboardMerchant = Merchant(
+        id = "test_market_merchant",
+        displayName = "Süper Market",
+        aliases = listOf(MerchantAlias("SÜPER MARKET")),
+        categoryIconKey = CategoryIcon("shopping"),
+        verifiedLogoKey = "super_market_logo_key",
+        catalogVersion = 2,
+    )
+    private val testDashboardCatalog = listOf(testDashboardMerchant)
+
+    @Test
+    fun build_recentTransactions_withKnownMerchantAndConfidenceAbove75_resolvesMerchantDisplay() {
+        val info = TransactionMerchantInfo(
+            merchantId = EntityId("test_market_merchant"),
+            matchSource = MerchantMatchSource.STRONG_BRAND,
+            confidence = 80,
+            catalogVersion = 2,
+        )
+        val trx = createTrx("trx-m1", amount = 30000, merchantInfo = info)
+
+        val summary = DashboardSummary(
+            month = YearMonth("2026-08"),
+            income = Money(amountMinor = 0, currency = Currency.TRY),
+            expense = Money(amountMinor = 30000, currency = Currency.TRY),
+            balance = MoneyDelta(amountMinor = -30000, currency = Currency.TRY),
+            savingsRate = RateBasisPoints(0),
+            topExpenseCategory = null,
+            recentTransactionIds = listOf(EntityId("trx-m1")),
+            moneyScore = null,
+        )
+
+        val result = DashboardDisplayModelBuilder.build(
+            summary = summary,
+            transactions = listOf(trx),
+            categories = listOf(sampleCategoryMarket),
+            catalog = testDashboardCatalog,
+        )
+
+        assertEquals(1, result.recentTransactions.size)
+        val item = result.recentTransactions[0]
+        val merchant = item.merchant
+        assertNotNull(merchant)
+        assertEquals("test_market_merchant", merchant.merchantId.value)
+        assertEquals("Süper Market", merchant.displayName)
+        assertEquals("super_market_logo_key", merchant.verifiedLogoKey)
+        assertTrue(merchant.canShowMerchantLogo)
+    }
+
+    @Test
+    fun build_recentTransactions_withConfidenceBelow75_doesNotLeakMerchantIdentity() {
+        val info = TransactionMerchantInfo(
+            merchantId = EntityId("test_market_merchant"),
+            matchSource = MerchantMatchSource.SHORT_ALIAS,
+            confidence = 70,
+            catalogVersion = 2,
+        )
+        val trx = createTrx("trx-m2", amount = 20000, merchantInfo = info)
+
+        val summary = DashboardSummary(
+            month = YearMonth("2026-08"),
+            income = Money(amountMinor = 0, currency = Currency.TRY),
+            expense = Money(amountMinor = 20000, currency = Currency.TRY),
+            balance = MoneyDelta(amountMinor = -20000, currency = Currency.TRY),
+            savingsRate = RateBasisPoints(0),
+            topExpenseCategory = null,
+            recentTransactionIds = listOf(EntityId("trx-m2")),
+            moneyScore = null,
+        )
+
+        val result = DashboardDisplayModelBuilder.build(
+            summary = summary,
+            transactions = listOf(trx),
+            categories = listOf(sampleCategoryMarket),
+            catalog = testDashboardCatalog,
+        )
+
+        assertEquals(1, result.recentTransactions.size)
+        val item = result.recentTransactions[0]
+        assertNull(item.merchant)
+    }
+
+    @Test
+    fun build_recentTransactions_withFutureCatalogVersion_returnsNullMerchantSafely() {
+        val info = TransactionMerchantInfo(
+            merchantId = EntityId("test_market_merchant"),
+            matchSource = MerchantMatchSource.EXACT_ALIAS,
+            confidence = 95,
+            catalogVersion = 3, // Catalog is at version 2
+        )
+        val trx = createTrx("trx-m3", amount = 15000, merchantInfo = info)
+
+        val summary = DashboardSummary(
+            month = YearMonth("2026-08"),
+            income = Money(amountMinor = 0, currency = Currency.TRY),
+            expense = Money(amountMinor = 15000, currency = Currency.TRY),
+            balance = MoneyDelta(amountMinor = -15000, currency = Currency.TRY),
+            savingsRate = RateBasisPoints(0),
+            topExpenseCategory = null,
+            recentTransactionIds = listOf(EntityId("trx-m3")),
+            moneyScore = null,
+        )
+
+        val result = DashboardDisplayModelBuilder.build(
+            summary = summary,
+            transactions = listOf(trx),
+            categories = listOf(sampleCategoryMarket),
+            catalog = testDashboardCatalog,
+        )
+
+        assertEquals(1, result.recentTransactions.size)
+        assertNull(result.recentTransactions[0].merchant)
+    }
+
+    @Test
+    fun build_recentTransactions_withMissingCategory_preservesFallbackCategoryNameAndResolvesMerchant() {
+        val info = TransactionMerchantInfo(
+            merchantId = EntityId("test_market_merchant"),
+            matchSource = MerchantMatchSource.EXACT_ALIAS,
+            confidence = 95,
+            catalogVersion = 2,
+        )
+        val trx = createTrx("trx-m4", amount = 10000, categoryId = "cat-deleted", merchantInfo = info)
+
+        val summary = DashboardSummary(
+            month = YearMonth("2026-08"),
+            income = Money(amountMinor = 0, currency = Currency.TRY),
+            expense = Money(amountMinor = 10000, currency = Currency.TRY),
+            balance = MoneyDelta(amountMinor = -10000, currency = Currency.TRY),
+            savingsRate = RateBasisPoints(0),
+            topExpenseCategory = null,
+            recentTransactionIds = listOf(EntityId("trx-m4")),
+            moneyScore = null,
+        )
+
+        val result = DashboardDisplayModelBuilder.build(
+            summary = summary,
+            transactions = listOf(trx),
+            categories = emptyList(),
+            catalog = testDashboardCatalog,
+        )
+
+        assertEquals(1, result.recentTransactions.size)
+        val item = result.recentTransactions[0]
+        assertEquals("Kategori", item.categoryName)
+        assertTrue(item.isCategoryUnavailable)
+        val merchant = item.merchant
+        assertNotNull(merchant)
+        assertEquals("Süper Market", merchant.displayName)
     }
 }

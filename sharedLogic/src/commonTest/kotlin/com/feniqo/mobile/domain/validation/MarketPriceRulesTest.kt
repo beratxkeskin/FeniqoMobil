@@ -16,9 +16,10 @@ import kotlin.test.assertIs
 class MarketPriceRulesTest {
     @Test
     fun request_normalizesSymbolAndKeepsProviderIndependentFields() {
-        val result = assertIs<MarketPriceRequestValidationResult.Valid>(
-            MarketPriceRequestRules.validate(MarketPriceRequest(AssetType.CRYPTO, " btc-usd ", Currency.TRY)),
-        )
+        val result =
+            assertIs<MarketPriceRequestValidationResult.Valid>(
+                MarketPriceRequestRules.validate(MarketPriceRequest(AssetType.CRYPTO, " btc-usd ", Currency.TRY)),
+            )
         assertEquals("BTC-USD", result.request.symbol)
         assertEquals(Currency.TRY, result.request.quoteCurrency)
     }
@@ -41,23 +42,25 @@ class MarketPriceRulesTest {
 
     @Test
     fun calculator_multipliesScaledValuesWithoutFloatingPoint() {
-        val result = assertIs<MarketValueCalculationResult.Success>(
-            MarketValueCalculator.calculate(
-                quantity = AssetQuantity(unscaledValue = 125L, scale = 2),
-                unitPrice = ScaledMarketPrice(unscaledValue = 250_050L, scale = 2, currency = Currency.TRY),
-            ),
-        )
+        val result =
+            assertIs<MarketValueCalculationResult.Success>(
+                MarketValueCalculator.calculate(
+                    quantity = AssetQuantity(unscaledValue = 125L, scale = 2),
+                    unitPrice = ScaledMarketPrice(unscaledValue = 250_050L, scale = 2, currency = Currency.TRY),
+                ),
+            )
         assertEquals(Money(312_563L, Currency.TRY), result.value)
     }
 
     @Test
     fun calculator_roundsHalfUpToMinorUnits() {
-        val roundedUp = assertIs<MarketValueCalculationResult.Success>(
-            MarketValueCalculator.calculate(
-                AssetQuantity(1L, 0),
-                ScaledMarketPrice(12_345L, 3, Currency.TRY),
-            ),
-        )
+        val roundedUp =
+            assertIs<MarketValueCalculationResult.Success>(
+                MarketValueCalculator.calculate(
+                    AssetQuantity(1L, 0),
+                    ScaledMarketPrice(12_345L, 3, Currency.TRY),
+                ),
+            )
         assertEquals(1_235L, roundedUp.value.amountMinor)
     }
 

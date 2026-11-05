@@ -69,19 +69,35 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    fun provideTransactionRepository(
+    fun provideOfflineFirstTransactionRepository(
         authRepository: AuthRepository,
         transactionDao: TransactionDao,
+        categoryDao: CategoryDao,
         offlineWriteQueue: OfflineWriteQueue,
         workspaceDao: WorkspaceDao,
         activeWorkspaceScope: ActiveWorkspaceScope,
-    ): TransactionRepository = OfflineFirstTransactionRepository(
+        userMerchantVerificationRepository: com.feniqo.mobile.domain.repository.UserMerchantVerificationRepository,
+    ): OfflineFirstTransactionRepository = OfflineFirstTransactionRepository(
         authRepository = authRepository,
         transactionDao = transactionDao,
+        categoryDao = categoryDao,
         offlineWriteQueue = offlineWriteQueue,
         workspaceDao = workspaceDao,
         activeWorkspaceScope = activeWorkspaceScope,
+        userMerchantVerificationRepository = userMerchantVerificationRepository,
     )
+
+    @Provides
+    @Singleton
+    fun provideTransactionRepository(
+        repository: OfflineFirstTransactionRepository,
+    ): TransactionRepository = repository
+
+    @Provides
+    @Singleton
+    fun provideTransactionMerchantCorrectionRepository(
+        repository: OfflineFirstTransactionRepository,
+    ): com.feniqo.mobile.domain.repository.TransactionMerchantCorrectionRepository = repository
 
     @Provides
     @Singleton
@@ -124,6 +140,7 @@ object RepositoryModule {
         offlineWriteQueue: OfflineWriteQueue,
         entityIdGenerator: com.feniqo.mobile.domain.model.EntityIdGenerator,
         activeWorkspaceScope: ActiveWorkspaceScope,
+        userMerchantVerificationRepository: com.feniqo.mobile.domain.repository.UserMerchantVerificationRepository,
     ): com.feniqo.mobile.domain.repository.RecurringTransactionRepository =
         com.feniqo.mobile.data.repository.OfflineFirstRecurringTransactionRepository(
             authRepository = authRepository,
@@ -132,6 +149,7 @@ object RepositoryModule {
             offlineWriteQueue = offlineWriteQueue,
             entityIdGenerator = entityIdGenerator,
             activeWorkspaceScope = activeWorkspaceScope,
+            userMerchantVerificationRepository = userMerchantVerificationRepository,
         )
 
     @Provides
@@ -217,8 +235,18 @@ object RepositoryModule {
             activeWorkspaceScope = activeWorkspaceScope,
         )
 
-
-
+    @Provides
+    @Singleton
+    fun provideUserMerchantVerificationRepository(
+        authRepository: AuthRepository,
+        dao: com.feniqo.mobile.data.local.dao.UserMerchantVerificationDao,
+        writeQueue: OfflineWriteQueue,
+    ): com.feniqo.mobile.domain.repository.UserMerchantVerificationRepository =
+        com.feniqo.mobile.data.repository.OfflineFirstUserMerchantVerificationRepository(
+            authRepository = authRepository,
+            dao = dao,
+            writeQueue = writeQueue,
+        )
 
     @Provides
     @Singleton

@@ -6,7 +6,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class ReceiptStorageDataSourceTest {
-
     @Test
     fun builds_owner_scoped_private_object_path() {
         val request = receiptRequest()
@@ -40,12 +39,13 @@ class ReceiptStorageDataSourceTest {
         extension: String = "jpg",
         contentType: String = "image/jpeg",
         bytes: ByteArray = byteArrayOf(1, 2, 3),
-    ): ReceiptUploadRequest = ReceiptUploadRequest(
-        ownerId = EntityId("user-1"),
-        transactionId = EntityId("tx-1"),
-        objectId = EntityId(objectId),
-        extension = extension,
-        contentType = contentType,
-        bytes = bytes,
-    )
+    ): ReceiptUploadRequest =
+        ReceiptUploadRequest(
+            ownerId = EntityId("user-1"),
+            transactionId = EntityId("tx-1"),
+            objectId = EntityId(objectId),
+            extension = extension,
+            contentType = contentType,
+            bytes = bytes,
+        )
 }

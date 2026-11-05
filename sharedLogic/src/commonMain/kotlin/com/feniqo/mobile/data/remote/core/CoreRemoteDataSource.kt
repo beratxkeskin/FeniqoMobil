@@ -13,6 +13,7 @@ import com.feniqo.mobile.data.remote.dto.SubscriptionDto
 import com.feniqo.mobile.data.remote.dto.TagDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.remote.dto.TransactionTagDto
+import com.feniqo.mobile.data.remote.dto.UserMerchantVerificationDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceMemberDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceInvitationRedeemResultDto
@@ -28,6 +29,10 @@ interface CoreRemoteDataSource {
     suspend fun fetchGoals(query: GoalRemoteQuery): RemotePage<GoalDto>
     suspend fun fetchAssets(query: AssetRemoteQuery): RemotePage<AssetDto> =
         error("fetchAssets(query) is not implemented in this CoreRemoteDataSource implementation")
+    suspend fun fetchMerchantVerifications(
+        query: UserMerchantVerificationRemoteQuery,
+    ): RemotePage<UserMerchantVerificationDto> =
+        error("fetchMerchantVerifications(query) is not implemented in this CoreRemoteDataSource implementation")
     suspend fun fetchGoalContributions(query: GoalContributionRemoteQuery): RemotePage<GoalContributionDto>
     suspend fun fetchDebts(query: DebtRemoteQuery): RemotePage<DebtDto>
     suspend fun fetchDebtPayments(query: DebtPaymentRemoteQuery): RemotePage<DebtPaymentDto>

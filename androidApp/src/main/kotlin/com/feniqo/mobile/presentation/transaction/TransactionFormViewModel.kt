@@ -12,11 +12,15 @@ import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.PaymentMethod
 import com.feniqo.mobile.domain.model.ReceiptPath
 import com.feniqo.mobile.domain.model.ReceiptOcrDraft
+import com.feniqo.mobile.domain.model.TransactionClassification
+import com.feniqo.mobile.domain.model.TransactionMerchantCreateDecision
+import com.feniqo.mobile.domain.model.TransactionMerchantEligibility
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.repository.RepositoryResult
 import com.feniqo.mobile.domain.usecase.AddInstallmentGroupCommand
 import com.feniqo.mobile.domain.usecase.AddInstallmentGroupUseCase
 import com.feniqo.mobile.domain.usecase.AddTransactionUseCase
+import com.feniqo.mobile.domain.usecase.CategoryMerchantCandidateResolver
 import com.feniqo.mobile.domain.usecase.ObserveActiveWorkspaceUseCase
 import com.feniqo.mobile.domain.usecase.ObserveAuthSessionUseCase
 import com.feniqo.mobile.domain.usecase.ObserveCategoriesForHistoryLookupUseCase
@@ -176,6 +180,7 @@ class TransactionFormViewModel @Inject constructor(
         val participantUserIds: Set<EntityId> = emptySet(),
         val splitMode: TransactionSplitMode = TransactionSplitMode.EQUAL,
         val customSharesText: Map<EntityId, String> = emptyMap(),
+        val merchantDecision: TransactionMerchantCreateDecision = TransactionMerchantCreateDecision.Auto,
     )
 
     private var initialSnapshot: FormSnapshot? = if (!isEditMode) {
@@ -195,6 +200,7 @@ class TransactionFormViewModel @Inject constructor(
             participantUserIds = emptySet(),
             splitMode = TransactionSplitMode.EQUAL,
             customSharesText = emptyMap(),
+            merchantDecision = TransactionMerchantCreateDecision.Auto,
         )
     } else {
         null
@@ -220,14 +226,98 @@ class TransactionFormViewModel @Inject constructor(
             state.isInstallmentEnabled != snapshot.isInstallmentEnabled ||
             (state.isInstallmentEnabled && state.installmentCountText != snapshot.installmentCountText) ||
             state.hasReceipt != snapshot.hasReceipt ||
+            state.merchantDecision != snapshot.merchantDecision ||
             splitChanged
+    }
+
+    private fun reconcileMerchantState(state: TransactionFormUiState): TransactionFormUiState {
+        val isInstallmentActive = state.isInstallmentOptionAvailable && state.isInstallmentEnabled
+        val isWorkspace = state.activeWorkspaceId != null
+        val isExpense = state.type == TransactionType.EXPENSE
+        val effectiveTitle = state.title.ifEmpty { state.description }
+        val isPurchase = effectiveTitle.isNotBlank() &&
+            TransactionMerchantEligibility.classify(effectiveTitle) == TransactionClassification.PURCHASE
+
+        val selectedCat = state.selectedCategoryId?.let { id ->
+            state.availableCategories.find { it.id == id && it.isSelectable }
+        }
+
+        val isEligible = !state.isEditMode && !isWorkspace && isExpense && !isInstallmentActive && isPurchase && selectedCat != null
+
+        val rawSuggested = if (isEligible) {
+            CategoryMerchantCandidateResolver.resolveSuggestedCandidates(
+                transactionType = TransactionType.EXPENSE,
+                categoryIconKey = selectedCat.iconKey,
+            )
+        } else {
+            emptyList()
+        }
+
+        val rawSearchable = if (isEligible) {
+            CategoryMerchantCandidateResolver.resolveSearchableCandidates(
+                transactionType = TransactionType.EXPENSE,
+                categoryIconKey = selectedCat.iconKey,
+            )
+        } else {
+            emptyList()
+        }
+
+        val suggestedItems = if (isEligible) {
+            rawSuggested.map { merchant ->
+                MerchantSelectorItem(
+                    id = EntityId(merchant.id),
+                    displayName = merchant.displayName,
+                    categoryIconKey = merchant.categoryIconKey.key,
+                    verifiedLogoKey = merchant.verifiedLogoKey,
+                )
+            }
+        } else {
+            emptyList()
+        }
+
+        val searchableItems = if (isEligible) {
+            rawSearchable.map { merchant ->
+                MerchantSelectorItem(
+                    id = EntityId(merchant.id),
+                    displayName = merchant.displayName,
+                    categoryIconKey = merchant.categoryIconKey.key,
+                    verifiedLogoKey = merchant.verifiedLogoKey,
+                )
+            }
+        } else {
+            emptyList()
+        }
+
+        val reconciledDecision = if (isEligible) {
+            when (val decision = state.merchantDecision) {
+                is TransactionMerchantCreateDecision.KnownMerchant -> {
+                    if (searchableItems.any { it.id == decision.merchantId }) {
+                        decision
+                    } else {
+                        TransactionMerchantCreateDecision.Auto
+                    }
+                }
+                is TransactionMerchantCreateDecision.UseTransactionName -> decision
+                TransactionMerchantCreateDecision.Auto -> TransactionMerchantCreateDecision.Auto
+            }
+        } else {
+            TransactionMerchantCreateDecision.Auto
+        }
+
+        return state.copy(
+            isMerchantSelectionEligible = isEligible,
+            merchantSuggestedCandidates = suggestedItems,
+            merchantSearchableCandidates = searchableItems,
+            merchantDecision = reconciledDecision,
+        )
     }
 
     private fun updateStateWithDirtyCheck(transform: (TransactionFormUiState) -> TransactionFormUiState) {
         _uiState.update { current ->
             val updated = transform(current)
-            val dirty = calculateHasUnsavedChanges(updated)
-            updated.copy(hasUnsavedChanges = dirty)
+            val reconciled = reconcileMerchantState(updated)
+            val dirty = calculateHasUnsavedChanges(reconciled)
+            reconciled.copy(hasUnsavedChanges = dirty)
         }
     }
 
@@ -259,19 +349,22 @@ class TransactionFormViewModel @Inject constructor(
             observeActiveWorkspaceUseCase().collect { activeWorkspace ->
                 val currentWorkspaceId = activeWorkspace?.id
                 val workspaceName = activeWorkspace?.name
-                _uiState.update {
-                    it.copy(
+                val shouldResetCategory = !isEditMode && currentWorkspaceId != previousWorkspaceId && !isFirstEmission
+                _uiState.update { state ->
+                    val updated = state.copy(
                         activeWorkspaceId = currentWorkspaceId,
                         activeWorkspaceName = workspaceName,
                         activeWorkspaceType = activeWorkspace?.type ?: com.feniqo.mobile.domain.model.WorkspaceType.PERSONAL,
+                        selectedCategoryId = if (shouldResetCategory) null else state.selectedCategoryId,
                     )
+                    val reconciled = reconcileMerchantState(updated)
+                    reconciled.copy(hasUnsavedChanges = calculateHasUnsavedChanges(reconciled))
                 }
 
                 if (!isEditMode) {
                     _workspaceIdState.value = currentWorkspaceId
                     if (!isFirstEmission && currentWorkspaceId != previousWorkspaceId) {
                         submitJob?.cancel()
-                        _uiState.update { it.copy(selectedCategoryId = null) }
                     }
                 } else if (!isFirstEmission && currentWorkspaceId != previousWorkspaceId) {
                     submitJob?.cancel()
@@ -324,10 +417,12 @@ class TransactionFormViewModel @Inject constructor(
                         }
 
                         _uiState.update { state ->
-                            state.copy(
+                            val updated = state.copy(
                                 availableCategories = finalOptions,
                                 categoryLoadError = null,
                             )
+                            val reconciled = reconcileMerchantState(updated)
+                            reconciled.copy(hasUnsavedChanges = calculateHasUnsavedChanges(reconciled))
                         }
                     }
                     .catch { e ->
@@ -817,6 +912,32 @@ class TransactionFormViewModel @Inject constructor(
         _uiState.update { it.copy(generalMessage = null) }
     }
 
+    fun onKnownMerchantSelected(merchantId: EntityId) {
+        val currentState = _uiState.value
+        if (!currentState.isMerchantSelectionEligible) return
+        val isCandidate = currentState.merchantSearchableCandidates.any { it.id == merchantId }
+        if (!isCandidate) return
+
+        updateStateWithDirtyCheck { state ->
+            state.copy(merchantDecision = TransactionMerchantCreateDecision.KnownMerchant(merchantId))
+        }
+    }
+
+    fun onUseTransactionNameSelected() {
+        val currentState = _uiState.value
+        if (!currentState.isMerchantSelectionEligible) return
+
+        updateStateWithDirtyCheck { state ->
+            state.copy(merchantDecision = TransactionMerchantCreateDecision.UseTransactionName)
+        }
+    }
+
+    fun onClearMerchantDecision() {
+        updateStateWithDirtyCheck { state ->
+            state.copy(merchantDecision = TransactionMerchantCreateDecision.Auto)
+        }
+    }
+
     fun submit() {
         val currentState = _uiState.value
         if (currentState.loadError != null || currentState.isSubmitting || submitJob?.isActive == true) return
@@ -1095,6 +1216,29 @@ class TransactionFormViewModel @Inject constructor(
                         }
                     }
                 } else {
+                    val decision = currentState.merchantDecision
+                    if (decision !is TransactionMerchantCreateDecision.Auto) {
+                        val isEligible = !currentState.isEditMode &&
+                            _workspaceIdState.value == null &&
+                            currentState.type == TransactionType.EXPENSE &&
+                            currentState.isMerchantSelectionEligible
+
+                        val isDecisionCandidateMatch =
+                            when (decision) {
+                                is TransactionMerchantCreateDecision.KnownMerchant -> {
+                                    currentState.merchantSearchableCandidates.any { it.id == decision.merchantId }
+                                }
+                                is TransactionMerchantCreateDecision.UseTransactionName -> true
+                                TransactionMerchantCreateDecision.Auto -> true
+                            }
+                        val isValidExplicit = isEligible && isDecisionCandidateMatch
+
+                        if (!isValidExplicit) {
+                            _uiState.update { it.copy(generalMessage = FinanceUiMessage.GENERIC_ERROR) }
+                            return@launch
+                        }
+                    }
+
                     val now = currentInstantProvider.now()
                     val newId = entityIdGenerator.nextId()
                     val command = TransactionCommand(
@@ -1112,6 +1256,7 @@ class TransactionFormViewModel @Inject constructor(
                         note = normalizedNote,
                         splitMode = if (currentState.isSharedExpense) currentState.splitMode else TransactionSplitMode.EQUAL,
                         participantShares = if (currentState.isSharedExpense && currentState.splitMode == TransactionSplitMode.CUSTOM) parsedParticipantShares else emptyList(),
+                        merchantDecision = decision,
                     )
                     when (val result = addTransactionUseCase(command, today, now)) {
                         is RepositoryResult.Success -> {

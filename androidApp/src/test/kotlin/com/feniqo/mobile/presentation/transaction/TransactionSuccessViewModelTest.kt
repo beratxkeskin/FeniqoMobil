@@ -151,6 +151,58 @@ class TransactionSuccessViewModelTest {
     }
 
     @Test
+    fun transactionSuccess_withAttributedMerchant_resolvesMerchantDisplayModel() = runTest {
+        val category = Category(
+            id = EntityId("cat-sub"),
+            ownerId = null,
+            workspaceId = null,
+            name = "Abonelik",
+            type = TransactionType.EXPENSE,
+            color = CategoryColor("#E50914"),
+            icon = CategoryIcon("subscriptions"),
+            isDefault = true,
+            createdAt = Instant.parse("2026-08-01T00:00:00Z"),
+        )
+        val transaction = Transaction(
+            id = EntityId("tx-netflix"),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            amount = Money(19999L, Currency.TRY),
+            type = TransactionType.EXPENSE,
+            categoryId = EntityId("cat-sub"),
+            description = "Netflix",
+            paymentMethod = PaymentMethod.CREDIT_CARD,
+            transactionDate = LocalDate(2026, 9, 12),
+            receiptPath = null,
+            installment = null,
+            createdAt = Instant.parse("2026-09-12T12:00:00Z"),
+            merchantInfo = TransactionMerchantInfo(
+                merchantId = EntityId("netflix"),
+                matchSource = MerchantMatchSource.EXACT_ALIAS,
+                confidence = 95,
+                catalogVersion = 1,
+            ),
+        )
+
+        catRepo.categoriesFlow.value = listOf(category)
+        trxRepo.transactionsFlow.value = listOf(transaction)
+
+        val viewModel = createViewModel(TransactionSuccessRoute("tx-netflix"))
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNotNull(state.transaction)
+        val item = state.transaction!!
+        assertNotNull(item.merchant)
+        assertEquals("netflix", item.merchant?.merchantId?.value)
+        assertEquals("Netflix", item.merchant?.displayName)
+        assertTrue(item.merchant?.canShowMerchantLogo == true)
+
+        collectJob.cancel()
+    }
+
+    @Test
     fun transactionSuccess_whenTransactionNotFound_emitsErrorState() = runTest {
         val viewModel = createViewModel(TransactionSuccessRoute("tx-non-existent"))
         val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }

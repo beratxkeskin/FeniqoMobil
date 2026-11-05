@@ -7,7 +7,6 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class WorkspaceInvitationCryptoTest {
-
     @Test
     fun sha256_matches_known_nist_vectors() {
         // Test vector 1: "abc"

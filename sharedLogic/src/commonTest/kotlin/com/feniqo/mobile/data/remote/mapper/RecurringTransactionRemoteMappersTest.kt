@@ -8,11 +8,11 @@ import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.PaymentMethod
 import com.feniqo.mobile.domain.model.RecurrenceFrequency
-import com.feniqo.mobile.domain.model.RecurrenceRule
-import com.feniqo.mobile.domain.model.RecurringTransaction
 import com.feniqo.mobile.domain.model.SyncStatus
 import com.feniqo.mobile.domain.model.Transaction
 import com.feniqo.mobile.domain.model.TransactionType
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -20,15 +20,13 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Instant
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 class RecurringTransactionRemoteMappersTest {
-
-    private val json = Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-    }
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
 
     private fun sampleDto(
         id: String = "rec-1",
@@ -50,35 +48,37 @@ class RecurringTransactionRemoteMappersTest {
         updatedAt: String? = "2026-08-15T12:00:00Z",
         deletedAt: String? = null,
         version: Long? = 2L,
-    ): RecurringTransactionDto = RecurringTransactionDto(
-        id = id,
-        userId = userId,
-        workspaceId = workspaceId,
-        amountMinor = amountMinor,
-        currency = currency,
-        type = type,
-        categoryId = categoryId,
-        description = description,
-        paymentMethod = paymentMethod,
-        frequency = frequency,
-        interval = interval,
-        startDate = startDate,
-        endDate = endDate,
-        lastGeneratedDate = lastGeneratedDate,
-        isActive = isActive,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-        deletedAt = deletedAt,
-        version = version,
-    )
+    ): RecurringTransactionDto =
+        RecurringTransactionDto(
+            id = id,
+            userId = userId,
+            workspaceId = workspaceId,
+            amountMinor = amountMinor,
+            currency = currency,
+            type = type,
+            categoryId = categoryId,
+            description = description,
+            paymentMethod = paymentMethod,
+            frequency = frequency,
+            interval = interval,
+            startDate = startDate,
+            endDate = endDate,
+            lastGeneratedDate = lastGeneratedDate,
+            isActive = isActive,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            deletedAt = deletedAt,
+            version = version,
+        )
 
     @Test
     fun personal_active_rule_round_trip() {
-        val dto = sampleDto(
-            endDate = null,
-            lastGeneratedDate = null,
-            isActive = true,
-        )
+        val dto =
+            sampleDto(
+                endDate = null,
+                lastGeneratedDate = null,
+                isActive = true,
+            )
 
         val domain = dto.toDomain()
 
@@ -119,13 +119,14 @@ class RecurringTransactionRemoteMappersTest {
 
     @Test
     fun paused_rule_with_end_date_and_last_generated_date_preserved() {
-        val dto = sampleDto(
-            endDate = "2026-12-31",
-            lastGeneratedDate = "2026-08-15",
-            isActive = false,
-            paymentMethod = "bank_transfer",
-            type = "income",
-        )
+        val dto =
+            sampleDto(
+                endDate = "2026-12-31",
+                lastGeneratedDate = "2026-08-15",
+                isActive = false,
+                paymentMethod = "bank_transfer",
+                type = "income",
+            )
 
         val domain = dto.toDomain()
 
@@ -273,12 +274,13 @@ class RecurringTransactionRemoteMappersTest {
 
     @Test
     fun toRemoteSyncMetadata_preserves_tombstone_version_and_updated_timestamp() {
-        val dto = sampleDto(
-            createdAt = "2026-08-01T10:00:00Z",
-            updatedAt = "2026-08-15T12:00:00Z",
-            deletedAt = "2026-08-20T15:00:00Z",
-            version = 5L,
-        )
+        val dto =
+            sampleDto(
+                createdAt = "2026-08-01T10:00:00Z",
+                updatedAt = "2026-08-15T12:00:00Z",
+                deletedAt = "2026-08-20T15:00:00Z",
+                version = 5L,
+            )
 
         val metadata = dto.toRemoteSyncMetadata(receivedAtEpochMillis = 1700000000000L)
 
@@ -293,12 +295,13 @@ class RecurringTransactionRemoteMappersTest {
 
     @Test
     fun toRemoteSyncMetadata_falls_back_to_createdAt_when_updatedAt_is_null() {
-        val dto = sampleDto(
-            createdAt = "2026-08-01T10:00:00Z",
-            updatedAt = null,
-            deletedAt = null,
-            version = 1L,
-        )
+        val dto =
+            sampleDto(
+                createdAt = "2026-08-01T10:00:00Z",
+                updatedAt = null,
+                deletedAt = null,
+                version = 1L,
+            )
 
         val metadata = dto.toRemoteSyncMetadata(receivedAtEpochMillis = 1700000000000L)
 

@@ -1,24 +1,14 @@
 package com.feniqo.mobile.domain.model
 
-import com.feniqo.mobile.data.backup.DefaultPersonalBackupExporter
-import com.feniqo.mobile.data.backup.PersonalBackupImporter
 import com.feniqo.mobile.data.mapper.toDomain
 import com.feniqo.mobile.data.mapper.toEntity
-import com.feniqo.mobile.domain.repository.CategoryRepository
-import com.feniqo.mobile.domain.repository.RepositoryResult
-import com.feniqo.mobile.domain.repository.TransactionFilter
-import com.feniqo.mobile.domain.repository.TransactionRepository
 import com.feniqo.mobile.domain.usecase.TransactionCsvExporter
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class CurrencyGbpCompatibilityTest {
-
     @Test
     fun currencyEnum_gbpIsAppendedAtTheEnd() {
         val entries = Currency.entries
@@ -44,22 +34,27 @@ class CurrencyGbpCompatibilityTest {
 
     @Test
     fun transactionEntity_roundTripWithGbp() {
-        val tx = Transaction(
-            id = EntityId("tx-gbp-1"),
-            ownerId = EntityId("user-1"),
-            workspaceId = null,
-            amount = Money(25000L, Currency.GBP),
-            type = TransactionType.EXPENSE,
-            categoryId = EntityId("cat-1"),
-            description = "London Tube",
-            paymentMethod = PaymentMethod.CREDIT_CARD,
-            transactionDate = LocalDate(2026, 9, 15),
-            receiptPath = null,
-            installment = null,
-            createdAt = Instant.fromEpochMilliseconds(1000L),
-        )
+        val tx =
+            Transaction(
+                id = EntityId("tx-gbp-1"),
+                ownerId = EntityId("user-1"),
+                workspaceId = null,
+                amount = Money(25000L, Currency.GBP),
+                type = TransactionType.EXPENSE,
+                categoryId = EntityId("cat-1"),
+                description = "London Tube",
+                paymentMethod = PaymentMethod.CREDIT_CARD,
+                transactionDate = LocalDate(2026, 9, 15),
+                receiptPath = null,
+                installment = null,
+                createdAt = Instant.fromEpochMilliseconds(1000L),
+            )
 
-        val entity = tx.toEntity(com.feniqo.mobile.data.mapper.newSyncMetadata(1))
+        val entity =
+            tx.toEntity(
+                com.feniqo.mobile.data.mapper
+                    .newSyncMetadata(1),
+            )
         assertEquals("GBP", entity.currencyCode)
 
         val restored = entity.toDomain()
@@ -70,20 +65,21 @@ class CurrencyGbpCompatibilityTest {
 
     @Test
     fun csvExport_supportsGbpTransactions() {
-        val tx = Transaction(
-            id = EntityId("tx-gbp-1"),
-            ownerId = EntityId("user-1"),
-            workspaceId = null,
-            amount = Money(4500L, Currency.GBP),
-            type = TransactionType.EXPENSE,
-            categoryId = EntityId("cat-1"),
-            description = "Cafe",
-            paymentMethod = PaymentMethod.CASH,
-            transactionDate = LocalDate(2026, 9, 16),
-            receiptPath = null,
-            installment = null,
-            createdAt = Instant.fromEpochMilliseconds(2000L),
-        )
+        val tx =
+            Transaction(
+                id = EntityId("tx-gbp-1"),
+                ownerId = EntityId("user-1"),
+                workspaceId = null,
+                amount = Money(4500L, Currency.GBP),
+                type = TransactionType.EXPENSE,
+                categoryId = EntityId("cat-1"),
+                description = "Cafe",
+                paymentMethod = PaymentMethod.CASH,
+                transactionDate = LocalDate(2026, 9, 16),
+                receiptPath = null,
+                installment = null,
+                createdAt = Instant.fromEpochMilliseconds(2000L),
+            )
 
         val exporter = TransactionCsvExporter()
         val csv = exporter.export(listOf(tx))

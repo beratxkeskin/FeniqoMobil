@@ -38,7 +38,10 @@ interface ProfileDao {
           )
         """,
     )
-    suspend fun setActiveWorkspaceGuarded(profileId: String, workspaceId: String): Int
+    suspend fun setActiveWorkspaceGuarded(
+        profileId: String,
+        workspaceId: String,
+    ): Int
 
     @Query(
         """
@@ -120,7 +123,10 @@ interface WorkspaceDao {
         LIMIT 1
         """,
     )
-    suspend fun getMember(workspaceId: String, userId: String): WorkspaceMemberEntity?
+    suspend fun getMember(
+        workspaceId: String,
+        userId: String,
+    ): WorkspaceMemberEntity?
 
     @Query(
         """

@@ -41,7 +41,10 @@ interface CategoryDao {
           AND ((is_default = 1 AND owner_id IS NULL) OR owner_id = :ownerId)
         """,
     )
-    fun observeByIdAndOwner(id: String, ownerId: String): Flow<CategoryEntity?>
+    fun observeByIdAndOwner(
+        id: String,
+        ownerId: String,
+    ): Flow<CategoryEntity?>
 
     @Query(
         """
@@ -51,7 +54,10 @@ interface CategoryDao {
           AND ((is_default = 1 AND owner_id IS NULL) OR owner_id = :ownerId)
         """,
     )
-    suspend fun getByIdAndOwner(id: String, ownerId: String): CategoryEntity?
+    suspend fun getByIdAndOwner(
+        id: String,
+        ownerId: String,
+    ): CategoryEntity?
 
     @Query(
         """
@@ -124,7 +130,10 @@ interface BudgetDao {
           AND deleted_at_epoch_ms IS NULL
         """,
     )
-    suspend fun getByIdAndOwner(id: String, ownerId: String): BudgetEntity?
+    suspend fun getByIdAndOwner(
+        id: String,
+        ownerId: String,
+    ): BudgetEntity?
 
     @Query(
         """

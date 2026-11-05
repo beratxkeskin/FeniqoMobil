@@ -16,6 +16,7 @@ import com.feniqo.mobile.domain.model.ReceiptOcrDraft
 import com.feniqo.mobile.domain.model.OcrCandidate
 import com.feniqo.mobile.domain.model.OcrCandidateConfidence
 import com.feniqo.mobile.domain.model.Transaction
+import com.feniqo.mobile.domain.model.TransactionMerchantCreateDecision
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.TransactionSplitMode
 import com.feniqo.mobile.domain.model.TransactionParticipantShare
@@ -105,6 +106,7 @@ class TransactionFormViewModelTest {
         var lastCreatedTransaction: Transaction? = null
         var lastCreatedInstallments: List<Transaction>? = null
         var lastUpdatedTransaction: Transaction? = null
+        var lastMerchantDecision: TransactionMerchantCreateDecision? = null
         var shouldFailWith: AppError? = null
 
         override fun observeTransactions(filter: TransactionFilter): Flow<List<Transaction>> = transactionsFlow
@@ -120,6 +122,14 @@ class TransactionFormViewModelTest {
             lastCreatedTransaction = transaction
             transactionsFlow.value = transactionsFlow.value + transaction
             return RepositoryResult.Success(transaction.id)
+        }
+
+        override suspend fun create(
+            transaction: Transaction,
+            merchantDecision: TransactionMerchantCreateDecision,
+        ): RepositoryResult<EntityId> {
+            lastMerchantDecision = merchantDecision
+            return create(transaction)
         }
 
         override suspend fun createInstallmentGroup(transactions: List<Transaction>): RepositoryResult<EntityId> {
@@ -2269,4 +2279,1104 @@ class TransactionFormViewModelTest {
 
         job.cancel()
     }
+
+    // =========================================================================
+    // Faz 8.6-F3-B2: Merchant Decision, Eligibility & Submit Wiring Tests
+    // =========================================================================
+
+    private val sampleGroceriesCategory = Category(
+        id = EntityId("cat-groceries"),
+        ownerId = EntityId("user-1"),
+        workspaceId = null,
+        name = "Market",
+        type = TransactionType.EXPENSE,
+        color = CategoryColor("#EF4444"),
+        icon = CategoryIcon("groceries"),
+        isDefault = false,
+        createdAt = Instant.parse("2026-08-01T00:00:00Z"),
+    )
+
+    private val sampleRestaurantCategory = Category(
+        id = EntityId("cat-dining"),
+        ownerId = EntityId("user-1"),
+        workspaceId = null,
+        name = "Yeme-İçme",
+        type = TransactionType.EXPENSE,
+        color = CategoryColor("#F97316"),
+        icon = CategoryIcon("food_dining"),
+        isDefault = false,
+        createdAt = Instant.parse("2026-08-01T00:00:00Z"),
+    )
+
+    private val sampleShoppingCategory = Category(
+        id = EntityId("cat-shopping"),
+        ownerId = EntityId("user-1"),
+        workspaceId = null,
+        name = "Alışveriş",
+        type = TransactionType.EXPENSE,
+        color = CategoryColor("#9C27B0"),
+        icon = CategoryIcon("shopping"),
+        isDefault = false,
+        createdAt = Instant.parse("2026-08-01T00:00:00Z"),
+    )
+
+    private val sampleTransportationCategory = Category(
+        id = EntityId("cat-transportation"),
+        ownerId = EntityId("user-1"),
+        workspaceId = null,
+        name = "Ulaşım",
+        type = TransactionType.EXPENSE,
+        color = CategoryColor("#0284C7"),
+        icon = CategoryIcon("transportation"),
+        isDefault = false,
+        createdAt = Instant.parse("2026-08-01T00:00:00Z"),
+    )
+
+    private val sampleTravelCategory = Category(
+        id = EntityId("cat-travel"),
+        ownerId = EntityId("user-1"),
+        workspaceId = null,
+        name = "Seyahat",
+        type = TransactionType.EXPENSE,
+        color = CategoryColor("#38BDF8"),
+        icon = CategoryIcon("travel"),
+        isDefault = false,
+        createdAt = Instant.parse("2026-08-01T00:00:00Z"),
+    )
+
+    private val sampleUnsupportedExpenseCategory = Category(
+        id = EntityId("cat-unsupported"),
+        ownerId = EntityId("user-1"),
+        workspaceId = null,
+        name = "Diğer Harcama",
+        type = TransactionType.EXPENSE,
+        color = CategoryColor("#9E9E9E"),
+        icon = CategoryIcon("help_outline"),
+        isDefault = false,
+        createdAt = Instant.parse("2026-08-01T00:00:00Z"),
+    )
+
+    @Test
+    fun merchantDecision_01_newFormDefaultsToAuto_andProducesNoMutation() = runTest {
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        advanceUntilIdle()
+
+        assertEquals(TransactionMerchantCreateDecision.Auto, viewModel.uiState.value.merchantDecision)
+        assertFalse(viewModel.uiState.value.isMerchantSelectionEligible)
+        assertTrue(viewModel.uiState.value.merchantSuggestedCandidates.isEmpty())
+        assertTrue(viewModel.uiState.value.merchantSearchableCandidates.isEmpty())
+        assertNull(viewModel.uiState.value.selectedMerchantCandidate)
+        assertNull(trxRepo.lastCreatedTransaction)
+        assertNull(trxRepo.lastMerchantDecision)
+    }
+
+    @Test
+    fun merchantDecision_02_groceries_suggestedExactlyEight_searchableExactlyEleven_inIndexOrder() = runTest {
+        catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory)
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+        viewModel.onTitleChanged("Migros market alisverisi")
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.isMerchantSelectionEligible)
+
+        // 1. Suggested listesi tam 8 adet ve indeks sırasıyla birebir eşleşir
+        val suggested = viewModel.uiState.value.merchantSuggestedCandidates
+        assertEquals(8, suggested.size)
+        val expectedSuggested = listOf("bim", "a101", "sok", "migros", "carrefoursa", "file_market", "tarim_kredi", "getir")
+        assertEquals(expectedSuggested, suggested.map { it.id.value })
+
+        // 2. Searchable listesi tam 21 adet ve indeks sırasıyla birebir eşleşir
+        val searchable = viewModel.uiState.value.merchantSearchableCandidates
+        assertEquals(21, searchable.size)
+        val expectedSearchable =
+            listOf(
+                "bim",
+                "a101",
+                "sok",
+                "migros",
+                "carrefoursa",
+                "file_market",
+                "tarim_kredi",
+                "getir",
+                "migros_sanal_market",
+                "macrocenter",
+                "yemeksepeti_market",
+                "bizim_toptan",
+                "metro_turkiye",
+                "istegelsin",
+                "onur_market",
+                "happy_center",
+                "hakmar",
+                "kim_market",
+                "cagri_market",
+                "ozkuruslar",
+                "sec_market",
+            )
+        assertEquals(expectedSearchable, searchable.map { it.id.value })
+
+        assertEquals(TransactionMerchantCreateDecision.Auto, viewModel.uiState.value.merchantDecision)
+
+        job.cancel()
+    }
+
+    @Test
+    fun merchantDecision_03_suggestedAndSearchable_areExplicitlySeparated_searchableOnlyNotInline() = runTest {
+        catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory)
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+        viewModel.onTitleChanged("Market")
+        advanceUntilIdle()
+
+        val suggested = viewModel.uiState.value.merchantSuggestedCandidates
+        val searchable = viewModel.uiState.value.merchantSearchableCandidates
+
+        val searchableOnly = searchable.filter { s -> suggested.none { it.id == s.id } }
+        val expectedSearchableOnly =
+            listOf(
+                "migros_sanal_market",
+                "macrocenter",
+                "yemeksepeti_market",
+                "bizim_toptan",
+                "metro_turkiye",
+                "istegelsin",
+                "onur_market",
+                "happy_center",
+                "hakmar",
+                "kim_market",
+                "cagri_market",
+                "ozkuruslar",
+                "sec_market",
+            )
+        assertEquals(expectedSearchableOnly, searchableOnly.map { it.id.value })
+        assertEquals(13, searchableOnly.size)
+
+        expectedSearchableOnly.forEach { id ->
+            assertTrue(suggested.none { it.id.value == id })
+            assertTrue(searchable.any { it.id.value == id })
+        }
+
+        job.cancel()
+    }
+
+    @Test
+    fun merchantDecision_04_searchableOnlyMerchant_canBeSelectedAsKnownMerchant_previewResolves() = runTest {
+        catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory)
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+        viewModel.onTitleChanged("Market")
+        advanceUntilIdle()
+
+        // Searchable-only merchant ("bizim_toptan") seçilebilir
+        viewModel.onKnownMerchantSelected(EntityId("bizim_toptan"))
+
+        assertEquals(
+            TransactionMerchantCreateDecision.KnownMerchant(EntityId("bizim_toptan")),
+            viewModel.uiState.value.merchantDecision,
+        )
+
+        val preview = viewModel.uiState.value.selectedMerchantCandidate
+        assertNotNull(preview)
+        assertEquals(EntityId("bizim_toptan"), preview?.id)
+        assertEquals("Bizim Toptan", preview?.displayName)
+
+        // Inline suggested listesinde bulunmaz
+        assertTrue(viewModel.uiState.value.merchantSuggestedCandidates.none { it.id == EntityId("bizim_toptan") })
+
+        // Submit tek AddTransaction çağrısıyla aynı stable ID'yi iletir
+        viewModel.onAmountChanged("250")
+        viewModel.submit()
+        advanceUntilIdle()
+
+        val lastDecision = trxRepo.lastMerchantDecision
+        assertEquals(TransactionMerchantCreateDecision.KnownMerchant(EntityId("bizim_toptan")), lastDecision)
+        assertNotNull(trxRepo.lastCreatedTransaction)
+
+        job.cancel()
+    }
+
+    @Test
+    fun merchantDecision_05_localizedCategoryNameDoesNotAffectCandidates_stableIconKeyUsed() = runTest {
+        val localizedCategory = sampleGroceriesCategory.copy(name = "Supermarket & Groceries")
+        catRepo.activeCategoriesFlow.value = listOf(localizedCategory)
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onCategoryChanged(localizedCategory.id)
+        viewModel.onTitleChanged("Supermarket alisverisi")
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.isMerchantSelectionEligible)
+        assertEquals(8, viewModel.uiState.value.merchantSuggestedCandidates.size)
+        assertEquals(21, viewModel.uiState.value.merchantSearchableCandidates.size)
+        assertTrue(viewModel.uiState.value.merchantSuggestedCandidates.any { it.id == EntityId("migros") })
+
+        job.cancel()
+    }
+
+    @Test
+    fun merchantDecision_06_knownMerchantSelection_setsStateWithStableId_noMutationProduced() = runTest {
+        catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory)
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+        viewModel.onTitleChanged("Market")
+        advanceUntilIdle()
+
+        viewModel.onKnownMerchantSelected(EntityId("migros"))
+
+        assertEquals(
+            TransactionMerchantCreateDecision.KnownMerchant(EntityId("migros")),
+            viewModel.uiState.value.merchantDecision,
+        )
+        assertEquals(EntityId("migros"), viewModel.uiState.value.selectedMerchantCandidate?.id)
+        assertNull(trxRepo.lastCreatedTransaction)
+        assertNull(trxRepo.lastMerchantDecision)
+
+        job.cancel()
+    }
+
+    @Test
+    fun merchantDecision_07_unknownMerchantId_rejectedFailClosed_noMutation() = runTest {
+        catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory)
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+        viewModel.onTitleChanged("Market")
+        advanceUntilIdle()
+
+        viewModel.onKnownMerchantSelected(EntityId("unknown_merchant_999"))
+
+        assertEquals(TransactionMerchantCreateDecision.Auto, viewModel.uiState.value.merchantDecision)
+        assertNull(trxRepo.lastCreatedTransaction)
+        assertNull(trxRepo.lastMerchantDecision)
+
+        job.cancel()
+    }
+
+    @Test
+    fun merchantDecision_08_differentCategoryGroupMerchantId_rejectedFailClosed() = runTest {
+        catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory, sampleRestaurantCategory)
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+        viewModel.onTitleChanged("Market")
+        advanceUntilIdle()
+
+        // yemeksepeti is a dining merchant, not in groceries searchable list
+        viewModel.onKnownMerchantSelected(EntityId("yemeksepeti"))
+
+        assertEquals(TransactionMerchantCreateDecision.Auto, viewModel.uiState.value.merchantDecision)
+        assertNull(trxRepo.lastCreatedTransaction)
+        assertNull(trxRepo.lastMerchantDecision)
+
+        job.cancel()
+    }
+
+    @Test
+    fun merchantDecision_09_useTransactionName_setsStateWhenEligible_noMutation() = runTest {
+        catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory)
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+        viewModel.onTitleChanged("Market")
+        advanceUntilIdle()
+
+        viewModel.onUseTransactionNameSelected()
+
+        assertEquals(TransactionMerchantCreateDecision.UseTransactionName, viewModel.uiState.value.merchantDecision)
+        assertNull(viewModel.uiState.value.selectedMerchantCandidate)
+        assertNull(trxRepo.lastCreatedTransaction)
+        assertNull(trxRepo.lastMerchantDecision)
+
+        job.cancel()
+    }
+
+    @Test
+    fun merchantDecision_10_categoryChangesIncompatibly_knownMerchantResetsToAuto() = runTest {
+        catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory, sampleRestaurantCategory)
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+        viewModel.onTitleChanged("Market")
+        advanceUntilIdle()
+
+        viewModel.onKnownMerchantSelected(EntityId("migros"))
+        assertEquals(
+            TransactionMerchantCreateDecision.KnownMerchant(EntityId("migros")),
+            viewModel.uiState.value.merchantDecision,
+        )
+
+        viewModel.onCategoryChanged(sampleRestaurantCategory.id)
+        advanceUntilIdle()
+
+        assertEquals(TransactionMerchantCreateDecision.Auto, viewModel.uiState.value.merchantDecision)
+        assertTrue(viewModel.uiState.value.merchantSuggestedCandidates.any { it.id == EntityId("yemeksepeti") })
+
+        job.cancel()
+    }
+
+    @Test
+    fun merchantDecision_11_categoryChangesCompatibly_knownMerchantRetained() = runTest {
+        catRepo.activeCategoriesFlow.value = listOf(sampleTransportationCategory, sampleTravelCategory)
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onCategoryChanged(sampleTransportationCategory.id)
+        viewModel.onTitleChanged("Ucak bileti")
+        advanceUntilIdle()
+
+        viewModel.onKnownMerchantSelected(EntityId("thy"))
+        assertEquals(
+            TransactionMerchantCreateDecision.KnownMerchant(EntityId("thy")),
+            viewModel.uiState.value.merchantDecision,
+        )
+
+        // THY hem transportation hem travel searchable listesinde yer aldığı için karar korunur
+        viewModel.onCategoryChanged(sampleTravelCategory.id)
+        advanceUntilIdle()
+
+        assertEquals(
+            TransactionMerchantCreateDecision.KnownMerchant(EntityId("thy")),
+            viewModel.uiState.value.merchantDecision,
+        )
+        assertEquals(EntityId("thy"), viewModel.uiState.value.selectedMerchantCandidate?.id)
+
+        job.cancel()
+    }
+
+    @Test
+    fun merchantDecision_12_useTransactionName_retainedAcrossCompatibleExpenseCategories() = runTest {
+        catRepo.activeCategoriesFlow.value = listOf(
+            sampleGroceriesCategory,
+            sampleRestaurantCategory,
+            sampleUnsupportedExpenseCategory,
+        )
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+        viewModel.onTitleChanged("Market")
+        advanceUntilIdle()
+
+        viewModel.onUseTransactionNameSelected()
+        assertEquals(TransactionMerchantCreateDecision.UseTransactionName, viewModel.uiState.value.merchantDecision)
+
+        // Yeme-İçme kategorisine geçişte UseTransactionName korunur
+        viewModel.onCategoryChanged(sampleRestaurantCategory.id)
+        advanceUntilIdle()
+        assertEquals(TransactionMerchantCreateDecision.UseTransactionName, viewModel.uiState.value.merchantDecision)
+
+        // Boş profilli kategoriye geçişte de UseTransactionName korunur
+        viewModel.onCategoryChanged(sampleUnsupportedExpenseCategory.id)
+        advanceUntilIdle()
+        assertEquals(TransactionMerchantCreateDecision.UseTransactionName, viewModel.uiState.value.merchantDecision)
+
+        job.cancel()
+    }
+
+    @Test
+    fun merchantDecision_13_emptyProfileExpenseCategory_isEligible_listsEmpty_useTransactionNameSelectable() = runTest {
+        catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory, sampleUnsupportedExpenseCategory)
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+        viewModel.onTitleChanged("Market")
+        advanceUntilIdle()
+
+        viewModel.onKnownMerchantSelected(EntityId("migros"))
+
+        // Boş profilli kategoriye geçiş
+        viewModel.onCategoryChanged(sampleUnsupportedExpenseCategory.id)
+        advanceUntilIdle()
+
+        // Form purchase ve personal expense olduğu için eligible kalır
+        assertTrue(viewModel.uiState.value.isMerchantSelectionEligible)
+        assertTrue(viewModel.uiState.value.merchantSuggestedCandidates.isEmpty())
+        assertTrue(viewModel.uiState.value.merchantSearchableCandidates.isEmpty())
+        assertEquals(TransactionMerchantCreateDecision.Auto, viewModel.uiState.value.merchantDecision)
+
+        // Boş profilli kategoride de UseTransactionName seçilebilir
+        viewModel.onUseTransactionNameSelected()
+        assertEquals(TransactionMerchantCreateDecision.UseTransactionName, viewModel.uiState.value.merchantDecision)
+
+        job.cancel()
+    }
+
+    @Test
+    fun merchantDecision_14_switchTypeToIncome_clearsCandidates_resetsDecisionToAuto() = runTest {
+        catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory, sampleActiveIncomeCategory)
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+        viewModel.onTitleChanged("Market")
+        advanceUntilIdle()
+
+        viewModel.onKnownMerchantSelected(EntityId("migros"))
+
+        viewModel.onTypeChanged(TransactionType.INCOME)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isMerchantSelectionEligible)
+        assertTrue(viewModel.uiState.value.merchantSuggestedCandidates.isEmpty())
+        assertTrue(viewModel.uiState.value.merchantSearchableCandidates.isEmpty())
+        assertEquals(TransactionMerchantCreateDecision.Auto, viewModel.uiState.value.merchantDecision)
+
+        job.cancel()
+    }
+
+    @Test
+    fun merchantDecision_15_workspaceActive_clearsCandidates_resetsDecisionToAuto() = runTest {
+        catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory)
+        val viewModel = createViewModel(TransactionFormRoute(null))
+        val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+        viewModel.onTitleChanged("Market")
+        advanceUntilIdle()
+
+        viewModel.onKnownMerchantSelected(EntityId("migros"))
+        assertEquals(
+            TransactionMerchantCreateDecision.KnownMerchant(EntityId("migros")),
+            viewModel.uiState.value.merchantDecision,
+        )
+
+        workspaceRepo.activeWorkspaceFlow.value = Workspace(
+            id = EntityId("ws-team"),
+            name = "Team Workspace",
+            currency = Currency.TRY,
+            ownerId = EntityId("user-1"),
+            createdAt = fixedInstant,
+        )
+        advanceUntilIdle()
+
+        val wsState = viewModel.uiState.value
+        assertFalse(wsState.isMerchantSelectionEligible)
+        assertTrue(wsState.merchantSuggestedCandidates.isEmpty())
+        assertTrue(wsState.merchantSearchableCandidates.isEmpty())
+        assertEquals(TransactionMerchantCreateDecision.Auto, wsState.merchantDecision)
+
+        job.cancel()
+    }
+
+    @Test
+    fun merchantDecision_16_editMode_hasNoCandidatesAndNoExplicitDecision() =
+        runTest {
+            val existingTrx =
+                Transaction(
+                    id = EntityId("tx-edit-1"),
+                    ownerId = EntityId("user-1"),
+                    workspaceId = null,
+                    amount = Money(25_000L, Currency.TRY),
+                    type = TransactionType.EXPENSE,
+                    categoryId = sampleGroceriesCategory.id,
+                    description = "Migros Market",
+                    paymentMethod = PaymentMethod.CREDIT_CARD,
+                    transactionDate = fixedToday,
+                    receiptPath = null,
+                    installment = null,
+                    createdAt = fixedInstant,
+                )
+            trxRepo.transactionsFlow.value = listOf(existingTrx)
+            catRepo.historyCategoriesFlow.value = listOf(sampleGroceriesCategory)
+
+            val viewModel = createViewModel(TransactionFormRoute(existingTrx.id.value))
+            val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertTrue(state.isEditMode)
+            assertFalse(state.isMerchantSelectionEligible)
+            assertTrue(state.merchantSuggestedCandidates.isEmpty())
+            assertTrue(state.merchantSearchableCandidates.isEmpty())
+            assertEquals(TransactionMerchantCreateDecision.Auto, state.merchantDecision)
+
+            viewModel.onKnownMerchantSelected(EntityId("migros"))
+            assertEquals(TransactionMerchantCreateDecision.Auto, viewModel.uiState.value.merchantDecision)
+
+            job.cancel()
+        }
+
+    @Test
+    fun merchantDecision_17_installmentEnabled_clearsExplicitDecision_installmentUseCaseHasNoMerchantDecision() =
+        runTest {
+            catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory)
+            val viewModel = createViewModel(TransactionFormRoute(null))
+            val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+            advanceUntilIdle()
+
+            viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+            viewModel.onTitleChanged("Elektronik Alisverisi")
+            viewModel.onPaymentMethodChanged(PaymentMethod.CREDIT_CARD)
+            advanceUntilIdle()
+
+            viewModel.onKnownMerchantSelected(EntityId("migros"))
+            assertEquals(
+                TransactionMerchantCreateDecision.KnownMerchant(EntityId("migros")),
+                viewModel.uiState.value.merchantDecision,
+            )
+
+            viewModel.onInstallmentToggle(true)
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertFalse(state.isMerchantSelectionEligible)
+            assertTrue(state.merchantSuggestedCandidates.isEmpty())
+            assertTrue(state.merchantSearchableCandidates.isEmpty())
+            assertEquals(TransactionMerchantCreateDecision.Auto, state.merchantDecision)
+
+            viewModel.onAmountChanged("3000")
+            viewModel.onInstallmentCountChanged("3")
+            viewModel.submit()
+            advanceUntilIdle()
+
+            assertNotNull(trxRepo.lastCreatedInstallments)
+            assertNull(trxRepo.lastMerchantDecision)
+
+            job.cancel()
+        }
+
+    @Test
+    fun merchantDecision_18_titleChangesToNonPurchase_clearsDecision() =
+        runTest {
+            catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory)
+            val viewModel = createViewModel(TransactionFormRoute(null))
+            val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+            advanceUntilIdle()
+
+            viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+            viewModel.onTitleChanged("Market sepeti")
+            advanceUntilIdle()
+
+            viewModel.onKnownMerchantSelected(EntityId("migros"))
+
+            // FAST / transfer sınıflandırması non-purchase olduğundan kararı Auto'ya çeker
+            viewModel.onTitleChanged("Ahmet FAST gonderimi")
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertFalse(state.isMerchantSelectionEligible)
+            assertTrue(state.merchantSuggestedCandidates.isEmpty())
+            assertTrue(state.merchantSearchableCandidates.isEmpty())
+            assertEquals(TransactionMerchantCreateDecision.Auto, state.merchantDecision)
+
+            job.cancel()
+        }
+
+    @Test
+    fun merchantDecision_19_receiptOcrDraftProducesNonPurchaseTitle_clearsDecision() =
+        runTest {
+            catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory)
+            val viewModel = createViewModel(TransactionFormRoute(null))
+            val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+            advanceUntilIdle()
+
+            viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+            viewModel.onTitleChanged("Market sepeti")
+            advanceUntilIdle()
+
+            viewModel.onKnownMerchantSelected(EntityId("migros"))
+
+            viewModel.applyReceiptOcrDraft(
+                ReceiptOcrDraft(
+                    merchantName = OcrCandidate("Maas Odemesi", OcrCandidateConfidence.HIGH),
+                    total = OcrCandidate(Money(500000L, Currency.TRY), OcrCandidateConfidence.HIGH),
+                    transactionDate = OcrCandidate(fixedToday, OcrCandidateConfidence.HIGH),
+                ),
+            )
+            advanceUntilIdle()
+
+            assertFalse(viewModel.uiState.value.isMerchantSelectionEligible)
+            assertEquals(TransactionMerchantCreateDecision.Auto, viewModel.uiState.value.merchantDecision)
+
+            job.cancel()
+        }
+
+    @Test
+    fun merchantDecision_20_titleChangesWithinPurchase_retainsCompatibleSelection() =
+        runTest {
+            catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory)
+            val viewModel = createViewModel(TransactionFormRoute(null))
+            val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+            advanceUntilIdle()
+
+            viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+            viewModel.onTitleChanged("Migros market")
+            advanceUntilIdle()
+
+            viewModel.onKnownMerchantSelected(EntityId("migros"))
+
+            viewModel.onTitleChanged("Haftalik market sepeti")
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.isMerchantSelectionEligible)
+            assertEquals(
+                TransactionMerchantCreateDecision.KnownMerchant(EntityId("migros")),
+                viewModel.uiState.value.merchantDecision,
+            )
+
+            job.cancel()
+        }
+
+    @Test
+    fun merchantDecision_21_submitSingleCreateAuto_passesAutoToAddTransactionUseCase() =
+        runTest {
+            catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory)
+            val viewModel = createViewModel(TransactionFormRoute(null))
+            val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+            advanceUntilIdle()
+
+            viewModel.onAmountChanged("150")
+            viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+            viewModel.onTitleChanged("Sut ve ekmek")
+            advanceUntilIdle()
+
+            viewModel.submit()
+            advanceUntilIdle()
+
+            assertNotNull(trxRepo.lastCreatedTransaction)
+            assertEquals(TransactionMerchantCreateDecision.Auto, trxRepo.lastMerchantDecision)
+
+            job.cancel()
+        }
+
+    @Test
+    fun merchantDecision_22_submitSingleCreateKnownMerchant_passesSameStableIdInSingleCall() =
+        runTest {
+            catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory)
+            val viewModel = createViewModel(TransactionFormRoute(null))
+            val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+            advanceUntilIdle()
+
+            viewModel.onAmountChanged("250")
+            viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+            viewModel.onTitleChanged("Supermarket")
+            advanceUntilIdle()
+
+            viewModel.onKnownMerchantSelected(EntityId("migros"))
+            viewModel.submit()
+            advanceUntilIdle()
+
+            assertNotNull(trxRepo.lastCreatedTransaction)
+            assertEquals(
+                TransactionMerchantCreateDecision.KnownMerchant(EntityId("migros")),
+                trxRepo.lastMerchantDecision,
+            )
+
+            job.cancel()
+        }
+
+    @Test
+    fun merchantDecision_23_submitSearchableOnlyMerchant_passesStableIdInSingleCall() =
+        runTest {
+            catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory)
+            val viewModel = createViewModel(TransactionFormRoute(null))
+            val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+            advanceUntilIdle()
+
+            viewModel.onAmountChanged("320")
+            viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+            viewModel.onTitleChanged("Online Market")
+            advanceUntilIdle()
+
+            viewModel.onKnownMerchantSelected(EntityId("migros_sanal_market"))
+            viewModel.submit()
+            advanceUntilIdle()
+
+            assertNotNull(trxRepo.lastCreatedTransaction)
+            assertEquals(
+                TransactionMerchantCreateDecision.KnownMerchant(EntityId("migros_sanal_market")),
+                trxRepo.lastMerchantDecision,
+            )
+
+            job.cancel()
+        }
+
+    @Test
+    fun merchantDecision_24_submitSingleCreateUseTransactionName_passesDecisionInSingleCall() =
+        runTest {
+            catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory)
+            val viewModel = createViewModel(TransactionFormRoute(null))
+            val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+            advanceUntilIdle()
+
+            viewModel.onAmountChanged("75")
+            viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+            viewModel.onTitleChanged("Mahalle bakkali")
+            advanceUntilIdle()
+
+            viewModel.onUseTransactionNameSelected()
+            viewModel.submit()
+            advanceUntilIdle()
+
+            assertNotNull(trxRepo.lastCreatedTransaction)
+            assertEquals(TransactionMerchantCreateDecision.UseTransactionName, trxRepo.lastMerchantDecision)
+
+            job.cancel()
+        }
+
+    @Test
+    fun merchantDecision_25_editSubmit_usesUpdateBranch_doesNotCarryMerchantCreateDecision() =
+        runTest {
+            val existingTrx =
+                Transaction(
+                    id = EntityId("tx-edit-2"),
+                    ownerId = EntityId("user-1"),
+                    workspaceId = null,
+                    amount = Money(10_000L, Currency.TRY),
+                    type = TransactionType.EXPENSE,
+                    categoryId = sampleGroceriesCategory.id,
+                    description = "Eski Alisveris",
+                    paymentMethod = PaymentMethod.CASH,
+                    transactionDate = fixedToday,
+                    receiptPath = null,
+                    installment = null,
+                    createdAt = fixedInstant,
+                )
+            trxRepo.transactionsFlow.value = listOf(existingTrx)
+            catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory)
+            catRepo.historyCategoriesFlow.value = listOf(sampleGroceriesCategory)
+
+            val viewModel = createViewModel(TransactionFormRoute(existingTrx.id.value))
+            val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+            advanceUntilIdle()
+
+            viewModel.onTitleChanged("Guncellenmis Alisveris")
+            viewModel.submit()
+            advanceUntilIdle()
+
+            assertNotNull(trxRepo.lastUpdatedTransaction)
+            assertEquals("Guncellenmis Alisveris", trxRepo.lastUpdatedTransaction?.description)
+            assertNull(trxRepo.lastMerchantDecision)
+
+            job.cancel()
+        }
+
+    @Test
+    fun merchantDecision_26_workspaceOrIncomeOrInstallment_cannotSubmitWithExplicitDecision() =
+        runTest {
+            catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory)
+            val viewModel = createViewModel(TransactionFormRoute(null))
+            val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+            advanceUntilIdle()
+
+            viewModel.onAmountChanged("100")
+            viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+            viewModel.onTitleChanged("Market")
+            advanceUntilIdle()
+
+            viewModel.onKnownMerchantSelected(EntityId("migros"))
+            assertEquals(
+                TransactionMerchantCreateDecision.KnownMerchant(EntityId("migros")),
+                viewModel.uiState.value.merchantDecision,
+            )
+
+            viewModel.onTypeChanged(TransactionType.INCOME)
+            advanceUntilIdle()
+            assertEquals(TransactionMerchantCreateDecision.Auto, viewModel.uiState.value.merchantDecision)
+
+            viewModel.onTypeChanged(TransactionType.EXPENSE)
+            viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+            viewModel.onTitleChanged("Market")
+            viewModel.onKnownMerchantSelected(EntityId("migros"))
+            advanceUntilIdle()
+
+            viewModel.onPaymentMethodChanged(PaymentMethod.CREDIT_CARD)
+            viewModel.onInstallmentToggle(true)
+            advanceUntilIdle()
+            assertEquals(TransactionMerchantCreateDecision.Auto, viewModel.uiState.value.merchantDecision)
+
+            job.cancel()
+        }
+
+    @Test
+    fun merchantDecision_27_doubleSubmitGuard_allowsOnlySingleMutationAfterWiring() =
+        runTest {
+            catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory)
+            val viewModel = createViewModel(TransactionFormRoute(null))
+            val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+            advanceUntilIdle()
+
+            viewModel.onAmountChanged("100")
+            viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+            viewModel.onTitleChanged("Market")
+            advanceUntilIdle()
+
+            viewModel.onKnownMerchantSelected(EntityId("migros"))
+
+            viewModel.submit()
+            viewModel.submit()
+            advanceUntilIdle()
+
+            assertEquals(1, trxRepo.transactionsFlow.value.size)
+            assertEquals(
+                TransactionMerchantCreateDecision.KnownMerchant(EntityId("migros")),
+                trxRepo.lastMerchantDecision,
+            )
+
+            job.cancel()
+        }
+
+    @Test
+    fun merchantDecision_28_formWithMerchantSelectionMaintainsUnsavedChangesState() =
+        runTest {
+            catRepo.activeCategoriesFlow.value = listOf(sampleGroceriesCategory)
+            val viewModel = createViewModel(TransactionFormRoute(null))
+            val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+            advanceUntilIdle()
+
+            assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+
+            viewModel.onAmountChanged("50")
+            viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+            viewModel.onTitleChanged("Market")
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.hasUnsavedChanges)
+
+            viewModel.onKnownMerchantSelected(EntityId("migros"))
+            assertTrue(viewModel.uiState.value.hasUnsavedChanges)
+
+            viewModel.onClearMerchantDecision()
+            assertEquals(TransactionMerchantCreateDecision.Auto, viewModel.uiState.value.merchantDecision)
+
+            job.cancel()
+        }
+
+    @Test
+    fun merchantDecision_29_transportationCategoryWithTravelMerchantThy_submitsWithSingleAddTransactionCall() =
+        runTest {
+            catRepo.activeCategoriesFlow.value = listOf(sampleTransportationCategory)
+            val viewModel = createViewModel(TransactionFormRoute(null))
+            val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+            advanceUntilIdle()
+
+            viewModel.onAmountChanged("1500")
+            viewModel.onCategoryChanged(sampleTransportationCategory.id)
+            viewModel.onTitleChanged("Ucak bileti alimi")
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.isMerchantSelectionEligible)
+            assertTrue(viewModel.uiState.value.merchantSearchableCandidates.any { it.id == EntityId("thy") })
+
+            viewModel.onKnownMerchantSelected(EntityId("thy"))
+            viewModel.submit()
+            advanceUntilIdle()
+
+            assertNotNull(trxRepo.lastCreatedTransaction)
+            assertEquals(
+                TransactionMerchantCreateDecision.KnownMerchant(EntityId("thy")),
+                trxRepo.lastMerchantDecision,
+            )
+
+            job.cancel()
+        }
+
+    @Test
+    fun merchantDecision_30_foodDining_candidatesAndSearchableOnlySelection_submitsSingleCall() =
+        runTest {
+            catRepo.activeCategoriesFlow.value = listOf(sampleRestaurantCategory)
+            val viewModel = createViewModel(TransactionFormRoute(null))
+            val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+            advanceUntilIdle()
+
+            viewModel.onAmountChanged("350")
+            viewModel.onCategoryChanged(sampleRestaurantCategory.id)
+            viewModel.onTitleChanged("Aksam yemegi")
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertTrue(state.isMerchantSelectionEligible)
+
+            // 8 suggested candidates
+            assertEquals(8, state.merchantSuggestedCandidates.size)
+            val expectedSuggested =
+                listOf(
+                    "yemeksepeti",
+                    "trendyol_yemek",
+                    "getiryemek",
+                    "migros_yemek",
+                    "starbucks",
+                    "mcdonalds",
+                    "burger_king",
+                    "kahve_dunyasi",
+                )
+            assertEquals(expectedSuggested, state.merchantSuggestedCandidates.map { it.id.value })
+
+            // 20 searchable candidates
+            assertEquals(20, state.merchantSearchableCandidates.size)
+            assertTrue(state.merchantSearchableCandidates.any { it.id == EntityId("kofteci_yusuf") })
+
+            // kofteci_yusuf is searchable-only (not in suggested)
+            assertTrue(state.merchantSuggestedCandidates.none { it.id == EntityId("kofteci_yusuf") })
+
+            // Unknown merchant rejected fail-closed
+            viewModel.onKnownMerchantSelected(EntityId("unknown_merchant_xyz"))
+            assertEquals(TransactionMerchantCreateDecision.Auto, viewModel.uiState.value.merchantDecision)
+
+            // Select searchable-only merchant kofteci_yusuf
+            viewModel.onKnownMerchantSelected(EntityId("kofteci_yusuf"))
+            assertEquals(
+                TransactionMerchantCreateDecision.KnownMerchant(EntityId("kofteci_yusuf")),
+                viewModel.uiState.value.merchantDecision,
+            )
+            assertEquals(EntityId("kofteci_yusuf"), viewModel.uiState.value.selectedMerchantCandidate?.id)
+            assertEquals("Köfteci Yusuf", viewModel.uiState.value.selectedMerchantCandidate?.displayName)
+
+            // Single submit call sends KnownMerchant(kofteci_yusuf)
+            viewModel.submit()
+            advanceUntilIdle()
+
+            assertNotNull(trxRepo.lastCreatedTransaction)
+            assertEquals(
+                TransactionMerchantCreateDecision.KnownMerchant(EntityId("kofteci_yusuf")),
+                trxRepo.lastMerchantDecision,
+            )
+
+            job.cancel()
+        }
+
+    @Test
+    fun merchantDecision_31_shopping_candidatesAndSearchableOnlySelection_submitsSingleCall() =
+        runTest {
+            catRepo.activeCategoriesFlow.value = listOf(sampleShoppingCategory)
+            val viewModel = createViewModel(TransactionFormRoute(null))
+            val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+            advanceUntilIdle()
+
+            viewModel.onAmountChanged("750")
+            viewModel.onCategoryChanged(sampleShoppingCategory.id)
+            viewModel.onTitleChanged("Bilgisayar parcalari")
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertTrue(state.isMerchantSelectionEligible)
+
+            // 8 suggested candidates
+            assertEquals(8, state.merchantSuggestedCandidates.size)
+            val expectedSuggested =
+                listOf(
+                    "trendyol",
+                    "hepsiburada",
+                    "amazon",
+                    "n11",
+                    "ciceksepeti",
+                    "boyner",
+                    "lc_waikiki",
+                    "defacto",
+                )
+            assertEquals(expectedSuggested, state.merchantSuggestedCandidates.map { it.id.value })
+
+            // 26 searchable candidates
+            assertEquals(26, state.merchantSearchableCandidates.size)
+            assertTrue(state.merchantSearchableCandidates.any { it.id == EntityId("vatan_bilgisayar") })
+
+            // vatan_bilgisayar is searchable-only (not in suggested)
+            assertTrue(state.merchantSuggestedCandidates.none { it.id == EntityId("vatan_bilgisayar") })
+
+            // Unknown merchant rejected fail-closed
+            viewModel.onKnownMerchantSelected(EntityId("unknown_merchant_xyz"))
+            assertEquals(TransactionMerchantCreateDecision.Auto, viewModel.uiState.value.merchantDecision)
+
+            // Select searchable-only merchant vatan_bilgisayar
+            viewModel.onKnownMerchantSelected(EntityId("vatan_bilgisayar"))
+            assertEquals(
+                TransactionMerchantCreateDecision.KnownMerchant(EntityId("vatan_bilgisayar")),
+                viewModel.uiState.value.merchantDecision,
+            )
+            assertEquals(EntityId("vatan_bilgisayar"), viewModel.uiState.value.selectedMerchantCandidate?.id)
+            assertEquals("Vatan Bilgisayar", viewModel.uiState.value.selectedMerchantCandidate?.displayName)
+
+            // Single submit call sends KnownMerchant(vatan_bilgisayar)
+            viewModel.submit()
+            advanceUntilIdle()
+
+            assertNotNull(trxRepo.lastCreatedTransaction)
+            assertEquals(
+                TransactionMerchantCreateDecision.KnownMerchant(EntityId("vatan_bilgisayar")),
+                trxRepo.lastMerchantDecision,
+            )
+
+            job.cancel()
+        }
+
+    @Test
+    fun merchantDecision_32_foodDining_genericTitleYemek_knownMerchantYemeksepeti_submitsSuccessfullyWithoutGenericError() =
+        runTest {
+            catRepo.activeCategoriesFlow.value = listOf(sampleRestaurantCategory)
+            val viewModel = createViewModel(TransactionFormRoute(null))
+            val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+            val events = mutableListOf<TransactionFormEvent>()
+            val eventJob = launch(UnconfinedTestDispatcher()) { viewModel.events.collect { events.add(it) } }
+            advanceUntilIdle()
+
+            viewModel.onCategoryChanged(sampleRestaurantCategory.id)
+            viewModel.onAmountChanged("150")
+            viewModel.onTitleChanged("Yemek")
+            advanceUntilIdle()
+
+            // Select KnownMerchant("yemeksepeti")
+            viewModel.onKnownMerchantSelected(EntityId("yemeksepeti"))
+            advanceUntilIdle()
+
+            assertEquals(
+                TransactionMerchantCreateDecision.KnownMerchant(EntityId("yemeksepeti")),
+                viewModel.uiState.value.merchantDecision,
+            )
+            val selectedCandidate = viewModel.uiState.value.selectedMerchantCandidate
+            assertEquals(EntityId("yemeksepeti"), selectedCandidate?.id)
+            assertEquals("Yemeksepeti", selectedCandidate?.displayName)
+
+            // Double submit protection
+            viewModel.submit()
+            viewModel.submit()
+            advanceUntilIdle()
+
+            // Verify repository received call with KnownMerchant(yemeksepeti)
+            assertNotNull(trxRepo.lastCreatedTransaction)
+            assertEquals("Yemek", trxRepo.lastCreatedTransaction?.description)
+            assertEquals(
+                TransactionMerchantCreateDecision.KnownMerchant(EntityId("yemeksepeti")),
+                trxRepo.lastMerchantDecision,
+            )
+
+            // Verify TransactionCreated event emitted, NOT generic error
+            assertEquals(1, events.size)
+            assertTrue(events[0] is TransactionFormEvent.TransactionCreated)
+            assertEquals(
+                trxRepo.lastCreatedTransaction?.id,
+                (events[0] as TransactionFormEvent.TransactionCreated).transactionId,
+            )
+            assertNull(viewModel.uiState.value.generalMessage)
+
+            job.cancel()
+            eventJob.cancel()
+        }
 }

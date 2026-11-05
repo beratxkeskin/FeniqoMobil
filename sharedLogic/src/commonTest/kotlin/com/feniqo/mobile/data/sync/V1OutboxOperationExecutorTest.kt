@@ -21,41 +21,44 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
 class V1OutboxOperationExecutorTest {
-
     @Test
-    fun applied_category_updates_room_with_server_version() = runTest {
-        val dao = RecordingDao(category = localCategory())
-        val writer = RecordingWriter(
-            categoryResult = ConditionalRemoteWriteResult.Applied(remoteCategory(version = 3)),
-        )
+    fun applied_category_updates_room_with_server_version() =
+        runTest {
+            val dao = RecordingDao(category = localCategory())
+            val writer =
+                RecordingWriter(
+                    categoryResult = ConditionalRemoteWriteResult.Applied(remoteCategory(version = 3)),
+                )
 
-        V1OutboxOperationExecutor(writer, dao) { RECEIVED_AT }.execute(operation())
-
-        assertEquals(RemoteWriteOperation.UPDATE, writer.operation)
-        assertEquals(2L, writer.baseVersion)
-        assertEquals("SYNCED", dao.category?.sync?.syncStatus)
-        assertEquals(3L, dao.category?.sync?.version)
-        assertEquals(3L, dao.category?.sync?.baseVersion)
-    }
-
-    @Test
-    fun conflict_preserves_both_snapshots_and_marks_local_row() = runTest {
-        val dao = RecordingDao(category = localCategory())
-        val writer = RecordingWriter(
-            categoryResult = ConditionalRemoteWriteResult.Conflict(remoteCategory(version = 4)),
-        )
-
-        assertFailsWith<OutboxConflictException> {
             V1OutboxOperationExecutor(writer, dao) { RECEIVED_AT }.execute(operation())
+
+            assertEquals(RemoteWriteOperation.UPDATE, writer.operation)
+            assertEquals(2L, writer.baseVersion)
+            assertEquals("SYNCED", dao.category?.sync?.syncStatus)
+            assertEquals(3L, dao.category?.sync?.version)
+            assertEquals(3L, dao.category?.sync?.baseVersion)
         }
 
-        val conflict = assertNotNull(dao.conflict)
-        assertEquals(2L, conflict.localVersion)
-        assertEquals(4L, conflict.remoteVersion)
-        assertEquals("CONFLICT", dao.category?.sync?.syncStatus)
-        assertEquals(true, conflict.localPayloadJson.contains("Yerel kategori"))
-        assertEquals(true, conflict.remotePayloadJson.contains("Uzak kategori"))
-    }
+    @Test
+    fun conflict_preserves_both_snapshots_and_marks_local_row() =
+        runTest {
+            val dao = RecordingDao(category = localCategory())
+            val writer =
+                RecordingWriter(
+                    categoryResult = ConditionalRemoteWriteResult.Conflict(remoteCategory(version = 4)),
+                )
+
+            assertFailsWith<OutboxConflictException> {
+                V1OutboxOperationExecutor(writer, dao) { RECEIVED_AT }.execute(operation())
+            }
+
+            val conflict = assertNotNull(dao.conflict)
+            assertEquals(2L, conflict.localVersion)
+            assertEquals(4L, conflict.remoteVersion)
+            assertEquals("CONFLICT", dao.category?.sync?.syncStatus)
+            assertEquals(true, conflict.localPayloadJson.contains("Yerel kategori"))
+            assertEquals(true, conflict.remotePayloadJson.contains("Uzak kategori"))
+        }
 
     private class RecordingWriter(
         private val categoryResult: ConditionalRemoteWriteResult<CategoryDto>,
@@ -92,73 +95,291 @@ class V1OutboxOperationExecutorTest {
         var conflict: SyncConflictEntity? = null
 
         override suspend fun getProfileRow(id: String): UserProfileEntity? = null
+
         override suspend fun getCategoryRow(id: String): CategoryEntity? = category?.takeIf { it.id == id }
+
         override suspend fun getTransactionRow(id: String): TransactionEntity? = null
+
         override suspend fun getRecurringTransactionRow(id: String): com.feniqo.mobile.data.local.entity.RecurringTransactionEntity? = null
+
         override suspend fun getSubscriptionRow(id: String): com.feniqo.mobile.data.local.entity.SubscriptionEntity? = null
+
         override suspend fun getGoalRow(id: String): com.feniqo.mobile.data.local.entity.GoalEntity? = null
+
         override suspend fun getGoalContributionRow(id: String): com.feniqo.mobile.data.local.entity.GoalContributionEntity? = null
+
         override suspend fun getDebtRow(id: String): com.feniqo.mobile.data.local.entity.DebtEntity? = null
+
         override suspend fun getDebtPaymentRow(id: String): com.feniqo.mobile.data.local.entity.DebtPaymentEntity? = null
+
         override suspend fun getWorkspaceRow(id: String): com.feniqo.mobile.data.local.entity.WorkspaceEntity? = null
-        override suspend fun getWorkspaceMemberRow(workspaceId: String, userId: String): com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity? = null
-        override suspend fun getWorkspaceMemberRows(workspaceId: String): List<com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity> = emptyList()
+
+        override suspend fun getWorkspaceMemberRow(
+            workspaceId: String,
+            userId: String,
+        ): com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity? = null
+
+        override suspend fun getWorkspaceMemberRows(workspaceId: String): List<com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity> =
+            emptyList()
+
         override suspend fun getAllKnownLiveWorkspaceIds(): List<String> = emptyList()
-        override suspend fun getFirstOutboxOperationId(syncScopeKey: String, entityTypeCode: String, entityId: String): String? = "operation-1"
-        override suspend fun countOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 1
+
+        override suspend fun getFirstOutboxOperationId(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+        ): String? = "operation-1"
+
+        override suspend fun countOutboxRows(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+        ): Int = 1
+
         override suspend fun upsertProfileRow(entity: UserProfileEntity) = Unit
+
         override suspend fun upsertWorkspaceRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceEntity>) = Unit
+
         override suspend fun upsertWorkspaceMemberRows(entities: List<com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity>) = Unit
-        override suspend fun clearActiveWorkspaceIfMatches(profileId: String, workspaceId: String): Int = 0
+
+        override suspend fun clearActiveWorkspaceIfMatches(
+            profileId: String,
+            workspaceId: String,
+        ): Int = 0
+
         override suspend fun upsertCategoryRows(entities: List<CategoryEntity>) {
             category = entities.single()
         }
+
         override suspend fun upsertTransactionRows(entities: List<TransactionEntity>) = Unit
-        override suspend fun upsertRecurringTransactionRows(entities: List<com.feniqo.mobile.data.local.entity.RecurringTransactionEntity>) = Unit
+
+        override suspend fun upsertRecurringTransactionRows(
+            entities: List<com.feniqo.mobile.data.local.entity.RecurringTransactionEntity>,
+        ) = Unit
+
         override suspend fun upsertSubscriptionRows(entities: List<com.feniqo.mobile.data.local.entity.SubscriptionEntity>) = Unit
+
         override suspend fun upsertGoalRows(entities: List<com.feniqo.mobile.data.local.entity.GoalEntity>) = Unit
+
         override suspend fun upsertGoalContributionRows(entities: List<com.feniqo.mobile.data.local.entity.GoalContributionEntity>) = Unit
+
         override suspend fun upsertDebtRows(entities: List<com.feniqo.mobile.data.local.entity.DebtEntity>) = Unit
+
         override suspend fun upsertDebtPaymentRows(entities: List<com.feniqo.mobile.data.local.entity.DebtPaymentEntity>) = Unit
+
         override suspend fun upsertConflictRow(conflict: SyncConflictEntity) {
             this.conflict = conflict
         }
+
         override suspend fun upsertCursorRows(cursors: List<SyncCursorEntity>) = Unit
-        override suspend fun deleteConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): Int {
+
+        override suspend fun deleteConflictRow(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+        ): Int {
             conflict = null
             return 1
         }
-        override suspend fun markProfileConflict(entityId: String, error: String): Int = 0
-        override suspend fun markCategoryConflict(entityId: String, error: String): Int {
+
+        override suspend fun markProfileConflict(
+            entityId: String,
+            error: String,
+        ): Int = 0
+
+        override suspend fun markCategoryConflict(
+            entityId: String,
+            error: String,
+        ): Int {
             category = category?.copy(sync = category!!.sync.copy(syncStatus = "CONFLICT", lastSyncError = error))
             return 1
         }
-        override suspend fun markTransactionConflict(entityId: String, error: String): Int = 0
-        override suspend fun markRecurringTransactionConflict(entityId: String, error: String): Int = 0
-        override suspend fun markSubscriptionConflict(entityId: String, error: String): Int = 0
-        override suspend fun markGoalConflict(entityId: String, error: String): Int = 0
-        override suspend fun markGoalContributionConflict(entityId: String, error: String): Int = 0
-        override suspend fun markDebtConflict(entityId: String, error: String): Int = 0
-        override suspend fun markDebtPaymentConflict(entityId: String, error: String): Int = 0
-        override suspend fun deleteOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
-        override suspend fun deleteOtherOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String, keptOperationId: String): Int = 0
-        override suspend fun resetConflictOperation(syncScopeKey: String, operationId: String, operationTypeCode: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun rebaseProfileForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun rebaseCategoryForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun rebaseTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun rebaseRecurringTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun rebaseSubscriptionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getActiveWorkspaceTailOperation(syncScopeKey: String, workspaceId: String): SyncOperationEntity? = null
-        override suspend fun markWorkspaceConflict(entityId: String, error: String): Int = 0
-        override suspend fun getAllWorkspaceOperations(syncScopeKey: String, workspaceId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun deleteSpecificWorkspaceOperations(syncScopeKey: String, workspaceId: String, operationIds: List<String>): Int = 0
-        override suspend fun rebaseWorkspaceForRetry(workspaceId: String, syncStatus: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun resetWorkspaceConflictOperation(syncScopeKey: String, operationId: String, operationTypeCode: String, payloadJson: String?, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): SyncConflictEntity? = null
+
+        override suspend fun markTransactionConflict(
+            entityId: String,
+            error: String,
+        ): Int = 0
+
+        override suspend fun markRecurringTransactionConflict(
+            entityId: String,
+            error: String,
+        ): Int = 0
+
+        override suspend fun markSubscriptionConflict(
+            entityId: String,
+            error: String,
+        ): Int = 0
+
+        override suspend fun markGoalConflict(
+            entityId: String,
+            error: String,
+        ): Int = 0
+
+        override suspend fun markGoalContributionConflict(
+            entityId: String,
+            error: String,
+        ): Int = 0
+
+        override suspend fun markDebtConflict(
+            entityId: String,
+            error: String,
+        ): Int = 0
+
+        override suspend fun markDebtPaymentConflict(
+            entityId: String,
+            error: String,
+        ): Int = 0
+
+        override suspend fun getUserMerchantVerificationRow(
+            id: String,
+        ): com.feniqo.mobile.data.local.entity.UserMerchantVerificationEntity? = null
+
+        override suspend fun getUserMerchantVerificationOutboxRow(
+            syncScopeKey: String,
+            entityId: String,
+            operationId: String,
+        ): com.feniqo.mobile.data.local.entity.SyncOperationEntity? = null
+
+        override suspend fun getActiveMerchantVerificationTailCandidates(
+            syncScopeKey: String,
+            entityId: String,
+        ): List<com.feniqo.mobile.data.local.entity.SyncOperationEntity> = emptyList()
+
+        override suspend fun upsertUserMerchantVerificationRows(
+            entities: List<com.feniqo.mobile.data.local.entity.UserMerchantVerificationEntity>,
+        ) = Unit
+
+        override suspend fun upsertUserMerchantVerificationRow(entity: com.feniqo.mobile.data.local.entity.UserMerchantVerificationEntity) =
+            Unit
+
+        override suspend fun markUserMerchantVerificationConflict(
+            scopeKey: String,
+            entityId: String,
+            error: String,
+        ): Int = 0
+
+        override suspend fun deleteOutboxRows(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+        ): Int = 0
+
+        override suspend fun deleteOtherOutboxRows(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+            keptOperationId: String,
+        ): Int = 0
+
+        override suspend fun resetConflictOperation(
+            syncScopeKey: String,
+            operationId: String,
+            operationTypeCode: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun rebaseProfileForRetry(
+            entityId: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun rebaseCategoryForRetry(
+            entityId: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun rebaseTransactionForRetry(
+            entityId: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun rebaseRecurringTransactionForRetry(
+            entityId: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun rebaseSubscriptionForRetry(
+            entityId: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun getActiveWorkspaceTailOperation(
+            syncScopeKey: String,
+            workspaceId: String,
+        ): SyncOperationEntity? = null
+
+        override suspend fun markWorkspaceConflict(
+            entityId: String,
+            error: String,
+        ): Int = 0
+
+        override suspend fun getAllWorkspaceOperations(
+            syncScopeKey: String,
+            workspaceId: String,
+        ): List<SyncOperationEntity> = emptyList()
+
+        override suspend fun deleteSpecificWorkspaceOperations(
+            syncScopeKey: String,
+            workspaceId: String,
+            operationIds: List<String>,
+        ): Int = 0
+
+        override suspend fun rebaseWorkspaceForRetry(
+            workspaceId: String,
+            syncStatus: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun resetWorkspaceConflictOperation(
+            syncScopeKey: String,
+            operationId: String,
+            operationTypeCode: String,
+            payloadJson: String?,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun getAllUserMerchantVerificationOperations(
+            syncScopeKey: String,
+            verificationId: String,
+        ): List<SyncOperationEntity> = emptyList()
+
+        override suspend fun deleteSpecificUserMerchantVerificationOperations(
+            syncScopeKey: String,
+            verificationId: String,
+            operationIds: List<String>,
+        ): Int = 0
+
+        override suspend fun rebaseUserMerchantVerificationForRetry(
+            verificationId: String,
+            syncScopeKey: String,
+            syncStatus: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun resetUserMerchantVerificationConflictOperation(
+            syncScopeKey: String,
+            operationId: String,
+            operationTypeCode: String,
+            payloadJson: String?,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun getConflictRow(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+        ): SyncConflictEntity? = null
     }
-
-
-
 
     private companion object {
         const val ENTITY_ID = "10000000-0000-0000-0000-000000000001"
@@ -167,54 +388,58 @@ class V1OutboxOperationExecutorTest {
         const val UPDATED_AT = "2026-08-14T10:00:00Z"
         const val RECEIVED_AT = 1_765_707_200_000L
 
-        fun localCategory() = CategoryEntity(
-            id = ENTITY_ID,
-            ownerId = USER_ID,
-            workspaceId = null,
-            scopeKey = "user:$USER_ID",
-            name = "Yerel kategori",
-            normalizedName = "yerel kategori",
-            slug = null,
-            typeCode = "EXPENSE",
-            colorHex = "#123456",
-            iconKey = null,
-            isDefault = false,
-            createdAtEpochMillis = 1_754_820_000_000L,
-            sync = SyncMetadata(
-                syncStatus = "PENDING_UPDATE",
-                updatedAtEpochMillis = 1_765_700_000_000L,
-                localUpdatedAtEpochMillis = 1_765_700_000_000L,
-                deletedAtEpochMillis = null,
-                version = 2,
+        fun localCategory() =
+            CategoryEntity(
+                id = ENTITY_ID,
+                ownerId = USER_ID,
+                workspaceId = null,
+                scopeKey = "user:$USER_ID",
+                name = "Yerel kategori",
+                normalizedName = "yerel kategori",
+                slug = null,
+                typeCode = "EXPENSE",
+                colorHex = "#123456",
+                iconKey = null,
+                isDefault = false,
+                createdAtEpochMillis = 1_754_820_000_000L,
+                sync =
+                    SyncMetadata(
+                        syncStatus = "PENDING_UPDATE",
+                        updatedAtEpochMillis = 1_765_700_000_000L,
+                        localUpdatedAtEpochMillis = 1_765_700_000_000L,
+                        deletedAtEpochMillis = null,
+                        version = 2,
+                        baseVersion = 2,
+                        lastSyncError = null,
+                    ),
+            )
+
+        fun remoteCategory(version: Long) =
+            CategoryDto(
+                id = ENTITY_ID,
+                userId = USER_ID,
+                name = if (version == 3L) "Yerel kategori" else "Uzak kategori",
+                type = "expense",
+                color = "#123456",
+                createdAt = CREATED_AT,
+                updatedAt = UPDATED_AT,
+                version = version,
+            )
+
+        fun operation() =
+            SyncOperationEntity(
+                syncScopeKey = "USER:$USER_ID",
+                operationId = "operation-1",
+                entityTypeCode = "CATEGORY",
+                entityId = ENTITY_ID,
+                operationTypeCode = "UPDATE",
                 baseVersion = 2,
-                lastSyncError = null,
-            ),
-        )
-
-        fun remoteCategory(version: Long) = CategoryDto(
-            id = ENTITY_ID,
-            userId = USER_ID,
-            name = if (version == 3L) "Yerel kategori" else "Uzak kategori",
-            type = "expense",
-            color = "#123456",
-            createdAt = CREATED_AT,
-            updatedAt = UPDATED_AT,
-            version = version,
-        )
-
-        fun operation() = SyncOperationEntity(
-            syncScopeKey = "USER:$USER_ID",
-            operationId = "operation-1",
-            entityTypeCode = "CATEGORY",
-            entityId = ENTITY_ID,
-            operationTypeCode = "UPDATE",
-            baseVersion = 2,
-            statusCode = "PENDING",
-            attemptCount = 0,
-            lastError = null,
-            nextAttemptAtEpochMillis = 0,
-            createdAtEpochMillis = 0,
-            updatedAtEpochMillis = 0,
-        )
+                statusCode = "PENDING",
+                attemptCount = 0,
+                lastError = null,
+                nextAttemptAtEpochMillis = 0,
+                createdAtEpochMillis = 0,
+                updatedAtEpochMillis = 0,
+            )
     }
 }

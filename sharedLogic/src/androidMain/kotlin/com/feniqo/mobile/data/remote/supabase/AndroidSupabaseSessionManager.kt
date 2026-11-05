@@ -6,6 +6,12 @@ import android.security.keystore.KeyProperties
 import android.util.AtomicFile
 import io.github.jan.supabase.auth.SessionManager
 import io.github.jan.supabase.auth.user.UserSession
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
@@ -14,12 +20,6 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 /**
  * Supabase erişim ve yenileme tokenlarını Android Keystore ile şifreleyerek saklar.
@@ -34,68 +34,71 @@ class AndroidSupabaseSessionManager(
     private val sessionFile = AtomicFile(File(context.applicationContext.noBackupFilesDir, sessionFileName))
     private val mutex = Mutex()
 
-    override suspend fun saveSession(session: UserSession): Unit = withContext(Dispatchers.IO) {
-        mutex.withLock {
-            val clearSession = json.encodeToString(session).encodeToByteArray()
-            try {
+    override suspend fun saveSession(session: UserSession): Unit =
+        withContext(Dispatchers.IO) {
+            mutex.withLock {
+                val clearSession = json.encodeToString(session).encodeToByteArray()
+                try {
+                    val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
+                    cipher.init(Cipher.ENCRYPT_MODE, getOrCreateWrappingKey())
+                    cipher.updateAAD(ASSOCIATED_DATA)
+                    writeEncryptedSession(cipher.iv, cipher.doFinal(clearSession))
+                } finally {
+                    clearSession.fill(0)
+                }
+            }
+        }
+
+    override suspend fun loadSession(): UserSession =
+        withContext(Dispatchers.IO) {
+            mutex.withLock {
+                require(sessionFile.baseFile.exists()) { "Kayıtlı Supabase oturumu bulunamadı." }
+
+                val wrappingKey =
+                    getExistingWrappingKey()
+                        ?: error("Supabase oturumunu koruyan Android Keystore anahtarı bulunamadı.")
+                val encryptedSession = readEncryptedSession()
                 val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
-                cipher.init(Cipher.ENCRYPT_MODE, getOrCreateWrappingKey())
+                cipher.init(
+                    Cipher.DECRYPT_MODE,
+                    wrappingKey,
+                    GCMParameterSpec(GCM_TAG_LENGTH_BITS, encryptedSession.initializationVector),
+                )
                 cipher.updateAAD(ASSOCIATED_DATA)
-                writeEncryptedSession(cipher.iv, cipher.doFinal(clearSession))
-            } finally {
-                clearSession.fill(0)
+
+                val clearSession = cipher.doFinal(encryptedSession.cipherText)
+                try {
+                    json.decodeFromString<UserSession>(clearSession.decodeToString())
+                } finally {
+                    clearSession.fill(0)
+                }
             }
         }
-    }
 
-    override suspend fun loadSession(): UserSession = withContext(Dispatchers.IO) {
-        mutex.withLock {
-            require(sessionFile.baseFile.exists()) { "Kayıtlı Supabase oturumu bulunamadı." }
-
-            val wrappingKey = getExistingWrappingKey()
-                ?: error("Supabase oturumunu koruyan Android Keystore anahtarı bulunamadı.")
-            val encryptedSession = readEncryptedSession()
-            val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
-            cipher.init(
-                Cipher.DECRYPT_MODE,
-                wrappingKey,
-                GCMParameterSpec(GCM_TAG_LENGTH_BITS, encryptedSession.initializationVector),
-            )
-            cipher.updateAAD(ASSOCIATED_DATA)
-
-            val clearSession = cipher.doFinal(encryptedSession.cipherText)
-            try {
-                json.decodeFromString<UserSession>(clearSession.decodeToString())
-            } finally {
-                clearSession.fill(0)
+    override suspend fun deleteSession(): Unit =
+        withContext(Dispatchers.IO) {
+            mutex.withLock {
+                sessionFile.delete()
             }
         }
-    }
-
-    override suspend fun deleteSession(): Unit = withContext(Dispatchers.IO) {
-        mutex.withLock {
-            sessionFile.delete()
-        }
-    }
 
     private fun getOrCreateWrappingKey(): SecretKey =
         getExistingWrappingKey() ?: KeyGenerator
             .getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
             .apply {
                 init(
-                    KeyGenParameterSpec.Builder(
-                        keyStoreAlias,
-                        KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
-                    )
-                        .setKeySize(AES_KEY_SIZE_BITS)
+                    KeyGenParameterSpec
+                        .Builder(
+                            keyStoreAlias,
+                            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
+                        ).setKeySize(AES_KEY_SIZE_BITS)
                         .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                         .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                         // Arka plan senkronizasyonu oturumu yenileyebilmelidir; biyometri uygulama kilididir.
                         .setUserAuthenticationRequired(false)
                         .build(),
                 )
-            }
-            .generateKey()
+            }.generateKey()
 
     private fun getExistingWrappingKey(): SecretKey? {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
@@ -104,7 +107,10 @@ class AndroidSupabaseSessionManager(
             ?: error("Supabase oturum Keystore girdisi geçerli bir AES anahtarı değil.")
     }
 
-    private fun writeEncryptedSession(initializationVector: ByteArray, cipherText: ByteArray) {
+    private fun writeEncryptedSession(
+        initializationVector: ByteArray,
+        cipherText: ByteArray,
+    ) {
         val output = sessionFile.startWrite()
         try {
             DataOutputStream(output).apply {

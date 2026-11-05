@@ -6,7 +6,6 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class EntityIdGeneratorTest {
-
     @Test
     fun nextId_generates32CharLowercaseHex() {
         val generator = RandomHexEntityIdGenerator()
@@ -48,4 +47,3 @@ class EntityIdGeneratorTest {
         assertNotEquals(id1, id2)
     }
 }
-

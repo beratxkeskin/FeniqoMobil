@@ -6,30 +6,40 @@ import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.PaymentMethod
 import com.feniqo.mobile.domain.model.TransactionType
+import kotlinx.serialization.MissingFieldException
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import kotlinx.serialization.MissingFieldException
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 class CoreFinanceRemoteMappersTest {
-    private val json = Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-    }
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
 
     @Test
     fun asset_contract_round_trips_without_workspace_scope() {
-        val dto = AssetDto(
-            id = "asset-1", userId = "user-1", name = "  BTC  ", type = "crypto",
-            currentValueMinor = 125_000L, currency = "TRY", quantityUnscaled = 25_000_000L,
-            quantityScale = 8, purchaseUnitPriceMinor = 100_000L, trackingSymbol = " btc ",
-            autoTrack = true, createdAt = "2026-09-08T10:00:00Z",
-        )
+        val dto =
+            AssetDto(
+                id = "asset-1",
+                userId = "user-1",
+                name = "  BTC  ",
+                type = "crypto",
+                currentValueMinor = 125_000L,
+                currency = "TRY",
+                quantityUnscaled = 25_000_000L,
+                quantityScale = 8,
+                purchaseUnitPriceMinor = 100_000L,
+                trackingSymbol = " btc ",
+                autoTrack = true,
+                createdAt = "2026-09-08T10:00:00Z",
+            )
 
         val roundTrip = dto.toDomain().toDto()
 
@@ -43,8 +53,13 @@ class CoreFinanceRemoteMappersTest {
     fun asset_contract_rejects_auto_tracking_without_symbol() {
         assertFailsWith<RemoteMappingException> {
             AssetDto(
-                id = "asset-1", userId = "user-1", name = "BTC", type = "CRYPTO",
-                currentValueMinor = 1L, currency = "TRY", autoTrack = true,
+                id = "asset-1",
+                userId = "user-1",
+                name = "BTC",
+                type = "CRYPTO",
+                currentValueMinor = 1L,
+                currency = "TRY",
+                autoTrack = true,
                 createdAt = "2026-09-08T10:00:00Z",
             ).toDomain()
         }
@@ -52,9 +67,10 @@ class CoreFinanceRemoteMappersTest {
 
     @Test
     fun maps_target_transaction_contract_without_double() {
-        val dto = json.decodeFromString<TransactionDto>(
-            """{"id":"tx-1","user_id":"user-1","amount_minor":12550,"currency":"TRY","type":"expense","category_id":"cat-1","payment_method":"credit_card","transaction_date":"2026-08-13","created_at":"2026-08-13T10:00:00Z"}""",
-        )
+        val dto =
+            json.decodeFromString<TransactionDto>(
+                """{"id":"tx-1","user_id":"user-1","amount_minor":12550,"currency":"TRY","type":"expense","category_id":"cat-1","payment_method":"credit_card","transaction_date":"2026-08-13","created_at":"2026-08-13T10:00:00Z"}""",
+            )
 
         val transaction = dto.toDomain()
 
@@ -101,16 +117,17 @@ class CoreFinanceRemoteMappersTest {
 
     @Test
     fun category_serialization_uses_supabase_column_names() {
-        val encoded = json.encodeToString(
-            CategoryDto(
-                id = "cat-1",
-                userId = "user-1",
-                name = "Market",
-                type = "expense",
-                color = "#10B981",
-                createdAt = "2026-08-13T10:00:00Z",
-            ),
-        )
+        val encoded =
+            json.encodeToString(
+                CategoryDto(
+                    id = "cat-1",
+                    userId = "user-1",
+                    name = "Market",
+                    type = "expense",
+                    color = "#10B981",
+                    createdAt = "2026-08-13T10:00:00Z",
+                ),
+            )
 
         assertTrue("\"user_id\"" in encoded)
         assertTrue("\"is_default\"" in encoded)
@@ -123,28 +140,30 @@ class CoreFinanceRemoteMappersTest {
         installmentNumber: Int? = null,
         totalInstallments: Int? = null,
         installmentGroupId: String? = null,
-    ): TransactionDto = TransactionDto(
-        id = "tx-1",
-        userId = "user-1",
-        amountMinor = 12_550,
-        currency = "TRY",
-        type = "expense",
-        categoryId = "cat-1",
-        paymentMethod = paymentMethod,
-        transactionDate = "2026-08-13",
-        receiptPath = receiptPath,
-        installmentNumber = installmentNumber,
-        totalInstallments = totalInstallments,
-        installmentGroupId = installmentGroupId,
-        createdAt = "2026-08-13T10:00:00Z",
-    )
+    ): TransactionDto =
+        TransactionDto(
+            id = "tx-1",
+            userId = "user-1",
+            amountMinor = 12_550,
+            currency = "TRY",
+            type = "expense",
+            categoryId = "cat-1",
+            paymentMethod = paymentMethod,
+            transactionDate = "2026-08-13",
+            receiptPath = receiptPath,
+            installmentNumber = installmentNumber,
+            totalInstallments = totalInstallments,
+            installmentGroupId = installmentGroupId,
+            createdAt = "2026-08-13T10:00:00Z",
+        )
 
     @Test
     fun subscription_round_trip_with_all_fields_populated() {
-        val dto = subscriptionDto(
-            categoryId = "cat-1",
-            endDate = "2027-08-01",
-        )
+        val dto =
+            subscriptionDto(
+                categoryId = "cat-1",
+                endDate = "2027-08-01",
+            )
 
         val domain = dto.toDomain()
 
@@ -157,9 +176,21 @@ class CoreFinanceRemoteMappersTest {
         assertEquals("cat-1", domain.categoryId?.value)
         assertEquals(com.feniqo.mobile.domain.model.RecurrenceFrequency.MONTHLY, domain.renewalRule.frequency)
         assertEquals(1, domain.renewalRule.interval)
-        assertEquals(com.feniqo.mobile.domain.model.LocalDate(2026, 8, 1), domain.renewalRule.startDate)
-        assertEquals(com.feniqo.mobile.domain.model.LocalDate(2027, 8, 1), domain.renewalRule.endDate)
-        assertEquals(com.feniqo.mobile.domain.model.LocalDate(2026, 9, 1), domain.nextRenewalDate)
+        assertEquals(
+            com.feniqo.mobile.domain.model
+                .LocalDate(2026, 8, 1),
+            domain.renewalRule.startDate,
+        )
+        assertEquals(
+            com.feniqo.mobile.domain.model
+                .LocalDate(2027, 8, 1),
+            domain.renewalRule.endDate,
+        )
+        assertEquals(
+            com.feniqo.mobile.domain.model
+                .LocalDate(2026, 9, 1),
+            domain.nextRenewalDate,
+        )
         assertTrue(domain.isActive)
 
         val roundTripDto = domain.toDto()
@@ -179,13 +210,14 @@ class CoreFinanceRemoteMappersTest {
 
     @Test
     fun subscription_with_nullable_fields_succeeds() {
-        val dto = subscriptionDto(
-            categoryId = null,
-            endDate = null,
-            updatedAt = null,
-            deletedAt = null,
-            version = null,
-        )
+        val dto =
+            subscriptionDto(
+                categoryId = null,
+                endDate = null,
+                updatedAt = null,
+                deletedAt = null,
+                version = null,
+            )
 
         val domain = dto.toDomain()
         assertEquals(null, domain.categoryId)
@@ -208,7 +240,6 @@ class CoreFinanceRemoteMappersTest {
 
     @Test
     fun subscription_rejects_workspace_id() {
-
         assertFailsWith<RemoteMappingException> {
             subscriptionDto(workspaceId = "ws-1").toDomain()
         }
@@ -313,31 +344,33 @@ class CoreFinanceRemoteMappersTest {
         updatedAt: String? = null,
         deletedAt: String? = null,
         version: Long? = 1L,
-    ): com.feniqo.mobile.data.remote.dto.SubscriptionDto = com.feniqo.mobile.data.remote.dto.SubscriptionDto(
-        id = id,
-        userId = userId,
-        workspaceId = workspaceId,
-        name = name,
-        amountMinor = amountMinor,
-        currency = currency,
-        categoryId = categoryId,
-        frequency = frequency,
-        interval = interval,
-        startDate = startDate,
-        endDate = endDate,
-        nextRenewalDate = nextRenewalDate,
-        isActive = isActive,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-        deletedAt = deletedAt,
-        version = version,
-    )
+    ): com.feniqo.mobile.data.remote.dto.SubscriptionDto =
+        com.feniqo.mobile.data.remote.dto.SubscriptionDto(
+            id = id,
+            userId = userId,
+            workspaceId = workspaceId,
+            name = name,
+            amountMinor = amountMinor,
+            currency = currency,
+            categoryId = categoryId,
+            frequency = frequency,
+            interval = interval,
+            startDate = startDate,
+            endDate = endDate,
+            nextRenewalDate = nextRenewalDate,
+            isActive = isActive,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            deletedAt = deletedAt,
+            version = version,
+        )
 
     @Test
     fun goal_round_trip_with_all_fields_populated() {
-        val dto = goalDto(
-            iconKey = "flag",
-        )
+        val dto =
+            goalDto(
+                iconKey = "flag",
+            )
 
         val domain = dto.toDomain()
 
@@ -349,7 +382,11 @@ class CoreFinanceRemoteMappersTest {
         assertEquals(100_000_00L, domain.currentAmount.amountMinor)
         assertEquals(Currency.TRY, domain.targetAmount.currency)
         assertEquals(Currency.TRY, domain.currentAmount.currency)
-        assertEquals(com.feniqo.mobile.domain.model.LocalDate(2027, 12, 31), domain.targetDate)
+        assertEquals(
+            com.feniqo.mobile.domain.model
+                .LocalDate(2027, 12, 31),
+            domain.targetDate,
+        )
         assertEquals("#10B981", domain.color.hex)
         assertEquals("flag", domain.icon?.key)
 
@@ -411,11 +448,11 @@ class CoreFinanceRemoteMappersTest {
 
     @Test
     fun goal_contribution_round_trip_with_all_fields_populated() {
-
-        val dto = goalContributionDto(
-            direction = "ADD",
-            note = "Aylık tasarruf",
-        )
+        val dto =
+            goalContributionDto(
+                direction = "ADD",
+                note = "Aylık tasarruf",
+            )
 
         val domain = dto.toDomain()
 
@@ -424,7 +461,11 @@ class CoreFinanceRemoteMappersTest {
         assertEquals(25_000_00L, domain.amount.amountMinor)
         assertEquals(Currency.TRY, domain.amount.currency)
         assertEquals(com.feniqo.mobile.domain.model.GoalContributionDirection.ADD, domain.direction)
-        assertEquals(com.feniqo.mobile.domain.model.LocalDate(2026, 9, 1), domain.occurredOn)
+        assertEquals(
+            com.feniqo.mobile.domain.model
+                .LocalDate(2026, 9, 1),
+            domain.occurredOn,
+        )
         assertEquals("Aylık tasarruf", domain.note)
 
         val roundTripDto = domain.toDto()
@@ -449,11 +490,12 @@ class CoreFinanceRemoteMappersTest {
 
     @Test
     fun debt_round_trip_with_all_fields_populated() {
-        val dto = debtDto(
-            type = "DEBT",
-            status = "OPEN",
-            description = "Elden borç",
-        )
+        val dto =
+            debtDto(
+                type = "DEBT",
+                status = "OPEN",
+                description = "Elden borç",
+            )
 
         val domain = dto.toDomain()
 
@@ -465,7 +507,11 @@ class CoreFinanceRemoteMappersTest {
         assertEquals(Currency.TRY, domain.amount.currency)
         assertEquals(com.feniqo.mobile.domain.model.DebtType.DEBT, domain.type)
         assertEquals(com.feniqo.mobile.domain.model.DebtStatus.OPEN, domain.status)
-        assertEquals(com.feniqo.mobile.domain.model.LocalDate(2026, 10, 1), domain.dueDate)
+        assertEquals(
+            com.feniqo.mobile.domain.model
+                .LocalDate(2026, 10, 1),
+            domain.dueDate,
+        )
         assertEquals("Elden borç", domain.description)
 
         val roundTripDto = domain.toDto()
@@ -503,7 +549,11 @@ class CoreFinanceRemoteMappersTest {
         assertEquals("debt-1", domain.debtId.value)
         assertEquals(5_000_00L, domain.amount.amountMinor)
         assertEquals(Currency.TRY, domain.amount.currency)
-        assertEquals(com.feniqo.mobile.domain.model.LocalDate(2026, 9, 15), domain.paidOn)
+        assertEquals(
+            com.feniqo.mobile.domain.model
+                .LocalDate(2026, 9, 15),
+            domain.paidOn,
+        )
 
         val roundTripDto = domain.toDto()
         assertEquals(dto.id, roundTripDto.id)
@@ -549,18 +599,20 @@ class CoreFinanceRemoteMappersTest {
         assertTrue("\"paid_on\"" in paymentEncoded)
         assertFalse("debtId" in paymentEncoded)
 
-        val goalSyncRecord = com.feniqo.mobile.data.remote.dto.GoalContributionSyncRecordDto(
-            contribution = goalContributionDto(),
-            goal = goalDto(),
-        )
+        val goalSyncRecord =
+            com.feniqo.mobile.data.remote.dto.GoalContributionSyncRecordDto(
+                contribution = goalContributionDto(),
+                goal = goalDto(),
+            )
         val goalSyncEncoded = json.encodeToString(goalSyncRecord)
         assertTrue("\"contribution\"" in goalSyncEncoded)
         assertTrue("\"goal\"" in goalSyncEncoded)
 
-        val debtSyncRecord = com.feniqo.mobile.data.remote.dto.DebtPaymentSyncRecordDto(
-            payment = debtPaymentDto(),
-            debt = debtDto(),
-        )
+        val debtSyncRecord =
+            com.feniqo.mobile.data.remote.dto.DebtPaymentSyncRecordDto(
+                payment = debtPaymentDto(),
+                debt = debtDto(),
+            )
         val debtSyncEncoded = json.encodeToString(debtSyncRecord)
         assertTrue("\"payment\"" in debtSyncEncoded)
         assertTrue("\"debt\"" in debtSyncEncoded)
@@ -581,22 +633,23 @@ class CoreFinanceRemoteMappersTest {
         updatedAt: String? = null,
         deletedAt: String? = null,
         version: Long? = 1L,
-    ): com.feniqo.mobile.data.remote.dto.GoalDto = com.feniqo.mobile.data.remote.dto.GoalDto(
-        id = id,
-        userId = userId,
-        workspaceId = workspaceId,
-        name = name,
-        targetAmountMinor = targetAmountMinor,
-        currentAmountMinor = currentAmountMinor,
-        currency = currency,
-        targetDate = targetDate,
-        colorHex = colorHex,
-        iconKey = iconKey,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-        deletedAt = deletedAt,
-        version = version,
-    )
+    ): com.feniqo.mobile.data.remote.dto.GoalDto =
+        com.feniqo.mobile.data.remote.dto.GoalDto(
+            id = id,
+            userId = userId,
+            workspaceId = workspaceId,
+            name = name,
+            targetAmountMinor = targetAmountMinor,
+            currentAmountMinor = currentAmountMinor,
+            currency = currency,
+            targetDate = targetDate,
+            colorHex = colorHex,
+            iconKey = iconKey,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            deletedAt = deletedAt,
+            version = version,
+        )
 
     private fun goalContributionDto(
         id: String = "contrib-1",
@@ -610,19 +663,20 @@ class CoreFinanceRemoteMappersTest {
         updatedAt: String? = null,
         deletedAt: String? = null,
         version: Long? = 1L,
-    ): com.feniqo.mobile.data.remote.dto.GoalContributionDto = com.feniqo.mobile.data.remote.dto.GoalContributionDto(
-        id = id,
-        goalId = goalId,
-        amountMinor = amountMinor,
-        currency = currency,
-        direction = direction,
-        occurredOn = occurredOn,
-        note = note,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-        deletedAt = deletedAt,
-        version = version,
-    )
+    ): com.feniqo.mobile.data.remote.dto.GoalContributionDto =
+        com.feniqo.mobile.data.remote.dto.GoalContributionDto(
+            id = id,
+            goalId = goalId,
+            amountMinor = amountMinor,
+            currency = currency,
+            direction = direction,
+            occurredOn = occurredOn,
+            note = note,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            deletedAt = deletedAt,
+            version = version,
+        )
 
     private fun debtDto(
         id: String = "debt-1",
@@ -639,22 +693,23 @@ class CoreFinanceRemoteMappersTest {
         updatedAt: String? = null,
         deletedAt: String? = null,
         version: Long? = 1L,
-    ): com.feniqo.mobile.data.remote.dto.DebtDto = com.feniqo.mobile.data.remote.dto.DebtDto(
-        id = id,
-        userId = userId,
-        workspaceId = workspaceId,
-        title = title,
-        amountMinor = amountMinor,
-        currency = currency,
-        type = type,
-        dueDate = dueDate,
-        status = status,
-        description = description,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-        deletedAt = deletedAt,
-        version = version,
-    )
+    ): com.feniqo.mobile.data.remote.dto.DebtDto =
+        com.feniqo.mobile.data.remote.dto.DebtDto(
+            id = id,
+            userId = userId,
+            workspaceId = workspaceId,
+            title = title,
+            amountMinor = amountMinor,
+            currency = currency,
+            type = type,
+            dueDate = dueDate,
+            status = status,
+            description = description,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            deletedAt = deletedAt,
+            version = version,
+        )
 
     private fun debtPaymentDto(
         id: String = "payment-1",
@@ -666,16 +721,16 @@ class CoreFinanceRemoteMappersTest {
         updatedAt: String? = null,
         deletedAt: String? = null,
         version: Long? = 1L,
-    ): com.feniqo.mobile.data.remote.dto.DebtPaymentDto = com.feniqo.mobile.data.remote.dto.DebtPaymentDto(
-        id = id,
-        debtId = debtId,
-        amountMinor = amountMinor,
-        currency = currency,
-        paidOn = paidOn,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-        deletedAt = deletedAt,
-        version = version,
-    )
-
+    ): com.feniqo.mobile.data.remote.dto.DebtPaymentDto =
+        com.feniqo.mobile.data.remote.dto.DebtPaymentDto(
+            id = id,
+            debtId = debtId,
+            amountMinor = amountMinor,
+            currency = currency,
+            paidOn = paidOn,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            deletedAt = deletedAt,
+            version = version,
+        )
 }

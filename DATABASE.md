@@ -16,8 +16,47 @@
 
 ## 2. Room şeması
 
-Güncel Room şema sürümü **22**'dir. Export edilen şemalar
+Güncel Room şema sürümü **24**'tür. Export edilen şemalar
 `sharedLogic/schemas/com.feniqo.mobile.data.local.database.FeniqoDatabase/` altında commit edilir.
+
+### Room v23 -> v24 Salt-Okuma Kişisel Merchant Doğrulama Temeli (Faz 8.6-C2)
+
+Room v24 (`ANDROID_MIGRATION_23_24`), kullanıcının açık `ASSIGN`/`BLOCK` kararlarını saklamak üzere `user_merchant_verifications` tablosunu ve ilişkili indekslerini ekler:
+- `id TEXT NOT NULL PRIMARY KEY`: Kararlı yerel UUID.
+- `owner_id TEXT NOT NULL`: Kararın ait olduğu kullanıcı UUID.
+- `workspace_id TEXT NULL`: C2 kişisel diliminde kesinlikle NULL.
+- `scope_key TEXT NOT NULL`: SQLite NULL unique kısıtını güvenli kılan deterministik kapsam anahtarı (`user:<canonical-owner-id>`).
+- `normalized_alias TEXT NOT NULL`: Kanonik olarak normalize edilmiş, uzunluğu `Transaction.MAX_DESCRIPTION_LENGTH` (500) ile sınırlı ve genel sözcükler kümesinden (`DISALLOWED_STANDALONE_GENERIC_TOKENS`) arındırılmış arama alias'ı.
+- `decision_code TEXT NOT NULL`: Tipli karar kodu (`ASSIGN` veya `BLOCK`).
+- `merchant_id TEXT NULL`: `ASSIGN` için zorunlu ve boş olamaz; `BLOCK` için kesinlikle NULL.
+- `scope_code TEXT NOT NULL`: C2'de yalnız `PERSONAL`.
+- `created_at_epoch_ms INTEGER NOT NULL`: Kayıt oluşturulma zamanı.
+- Standart gömülü `SyncMetadata` kolonları: `sync_status`, `updated_at_epoch_ms`, `local_updated_at_epoch_ms`, `deleted_at_epoch_ms`, `version`, `base_version`, `last_sync_error`.
+
+**İndeksler:**
+- `UNIQUE(scope_key, normalized_alias)`: Aynı kullanıcı kapsamı altında aynı alias için çakışan iki karar bulunamaz.
+- `INDEX(owner_id)`
+- `INDEX(workspace_id)`
+- `INDEX(deleted_at_epoch_ms)`
+- `INDEX(scope_key, deleted_at_epoch_ms)`
+
+**Kapsam Sınırları ve Mimari Kurallar (Faz 8.6-C2, 8.6-D ve 8.6-C3):**
+- **DAO ve Repository Katmanı:** `UserMerchantVerificationDao` salt-okuma sorguları sunar; tüm aktif sorgularda `deleted_at_epoch_ms IS NULL` filtrelenir.
+- **Atomik Yazma ve Outbox (Faz 8.6-D):** Uygulama kaynaklı yerel mutasyonlar `LocalMutationDao.mutateUserMerchantVerificationV2` üzerinden tek `@Transaction` sınırında entity + V2 outbox olarak atomik yazılır; deterministik RFC 9562 UUIDv8 kimliği kullanılır.
+- **İşlem Merchant Attribution Wiring (Faz 8.6-C3):** `UserMerchantVerificationRepository` üzerinden çözülen kişisel `ASSIGN`/`BLOCK` kararları, `OfflineFirstTransactionRepository`, `OfflineFirstRecurringTransactionRepository` ve `BackupImportPlanner` akışlarında sistem kataloğu öncesinde yetkili karar olarak uygulanır. Bozuk doğrulama satırı fail-closed ele alınır (`AppError.Storage("invalid_stored_merchant_verification")` veya skipping) ve asla sessizce sistem kataloğuna düşmez.
+
+### Room v22 -> v23 Transaction Merchant Kolonları ve Yerel Attribution SSOT
+
+Room v23 (`ANDROID_MIGRATION_22_23`), `transactions` tablosuna yerel merchant attribution kolonlarını ekler:
+- `merchant_id TEXT`: Eşleşen merchant kimliği (ör. `netflix`, `bim`). Nullable.
+- `merchant_match_source_code TEXT`: Tipli eşleşme kaynağı kodu (ör. `EXACT_ALIAS`, `SERVICE_PATTERN`). Nullable.
+- `merchant_confidence INTEGER`: Tanıma güven skoru (`0..100`). Nullable.
+- `merchant_catalog_version INTEGER`: Eşleşmenin üretildiği katalog sürümü (pozitif tamsayı). Nullable.
+
+**Kapsam Sınırları ve Mimari Kurallar (Faz 8.6-B):**
+- **Veri Korunumu:** Mevcut v22 transaction verileri kayıpsız korunur, yeni 4 kolon NULL olarak başlar. Tutar, tarih, açıklama, split, installment ve sync metadata eksiksiz korunur (`TransactionMerchantMigrationTest`).
+- **İndeks Politikası:** `merchant_id` üzerinde bu dilimde gereksiz indeks eklenmemiştir; yalnızca gerçek sorgu ihtiyacı doğduğunda eklenecektir.
+- **Yerel-Only Koruma:** Remote `TransactionDto`, outbox JSON payload'u, RPC ve conflict equivalence bu aşamada merchant alanı taşımaz (Faz 8.6-D'ye bırakılmıştır). ACK ve pull sırasında yerel merchant attribution'ın korunması için saf `mergePreservingLocalMerchant` fonksiyonu uygulanmıştır: açıklama trim sonrası birebir aynı ise mevcut yerel attribution korunur; açıklama farklıysa üst katmandan (koordinatör/repository) gelen önceden çözümlenmiş aday kullanılır.
 
 ### Room v21 -> v22 Kullanıcı-Scope İzolasyonu ve Outbox/Cursor/Conflict Kalıcılık Sözleşmesi
 
@@ -76,6 +115,20 @@ değişmediği için yeni Room sürümü gerektirmez.
 | `subscriptions` | Abonelikler ve yaşam döngüsü (`ACTIVE`, `PAUSED`, `CANCELLED`, `TRIAL`, `EXPIRED`, hatırlatıcı tercihi) | category, owner/workspace |
 | `subscription_price_histories` | Abonelik fiyat değişim geçmişi | subscription_id, owner/workspace |
 | `subscription_payments` | Gerçekleşen abonelik ödeme olayları | subscription_id, renewal_due_date, owner/workspace |
+
+### Transaction merchant kalıcılığı (Room v23 SSOT — Faz 8.6-B)
+
+Faz 8.6-B ile `transactions` tablosuna nullable merchant attribution kolonları (`merchant_id`,
+`merchant_match_source_code`, `merchant_confidence`, `merchant_catalog_version`) eklenmiş, forward-only
+Room migration (`ANDROID_MIGRATION_22_23`, `23.json`) ve veri koruma testleri tamamlanmıştır. Eski
+transaction satırları merchant'sız ve kayıpsız korunur.
+
+Onaylanan Faz 8.6-B / 8.6-D ayrımına göre:
+- **Yerel kalıcılık (8.6-B):** Room SSOT, domain model, repository tanıma kararı ve atomik DAO yazma sınırları tamamlanmıştır. ACK (no-successor/successor), incremental pull, initial snapshot, keep-remote, applyTransactionWrite ve eşdeğer conflict recovery yollarında; açıklama trim sonrası birebir aynı ise mevcut yerel attribution korunur, açıklama farklıysa üst katmanda önceden çözümlenmiş aday kullanılır.
+- **Kişisel düzeltmeler (8.6-C):** Kullanıcı `ASSIGN`/`BLOCK` doğrulama kayıtlarının Room kalıcılığı sıradaki dilimdir.
+- **Uzak senkronizasyon (8.6-D):** Supabase SQL/migration, uzak `TransactionDto` merchant kolonları, outbox JSON payload sözleşmesi, RPC ve uzak conflict eşdeğerliği 8.6-D kapsamında güncellenecektir.
+
+Ayrıntılı durum ve dilim sözleşmesi: [Merchant tanıma ve logo uygulama planı](docs/MERCHANT_TANIMA_VE_LOGO_UYGULAMA_PLANI.md).
 
 ### Senkronizasyon tabloları
 
@@ -189,6 +242,21 @@ Kurallar:
   - Pay sahipleri `participant_user_ids` kümesiyle birebir örtüşmelidir (`CUSTOM_SPLIT_PARTICIPANT_SET_MISMATCH`).
   - Eski istemcilerden gelen split alanı içermeyen UPDATE çağrılarında mevcut CUSTOM dağılımı korunur.
 
+### `user_merchant_verifications` (Yerel / Pending Migration: 20261015144943)
+
+- Kullanıcıların kişisel merchant doğrulama/engelleme kararları için uzak kalıcı tablodur.
+- Sahiplik: `user_id uuid not null references auth.users(id) on delete cascade` (Kişisel satırlarda zorunludur; Room v24 `owner_id` alanı ile mapper sınırında eşlenir).
+- Kapsam: `workspace_id null check (workspace_id is null)`, `scope_code text not null check (scope_code = 'PERSONAL')`.
+- Kanonik alias: `normalized_alias text not null` (`^[A-Z0-9]+( [A-Z0-9]+)*$`, 1..500 karakter, generic-token reddi).
+- Karar invariantı: `decision_code in ('ASSIGN', 'BLOCK')` (ASSIGN için `merchant_id` dolu, BLOCK için `merchant_id` null).
+- Deterministik RFC 9562 UUIDv8: `UTF8("feniqo:user-merchant-verification:v1\u0000" + canonicalUserId + "\u0000" + normalizedAlias)` SHA-256'nın ilk 16 byte'ı üzerinden türetilir (version 8, variant 1).
+- RLS ve Güvenlik: Yalnızca `authenticated` rolü `user_id = auth.uid()` için SELECT yapabilir; doğrudan INSERT/UPDATE/DELETE kapatılmıştır.
+- Uzak yazma: Yalnızca `sync_write_v2` dar wrapper'ı üzerinden yapılır; sunucu deterministik UUID'yi NUL bytea (`decode('00', 'hex')`) ile yeniden hesaplayarak doğrular, uyuşmazlıkta definitive rejection üretir ve receipt oluşturmaz.
+- Receipt constraint: `sync_operations_receipts_entity_type_check` 15 entity type (`USER_MERCHANT_VERIFICATION` dahil) ile genişletilmiştir.
+- Pull/Apply Atomikliği ve Pending Koruması (Faz 8.6-D2-B1 / B1-R1 / B1-R2): `RemoteSyncDao.applyUserMerchantVerificationPull` ve `recordUserMerchantVerificationPullConflict` Room transaction primitifleridir. Remote apply sırasında yerel `PENDING_CREATE`, `PENDING_UPDATE`, `PENDING_DELETE` veya `CONFLICT` durumundaki satırlar asla sessizce ezilmez (fail-closed rollback). `SYNCED` yerel satırlarda ise yalnızca ileri versiyon veya 15 authoritative alanın (`id`, `ownerId`, `workspaceId`, `scopeKey`, `normalizedAlias`, `decisionCode`, `merchantId`, `scopeCode`, `createdAtEpochMillis`, `syncStatus`, `version`, `baseVersion`, `updatedAtEpochMillis`, `deletedAtEpochMillis`, `lastSyncError`) birebir eşdeğer olduğu replay durumları kabul edilir; eşdeğer replay durumunda entity yeniden yazımı atlanarak atomik cursor/conflict işlemi yapılır, herhangi bir authoritative alan farklıysa rollback uygulanır. Çakışma durumunda (`recordUserMerchantVerificationPullConflict`), yerel durum açık allow-list (`PENDING_CREATE`, `PENDING_UPDATE`, `PENDING_DELETE`, `CONFLICT`) ile doğrulanır; dar ve güvenli `getUserMerchantVerificationOutboxRow` sorgusuyla canlı V2 outbox kaydı (`protocolVersion == 2`, entityTypeCode `USER_MERCHANT_VERIFICATION`, canlı `statusCode` allow-list, yerel duruma uygun `operationTypeCode`, `baseVersion` uyumu, `UserMerchantVerificationPayloadCodec` geçerliliği ve entity ile birebir payload alan eşleşmesi) fail-closed teyit edilir; yerel entity ve outbox version/baseVersion sözleşmesi operasyon türüne göre açıkça denetlenir (CREATE için `liveOp.baseVersion == null`, `local.baseVersion == null`, `local.version == 0L` ve local status `PENDING_CREATE` veya CREATE tabanlı `CONFLICT`; UPDATE/DELETE için `liveOp.baseVersion >= 1L`, `local.baseVersion >= 1L`, `liveOp.baseVersion == local.baseVersion`, `local.baseVersion <= local.version` ve `local.version >= 1L`; CONFLICT durumunda operasyon türüne göre ilgili invariantlar aranır); doğrulanmış `remoteEntity` parametresi üzerinden ortak remote invariant kontrolleri (`remoteEntity.id == conflict.entityId`, `conflict.localVersion == local.sync.version`, `conflict.remoteVersion == remoteEntity.sync.version`, `remoteVersion > localBaseVersion`, cursor timestamp eşleşmesi, non-blank payload'lar) sağlanır; yerel karar ve outbox korunarak satır `CONFLICT` durumuna alınır, `SyncConflictEntity` kaydedilir ve cursor aynı transaction içinde atomik ilerletilir.
+- Incremental Pull Wiring, Canlı Outbox Doğrulamalı Cursor İlerleme Primitifi ve Fail-Closed Kapanışı (Faz 8.6-D2-B2-A, B2-A-R1 & B2-A-R2 — denetimden geçti): `IncrementalRemoteSync.pullFor` akışına `"USER_MERCHANT_VERIFICATION"` cursor anahtarı bağlandı. Remote fetch sonrası actor user scope ve DTO invariantları fail-closed doğrulanır. Temiz/SYNCED kayıtlar `applyUserMerchantVerificationPull`, yerel pending/CONFLICT ve `remoteVersion > localBaseVersion` durumları `recordUserMerchantVerificationPullConflict` ile işlenir. Yerel pending/CONFLICT ve `remoteVersion <= localBaseVersion` durumunda ise `RemoteSyncDao.advanceUserMerchantVerificationPullCursor(syncScopeKey, remoteEntity, cursor)` dar transaction primitifi kullanılır; dışarıdan `operationId` parametresi almaz, aktif tail'i `LocalMutationDao.getActiveTailCandidates` topoloji desenini kullanan `getActiveMerchantVerificationTailCandidates` ile doğrudan `@Transaction` sınırı içinde çözümler ve doğrular (TOCTOU yarışlarını önler). `recordUserMerchantVerificationPullConflict` ise dışarıdan atanan `conflict.operationId` değerinin transaction içinde çözülen tekil aktif tail ile birebir uyuştuğunu doğrular. Ortak `validateLiveUserMerchantVerificationOutbox` helper'ı üzerinden tek aktif tail, root tail (`predecessorOperationId == null`, `!isBlocked`) ve successor tail (`predecessorOperationId != null`, `isBlocked == true`, predecessor `protocolVersion == 2`, `IN_FLIGHT`, `!isBlocked`, non-terminal FAILED), `protocolVersion == 2`, terminal FAILED engeli, canlı status allow-list (`PENDING`, `IN_FLIGHT`, `CONFLICT`), operasyon/status eşleşmesi, CREATE/UPDATE/DELETE version & baseVersion kuralları, non-blank payloadJson, codec doğrulaması ve yerel entity ile tam 7 alan eşleşmesi fail-closed doğrulanır; yerel entity, outbox veya conflict snapshot'ı byte-for-byte korunarak yalnızca cursor atomik ilerletilir. CoreRemoteDataSource fail-closed sözleşmesine geri alınmıştır (`error(...)`). 32 hedefli incremental test (`UserMerchantVerificationIncrementalSyncTest`), 52 hedefli DAO testi (`UserMerchantVerificationPullDaoTest`) ve 15 gerileme testi (`IncrementalRemoteSyncTest`) ile 1988 toplam testte doğrulanmıştır.
+- Durum: Yerel/pending migration. Yalnızca izole yerel PostgreSQL üzerinde 33 migration sıralı apply ve SQL sözleşme testleri ile doğrulanmıştır; hiçbir uzak ortama (staging veya production) uygulanmamıştır.
+
 ## 9. RLS ve uzak yazma
 
 - RLS `profiles`, `categories` ve `transactions` üzerinde zorunludur.
@@ -237,6 +305,7 @@ Mevcut sıralı dosyalar:
 ...
 - `20260913000100_subscription_lifecycle_and_history.sql` (Hazırlandı: subscription lifecycle sütunları, `subscription_price_histories`, `subscription_payments` ve RLS politikaları. Henüz staging veya production'a uygulanmamıştır).
 - `20260913000200_subscription_website_and_notes.sql` (Hazırlandı: `subscriptions` tablosuna `website_url` ve `notes` sütunları eklendi. Room v17 ile eşleşir. Henüz staging veya production'a uygulanmamıştır).
+- `20261015144943_sync_write_v2_user_merchant_verifications.sql` (Hazırlandı: Faz 8.6-D1 kişisel merchant doğrulama tablosu, RLS, 15 entity receipt constraint genişletmesi ve deterministik RFC 9562 UUIDv8 sync_write_v2 wrapper'ı. Yalnızca izole yerel testte doğrulanmıştır; staging veya production'a uygulanmamıştır).
 
 Bu seri `FeniqoMobil-Staging` üzerinde kabul testinden geçmiştir. Production'a uygulanmamıştır.
 Yerel Room şeması v17'ye yükseltilmiş; `website_url` ve `notes` alanları eklenmiş, migration testleri (`RoomDaoTest`) doğrulanmıştır.

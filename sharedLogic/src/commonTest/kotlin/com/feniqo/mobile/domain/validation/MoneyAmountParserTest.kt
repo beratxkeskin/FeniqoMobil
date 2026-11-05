@@ -7,7 +7,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class MoneyAmountParserTest {
-
     @Test
     fun parseToMinorUnits_withValidInputs_returnsCorrectMinorUnits() {
         // "10" -> 1000 minor units

@@ -18,12 +18,13 @@ class TransactionCsvExporterTest {
 
     @Test
     fun export_usesStableMinorUnitSchemaAndExcludesPrivateFields() {
-        val csv = exporter.export(
-            listOf(
-                transaction(id = "b", date = "2026-09-10", description = "Market, \"haftalık\""),
-                transaction(id = "a", date = "2026-09-09", description = null),
-            ),
-        )
+        val csv =
+            exporter.export(
+                listOf(
+                    transaction(id = "b", date = "2026-09-10", description = "Market, \"haftalık\""),
+                    transaction(id = "a", date = "2026-09-09", description = null),
+                ),
+            )
 
         val lines = csv.lines().filter(String::isNotEmpty)
         assertEquals(
@@ -63,10 +64,13 @@ class TransactionCsvExporterTest {
         categoryId = EntityId("category-1"),
         description = description,
         paymentMethod = PaymentMethod.CREDIT_CARD,
-        transactionDate = date.split('-').map(String::toInt).let { (year, month, day) ->
-            LocalDate(year, month, day)
-        },
-        receiptPath = com.feniqo.mobile.domain.model.ReceiptPath("private/path"),
+        transactionDate =
+            date.split('-').map(String::toInt).let { (year, month, day) ->
+                LocalDate(year, month, day)
+            },
+        receiptPath =
+            com.feniqo.mobile.domain.model
+                .ReceiptPath("private/path"),
         installment = null,
         createdAt = Instant.parse("2026-09-10T10:00:00Z"),
     )

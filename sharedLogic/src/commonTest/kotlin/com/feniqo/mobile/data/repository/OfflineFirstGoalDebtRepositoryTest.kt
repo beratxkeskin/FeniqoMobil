@@ -11,20 +11,12 @@ import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.DebtStatus
 import com.feniqo.mobile.domain.model.DebtType
 import com.feniqo.mobile.domain.model.EntityId
-import com.feniqo.mobile.domain.model.GoalContributionDirection
-import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.SyncStatus
 import com.feniqo.mobile.domain.model.UserProfile
 import com.feniqo.mobile.domain.repository.AuthRepository
 import com.feniqo.mobile.domain.repository.AuthSession
 import com.feniqo.mobile.domain.repository.RepositoryResult
-import kotlin.coroutines.cancellation.CancellationException
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,27 +25,47 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.job
 import kotlinx.coroutines.test.runTest
+import kotlin.coroutines.cancellation.CancellationException
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class OfflineFirstGoalDebtRepositoryTest {
-
     private val nowEpoch = 1700000000000L
 
-    private val defaultSync = SyncMetadata(
-        syncStatus = SyncStatus.SYNCED.name,
-        updatedAtEpochMillis = nowEpoch,
-        localUpdatedAtEpochMillis = nowEpoch,
-        deletedAtEpochMillis = null,
-        version = 1L,
-        baseVersion = 1L,
-        lastSyncError = null,
-    )
+    private val defaultSync =
+        SyncMetadata(
+            syncStatus = SyncStatus.SYNCED.name,
+            updatedAtEpochMillis = nowEpoch,
+            localUpdatedAtEpochMillis = nowEpoch,
+            deletedAtEpochMillis = null,
+            version = 1L,
+            baseVersion = 1L,
+            lastSyncError = null,
+        )
 
-    private class FakeAuthRepository(var session: AuthSession? = null) : AuthRepository {
+    private class FakeAuthRepository(
+        var session: AuthSession? = null,
+    ) : AuthRepository {
         override fun observeSession(): Flow<AuthSession?> = flowOf(session)
+
         override fun observeCurrentProfile(): Flow<UserProfile?> = flowOf(null)
-        override suspend fun signIn(email: String, password: String): RepositoryResult<Unit> = error("N/A")
-        override suspend fun signUp(email: String, password: String, fullName: String?): RepositoryResult<EntityId> = error("N/A")
+
+        override suspend fun signIn(
+            email: String,
+            password: String,
+        ): RepositoryResult<Unit> = error("N/A")
+
+        override suspend fun signUp(
+            email: String,
+            password: String,
+            fullName: String?,
+        ): RepositoryResult<EntityId> = error("N/A")
+
         override suspend fun refreshSession(): RepositoryResult<Unit> = error("N/A")
+
         override suspend fun signOut(): RepositoryResult<Unit> = error("N/A")
     }
 
@@ -63,27 +75,32 @@ class OfflineFirstGoalDebtRepositoryTest {
         var observeAllException: Throwable? = null
         var cancellationExceptionToThrow: CancellationException? = null
 
-        override fun observeAll(ownerId: String, workspaceId: String?): Flow<List<GoalEntity>> = flow {
-            cancellationExceptionToThrow?.let { ex ->
-                currentCoroutineContext().job.cancel(ex)
-                throw ex
+        override fun observeAll(
+            ownerId: String,
+            workspaceId: String?,
+        ): Flow<List<GoalEntity>> =
+            flow {
+                cancellationExceptionToThrow?.let { ex ->
+                    currentCoroutineContext().job.cancel(ex)
+                    throw ex
+                }
+                observeAllException?.let { throw it }
+                val list =
+                    goals.values.filter {
+                        it.ownerId == ownerId &&
+                            it.sync.deletedAtEpochMillis == null &&
+                            it.workspaceId == workspaceId
+                    }
+                emit(list)
             }
-            observeAllException?.let { throw it }
-            val list = goals.values.filter {
-                it.ownerId == ownerId &&
-                    it.sync.deletedAtEpochMillis == null &&
-                    it.workspaceId == workspaceId
+
+        override fun observeById(id: String): Flow<GoalEntity?> =
+            flow {
+                val goal = goals[id]?.takeIf { it.sync.deletedAtEpochMillis == null }
+                emit(goal)
             }
-            emit(list)
-        }
 
-        override fun observeById(id: String): Flow<GoalEntity?> = flow {
-            val goal = goals[id]?.takeIf { it.sync.deletedAtEpochMillis == null }
-            emit(goal)
-        }
-
-        override suspend fun getById(id: String): GoalEntity? =
-            goals[id]?.takeIf { it.sync.deletedAtEpochMillis == null }
+        override suspend fun getById(id: String): GoalEntity? = goals[id]?.takeIf { it.sync.deletedAtEpochMillis == null }
 
         override suspend fun getAnyById(id: String): GoalEntity? = goals[id]
 
@@ -95,12 +112,14 @@ class OfflineFirstGoalDebtRepositoryTest {
             goals.forEach { upsert(it) }
         }
 
-        override fun observeContributionsByGoalId(goalId: String): Flow<List<GoalContributionEntity>> = flow {
-            val list = contributions.filter {
-                it.goalId == goalId && it.sync.deletedAtEpochMillis == null
+        override fun observeContributionsByGoalId(goalId: String): Flow<List<GoalContributionEntity>> =
+            flow {
+                val list =
+                    contributions.filter {
+                        it.goalId == goalId && it.sync.deletedAtEpochMillis == null
+                    }
+                emit(list)
             }
-            emit(list)
-        }
 
         override suspend fun getContributionsByGoalId(goalId: String): List<GoalContributionEntity> =
             contributions.filter { it.goalId == goalId && it.sync.deletedAtEpochMillis == null }
@@ -108,8 +127,7 @@ class OfflineFirstGoalDebtRepositoryTest {
         override suspend fun getContributionById(id: String): GoalContributionEntity? =
             contributions.firstOrNull { it.id == id && it.sync.deletedAtEpochMillis == null }
 
-        override suspend fun getAnyContributionById(id: String): GoalContributionEntity? =
-            contributions.firstOrNull { it.id == id }
+        override suspend fun getAnyContributionById(id: String): GoalContributionEntity? = contributions.firstOrNull { it.id == id }
 
         override suspend fun upsertContribution(contribution: GoalContributionEntity) {
             contributions.removeAll { it.id == contribution.id }
@@ -127,37 +145,48 @@ class OfflineFirstGoalDebtRepositoryTest {
         var observeAllException: Throwable? = null
         var cancellationExceptionToThrow: CancellationException? = null
 
-        override fun observeAll(ownerId: String, workspaceId: String?): Flow<List<DebtEntity>> = flow {
-            cancellationExceptionToThrow?.let { ex ->
-                currentCoroutineContext().job.cancel(ex)
-                throw ex
+        override fun observeAll(
+            ownerId: String,
+            workspaceId: String?,
+        ): Flow<List<DebtEntity>> =
+            flow {
+                cancellationExceptionToThrow?.let { ex ->
+                    currentCoroutineContext().job.cancel(ex)
+                    throw ex
+                }
+                observeAllException?.let { throw it }
+                val list =
+                    debts.values.filter {
+                        it.ownerId == ownerId &&
+                            it.sync.deletedAtEpochMillis == null &&
+                            it.workspaceId == workspaceId
+                    }
+                emit(list)
             }
-            observeAllException?.let { throw it }
-            val list = debts.values.filter {
-                it.ownerId == ownerId &&
-                    it.sync.deletedAtEpochMillis == null &&
-                    it.workspaceId == workspaceId
+
+        override fun observeAllByType(
+            ownerId: String,
+            workspaceId: String?,
+            typeCode: String,
+        ): Flow<List<DebtEntity>> =
+            flow {
+                val list =
+                    debts.values.filter {
+                        it.ownerId == ownerId &&
+                            it.typeCode == typeCode &&
+                            it.sync.deletedAtEpochMillis == null &&
+                            it.workspaceId == workspaceId
+                    }
+                emit(list)
             }
-            emit(list)
-        }
 
-        override fun observeAllByType(ownerId: String, workspaceId: String?, typeCode: String): Flow<List<DebtEntity>> = flow {
-            val list = debts.values.filter {
-                it.ownerId == ownerId &&
-                    it.typeCode == typeCode &&
-                    it.sync.deletedAtEpochMillis == null &&
-                    it.workspaceId == workspaceId
+        override fun observeById(id: String): Flow<DebtEntity?> =
+            flow {
+                val debt = debts[id]?.takeIf { it.sync.deletedAtEpochMillis == null }
+                emit(debt)
             }
-            emit(list)
-        }
 
-        override fun observeById(id: String): Flow<DebtEntity?> = flow {
-            val debt = debts[id]?.takeIf { it.sync.deletedAtEpochMillis == null }
-            emit(debt)
-        }
-
-        override suspend fun getById(id: String): DebtEntity? =
-            debts[id]?.takeIf { it.sync.deletedAtEpochMillis == null }
+        override suspend fun getById(id: String): DebtEntity? = debts[id]?.takeIf { it.sync.deletedAtEpochMillis == null }
 
         override suspend fun getAnyById(id: String): DebtEntity? = debts[id]
 
@@ -169,12 +198,14 @@ class OfflineFirstGoalDebtRepositoryTest {
             debts.forEach { upsert(it) }
         }
 
-        override fun observePaymentsByDebtId(debtId: String): Flow<List<DebtPaymentEntity>> = flow {
-            val list = payments.filter {
-                it.debtId == debtId && it.sync.deletedAtEpochMillis == null
+        override fun observePaymentsByDebtId(debtId: String): Flow<List<DebtPaymentEntity>> =
+            flow {
+                val list =
+                    payments.filter {
+                        it.debtId == debtId && it.sync.deletedAtEpochMillis == null
+                    }
+                emit(list)
             }
-            emit(list)
-        }
 
         override suspend fun getPaymentsByDebtId(debtId: String): List<DebtPaymentEntity> =
             payments.filter { it.debtId == debtId && it.sync.deletedAtEpochMillis == null }
@@ -182,8 +213,7 @@ class OfflineFirstGoalDebtRepositoryTest {
         override suspend fun getPaymentById(id: String): DebtPaymentEntity? =
             payments.firstOrNull { it.id == id && it.sync.deletedAtEpochMillis == null }
 
-        override suspend fun getAnyPaymentById(id: String): DebtPaymentEntity? =
-            payments.firstOrNull { it.id == id }
+        override suspend fun getAnyPaymentById(id: String): DebtPaymentEntity? = payments.firstOrNull { it.id == id }
 
         override suspend fun upsertPayment(payment: DebtPaymentEntity) {
             payments.removeAll { it.id == payment.id }
@@ -264,298 +294,325 @@ class OfflineFirstGoalDebtRepositoryTest {
         sync = defaultSync,
     )
 
-    private val testSession = AuthSession(
-        userId = EntityId("user-1"),
-        email = "user@test.com",
-        expiresAt = kotlinx.datetime.Instant.fromEpochMilliseconds(nowEpoch + 100000L),
-    )
+    private val testSession =
+        AuthSession(
+            userId = EntityId("user-1"),
+            email = "user@test.com",
+            expiresAt = kotlinx.datetime.Instant.fromEpochMilliseconds(nowEpoch + 100000L),
+        )
 
     // region Goal Repository Tests
 
     @Test
-    fun goalRepository_observeGoals_returnsEmptyWhenUnauthenticated() = runTest {
-        val authRepo = FakeAuthRepository(session = null)
-        val goalDao = FakeGoalDao()
-        val repo = OfflineFirstGoalRepository(authRepo, goalDao)
+    fun goalRepository_observeGoals_returnsEmptyWhenUnauthenticated() =
+        runTest {
+            val authRepo = FakeAuthRepository(session = null)
+            val goalDao = FakeGoalDao()
+            val repo = OfflineFirstGoalRepository(authRepo, goalDao)
 
-        assertEquals(emptyList(), repo.observeGoals().first())
-    }
+            assertEquals(emptyList(), repo.observeGoals().first())
+        }
 
     @Test
-    fun goalRepository_observeGoals_mapsEntitiesForActiveSession() = runTest {
-        val authRepo = FakeAuthRepository(session = testSession)
-        val goalDao = FakeGoalDao().apply {
-            upsert(sampleGoalEntity(id = "g-1", ownerId = "user-1"))
-            upsert(sampleGoalEntity(id = "g-other-owner", ownerId = "user-2"))
-            upsert(sampleGoalEntity(id = "g-ws", ownerId = "user-1", workspaceId = "ws-1"))
-        }
-        val repo = OfflineFirstGoalRepository(authRepo, goalDao)
+    fun goalRepository_observeGoals_mapsEntitiesForActiveSession() =
+        runTest {
+            val authRepo = FakeAuthRepository(session = testSession)
+            val goalDao =
+                FakeGoalDao().apply {
+                    upsert(sampleGoalEntity(id = "g-1", ownerId = "user-1"))
+                    upsert(sampleGoalEntity(id = "g-other-owner", ownerId = "user-2"))
+                    upsert(sampleGoalEntity(id = "g-ws", ownerId = "user-1", workspaceId = "ws-1"))
+                }
+            val repo = OfflineFirstGoalRepository(authRepo, goalDao)
 
-        val list = repo.observeGoals().first()
-        assertEquals(1, list.size)
-        assertEquals(EntityId("g-1"), list[0].id)
-        assertEquals(Money(100_000, Currency.TRY), list[0].targetAmount)
-        assertEquals(Money(20_000, Currency.TRY), list[0].currentAmount)
-    }
+            val list = repo.observeGoals().first()
+            assertEquals(1, list.size)
+            assertEquals(EntityId("g-1"), list[0].id)
+            assertEquals(Money(100_000, Currency.TRY), list[0].targetAmount)
+            assertEquals(Money(20_000, Currency.TRY), list[0].currentAmount)
+        }
 
     @Test
-    fun goalRepository_observeGoal_returnsNullWhenUnauthenticatedOrMismatched() = runTest {
-        val authRepo = FakeAuthRepository(session = null)
-        val goalDao = FakeGoalDao().apply {
-            upsert(sampleGoalEntity(id = "g-1", ownerId = "user-1"))
-            upsert(sampleGoalEntity(id = "g-ws", ownerId = "user-1", workspaceId = "ws-1"))
+    fun goalRepository_observeGoal_returnsNullWhenUnauthenticatedOrMismatched() =
+        runTest {
+            val authRepo = FakeAuthRepository(session = null)
+            val goalDao =
+                FakeGoalDao().apply {
+                    upsert(sampleGoalEntity(id = "g-1", ownerId = "user-1"))
+                    upsert(sampleGoalEntity(id = "g-ws", ownerId = "user-1", workspaceId = "ws-1"))
+                }
+            val repo = OfflineFirstGoalRepository(authRepo, goalDao)
+
+            assertNull(repo.observeGoal(EntityId("g-1")).first())
+
+            authRepo.session = testSession
+            val valid = repo.observeGoal(EntityId("g-1")).first()
+            assertNotNull(valid)
+            assertEquals(EntityId("g-1"), valid.id)
+
+            // Workspace item filtered out in personal scope
+            assertNull(repo.observeGoal(EntityId("g-ws")).first())
+            // Non-existent item
+            assertNull(repo.observeGoal(EntityId("non-existent")).first())
         }
-        val repo = OfflineFirstGoalRepository(authRepo, goalDao)
-
-        assertNull(repo.observeGoal(EntityId("g-1")).first())
-
-        authRepo.session = testSession
-        val valid = repo.observeGoal(EntityId("g-1")).first()
-        assertNotNull(valid)
-        assertEquals(EntityId("g-1"), valid.id)
-
-        // Workspace item filtered out in personal scope
-        assertNull(repo.observeGoal(EntityId("g-ws")).first())
-        // Non-existent item
-        assertNull(repo.observeGoal(EntityId("non-existent")).first())
-    }
 
     @Test
-    fun goalRepository_observeContributions_requiresParentGoalOwnership() = runTest {
-        val authRepo = FakeAuthRepository(session = testSession)
-        val goalDao = FakeGoalDao().apply {
-            upsert(sampleGoalEntity(id = "g-1", ownerId = "user-1"))
-            upsert(sampleGoalEntity(id = "g-user2", ownerId = "user-2"))
-            upsertContribution(sampleGoalContributionEntity(id = "c-1", goalId = "g-1"))
-            upsertContribution(sampleGoalContributionEntity(id = "c-2", goalId = "g-user2"))
+    fun goalRepository_observeContributions_requiresParentGoalOwnership() =
+        runTest {
+            val authRepo = FakeAuthRepository(session = testSession)
+            val goalDao =
+                FakeGoalDao().apply {
+                    upsert(sampleGoalEntity(id = "g-1", ownerId = "user-1"))
+                    upsert(sampleGoalEntity(id = "g-user2", ownerId = "user-2"))
+                    upsertContribution(sampleGoalContributionEntity(id = "c-1", goalId = "g-1"))
+                    upsertContribution(sampleGoalContributionEntity(id = "c-2", goalId = "g-user2"))
+                }
+            val repo = OfflineFirstGoalRepository(authRepo, goalDao)
+
+            val contribsGoal1 = repo.observeContributions(EntityId("g-1")).first()
+            assertEquals(1, contribsGoal1.size)
+            assertEquals(EntityId("c-1"), contribsGoal1[0].id)
+
+            // Other user's goal contributions return empty
+            val contribsGoal2 = repo.observeContributions(EntityId("g-user2")).first()
+            assertEquals(emptyList(), contribsGoal2)
         }
-        val repo = OfflineFirstGoalRepository(authRepo, goalDao)
-
-        val contribsGoal1 = repo.observeContributions(EntityId("g-1")).first()
-        assertEquals(1, contribsGoal1.size)
-        assertEquals(EntityId("c-1"), contribsGoal1[0].id)
-
-        // Other user's goal contributions return empty
-        val contribsGoal2 = repo.observeContributions(EntityId("g-user2")).first()
-        assertEquals(emptyList(), contribsGoal2)
-    }
 
     @Test
-    fun goalRepository_doesNotSwallowMapperOrCancellationException() = runTest {
-        val authRepo = FakeAuthRepository(session = testSession)
-        val goalDao = FakeGoalDao()
-        val repo = OfflineFirstGoalRepository(authRepo, goalDao)
+    fun goalRepository_doesNotSwallowMapperOrCancellationException() =
+        runTest {
+            val authRepo = FakeAuthRepository(session = testSession)
+            val goalDao = FakeGoalDao()
+            val repo = OfflineFirstGoalRepository(authRepo, goalDao)
 
-        // Corrupt entity throws when mapped
-        goalDao.goals["corrupt"] = sampleGoalEntity(id = "corrupt", ownerId = "user-1").copy(currencyCode = "INVALID")
-        assertFailsWith<IllegalArgumentException> {
-            repo.observeGoals().first()
-        }
-        goalDao.goals.remove("corrupt")
+            // Corrupt entity throws when mapped
+            goalDao.goals["corrupt"] = sampleGoalEntity(id = "corrupt", ownerId = "user-1").copy(currencyCode = "INVALID")
+            assertFailsWith<IllegalArgumentException> {
+                repo.observeGoals().first()
+            }
+            goalDao.goals.remove("corrupt")
 
-        // DAO exception propagates
-        goalDao.observeAllException = IllegalStateException("database failure")
-        assertFailsWith<IllegalStateException> {
-            repo.observeGoals().first()
-        }
-        goalDao.observeAllException = null
+            // DAO exception propagates
+            goalDao.observeAllException = IllegalStateException("database failure")
+            assertFailsWith<IllegalStateException> {
+                repo.observeGoals().first()
+            }
+            goalDao.observeAllException = null
 
-        // CancellationException is rethrown directly without converting to empty list or other error
-        val cancellingAuthRepo = object : AuthRepository by authRepo {
-            override fun observeSession(): Flow<AuthSession?> = flow {
-                throw CancellationException("goal_observe_cancelled")
+            // CancellationException is rethrown directly without converting to empty list or other error
+            val cancellingAuthRepo =
+                object : AuthRepository by authRepo {
+                    override fun observeSession(): Flow<AuthSession?> =
+                        flow {
+                            throw CancellationException("goal_observe_cancelled")
+                        }
+                }
+            val cancellingRepo = OfflineFirstGoalRepository(cancellingAuthRepo, goalDao)
+            assertFailsWith<CancellationException> {
+                cancellingRepo.observeGoals().first()
             }
         }
-        val cancellingRepo = OfflineFirstGoalRepository(cancellingAuthRepo, goalDao)
-        assertFailsWith<CancellationException> {
-            cancellingRepo.observeGoals().first()
-        }
-    }
 
     // endregion
 
     // region Debt Repository Tests
 
     @Test
-    fun debtRepository_observeDebts_returnsEmptyWhenUnauthenticated() = runTest {
-        val authRepo = FakeAuthRepository(session = null)
-        val debtDao = FakeDebtDao()
-        val repo = OfflineFirstDebtRepository(authRepo, debtDao)
+    fun debtRepository_observeDebts_returnsEmptyWhenUnauthenticated() =
+        runTest {
+            val authRepo = FakeAuthRepository(session = null)
+            val debtDao = FakeDebtDao()
+            val repo = OfflineFirstDebtRepository(authRepo, debtDao)
 
-        assertEquals(emptyList(), repo.observeDebts().first())
-    }
+            assertEquals(emptyList(), repo.observeDebts().first())
+        }
 
     @Test
-    fun debtRepository_observeDebts_mapsEntitiesForActiveSession() = runTest {
-        val authRepo = FakeAuthRepository(session = testSession)
-        val debtDao = FakeDebtDao().apply {
-            upsert(sampleDebtEntity(id = "d-1", ownerId = "user-1"))
-            upsert(sampleDebtEntity(id = "d-other", ownerId = "user-2"))
-            upsert(sampleDebtEntity(id = "d-ws", ownerId = "user-1", workspaceId = "ws-1"))
-        }
-        val repo = OfflineFirstDebtRepository(authRepo, debtDao)
+    fun debtRepository_observeDebts_mapsEntitiesForActiveSession() =
+        runTest {
+            val authRepo = FakeAuthRepository(session = testSession)
+            val debtDao =
+                FakeDebtDao().apply {
+                    upsert(sampleDebtEntity(id = "d-1", ownerId = "user-1"))
+                    upsert(sampleDebtEntity(id = "d-other", ownerId = "user-2"))
+                    upsert(sampleDebtEntity(id = "d-ws", ownerId = "user-1", workspaceId = "ws-1"))
+                }
+            val repo = OfflineFirstDebtRepository(authRepo, debtDao)
 
-        val list = repo.observeDebts().first()
-        assertEquals(1, list.size)
-        assertEquals(EntityId("d-1"), list[0].id)
-        assertEquals(Money(50_000, Currency.TRY), list[0].amount)
-        assertEquals(DebtType.DEBT, list[0].type)
-        assertEquals(DebtStatus.OPEN, list[0].status)
-    }
+            val list = repo.observeDebts().first()
+            assertEquals(1, list.size)
+            assertEquals(EntityId("d-1"), list[0].id)
+            assertEquals(Money(50_000, Currency.TRY), list[0].amount)
+            assertEquals(DebtType.DEBT, list[0].type)
+            assertEquals(DebtStatus.OPEN, list[0].status)
+        }
 
     @Test
-    fun debtRepository_observeDebt_returnsNullWhenUnauthenticatedOrMismatched() = runTest {
-        val authRepo = FakeAuthRepository(session = null)
-        val debtDao = FakeDebtDao().apply {
-            upsert(sampleDebtEntity(id = "d-1", ownerId = "user-1"))
-            upsert(sampleDebtEntity(id = "d-ws", ownerId = "user-1", workspaceId = "ws-1"))
+    fun debtRepository_observeDebt_returnsNullWhenUnauthenticatedOrMismatched() =
+        runTest {
+            val authRepo = FakeAuthRepository(session = null)
+            val debtDao =
+                FakeDebtDao().apply {
+                    upsert(sampleDebtEntity(id = "d-1", ownerId = "user-1"))
+                    upsert(sampleDebtEntity(id = "d-ws", ownerId = "user-1", workspaceId = "ws-1"))
+                }
+            val repo = OfflineFirstDebtRepository(authRepo, debtDao)
+
+            assertNull(repo.observeDebt(EntityId("d-1")).first())
+
+            authRepo.session = testSession
+            val valid = repo.observeDebt(EntityId("d-1")).first()
+            assertNotNull(valid)
+            assertEquals(EntityId("d-1"), valid.id)
+
+            // Workspace item filtered out in personal scope
+            assertNull(repo.observeDebt(EntityId("d-ws")).first())
+            // Non-existent item
+            assertNull(repo.observeDebt(EntityId("non-existent")).first())
         }
-        val repo = OfflineFirstDebtRepository(authRepo, debtDao)
-
-        assertNull(repo.observeDebt(EntityId("d-1")).first())
-
-        authRepo.session = testSession
-        val valid = repo.observeDebt(EntityId("d-1")).first()
-        assertNotNull(valid)
-        assertEquals(EntityId("d-1"), valid.id)
-
-        // Workspace item filtered out in personal scope
-        assertNull(repo.observeDebt(EntityId("d-ws")).first())
-        // Non-existent item
-        assertNull(repo.observeDebt(EntityId("non-existent")).first())
-    }
 
     @Test
-    fun debtRepository_observePayments_requiresParentDebtOwnership() = runTest {
-        val authRepo = FakeAuthRepository(session = testSession)
-        val debtDao = FakeDebtDao().apply {
-            upsert(sampleDebtEntity(id = "d-1", ownerId = "user-1"))
-            upsert(sampleDebtEntity(id = "d-user2", ownerId = "user-2"))
-            upsertPayment(sampleDebtPaymentEntity(id = "p-1", debtId = "d-1"))
-            upsertPayment(sampleDebtPaymentEntity(id = "p-2", debtId = "d-user2"))
+    fun debtRepository_observePayments_requiresParentDebtOwnership() =
+        runTest {
+            val authRepo = FakeAuthRepository(session = testSession)
+            val debtDao =
+                FakeDebtDao().apply {
+                    upsert(sampleDebtEntity(id = "d-1", ownerId = "user-1"))
+                    upsert(sampleDebtEntity(id = "d-user2", ownerId = "user-2"))
+                    upsertPayment(sampleDebtPaymentEntity(id = "p-1", debtId = "d-1"))
+                    upsertPayment(sampleDebtPaymentEntity(id = "p-2", debtId = "d-user2"))
+                }
+            val repo = OfflineFirstDebtRepository(authRepo, debtDao)
+
+            val paymentsDebt1 = repo.observePayments(EntityId("d-1")).first()
+            assertEquals(1, paymentsDebt1.size)
+            assertEquals(EntityId("p-1"), paymentsDebt1[0].id)
+
+            // Other user's debt payments return empty
+            val paymentsDebt2 = repo.observePayments(EntityId("d-user2")).first()
+            assertEquals(emptyList(), paymentsDebt2)
         }
-        val repo = OfflineFirstDebtRepository(authRepo, debtDao)
-
-        val paymentsDebt1 = repo.observePayments(EntityId("d-1")).first()
-        assertEquals(1, paymentsDebt1.size)
-        assertEquals(EntityId("p-1"), paymentsDebt1[0].id)
-
-        // Other user's debt payments return empty
-        val paymentsDebt2 = repo.observePayments(EntityId("d-user2")).first()
-        assertEquals(emptyList(), paymentsDebt2)
-    }
 
     @Test
-    fun debtRepository_doesNotSwallowMapperOrCancellationException() = runTest {
-        val authRepo = FakeAuthRepository(session = testSession)
-        val debtDao = FakeDebtDao()
-        val repo = OfflineFirstDebtRepository(authRepo, debtDao)
+    fun debtRepository_doesNotSwallowMapperOrCancellationException() =
+        runTest {
+            val authRepo = FakeAuthRepository(session = testSession)
+            val debtDao = FakeDebtDao()
+            val repo = OfflineFirstDebtRepository(authRepo, debtDao)
 
-        // Corrupt entity throws when mapped
-        debtDao.debts["corrupt"] = sampleDebtEntity(id = "corrupt", ownerId = "user-1").copy(typeCode = "INVALID_TYPE")
-        assertFailsWith<IllegalArgumentException> {
-            repo.observeDebts().first()
-        }
-        debtDao.debts.remove("corrupt")
+            // Corrupt entity throws when mapped
+            debtDao.debts["corrupt"] = sampleDebtEntity(id = "corrupt", ownerId = "user-1").copy(typeCode = "INVALID_TYPE")
+            assertFailsWith<IllegalArgumentException> {
+                repo.observeDebts().first()
+            }
+            debtDao.debts.remove("corrupt")
 
-        // DAO exception propagates
-        debtDao.observeAllException = IllegalStateException("database failure")
-        assertFailsWith<IllegalStateException> {
-            repo.observeDebts().first()
-        }
-        debtDao.observeAllException = null
+            // DAO exception propagates
+            debtDao.observeAllException = IllegalStateException("database failure")
+            assertFailsWith<IllegalStateException> {
+                repo.observeDebts().first()
+            }
+            debtDao.observeAllException = null
 
-        // CancellationException is rethrown directly without converting to empty list or other error
-        val cancellingAuthRepo = object : AuthRepository by authRepo {
-            override fun observeSession(): Flow<AuthSession?> = flow {
-                throw CancellationException("debt_observe_cancelled")
+            // CancellationException is rethrown directly without converting to empty list or other error
+            val cancellingAuthRepo =
+                object : AuthRepository by authRepo {
+                    override fun observeSession(): Flow<AuthSession?> =
+                        flow {
+                            throw CancellationException("debt_observe_cancelled")
+                        }
+                }
+            val cancellingRepo = OfflineFirstDebtRepository(cancellingAuthRepo, debtDao)
+            assertFailsWith<CancellationException> {
+                cancellingRepo.observeDebts().first()
             }
         }
-        val cancellingRepo = OfflineFirstDebtRepository(cancellingAuthRepo, debtDao)
-        assertFailsWith<CancellationException> {
-            cancellingRepo.observeDebts().first()
-        }
-    }
 
     private class TestActiveWorkspaceScope(
         initial: EntityId? = null,
     ) : ActiveWorkspaceScope {
         val flow = kotlinx.coroutines.flow.MutableStateFlow(initial)
+
         override fun observe(profileId: EntityId): Flow<EntityId?> = flow
+
         override suspend fun current(profileId: EntityId): EntityId? = flow.value
     }
 
     @Test
-    fun goalRepository_activeWorkspaceScope_isolatesObserve() = runTest {
-        val authRepo = FakeAuthRepository(session = testSession)
-        val goalDao = FakeGoalDao()
-        val scope = TestActiveWorkspaceScope(null) // personal
-        val repo = OfflineFirstGoalRepository(
-            authRepository = authRepo,
-            goalDao = goalDao,
-            activeWorkspaceScope = scope,
-        )
+    fun goalRepository_activeWorkspaceScope_isolatesObserve() =
+        runTest {
+            val authRepo = FakeAuthRepository(session = testSession)
+            val goalDao = FakeGoalDao()
+            val scope = TestActiveWorkspaceScope(null) // personal
+            val repo =
+                OfflineFirstGoalRepository(
+                    authRepository = authRepo,
+                    goalDao = goalDao,
+                    activeWorkspaceScope = scope,
+                )
 
-        goalDao.goals["g-personal"] = sampleGoalEntity(id = "g-personal", ownerId = "user-1", workspaceId = null)
-        goalDao.goals["g-ws1"] = sampleGoalEntity(id = "g-ws1", ownerId = "user-1", workspaceId = "ws-1")
+            goalDao.goals["g-personal"] = sampleGoalEntity(id = "g-personal", ownerId = "user-1", workspaceId = null)
+            goalDao.goals["g-ws1"] = sampleGoalEntity(id = "g-ws1", ownerId = "user-1", workspaceId = "ws-1")
 
-        // 1. Personal mod
-        val personalGoals = repo.observeGoals().first()
-        assertEquals(1, personalGoals.size)
-        assertEquals(EntityId("g-personal"), personalGoals.first().id)
+            // 1. Personal mod
+            val personalGoals = repo.observeGoals().first()
+            assertEquals(1, personalGoals.size)
+            assertEquals(EntityId("g-personal"), personalGoals.first().id)
 
-        val personalGoal = repo.observeGoal(EntityId("g-personal")).first()
-        assertNotNull(personalGoal)
-        val crossScopeGoal = repo.observeGoal(EntityId("g-ws1")).first()
-        assertNull(crossScopeGoal)
+            val personalGoal = repo.observeGoal(EntityId("g-personal")).first()
+            assertNotNull(personalGoal)
+            val crossScopeGoal = repo.observeGoal(EntityId("g-ws1")).first()
+            assertNull(crossScopeGoal)
 
-        // 2. ws-1 scope'u
-        scope.flow.value = EntityId("ws-1")
-        val wsGoals = repo.observeGoals().first()
-        assertEquals(1, wsGoals.size)
-        assertEquals(EntityId("g-ws1"), wsGoals.first().id)
+            // 2. ws-1 scope'u
+            scope.flow.value = EntityId("ws-1")
+            val wsGoals = repo.observeGoals().first()
+            assertEquals(1, wsGoals.size)
+            assertEquals(EntityId("g-ws1"), wsGoals.first().id)
 
-        val wsGoal = repo.observeGoal(EntityId("g-ws1")).first()
-        assertNotNull(wsGoal)
-        val oldPersonalGoal = repo.observeGoal(EntityId("g-personal")).first()
-        assertNull(oldPersonalGoal)
-    }
+            val wsGoal = repo.observeGoal(EntityId("g-ws1")).first()
+            assertNotNull(wsGoal)
+            val oldPersonalGoal = repo.observeGoal(EntityId("g-personal")).first()
+            assertNull(oldPersonalGoal)
+        }
 
     @Test
-    fun debtRepository_activeWorkspaceScope_isolatesObserve() = runTest {
-        val authRepo = FakeAuthRepository(session = testSession)
-        val debtDao = FakeDebtDao()
-        val scope = TestActiveWorkspaceScope(null) // personal
-        val repo = OfflineFirstDebtRepository(
-            authRepository = authRepo,
-            debtDao = debtDao,
-            activeWorkspaceScope = scope,
-        )
+    fun debtRepository_activeWorkspaceScope_isolatesObserve() =
+        runTest {
+            val authRepo = FakeAuthRepository(session = testSession)
+            val debtDao = FakeDebtDao()
+            val scope = TestActiveWorkspaceScope(null) // personal
+            val repo =
+                OfflineFirstDebtRepository(
+                    authRepository = authRepo,
+                    debtDao = debtDao,
+                    activeWorkspaceScope = scope,
+                )
 
-        debtDao.debts["d-personal"] = sampleDebtEntity(id = "d-personal", ownerId = "user-1", workspaceId = null)
-        debtDao.debts["d-ws1"] = sampleDebtEntity(id = "d-ws1", ownerId = "user-1", workspaceId = "ws-1")
+            debtDao.debts["d-personal"] = sampleDebtEntity(id = "d-personal", ownerId = "user-1", workspaceId = null)
+            debtDao.debts["d-ws1"] = sampleDebtEntity(id = "d-ws1", ownerId = "user-1", workspaceId = "ws-1")
 
-        // 1. Personal mod
-        val personalDebts = repo.observeDebts().first()
-        assertEquals(1, personalDebts.size)
-        assertEquals(EntityId("d-personal"), personalDebts.first().id)
+            // 1. Personal mod
+            val personalDebts = repo.observeDebts().first()
+            assertEquals(1, personalDebts.size)
+            assertEquals(EntityId("d-personal"), personalDebts.first().id)
 
-        val personalDebt = repo.observeDebt(EntityId("d-personal")).first()
-        assertNotNull(personalDebt)
-        val crossScopeDebt = repo.observeDebt(EntityId("d-ws1")).first()
-        assertNull(crossScopeDebt)
+            val personalDebt = repo.observeDebt(EntityId("d-personal")).first()
+            assertNotNull(personalDebt)
+            val crossScopeDebt = repo.observeDebt(EntityId("d-ws1")).first()
+            assertNull(crossScopeDebt)
 
-        // 2. ws-1 scope'u
-        scope.flow.value = EntityId("ws-1")
-        val wsDebts = repo.observeDebts().first()
-        assertEquals(1, wsDebts.size)
-        assertEquals(EntityId("d-ws1"), wsDebts.first().id)
+            // 2. ws-1 scope'u
+            scope.flow.value = EntityId("ws-1")
+            val wsDebts = repo.observeDebts().first()
+            assertEquals(1, wsDebts.size)
+            assertEquals(EntityId("d-ws1"), wsDebts.first().id)
 
-        val wsDebt = repo.observeDebt(EntityId("d-ws1")).first()
-        assertNotNull(wsDebt)
-        val oldPersonalDebt = repo.observeDebt(EntityId("d-personal")).first()
-        assertNull(oldPersonalDebt)
-    }
+            val wsDebt = repo.observeDebt(EntityId("d-ws1")).first()
+            assertNotNull(wsDebt)
+            val oldPersonalDebt = repo.observeDebt(EntityId("d-personal")).first()
+            assertNull(oldPersonalDebt)
+        }
 
     // endregion
 }

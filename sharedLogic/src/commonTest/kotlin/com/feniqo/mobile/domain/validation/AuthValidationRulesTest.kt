@@ -3,10 +3,8 @@ package com.feniqo.mobile.domain.validation
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class AuthValidationRulesTest {
-
     // --- E-posta Doğrulama Testleri ---
 
     @Test

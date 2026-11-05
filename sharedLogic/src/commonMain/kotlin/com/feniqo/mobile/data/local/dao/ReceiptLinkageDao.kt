@@ -20,10 +20,16 @@ import com.feniqo.mobile.data.local.entity.TransactionEntity
 @Dao
 abstract class ReceiptLinkageDao {
     @Query("SELECT * FROM receipt_linkages WHERE transaction_id = :transactionId AND owner_id = :ownerId")
-    abstract suspend fun getByTransactionId(transactionId: String, ownerId: String): ReceiptLinkageEntity?
+    abstract suspend fun getByTransactionId(
+        transactionId: String,
+        ownerId: String,
+    ): ReceiptLinkageEntity?
 
     @Query("SELECT * FROM receipt_linkages WHERE active_attachment_id = :attachmentId AND owner_id = :ownerId")
-    abstract suspend fun listByAttachmentId(attachmentId: String, ownerId: String): List<ReceiptLinkageEntity>
+    abstract suspend fun listByAttachmentId(
+        attachmentId: String,
+        ownerId: String,
+    ): List<ReceiptLinkageEntity>
 
     @Query("SELECT * FROM receipt_linkages WHERE transaction_id = :transactionId")
     protected abstract suspend fun getByTransactionIdInternal(transactionId: String): ReceiptLinkageEntity?
@@ -51,14 +57,16 @@ abstract class ReceiptLinkageDao {
     @Transaction
     open suspend fun insertInitialLinkage(linkage: ReceiptLinkageEntity) {
         require(linkage.generation >= 1L) { "Generation 1 veya daha büyük olmalıdır." }
-        val targetTx = getTransactionByIdInternal(linkage.transactionId)
-            ?: error("İşlem bulunamadı: ${linkage.transactionId}")
+        val targetTx =
+            getTransactionByIdInternal(linkage.transactionId)
+                ?: error("İşlem bulunamadı: ${linkage.transactionId}")
         if (targetTx.ownerId != linkage.ownerId) {
             error("İşlem sahibi (${targetTx.ownerId}) ile bağlantı sahibi (${linkage.ownerId}) uyuşmuyor.")
         }
         if (linkage.activeAttachmentId != null) {
-            val targetFile = getFileByIdInternal(linkage.activeAttachmentId)
-                ?: error("Makbuz dosyası bulunamadı: ${linkage.activeAttachmentId}")
+            val targetFile =
+                getFileByIdInternal(linkage.activeAttachmentId)
+                    ?: error("Makbuz dosyası bulunamadı: ${linkage.activeAttachmentId}")
             if (targetFile.ownerId != linkage.ownerId) {
                 error("Makbuz sahibi (${targetFile.ownerId}) ile bağlantı sahibi (${linkage.ownerId}) uyuşmuyor.")
             }
@@ -80,8 +88,9 @@ abstract class ReceiptLinkageDao {
      */
     @Transaction
     open suspend fun updateLinkage(updatedLinkage: ReceiptLinkageEntity) {
-        val existing = getByTransactionIdInternal(updatedLinkage.transactionId)
-            ?: error("Güncellenecek linkage bulunamadı: ${updatedLinkage.transactionId}")
+        val existing =
+            getByTransactionIdInternal(updatedLinkage.transactionId)
+                ?: error("Güncellenecek linkage bulunamadı: ${updatedLinkage.transactionId}")
         if (existing.ownerId != updatedLinkage.ownerId) {
             error("Mevcut bağlantı sahibi (${existing.ownerId}) ile güncelleyen sahip (${updatedLinkage.ownerId}) uyuşmuyor.")
         }
@@ -89,12 +98,13 @@ abstract class ReceiptLinkageDao {
         if (updatedLinkage.generation != existing.generation + 1L) {
             error(
                 "Geçersiz generation: Mevcut generation=${existing.generation}, " +
-                    "beklenen yeni generation=${existing.generation + 1L}, verilen=${updatedLinkage.generation}"
+                    "beklenen yeni generation=${existing.generation + 1L}, verilen=${updatedLinkage.generation}",
             )
         }
         if (updatedLinkage.activeAttachmentId != null) {
-            val targetFile = getFileByIdInternal(updatedLinkage.activeAttachmentId)
-                ?: error("Makbuz dosyası bulunamadı: ${updatedLinkage.activeAttachmentId}")
+            val targetFile =
+                getFileByIdInternal(updatedLinkage.activeAttachmentId)
+                    ?: error("Makbuz dosyası bulunamadı: ${updatedLinkage.activeAttachmentId}")
             if (targetFile.ownerId != updatedLinkage.ownerId) {
                 error("Makbuz sahibi (${targetFile.ownerId}) ile bağlantı sahibi (${updatedLinkage.ownerId}) uyuşmuyor.")
             }

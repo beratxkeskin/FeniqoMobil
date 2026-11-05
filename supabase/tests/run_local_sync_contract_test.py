@@ -20,6 +20,7 @@ ALLOWED_HOSTS = {'localhost', '127.0.0.1', '::1'}
 ALLOWED_CONTRACTS = {
     "sync_write_v2_contract.sql": "sync_write_v2_contract.sql",
     "sync_write_v2_assets_contract.sql": "sync_write_v2_assets_contract.sql",
+    "sync_write_v2_merchant_verifications_contract.sql": "sync_write_v2_merchant_verifications_contract.sql",
     "market_prices_contract.sql": "market_prices_contract.sql",
     "market_price_rate_limit_contract.sql": "market_price_rate_limit_contract.sql",
     "workspace_invitation_security_contract.sql": "workspace_invitation_security_contract.sql",

@@ -2,10 +2,12 @@ package com.feniqo.mobile.presentation.dashboard
 
 import com.feniqo.mobile.domain.model.Category
 import com.feniqo.mobile.domain.model.DashboardSummary
+import com.feniqo.mobile.domain.model.Merchant
 import com.feniqo.mobile.domain.model.Transaction
 import com.feniqo.mobile.domain.model.TransactionType
-import com.feniqo.mobile.presentation.transaction.InstallmentDisplayModel
+import com.feniqo.mobile.domain.usecase.StarterMerchantCatalog
 import com.feniqo.mobile.presentation.transaction.TransactionDisplayModel
+import com.feniqo.mobile.presentation.transaction.TransactionsDisplayModelBuilder
 import com.feniqo.mobile.presentation.util.DateFormatter
 import com.feniqo.mobile.presentation.util.MoneyFormatter
 
@@ -36,6 +38,7 @@ object DashboardDisplayModelBuilder {
         userName: String = "",
         excludedDifferentCurrencyCount: Int = 0,
         summaryCurrencyCode: String = "TRY",
+        catalog: List<Merchant> = StarterMerchantCatalog.merchants,
     ): DashboardDisplayModel {
         val categoryMap = categories.associateBy { it.id }
         val transactionMap = transactions.associateBy { it.id }
@@ -87,32 +90,11 @@ object DashboardDisplayModelBuilder {
             val trx = transactionMap[trxId] ?: return@mapNotNull null
             val cat = categoryMap[trx.categoryId]
 
-            TransactionDisplayModel(
-                id = trx.id,
-                amount = trx.amount,
-                formattedAmount = MoneyFormatter.format(
-                    money = trx.amount,
-                    includeSign = true,
-                    type = trx.type,
-                ),
-                type = trx.type,
-                categoryId = trx.categoryId,
-                categoryName = cat?.name ?: FALLBACK_CATEGORY_NAME,
-                categoryColorHex = cat?.color?.hex,
-                categoryIconKey = cat?.icon?.key,
-                description = trx.description,
-                paymentMethod = trx.paymentMethod,
-                transactionDate = trx.transactionDate,
-                installment = trx.installment?.let { inst ->
-                    InstallmentDisplayModel(
-                        number = inst.number,
-                        total = inst.total,
-                        badgeText = "${inst.number}/${inst.total}",
-                    )
-                },
-                hasReceipt = trx.receiptPath != null,
-                canEdit = true,
-                canDelete = true,
+            TransactionsDisplayModelBuilder.buildItem(
+                transaction = trx,
+                category = cat,
+                fallbackCategoryName = FALLBACK_CATEGORY_NAME,
+                catalog = catalog,
             )
         }
 

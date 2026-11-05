@@ -153,3 +153,8 @@ data class WorkspaceMemberRemoteQuery(
     val workspaceId: EntityId? = null,
     val updatedAfter: WorkspaceMemberSyncCursor? = null,
 )
+
+data class UserMerchantVerificationRemoteQuery(
+    val page: RemotePageRequest = RemotePageRequest(),
+    val updatedAfter: RemoteSyncCursor? = null,
+)

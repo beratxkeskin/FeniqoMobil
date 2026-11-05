@@ -23,12 +23,12 @@ import kotlin.test.assertTrue
 import kotlin.time.Instant
 
 class TransactionSplitRemoteMappersTest {
-
-    private val json = Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-        explicitNulls = true
-    }
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+            explicitNulls = true
+        }
 
     private val user1 = EntityId("user-1")
     private val user2 = EntityId("user-2")
@@ -36,29 +36,31 @@ class TransactionSplitRemoteMappersTest {
 
     @Test
     fun valid_custom_split_round_trips_losslessly() {
-        val domain = Transaction(
-            id = EntityId("tx-1"),
-            ownerId = user1,
-            workspaceId = EntityId("ws-1"),
-            amount = Money(30_000L, Currency.TRY),
-            type = TransactionType.EXPENSE,
-            categoryId = EntityId("cat-1"),
-            description = "Akşam Yemeği",
-            paymentMethod = PaymentMethod.CREDIT_CARD,
-            transactionDate = LocalDate.parse("2026-09-18"),
-            receiptPath = null,
-            installment = null,
-            createdAt = Instant.fromEpochMilliseconds(1000L),
-            paidByUserId = user1,
-            participantUserIds = listOf(user1, user2, user3),
-            note = "Özel paylaşımlı",
-            splitMode = TransactionSplitMode.CUSTOM,
-            participantShares = listOf(
-                TransactionParticipantShare(user2, 5_000L),
-                TransactionParticipantShare(user3, 10_000L),
-                TransactionParticipantShare(user1, 15_000L),
-            ),
-        )
+        val domain =
+            Transaction(
+                id = EntityId("tx-1"),
+                ownerId = user1,
+                workspaceId = EntityId("ws-1"),
+                amount = Money(30_000L, Currency.TRY),
+                type = TransactionType.EXPENSE,
+                categoryId = EntityId("cat-1"),
+                description = "Akşam Yemeği",
+                paymentMethod = PaymentMethod.CREDIT_CARD,
+                transactionDate = LocalDate.parse("2026-09-18"),
+                receiptPath = null,
+                installment = null,
+                createdAt = Instant.fromEpochMilliseconds(1000L),
+                paidByUserId = user1,
+                participantUserIds = listOf(user1, user2, user3),
+                note = "Özel paylaşımlı",
+                splitMode = TransactionSplitMode.CUSTOM,
+                participantShares =
+                    listOf(
+                        TransactionParticipantShare(user2, 5_000L),
+                        TransactionParticipantShare(user3, 10_000L),
+                        TransactionParticipantShare(user1, 15_000L),
+                    ),
+            )
 
         val dto = domain.toDto()
         assertEquals("CUSTOM", dto.splitMode)
@@ -85,7 +87,8 @@ class TransactionSplitRemoteMappersTest {
 
     @Test
     fun legacy_payload_without_split_fields_maps_to_equal_split() {
-        val legacyJson = """
+        val legacyJson =
+            """
             {
                 "id": "tx-legacy",
                 "user_id": "user-1",
@@ -100,7 +103,7 @@ class TransactionSplitRemoteMappersTest {
                 "transaction_date": "2026-09-18",
                 "created_at": "2026-09-18T10:00:00Z"
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val dto = json.decodeFromString<TransactionDto>(legacyJson)
         assertEquals(null, dto.splitMode)
@@ -113,7 +116,8 @@ class TransactionSplitRemoteMappersTest {
 
     @Test
     fun legacy_payload_with_explicit_nulls_maps_to_equal_split() {
-        val legacyJsonWithNulls = """
+        val legacyJsonWithNulls =
+            """
             {
                 "id": "tx-legacy-nulls",
                 "user_id": "user-1",
@@ -130,7 +134,7 @@ class TransactionSplitRemoteMappersTest {
                 "split_mode": null,
                 "participant_shares": null
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val dto = json.decodeFromString<TransactionDto>(legacyJsonWithNulls)
         val domain = dto.toDomain()
@@ -140,10 +144,11 @@ class TransactionSplitRemoteMappersTest {
 
     @Test
     fun rejects_missing_split_mode_when_participant_shares_is_present() {
-        val invalidDto = baseTransactionDto().copy(
-            splitMode = null,
-            participantShares = listOf(TransactionParticipantShareDto(userId = "user-1", amountMinor = 10000L)),
-        )
+        val invalidDto =
+            baseTransactionDto().copy(
+                splitMode = null,
+                participantShares = listOf(TransactionParticipantShareDto(userId = "user-1", amountMinor = 10000L)),
+            )
 
         assertFailsWith<RemoteMappingException> {
             invalidDto.toDomain()
@@ -152,10 +157,11 @@ class TransactionSplitRemoteMappersTest {
 
     @Test
     fun rejects_equal_split_with_non_empty_participant_shares() {
-        val invalidDto = baseTransactionDto().copy(
-            splitMode = "EQUAL",
-            participantShares = listOf(TransactionParticipantShareDto(userId = "user-1", amountMinor = 10000L)),
-        )
+        val invalidDto =
+            baseTransactionDto().copy(
+                splitMode = "EQUAL",
+                participantShares = listOf(TransactionParticipantShareDto(userId = "user-1", amountMinor = 10000L)),
+            )
 
         assertFailsWith<RemoteMappingException> {
             invalidDto.toDomain()
@@ -184,14 +190,16 @@ class TransactionSplitRemoteMappersTest {
 
     @Test
     fun rejects_custom_split_with_blank_user_id() {
-        val invalidDto = baseTransactionDto().copy(
-            splitMode = "CUSTOM",
-            participantUserIds = listOf("user-1", ""),
-            participantShares = listOf(
-                TransactionParticipantShareDto(userId = "user-1", amountMinor = 5000L),
-                TransactionParticipantShareDto(userId = "   ", amountMinor = 5000L),
-            ),
-        )
+        val invalidDto =
+            baseTransactionDto().copy(
+                splitMode = "CUSTOM",
+                participantUserIds = listOf("user-1", ""),
+                participantShares =
+                    listOf(
+                        TransactionParticipantShareDto(userId = "user-1", amountMinor = 5000L),
+                        TransactionParticipantShareDto(userId = "   ", amountMinor = 5000L),
+                    ),
+            )
 
         assertFailsWith<RemoteMappingException> {
             invalidDto.toDomain()
@@ -200,14 +208,16 @@ class TransactionSplitRemoteMappersTest {
 
     @Test
     fun rejects_custom_split_with_negative_share() {
-        val invalidDto = baseTransactionDto().copy(
-            splitMode = "CUSTOM",
-            participantUserIds = listOf("user-1", "user-2"),
-            participantShares = listOf(
-                TransactionParticipantShareDto(userId = "user-1", amountMinor = 15000L),
-                TransactionParticipantShareDto(userId = "user-2", amountMinor = -5000L),
-            ),
-        )
+        val invalidDto =
+            baseTransactionDto().copy(
+                splitMode = "CUSTOM",
+                participantUserIds = listOf("user-1", "user-2"),
+                participantShares =
+                    listOf(
+                        TransactionParticipantShareDto(userId = "user-1", amountMinor = 15000L),
+                        TransactionParticipantShareDto(userId = "user-2", amountMinor = -5000L),
+                    ),
+            )
 
         assertFailsWith<RemoteMappingException> {
             invalidDto.toDomain()
@@ -216,14 +226,16 @@ class TransactionSplitRemoteMappersTest {
 
     @Test
     fun rejects_custom_split_with_duplicate_participant_in_shares() {
-        val invalidDto = baseTransactionDto().copy(
-            splitMode = "CUSTOM",
-            participantUserIds = listOf("user-1"),
-            participantShares = listOf(
-                TransactionParticipantShareDto(userId = "user-1", amountMinor = 5000L),
-                TransactionParticipantShareDto(userId = "user-1", amountMinor = 5000L),
-            ),
-        )
+        val invalidDto =
+            baseTransactionDto().copy(
+                splitMode = "CUSTOM",
+                participantUserIds = listOf("user-1"),
+                participantShares =
+                    listOf(
+                        TransactionParticipantShareDto(userId = "user-1", amountMinor = 5000L),
+                        TransactionParticipantShareDto(userId = "user-1", amountMinor = 5000L),
+                    ),
+            )
 
         assertFailsWith<RemoteMappingException> {
             invalidDto.toDomain()
@@ -232,15 +244,17 @@ class TransactionSplitRemoteMappersTest {
 
     @Test
     fun rejects_custom_split_when_payer_not_in_shares() {
-        val invalidDto = baseTransactionDto().copy(
-            paidByUserId = "user-1",
-            participantUserIds = listOf("user-2", "user-3"),
-            splitMode = "CUSTOM",
-            participantShares = listOf(
-                TransactionParticipantShareDto(userId = "user-2", amountMinor = 5000L),
-                TransactionParticipantShareDto(userId = "user-3", amountMinor = 5000L),
-            ),
-        )
+        val invalidDto =
+            baseTransactionDto().copy(
+                paidByUserId = "user-1",
+                participantUserIds = listOf("user-2", "user-3"),
+                splitMode = "CUSTOM",
+                participantShares =
+                    listOf(
+                        TransactionParticipantShareDto(userId = "user-2", amountMinor = 5000L),
+                        TransactionParticipantShareDto(userId = "user-3", amountMinor = 5000L),
+                    ),
+            )
 
         assertFailsWith<RemoteMappingException> {
             invalidDto.toDomain()
@@ -249,15 +263,17 @@ class TransactionSplitRemoteMappersTest {
 
     @Test
     fun rejects_custom_split_when_non_payer_has_zero_share() {
-        val invalidDto = baseTransactionDto().copy(
-            paidByUserId = "user-1",
-            participantUserIds = listOf("user-1", "user-2"),
-            splitMode = "CUSTOM",
-            participantShares = listOf(
-                TransactionParticipantShareDto(userId = "user-1", amountMinor = 10000L),
-                TransactionParticipantShareDto(userId = "user-2", amountMinor = 0L),
-            ),
-        )
+        val invalidDto =
+            baseTransactionDto().copy(
+                paidByUserId = "user-1",
+                participantUserIds = listOf("user-1", "user-2"),
+                splitMode = "CUSTOM",
+                participantShares =
+                    listOf(
+                        TransactionParticipantShareDto(userId = "user-1", amountMinor = 10000L),
+                        TransactionParticipantShareDto(userId = "user-2", amountMinor = 0L),
+                    ),
+            )
 
         assertFailsWith<RemoteMappingException> {
             invalidDto.toDomain()
@@ -266,15 +282,17 @@ class TransactionSplitRemoteMappersTest {
 
     @Test
     fun allows_custom_split_when_payer_has_zero_share_paid_for_others() {
-        val validDto = baseTransactionDto().copy(
-            paidByUserId = "user-1",
-            participantUserIds = listOf("user-1", "user-2"),
-            splitMode = "CUSTOM",
-            participantShares = listOf(
-                TransactionParticipantShareDto(userId = "user-1", amountMinor = 0L),
-                TransactionParticipantShareDto(userId = "user-2", amountMinor = 10000L),
-            ),
-        )
+        val validDto =
+            baseTransactionDto().copy(
+                paidByUserId = "user-1",
+                participantUserIds = listOf("user-1", "user-2"),
+                splitMode = "CUSTOM",
+                participantShares =
+                    listOf(
+                        TransactionParticipantShareDto(userId = "user-1", amountMinor = 0L),
+                        TransactionParticipantShareDto(userId = "user-2", amountMinor = 10000L),
+                    ),
+            )
 
         val domain = validDto.toDomain()
         assertEquals(TransactionSplitMode.CUSTOM, domain.splitMode)
@@ -285,15 +303,17 @@ class TransactionSplitRemoteMappersTest {
     @Test
     fun rejects_custom_split_when_participant_user_ids_set_mismatches_shares() {
         // user-3 participantUserIds içinde var ama shares içinde yok
-        val invalidDto = baseTransactionDto().copy(
-            paidByUserId = "user-1",
-            participantUserIds = listOf("user-1", "user-2", "user-3"),
-            splitMode = "CUSTOM",
-            participantShares = listOf(
-                TransactionParticipantShareDto(userId = "user-1", amountMinor = 5000L),
-                TransactionParticipantShareDto(userId = "user-2", amountMinor = 5000L),
-            ),
-        )
+        val invalidDto =
+            baseTransactionDto().copy(
+                paidByUserId = "user-1",
+                participantUserIds = listOf("user-1", "user-2", "user-3"),
+                splitMode = "CUSTOM",
+                participantShares =
+                    listOf(
+                        TransactionParticipantShareDto(userId = "user-1", amountMinor = 5000L),
+                        TransactionParticipantShareDto(userId = "user-2", amountMinor = 5000L),
+                    ),
+            )
 
         assertFailsWith<RemoteMappingException> {
             invalidDto.toDomain()
@@ -302,16 +322,18 @@ class TransactionSplitRemoteMappersTest {
 
     @Test
     fun rejects_custom_split_when_sum_does_not_equal_amount_minor() {
-        val invalidDto = baseTransactionDto().copy(
-            amountMinor = 10000L,
-            paidByUserId = "user-1",
-            participantUserIds = listOf("user-1", "user-2"),
-            splitMode = "CUSTOM",
-            participantShares = listOf(
-                TransactionParticipantShareDto(userId = "user-1", amountMinor = 4000L),
-                TransactionParticipantShareDto(userId = "user-2", amountMinor = 5000L),
-            ),
-        )
+        val invalidDto =
+            baseTransactionDto().copy(
+                amountMinor = 10000L,
+                paidByUserId = "user-1",
+                participantUserIds = listOf("user-1", "user-2"),
+                splitMode = "CUSTOM",
+                participantShares =
+                    listOf(
+                        TransactionParticipantShareDto(userId = "user-1", amountMinor = 4000L),
+                        TransactionParticipantShareDto(userId = "user-2", amountMinor = 5000L),
+                    ),
+            )
 
         assertFailsWith<RemoteMappingException> {
             invalidDto.toDomain()
@@ -320,16 +342,18 @@ class TransactionSplitRemoteMappersTest {
 
     @Test
     fun rejects_custom_split_on_long_overflow_during_sum() {
-        val invalidDto = baseTransactionDto().copy(
-            amountMinor = 10000L,
-            paidByUserId = "user-1",
-            participantUserIds = listOf("user-1", "user-2"),
-            splitMode = "CUSTOM",
-            participantShares = listOf(
-                TransactionParticipantShareDto(userId = "user-1", amountMinor = Long.MAX_VALUE - 10),
-                TransactionParticipantShareDto(userId = "user-2", amountMinor = 100L),
-            ),
-        )
+        val invalidDto =
+            baseTransactionDto().copy(
+                amountMinor = 10000L,
+                paidByUserId = "user-1",
+                participantUserIds = listOf("user-1", "user-2"),
+                splitMode = "CUSTOM",
+                participantShares =
+                    listOf(
+                        TransactionParticipantShareDto(userId = "user-1", amountMinor = Long.MAX_VALUE - 10),
+                        TransactionParticipantShareDto(userId = "user-2", amountMinor = 100L),
+                    ),
+            )
 
         assertFailsWith<RemoteMappingException> {
             invalidDto.toDomain()
@@ -338,34 +362,41 @@ class TransactionSplitRemoteMappersTest {
 
     @Test
     fun equivalent_conflict_resolver_compares_split_mode_and_shares() {
-        val tx1 = baseTransactionDto().copy(
-            amountMinor = 10000L,
-            splitMode = "CUSTOM",
-            participantUserIds = listOf("user-1", "user-2"),
-            participantShares = listOf(
-                TransactionParticipantShareDto("user-1", 6000L),
-                TransactionParticipantShareDto("user-2", 4000L),
-            ),
-        )
+        val tx1 =
+            baseTransactionDto().copy(
+                amountMinor = 10000L,
+                splitMode = "CUSTOM",
+                participantUserIds = listOf("user-1", "user-2"),
+                participantShares =
+                    listOf(
+                        TransactionParticipantShareDto("user-1", 6000L),
+                        TransactionParticipantShareDto("user-2", 4000L),
+                    ),
+            )
         // tx2 aynı paylar farklı sırada
-        val tx2 = tx1.copy(
-            participantShares = listOf(
-                TransactionParticipantShareDto("user-2", 4000L),
-                TransactionParticipantShareDto("user-1", 6000L),
-            ),
-        )
+        val tx2 =
+            tx1.copy(
+                participantShares =
+                    listOf(
+                        TransactionParticipantShareDto("user-2", 4000L),
+                        TransactionParticipantShareDto("user-1", 6000L),
+                    ),
+            )
         // tx3 farklı paylar
-        val tx3 = tx1.copy(
-            participantShares = listOf(
-                TransactionParticipantShareDto("user-1", 5000L),
-                TransactionParticipantShareDto("user-2", 5000L),
-            ),
-        )
+        val tx3 =
+            tx1.copy(
+                participantShares =
+                    listOf(
+                        TransactionParticipantShareDto("user-1", 5000L),
+                        TransactionParticipantShareDto("user-2", 5000L),
+                    ),
+            )
         // tx4 EQUAL
-        val tx4 = tx1.copy(
-            splitMode = "EQUAL",
-            participantShares = emptyList(),
-        )
+        val tx4 =
+            tx1.copy(
+                splitMode = "EQUAL",
+                participantShares = emptyList(),
+            )
 
         val json1 = json.encodeToString(tx1)
         val json2 = json.encodeToString(tx2)
@@ -379,103 +410,116 @@ class TransactionSplitRemoteMappersTest {
 
     @Test
     fun rejects_custom_split_when_participant_user_ids_is_empty_even_if_payer_is_specified() {
-        val invalidDto = baseTransactionDto().copy(
-            paidByUserId = "user-1",
-            participantUserIds = emptyList(),
-            splitMode = "CUSTOM",
-            participantShares = listOf(
-                TransactionParticipantShareDto(userId = "user-1", amountMinor = 10000L),
-            ),
-        )
+        val invalidDto =
+            baseTransactionDto().copy(
+                paidByUserId = "user-1",
+                participantUserIds = emptyList(),
+                splitMode = "CUSTOM",
+                participantShares =
+                    listOf(
+                        TransactionParticipantShareDto(userId = "user-1", amountMinor = 10000L),
+                    ),
+            )
 
-        val ex = assertFailsWith<RemoteMappingException> {
-            invalidDto.toDomain()
-        }
+        val ex =
+            assertFailsWith<RemoteMappingException> {
+                invalidDto.toDomain()
+            }
         assertTrue(ex.message?.contains("CUSTOM modunda participant_user_ids boş olamaz") == true)
     }
 
     @Test
     fun equivalent_conflict_resolver_rejects_corrupt_or_inconsistent_splits() {
         // 1. Bozuk EQUAL: participantShares dolu
-        val corruptEqual = baseTransactionDto().copy(
-            splitMode = "EQUAL",
-            participantShares = listOf(TransactionParticipantShareDto("user-1", 10000L)),
-        )
+        val corruptEqual =
+            baseTransactionDto().copy(
+                splitMode = "EQUAL",
+                participantShares = listOf(TransactionParticipantShareDto("user-1", 10000L)),
+            )
         val jsonCorruptEqual = json.encodeToString(corruptEqual)
         assertFalse(EquivalentConflictResolver.isTransactionEquivalent(jsonCorruptEqual, jsonCorruptEqual))
 
         // 2. Bozuk CUSTOM: participantUserIds boş
-        val corruptCustomNoParticipants = baseTransactionDto().copy(
-            splitMode = "CUSTOM",
-            participantUserIds = emptyList(),
-            participantShares = listOf(TransactionParticipantShareDto("user-1", 10000L)),
-        )
+        val corruptCustomNoParticipants =
+            baseTransactionDto().copy(
+                splitMode = "CUSTOM",
+                participantUserIds = emptyList(),
+                participantShares = listOf(TransactionParticipantShareDto("user-1", 10000L)),
+            )
         val jsonNoParticipants = json.encodeToString(corruptCustomNoParticipants)
         assertFalse(EquivalentConflictResolver.isTransactionEquivalent(jsonNoParticipants, jsonNoParticipants))
 
         // 3. Bozuk CUSTOM: participantShares boş
-        val corruptCustomNoShares = baseTransactionDto().copy(
-            splitMode = "CUSTOM",
-            participantUserIds = listOf("user-1"),
-            participantShares = emptyList(),
-        )
+        val corruptCustomNoShares =
+            baseTransactionDto().copy(
+                splitMode = "CUSTOM",
+                participantUserIds = listOf("user-1"),
+                participantShares = emptyList(),
+            )
         val jsonNoShares = json.encodeToString(corruptCustomNoShares)
         assertFalse(EquivalentConflictResolver.isTransactionEquivalent(jsonNoShares, jsonNoShares))
 
         // 4. Bozuk CUSTOM: paylar toplamı tutara eşit değil (6000 + 3000 != 10000)
-        val corruptCustomSumMismatch = baseTransactionDto().copy(
-            amountMinor = 10000L,
-            splitMode = "CUSTOM",
-            participantUserIds = listOf("user-1", "user-2"),
-            participantShares = listOf(
-                TransactionParticipantShareDto("user-1", 6000L),
-                TransactionParticipantShareDto("user-2", 3000L),
-            ),
-        )
+        val corruptCustomSumMismatch =
+            baseTransactionDto().copy(
+                amountMinor = 10000L,
+                splitMode = "CUSTOM",
+                participantUserIds = listOf("user-1", "user-2"),
+                participantShares =
+                    listOf(
+                        TransactionParticipantShareDto("user-1", 6000L),
+                        TransactionParticipantShareDto("user-2", 3000L),
+                    ),
+            )
         val jsonSumMismatch = json.encodeToString(corruptCustomSumMismatch)
         assertFalse(EquivalentConflictResolver.isTransactionEquivalent(jsonSumMismatch, jsonSumMismatch))
 
         // 5. Bozuk CUSTOM: ödeyen dışı katılımcıya 0 pay
-        val corruptCustomZeroShare = baseTransactionDto().copy(
-            amountMinor = 10000L,
-            paidByUserId = "user-1",
-            participantUserIds = listOf("user-1", "user-2"),
-            splitMode = "CUSTOM",
-            participantShares = listOf(
-                TransactionParticipantShareDto("user-1", 10000L),
-                TransactionParticipantShareDto("user-2", 0L),
-            ),
-        )
+        val corruptCustomZeroShare =
+            baseTransactionDto().copy(
+                amountMinor = 10000L,
+                paidByUserId = "user-1",
+                participantUserIds = listOf("user-1", "user-2"),
+                splitMode = "CUSTOM",
+                participantShares =
+                    listOf(
+                        TransactionParticipantShareDto("user-1", 10000L),
+                        TransactionParticipantShareDto("user-2", 0L),
+                    ),
+            )
         val jsonZeroShare = json.encodeToString(corruptCustomZeroShare)
         assertFalse(EquivalentConflictResolver.isTransactionEquivalent(jsonZeroShare, jsonZeroShare))
 
         // 6. Bilinmeyen veya boş split_mode
-        val invalidMode = baseTransactionDto().copy(
-            splitMode = "UNKNOWN",
-        )
+        val invalidMode =
+            baseTransactionDto().copy(
+                splitMode = "UNKNOWN",
+            )
         val jsonInvalidMode = json.encodeToString(invalidMode)
         assertFalse(EquivalentConflictResolver.isTransactionEquivalent(jsonInvalidMode, jsonInvalidMode))
 
-        val blankMode = baseTransactionDto().copy(
-            splitMode = "   ",
-        )
+        val blankMode =
+            baseTransactionDto().copy(
+                splitMode = "   ",
+            )
         val jsonBlankMode = json.encodeToString(blankMode)
         assertFalse(EquivalentConflictResolver.isTransactionEquivalent(jsonBlankMode, jsonBlankMode))
     }
 
-    private fun baseTransactionDto() = TransactionDto(
-        id = "tx-1",
-        userId = "user-1",
-        workspaceId = "ws-1",
-        paidByUserId = "user-1",
-        participantUserIds = listOf("user-1"),
-        amountMinor = 10000L,
-        currency = "TRY",
-        type = "expense",
-        categoryId = "cat-1",
-        description = "Test İşlem",
-        paymentMethod = "cash",
-        transactionDate = "2026-09-18",
-        createdAt = "2026-09-18T10:00:00Z",
-    )
+    private fun baseTransactionDto() =
+        TransactionDto(
+            id = "tx-1",
+            userId = "user-1",
+            workspaceId = "ws-1",
+            paidByUserId = "user-1",
+            participantUserIds = listOf("user-1"),
+            amountMinor = 10000L,
+            currency = "TRY",
+            type = "expense",
+            categoryId = "cat-1",
+            description = "Test İşlem",
+            paymentMethod = "cash",
+            transactionDate = "2026-09-18",
+            createdAt = "2026-09-18T10:00:00Z",
+        )
 }

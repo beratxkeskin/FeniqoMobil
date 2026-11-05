@@ -34,6 +34,7 @@ import com.feniqo.mobile.domain.model.GoalContribution
 import com.feniqo.mobile.domain.model.GoalContributionDirection
 import com.feniqo.mobile.domain.model.InstallmentInfo
 import com.feniqo.mobile.domain.model.LocalDate
+import com.feniqo.mobile.domain.model.MerchantMatchSource
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.PaymentMethod
 import com.feniqo.mobile.domain.model.ReceiptPath
@@ -47,6 +48,7 @@ import com.feniqo.mobile.domain.model.SubscriptionPaymentSourceType
 import com.feniqo.mobile.domain.model.SubscriptionPriceHistory
 import com.feniqo.mobile.domain.model.Tag
 import com.feniqo.mobile.domain.model.Transaction
+import com.feniqo.mobile.domain.model.TransactionMerchantInfo
 import com.feniqo.mobile.domain.model.TransactionSplitMode
 import com.feniqo.mobile.domain.model.TransactionTag
 import com.feniqo.mobile.domain.model.TransactionType
@@ -146,6 +148,10 @@ fun Transaction.toEntity(sync: SyncMetadata): TransactionEntity = TransactionEnt
     } else {
         "[]"
     },
+    merchantId = merchantId?.value,
+    merchantMatchSourceCode = merchantMatchSource?.name,
+    merchantConfidence = merchantConfidence,
+    merchantCatalogVersion = merchantCatalogVersion,
 )
 
 fun TransactionEntity.toDomain(): Transaction {
@@ -183,6 +189,35 @@ fun TransactionEntity.toDomain(): Transaction {
         note = note,
         splitMode = decodedSplitMode,
         participantShares = decodedShares,
+        merchantInfo = merchantInfo(),
+    )
+}
+
+private fun TransactionEntity.merchantInfo(): TransactionMerchantInfo? {
+    val rawId = merchantId
+    val rawSource = merchantMatchSourceCode
+    val rawConfidence = merchantConfidence
+    val rawVersion = merchantCatalogVersion
+
+    if (rawId == null && rawSource == null && rawConfidence == null && rawVersion == null) {
+        return null
+    }
+
+    if (rawId.isNullOrBlank() || rawSource.isNullOrBlank() || rawConfidence == null || rawVersion == null) {
+        return null
+    }
+
+    if (rawConfidence !in 0..100 || rawVersion <= 0) {
+        return null
+    }
+
+    val source = runCatching { MerchantMatchSource.valueOf(rawSource) }.getOrNull() ?: return null
+
+    return TransactionMerchantInfo(
+        merchantId = EntityId(rawId),
+        matchSource = source,
+        confidence = rawConfidence,
+        catalogVersion = rawVersion,
     )
 }
 
@@ -489,3 +524,20 @@ fun DebtPaymentEntity.toDomain(): DebtPayment = DebtPayment(
     paidOn = LocalDate.parse(paidOn),
     createdAt = Instant.fromEpochMilliseconds(createdAtEpochMillis),
 )
+
+fun TransactionEntity.mergePreservingLocalMerchant(localExisting: TransactionEntity?): TransactionEntity {
+    val descriptionUnchanged =
+        localExisting != null &&
+            localExisting.description?.trim() == this.description?.trim()
+
+    return if (descriptionUnchanged) {
+        this.copy(
+            merchantId = localExisting.merchantId,
+            merchantMatchSourceCode = localExisting.merchantMatchSourceCode,
+            merchantConfidence = localExisting.merchantConfidence,
+            merchantCatalogVersion = localExisting.merchantCatalogVersion,
+        )
+    } else {
+        this
+    }
+}

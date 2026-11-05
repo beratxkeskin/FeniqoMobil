@@ -199,6 +199,10 @@ class WorkspaceConflictLifecycleTest {
             RemotePage(emptyList(), query.page, 0)
         override suspend fun fetchTags(scope: RemoteWorkspaceScope, page: RemotePageRequest): RemotePage<TagDto> =
             RemotePage(emptyList(), page, 0)
+        override suspend fun fetchMerchantVerifications(
+            query: com.feniqo.mobile.data.remote.core.UserMerchantVerificationRemoteQuery,
+        ): RemotePage<com.feniqo.mobile.data.remote.dto.UserMerchantVerificationDto> =
+            RemotePage(emptyList(), query.page, 0)
         override suspend fun fetchTransactionTags(transactionId: String): List<TransactionTagDto> = emptyList()
         override suspend fun upsertProfile(dto: ProfileDto) = Unit
         override suspend fun upsertCategory(dto: CategoryDto) = Unit

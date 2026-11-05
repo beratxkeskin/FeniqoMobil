@@ -16,6 +16,7 @@ import com.feniqo.mobile.data.remote.dto.SubscriptionDto
 import com.feniqo.mobile.data.remote.dto.TagDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.remote.dto.TransactionTagDto
+import com.feniqo.mobile.data.remote.dto.UserMerchantVerificationDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceInvitationDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceInvitationRedeemResultDto
@@ -224,6 +225,24 @@ class SupabaseCoreRemoteDataSource(
             }
         }
         return result.toCursorPage(query.page, query.updatedAfter, { it.updatedAt ?: it.createdAt }, AssetDto::id)
+    }
+
+    override suspend fun fetchMerchantVerifications(query: UserMerchantVerificationRemoteQuery): RemotePage<UserMerchantVerificationDto> {
+        val result = client.from(USER_MERCHANT_VERIFICATIONS).select {
+            count(Count.EXACT)
+            range(query.page.range)
+            order("updated_at", Order.ASCENDING)
+            order("id", Order.ASCENDING)
+            filter {
+                query.updatedAfter?.let { cursor ->
+                    or {
+                        gt("updated_at", cursor.updatedAt)
+                        and { eq("updated_at", cursor.updatedAt); gt("id", cursor.entityId) }
+                    }
+                }
+            }
+        }
+        return result.toCursorPage(query.page, query.updatedAfter, { it.updatedAt ?: it.createdAt }, UserMerchantVerificationDto::id)
     }
 
     override suspend fun fetchGoalContributions(query: GoalContributionRemoteQuery): RemotePage<GoalContributionDto> {
@@ -481,6 +500,14 @@ class SupabaseCoreRemoteDataSource(
         dto: AssetDto,
     ): ConditionalRemoteWriteResult<AssetDto> =
         idempotentConditionalWrite(operationId, ASSET, operation, baseVersion, dto)
+
+    override suspend fun writeMerchantVerification(
+        operationId: String,
+        operation: RemoteWriteOperation,
+        baseVersion: Long?,
+        dto: UserMerchantVerificationDto,
+    ): ConditionalRemoteWriteResult<UserMerchantVerificationDto> =
+        idempotentConditionalWrite(operationId, USER_MERCHANT_VERIFICATION, operation, baseVersion, dto)
 
     override suspend fun writeGoalContribution(
         operationId: String,
@@ -744,6 +771,7 @@ class SupabaseCoreRemoteDataSource(
         const val WORKSPACE = "WORKSPACE"
         const val WORKSPACE_MEMBER = "WORKSPACE_MEMBER"
         const val WORKSPACE_INVITATION = "WORKSPACE_INVITATION"
+        const val USER_MERCHANT_VERIFICATION = "USER_MERCHANT_VERIFICATION"
 
         const val STATUS = "status"
 
@@ -762,6 +790,7 @@ class SupabaseCoreRemoteDataSource(
         const val GOAL_CONTRIBUTIONS = "goal_contributions"
         const val DEBTS = "debts"
         const val DEBT_PAYMENTS = "debt_payments"
+        const val USER_MERCHANT_VERIFICATIONS = "user_merchant_verifications"
         const val TAGS = "tags"
 
 

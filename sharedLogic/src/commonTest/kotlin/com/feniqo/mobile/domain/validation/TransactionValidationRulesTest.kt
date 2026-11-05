@@ -8,7 +8,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class TransactionValidationRulesTest {
-
     private val today = LocalDate(2026, 8, 21)
 
     @Test

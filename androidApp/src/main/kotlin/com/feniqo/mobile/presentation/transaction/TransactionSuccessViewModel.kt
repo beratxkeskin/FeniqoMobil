@@ -8,7 +8,7 @@ import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.usecase.ObserveCategoriesForHistoryLookupUseCase
 import com.feniqo.mobile.domain.usecase.ObserveTransactionUseCase
 import com.feniqo.mobile.navigation.TransactionSuccessRoute
-import com.feniqo.mobile.presentation.util.MoneyFormatter
+import com.feniqo.mobile.presentation.transaction.TransactionsDisplayModelBuilder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -56,35 +56,10 @@ class TransactionSuccessViewModel @Inject constructor(
                 )
             } else {
                 val category = categories.find { it.id == transaction.categoryId }
-                val displayModel = TransactionDisplayModel(
-                    id = transaction.id,
-                    amount = transaction.amount,
-                    formattedAmount = MoneyFormatter.format(
-                        money = transaction.amount,
-                        includeSign = true,
-                        type = transaction.type,
-                    ),
-                    type = transaction.type,
-                    categoryId = transaction.categoryId,
-                    categoryName = category?.name.orEmpty(),
-                    isCategoryUnavailable = category == null,
-                    categoryColorHex = category?.color?.hex,
-                    categoryIconKey = category?.icon?.key,
-                    description = transaction.description,
-                    paymentMethod = transaction.paymentMethod,
-                    transactionDate = transaction.transactionDate,
-                    installment = transaction.installment?.let { inst ->
-                        InstallmentDisplayModel(
-                            number = inst.number,
-                            total = inst.total,
-                            badgeText = "${inst.number}/${inst.total}",
-                        )
-                    },
-                    hasReceipt = transaction.receiptPath != null,
-                    note = transaction.note,
-                    syncStatus = transaction.syncStatus,
-                    canEdit = true,
-                    canDelete = true,
+                val displayModel = TransactionsDisplayModelBuilder.buildItem(
+                    transaction = transaction,
+                    category = category,
+                    fallbackCategoryName = "",
                 )
                 TransactionSuccessUiState(
                     isLoading = false,

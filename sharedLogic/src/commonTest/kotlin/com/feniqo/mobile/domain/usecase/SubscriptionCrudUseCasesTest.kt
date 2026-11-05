@@ -28,109 +28,112 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 
 class SubscriptionCrudUseCasesTest {
-
     @Test
-    fun crudUseCases_delegateOriginalInputsAndResults() = runTest {
-        val repository = RecordingRepository()
-        val create = CreateSubscriptionUseCase(repository)
-        val update = UpdateSubscriptionUseCase(repository)
-        val setActive = SetSubscriptionActiveUseCase(repository)
-        val advance = AdvanceSubscriptionRenewalUseCase(repository)
-        val delete = DeleteSubscriptionUseCase(repository)
+    fun crudUseCases_delegateOriginalInputsAndResults() =
+        runTest {
+            val repository = RecordingRepository()
+            val create = CreateSubscriptionUseCase(repository)
+            val update = UpdateSubscriptionUseCase(repository)
+            val setActive = SetSubscriptionActiveUseCase(repository)
+            val advance = AdvanceSubscriptionRenewalUseCase(repository)
+            val delete = DeleteSubscriptionUseCase(repository)
 
-        val createCmd = createCommand()
-        val updateCmd = updateCommand()
-        val activeCmd = SetSubscriptionActiveCommand(EntityId("sub-1"), false)
-        val expectedProgression = SubscriptionRenewalProgressionResult.Advanced(LocalDate(2026, 3, 1))
-        repository.advanceResult = RepositoryResult.Success(expectedProgression)
+            val createCmd = createCommand()
+            val updateCmd = updateCommand()
+            val activeCmd = SetSubscriptionActiveCommand(EntityId("sub-1"), false)
+            val expectedProgression = SubscriptionRenewalProgressionResult.Advanced(LocalDate(2026, 3, 1))
+            repository.advanceResult = RepositoryResult.Success(expectedProgression)
 
-        val createResult = create(createCmd)
-        val updateResult = update(updateCmd)
-        val setActiveResult = setActive(activeCmd)
-        val advanceResult = advance(EntityId("sub-1"))
-        val deleteResult = delete(EntityId("sub-1"))
+            val createResult = create(createCmd)
+            val updateResult = update(updateCmd)
+            val setActiveResult = setActive(activeCmd)
+            val advanceResult = advance(EntityId("sub-1"))
+            val deleteResult = delete(EntityId("sub-1"))
 
-        val createdId = assertIs<RepositoryResult.Success<EntityId>>(createResult)
-        assertEquals(EntityId("sub-created-1"), createdId.value)
-        assertIs<RepositoryResult.Success<Unit>>(updateResult)
-        assertIs<RepositoryResult.Success<Unit>>(setActiveResult)
-        val advancedSuccess = assertIs<RepositoryResult.Success<SubscriptionRenewalProgressionResult>>(advanceResult)
-        assertEquals(expectedProgression, advancedSuccess.value)
-        assertIs<RepositoryResult.Success<Unit>>(deleteResult)
+            val createdId = assertIs<RepositoryResult.Success<EntityId>>(createResult)
+            assertEquals(EntityId("sub-created-1"), createdId.value)
+            assertIs<RepositoryResult.Success<Unit>>(updateResult)
+            assertIs<RepositoryResult.Success<Unit>>(setActiveResult)
+            val advancedSuccess = assertIs<RepositoryResult.Success<SubscriptionRenewalProgressionResult>>(advanceResult)
+            assertEquals(expectedProgression, advancedSuccess.value)
+            assertIs<RepositoryResult.Success<Unit>>(deleteResult)
 
-        assertEquals(createCmd, repository.lastCreateCommand)
-        assertEquals(updateCmd, repository.lastUpdateCommand)
-        assertEquals(activeCmd, repository.lastSetActiveCommand)
-        assertEquals(EntityId("sub-1"), repository.lastAdvancedId)
-        assertEquals(EntityId("sub-1"), repository.lastDeletedId)
-    }
-
-
-    @Test
-    fun crudUseCases_carryFailureDirectlyWithoutTransformation() = runTest {
-        val repository = RecordingRepository()
-        val failure = RepositoryResult.Failure(AppError.Storage("DB Error"))
-        repository.createResult = failure
-        repository.updateResult = failure
-        repository.setActiveResult = failure
-        repository.advanceResult = failure
-        repository.deleteResult = failure
-
-        val create = CreateSubscriptionUseCase(repository)
-        val update = UpdateSubscriptionUseCase(repository)
-        val setActive = SetSubscriptionActiveUseCase(repository)
-        val advance = AdvanceSubscriptionRenewalUseCase(repository)
-        val delete = DeleteSubscriptionUseCase(repository)
-
-        assertEquals(failure, create(createCommand()))
-        assertEquals(failure, update(updateCommand()))
-        assertEquals(failure, setActive(SetSubscriptionActiveCommand(EntityId("sub-1"), true)))
-        assertEquals(failure, advance(EntityId("sub-1")))
-        assertEquals(failure, delete(EntityId("sub-1")))
-    }
-
-    @Test
-    fun observeSubscriptions_emitsRepositoryListDirectly() = runTest {
-        val repository = RecordingRepository()
-        val observeList = ObserveSubscriptionsUseCase(repository)
-        val expected = listOf(sampleSubscription("sub-1"), sampleSubscription("sub-2"))
-        repository.listToEmit = expected
-
-        val actual = observeList().first()
-        assertEquals(expected, actual)
-    }
-
-    @Test
-    fun observeSubscription_delegatesIdAndEmitsNullableResult() = runTest {
-        val repository = RecordingRepository()
-        val observeSingle = ObserveSubscriptionUseCase(repository)
-        val expected = sampleSubscription("sub-1")
-        repository.singleToEmit = expected
-
-        val actual = observeSingle(EntityId("sub-1")).first()
-        assertEquals(expected, actual)
-        assertEquals(EntityId("sub-1"), repository.lastObservedId)
-
-        repository.singleToEmit = null
-        val nullResult = observeSingle(EntityId("sub-nonexistent")).first()
-        assertNull(nullResult)
-        assertEquals(EntityId("sub-nonexistent"), repository.lastObservedId)
-    }
-
-    @Test
-    fun observe_rethrowsCancellationDirectly() = runTest {
-        val repository = RecordingRepository().apply { throwCancellation = true }
-        val observeList = ObserveSubscriptionsUseCase(repository)
-        val observeSingle = ObserveSubscriptionUseCase(repository)
-
-        assertFailsWith<CancellationException> {
-            observeList().first()
+            assertEquals(createCmd, repository.lastCreateCommand)
+            assertEquals(updateCmd, repository.lastUpdateCommand)
+            assertEquals(activeCmd, repository.lastSetActiveCommand)
+            assertEquals(EntityId("sub-1"), repository.lastAdvancedId)
+            assertEquals(EntityId("sub-1"), repository.lastDeletedId)
         }
 
-        assertFailsWith<CancellationException> {
-            observeSingle(EntityId("sub-1")).first()
+    @Test
+    fun crudUseCases_carryFailureDirectlyWithoutTransformation() =
+        runTest {
+            val repository = RecordingRepository()
+            val failure = RepositoryResult.Failure(AppError.Storage("DB Error"))
+            repository.createResult = failure
+            repository.updateResult = failure
+            repository.setActiveResult = failure
+            repository.advanceResult = failure
+            repository.deleteResult = failure
+
+            val create = CreateSubscriptionUseCase(repository)
+            val update = UpdateSubscriptionUseCase(repository)
+            val setActive = SetSubscriptionActiveUseCase(repository)
+            val advance = AdvanceSubscriptionRenewalUseCase(repository)
+            val delete = DeleteSubscriptionUseCase(repository)
+
+            assertEquals(failure, create(createCommand()))
+            assertEquals(failure, update(updateCommand()))
+            assertEquals(failure, setActive(SetSubscriptionActiveCommand(EntityId("sub-1"), true)))
+            assertEquals(failure, advance(EntityId("sub-1")))
+            assertEquals(failure, delete(EntityId("sub-1")))
         }
-    }
+
+    @Test
+    fun observeSubscriptions_emitsRepositoryListDirectly() =
+        runTest {
+            val repository = RecordingRepository()
+            val observeList = ObserveSubscriptionsUseCase(repository)
+            val expected = listOf(sampleSubscription("sub-1"), sampleSubscription("sub-2"))
+            repository.listToEmit = expected
+
+            val actual = observeList().first()
+            assertEquals(expected, actual)
+        }
+
+    @Test
+    fun observeSubscription_delegatesIdAndEmitsNullableResult() =
+        runTest {
+            val repository = RecordingRepository()
+            val observeSingle = ObserveSubscriptionUseCase(repository)
+            val expected = sampleSubscription("sub-1")
+            repository.singleToEmit = expected
+
+            val actual = observeSingle(EntityId("sub-1")).first()
+            assertEquals(expected, actual)
+            assertEquals(EntityId("sub-1"), repository.lastObservedId)
+
+            repository.singleToEmit = null
+            val nullResult = observeSingle(EntityId("sub-nonexistent")).first()
+            assertNull(nullResult)
+            assertEquals(EntityId("sub-nonexistent"), repository.lastObservedId)
+        }
+
+    @Test
+    fun observe_rethrowsCancellationDirectly() =
+        runTest {
+            val repository = RecordingRepository().apply { throwCancellation = true }
+            val observeList = ObserveSubscriptionsUseCase(repository)
+            val observeSingle = ObserveSubscriptionUseCase(repository)
+
+            assertFailsWith<CancellationException> {
+                observeList().first()
+            }
+
+            assertFailsWith<CancellationException> {
+                observeSingle(EntityId("sub-1")).first()
+            }
+        }
 
     private class RecordingRepository : SubscriptionRepository {
         var lastCreateCommand: CreateSubscriptionCommand? = null
@@ -154,20 +157,22 @@ class SubscriptionCrudUseCasesTest {
         var lastObservedId: EntityId? = null
         var throwCancellation: Boolean = false
 
-        override fun observeSubscriptions(): Flow<List<Subscription>> = flow {
-            if (throwCancellation) {
-                throw CancellationException("List observation cancelled")
+        override fun observeSubscriptions(): Flow<List<Subscription>> =
+            flow {
+                if (throwCancellation) {
+                    throw CancellationException("List observation cancelled")
+                }
+                emit(listToEmit)
             }
-            emit(listToEmit)
-        }
 
-        override fun observeSubscription(id: EntityId): Flow<Subscription?> = flow {
-            lastObservedId = id
-            if (throwCancellation) {
-                throw CancellationException("Single observation cancelled")
+        override fun observeSubscription(id: EntityId): Flow<Subscription?> =
+            flow {
+                lastObservedId = id
+                if (throwCancellation) {
+                    throw CancellationException("Single observation cancelled")
+                }
+                emit(singleToEmit)
             }
-            emit(singleToEmit)
-        }
 
         override suspend fun create(command: CreateSubscriptionCommand): RepositoryResult<EntityId> {
             lastCreateCommand = command
@@ -189,11 +194,14 @@ class SubscriptionCrudUseCasesTest {
             return advanceResult
         }
 
-        override fun observePriceHistories(subscriptionId: EntityId?): Flow<List<com.feniqo.mobile.domain.model.SubscriptionPriceHistory>> = flowOf(emptyList())
+        override fun observePriceHistories(subscriptionId: EntityId?): Flow<List<com.feniqo.mobile.domain.model.SubscriptionPriceHistory>> =
+            flowOf(emptyList())
 
-        override fun observePayments(subscriptionId: EntityId?): Flow<List<com.feniqo.mobile.domain.model.SubscriptionPayment>> = flowOf(emptyList())
+        override fun observePayments(subscriptionId: EntityId?): Flow<List<com.feniqo.mobile.domain.model.SubscriptionPayment>> =
+            flowOf(emptyList())
 
-        override suspend fun setLifecycle(command: com.feniqo.mobile.domain.model.SetSubscriptionLifecycleCommand): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+        override suspend fun setLifecycle(command: com.feniqo.mobile.domain.model.SetSubscriptionLifecycleCommand): RepositoryResult<Unit> =
+            RepositoryResult.Success(Unit)
 
         override suspend fun softDelete(id: EntityId): RepositoryResult<Unit> {
             lastDeletedId = id
@@ -201,47 +209,53 @@ class SubscriptionCrudUseCasesTest {
         }
     }
 
-    private fun createCommand() = CreateSubscriptionCommand(
-        name = "Spotify",
-        amount = Money(5999L, Currency.TRY),
-        categoryId = EntityId("cat-music"),
-        renewalRule = RecurrenceRule(
-            frequency = RecurrenceFrequency.MONTHLY,
-            interval = 1,
-            startDate = LocalDate(2026, 1, 1),
-            endDate = null,
-        ),
-        nextRenewalDate = LocalDate(2026, 2, 1),
-    )
+    private fun createCommand() =
+        CreateSubscriptionCommand(
+            name = "Spotify",
+            amount = Money(5999L, Currency.TRY),
+            categoryId = EntityId("cat-music"),
+            renewalRule =
+                RecurrenceRule(
+                    frequency = RecurrenceFrequency.MONTHLY,
+                    interval = 1,
+                    startDate = LocalDate(2026, 1, 1),
+                    endDate = null,
+                ),
+            nextRenewalDate = LocalDate(2026, 2, 1),
+        )
 
-    private fun updateCommand() = UpdateSubscriptionCommand(
-        id = EntityId("sub-1"),
-        name = "Spotify Duo",
-        amount = Money(7999L, Currency.TRY),
-        categoryId = EntityId("cat-music"),
-        renewalRule = RecurrenceRule(
-            frequency = RecurrenceFrequency.MONTHLY,
-            interval = 1,
-            startDate = LocalDate(2026, 1, 1),
-            endDate = null,
-        ),
-    )
+    private fun updateCommand() =
+        UpdateSubscriptionCommand(
+            id = EntityId("sub-1"),
+            name = "Spotify Duo",
+            amount = Money(7999L, Currency.TRY),
+            categoryId = EntityId("cat-music"),
+            renewalRule =
+                RecurrenceRule(
+                    frequency = RecurrenceFrequency.MONTHLY,
+                    interval = 1,
+                    startDate = LocalDate(2026, 1, 1),
+                    endDate = null,
+                ),
+        )
 
-    private fun sampleSubscription(id: String) = Subscription(
-        id = EntityId(id),
-        ownerId = EntityId("user-1"),
-        workspaceId = EntityId("ws-1"),
-        name = "Abonelik $id",
-        amount = Money(4999L, Currency.TRY),
-        categoryId = EntityId("cat-1"),
-        renewalRule = RecurrenceRule(
-            frequency = RecurrenceFrequency.MONTHLY,
-            interval = 1,
-            startDate = LocalDate(2026, 1, 1),
-            endDate = null,
-        ),
-        nextRenewalDate = LocalDate(2026, 2, 1),
-        isActive = true,
-        createdAt = Instant.fromEpochMilliseconds(1000L),
-    )
+    private fun sampleSubscription(id: String) =
+        Subscription(
+            id = EntityId(id),
+            ownerId = EntityId("user-1"),
+            workspaceId = EntityId("ws-1"),
+            name = "Abonelik $id",
+            amount = Money(4999L, Currency.TRY),
+            categoryId = EntityId("cat-1"),
+            renewalRule =
+                RecurrenceRule(
+                    frequency = RecurrenceFrequency.MONTHLY,
+                    interval = 1,
+                    startDate = LocalDate(2026, 1, 1),
+                    endDate = null,
+                ),
+            nextRenewalDate = LocalDate(2026, 2, 1),
+            isActive = true,
+            createdAt = Instant.fromEpochMilliseconds(1000L),
+        )
 }

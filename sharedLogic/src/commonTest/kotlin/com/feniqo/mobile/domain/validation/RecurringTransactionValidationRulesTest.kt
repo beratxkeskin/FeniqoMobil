@@ -13,34 +13,35 @@ import com.feniqo.mobile.domain.model.SetRecurringTransactionActiveCommand
 import com.feniqo.mobile.domain.model.Transaction
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.UpdateRecurringTransactionCommand
+import kotlinx.datetime.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlinx.datetime.Instant
 
 class RecurringTransactionValidationRulesTest {
-
     private val validAmount = Money(10000L, Currency.TRY)
     private val validCategoryId = EntityId("cat-1")
-    private val validRule = RecurrenceRule(
-        frequency = RecurrenceFrequency.MONTHLY,
-        interval = 1,
-        startDate = LocalDate(2026, 8, 1),
-        endDate = LocalDate(2026, 12, 31),
-    )
+    private val validRule =
+        RecurrenceRule(
+            frequency = RecurrenceFrequency.MONTHLY,
+            interval = 1,
+            startDate = LocalDate(2026, 8, 1),
+            endDate = LocalDate(2026, 12, 31),
+        )
 
     @Test
     fun validCreateCommand_returnsValid() {
-        val command = CreateRecurringTransactionCommand(
-            amount = validAmount,
-            type = TransactionType.EXPENSE,
-            categoryId = validCategoryId,
-            description = "  Netflix Aboneliği  ",
-            paymentMethod = PaymentMethod.CREDIT_CARD,
-            rule = validRule,
-        )
+        val command =
+            CreateRecurringTransactionCommand(
+                amount = validAmount,
+                type = TransactionType.EXPENSE,
+                categoryId = validCategoryId,
+                description = "  Netflix Aboneliği  ",
+                paymentMethod = PaymentMethod.CREDIT_CARD,
+                rule = validRule,
+            )
 
         val result = RecurringTransactionValidationRules.validateCreateCommand(command)
 
@@ -53,20 +54,22 @@ class RecurringTransactionValidationRulesTest {
 
     @Test
     fun validUpdateCommand_returnsValid() {
-        val command = UpdateRecurringTransactionCommand(
-            id = EntityId("rec-1"),
-            amount = validAmount,
-            type = TransactionType.EXPENSE,
-            categoryId = validCategoryId,
-            description = "Abonelik",
-            paymentMethod = PaymentMethod.CREDIT_CARD,
-            rule = validRule,
-        )
+        val command =
+            UpdateRecurringTransactionCommand(
+                id = EntityId("rec-1"),
+                amount = validAmount,
+                type = TransactionType.EXPENSE,
+                categoryId = validCategoryId,
+                description = "Abonelik",
+                paymentMethod = PaymentMethod.CREDIT_CARD,
+                rule = validRule,
+            )
 
-        val result = RecurringTransactionValidationRules.validateUpdateCommand(
-            command = command,
-            existingLastGeneratedDate = LocalDate(2026, 8, 1),
-        )
+        val result =
+            RecurringTransactionValidationRules.validateUpdateCommand(
+                command = command,
+                existingLastGeneratedDate = LocalDate(2026, 8, 1),
+            )
 
         assertTrue(result is RecurringTransactionValidationResult.Valid)
         assertEquals(EntityId("rec-1"), result.value.id)
@@ -142,17 +145,19 @@ class RecurringTransactionValidationRulesTest {
     @Test
     fun updateStartDateAfterLastGeneratedDate_returnsInvalid() {
         val lastGenerated = LocalDate(2026, 8, 15)
-        val newRule = RecurrenceRule(
-            frequency = RecurrenceFrequency.DAILY,
-            interval = 1,
-            startDate = LocalDate(2026, 8, 20), // Moved forward past last generated
-            endDate = null,
-        )
+        val newRule =
+            RecurrenceRule(
+                frequency = RecurrenceFrequency.DAILY,
+                interval = 1,
+                startDate = LocalDate(2026, 8, 20), // Moved forward past last generated
+                endDate = null,
+            )
 
-        val result = RecurringTransactionValidationRules.validateRuleUpdate(
-            rule = newRule,
-            lastGeneratedDate = lastGenerated,
-        )
+        val result =
+            RecurringTransactionValidationRules.validateRuleUpdate(
+                rule = newRule,
+                lastGeneratedDate = lastGenerated,
+            )
 
         assertTrue(result is RecurringTransactionValidationResult.Invalid)
         assertEquals(RecurringTransactionValidationError.START_DATE_AFTER_LAST_GENERATED, result.error)
@@ -161,17 +166,19 @@ class RecurringTransactionValidationRulesTest {
     @Test
     fun updateEndDateBeforeLastGeneratedDate_returnsInvalid() {
         val lastGenerated = LocalDate(2026, 8, 15)
-        val newRule = RecurrenceRule(
-            frequency = RecurrenceFrequency.DAILY,
-            interval = 1,
-            startDate = LocalDate(2026, 8, 1),
-            endDate = LocalDate(2026, 8, 10), // Moved backwards before last generated
-        )
+        val newRule =
+            RecurrenceRule(
+                frequency = RecurrenceFrequency.DAILY,
+                interval = 1,
+                startDate = LocalDate(2026, 8, 1),
+                endDate = LocalDate(2026, 8, 10), // Moved backwards before last generated
+            )
 
-        val result = RecurringTransactionValidationRules.validateRuleUpdate(
-            rule = newRule,
-            lastGeneratedDate = lastGenerated,
-        )
+        val result =
+            RecurringTransactionValidationRules.validateRuleUpdate(
+                rule = newRule,
+                lastGeneratedDate = lastGenerated,
+            )
 
         assertTrue(result is RecurringTransactionValidationResult.Invalid)
         assertEquals(RecurringTransactionValidationError.END_DATE_BEFORE_LAST_GENERATED, result.error)
@@ -182,40 +189,44 @@ class RecurringTransactionValidationRulesTest {
         val originalCreatedAt = Instant.fromEpochMilliseconds(1700000000000L)
         val originalLastGenerated = LocalDate(2026, 8, 15)
 
-        val existing = RecurringTransaction(
-            id = EntityId("rec-1"),
-            ownerId = EntityId("user-1"),
-            workspaceId = EntityId("ws-1"),
-            amount = Money(5000L, Currency.TRY),
-            type = TransactionType.EXPENSE,
-            categoryId = EntityId("cat-old"),
-            description = "Eski açıklama",
-            paymentMethod = PaymentMethod.CASH,
-            rule = RecurrenceRule(
-                frequency = RecurrenceFrequency.MONTHLY,
-                interval = 1,
-                startDate = LocalDate(2026, 8, 1),
-                endDate = null,
-            ),
-            lastGeneratedDate = originalLastGenerated,
-            isActive = true,
-            createdAt = originalCreatedAt,
-        )
+        val existing =
+            RecurringTransaction(
+                id = EntityId("rec-1"),
+                ownerId = EntityId("user-1"),
+                workspaceId = EntityId("ws-1"),
+                amount = Money(5000L, Currency.TRY),
+                type = TransactionType.EXPENSE,
+                categoryId = EntityId("cat-old"),
+                description = "Eski açıklama",
+                paymentMethod = PaymentMethod.CASH,
+                rule =
+                    RecurrenceRule(
+                        frequency = RecurrenceFrequency.MONTHLY,
+                        interval = 1,
+                        startDate = LocalDate(2026, 8, 1),
+                        endDate = null,
+                    ),
+                lastGeneratedDate = originalLastGenerated,
+                isActive = true,
+                createdAt = originalCreatedAt,
+            )
 
-        val updateCommand = UpdateRecurringTransactionCommand(
-            id = EntityId("rec-1"),
-            amount = Money(7500L, Currency.TRY),
-            type = TransactionType.INCOME,
-            categoryId = EntityId("cat-new"),
-            description = "  Yeni açıklama  ",
-            paymentMethod = PaymentMethod.BANK_TRANSFER,
-            rule = RecurrenceRule(
-                frequency = RecurrenceFrequency.WEEKLY,
-                interval = 2,
-                startDate = LocalDate(2026, 8, 1),
-                endDate = LocalDate(2026, 12, 31),
-            ),
-        )
+        val updateCommand =
+            UpdateRecurringTransactionCommand(
+                id = EntityId("rec-1"),
+                amount = Money(7500L, Currency.TRY),
+                type = TransactionType.INCOME,
+                categoryId = EntityId("cat-new"),
+                description = "  Yeni açıklama  ",
+                paymentMethod = PaymentMethod.BANK_TRANSFER,
+                rule =
+                    RecurrenceRule(
+                        frequency = RecurrenceFrequency.WEEKLY,
+                        interval = 2,
+                        startDate = LocalDate(2026, 8, 1),
+                        endDate = LocalDate(2026, 12, 31),
+                    ),
+            )
 
         val result = RecurringTransactionValidationRules.applyRecurringRuleUpdate(existing, updateCommand)
 
@@ -241,40 +252,44 @@ class RecurringTransactionValidationRulesTest {
 
     @Test
     fun applyRecurringRuleUpdate_startDateAfterLastGenerated_returnsInvalidAndProducesNoEntity() {
-        val existing = RecurringTransaction(
-            id = EntityId("rec-1"),
-            ownerId = EntityId("user-1"),
-            workspaceId = null,
-            amount = Money(5000L, Currency.TRY),
-            type = TransactionType.EXPENSE,
-            categoryId = EntityId("cat-1"),
-            description = null,
-            paymentMethod = PaymentMethod.CASH,
-            rule = RecurrenceRule(
-                frequency = RecurrenceFrequency.DAILY,
-                interval = 1,
-                startDate = LocalDate(2026, 8, 1),
-                endDate = null,
-            ),
-            lastGeneratedDate = LocalDate(2026, 8, 15),
-            isActive = true,
-            createdAt = Instant.fromEpochMilliseconds(1700000000000L),
-        )
+        val existing =
+            RecurringTransaction(
+                id = EntityId("rec-1"),
+                ownerId = EntityId("user-1"),
+                workspaceId = null,
+                amount = Money(5000L, Currency.TRY),
+                type = TransactionType.EXPENSE,
+                categoryId = EntityId("cat-1"),
+                description = null,
+                paymentMethod = PaymentMethod.CASH,
+                rule =
+                    RecurrenceRule(
+                        frequency = RecurrenceFrequency.DAILY,
+                        interval = 1,
+                        startDate = LocalDate(2026, 8, 1),
+                        endDate = null,
+                    ),
+                lastGeneratedDate = LocalDate(2026, 8, 15),
+                isActive = true,
+                createdAt = Instant.fromEpochMilliseconds(1700000000000L),
+            )
 
-        val invalidCommand = UpdateRecurringTransactionCommand(
-            id = EntityId("rec-1"),
-            amount = Money(5000L, Currency.TRY),
-            type = TransactionType.EXPENSE,
-            categoryId = EntityId("cat-1"),
-            description = null,
-            paymentMethod = PaymentMethod.CASH,
-            rule = RecurrenceRule(
-                frequency = RecurrenceFrequency.DAILY,
-                interval = 1,
-                startDate = LocalDate(2026, 8, 20), // After lastGeneratedDate (8-15)
-                endDate = null,
-            ),
-        )
+        val invalidCommand =
+            UpdateRecurringTransactionCommand(
+                id = EntityId("rec-1"),
+                amount = Money(5000L, Currency.TRY),
+                type = TransactionType.EXPENSE,
+                categoryId = EntityId("cat-1"),
+                description = null,
+                paymentMethod = PaymentMethod.CASH,
+                rule =
+                    RecurrenceRule(
+                        frequency = RecurrenceFrequency.DAILY,
+                        interval = 1,
+                        startDate = LocalDate(2026, 8, 20), // After lastGeneratedDate (8-15)
+                        endDate = null,
+                    ),
+            )
 
         val result = RecurringTransactionValidationRules.applyRecurringRuleUpdate(existing, invalidCommand)
 
@@ -284,40 +299,44 @@ class RecurringTransactionValidationRulesTest {
 
     @Test
     fun applyRecurringRuleUpdate_endDateBeforeLastGenerated_returnsInvalidAndProducesNoEntity() {
-        val existing = RecurringTransaction(
-            id = EntityId("rec-1"),
-            ownerId = EntityId("user-1"),
-            workspaceId = null,
-            amount = Money(5000L, Currency.TRY),
-            type = TransactionType.EXPENSE,
-            categoryId = EntityId("cat-1"),
-            description = null,
-            paymentMethod = PaymentMethod.CASH,
-            rule = RecurrenceRule(
-                frequency = RecurrenceFrequency.DAILY,
-                interval = 1,
-                startDate = LocalDate(2026, 8, 1),
-                endDate = null,
-            ),
-            lastGeneratedDate = LocalDate(2026, 8, 15),
-            isActive = true,
-            createdAt = Instant.fromEpochMilliseconds(1700000000000L),
-        )
+        val existing =
+            RecurringTransaction(
+                id = EntityId("rec-1"),
+                ownerId = EntityId("user-1"),
+                workspaceId = null,
+                amount = Money(5000L, Currency.TRY),
+                type = TransactionType.EXPENSE,
+                categoryId = EntityId("cat-1"),
+                description = null,
+                paymentMethod = PaymentMethod.CASH,
+                rule =
+                    RecurrenceRule(
+                        frequency = RecurrenceFrequency.DAILY,
+                        interval = 1,
+                        startDate = LocalDate(2026, 8, 1),
+                        endDate = null,
+                    ),
+                lastGeneratedDate = LocalDate(2026, 8, 15),
+                isActive = true,
+                createdAt = Instant.fromEpochMilliseconds(1700000000000L),
+            )
 
-        val invalidCommand = UpdateRecurringTransactionCommand(
-            id = EntityId("rec-1"),
-            amount = Money(5000L, Currency.TRY),
-            type = TransactionType.EXPENSE,
-            categoryId = EntityId("cat-1"),
-            description = null,
-            paymentMethod = PaymentMethod.CASH,
-            rule = RecurrenceRule(
-                frequency = RecurrenceFrequency.DAILY,
-                interval = 1,
-                startDate = LocalDate(2026, 8, 1),
-                endDate = LocalDate(2026, 8, 10), // Before lastGeneratedDate (8-15)
-            ),
-        )
+        val invalidCommand =
+            UpdateRecurringTransactionCommand(
+                id = EntityId("rec-1"),
+                amount = Money(5000L, Currency.TRY),
+                type = TransactionType.EXPENSE,
+                categoryId = EntityId("cat-1"),
+                description = null,
+                paymentMethod = PaymentMethod.CASH,
+                rule =
+                    RecurrenceRule(
+                        frequency = RecurrenceFrequency.DAILY,
+                        interval = 1,
+                        startDate = LocalDate(2026, 8, 1),
+                        endDate = LocalDate(2026, 8, 10), // Before lastGeneratedDate (8-15)
+                    ),
+            )
 
         val result = RecurringTransactionValidationRules.applyRecurringRuleUpdate(existing, invalidCommand)
 
@@ -327,30 +346,32 @@ class RecurringTransactionValidationRulesTest {
 
     @Test
     fun applyRecurringRuleUpdate_failsClosedOnIdMismatch() {
-        val existing = RecurringTransaction(
-            id = EntityId("rec-1"),
-            ownerId = EntityId("user-1"),
-            workspaceId = null,
-            amount = Money(5000L, Currency.TRY),
-            type = TransactionType.EXPENSE,
-            categoryId = EntityId("cat-1"),
-            description = null,
-            paymentMethod = PaymentMethod.CASH,
-            rule = validRule,
-            lastGeneratedDate = null,
-            isActive = true,
-            createdAt = Instant.fromEpochMilliseconds(1700000000000L),
-        )
+        val existing =
+            RecurringTransaction(
+                id = EntityId("rec-1"),
+                ownerId = EntityId("user-1"),
+                workspaceId = null,
+                amount = Money(5000L, Currency.TRY),
+                type = TransactionType.EXPENSE,
+                categoryId = EntityId("cat-1"),
+                description = null,
+                paymentMethod = PaymentMethod.CASH,
+                rule = validRule,
+                lastGeneratedDate = null,
+                isActive = true,
+                createdAt = Instant.fromEpochMilliseconds(1700000000000L),
+            )
 
-        val mismatchCommand = UpdateRecurringTransactionCommand(
-            id = EntityId("rec-2"),
-            amount = Money(7500L, Currency.TRY),
-            type = TransactionType.EXPENSE,
-            categoryId = EntityId("cat-1"),
-            description = null,
-            paymentMethod = PaymentMethod.CASH,
-            rule = validRule,
-        )
+        val mismatchCommand =
+            UpdateRecurringTransactionCommand(
+                id = EntityId("rec-2"),
+                amount = Money(7500L, Currency.TRY),
+                type = TransactionType.EXPENSE,
+                categoryId = EntityId("cat-1"),
+                description = null,
+                paymentMethod = PaymentMethod.CASH,
+                rule = validRule,
+            )
 
         assertFailsWith<IllegalArgumentException> {
             RecurringTransactionValidationRules.applyRecurringRuleUpdate(existing, mismatchCommand)
@@ -359,17 +380,19 @@ class RecurringTransactionValidationRulesTest {
 
     @Test
     fun setRecurringTransactionActiveCommand_carriesOnlyIdAndIsActive() {
-        val pauseCommand = SetRecurringTransactionActiveCommand(
-            id = EntityId("rec-1"),
-            isActive = false,
-        )
+        val pauseCommand =
+            SetRecurringTransactionActiveCommand(
+                id = EntityId("rec-1"),
+                isActive = false,
+            )
         assertEquals(EntityId("rec-1"), pauseCommand.id)
         assertEquals(false, pauseCommand.isActive)
 
-        val resumeCommand = SetRecurringTransactionActiveCommand(
-            id = EntityId("rec-1"),
-            isActive = true,
-        )
+        val resumeCommand =
+            SetRecurringTransactionActiveCommand(
+                id = EntityId("rec-1"),
+                isActive = true,
+            )
         assertEquals(EntityId("rec-1"), resumeCommand.id)
         assertEquals(true, resumeCommand.isActive)
     }

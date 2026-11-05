@@ -51,7 +51,9 @@ import androidx.compose.ui.unit.dp
 
 /** Semantik kategori anahtarlarını platformdan bağımsız Compose vektörlerine çözümler. */
 object CategorySemanticIconResolver {
-    fun resolve(key: String?): ImageVector = when (key?.trim()?.lowercase()) {
+    fun resolve(key: String?): ImageVector = resolveOrNull(key) ?: Icons.Outlined.Category
+
+    fun resolveOrNull(key: String?): ImageVector? = when (key?.trim()?.lowercase()) {
         "food_dining", "utensils", "coffee" -> Icons.Outlined.Restaurant
         "groceries", "shopping-cart", "cart" -> Icons.Outlined.ShoppingCart
         "housing", "home" -> Icons.Outlined.Home
@@ -88,7 +90,7 @@ object CategorySemanticIconResolver {
         "briefcase" -> Icons.Outlined.WorkOutline
         "market" -> Icons.Outlined.ShoppingCart
         "storefront", "merchant" -> Icons.Outlined.Storefront
-        else -> Icons.Outlined.Category
+        else -> null
     }
 }
 

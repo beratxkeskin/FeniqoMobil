@@ -100,6 +100,9 @@ bulut hesabı değildir. Kullanım ve veri kapsamı: [Demo kullanım rehberi](do
   taşınır. Kanonik görsel sözlük 18 gider ve 9 gelir anahtarının Türkçe/İngilizce adı, ikon anlamı,
   renk ve kapsamını tanımlar; platformlar bu anahtarları kendi ikon bileşenlerine çözümler.
 - Ham banka açıklaması korunur; eşleştirme ayrı, temizlenmiş açıklama üzerinden yapılır.
+- Kullanıcının yazdığı işlem adı da ayrı bir tanıma girdisidir. `Netflix ücreti` gibi yeterince
+  özgül bir ad güven eşiğini geçerse merchant logosu gösterilebilir; özgün işlem adı korunur ve
+  merchant tahmini kullanıcının seçtiği kategoriyi sessizce değiştirmez.
 - Merchant tahmini 0–100 güven puanlıdır. 75 altındaki sonuçta merchant logosu gösterilmez ve
   kullanıcının doğrulanmış düzeltmesi sistem tahmininden önceliklidir.
 - Eşleşme önceliği kişisel doğrulama, çalışma alanı doğrulaması, banka tarafından doğrulanmış
@@ -109,9 +112,18 @@ bulut hesabı değildir. Kullanım ve veri kapsamı: [Demo kullanım rehberi](do
 - Kişisel transferler ile maaş, kredi kartı ödemesi, hesaplar arası transfer ve yatırım/birikim
   aktarımları merchant değildir. Nakit çekim/yatırma ve bakiye düzeltmesi de gelir/gider bütçe
   kategorisi değil, ayrı sistem hareketidir ve merchant eşleştirmesine girmez.
-- Logo fallback sırası doğrulanmış merchant logosu, kullanıcının seçtiği merchant görseli,
-  kategori ikonu, merchant/açıklama baş harfi ve genel işlem ikonudur. Logo servisi temel çalışma
-  için zorunlu değildir; ham finansal açıklama üçüncü taraf logo servisine gönderilemez.
+- Logo fallback hedef sırası: 1) gelecekte uygulanacak, kullanıcının açıkça seçtiği ve güvenli yerel
+  yolu doğrulanan merchant görseli; 2) kullanım hakkı doğrulanmış paketli veya kontrollü-cache merchant
+  logosu; 3) kategori ikonu; 4) locale-aware merchant/işlem baş harfi; 5) genel işlem ikonudur. Kullanıcının
+  seçtiği merchant görseli veri modelinde bugün henüz uygulanmamıştır; bu nedenle mevcut Faz 8.6-E efektif
+  fallback zinciri doğrulanmış paketli logo → kategori ikonu → baş harf → genel işlem ikonudur. Logo servisi
+  temel çalışma için zorunlu değildir; ham finansal açıklama üçüncü taraf logo servisine gönderilemez.
+- Türkiye başlangıç kataloğu abonelik, alışveriş, market/hızlı teslimat, yemek, telekom,
+  akaryakıt ve ulaşım gruplarında küçük ve denetlenebilir paketlerle genişletilir. Hizmete özel
+  merchant (`Amazon Prime`, `Trendyol Yemek`) genel markadan önce değerlendirilir; `market`,
+  `premium`, `apple` gibi genel ifadeler tek başına otomatik merchant olamaz.
+- Ayrıntılı kabul örnekleri, katalog kapsamı, veri modeli ve uygulama dilimleri:
+  [Merchant tanıma ve logo uygulama planı](docs/MERCHANT_TANIMA_VE_LOGO_UYGULAMA_PLANI.md).
 
 - Ayrıntılı web ekranı ve kullanıcı akışları: [docs/WEB_REFERANS_ENVANTERI.md](docs/WEB_REFERANS_ENVANTERI.md)
 - Güncel özellik durumu: [FEATURES.md](FEATURES.md)

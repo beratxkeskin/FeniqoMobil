@@ -4,8 +4,8 @@ import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
-import com.feniqo.mobile.data.local.dao.BudgetDao
 import com.feniqo.mobile.data.local.dao.AssetDao
+import com.feniqo.mobile.data.local.dao.BudgetDao
 import com.feniqo.mobile.data.local.dao.CategoryDao
 import com.feniqo.mobile.data.local.dao.DebtDao
 import com.feniqo.mobile.data.local.dao.GoalDao
@@ -24,9 +24,10 @@ import com.feniqo.mobile.data.local.dao.SyncOperationDao
 import com.feniqo.mobile.data.local.dao.SyncStateDao
 import com.feniqo.mobile.data.local.dao.TagDao
 import com.feniqo.mobile.data.local.dao.TransactionDao
+import com.feniqo.mobile.data.local.dao.UserMerchantVerificationDao
 import com.feniqo.mobile.data.local.dao.WorkspaceDao
-import com.feniqo.mobile.data.local.entity.BudgetEntity
 import com.feniqo.mobile.data.local.entity.AssetEntity
+import com.feniqo.mobile.data.local.entity.BudgetEntity
 import com.feniqo.mobile.data.local.entity.CategoryEntity
 import com.feniqo.mobile.data.local.entity.DebtEntity
 import com.feniqo.mobile.data.local.entity.DebtPaymentEntity
@@ -48,6 +49,7 @@ import com.feniqo.mobile.data.local.entity.SyncUserStateEntity
 import com.feniqo.mobile.data.local.entity.TagEntity
 import com.feniqo.mobile.data.local.entity.TransactionEntity
 import com.feniqo.mobile.data.local.entity.TransactionTagCrossRef
+import com.feniqo.mobile.data.local.entity.UserMerchantVerificationEntity
 import com.feniqo.mobile.data.local.entity.UserProfileEntity
 import com.feniqo.mobile.data.local.entity.WorkspaceEntity
 import com.feniqo.mobile.data.local.entity.WorkspaceInvitationEntity
@@ -82,35 +84,57 @@ import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
         MarketPriceEntity::class,
         ReceiptFileEntity::class,
         ReceiptLinkageEntity::class,
+        UserMerchantVerificationEntity::class,
     ],
-    version = 22,
+    version = 24,
     exportSchema = true,
 )
 @ConstructedBy(FeniqoDatabaseConstructor::class)
 abstract class FeniqoDatabase : RoomDatabase() {
     abstract fun assetDao(): AssetDao
-    abstract fun marketPriceDao(): MarketPriceDao
-    abstract fun profileDao(): ProfileDao
-    abstract fun workspaceDao(): WorkspaceDao
-    abstract fun categoryDao(): CategoryDao
-    abstract fun transactionDao(): TransactionDao
-    abstract fun budgetDao(): BudgetDao
-    abstract fun tagDao(): TagDao
-    abstract fun recurringTransactionDao(): RecurringTransactionDao
-    abstract fun subscriptionDao(): SubscriptionDao
-    abstract fun subscriptionPaymentReminderReceiptDao(): SubscriptionPaymentReminderReceiptDao
-    abstract fun subscriptionPriceHistoryDao(): SubscriptionPriceHistoryDao
-    abstract fun subscriptionPaymentDao(): SubscriptionPaymentDao
-    abstract fun goalDao(): GoalDao
-    abstract fun debtDao(): DebtDao
-    abstract fun syncOperationDao(): SyncOperationDao
-    abstract fun syncStateDao(): SyncStateDao
-    abstract fun remoteSyncDao(): RemoteSyncDao
-    abstract fun localMutationDao(): LocalMutationDao
-    abstract fun receiptFileDao(): ReceiptFileDao
-    abstract fun receiptLinkageDao(): ReceiptLinkageDao
-}
 
+    abstract fun marketPriceDao(): MarketPriceDao
+
+    abstract fun profileDao(): ProfileDao
+
+    abstract fun workspaceDao(): WorkspaceDao
+
+    abstract fun categoryDao(): CategoryDao
+
+    abstract fun transactionDao(): TransactionDao
+
+    abstract fun budgetDao(): BudgetDao
+
+    abstract fun tagDao(): TagDao
+
+    abstract fun recurringTransactionDao(): RecurringTransactionDao
+
+    abstract fun subscriptionDao(): SubscriptionDao
+
+    abstract fun subscriptionPaymentReminderReceiptDao(): SubscriptionPaymentReminderReceiptDao
+
+    abstract fun subscriptionPriceHistoryDao(): SubscriptionPriceHistoryDao
+
+    abstract fun subscriptionPaymentDao(): SubscriptionPaymentDao
+
+    abstract fun goalDao(): GoalDao
+
+    abstract fun debtDao(): DebtDao
+
+    abstract fun syncOperationDao(): SyncOperationDao
+
+    abstract fun syncStateDao(): SyncStateDao
+
+    abstract fun remoteSyncDao(): RemoteSyncDao
+
+    abstract fun localMutationDao(): LocalMutationDao
+
+    abstract fun receiptFileDao(): ReceiptFileDao
+
+    abstract fun receiptLinkageDao(): ReceiptLinkageDao
+
+    abstract fun userMerchantVerificationDao(): UserMerchantVerificationDao
+}
 
 /** Room KSP her hedef için actual veritabanı kurucusunu üretir. */
 @Suppress("KotlinNoActualForExpect")

@@ -34,6 +34,7 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.compose.uiTooling)
+            implementation(libs.coil.compose)
         }
         commonMain.dependencies {
             api(project(":sharedLogic"))

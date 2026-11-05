@@ -18,7 +18,9 @@ import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceInvitationDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceMemberDto
+import com.feniqo.mobile.data.remote.dto.UserMerchantVerificationDto
 import com.feniqo.mobile.data.local.entity.OutboxErrorClassification
+import com.feniqo.mobile.domain.model.TransactionMerchantInfo
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
@@ -28,7 +30,10 @@ sealed interface OutboxExecutionResult {
     data object V1Completed : OutboxExecutionResult
     data class ProfileApplied(val record: ProfileDto) : OutboxExecutionResult
     data class CategoryApplied(val record: CategoryDto) : OutboxExecutionResult
-    data class TransactionApplied(val record: TransactionDto) : OutboxExecutionResult
+    data class TransactionApplied(
+        val record: TransactionDto,
+        val candidateMerchant: TransactionMerchantInfo?,
+    ) : OutboxExecutionResult
     data class BudgetApplied(val record: BudgetDto) : OutboxExecutionResult
     data class AssetApplied(val record: AssetDto) : OutboxExecutionResult
     data class RecurringTransactionApplied(val record: RecurringTransactionDto) : OutboxExecutionResult
@@ -40,6 +45,7 @@ sealed interface OutboxExecutionResult {
     data class WorkspaceApplied(val record: WorkspaceDto) : OutboxExecutionResult
     data class WorkspaceMemberApplied(val record: WorkspaceMemberDto) : OutboxExecutionResult
     data class WorkspaceInvitationApplied(val record: WorkspaceInvitationDto) : OutboxExecutionResult
+    data class UserMerchantVerificationApplied(val record: UserMerchantVerificationDto) : OutboxExecutionResult
     data object MissingDeleteAcknowledged : OutboxExecutionResult
     data class ConflictDetected(val conflict: com.feniqo.mobile.data.local.entity.SyncConflictEntity) : OutboxExecutionResult
 }

@@ -2,7 +2,6 @@ package com.feniqo.mobile.data.repository
 
 import androidx.sqlite.SQLiteException
 import com.feniqo.mobile.domain.model.AppError
-import io.github.jan.supabase.auth.exception.AuthErrorCode
 import io.github.jan.supabase.auth.exception.AuthRestException
 import io.github.jan.supabase.exceptions.HttpRequestException
 import io.github.jan.supabase.exceptions.RestException
@@ -22,13 +21,13 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class SyncErrorMapperTest {
-
     private suspend fun mockResponse(status: HttpStatusCode): HttpResponse {
-        val client = HttpClient(MockEngine) {
-            engine {
-                addHandler { respond(content = "", status = status) }
+        val client =
+            HttpClient(MockEngine) {
+                engine {
+                    addHandler { respond(content = "", status = status) }
+                }
             }
-        }
         return client.get("https://example.com")
     }
 
@@ -71,84 +70,157 @@ class SyncErrorMapperTest {
         assertTrue(ioError is AppError.Network)
         assertEquals("sync.network_failed", ioError.code)
 
-        val httpReqError = HttpRequestException("Cannot reach server", io.ktor.client.request.HttpRequestBuilder()).toSyncAppError()
+        val httpReqError =
+            HttpRequestException(
+                "Cannot reach server",
+                io.ktor.client.request
+                    .HttpRequestBuilder(),
+            ).toSyncAppError()
         assertTrue(httpReqError is AppError.Network)
         assertEquals("sync.network_unavailable", httpReqError.code)
     }
 
     @Test
-    fun maps_rest_exception_status_codes_according_to_contract() = runTest {
-        // 401 & 403 -> Authentication
-        val rest401 = RestException(error = "Unauthorized", description = null, response = mockResponse(HttpStatusCode.Unauthorized)).toSyncAppError()
-        assertTrue(rest401 is AppError.Authentication)
-        assertEquals("sync.unauthorized", rest401.code)
+    fun maps_rest_exception_status_codes_according_to_contract() =
+        runTest {
+            // 401 & 403 -> Authentication
+            val rest401 =
+                RestException(
+                    error = "Unauthorized",
+                    description = null,
+                    response = mockResponse(HttpStatusCode.Unauthorized),
+                ).toSyncAppError()
+            assertTrue(rest401 is AppError.Authentication)
+            assertEquals("sync.unauthorized", rest401.code)
 
-        val rest403 = RestException(error = "Forbidden", description = null, response = mockResponse(HttpStatusCode.Forbidden)).toSyncAppError()
-        assertTrue(rest403 is AppError.Authentication)
-        assertEquals("sync.unauthorized", rest403.code)
+            val rest403 =
+                RestException(
+                    error = "Forbidden",
+                    description = null,
+                    response = mockResponse(HttpStatusCode.Forbidden),
+                ).toSyncAppError()
+            assertTrue(rest403 is AppError.Authentication)
+            assertEquals("sync.unauthorized", rest403.code)
 
-        // 400, 422 -> Validation
-        val rest400 = RestException(error = "Bad Request", description = null, response = mockResponse(HttpStatusCode.BadRequest)).toSyncAppError()
-        assertTrue(rest400 is AppError.Validation)
-        assertEquals("sync.invalid_request", rest400.code)
+            // 400, 422 -> Validation
+            val rest400 =
+                RestException(
+                    error = "Bad Request",
+                    description = null,
+                    response = mockResponse(HttpStatusCode.BadRequest),
+                ).toSyncAppError()
+            assertTrue(rest400 is AppError.Validation)
+            assertEquals("sync.invalid_request", rest400.code)
 
-        val rest422 = RestException(error = "Unprocessable", description = null, response = mockResponse(HttpStatusCode.UnprocessableEntity)).toSyncAppError()
-        assertTrue(rest422 is AppError.Validation)
-        assertEquals("sync.invalid_request", rest422.code)
+            val rest422 =
+                RestException(
+                    error = "Unprocessable",
+                    description = null,
+                    response = mockResponse(HttpStatusCode.UnprocessableEntity),
+                ).toSyncAppError()
+            assertTrue(rest422 is AppError.Validation)
+            assertEquals("sync.invalid_request", rest422.code)
 
-        // 409 -> Conflict
-        val rest409 = RestException(error = "Conflict", description = null, response = mockResponse(HttpStatusCode.Conflict)).toSyncAppError()
-        assertTrue(rest409 is AppError.Conflict)
-        assertEquals("sync.remote_conflict", rest409.code)
+            // 409 -> Conflict
+            val rest409 =
+                RestException(
+                    error = "Conflict",
+                    description = null,
+                    response = mockResponse(HttpStatusCode.Conflict),
+                ).toSyncAppError()
+            assertTrue(rest409 is AppError.Conflict)
+            assertEquals("sync.remote_conflict", rest409.code)
 
-        // 404, 408, 429, 500..599 -> Network
-        val rest404 = RestException(error = "Not Found", description = null, response = mockResponse(HttpStatusCode.NotFound)).toSyncAppError()
-        assertTrue(rest404 is AppError.Network)
-        assertEquals("sync.http_error_404", rest404.code)
+            // 404, 408, 429, 500..599 -> Network
+            val rest404 =
+                RestException(
+                    error = "Not Found",
+                    description = null,
+                    response = mockResponse(HttpStatusCode.NotFound),
+                ).toSyncAppError()
+            assertTrue(rest404 is AppError.Network)
+            assertEquals("sync.http_error_404", rest404.code)
 
-        val rest408 = RestException(error = "Request Timeout", description = null, response = mockResponse(HttpStatusCode.RequestTimeout)).toSyncAppError()
-        assertTrue(rest408 is AppError.Network)
-        assertEquals("sync.http_error_408", rest408.code)
+            val rest408 =
+                RestException(
+                    error = "Request Timeout",
+                    description = null,
+                    response = mockResponse(HttpStatusCode.RequestTimeout),
+                ).toSyncAppError()
+            assertTrue(rest408 is AppError.Network)
+            assertEquals("sync.http_error_408", rest408.code)
 
-        val rest429 = RestException(error = "Too Many Requests", description = null, response = mockResponse(HttpStatusCode.TooManyRequests)).toSyncAppError()
-        assertTrue(rest429 is AppError.Network)
-        assertEquals("sync.http_error_429", rest429.code)
+            val rest429 =
+                RestException(
+                    error = "Too Many Requests",
+                    description = null,
+                    response = mockResponse(HttpStatusCode.TooManyRequests),
+                ).toSyncAppError()
+            assertTrue(rest429 is AppError.Network)
+            assertEquals("sync.http_error_429", rest429.code)
 
-        val rest500 = RestException(error = "Internal Server Error", description = null, response = mockResponse(HttpStatusCode.InternalServerError)).toSyncAppError()
-        assertTrue(rest500 is AppError.Network)
-        assertEquals("sync.http_error_500", rest500.code)
+            val rest500 =
+                RestException(
+                    error = "Internal Server Error",
+                    description = null,
+                    response = mockResponse(HttpStatusCode.InternalServerError),
+                ).toSyncAppError()
+            assertTrue(rest500 is AppError.Network)
+            assertEquals("sync.http_error_500", rest500.code)
 
-        val rest503 = RestException(error = "Service Unavailable", description = null, response = mockResponse(HttpStatusCode.ServiceUnavailable)).toSyncAppError()
-        assertTrue(rest503 is AppError.Network)
-        assertEquals("sync.http_error_503", rest503.code)
+            val rest503 =
+                RestException(
+                    error = "Service Unavailable",
+                    description = null,
+                    response = mockResponse(HttpStatusCode.ServiceUnavailable),
+                ).toSyncAppError()
+            assertTrue(rest503 is AppError.Network)
+            assertEquals("sync.http_error_503", rest503.code)
 
-        // Other status -> Unknown
-        val rest302 = RestException(error = "Found", description = null, response = mockResponse(HttpStatusCode.Found)).toSyncAppError()
-        assertTrue(rest302 is AppError.Unknown)
-        assertEquals("sync.http_error_302", rest302.code)
-    }
+            // Other status -> Unknown
+            val rest302 = RestException(error = "Found", description = null, response = mockResponse(HttpStatusCode.Found)).toSyncAppError()
+            assertTrue(rest302 is AppError.Unknown)
+            assertEquals("sync.http_error_302", rest302.code)
+        }
 
     @Test
-    fun maps_auth_rest_exceptions_according_to_auth_error_code() = runTest {
-        val dummyResponse = mockResponse(HttpStatusCode.BadRequest)
+    fun maps_auth_rest_exceptions_according_to_auth_error_code() =
+        runTest {
+            val dummyResponse = mockResponse(HttpStatusCode.BadRequest)
 
-        val conflictAuth = AuthRestException(errorCode = "user_already_exists", errorDescription = "User already exists", response = dummyResponse)
-        val conflictError = conflictAuth.toSyncAppError()
-        assertTrue(conflictError is AppError.Conflict)
-        assertEquals("sync.remote_conflict", conflictError.code)
+            val conflictAuth =
+                AuthRestException(errorCode = "user_already_exists", errorDescription = "User already exists", response = dummyResponse)
+            val conflictError = conflictAuth.toSyncAppError()
+            assertTrue(conflictError is AppError.Conflict)
+            assertEquals("sync.remote_conflict", conflictError.code)
 
-        val weakPass = AuthRestException(errorCode = "weak_password", errorDescription = "Weak password", response = dummyResponse).toSyncAppError()
-        assertTrue(weakPass is AppError.Validation)
-        assertEquals("sync.invalid_request", weakPass.code)
+            val weakPass =
+                AuthRestException(
+                    errorCode = "weak_password",
+                    errorDescription = "Weak password",
+                    response = dummyResponse,
+                ).toSyncAppError()
+            assertTrue(weakPass is AppError.Validation)
+            assertEquals("sync.invalid_request", weakPass.code)
 
-        val rateLimit = AuthRestException(errorCode = "over_request_rate_limit", errorDescription = "Rate limit", response = dummyResponse).toSyncAppError()
-        assertTrue(rateLimit is AppError.Network)
-        assertEquals("sync.rate_limited", rateLimit.code)
+            val rateLimit =
+                AuthRestException(
+                    errorCode = "over_request_rate_limit",
+                    errorDescription = "Rate limit",
+                    response = dummyResponse,
+                ).toSyncAppError()
+            assertTrue(rateLimit is AppError.Network)
+            assertEquals("sync.rate_limited", rateLimit.code)
 
-        val invalidCreds = AuthRestException(errorCode = "invalid_credentials", errorDescription = "Invalid credentials", response = dummyResponse).toSyncAppError()
-        assertTrue(invalidCreds is AppError.Authentication)
-        assertEquals("sync.auth_failed", invalidCreds.code)
-    }
+            val invalidCreds =
+                AuthRestException(
+                    errorCode = "invalid_credentials",
+                    errorDescription = "Invalid credentials",
+                    response = dummyResponse,
+                ).toSyncAppError()
+            assertTrue(invalidCreds is AppError.Authentication)
+            assertEquals("sync.auth_failed", invalidCreds.code)
+        }
 
     @Test
     fun maps_sqlite_exception_to_storage_error() {
@@ -164,4 +236,3 @@ class SyncErrorMapperTest {
         assertEquals("sync.unknown_error", unknown.code)
     }
 }
-

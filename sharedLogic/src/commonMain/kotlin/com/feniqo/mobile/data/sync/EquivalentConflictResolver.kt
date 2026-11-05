@@ -2,6 +2,7 @@ package com.feniqo.mobile.data.sync
 
 import com.feniqo.mobile.data.local.entity.SyncConflictEntity
 import com.feniqo.mobile.data.local.entity.SyncOperationEntity
+import com.feniqo.mobile.data.remote.codec.UserMerchantVerificationPayloadCodec
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.ProfileDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
@@ -33,8 +34,30 @@ object EquivalentConflictResolver {
             SyncEntityType.TRANSACTION -> isTransactionEquivalent(conflict.localPayloadJson, conflict.remotePayloadJson)
             SyncEntityType.CATEGORY -> isCategoryEquivalent(conflict.localPayloadJson, conflict.remotePayloadJson)
             SyncEntityType.PROFILE -> isProfileEquivalent(conflict.localPayloadJson, conflict.remotePayloadJson)
+            SyncEntityType.USER_MERCHANT_VERIFICATION -> isUserMerchantVerificationEquivalent(conflict.localPayloadJson, conflict.remotePayloadJson)
             else -> false
         }
+    }
+
+    fun isUserMerchantVerificationEquivalent(localJson: String, remoteJson: String): Boolean {
+        val local = runCatching {
+            UserMerchantVerificationPayloadCodec.decodeAndValidateSnapshot(localJson)
+        }.getOrNull() ?: return false
+        val remote = runCatching {
+            UserMerchantVerificationPayloadCodec.decodeAndValidateSnapshot(remoteJson)
+        }.getOrNull() ?: return false
+
+        if (local.deletedAt != null || remote.deletedAt != null) return false
+
+        return local.id == remote.id &&
+            local.userId == remote.userId &&
+            local.workspaceId == null &&
+            remote.workspaceId == null &&
+            local.normalizedAlias == remote.normalizedAlias &&
+            local.decisionCode == remote.decisionCode &&
+            local.merchantId == remote.merchantId &&
+            local.scopeCode == "PERSONAL" &&
+            remote.scopeCode == "PERSONAL"
     }
 
     fun isTransactionEquivalent(localJson: String, remoteJson: String): Boolean {

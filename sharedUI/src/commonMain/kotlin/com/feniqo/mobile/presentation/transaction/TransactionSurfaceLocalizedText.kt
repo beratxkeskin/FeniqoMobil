@@ -43,6 +43,9 @@ fun transactionDetailUnavailableText(): String = stringResource(Res.string.trans
 @Composable
 fun transactionDetailReturnText(): String = stringResource(Res.string.transaction_detail_return)
 
+@Composable
+fun transactionMerchantSuccessText(): String = stringResource(Res.string.transaction_merchant_success)
+
 private fun TransactionSurfaceUiMessage.toStringResource(): StringResource = when (this) {
     TransactionSurfaceUiMessage.DETAIL_INVALID_LINK -> Res.string.transaction_surface_detail_invalid_link
     TransactionSurfaceUiMessage.DETAIL_NOT_FOUND -> Res.string.transaction_surface_detail_not_found

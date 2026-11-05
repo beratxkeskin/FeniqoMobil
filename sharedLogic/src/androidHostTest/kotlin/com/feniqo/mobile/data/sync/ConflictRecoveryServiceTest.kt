@@ -10,9 +10,13 @@ import com.feniqo.mobile.data.local.entity.SyncConflictEntity
 import com.feniqo.mobile.data.local.entity.SyncMetadata
 import com.feniqo.mobile.data.local.entity.SyncOperationEntity
 import com.feniqo.mobile.data.local.entity.TransactionEntity
+import com.feniqo.mobile.data.local.entity.UserMerchantVerificationEntity
 import com.feniqo.mobile.data.local.outbox.OfflineWriteQueue
 import com.feniqo.mobile.data.local.outbox.OutboxOperationType
+import com.feniqo.mobile.data.remote.codec.UserMerchantVerificationPayloadCodec
 import com.feniqo.mobile.data.remote.dto.TransactionDto
+import com.feniqo.mobile.data.remote.dto.UserMerchantVerificationDto
+import com.feniqo.mobile.data.util.UuidHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.encodeToString
@@ -880,6 +884,492 @@ class ConflictRecoveryServiceTest {
         }
     }
 
+    @Test
+    fun single_equivalent_merchant_verification_create_recovery_resolves_and_cleans_conflict_and_outbox_when_in_conflict_status() = runTest {
+        val db = inMemoryDatabase()
+        try {
+            val queue = createQueue(db)
+            val service = ConflictRecoveryService(
+                syncStateDao = db.syncStateDao(),
+                syncOperationDao = db.syncOperationDao(),
+                localMutationDao = db.localMutationDao(),
+                nowEpochMillisProvider = { 1000L },
+            )
+
+            val user = "11111111-1111-4111-8111-111111111111"
+            val alias = "NETFLIX"
+            val id = UuidHelper.deterministicMerchantVerificationUuid(user, alias)
+            val entity = merchantEntity(id = id, userId = user, alias = alias, decisionCode = "ASSIGN", merchantId = "netflix")
+            val payload = UserMerchantVerificationPayloadCodec.encodeCreate(entity)
+
+            val opId = queue.enqueueUserMerchantVerificationV2(
+                syncScopeKey = SCOPE,
+                entity = entity,
+                type = OutboxOperationType.CREATE,
+            )
+            queue.claimOperation(SCOPE, opId)
+
+            val remoteDto = UserMerchantVerificationDto(
+                id = id,
+                userId = user,
+                workspaceId = null,
+                normalizedAlias = alias,
+                decisionCode = "ASSIGN",
+                merchantId = "netflix",
+                scopeCode = "PERSONAL",
+                createdAt = "1970-01-01T00:00:01Z",
+                updatedAt = "1970-01-01T00:00:01Z",
+                version = 1L,
+            )
+
+            val conflict = SyncConflictEntity(
+                syncScopeKey = SCOPE,
+                entityTypeCode = "USER_MERCHANT_VERIFICATION",
+                entityId = id,
+                operationId = opId,
+                localVersion = 0L,
+                remoteVersion = 1L,
+                localPayloadJson = UserMerchantVerificationPayloadCodec.encodeSnapshot(
+                    remoteDto.copy(version = 0L)
+                ),
+                remotePayloadJson = UserMerchantVerificationPayloadCodec.encodeSnapshot(remoteDto),
+                detectedAtEpochMillis = 1000L,
+            )
+            queue.recordV2Conflict(SCOPE, conflict)
+
+            val conflictOp = db.syncOperationDao().getById(SCOPE, opId)
+            assertNotNull(conflictOp)
+            assertEquals("CONFLICT", conflictOp.statusCode)
+
+            val recovered = service.recoverSingleEquivalentCreate(SCOPE, "USER_MERCHANT_VERIFICATION", id)
+            assertTrue(recovered)
+
+            assertNull(db.syncStateDao().getConflict(SCOPE, "USER_MERCHANT_VERIFICATION", id))
+            assertNull(db.syncOperationDao().getById(SCOPE, opId))
+            val synced = db.userMerchantVerificationDao().getByScopeAndAlias("user:$user", alias)
+            assertNotNull(synced)
+            assertEquals("SYNCED", synced.sync.syncStatus)
+            assertEquals(1L, synced.sync.version)
+            assertEquals("ASSIGN", synced.decisionCode)
+            assertEquals("netflix", synced.merchantId)
+        } finally {
+            db.close()
+        }
+    }
+
+    @Test
+    fun single_equivalent_merchant_verification_block_recovery_resolves_successfully() = runTest {
+        val db = inMemoryDatabase()
+        try {
+            val queue = createQueue(db)
+            val service = ConflictRecoveryService(
+                syncStateDao = db.syncStateDao(),
+                syncOperationDao = db.syncOperationDao(),
+                localMutationDao = db.localMutationDao(),
+                nowEpochMillisProvider = { 1000L },
+            )
+
+            val user = "11111111-1111-4111-8111-111111111111"
+            val alias = "KAHVEDUNYASI"
+            val id = UuidHelper.deterministicMerchantVerificationUuid(user, alias)
+            val entity = merchantEntity(id = id, userId = user, alias = alias, decisionCode = "BLOCK", merchantId = null)
+            val payload = UserMerchantVerificationPayloadCodec.encodeCreate(entity)
+
+            val opId = queue.enqueueUserMerchantVerificationV2(
+                syncScopeKey = SCOPE,
+                entity = entity,
+                type = OutboxOperationType.CREATE,
+            )
+            queue.claimOperation(SCOPE, opId)
+
+            val remoteDto = UserMerchantVerificationDto(
+                id = id,
+                userId = user,
+                workspaceId = null,
+                normalizedAlias = alias,
+                decisionCode = "BLOCK",
+                merchantId = null,
+                scopeCode = "PERSONAL",
+                createdAt = "1970-01-01T00:00:01Z",
+                updatedAt = "1970-01-01T00:00:01Z",
+                version = 2L,
+            )
+
+            val conflict = SyncConflictEntity(
+                syncScopeKey = SCOPE,
+                entityTypeCode = "USER_MERCHANT_VERIFICATION",
+                entityId = id,
+                operationId = opId,
+                localVersion = 0L,
+                remoteVersion = 2L,
+                localPayloadJson = UserMerchantVerificationPayloadCodec.encodeSnapshot(
+                    remoteDto.copy(version = 0L)
+                ),
+                remotePayloadJson = UserMerchantVerificationPayloadCodec.encodeSnapshot(remoteDto),
+                detectedAtEpochMillis = 1000L,
+            )
+            queue.recordV2Conflict(SCOPE, conflict)
+
+            val recovered = service.recoverSingleEquivalentCreate(SCOPE, "USER_MERCHANT_VERIFICATION", id)
+            assertTrue(recovered)
+
+            assertNull(db.syncStateDao().getConflict(SCOPE, "USER_MERCHANT_VERIFICATION", id))
+            assertNull(db.syncOperationDao().getById(SCOPE, opId))
+            val synced = db.userMerchantVerificationDao().getByScopeAndAlias("user:$user", alias)
+            assertNotNull(synced)
+            assertEquals("SYNCED", synced.sync.syncStatus)
+            assertEquals(2L, synced.sync.version)
+            assertEquals("BLOCK", synced.decisionCode)
+            assertNull(synced.merchantId)
+        } finally {
+            db.close()
+        }
+    }
+
+    @Test
+    fun single_non_equivalent_merchant_verification_create_recovery_returns_false_and_preserves_conflict() = runTest {
+        val db = inMemoryDatabase()
+        try {
+            val queue = createQueue(db)
+            val service = ConflictRecoveryService(
+                syncStateDao = db.syncStateDao(),
+                syncOperationDao = db.syncOperationDao(),
+                localMutationDao = db.localMutationDao(),
+                nowEpochMillisProvider = { 1000L },
+            )
+
+            val user = "11111111-1111-4111-8111-111111111111"
+            val alias = "NETFLIX"
+            val id = UuidHelper.deterministicMerchantVerificationUuid(user, alias)
+            val entity = merchantEntity(id = id, userId = user, alias = alias, decisionCode = "ASSIGN", merchantId = "netflix")
+            val payload = UserMerchantVerificationPayloadCodec.encodeCreate(entity)
+
+            val opId = queue.enqueueUserMerchantVerificationV2(
+                syncScopeKey = SCOPE,
+                entity = entity,
+                type = OutboxOperationType.CREATE,
+            )
+            queue.claimOperation(SCOPE, opId)
+
+            val localDto = UserMerchantVerificationDto(
+                id = id,
+                userId = user,
+                workspaceId = null,
+                normalizedAlias = alias,
+                decisionCode = "ASSIGN",
+                merchantId = "netflix",
+                scopeCode = "PERSONAL",
+                createdAt = "1970-01-01T00:00:01Z",
+                updatedAt = "1970-01-01T00:00:01Z",
+                version = 0L,
+            )
+            val remoteDto = UserMerchantVerificationDto(
+                id = id,
+                userId = user,
+                workspaceId = null,
+                normalizedAlias = alias,
+                decisionCode = "BLOCK",
+                merchantId = null,
+                scopeCode = "PERSONAL",
+                createdAt = "1970-01-01T00:00:01Z",
+                updatedAt = "1970-01-01T00:00:01Z",
+                version = 1L,
+            )
+
+            val conflict = SyncConflictEntity(
+                syncScopeKey = SCOPE,
+                entityTypeCode = "USER_MERCHANT_VERIFICATION",
+                entityId = id,
+                operationId = opId,
+                localVersion = 0L,
+                remoteVersion = 1L,
+                localPayloadJson = UserMerchantVerificationPayloadCodec.encodeSnapshot(localDto),
+                remotePayloadJson = UserMerchantVerificationPayloadCodec.encodeSnapshot(remoteDto),
+                detectedAtEpochMillis = 1000L,
+            )
+            queue.recordV2Conflict(SCOPE, conflict)
+
+            val recovered = service.recoverSingleEquivalentCreate(SCOPE, "USER_MERCHANT_VERIFICATION", id)
+            assertFalse(recovered)
+
+            assertNotNull(db.syncStateDao().getConflict(SCOPE, "USER_MERCHANT_VERIFICATION", id))
+            val op = db.syncOperationDao().getById(SCOPE, opId)
+            assertNotNull(op)
+            assertEquals("CONFLICT", op.statusCode)
+            val stored = db.userMerchantVerificationDao().getByScopeAndAlias("user:$user", alias)
+            assertNotNull(stored)
+            assertEquals("CONFLICT", stored.sync.syncStatus)
+            assertEquals("ASSIGN", stored.decisionCode)
+        } finally {
+            db.close()
+        }
+    }
+
+    @Test
+    fun single_malformed_merchant_verification_create_recovery_returns_false_and_preserves_conflict() = runTest {
+        val db = inMemoryDatabase()
+        try {
+            val queue = createQueue(db)
+            val service = ConflictRecoveryService(
+                syncStateDao = db.syncStateDao(),
+                syncOperationDao = db.syncOperationDao(),
+                localMutationDao = db.localMutationDao(),
+                nowEpochMillisProvider = { 1000L },
+            )
+
+            val user = "11111111-1111-4111-8111-111111111111"
+            val alias = "SPOTIFY"
+            val id = UuidHelper.deterministicMerchantVerificationUuid(user, alias)
+            val entity = merchantEntity(id = id, userId = user, alias = alias, decisionCode = "ASSIGN", merchantId = "spotify")
+            val payload = UserMerchantVerificationPayloadCodec.encodeCreate(entity)
+
+            val opId = queue.enqueueUserMerchantVerificationV2(
+                syncScopeKey = SCOPE,
+                entity = entity,
+                type = OutboxOperationType.CREATE,
+            )
+            queue.claimOperation(SCOPE, opId)
+
+            val conflict = SyncConflictEntity(
+                syncScopeKey = SCOPE,
+                entityTypeCode = "USER_MERCHANT_VERIFICATION",
+                entityId = id,
+                operationId = opId,
+                localVersion = 0L,
+                remoteVersion = 1L,
+                localPayloadJson = "{malformed json}",
+                remotePayloadJson = "{bad remote json}",
+                detectedAtEpochMillis = 1000L,
+            )
+            queue.recordV2Conflict(SCOPE, conflict)
+
+            val recovered = service.recoverSingleEquivalentCreate(SCOPE, "USER_MERCHANT_VERIFICATION", id)
+            assertFalse(recovered)
+
+            assertNotNull(db.syncStateDao().getConflict(SCOPE, "USER_MERCHANT_VERIFICATION", id))
+            val op = db.syncOperationDao().getById(SCOPE, opId)
+            assertNotNull(op)
+            assertEquals("CONFLICT", op.statusCode)
+        } finally {
+            db.close()
+        }
+    }
+
+    @Test
+    fun recoverAllPendingConflicts_includes_merchant_verifications_in_success_count() = runTest {
+        val db = inMemoryDatabase()
+        try {
+            val queue = createQueue(db)
+            val service = ConflictRecoveryService(
+                syncStateDao = db.syncStateDao(),
+                syncOperationDao = db.syncOperationDao(),
+                localMutationDao = db.localMutationDao(),
+                nowEpochMillisProvider = { 1000L },
+            )
+
+            // 1. Category conflict
+            val cat = categoryEntity("cat-count-1", "Kategori")
+            val catOpId = queue.enqueueCategoryV2(
+                syncScopeKey = SCOPE,
+                entity = cat,
+                type = OutboxOperationType.CREATE,
+                payloadJson = """{"id":"cat-count-1","user_id":"usr-1","name":"Kategori","type":"expense","color":"#EF4444","created_at":"2026-08-25T17:00:00Z"}""",
+            )
+            queue.claimOperation(SCOPE, catOpId)
+            val catConflict = SyncConflictEntity(
+                syncScopeKey = SCOPE,
+                entityTypeCode = "CATEGORY",
+                entityId = "cat-count-1",
+                operationId = catOpId,
+                localVersion = 0L,
+                remoteVersion = 1L,
+                localPayloadJson = """{"id":"cat-count-1","user_id":"usr-1","name":"Kategori","type":"expense","color":"#EF4444","created_at":"2026-08-25T17:00:00Z"}""",
+                remotePayloadJson = """{"id":"cat-count-1","user_id":"usr-1","name":"Kategori","type":"expense","color":"#EF4444","created_at":"2026-08-25T17:00:00Z","version":1}""",
+                detectedAtEpochMillis = 1000L,
+            )
+            queue.recordV2Conflict(SCOPE, catConflict)
+
+            // 2. Merchant verification conflict
+            val user = "11111111-1111-4111-8111-111111111111"
+            val alias = "YOUTUBE"
+            val id = UuidHelper.deterministicMerchantVerificationUuid(user, alias)
+            val entity = merchantEntity(id = id, userId = user, alias = alias, decisionCode = "ASSIGN", merchantId = "youtube")
+            val payload = UserMerchantVerificationPayloadCodec.encodeCreate(entity)
+            val merchOpId = queue.enqueueUserMerchantVerificationV2(
+                syncScopeKey = SCOPE,
+                entity = entity,
+                type = OutboxOperationType.CREATE,
+            )
+            queue.claimOperation(SCOPE, merchOpId)
+
+            val remoteDto = UserMerchantVerificationDto(
+                id = id,
+                userId = user,
+                workspaceId = null,
+                normalizedAlias = alias,
+                decisionCode = "ASSIGN",
+                merchantId = "youtube",
+                scopeCode = "PERSONAL",
+                createdAt = "1970-01-01T00:00:01Z",
+                updatedAt = "1970-01-01T00:00:01Z",
+                version = 1L,
+            )
+            val merchConflict = SyncConflictEntity(
+                syncScopeKey = SCOPE,
+                entityTypeCode = "USER_MERCHANT_VERIFICATION",
+                entityId = id,
+                operationId = merchOpId,
+                localVersion = 0L,
+                remoteVersion = 1L,
+                localPayloadJson = UserMerchantVerificationPayloadCodec.encodeSnapshot(remoteDto.copy(version = 0L)),
+                remotePayloadJson = UserMerchantVerificationPayloadCodec.encodeSnapshot(remoteDto),
+                detectedAtEpochMillis = 1000L,
+            )
+            queue.recordV2Conflict(SCOPE, merchConflict)
+
+            val count = service.recoverAllPendingConflicts(SCOPE)
+            assertEquals(2, count)
+
+            assertNull(db.syncStateDao().getConflict(SCOPE, "CATEGORY", "cat-count-1"))
+            assertNull(db.syncStateDao().getConflict(SCOPE, "USER_MERCHANT_VERIFICATION", id))
+        } finally {
+            db.close()
+        }
+    }
+
+    @Test
+    fun user_scope_isolation_merchant_verification_conflict_cannot_be_recovered_by_different_user() = runTest {
+        val db = inMemoryDatabase()
+        try {
+            val queue = createQueue(db)
+            val service = ConflictRecoveryService(
+                syncStateDao = db.syncStateDao(),
+                syncOperationDao = db.syncOperationDao(),
+                localMutationDao = db.localMutationDao(),
+                nowEpochMillisProvider = { 1000L },
+            )
+
+            val userA = "11111111-1111-4111-8111-111111111111"
+            val alias = "NETFLIX"
+            val id = UuidHelper.deterministicMerchantVerificationUuid(userA, alias)
+            val entity = merchantEntity(id = id, userId = userA, alias = alias, decisionCode = "ASSIGN", merchantId = "netflix")
+            val payload = UserMerchantVerificationPayloadCodec.encodeCreate(entity)
+
+            val opId = queue.enqueueUserMerchantVerificationV2(
+                syncScopeKey = SCOPE_A,
+                entity = entity,
+                type = OutboxOperationType.CREATE,
+            )
+            queue.claimOperation(SCOPE_A, opId)
+
+            val remoteDto = UserMerchantVerificationDto(
+                id = id,
+                userId = userA,
+                workspaceId = null,
+                normalizedAlias = alias,
+                decisionCode = "ASSIGN",
+                merchantId = "netflix",
+                scopeCode = "PERSONAL",
+                createdAt = "1970-01-01T00:00:01Z",
+                updatedAt = "1970-01-01T00:00:01Z",
+                version = 1L,
+            )
+
+            val conflict = SyncConflictEntity(
+                syncScopeKey = SCOPE_A,
+                entityTypeCode = "USER_MERCHANT_VERIFICATION",
+                entityId = id,
+                operationId = opId,
+                localVersion = 0L,
+                remoteVersion = 1L,
+                localPayloadJson = UserMerchantVerificationPayloadCodec.encodeSnapshot(remoteDto.copy(version = 0L)),
+                remotePayloadJson = UserMerchantVerificationPayloadCodec.encodeSnapshot(remoteDto),
+                detectedAtEpochMillis = 1000L,
+            )
+            queue.recordV2Conflict(SCOPE_A, conflict)
+
+            // Try to recover from SCOPE_B
+            val recovered = service.recoverSingleEquivalentCreate(SCOPE_B, "USER_MERCHANT_VERIFICATION", id)
+            assertFalse(recovered)
+
+            // Scope A remains intact
+            assertNotNull(db.syncStateDao().getConflict(SCOPE_A, "USER_MERCHANT_VERIFICATION", id))
+            assertNotNull(db.syncOperationDao().getById(SCOPE_A, opId))
+        } finally {
+            db.close()
+        }
+    }
+
+    @Test
+    fun recoverSingleEquivalentCreate_rethrowsCancellationExceptionWithoutSuppressing() = runTest {
+        val db = inMemoryDatabase()
+        try {
+            val userA = "11111111-1111-4111-8111-111111111111"
+            val alias = "NETFLIX"
+            val id = UuidHelper.deterministicMerchantVerificationUuid(userA, alias)
+            val entity = merchantEntity(id = id, userId = userA, alias = alias, decisionCode = "ASSIGN", merchantId = "netflix")
+            val queue = createQueue(db)
+
+            val opId = queue.enqueueUserMerchantVerificationV2(
+                syncScopeKey = SCOPE_A,
+                entity = entity,
+                type = OutboxOperationType.CREATE,
+            )
+            queue.claimOperation(SCOPE_A, opId)
+
+            val remoteDto = UserMerchantVerificationDto(
+                id = id,
+                userId = userA,
+                workspaceId = null,
+                normalizedAlias = alias,
+                decisionCode = "ASSIGN",
+                merchantId = "netflix",
+                scopeCode = "PERSONAL",
+                createdAt = "1970-01-01T00:00:01Z",
+                updatedAt = "1970-01-01T00:00:01Z",
+                version = 1L,
+            )
+
+            val conflict = SyncConflictEntity(
+                syncScopeKey = SCOPE_A,
+                entityTypeCode = "USER_MERCHANT_VERIFICATION",
+                entityId = id,
+                operationId = opId,
+                localVersion = 0L,
+                remoteVersion = 1L,
+                localPayloadJson = UserMerchantVerificationPayloadCodec.encodeSnapshot(remoteDto.copy(version = 0L)),
+                remotePayloadJson = UserMerchantVerificationPayloadCodec.encodeSnapshot(remoteDto),
+                detectedAtEpochMillis = 1000L,
+            )
+            queue.recordV2Conflict(SCOPE_A, conflict)
+
+            val throwingMutationDao = object : com.feniqo.mobile.data.local.dao.LocalMutationDao by db.localMutationDao() {
+                override suspend fun recoverEquivalentUserMerchantVerification(
+                    syncScopeKey: String,
+                    operationId: String,
+                    remoteRecord: UserMerchantVerificationDto,
+                    nowEpochMillis: Long,
+                    expectedLocalEntity: UserMerchantVerificationEntity,
+                ): Boolean {
+                    throw kotlinx.coroutines.CancellationException("Test simulated cancellation")
+                }
+            }
+
+            val service = ConflictRecoveryService(
+                syncStateDao = db.syncStateDao(),
+                syncOperationDao = db.syncOperationDao(),
+                localMutationDao = throwingMutationDao,
+                nowEpochMillisProvider = { 1000L },
+            )
+
+            assertFailsWith<kotlinx.coroutines.CancellationException> {
+                service.recoverSingleEquivalentCreate(SCOPE_A, "USER_MERCHANT_VERIFICATION", id)
+            }
+        } finally {
+            db.close()
+        }
+    }
+
     private fun inMemoryDatabase(): FeniqoDatabase {
         val context = ApplicationProvider.getApplicationContext<Context>()
         return Room.inMemoryDatabaseBuilder<FeniqoDatabase>(
@@ -952,6 +1442,37 @@ class ConflictRecoveryServiceTest {
             deletedAtEpochMillis = null,
             version = 0,
             baseVersion = null,
+            lastSyncError = null,
+        ),
+    )
+
+    private fun merchantEntity(
+        id: String,
+        userId: String = "11111111-1111-4111-8111-111111111111",
+        alias: String,
+        decisionCode: String = "ASSIGN",
+        merchantId: String? = "netflix",
+        syncStatus: String = "PENDING_CREATE",
+        version: Long = 0L,
+        baseVersion: Long? = null,
+        localUpdatedAtEpochMillis: Long = 1000L,
+    ) = UserMerchantVerificationEntity(
+        id = id,
+        ownerId = userId,
+        workspaceId = null,
+        normalizedAlias = alias,
+        decisionCode = decisionCode,
+        merchantId = merchantId,
+        scopeCode = "PERSONAL",
+        scopeKey = "user:$userId",
+        createdAtEpochMillis = 1000L,
+        sync = SyncMetadata(
+            syncStatus = syncStatus,
+            updatedAtEpochMillis = 1000L,
+            localUpdatedAtEpochMillis = localUpdatedAtEpochMillis,
+            deletedAtEpochMillis = null,
+            version = version,
+            baseVersion = baseVersion,
             lastSyncError = null,
         ),
     )

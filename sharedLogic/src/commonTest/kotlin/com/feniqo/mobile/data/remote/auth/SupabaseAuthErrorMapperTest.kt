@@ -6,7 +6,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class SupabaseAuthErrorMapperTest {
-
     @Test
     fun maps_auth_codes_to_stable_domain_errors() {
         assertEquals(

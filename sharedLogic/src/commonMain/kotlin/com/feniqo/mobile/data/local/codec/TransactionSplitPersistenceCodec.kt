@@ -17,31 +17,46 @@ sealed interface TransactionSplitDecodeResult {
     sealed interface Invalid : TransactionSplitDecodeResult {
         val reason: String
 
-        data class UnknownSplitMode(val rawMode: String) : Invalid {
+        data class UnknownSplitMode(
+            val rawMode: String,
+        ) : Invalid {
             override val reason: String = "Bilinmeyen split mode: $rawMode"
         }
 
-        data class MalformedJson(val detail: String) : Invalid {
+        data class MalformedJson(
+            val detail: String,
+        ) : Invalid {
             override val reason: String = "Bozuk JSON: $detail"
         }
 
-        data class DuplicateUser(val userId: String) : Invalid {
+        data class DuplicateUser(
+            val userId: String,
+        ) : Invalid {
             override val reason: String = "Tekrarlanan katılımcı payı: $userId"
         }
 
-        data class BlankUserId(val index: Int) : Invalid {
+        data class BlankUserId(
+            val index: Int,
+        ) : Invalid {
             override val reason: String = "Boş veya geçersiz kullanıcı kimliği: index $index"
         }
 
-        data class EmptySharesForCustom(val detail: String = "CUSTOM modunda pay listesi boş olamaz.") : Invalid {
+        data class EmptySharesForCustom(
+            val detail: String = "CUSTOM modunda pay listesi boş olamaz.",
+        ) : Invalid {
             override val reason: String = detail
         }
 
-        data class NonEmptySharesForEqual(val count: Int) : Invalid {
+        data class NonEmptySharesForEqual(
+            val count: Int,
+        ) : Invalid {
             override val reason: String = "EQUAL modunda pay listesi boş olmalıdır (bulunan: $count)"
         }
 
-        data class NegativeShare(val userId: String, val amountMinor: Long) : Invalid {
+        data class NegativeShare(
+            val userId: String,
+            val amountMinor: Long,
+        ) : Invalid {
             override val reason: String = "Katılımcı payı negatif olamaz: $userId -> $amountMinor"
         }
     }
@@ -54,11 +69,11 @@ private data class ParticipantSharePersistenceDto(
 )
 
 object TransactionSplitPersistenceCodec {
-
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = false
-    }
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            isLenient = false
+        }
 
     /**
      * Katılımcı paylarını deterministik ve kanonik JSON biçiminde kodlar.
@@ -67,9 +82,10 @@ object TransactionSplitPersistenceCodec {
      */
     fun encode(shares: List<TransactionParticipantShare>): String {
         if (shares.isEmpty()) return "[]"
-        val canonicalList = shares
-            .sortedBy { it.userId.value }
-            .map { ParticipantSharePersistenceDto(userId = it.userId.value, amountMinor = it.amountMinor) }
+        val canonicalList =
+            shares
+                .sortedBy { it.userId.value }
+                .map { ParticipantSharePersistenceDto(userId = it.userId.value, amountMinor = it.amountMinor) }
         return json.encodeToString(canonicalList)
     }
 
@@ -77,26 +93,31 @@ object TransactionSplitPersistenceCodec {
      * Room persistence katmanındaki split_mode ve participant_shares_json alanlarını tipli sonuca çözer.
      * Bilinmeyen modlar, bozuk JSON, tekrarlanan veya boş kullanıcılar ve kural dışı paylar fail-closed olarak Invalid döner.
      */
-    fun decode(splitModeCode: String, participantSharesJson: String): TransactionSplitDecodeResult {
+    fun decode(
+        splitModeCode: String,
+        participantSharesJson: String,
+    ): TransactionSplitDecodeResult {
         val trimmedJson = participantSharesJson.trim()
 
-        val parsedMode = when (splitModeCode.trim().uppercase()) {
-            TransactionSplitMode.EQUAL.name -> TransactionSplitMode.EQUAL
-            TransactionSplitMode.CUSTOM.name -> TransactionSplitMode.CUSTOM
-            else -> return TransactionSplitDecodeResult.Invalid.UnknownSplitMode(splitModeCode)
-        }
-
-        val dtoList = try {
-            if (trimmedJson.isEmpty() || trimmedJson == "[]") {
-                emptyList()
-            } else {
-                json.decodeFromString<List<ParticipantSharePersistenceDto>>(trimmedJson)
+        val parsedMode =
+            when (splitModeCode.trim().uppercase()) {
+                TransactionSplitMode.EQUAL.name -> TransactionSplitMode.EQUAL
+                TransactionSplitMode.CUSTOM.name -> TransactionSplitMode.CUSTOM
+                else -> return TransactionSplitDecodeResult.Invalid.UnknownSplitMode(splitModeCode)
             }
-        } catch (e: SerializationException) {
-            return TransactionSplitDecodeResult.Invalid.MalformedJson(e.message ?: "JSON deserialization failure")
-        } catch (e: IllegalArgumentException) {
-            return TransactionSplitDecodeResult.Invalid.MalformedJson(e.message ?: "Invalid JSON format")
-        }
+
+        val dtoList =
+            try {
+                if (trimmedJson.isEmpty() || trimmedJson == "[]") {
+                    emptyList()
+                } else {
+                    json.decodeFromString<List<ParticipantSharePersistenceDto>>(trimmedJson)
+                }
+            } catch (e: SerializationException) {
+                return TransactionSplitDecodeResult.Invalid.MalformedJson(e.message ?: "JSON deserialization failure")
+            } catch (e: IllegalArgumentException) {
+                return TransactionSplitDecodeResult.Invalid.MalformedJson(e.message ?: "Invalid JSON format")
+            }
 
         when (parsedMode) {
             TransactionSplitMode.EQUAL -> {

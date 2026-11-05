@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SubscriptionPriceHistoryDao {
-
     @Query(
         """
         SELECT * FROM subscription_price_histories

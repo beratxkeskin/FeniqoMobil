@@ -249,6 +249,80 @@ class TransactionAccessibilityComposeTest {
         noteField.assertIsNotFocused()
     }
 
+    @Test
+    fun form_smallScreenAnd15xFont_withEligibleMerchant_scrollsToMerchantSectionAndKeepsSubmitVisibleWhenKeyboardClosed() {
+        val candidates =
+            listOf(
+                MerchantSelectorItem(EntityId("migros"), "Migros", "shopping-cart", null),
+                MerchantSelectorItem(EntityId("file"), "File Market", "shopping-cart", null),
+            )
+        val categories =
+            listOf(
+                TransactionCategoryOptionUiModel(
+                    id = EntityId("cat-market"),
+                    name = "Market",
+                    type = TransactionType.EXPENSE,
+                    colorHex = "#10B981",
+                    iconKey = "shopping-cart",
+                    isSelectable = true,
+                    isHistorical = false,
+                ),
+            )
+        val uiState =
+            TransactionFormUiState(
+                title = "F3I02R Keyboard 20261027",
+                description = "F3I02R Keyboard 20261027",
+                amountText = "150,00",
+                type = TransactionType.EXPENSE,
+                selectedCategoryId = EntityId("cat-market"),
+                availableCategories = categories,
+                isMerchantSelectionEligible = true,
+                merchantSuggestedCandidates = candidates,
+                merchantSearchableCandidates = candidates,
+                merchantDecision = com.feniqo.mobile.domain.model.TransactionMerchantCreateDecision.Auto,
+            )
+
+        compose.setContent {
+            App(languageTag = "tr") {
+                CompositionLocalProvider(LocalDensity provides Density(density = 2f, fontScale = 1.5f)) {
+                    FeniqoTheme {
+                        Box(Modifier.requiredSize(width = 360.dp, height = 640.dp)) {
+                            TransactionFormScreen(
+                                uiState = uiState,
+                                onAmountChange = {},
+                                onCurrencyChange = {},
+                                onTypeChange = {},
+                                onCategoryChange = {},
+                                onDateClick = {},
+                                onDescriptionChange = {},
+                                onPaymentMethodChange = {},
+                                onInstallmentToggle = {},
+                                onInstallmentCountChange = {},
+                                onRetryCategories = {},
+                                onSubmit = {},
+                                onBack = {},
+                                onDismissMessage = {},
+                                onAttachReceipt = {},
+                                onRemoveReceipt = {},
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Klavye kapalıyken submit butonu görünürdür
+        compose.onNodeWithContentDescription("Gideri kaydet").assertIsDisplayed()
+
+        // Merchant bölümü ("İş yeri / marka") normal scroll ile erişilebilir
+        compose.onNodeWithText("İş yeri / marka").performScrollTo().assertIsDisplayed()
+
+        // Merchant seçim aksiyonları erişilebilirdir
+        compose.onNodeWithText("Tümünü ara").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Listede yok").performScrollTo().assertIsDisplayed()
+    }
+
+    @Suppress("ktlint:standard:function-naming")
     @Composable
     private fun LargeFontSmallScreen(content: @Composable () -> Unit) {
         CompositionLocalProvider(LocalDensity provides Density(density = 1f, fontScale = 2f)) {

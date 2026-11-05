@@ -22,5 +22,29 @@ class CategorySemanticIconTest {
     @Test
     fun unknownKey_usesGenericCategoryVector() {
         assertSame(Icons.Outlined.Category, CategorySemanticIconResolver.resolve("unknown"))
+        assertSame(Icons.Outlined.Category, CategorySemanticIconResolver.resolve(null))
+        assertSame(Icons.Outlined.Category, CategorySemanticIconResolver.resolve("   "))
+    }
+
+    @Test
+    fun resolveOrNull_forEveryCanonicalKey_returnsDedicatedVectorMatchingResolve() {
+        val keys = ExpenseCategoryVisualCatalog.definitions.map { it.key.key } +
+            IncomeCategoryVisualCatalog.definitions.map { it.key.key }
+
+        keys.forEach { key ->
+            val resolvedOrNull = CategorySemanticIconResolver.resolveOrNull(key)
+            val resolved = CategorySemanticIconResolver.resolve(key)
+            kotlin.test.assertNotNull(resolvedOrNull, "Expected non-null for key: $key")
+            assertSame(resolved, resolvedOrNull, "resolve and resolveOrNull should match for key: $key")
+            assertNotEquals(Icons.Outlined.Category, resolvedOrNull, key)
+        }
+    }
+
+    @Test
+    fun resolveOrNull_forUnknownNullOrBlank_returnsNull() {
+        kotlin.test.assertNull(CategorySemanticIconResolver.resolveOrNull("unknown_category_key"))
+        kotlin.test.assertNull(CategorySemanticIconResolver.resolveOrNull(null))
+        kotlin.test.assertNull(CategorySemanticIconResolver.resolveOrNull(""))
+        kotlin.test.assertNull(CategorySemanticIconResolver.resolveOrNull("    "))
     }
 }

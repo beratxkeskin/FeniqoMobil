@@ -1,13 +1,14 @@
 package com.feniqo.mobile.data.local.dao
 
+import com.feniqo.mobile.domain.usecase.TransactionMerchantVerificationAliasResolver
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Upsert
-import com.feniqo.mobile.data.local.entity.BudgetEntity
 import com.feniqo.mobile.data.local.entity.AssetEntity
+import com.feniqo.mobile.data.local.entity.BudgetEntity
 import com.feniqo.mobile.data.local.entity.CategoryEntity
 import com.feniqo.mobile.data.local.entity.DebtEntity
 import com.feniqo.mobile.data.local.entity.DebtPaymentEntity
@@ -20,43 +21,50 @@ import com.feniqo.mobile.data.local.entity.SubscriptionPaymentEntity
 import com.feniqo.mobile.data.local.entity.SubscriptionPriceHistoryEntity
 import com.feniqo.mobile.data.local.entity.SyncConflictEntity
 import com.feniqo.mobile.data.local.entity.SyncOperationEntity
-import com.feniqo.mobile.data.local.entity.isDefinitiveRejection
 import com.feniqo.mobile.data.local.entity.TagEntity
 import com.feniqo.mobile.data.local.entity.TransactionEntity
 import com.feniqo.mobile.data.local.entity.TransactionTagCrossRef
+import com.feniqo.mobile.data.local.entity.UserMerchantVerificationEntity
 import com.feniqo.mobile.data.local.entity.UserProfileEntity
 import com.feniqo.mobile.data.local.entity.WorkspaceEntity
 import com.feniqo.mobile.data.local.entity.WorkspaceInvitationEntity
 import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
+import com.feniqo.mobile.data.local.entity.isDefinitiveRejection
 import com.feniqo.mobile.data.local.outbox.OutboxOperationType
+import com.feniqo.mobile.data.mapper.mergePreservingLocalMerchant
 import com.feniqo.mobile.data.mapper.toEntity
-import com.feniqo.mobile.data.remote.dto.BudgetDto
+import com.feniqo.mobile.data.remote.codec.UserMerchantVerificationPayloadCodec
 import com.feniqo.mobile.data.remote.dto.AssetDto
+import com.feniqo.mobile.data.remote.dto.BudgetDto
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.DebtDto
-import com.feniqo.mobile.data.remote.dto.DebtPaymentDto
 import com.feniqo.mobile.data.remote.dto.DebtPaymentSyncRecordDto
-import com.feniqo.mobile.data.remote.dto.GoalContributionDto
 import com.feniqo.mobile.data.remote.dto.GoalContributionSyncRecordDto
 import com.feniqo.mobile.data.remote.dto.GoalDto
 import com.feniqo.mobile.data.remote.dto.ProfileDto
 import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
 import com.feniqo.mobile.data.remote.dto.SubscriptionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
+import com.feniqo.mobile.data.remote.dto.UserMerchantVerificationDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceInvitationDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceMemberDto
-import com.feniqo.mobile.data.remote.mapper.toEntity
-import com.feniqo.mobile.data.util.WorkspaceInvitationCrypto
-import com.feniqo.mobile.data.util.WorkspaceMemberEntityId
 import com.feniqo.mobile.data.remote.mapper.toDomain
 import com.feniqo.mobile.data.remote.mapper.toEntity
-import com.feniqo.mobile.domain.model.SyncStatus
-
-
 import com.feniqo.mobile.data.sync.OutboxExecutionResult
 import com.feniqo.mobile.data.sync.SyncScopeKey
 import com.feniqo.mobile.data.sync.toRemoteSyncMetadata
+import com.feniqo.mobile.data.util.UuidHelper
+import com.feniqo.mobile.data.util.WorkspaceInvitationCrypto
+import com.feniqo.mobile.data.util.WorkspaceMemberEntityId
+import com.feniqo.mobile.domain.model.DISALLOWED_STANDALONE_GENERIC_TOKENS
+import com.feniqo.mobile.domain.model.SyncStatus
+import com.feniqo.mobile.domain.model.TransactionMerchantCreateDecision
+import com.feniqo.mobile.domain.model.TransactionMerchantEligibility
+import com.feniqo.mobile.domain.model.TransactionMerchantInfo
+import com.feniqo.mobile.domain.model.TurkishDescriptionNormalizer
+import com.feniqo.mobile.domain.usecase.CategoryMerchantCandidateResolver
+import com.feniqo.mobile.domain.usecase.StarterMerchantCatalog
 
 enum class V2EnqueueDecision {
     INSERTED,
@@ -71,30 +79,109 @@ data class V2EnqueueResult(
     val decision: V2EnqueueDecision,
 )
 
+data class TransactionCreationWithMerchantResult(
+    val transactionOperationId: String,
+    val verificationOperationId: String?,
+)
+
 /** Yerel entity ile outbox kaydını aynı Room transaction içinde yazar. */
 @Dao
 interface LocalMutationDao {
     @Upsert suspend fun upsertProfileRow(entity: UserProfileEntity)
+
     @Upsert suspend fun upsertWorkspaceRow(entity: WorkspaceEntity)
+
     @Upsert suspend fun upsertWorkspaceMemberRow(entity: WorkspaceMemberEntity)
+
     @Upsert suspend fun upsertWorkspaceMemberRows(entities: List<WorkspaceMemberEntity>)
+
     @Upsert suspend fun upsertWorkspaceInvitationRow(entity: WorkspaceInvitationEntity)
+
     @Upsert suspend fun upsertCategoryRow(entity: CategoryEntity)
+
     @Upsert suspend fun upsertBudgetRow(entity: BudgetEntity)
+
     @Upsert suspend fun upsertAssetRow(entity: AssetEntity)
+
     @Upsert suspend fun upsertTransactionRow(entity: TransactionEntity)
-    @Insert(onConflict = OnConflictStrategy.ABORT) suspend fun insertTransactionRow(entity: TransactionEntity)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertTransactionRow(entity: TransactionEntity)
+
     @Upsert suspend fun upsertTagRows(entities: List<TagEntity>)
+
     @Upsert suspend fun upsertTransactionTagRows(entities: List<TransactionTagCrossRef>)
+
     @Upsert suspend fun upsertRecurringTransactionRow(entity: RecurringTransactionEntity)
+
     @Upsert suspend fun upsertRecurringOccurrenceRow(entity: RecurringTransactionOccurrenceEntity)
+
     @Upsert suspend fun upsertSubscriptionRow(entity: SubscriptionEntity)
+
     @Upsert suspend fun upsertSubscriptionPriceHistoryRow(entity: SubscriptionPriceHistoryEntity)
+
     @Upsert suspend fun upsertSubscriptionPaymentRow(entity: SubscriptionPaymentEntity)
+
     @Upsert suspend fun upsertGoalRow(entity: GoalEntity)
+
     @Upsert suspend fun upsertGoalContributionRow(entity: GoalContributionEntity)
+
     @Upsert suspend fun upsertDebtRow(entity: DebtEntity)
+
     @Upsert suspend fun upsertDebtPaymentRow(entity: DebtPaymentEntity)
+
+    @Upsert suspend fun upsertUserMerchantVerificationRow(entity: UserMerchantVerificationEntity)
+
+    @Query("SELECT * FROM user_merchant_verifications WHERE id = :id LIMIT 1")
+    suspend fun getUserMerchantVerificationRow(id: String): UserMerchantVerificationEntity?
+
+    @Query("DELETE FROM user_merchant_verifications WHERE id = :id")
+    suspend fun deleteUserMerchantVerificationRow(id: String): Int
+
+    @Query(
+        """
+        UPDATE user_merchant_verifications
+        SET version = :appliedVersion,
+            base_version = :appliedVersion,
+            sync_status = 'PENDING_UPDATE',
+            local_updated_at_epoch_ms = :nowEpochMillis,
+            last_sync_error = NULL
+        WHERE id = :id
+        """,
+    )
+    suspend fun rebaseUserMerchantVerificationVersion(
+        id: String,
+        appliedVersion: Long,
+        nowEpochMillis: Long,
+    ): Int
+
+    @Query(
+        """
+        UPDATE user_merchant_verifications
+        SET sync_status = 'SYNCED',
+            local_updated_at_epoch_ms = :nowEpochMillis,
+            last_sync_error = NULL
+        WHERE id = :id AND deleted_at_epoch_ms IS NOT NULL
+        """,
+    )
+    suspend fun markUserMerchantVerificationSyncedIfDeleted(
+        id: String,
+        nowEpochMillis: Long,
+    ): Int
+
+    @Query(
+        """
+        UPDATE user_merchant_verifications
+        SET sync_status = :status,
+            local_updated_at_epoch_ms = :nowEpochMillis
+        WHERE id = :id
+        """,
+    )
+    suspend fun setUserMerchantVerificationSyncStatus(
+        id: String,
+        status: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query("DELETE FROM assets WHERE id = :id")
     suspend fun deleteAssetRow(id: String): Int
@@ -106,7 +193,11 @@ interface LocalMutationDao {
         WHERE id = :id
         """,
     )
-    suspend fun rebaseAssetVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int
+    suspend fun rebaseAssetVersion(
+        id: String,
+        appliedVersion: Long,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -115,9 +206,10 @@ interface LocalMutationDao {
         WHERE id = :id AND deleted_at_epoch_ms IS NOT NULL
         """,
     )
-    suspend fun markAssetSyncedIfDeleted(id: String, nowEpochMillis: Long): Int
-
-
+    suspend fun markAssetSyncedIfDeleted(
+        id: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -125,7 +217,7 @@ interface LocalMutationDao {
         WHERE recurring_transaction_id = :recurringTransactionId
           AND due_date = :dueDate
         LIMIT 1
-        """
+        """,
     )
     suspend fun getOccurrence(
         recurringTransactionId: String,
@@ -145,7 +237,7 @@ interface LocalMutationDao {
             (:expectedPreviousLastGeneratedDate IS NULL AND last_generated_date IS NULL) OR
             last_generated_date = :expectedPreviousLastGeneratedDate
           )
-        """
+        """,
     )
     suspend fun advanceRecurringLastGeneratedDate(
         recurringTransactionId: String,
@@ -163,26 +255,82 @@ interface LocalMutationDao {
     @Query("DELETE FROM categories WHERE id = :id")
     suspend fun deleteCategoryRow(id: String): Int
 
+    @Query("SELECT * FROM categories WHERE id = :id LIMIT 1")
+    suspend fun getCategoryRow(id: String): CategoryEntity?
+
     @Query("DELETE FROM budgets WHERE id = :id")
     suspend fun deleteBudgetRow(id: String): Int
 
     @Query("DELETE FROM transactions WHERE id = :id")
     suspend fun deleteTransactionRow(id: String): Int
 
+    @Query("SELECT * FROM transactions WHERE id = :id LIMIT 1")
+    suspend fun getTransactionRow(id: String): TransactionEntity?
+
+    @Query(
+        """
+        UPDATE transactions
+        SET merchant_id = :merchantId,
+            merchant_match_source_code = :merchantMatchSourceCode,
+            merchant_confidence = :merchantConfidence,
+            merchant_catalog_version = :merchantCatalogVersion
+        WHERE id = :transactionId
+        """,
+    )
+    suspend fun updateTransactionMerchantAttribution(
+        transactionId: String,
+        merchantId: String?,
+        merchantMatchSourceCode: String?,
+        merchantConfidence: Int?,
+        merchantCatalogVersion: Int?,
+    ): Int
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertOutboxRow(operation: SyncOperationEntity)
 
     @Query("DELETE FROM sync_operations WHERE sync_scope_key = :syncScopeKey AND operation_id = :operationId")
-    suspend fun deleteOutboxRow(syncScopeKey: String, operationId: String): Int
+    suspend fun deleteOutboxRow(
+        syncScopeKey: String,
+        operationId: String,
+    ): Int
 
     @Query("SELECT * FROM sync_operations WHERE sync_scope_key = :syncScopeKey AND operation_id = :operationId LIMIT 1")
-    suspend fun getOutboxById(syncScopeKey: String, operationId: String): SyncOperationEntity?
+    suspend fun getOutboxById(
+        syncScopeKey: String,
+        operationId: String,
+    ): SyncOperationEntity?
 
-    @Query("SELECT * FROM sync_operations WHERE sync_scope_key = :syncScopeKey AND predecessor_operation_id = :predecessorOperationId LIMIT 2")
-    suspend fun getSuccessors(syncScopeKey: String, predecessorOperationId: String): List<SyncOperationEntity>
+    @Query(
+        "SELECT * FROM sync_operations WHERE sync_scope_key = :syncScopeKey AND predecessor_operation_id = :predecessorOperationId LIMIT 2",
+    )
+    suspend fun getSuccessors(
+        syncScopeKey: String,
+        predecessorOperationId: String,
+    ): List<SyncOperationEntity>
 
-    @Query("DELETE FROM sync_conflicts WHERE sync_scope_key = :syncScopeKey AND entity_type_code = :entityTypeCode AND entity_id = :entityId")
-    suspend fun deleteConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): Int
+    @Query(
+        "DELETE FROM sync_conflicts WHERE sync_scope_key = :syncScopeKey AND entity_type_code = :entityTypeCode AND entity_id = :entityId",
+    )
+    suspend fun deleteConflictRow(
+        syncScopeKey: String,
+        entityTypeCode: String,
+        entityId: String,
+    ): Int
+
+    @Query(
+        """
+        SELECT * FROM sync_conflicts
+        WHERE sync_scope_key = :syncScopeKey
+          AND entity_type_code = :entityTypeCode
+          AND entity_id = :entityId
+        LIMIT 1
+        """,
+    )
+    suspend fun getConflictRow(
+        syncScopeKey: String,
+        entityTypeCode: String,
+        entityId: String,
+    ): SyncConflictEntity?
 
     @Query(
         """
@@ -194,7 +342,11 @@ interface LocalMutationDao {
         WHERE id = :id
         """,
     )
-    suspend fun rebaseProfileVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int
+    suspend fun rebaseProfileVersion(
+        id: String,
+        appliedVersion: Long,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -206,7 +358,11 @@ interface LocalMutationDao {
         WHERE id = :id
         """,
     )
-    suspend fun rebaseCategoryVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int
+    suspend fun rebaseCategoryVersion(
+        id: String,
+        appliedVersion: Long,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -218,7 +374,11 @@ interface LocalMutationDao {
         WHERE id = :id
         """,
     )
-    suspend fun rebaseTransactionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int
+    suspend fun rebaseTransactionVersion(
+        id: String,
+        appliedVersion: Long,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -229,7 +389,10 @@ interface LocalMutationDao {
         WHERE id = :id AND deleted_at_epoch_ms IS NOT NULL
         """,
     )
-    suspend fun markCategorySyncedIfDeleted(id: String, nowEpochMillis: Long): Int
+    suspend fun markCategorySyncedIfDeleted(
+        id: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -240,7 +403,10 @@ interface LocalMutationDao {
         WHERE id = :id AND deleted_at_epoch_ms IS NOT NULL
         """,
     )
-    suspend fun markTransactionSyncedIfDeleted(id: String, nowEpochMillis: Long): Int
+    suspend fun markTransactionSyncedIfDeleted(
+        id: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -252,7 +418,11 @@ interface LocalMutationDao {
         WHERE id = :id
         """,
     )
-    suspend fun rebaseBudgetVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int
+    suspend fun rebaseBudgetVersion(
+        id: String,
+        appliedVersion: Long,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -263,7 +433,10 @@ interface LocalMutationDao {
         WHERE id = :id AND deleted_at_epoch_ms IS NOT NULL
         """,
     )
-    suspend fun markBudgetSyncedIfDeleted(id: String, nowEpochMillis: Long): Int
+    suspend fun markBudgetSyncedIfDeleted(
+        id: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query("DELETE FROM recurring_transactions WHERE id = :id")
     suspend fun deleteRecurringTransactionRow(id: String): Int
@@ -278,7 +451,11 @@ interface LocalMutationDao {
         WHERE id = :id
         """,
     )
-    suspend fun rebaseRecurringTransactionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int
+    suspend fun rebaseRecurringTransactionVersion(
+        id: String,
+        appliedVersion: Long,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -289,7 +466,10 @@ interface LocalMutationDao {
         WHERE id = :id AND deleted_at_epoch_ms IS NOT NULL
         """,
     )
-    suspend fun markRecurringTransactionSyncedIfDeleted(id: String, nowEpochMillis: Long): Int
+    suspend fun markRecurringTransactionSyncedIfDeleted(
+        id: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query("DELETE FROM subscriptions WHERE id = :id")
     suspend fun deleteSubscriptionRow(id: String): Int
@@ -304,7 +484,11 @@ interface LocalMutationDao {
         WHERE id = :id
         """,
     )
-    suspend fun rebaseSubscriptionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int
+    suspend fun rebaseSubscriptionVersion(
+        id: String,
+        appliedVersion: Long,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -315,8 +499,10 @@ interface LocalMutationDao {
         WHERE id = :id AND deleted_at_epoch_ms IS NOT NULL
         """,
     )
-    suspend fun markSubscriptionSyncedIfDeleted(id: String, nowEpochMillis: Long): Int
-
+    suspend fun markSubscriptionSyncedIfDeleted(
+        id: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query("DELETE FROM workspaces WHERE id = :id")
     suspend fun deleteWorkspaceRow(id: String): Int
@@ -334,10 +520,16 @@ interface LocalMutationDao {
     suspend fun getWorkspaceInvitationByTokenHash(tokenHash: String): WorkspaceInvitationEntity?
 
     @Query("SELECT * FROM workspace_members WHERE workspace_id = :workspaceId AND user_id = :userId LIMIT 1")
-    suspend fun getWorkspaceMember(workspaceId: String, userId: String): WorkspaceMemberEntity?
+    suspend fun getWorkspaceMember(
+        workspaceId: String,
+        userId: String,
+    ): WorkspaceMemberEntity?
 
     @Query("UPDATE profiles SET active_workspace_id = NULL WHERE id = :profileId AND active_workspace_id = :workspaceId")
-    suspend fun clearActiveWorkspaceIfMatches(profileId: String, workspaceId: String): Int
+    suspend fun clearActiveWorkspaceIfMatches(
+        profileId: String,
+        workspaceId: String,
+    ): Int
 
     @Query("DELETE FROM goals WHERE id = :id")
     suspend fun deleteGoalRow(id: String): Int
@@ -379,7 +571,11 @@ interface LocalMutationDao {
         WHERE id = :id
         """,
     )
-    suspend fun rebaseGoalVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int
+    suspend fun rebaseGoalVersion(
+        id: String,
+        appliedVersion: Long,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -391,7 +587,11 @@ interface LocalMutationDao {
         WHERE id = :id
         """,
     )
-    suspend fun rebaseGoalContributionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int
+    suspend fun rebaseGoalContributionVersion(
+        id: String,
+        appliedVersion: Long,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -403,7 +603,11 @@ interface LocalMutationDao {
         WHERE id = :id
         """,
     )
-    suspend fun rebaseDebtVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int
+    suspend fun rebaseDebtVersion(
+        id: String,
+        appliedVersion: Long,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -415,7 +619,11 @@ interface LocalMutationDao {
         WHERE id = :id
         """,
     )
-    suspend fun rebaseDebtPaymentVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int
+    suspend fun rebaseDebtPaymentVersion(
+        id: String,
+        appliedVersion: Long,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -427,7 +635,11 @@ interface LocalMutationDao {
         WHERE id = :id
         """,
     )
-    suspend fun rebaseWorkspaceVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int
+    suspend fun rebaseWorkspaceVersion(
+        id: String,
+        appliedVersion: Long,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -438,7 +650,10 @@ interface LocalMutationDao {
         WHERE id = :id AND deleted_at_epoch_ms IS NOT NULL
         """,
     )
-    suspend fun markWorkspaceSyncedIfDeleted(id: String, nowEpochMillis: Long): Int
+    suspend fun markWorkspaceSyncedIfDeleted(
+        id: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -451,7 +666,12 @@ interface LocalMutationDao {
         WHERE workspace_id = :workspaceId AND user_id = :userId
         """,
     )
-    suspend fun rebaseWorkspaceMemberVersion(workspaceId: String, userId: String, appliedVersion: Long, nowEpochMillis: Long): Int
+    suspend fun rebaseWorkspaceMemberVersion(
+        workspaceId: String,
+        userId: String,
+        appliedVersion: Long,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -464,7 +684,11 @@ interface LocalMutationDao {
         WHERE id = :id
         """,
     )
-    suspend fun rebaseWorkspaceInvitationVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int
+    suspend fun rebaseWorkspaceInvitationVersion(
+        id: String,
+        appliedVersion: Long,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -475,7 +699,11 @@ interface LocalMutationDao {
         WHERE workspace_id = :workspaceId AND user_id = :userId AND deleted_at_epoch_ms IS NOT NULL
         """,
     )
-    suspend fun markWorkspaceMemberSyncedIfDeleted(workspaceId: String, userId: String, nowEpochMillis: Long): Int
+    suspend fun markWorkspaceMemberSyncedIfDeleted(
+        workspaceId: String,
+        userId: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -486,7 +714,10 @@ interface LocalMutationDao {
         WHERE id = :id AND deleted_at_epoch_ms IS NOT NULL
         """,
     )
-    suspend fun markGoalSyncedIfDeleted(id: String, nowEpochMillis: Long): Int
+    suspend fun markGoalSyncedIfDeleted(
+        id: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -497,7 +728,10 @@ interface LocalMutationDao {
         WHERE id = :id AND deleted_at_epoch_ms IS NOT NULL
         """,
     )
-    suspend fun markDebtSyncedIfDeleted(id: String, nowEpochMillis: Long): Int
+    suspend fun markDebtSyncedIfDeleted(
+        id: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -508,7 +742,11 @@ interface LocalMutationDao {
         WHERE goal_id = :goalId AND deleted_at_epoch_ms IS NULL
         """,
     )
-    suspend fun tombstoneGoalContributionsForDeletedGoal(goalId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int
+    suspend fun tombstoneGoalContributionsForDeletedGoal(
+        goalId: String,
+        deletedAtEpochMillis: Long,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -519,7 +757,11 @@ interface LocalMutationDao {
         WHERE debt_id = :debtId AND deleted_at_epoch_ms IS NULL
         """,
     )
-    suspend fun tombstoneDebtPaymentsForDeletedDebt(debtId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int
+    suspend fun tombstoneDebtPaymentsForDeletedDebt(
+        debtId: String,
+        deletedAtEpochMillis: Long,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -538,7 +780,10 @@ interface LocalMutationDao {
         LIMIT 2
         """,
     )
-    suspend fun getActiveGoalAggregateTailCandidates(syncScopeKey: String, goalId: String): List<SyncOperationEntity>
+    suspend fun getActiveGoalAggregateTailCandidates(
+        syncScopeKey: String,
+        goalId: String,
+    ): List<SyncOperationEntity>
 
     @Query(
         """
@@ -557,7 +802,10 @@ interface LocalMutationDao {
         LIMIT 2
         """,
     )
-    suspend fun getActiveDebtAggregateTailCandidates(syncScopeKey: String, debtId: String): List<SyncOperationEntity>
+    suspend fun getActiveDebtAggregateTailCandidates(
+        syncScopeKey: String,
+        debtId: String,
+    ): List<SyncOperationEntity>
 
     @Query(
         """
@@ -570,7 +818,11 @@ interface LocalMutationDao {
         )
         """,
     )
-    suspend fun countPendingGoalAggregateOperations(syncScopeKey: String, goalId: String, operationId: String): Int
+    suspend fun countPendingGoalAggregateOperations(
+        syncScopeKey: String,
+        goalId: String,
+        operationId: String,
+    ): Int
 
     @Query(
         """
@@ -583,7 +835,11 @@ interface LocalMutationDao {
         )
         """,
     )
-    suspend fun countPendingDebtAggregateOperations(syncScopeKey: String, debtId: String, operationId: String): Int
+    suspend fun countPendingDebtAggregateOperations(
+        syncScopeKey: String,
+        debtId: String,
+        operationId: String,
+    ): Int
 
     @Query(
         """
@@ -599,7 +855,11 @@ interface LocalMutationDao {
         LIMIT 2
         """,
     )
-    suspend fun getActiveTailCandidates(syncScopeKey: String, entityTypeCode: String, entityId: String): List<SyncOperationEntity>
+    suspend fun getActiveTailCandidates(
+        syncScopeKey: String,
+        entityTypeCode: String,
+        entityId: String,
+    ): List<SyncOperationEntity>
 
     @Query(
         """
@@ -613,7 +873,12 @@ interface LocalMutationDao {
           AND status_code = 'PENDING'
         """,
     )
-    suspend fun coalescePendingPayload(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int
+    suspend fun coalescePendingPayload(
+        syncScopeKey: String,
+        operationId: String,
+        payloadJson: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -628,7 +893,12 @@ interface LocalMutationDao {
           AND status_code = 'PENDING'
         """,
     )
-    suspend fun convertToPendingDelete(syncScopeKey: String, operationId: String, payloadJson: String?, nowEpochMillis: Long): Int
+    suspend fun convertToPendingDelete(
+        syncScopeKey: String,
+        operationId: String,
+        payloadJson: String?,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -643,7 +913,12 @@ interface LocalMutationDao {
           AND status_code = 'PENDING'
         """,
     )
-    suspend fun convertPendingDeleteToUpdate(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int
+    suspend fun convertPendingDeleteToUpdate(
+        syncScopeKey: String,
+        operationId: String,
+        payloadJson: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query(
         """
@@ -665,6 +940,53 @@ interface LocalMutationDao {
         operationId: String,
         predecessorOperationId: String,
         appliedVersion: Long,
+        nowEpochMillis: Long,
+    ): Int
+
+    @Query(
+        """
+        UPDATE sync_operations
+        SET operation_type_code = 'CREATE',
+            base_version = NULL,
+            predecessor_operation_id = NULL,
+            is_blocked = 0,
+            updated_at_epoch_ms = :nowEpochMillis
+        WHERE sync_scope_key = :syncScopeKey
+          AND operation_id = :operationId
+          AND predecessor_operation_id = :predecessorOperationId
+          AND entity_type_code = :entityTypeCode
+          AND entity_id = :entityId
+          AND operation_type_code = 'UPDATE'
+          AND is_blocked = 1
+          AND attempt_count = 0
+          AND status_code = 'PENDING'
+          AND protocol_version = 2
+        """,
+    )
+    suspend fun convertSuccessorToPendingCreate(
+        syncScopeKey: String,
+        operationId: String,
+        predecessorOperationId: String,
+        entityTypeCode: String,
+        entityId: String,
+        nowEpochMillis: Long,
+    ): Int
+
+    @Query(
+        """
+        UPDATE user_merchant_verifications
+        SET sync_status = 'PENDING_CREATE',
+            version = 0,
+            base_version = NULL,
+            deleted_at_epoch_ms = NULL,
+            local_updated_at_epoch_ms = :nowEpochMillis
+        WHERE id = :id
+          AND scope_key = :scopeKey
+        """,
+    )
+    suspend fun resetUserMerchantVerificationToPendingCreate(
+        id: String,
+        scopeKey: String,
         nowEpochMillis: Long,
     ): Int
 
@@ -705,13 +1027,14 @@ interface LocalMutationDao {
         check(deleted == 1) { "Predecessor outbox silinemedi: $predecessorOperationId" }
 
         if (successor != null) {
-            val unblocked = unblockSuccessor(
-                syncScopeKey = syncScopeKey,
-                operationId = successor.operationId,
-                predecessorOperationId = predecessorOperationId,
-                appliedVersion = appliedVersion,
-                nowEpochMillis = nowEpochMillis,
-            )
+            val unblocked =
+                unblockSuccessor(
+                    syncScopeKey = syncScopeKey,
+                    operationId = successor.operationId,
+                    predecessorOperationId = predecessorOperationId,
+                    appliedVersion = appliedVersion,
+                    nowEpochMillis = nowEpochMillis,
+                )
             check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
         }
         return true
@@ -720,32 +1043,70 @@ interface LocalMutationDao {
     @Upsert
     suspend fun upsertConflictRow(entity: SyncConflictEntity)
 
-    @Query("UPDATE sync_operations SET status_code = 'CONFLICT', updated_at_epoch_ms = :nowEpochMillis WHERE sync_scope_key = :syncScopeKey AND operation_id = :operationId")
-    suspend fun setOutboxStatusConflict(syncScopeKey: String, operationId: String, nowEpochMillis: Long): Int
+    @Query(
+        "UPDATE sync_operations SET status_code = 'CONFLICT', updated_at_epoch_ms = :nowEpochMillis WHERE sync_scope_key = :syncScopeKey AND operation_id = :operationId",
+    )
+    suspend fun setOutboxStatusConflict(
+        syncScopeKey: String,
+        operationId: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query("UPDATE profiles SET sync_status = :status, local_updated_at_epoch_ms = :nowEpochMillis WHERE id = :id")
-    suspend fun setProfileSyncStatus(id: String, status: String, nowEpochMillis: Long): Int
+    suspend fun setProfileSyncStatus(
+        id: String,
+        status: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query("UPDATE categories SET sync_status = :status, local_updated_at_epoch_ms = :nowEpochMillis WHERE id = :id")
-    suspend fun setCategorySyncStatus(id: String, status: String, nowEpochMillis: Long): Int
+    suspend fun setCategorySyncStatus(
+        id: String,
+        status: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query("UPDATE transactions SET sync_status = :status, local_updated_at_epoch_ms = :nowEpochMillis WHERE id = :id")
-    suspend fun setTransactionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int
+    suspend fun setTransactionSyncStatus(
+        id: String,
+        status: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query("UPDATE budgets SET sync_status = :status, local_updated_at_epoch_ms = :nowEpochMillis WHERE id = :id")
-    suspend fun setBudgetSyncStatus(id: String, status: String, nowEpochMillis: Long): Int
+    suspend fun setBudgetSyncStatus(
+        id: String,
+        status: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query("UPDATE goals SET sync_status = :status, local_updated_at_epoch_ms = :nowEpochMillis WHERE id = :id")
-    suspend fun setGoalSyncStatus(id: String, status: String, nowEpochMillis: Long): Int
+    suspend fun setGoalSyncStatus(
+        id: String,
+        status: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query("UPDATE goal_contributions SET sync_status = :status, local_updated_at_epoch_ms = :nowEpochMillis WHERE id = :id")
-    suspend fun setGoalContributionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int
+    suspend fun setGoalContributionSyncStatus(
+        id: String,
+        status: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query("UPDATE debts SET sync_status = :status, local_updated_at_epoch_ms = :nowEpochMillis WHERE id = :id")
-    suspend fun setDebtSyncStatus(id: String, status: String, nowEpochMillis: Long): Int
+    suspend fun setDebtSyncStatus(
+        id: String,
+        status: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Query("UPDATE debt_payments SET sync_status = :status, local_updated_at_epoch_ms = :nowEpochMillis WHERE id = :id")
-    suspend fun setDebtPaymentSyncStatus(id: String, status: String, nowEpochMillis: Long): Int
+    suspend fun setDebtPaymentSyncStatus(
+        id: String,
+        status: String,
+        nowEpochMillis: Long,
+    ): Int
 
     @Transaction
     suspend fun recordV2Conflict(
@@ -784,17 +1145,19 @@ interface LocalMutationDao {
         val successor = successors.firstOrNull()
 
         if (successor == null) {
-            val updatedCount = when (conflict.entityTypeCode) {
-                "PROFILE" -> setProfileSyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
-                "CATEGORY" -> setCategorySyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
-                "TRANSACTION" -> setTransactionSyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
-                "BUDGET" -> setBudgetSyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
-                "GOAL" -> setGoalSyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
-                "GOAL_CONTRIBUTION" -> setGoalContributionSyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
-                "DEBT" -> setDebtSyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
-                "DEBT_PAYMENT" -> setDebtPaymentSyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
-                else -> error("Bilinmeyen entityTypeCode: ${conflict.entityTypeCode}")
-            }
+            val updatedCount =
+                when (conflict.entityTypeCode) {
+                    "PROFILE" -> setProfileSyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
+                    "CATEGORY" -> setCategorySyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
+                    "TRANSACTION" -> setTransactionSyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
+                    "BUDGET" -> setBudgetSyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
+                    "GOAL" -> setGoalSyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
+                    "GOAL_CONTRIBUTION" -> setGoalContributionSyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
+                    "DEBT" -> setDebtSyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
+                    "DEBT_PAYMENT" -> setDebtPaymentSyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
+                    "USER_MERCHANT_VERIFICATION" -> setUserMerchantVerificationSyncStatus(conflict.entityId, "CONFLICT", nowEpochMillis)
+                    else -> error("Bilinmeyen entityTypeCode: ${conflict.entityTypeCode}")
+                }
             check(updatedCount == 1) {
                 "Entity sync_status güncellenemedi veya entity bulunamadı: ${conflict.entityTypeCode}:${conflict.entityId}"
             }
@@ -802,9 +1165,13 @@ interface LocalMutationDao {
         return true
     }
 
-
     @Transaction
-    suspend fun ackProfileWriteV2(syncScopeKey: String, operationId: String, record: ProfileDto, nowEpochMillis: Long): Boolean {
+    suspend fun ackProfileWriteV2(
+        syncScopeKey: String,
+        operationId: String,
+        record: ProfileDto,
+        nowEpochMillis: Long,
+    ): Boolean {
         val appliedVersion = record.version
         requireNotNull(appliedVersion) { "Uzak profil kaydı version taşımıyor: $operationId" }
         require(appliedVersion >= 1) { "appliedVersion en az 1 olmalıdır: $appliedVersion" }
@@ -853,20 +1220,26 @@ interface LocalMutationDao {
             val deleted = deleteOutboxRow(syncScopeKey, operationId)
             check(deleted == 1) { "Predecessor outbox silinemedi: $operationId" }
 
-            val unblocked = unblockSuccessor(
-                syncScopeKey = syncScopeKey,
-                operationId = successor.operationId,
-                predecessorOperationId = operationId,
-                appliedVersion = appliedVersion,
-                nowEpochMillis = nowEpochMillis,
-            )
+            val unblocked =
+                unblockSuccessor(
+                    syncScopeKey = syncScopeKey,
+                    operationId = successor.operationId,
+                    predecessorOperationId = operationId,
+                    appliedVersion = appliedVersion,
+                    nowEpochMillis = nowEpochMillis,
+                )
             check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
         }
         return true
     }
 
     @Transaction
-    suspend fun ackCategoryWriteV2(syncScopeKey: String, operationId: String, record: CategoryDto, nowEpochMillis: Long): Boolean {
+    suspend fun ackCategoryWriteV2(
+        syncScopeKey: String,
+        operationId: String,
+        record: CategoryDto,
+        nowEpochMillis: Long,
+    ): Boolean {
         val appliedVersion = record.version
         requireNotNull(appliedVersion) { "Uzak kategori kaydı version taşımıyor: $operationId" }
         require(appliedVersion >= 1) { "appliedVersion en az 1 olmalıdır: $appliedVersion" }
@@ -915,20 +1288,27 @@ interface LocalMutationDao {
             val deleted = deleteOutboxRow(syncScopeKey, operationId)
             check(deleted == 1) { "Predecessor outbox silinemedi: $operationId" }
 
-            val unblocked = unblockSuccessor(
-                syncScopeKey = syncScopeKey,
-                operationId = successor.operationId,
-                predecessorOperationId = operationId,
-                appliedVersion = appliedVersion,
-                nowEpochMillis = nowEpochMillis,
-            )
+            val unblocked =
+                unblockSuccessor(
+                    syncScopeKey = syncScopeKey,
+                    operationId = successor.operationId,
+                    predecessorOperationId = operationId,
+                    appliedVersion = appliedVersion,
+                    nowEpochMillis = nowEpochMillis,
+                )
             check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
         }
         return true
     }
 
     @Transaction
-    suspend fun ackTransactionWriteV2(syncScopeKey: String, operationId: String, record: TransactionDto, nowEpochMillis: Long): Boolean {
+    suspend fun ackTransactionWriteV2(
+        syncScopeKey: String,
+        operationId: String,
+        record: TransactionDto,
+        nowEpochMillis: Long,
+        candidateMerchant: TransactionMerchantInfo?,
+    ): Boolean {
         val appliedVersion = record.version
         requireNotNull(appliedVersion) { "Uzak işlem kaydı version taşımıyor: $operationId" }
         require(appliedVersion >= 1) { "appliedVersion en az 1 olmalıdır: $appliedVersion" }
@@ -957,7 +1337,10 @@ interface LocalMutationDao {
         val successor = successors.firstOrNull()
 
         if (successor == null) {
-            upsertTransactionRow(record.toDomain().toEntity(record.toRemoteSyncMetadata(nowEpochMillis)))
+            val existing = getTransactionRow(record.id)
+            val domainTransaction = record.toDomain().copy(merchantInfo = candidateMerchant)
+            val remoteEntity = domainTransaction.toEntity(record.toRemoteSyncMetadata(nowEpochMillis))
+            upsertTransactionRow(remoteEntity.mergePreservingLocalMerchant(existing))
             deleteConflictRow(syncScopeKey, "TRANSACTION", record.id)
             val deleted = deleteOutboxRow(syncScopeKey, operationId)
             check(deleted == 1) { "Outbox kaydı silinemedi: $operationId" }
@@ -977,20 +1360,26 @@ interface LocalMutationDao {
             val deleted = deleteOutboxRow(syncScopeKey, operationId)
             check(deleted == 1) { "Predecessor outbox silinemedi: $operationId" }
 
-            val unblocked = unblockSuccessor(
-                syncScopeKey = syncScopeKey,
-                operationId = successor.operationId,
-                predecessorOperationId = operationId,
-                appliedVersion = appliedVersion,
-                nowEpochMillis = nowEpochMillis,
-            )
+            val unblocked =
+                unblockSuccessor(
+                    syncScopeKey = syncScopeKey,
+                    operationId = successor.operationId,
+                    predecessorOperationId = operationId,
+                    appliedVersion = appliedVersion,
+                    nowEpochMillis = nowEpochMillis,
+                )
             check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
         }
         return true
     }
 
     @Transaction
-    suspend fun ackBudgetWriteV2(syncScopeKey: String, operationId: String, record: BudgetDto, nowEpochMillis: Long): Boolean {
+    suspend fun ackBudgetWriteV2(
+        syncScopeKey: String,
+        operationId: String,
+        record: BudgetDto,
+        nowEpochMillis: Long,
+    ): Boolean {
         val appliedVersion = record.version
         requireNotNull(appliedVersion) { "Uzak bütçe kaydı version taşımıyor: $operationId" }
         require(appliedVersion >= 1) { "appliedVersion en az 1 olmalıdır: $appliedVersion" }
@@ -1039,13 +1428,14 @@ interface LocalMutationDao {
             val deleted = deleteOutboxRow(syncScopeKey, operationId)
             check(deleted == 1) { "Predecessor outbox silinemedi: $operationId" }
 
-            val unblocked = unblockSuccessor(
-                syncScopeKey = syncScopeKey,
-                operationId = successor.operationId,
-                predecessorOperationId = operationId,
-                appliedVersion = appliedVersion,
-                nowEpochMillis = nowEpochMillis,
-            )
+            val unblocked =
+                unblockSuccessor(
+                    syncScopeKey = syncScopeKey,
+                    operationId = successor.operationId,
+                    predecessorOperationId = operationId,
+                    appliedVersion = appliedVersion,
+                    nowEpochMillis = nowEpochMillis,
+                )
             check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
         }
         return true
@@ -1106,13 +1496,14 @@ interface LocalMutationDao {
             val deleted = deleteOutboxRow(syncScopeKey, operationId)
             check(deleted == 1) { "Predecessor outbox silinemedi: $operationId" }
 
-            val unblocked = unblockSuccessor(
-                syncScopeKey = syncScopeKey,
-                operationId = successor.operationId,
-                predecessorOperationId = operationId,
-                appliedVersion = appliedVersion,
-                nowEpochMillis = nowEpochMillis,
-            )
+            val unblocked =
+                unblockSuccessor(
+                    syncScopeKey = syncScopeKey,
+                    operationId = successor.operationId,
+                    predecessorOperationId = operationId,
+                    appliedVersion = appliedVersion,
+                    nowEpochMillis = nowEpochMillis,
+                )
             check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
         }
         return true
@@ -1173,20 +1564,26 @@ interface LocalMutationDao {
             val deleted = deleteOutboxRow(syncScopeKey, operationId)
             check(deleted == 1) { "Predecessor outbox silinemedi: $operationId" }
 
-            val unblocked = unblockSuccessor(
-                syncScopeKey = syncScopeKey,
-                operationId = successor.operationId,
-                predecessorOperationId = operationId,
-                appliedVersion = appliedVersion,
-                nowEpochMillis = nowEpochMillis,
-            )
+            val unblocked =
+                unblockSuccessor(
+                    syncScopeKey = syncScopeKey,
+                    operationId = successor.operationId,
+                    predecessorOperationId = operationId,
+                    appliedVersion = appliedVersion,
+                    nowEpochMillis = nowEpochMillis,
+                )
             check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
         }
         return true
     }
 
     @Transaction
-    suspend fun ackGoalWriteV2(syncScopeKey: String, operationId: String, record: GoalDto, nowEpochMillis: Long): Boolean {
+    suspend fun ackGoalWriteV2(
+        syncScopeKey: String,
+        operationId: String,
+        record: GoalDto,
+        nowEpochMillis: Long,
+    ): Boolean {
         val appliedVersion = record.version
         requireNotNull(appliedVersion) { "Uzak hedef kaydı version taşımıyor: $operationId" }
         require(appliedVersion >= 1) { "appliedVersion en az 1 olmalıdır: $appliedVersion" }
@@ -1236,13 +1633,14 @@ interface LocalMutationDao {
                 check(successor.attemptCount == 0) { "Successor attemptCount == 0 olmalıdır: ${successor.attemptCount}" }
                 check(successor.isBlocked) { "Successor isBlocked == true olmalıdır" }
 
-                val unblocked = unblockSuccessor(
-                    syncScopeKey = syncScopeKey,
-                    operationId = successor.operationId,
-                    predecessorOperationId = operationId,
-                    appliedVersion = appliedVersion,
-                    nowEpochMillis = nowEpochMillis,
-                )
+                val unblocked =
+                    unblockSuccessor(
+                        syncScopeKey = syncScopeKey,
+                        operationId = successor.operationId,
+                        predecessorOperationId = operationId,
+                        appliedVersion = appliedVersion,
+                        nowEpochMillis = nowEpochMillis,
+                    )
                 check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
             }
         }
@@ -1311,13 +1709,14 @@ interface LocalMutationDao {
                 check(successor.attemptCount == 0) { "Successor attemptCount == 0 olmalıdır: ${successor.attemptCount}" }
                 check(successor.isBlocked) { "Successor isBlocked == true olmalıdır" }
 
-                val unblocked = unblockSuccessor(
-                    syncScopeKey = syncScopeKey,
-                    operationId = successor.operationId,
-                    predecessorOperationId = operationId,
-                    appliedVersion = appliedGoalVersion,
-                    nowEpochMillis = nowEpochMillis,
-                )
+                val unblocked =
+                    unblockSuccessor(
+                        syncScopeKey = syncScopeKey,
+                        operationId = successor.operationId,
+                        predecessorOperationId = operationId,
+                        appliedVersion = appliedGoalVersion,
+                        nowEpochMillis = nowEpochMillis,
+                    )
                 check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
             }
         }
@@ -1325,7 +1724,12 @@ interface LocalMutationDao {
     }
 
     @Transaction
-    suspend fun ackDebtWriteV2(syncScopeKey: String, operationId: String, record: DebtDto, nowEpochMillis: Long): Boolean {
+    suspend fun ackDebtWriteV2(
+        syncScopeKey: String,
+        operationId: String,
+        record: DebtDto,
+        nowEpochMillis: Long,
+    ): Boolean {
         val appliedVersion = record.version
         requireNotNull(appliedVersion) { "Uzak borç kaydı version taşımıyor: $operationId" }
         require(appliedVersion >= 1) { "appliedVersion en az 1 olmalıdır: $appliedVersion" }
@@ -1375,13 +1779,14 @@ interface LocalMutationDao {
                 check(successor.attemptCount == 0) { "Successor attemptCount == 0 olmalıdır: ${successor.attemptCount}" }
                 check(successor.isBlocked) { "Successor isBlocked == true olmalıdır" }
 
-                val unblocked = unblockSuccessor(
-                    syncScopeKey = syncScopeKey,
-                    operationId = successor.operationId,
-                    predecessorOperationId = operationId,
-                    appliedVersion = appliedVersion,
-                    nowEpochMillis = nowEpochMillis,
-                )
+                val unblocked =
+                    unblockSuccessor(
+                        syncScopeKey = syncScopeKey,
+                        operationId = successor.operationId,
+                        predecessorOperationId = operationId,
+                        appliedVersion = appliedVersion,
+                        nowEpochMillis = nowEpochMillis,
+                    )
                 check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
             }
         }
@@ -1450,13 +1855,14 @@ interface LocalMutationDao {
                 check(successor.attemptCount == 0) { "Successor attemptCount == 0 olmalıdır: ${successor.attemptCount}" }
                 check(successor.isBlocked) { "Successor isBlocked == true olmalıdır" }
 
-                val unblocked = unblockSuccessor(
-                    syncScopeKey = syncScopeKey,
-                    operationId = successor.operationId,
-                    predecessorOperationId = operationId,
-                    appliedVersion = appliedDebtVersion,
-                    nowEpochMillis = nowEpochMillis,
-                )
+                val unblocked =
+                    unblockSuccessor(
+                        syncScopeKey = syncScopeKey,
+                        operationId = successor.operationId,
+                        predecessorOperationId = operationId,
+                        appliedVersion = appliedDebtVersion,
+                        nowEpochMillis = nowEpochMillis,
+                    )
                 check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
             }
         }
@@ -1532,13 +1938,14 @@ interface LocalMutationDao {
             val deleted = deleteOutboxRow(syncScopeKey, operationId)
             check(deleted == 1) { "Predecessor outbox silinemedi: $operationId" }
 
-            val unblocked = unblockSuccessor(
-                syncScopeKey = syncScopeKey,
-                operationId = successor.operationId,
-                predecessorOperationId = operationId,
-                appliedVersion = appliedVersion,
-                nowEpochMillis = nowEpochMillis,
-            )
+            val unblocked =
+                unblockSuccessor(
+                    syncScopeKey = syncScopeKey,
+                    operationId = successor.operationId,
+                    predecessorOperationId = operationId,
+                    appliedVersion = appliedVersion,
+                    nowEpochMillis = nowEpochMillis,
+                )
             check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
         }
         return true
@@ -1614,13 +2021,14 @@ interface LocalMutationDao {
             val deleted = deleteOutboxRow(syncScopeKey, operationId)
             check(deleted == 1) { "Predecessor outbox silinemedi: $operationId" }
 
-            val unblocked = unblockSuccessor(
-                syncScopeKey = syncScopeKey,
-                operationId = successor.operationId,
-                predecessorOperationId = operationId,
-                appliedVersion = appliedVersion,
-                nowEpochMillis = nowEpochMillis,
-            )
+            val unblocked =
+                unblockSuccessor(
+                    syncScopeKey = syncScopeKey,
+                    operationId = successor.operationId,
+                    predecessorOperationId = operationId,
+                    appliedVersion = appliedVersion,
+                    nowEpochMillis = nowEpochMillis,
+                )
             check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
         }
         return true
@@ -1697,13 +2105,14 @@ interface LocalMutationDao {
             val deleted = deleteOutboxRow(syncScopeKey, operationId)
             check(deleted == 1) { "Predecessor outbox silinemedi: $operationId" }
 
-            val unblocked = unblockSuccessor(
-                syncScopeKey = syncScopeKey,
-                operationId = successor.operationId,
-                predecessorOperationId = operationId,
-                appliedVersion = appliedVersion,
-                nowEpochMillis = nowEpochMillis,
-            )
+            val unblocked =
+                unblockSuccessor(
+                    syncScopeKey = syncScopeKey,
+                    operationId = successor.operationId,
+                    predecessorOperationId = operationId,
+                    appliedVersion = appliedVersion,
+                    nowEpochMillis = nowEpochMillis,
+                )
             check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
         }
         return true
@@ -1744,7 +2153,82 @@ interface LocalMutationDao {
         val successor = successors.firstOrNull()
 
         if (successor != null) {
-            error("DELETE NOT_FOUND durumunda successor varken güvenli rebase sürümü mevcut değildir.")
+            if (entityTypeCode == "USER_MERCHANT_VERIFICATION") {
+                check(successor.syncScopeKey == syncScopeKey) {
+                    "Successor syncScopeKey ($syncScopeKey) eşleşmelidir: ${successor.syncScopeKey}"
+                }
+                check(successor.protocolVersion == 2) {
+                    "Successor protocolVersion 2 olmalıdır: ${successor.protocolVersion}"
+                }
+                check(successor.predecessorOperationId == predecessor.operationId) {
+                    "Successor predecessorOperationId (${predecessor.operationId}) eşleşmelidir: ${successor.predecessorOperationId}"
+                }
+                check(successor.entityTypeCode == "USER_MERCHANT_VERIFICATION") {
+                    "Successor entityTypeCode USER_MERCHANT_VERIFICATION olmalıdır: ${successor.entityTypeCode}"
+                }
+                check(successor.entityId == predecessor.entityId) {
+                    "Successor entityId (${predecessor.entityId}) eşleşmelidir: ${successor.entityId}"
+                }
+                check(successor.operationTypeCode == "UPDATE") {
+                    "Successor operationTypeCode UPDATE olmalıdır: ${successor.operationTypeCode}"
+                }
+                check(successor.statusCode == "PENDING") {
+                    "Successor statusCode PENDING olmalıdır: ${successor.statusCode}"
+                }
+                check(successor.attemptCount == 0) {
+                    "Successor attemptCount 0 olmalıdır: ${successor.attemptCount}"
+                }
+                check(successor.isBlocked) {
+                    "Successor isBlocked true olmalıdır: ${successor.isBlocked}"
+                }
+                check(!successor.payloadJson.isNullOrBlank()) {
+                    "Successor payloadJson boş olamaz."
+                }
+                val validatedSuccessorPayload =
+                    try {
+                        com.feniqo.mobile.data.remote.codec.UserMerchantVerificationPayloadCodec.parseAndValidate(
+                            jsonString = successor.payloadJson!!,
+                            operation = "CREATE",
+                            baseVersion = null,
+                        )
+                    } catch (e: Exception) {
+                        throw IllegalStateException("Successor canonical payload sözleşmesine uymuyor: ${e.message}", e)
+                    }
+                check(validatedSuccessorPayload.id == predecessor.entityId) {
+                    "Successor payload id (${validatedSuccessorPayload.id}) entityId (${predecessor.entityId}) ile eşleşmelidir."
+                }
+                val userScope = SyncScopeKey.requireUserScope(syncScopeKey)
+                check(validatedSuccessorPayload.userId == userScope.userId) {
+                    "Successor payload userId (${validatedSuccessorPayload.userId}) syncScopeKey (${userScope.userId}) ile eşleşmelidir."
+                }
+
+                val converted =
+                    convertSuccessorToPendingCreate(
+                        syncScopeKey = syncScopeKey,
+                        operationId = successor.operationId,
+                        predecessorOperationId = operationId,
+                        entityTypeCode = entityTypeCode,
+                        entityId = entityId,
+                        nowEpochMillis = nowEpochMillis,
+                    )
+                check(converted == 1) { "Successor outbox kaydı CREATE'e dönüştürülemedi: ${successor.operationId}" }
+
+                val expectedScopeKey = "user:${userScope.userId}"
+                val reset =
+                    resetUserMerchantVerificationToPendingCreate(
+                        id = entityId,
+                        scopeKey = expectedScopeKey,
+                        nowEpochMillis = nowEpochMillis,
+                    )
+                check(reset == 1) { "UserMerchantVerification entity PENDING_CREATE durumuna rebase edilemedi: $entityId" }
+
+                deleteConflictRow(syncScopeKey, entityTypeCode, entityId)
+                val deleted = deleteOutboxRow(syncScopeKey, operationId)
+                check(deleted == 1) { "Predecessor DELETE outbox kaydı silinemedi: $operationId" }
+                return true
+            } else {
+                error("DELETE NOT_FOUND durumunda successor varken güvenli rebase sürümü mevcut değildir.")
+            }
         }
 
         when (entityTypeCode) {
@@ -1768,6 +2252,10 @@ interface LocalMutationDao {
                 val marked = markWorkspaceMemberSyncedIfDeleted(wsId, uId, nowEpochMillis)
                 check(marked == 1) { "Silinmiş yerel WorkspaceMember kaydı bulunamadı veya güncellenemedi: $entityId" }
             }
+            "USER_MERCHANT_VERIFICATION" -> {
+                val marked = markUserMerchantVerificationSyncedIfDeleted(entityId, nowEpochMillis)
+                check(marked == 1) { "Silinmiş yerel UserMerchantVerification kaydı bulunamadı veya güncellenemedi: $entityId" }
+            }
         }
         deleteConflictRow(syncScopeKey, entityTypeCode, entityId)
         val deleted = deleteOutboxRow(syncScopeKey, operationId)
@@ -1775,16 +2263,15 @@ interface LocalMutationDao {
         return true
     }
 
-
-
     @Transaction
     suspend fun ackTransactionGroupV2(
         syncScopeKey: String,
-        units: List<Pair<String, TransactionDto>>,
+        units: List<Triple<String, TransactionDto, TransactionMerchantInfo?>>,
         nowEpochMillis: Long,
     ): Boolean {
-        for ((opId, dto) in units) {
-            ackTransactionWriteV2(syncScopeKey, opId, dto, nowEpochMillis)
+        for ((opId, dto, candidate) in units) {
+            val ok = ackTransactionWriteV2(syncScopeKey, opId, dto, nowEpochMillis, candidate)
+            if (!ok) return false
         }
         return true
     }
@@ -1848,13 +2335,14 @@ interface LocalMutationDao {
             val deleted = deleteOutboxRow(syncScopeKey, operationId)
             check(deleted == 1) { "Predecessor outbox silinemedi: $operationId" }
 
-            val unblocked = unblockSuccessor(
-                syncScopeKey = syncScopeKey,
-                operationId = successor.operationId,
-                predecessorOperationId = operationId,
-                appliedVersion = appliedVersion,
-                nowEpochMillis = nowEpochMillis,
-            )
+            val unblocked =
+                unblockSuccessor(
+                    syncScopeKey = syncScopeKey,
+                    operationId = successor.operationId,
+                    predecessorOperationId = operationId,
+                    appliedVersion = appliedVersion,
+                    nowEpochMillis = nowEpochMillis,
+                )
             check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
         }
         return true
@@ -1866,6 +2354,7 @@ interface LocalMutationDao {
         operationId: String,
         remoteRecord: TransactionDto,
         nowEpochMillis: Long,
+        candidateMerchant: TransactionMerchantInfo?,
     ): Boolean {
         val appliedVersion = remoteRecord.version
         requireNotNull(appliedVersion) { "Uzak işlem kaydı version taşımıyor: $operationId" }
@@ -1898,7 +2387,10 @@ interface LocalMutationDao {
         val successor = successors.firstOrNull()
 
         if (successor == null) {
-            upsertTransactionRow(remoteRecord.toDomain().toEntity(remoteRecord.toRemoteSyncMetadata(nowEpochMillis)))
+            val existing = getTransactionRow(remoteRecord.id)
+            val domainTransaction = remoteRecord.toDomain().copy(merchantInfo = candidateMerchant)
+            val remoteEntity = domainTransaction.toEntity(remoteRecord.toRemoteSyncMetadata(nowEpochMillis))
+            upsertTransactionRow(remoteEntity.mergePreservingLocalMerchant(existing))
             deleteConflictRow(syncScopeKey, "TRANSACTION", remoteRecord.id)
             val deleted = deleteOutboxRow(syncScopeKey, operationId)
             check(deleted == 1) { "Outbox kaydı silinemedi: $operationId" }
@@ -1919,26 +2411,278 @@ interface LocalMutationDao {
             val deleted = deleteOutboxRow(syncScopeKey, operationId)
             check(deleted == 1) { "Predecessor outbox silinemedi: $operationId" }
 
-            val unblocked = unblockSuccessor(
-                syncScopeKey = syncScopeKey,
-                operationId = successor.operationId,
-                predecessorOperationId = operationId,
-                appliedVersion = appliedVersion,
-                nowEpochMillis = nowEpochMillis,
-            )
+            val unblocked =
+                unblockSuccessor(
+                    syncScopeKey = syncScopeKey,
+                    operationId = successor.operationId,
+                    predecessorOperationId = operationId,
+                    appliedVersion = appliedVersion,
+                    nowEpochMillis = nowEpochMillis,
+                )
             check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
         }
         return true
     }
 
     @Transaction
-    suspend fun recoverEquivalentTransactionGroup(
+    suspend fun recoverEquivalentTransactionUnits(
         syncScopeKey: String,
-        units: List<Pair<String, TransactionDto>>,
+        units: List<Triple<String, TransactionDto, TransactionMerchantInfo?>>,
         nowEpochMillis: Long,
     ): Boolean {
-        for ((opId, dto) in units) {
-            recoverEquivalentTransaction(syncScopeKey, opId, dto, nowEpochMillis)
+        for ((opId, dto, candidate) in units) {
+            val ok = recoverEquivalentTransaction(syncScopeKey, opId, dto, nowEpochMillis, candidate)
+            if (!ok) return false
+        }
+        return true
+    }
+
+    @Transaction
+    suspend fun recoverEquivalentUserMerchantVerification(
+        syncScopeKey: String,
+        operationId: String,
+        remoteRecord: UserMerchantVerificationDto,
+        nowEpochMillis: Long,
+        expectedLocalEntity: UserMerchantVerificationEntity,
+    ): Boolean {
+        val userScope = SyncScopeKey.requireUserScope(syncScopeKey)
+        check(userScope.userId == remoteRecord.userId) {
+            "Actor scope (${userScope.userId}) ile remote userId (${remoteRecord.userId}) eşleşmelidir."
+        }
+        check(remoteRecord.workspaceId == null) {
+            "Merchant verification workspaceId null olmalıdır."
+        }
+        check(remoteRecord.scopeCode == "PERSONAL") {
+            "Merchant verification scopeCode PERSONAL olmalıdır: ${remoteRecord.scopeCode}"
+        }
+
+        val appliedVersion = remoteRecord.version
+        requireNotNull(appliedVersion) { "Uzak merchant verification version taşımıyor: $operationId" }
+        require(appliedVersion >= 1L) { "appliedVersion en az 1 olmalıdır: $appliedVersion" }
+
+        check(remoteRecord.deletedAt == null) {
+            "Silinmiş uzak kayıt eşdeğer kabul edilemez: $operationId"
+        }
+
+        val op =
+            requireNotNull(getOutboxById(syncScopeKey, operationId)) {
+                "Outbox operasyonu bulunamadı: $operationId"
+            }
+        check(op.syncScopeKey == syncScopeKey) { "Outbox syncScopeKey eşleşmelidir: ${op.syncScopeKey}" }
+        check(op.protocolVersion == 2) { "ProtocolVersion 2 olmalıdır: ${op.protocolVersion}" }
+        check(op.statusCode == "CONFLICT") {
+            "Recovery yalnız CONFLICT durumundaki operasyonlar için geçerlidir: ${op.statusCode}"
+        }
+        check(op.operationTypeCode == "CREATE") {
+            "Recovery yalnız CREATE operasyonları için geçerlidir: ${op.operationTypeCode}"
+        }
+        check(op.entityTypeCode == "USER_MERCHANT_VERIFICATION") {
+            "entityTypeCode USER_MERCHANT_VERIFICATION olmalıdır: ${op.entityTypeCode}"
+        }
+        check(op.entityId == remoteRecord.id) {
+            "entityId (${op.entityId}) ile uzak kayıt id (${remoteRecord.id}) eşleşmelidir."
+        }
+        check(op.baseVersion == null) {
+            "CREATE operasyonu için baseVersion null olmalıdır: ${op.baseVersion}"
+        }
+        check(op.predecessorOperationId == null) {
+            "Predecessor CREATE kök olmalıdır: predecessorOperationId=${op.predecessorOperationId}"
+        }
+        check(!op.isBlocked) {
+            "Predecessor CREATE unblocked olmalıdır: $operationId"
+        }
+
+        val conflict =
+            requireNotNull(getConflictRow(syncScopeKey, "USER_MERCHANT_VERIFICATION", remoteRecord.id)) {
+                "SyncConflictEntity bulunamadı: $operationId"
+            }
+        check(conflict.syncScopeKey == syncScopeKey) { "Conflict syncScopeKey eşleşmelidir: ${conflict.syncScopeKey}" }
+        check(conflict.operationId == operationId) { "Conflict operationId eşleşmelidir: ${conflict.operationId}" }
+        check(
+            conflict.entityTypeCode == "USER_MERCHANT_VERIFICATION",
+        ) { "Conflict entityTypeCode eşleşmelidir: ${conflict.entityTypeCode}" }
+        check(conflict.entityId == remoteRecord.id) { "Conflict entityId eşleşmelidir: ${conflict.entityId}" }
+
+        val conflictLocalDto = UserMerchantVerificationPayloadCodec.decodeAndValidateSnapshot(conflict.localPayloadJson)
+        val conflictRemoteDto = UserMerchantVerificationPayloadCodec.decodeAndValidateSnapshot(conflict.remotePayloadJson)
+
+        // 1.a Live conflict metadata
+        check(conflict.localVersion == conflictLocalDto.version) {
+            "conflict.localVersion (${conflict.localVersion}) local snapshot version (${conflictLocalDto.version}) ile eşleşmelidir: $operationId"
+        }
+        check(conflict.remoteVersion == conflictRemoteDto.version) {
+            "conflict.remoteVersion (${conflict.remoteVersion}) remote snapshot version (${conflictRemoteDto.version}) ile eşleşmelidir: $operationId"
+        }
+        check(conflict.remoteVersion == remoteRecord.version) {
+            "conflict.remoteVersion (${conflict.remoteVersion}) remoteRecord.version (${remoteRecord.version}) ile eşleşmelidir: $operationId"
+        }
+        check(conflict.remoteVersion >= 1L) {
+            "remoteVersion en az 1 olmalıdır: ${conflict.remoteVersion}"
+        }
+        check(conflict.localVersion == 0L && (conflictLocalDto.version == null || conflictLocalDto.version == 0L)) {
+            "CREATE local snapshot version sözleşmesi (version=0L) geçerli olmalıdır: conflict.localVersion=${conflict.localVersion}, snapshot.version=${conflictLocalDto.version}"
+        }
+
+        // 1.b Predecessor CREATE payload bağı
+        val predecessorPayload = op.payloadJson
+        check(!predecessorPayload.isNullOrBlank()) {
+            "Predecessor payloadJson null veya blank olamaz: $operationId"
+        }
+        val decodedPredecessorPayload =
+            UserMerchantVerificationPayloadCodec.parseAndValidate(
+                jsonString = predecessorPayload,
+                operation = "CREATE",
+                baseVersion = null,
+            )
+        check(decodedPredecessorPayload.id == conflictLocalDto.id) {
+            "Predecessor payload id (${decodedPredecessorPayload.id}) ile conflictLocalDto id (${conflictLocalDto.id}) eşleşmelidir."
+        }
+        check(decodedPredecessorPayload.userId == conflictLocalDto.userId) {
+            "Predecessor payload userId (${decodedPredecessorPayload.userId}) ile conflictLocalDto userId (${conflictLocalDto.userId}) eşleşmelidir."
+        }
+        check(decodedPredecessorPayload.workspaceId == conflictLocalDto.workspaceId) {
+            "Predecessor payload workspaceId (${decodedPredecessorPayload.workspaceId}) ile conflictLocalDto workspaceId (${conflictLocalDto.workspaceId}) eşleşmelidir."
+        }
+        check(decodedPredecessorPayload.normalizedAlias == conflictLocalDto.normalizedAlias) {
+            "Predecessor payload normalizedAlias (${decodedPredecessorPayload.normalizedAlias}) ile conflictLocalDto normalizedAlias (${conflictLocalDto.normalizedAlias}) eşleşmelidir."
+        }
+        check(decodedPredecessorPayload.decisionCode == conflictLocalDto.decisionCode) {
+            "Predecessor payload decisionCode (${decodedPredecessorPayload.decisionCode}) ile conflictLocalDto decisionCode (${conflictLocalDto.decisionCode}) eşleşmelidir."
+        }
+        check(decodedPredecessorPayload.merchantId == conflictLocalDto.merchantId) {
+            "Predecessor payload merchantId (${decodedPredecessorPayload.merchantId}) ile conflictLocalDto merchantId (${conflictLocalDto.merchantId}) eşleşmelidir."
+        }
+        check(decodedPredecessorPayload.scopeCode == conflictLocalDto.scopeCode) {
+            "Predecessor payload scopeCode (${decodedPredecessorPayload.scopeCode}) ile conflictLocalDto scopeCode (${conflictLocalDto.scopeCode}) eşleşmelidir."
+        }
+
+        // conflictLocalDto ile conflictRemoteDto 7 iş alanı eşdeğerliği
+        check(conflictLocalDto.id == conflictRemoteDto.id) {
+            "Eşdeğerlik uyuşmazlığı: id (local=${conflictLocalDto.id}, remote=${conflictRemoteDto.id})"
+        }
+        check(conflictLocalDto.userId == conflictRemoteDto.userId) {
+            "Eşdeğerlik uyuşmazlığı: userId (local=${conflictLocalDto.userId}, remote=${conflictRemoteDto.userId})"
+        }
+        check(conflictLocalDto.workspaceId == conflictRemoteDto.workspaceId) {
+            "Eşdeğerlik uyuşmazlığı: workspaceId (local=${conflictLocalDto.workspaceId}, remote=${conflictRemoteDto.workspaceId})"
+        }
+        check(conflictLocalDto.normalizedAlias == conflictRemoteDto.normalizedAlias) {
+            "Eşdeğerlik uyuşmazlığı: normalizedAlias (local=${conflictLocalDto.normalizedAlias}, remote=${conflictRemoteDto.normalizedAlias})"
+        }
+        check(conflictLocalDto.decisionCode == conflictRemoteDto.decisionCode) {
+            "Eşdeğerlik uyuşmazlığı: decisionCode (local=${conflictLocalDto.decisionCode}, remote=${conflictRemoteDto.decisionCode})"
+        }
+        check(conflictLocalDto.merchantId == conflictRemoteDto.merchantId) {
+            "Eşdeğerlik uyuşmazlığı: merchantId (local=${conflictLocalDto.merchantId}, remote=${conflictRemoteDto.merchantId})"
+        }
+        check(conflictLocalDto.scopeCode == conflictRemoteDto.scopeCode) {
+            "Eşdeğerlik uyuşmazlığı: scopeCode (local=${conflictLocalDto.scopeCode}, remote=${conflictRemoteDto.scopeCode})"
+        }
+
+        // Tombstone iki tarafta da reddedilmeli
+        check(conflictLocalDto.deletedAt == null && conflictRemoteDto.deletedAt == null) {
+            "Tombstone içeren snapshot eşdeğer kabul edilemez: $operationId"
+        }
+        check(conflictRemoteDto == remoteRecord) {
+            "Conflict remote snapshot ile iletilen remoteRecord birebir eşleşmelidir."
+        }
+
+        val local =
+            requireNotNull(getUserMerchantVerificationRow(remoteRecord.id)) {
+                "Yerel merchant verification entity bulunamadı: ${remoteRecord.id}"
+            }
+        check(local == expectedLocalEntity) {
+            "Yerel entity expectedLocalEntity ile tam eşleşmelidir (localUpdatedAtEpochMillis dahil)."
+        }
+        check(local.ownerId == remoteRecord.userId) {
+            "Yerel entity ownerId (${local.ownerId}) ile remote userId (${remoteRecord.userId}) eşleşmelidir."
+        }
+        check(local.scopeKey == "user:${remoteRecord.userId}") {
+            "Yerel entity scopeKey yetkili scope ile eşleşmelidir: ${local.scopeKey}"
+        }
+
+        val successors = getSuccessors(syncScopeKey, operationId)
+        check(successors.size <= 1) { "Birden fazla successor bulundu: $operationId" }
+        val successor = successors.firstOrNull()
+
+        if (successor == null) {
+            // 1.c Successor yoksa
+            UserMerchantVerificationPayloadCodec.validateLocalSnapshotMatchesEntity(conflictLocalDto, local)
+
+            val tailCandidates = getActiveTailCandidates(syncScopeKey, "USER_MERCHANT_VERIFICATION", remoteRecord.id)
+            check(tailCandidates.size == 1 && tailCandidates[0].operationId == op.operationId) {
+                "Successor yokken outbox operasyonu tek aktif tail olmalıdır: $operationId"
+            }
+            check(op.predecessorOperationId == null && !op.isBlocked) {
+                "Successor yokken outbox operasyonu root unblocked olmalıdır: $operationId"
+            }
+
+            upsertUserMerchantVerificationRow(remoteRecord.toEntity(remoteRecord.toRemoteSyncMetadata(nowEpochMillis)))
+            deleteConflictRow(syncScopeKey, "USER_MERCHANT_VERIFICATION", remoteRecord.id)
+            val deleted = deleteOutboxRow(syncScopeKey, operationId)
+            check(deleted == 1) { "Outbox kaydı silinemedi: $operationId" }
+        } else {
+            // 1.d Successor varsa
+            check(successor.operationTypeCode == "UPDATE") {
+                "Successor operasyon türü kesinlikle UPDATE olmalıdır; CREATE veya DELETE desteklenmez: ${successor.operationTypeCode}"
+            }
+            check(op.predecessorOperationId == null && !op.isBlocked) {
+                "Predecessor CREATE kök ve unblocked olmalıdır: $operationId"
+            }
+            check(successor.syncScopeKey == syncScopeKey) { "Successor syncScopeKey eşleşmelidir" }
+            check(successor.protocolVersion == 2) { "Successor protocolVersion == 2 olmalıdır: ${successor.protocolVersion}" }
+            check(successor.predecessorOperationId == op.operationId) { "Successor predecessor_operation_id eşleşmelidir" }
+            check(successor.entityTypeCode == "USER_MERCHANT_VERIFICATION") { "Successor entityTypeCode eşleşmelidir" }
+            check(successor.entityId == remoteRecord.id) { "Successor entityId eşleşmelidir" }
+            check(successor.statusCode == "PENDING") { "Successor statusCode == PENDING olmalıdır: ${successor.statusCode}" }
+            check(successor.attemptCount == 0) { "Successor attemptCount == 0 olmalıdır: ${successor.attemptCount}" }
+            check(successor.isBlocked) { "Successor isBlocked == true olmalıdır" }
+            check(successor.baseVersion == null) { "CREATE sonrası bloklanan pre-ACK successor baseVersion null olmalıdır" }
+
+            val tailCandidates = getActiveTailCandidates(syncScopeKey, "USER_MERCHANT_VERIFICATION", remoteRecord.id)
+            check(tailCandidates.size == 1 && tailCandidates[0].operationId == successor.operationId) {
+                "Successor tek aktif tail olmalıdır: ${successor.operationId}"
+            }
+
+            val successorPayload = checkNotNull(successor.payloadJson) { "Successor payload_json boş olamaz: ${successor.operationId}" }
+            val validatedSuccessorPayload =
+                UserMerchantVerificationPayloadCodec.parseAndValidate(
+                    jsonString = successorPayload,
+                    operation = "CREATE",
+                    baseVersion = null,
+                )
+            check(validatedSuccessorPayload.id == local.id) { "Successor payload id yerel id ile eşleşmelidir" }
+            check(validatedSuccessorPayload.userId == local.ownerId) { "Successor payload userId yerel ownerId ile eşleşmelidir" }
+            check(
+                validatedSuccessorPayload.workspaceId == local.workspaceId,
+            ) { "Successor payload workspaceId yerel workspaceId ile eşleşmelidir" }
+            check(
+                validatedSuccessorPayload.normalizedAlias == local.normalizedAlias,
+            ) { "Successor payload alias yerel alias ile eşleşmelidir" }
+            check(
+                validatedSuccessorPayload.decisionCode == local.decisionCode,
+            ) { "Successor payload decisionCode yerel karar ile eşleşmelidir" }
+            check(
+                validatedSuccessorPayload.merchantId == local.merchantId,
+            ) { "Successor payload merchantId yerel merchantId ile eşleşmelidir" }
+            check(validatedSuccessorPayload.scopeCode == "PERSONAL") { "Successor payload scopeCode PERSONAL olmalıdır" }
+
+            val rebased = rebaseUserMerchantVerificationVersion(remoteRecord.id, appliedVersion, nowEpochMillis)
+            check(rebased == 1) { "Merchant verification sürümü rebase edilemedi: ${remoteRecord.id}" }
+
+            deleteConflictRow(syncScopeKey, "USER_MERCHANT_VERIFICATION", remoteRecord.id)
+            val deleted = deleteOutboxRow(syncScopeKey, operationId)
+            check(deleted == 1) { "Predecessor outbox silinemedi: $operationId" }
+
+            val unblocked =
+                unblockSuccessor(
+                    syncScopeKey = syncScopeKey,
+                    operationId = successor.operationId,
+                    predecessorOperationId = operationId,
+                    appliedVersion = appliedVersion,
+                    nowEpochMillis = nowEpochMillis,
+                )
+            check(unblocked == 1) { "Successor unblock edilemedi: ${successor.operationId}" }
         }
         return true
     }
@@ -1955,18 +2699,56 @@ interface LocalMutationDao {
             is OutboxExecutionResult.V1Completed -> return deleteOutboxRow(syncScopeKey, operationId) == 1
             is OutboxExecutionResult.ProfileApplied -> ackProfileWriteV2(syncScopeKey, operationId, result.record, nowEpochMillis)
             is OutboxExecutionResult.CategoryApplied -> ackCategoryWriteV2(syncScopeKey, operationId, result.record, nowEpochMillis)
-            is OutboxExecutionResult.TransactionApplied -> ackTransactionWriteV2(syncScopeKey, operationId, result.record, nowEpochMillis)
+            is OutboxExecutionResult.TransactionApplied ->
+                ackTransactionWriteV2(
+                    syncScopeKey = syncScopeKey,
+                    operationId = operationId,
+                    record = result.record,
+                    nowEpochMillis = nowEpochMillis,
+                    candidateMerchant = result.candidateMerchant,
+                )
             is OutboxExecutionResult.BudgetApplied -> ackBudgetWriteV2(syncScopeKey, operationId, result.record, nowEpochMillis)
             is OutboxExecutionResult.AssetApplied -> ackAssetWriteV2(syncScopeKey, operationId, result.record, nowEpochMillis)
-            is OutboxExecutionResult.RecurringTransactionApplied -> ackRecurringTransactionWriteV2(syncScopeKey, operationId, result.record, nowEpochMillis)
+            is OutboxExecutionResult.RecurringTransactionApplied ->
+                ackRecurringTransactionWriteV2(
+                    syncScopeKey,
+                    operationId,
+                    result.record,
+                    nowEpochMillis,
+                )
             is OutboxExecutionResult.SubscriptionApplied -> ackSubscriptionWriteV2(syncScopeKey, operationId, result.record, nowEpochMillis)
             is OutboxExecutionResult.GoalApplied -> ackGoalWriteV2(syncScopeKey, operationId, result.record, nowEpochMillis)
-            is OutboxExecutionResult.GoalContributionApplied -> ackGoalContributionWriteV2(syncScopeKey, operationId, result.record, nowEpochMillis)
+            is OutboxExecutionResult.GoalContributionApplied ->
+                ackGoalContributionWriteV2(
+                    syncScopeKey,
+                    operationId,
+                    result.record,
+                    nowEpochMillis,
+                )
             is OutboxExecutionResult.DebtApplied -> ackDebtWriteV2(syncScopeKey, operationId, result.record, nowEpochMillis)
             is OutboxExecutionResult.DebtPaymentApplied -> ackDebtPaymentWriteV2(syncScopeKey, operationId, result.record, nowEpochMillis)
             is OutboxExecutionResult.WorkspaceApplied -> ackWorkspaceWriteV2(syncScopeKey, operationId, result.record, nowEpochMillis)
-            is OutboxExecutionResult.WorkspaceMemberApplied -> ackWorkspaceMemberWriteV2(syncScopeKey, operationId, result.record, nowEpochMillis)
-            is OutboxExecutionResult.WorkspaceInvitationApplied -> ackWorkspaceInvitationWriteV2(syncScopeKey, operationId, result.record, nowEpochMillis)
+            is OutboxExecutionResult.WorkspaceMemberApplied ->
+                ackWorkspaceMemberWriteV2(
+                    syncScopeKey,
+                    operationId,
+                    result.record,
+                    nowEpochMillis,
+                )
+            is OutboxExecutionResult.WorkspaceInvitationApplied ->
+                ackWorkspaceInvitationWriteV2(
+                    syncScopeKey,
+                    operationId,
+                    result.record,
+                    nowEpochMillis,
+                )
+            is OutboxExecutionResult.UserMerchantVerificationApplied ->
+                ackUserMerchantVerificationWriteV2(
+                    syncScopeKey,
+                    operationId,
+                    result.record,
+                    nowEpochMillis,
+                )
             is OutboxExecutionResult.MissingDeleteAcknowledged -> {
                 val op = checkNotNull(getOutboxById(syncScopeKey, operationId)) { "Outbox işlemi bulunamadı: $operationId" }
                 ackMissingDeleteV2(syncScopeKey, operationId, op.entityTypeCode, op.entityId, nowEpochMillis)
@@ -1982,7 +2764,12 @@ interface LocalMutationDao {
     }
 
     @Transaction
-    suspend fun ackAssetWriteV2(syncScopeKey: String, operationId: String, record: AssetDto, nowEpochMillis: Long): Boolean {
+    suspend fun ackAssetWriteV2(
+        syncScopeKey: String,
+        operationId: String,
+        record: AssetDto,
+        nowEpochMillis: Long,
+    ): Boolean {
         val version = requireNotNull(record.version) { "Uzak varlık sürümü yok: $operationId" }
         require(version >= 1L) { "Uzak varlık sürümü geçersiz: $version" }
         val operation = requireNotNull(getOutboxById(syncScopeKey, operationId)) { "Varlık outbox işlemi bulunamadı: $operationId" }
@@ -2008,6 +2795,1410 @@ interface LocalMutationDao {
         return true
     }
 
+    @Transaction
+    suspend fun ackUserMerchantVerificationWriteV2(
+        syncScopeKey: String,
+        operationId: String,
+        record: UserMerchantVerificationDto,
+        nowEpochMillis: Long,
+    ): Boolean {
+        val userScope = SyncScopeKey.requireUserScope(syncScopeKey)
+        requireNotNull(record.toDomainOrNull()) {
+            "Uzak merchant verification DTO geçersiz veya doğrulanamadı: ${record.id}"
+        }
+        require(record.userId == userScope.userId) {
+            "Uzak merchant verification userId (${record.userId}) yetkili user (${userScope.userId}) ile eşleşmiyor."
+        }
+
+        val operation =
+            requireNotNull(getOutboxById(syncScopeKey, operationId)) {
+                "Merchant verification outbox işlemi bulunamadı: $operationId"
+            }
+        check(operation.syncScopeKey == syncScopeKey) { "Merchant verification outbox syncScopeKey eşleşmiyor." }
+        check(operation.entityTypeCode == "USER_MERCHANT_VERIFICATION") {
+            "Merchant verification ACK entityTypeCode USER_MERCHANT_VERIFICATION olmalıdır: ${operation.entityTypeCode}"
+        }
+        check(operation.entityId == record.id) {
+            "Merchant verification ACK kimliği eşleşmiyor: beklenen ${record.id}, gelen ${operation.entityId}"
+        }
+        check(operation.protocolVersion == 2) {
+            "Merchant verification ACK yalnız protocolVersion=2 içindir: ${operation.protocolVersion}"
+        }
+        check(operation.statusCode == "IN_FLIGHT") {
+            "Merchant verification ACK yalnız IN_FLIGHT V2 kayıt içindir: ${operation.statusCode}"
+        }
+        check(operation.attemptCount > 0) {
+            "Merchant verification ACK attemptCount > 0 olmalıdır: ${operation.attemptCount}"
+        }
+        check(!operation.isBlocked) {
+            "ACK operation isBlocked false olmalıdır: ${operation.operationId}"
+        }
+        check(operation.operationTypeCode in setOf("CREATE", "UPDATE", "DELETE")) {
+            "Desteklenmeyen operationTypeCode: ${operation.operationTypeCode}"
+        }
+        if (operation.predecessorOperationId != null) {
+            check(getOutboxById(syncScopeKey, operation.predecessorOperationId) == null) {
+                "ACK operation canlı bir predecessor'a bağlı olamaz: ${operation.predecessorOperationId}"
+            }
+        }
+        val opPayload =
+            checkNotNull(operation.payloadJson?.takeIf { it.isNotBlank() }) {
+                "ACK operation payloadJson boş olamaz: ${operation.operationId}"
+            }
+
+        val decodedOpPayload: UserMerchantVerificationPayloadCodec.ValidatedVerificationPayload
+        when (operation.operationTypeCode) {
+            "CREATE" -> {
+                check(operation.baseVersion == null) {
+                    "CREATE operasyonunda baseVersion null olmalıdır: ${operation.baseVersion}"
+                }
+                decodedOpPayload =
+                    UserMerchantVerificationPayloadCodec.parseAndValidate(
+                        jsonString = opPayload,
+                        operation = "CREATE",
+                        baseVersion = null,
+                    )
+                check(record.version == 1L) {
+                    "CREATE operasyonunda uzak sürüm kesinlikle 1 olmalıdır: ${record.version}"
+                }
+                check(record.deletedAt == null) {
+                    "CREATE operasyonunda uzak deletedAt null olmalıdır: ${record.deletedAt}"
+                }
+            }
+            "UPDATE" -> {
+                check(operation.baseVersion != null && operation.baseVersion >= 1L) {
+                    "UPDATE operasyonunda baseVersion >= 1 olmalıdır: ${operation.baseVersion}"
+                }
+                check(operation.baseVersion < Long.MAX_VALUE) {
+                    "UPDATE operasyonunda baseVersion Long.MAX_VALUE olamaz."
+                }
+                decodedOpPayload =
+                    UserMerchantVerificationPayloadCodec.parseAndValidate(
+                        jsonString = opPayload,
+                        operation = "UPDATE",
+                        baseVersion = operation.baseVersion,
+                    )
+                check(record.version == operation.baseVersion + 1L) {
+                    "UPDATE operasyonunda uzak sürüm baseVersion + 1 (${operation.baseVersion + 1L}) olmalıdır: ${record.version}"
+                }
+                check(record.deletedAt == null) {
+                    "UPDATE operasyonunda uzak deletedAt null olmalıdır: ${record.deletedAt}"
+                }
+            }
+            "DELETE" -> {
+                check(operation.baseVersion != null && operation.baseVersion >= 1L) {
+                    "DELETE operasyonunda baseVersion >= 1 olmalıdır: ${operation.baseVersion}"
+                }
+                check(operation.baseVersion < Long.MAX_VALUE) {
+                    "DELETE operasyonunda baseVersion Long.MAX_VALUE olamaz."
+                }
+                decodedOpPayload =
+                    UserMerchantVerificationPayloadCodec.parseAndValidate(
+                        jsonString = opPayload,
+                        operation = "DELETE",
+                        baseVersion = operation.baseVersion,
+                    )
+                check(record.version == operation.baseVersion + 1L) {
+                    "DELETE operasyonunda uzak sürüm baseVersion + 1 (${operation.baseVersion + 1L}) olmalıdır: ${record.version}"
+                }
+                check(record.deletedAt != null) {
+                    "DELETE operasyonunda uzak deletedAt zorunludur: null"
+                }
+            }
+            else -> error("Desteklenmeyen operationTypeCode: ${operation.operationTypeCode}")
+        }
+
+        check(decodedOpPayload.id == record.id) {
+            "Payload id (${decodedOpPayload.id}) uzak id (${record.id}) ile eşleşmiyor."
+        }
+        check(decodedOpPayload.userId == record.userId) {
+            "Payload userId (${decodedOpPayload.userId}) uzak userId (${record.userId}) ile eşleşmiyor."
+        }
+        check(decodedOpPayload.workspaceId == record.workspaceId) {
+            "Payload workspaceId (${decodedOpPayload.workspaceId}) uzak workspaceId (${record.workspaceId}) ile eşleşmiyor."
+        }
+        check(decodedOpPayload.normalizedAlias == record.normalizedAlias) {
+            "Payload alias (${decodedOpPayload.normalizedAlias}) uzak alias (${record.normalizedAlias}) ile eşleşmiyor."
+        }
+        check(decodedOpPayload.decisionCode == record.decisionCode) {
+            "Payload decisionCode (${decodedOpPayload.decisionCode}) uzak decisionCode (${record.decisionCode}) ile eşleşmiyor."
+        }
+        check(decodedOpPayload.merchantId == record.merchantId) {
+            "Payload merchantId (${decodedOpPayload.merchantId}) uzak merchantId (${record.merchantId}) ile eşleşmiyor."
+        }
+        check(decodedOpPayload.scopeCode == record.scopeCode) {
+            "Payload scopeCode (${decodedOpPayload.scopeCode}) uzak scopeCode (${record.scopeCode}) ile eşleşmiyor."
+        }
+
+        val successors = getSuccessors(syncScopeKey, operationId)
+        check(successors.size <= 1) { "Merchant verification ACK için birden çok successor bulundu: $operationId" }
+        val successor = successors.firstOrNull()
+
+        if (successor == null) {
+            val tailCandidates = getActiveTailCandidates(syncScopeKey, "USER_MERCHANT_VERIFICATION", record.id)
+            check(tailCandidates.size == 1 && tailCandidates[0].operationId == operation.operationId) {
+                "Successor yokken outbox operasyonu tek aktif tail olmalıdır: $operationId"
+            }
+            val local =
+                requireNotNull(getUserMerchantVerificationRow(record.id)) {
+                    "Yerel merchant verification entity bulunamadı: ${record.id}"
+                }
+            check(
+                local.id == record.id &&
+                    local.ownerId == record.userId &&
+                    local.scopeKey == "user:${record.userId}" &&
+                    local.scopeCode == "PERSONAL" &&
+                    local.workspaceId == null,
+            ) {
+                "Yerel entity kimlik ve sahiplik alanları uzak kayıt ile eşleşmiyor."
+            }
+
+            when (operation.operationTypeCode) {
+                "CREATE" -> {
+                    check(local.sync.syncStatus == "PENDING_CREATE" && local.sync.version == 0L && local.sync.baseVersion == null) {
+                        "CREATE ACK için yerel sync durumu PENDING_CREATE ve version 0 olmalıdır: ${local.sync.syncStatus}, ${local.sync.version}"
+                    }
+                }
+                "UPDATE" -> {
+                    check(
+                        local.sync.syncStatus == "PENDING_UPDATE" &&
+                            local.sync.version >= 1L &&
+                            local.sync.baseVersion == operation.baseVersion &&
+                            local.sync.baseVersion == local.sync.version,
+                    ) {
+                        "UPDATE ACK için yerel sync durumu PENDING_UPDATE ve baseVersion yerel sürümle eşleşmelidir: ${local.sync.syncStatus}, base=${local.sync.baseVersion}, ver=${local.sync.version}"
+                    }
+                }
+                "DELETE" -> {
+                    check(
+                        local.sync.syncStatus == "PENDING_DELETE" &&
+                            local.sync.deletedAtEpochMillis != null &&
+                            local.sync.version >= 1L &&
+                            local.sync.baseVersion == operation.baseVersion &&
+                            local.sync.baseVersion == local.sync.version,
+                    ) {
+                        "DELETE ACK için yerel sync durumu PENDING_DELETE ve baseVersion yerel sürümle eşleşmelidir: ${local.sync.syncStatus}, base=${local.sync.baseVersion}, ver=${local.sync.version}"
+                    }
+                }
+            }
+
+            check(decodedOpPayload.id == local.id) {
+                "Payload id (${decodedOpPayload.id}) yerel id (${local.id}) ile eşleşmelidir."
+            }
+            check(decodedOpPayload.userId == local.ownerId) {
+                "Payload userId (${decodedOpPayload.userId}) yerel ownerId (${local.ownerId}) ile eşleşmelidir."
+            }
+            check(decodedOpPayload.workspaceId == local.workspaceId) {
+                "Payload workspaceId (${decodedOpPayload.workspaceId}) yerel workspaceId (${local.workspaceId}) ile eşleşmelidir."
+            }
+            check(decodedOpPayload.normalizedAlias == local.normalizedAlias) {
+                "Payload alias (${decodedOpPayload.normalizedAlias}) yerel alias (${local.normalizedAlias}) ile eşleşmelidir."
+            }
+            check(decodedOpPayload.decisionCode == local.decisionCode) {
+                "Payload decisionCode (${decodedOpPayload.decisionCode}) yerel karar (${local.decisionCode}) ile eşleşmelidir."
+            }
+            check(decodedOpPayload.merchantId == local.merchantId) {
+                "Payload merchantId (${decodedOpPayload.merchantId}) yerel merchantId (${local.merchantId}) ile eşleşmelidir."
+            }
+            check(decodedOpPayload.scopeCode == local.scopeCode) {
+                "Payload scopeCode (${decodedOpPayload.scopeCode}) yerel scopeCode (${local.scopeCode}) ile eşleşmelidir."
+            }
+
+            upsertUserMerchantVerificationRow(record.toEntity(record.toRemoteSyncMetadata(nowEpochMillis)))
+            deleteConflictRow(syncScopeKey, "USER_MERCHANT_VERIFICATION", record.id)
+            val deleted = deleteOutboxRow(syncScopeKey, operationId)
+            check(deleted == 1) { "Merchant verification outbox kaydı silinemedi: $operationId" }
+        } else {
+            check(successor.syncScopeKey == syncScopeKey) {
+                "Successor syncScopeKey (${successor.syncScopeKey}) yetkili syncScopeKey ($syncScopeKey) ile eşleşmelidir."
+            }
+            check(successor.entityTypeCode == "USER_MERCHANT_VERIFICATION") {
+                "Successor entityTypeCode USER_MERCHANT_VERIFICATION olmalıdır: ${successor.entityTypeCode}"
+            }
+            check(successor.entityId == record.id && successor.entityId == operation.entityId) {
+                "Successor entityId (${successor.entityId}) ile record.id (${record.id}) eşleşmelidir."
+            }
+            check(successor.protocolVersion == 2) {
+                "Successor protocolVersion 2 olmalıdır: ${successor.protocolVersion}"
+            }
+            check(successor.operationTypeCode == "UPDATE") {
+                "Successor operasyon türü kesinlikle UPDATE olmalıdır; DELETE veya CREATE desteklenmez: ${successor.operationTypeCode}"
+            }
+            check(successor.statusCode == "PENDING") {
+                "Successor statusCode PENDING olmalıdır: ${successor.statusCode}"
+            }
+            check(successor.attemptCount == 0) {
+                "Successor attemptCount 0 olmalıdır: ${successor.attemptCount}"
+            }
+            check(successor.isBlocked) {
+                "Successor isBlocked true olmalıdır: ${successor.operationId}"
+            }
+            check(successor.predecessorOperationId == operation.operationId) {
+                "Successor predecessorOperationId (${successor.predecessorOperationId}) ACK operationId (${operation.operationId}) ile eşleşmelidir."
+            }
+
+            val tailCandidates = getActiveTailCandidates(syncScopeKey, "USER_MERCHANT_VERIFICATION", record.id)
+            check(tailCandidates.size == 1 && tailCandidates[0].operationId == successor.operationId) {
+                "Successor tek aktif tail olmalıdır: ${successor.operationId}"
+            }
+
+            val local =
+                requireNotNull(getUserMerchantVerificationRow(record.id)) {
+                    "Yerel merchant verification entity bulunamadı: ${record.id}"
+                }
+            check(
+                local.id == record.id &&
+                    local.ownerId == record.userId &&
+                    local.scopeKey == "user:${record.userId}" &&
+                    local.scopeCode == "PERSONAL" &&
+                    local.workspaceId == null,
+            ) {
+                "Yerel entity kimlik ve sahiplik alanları doğrulanmalıdır: ${local.id}"
+            }
+
+            val successorPayload =
+                checkNotNull(successor.payloadJson?.takeIf { it.isNotBlank() }) {
+                    "Successor payloadJson null veya boş olamaz: ${successor.operationId}"
+                }
+
+            val decodedSuccessorPayload: UserMerchantVerificationPayloadCodec.ValidatedVerificationPayload
+            when (operation.operationTypeCode) {
+                "CREATE" -> {
+                    check(operation.baseVersion == null) {
+                        "CREATE operasyonunda baseVersion null olmalıdır: ${operation.baseVersion}"
+                    }
+                    check(local.sync.syncStatus == "PENDING_CREATE") {
+                        "CREATE predecessor için yerel syncStatus PENDING_CREATE olmalıdır: ${local.sync.syncStatus}"
+                    }
+                    check(local.sync.version == 0L) {
+                        "CREATE predecessor için yerel version 0 olmalıdır: ${local.sync.version}"
+                    }
+                    check(local.sync.baseVersion == null) {
+                        "CREATE predecessor için yerel baseVersion null olmalıdır: ${local.sync.baseVersion}"
+                    }
+                    check(successor.operationTypeCode == "UPDATE") {
+                        "CREATE predecessor zincirinde successor operationTypeCode UPDATE olmalıdır: ${successor.operationTypeCode}"
+                    }
+                    check(successor.baseVersion == null) {
+                        "CREATE predecessor zincirinde successor baseVersion null olmalıdır: ${successor.baseVersion}"
+                    }
+                    decodedSuccessorPayload =
+                        UserMerchantVerificationPayloadCodec.parseAndValidate(
+                            jsonString = successorPayload,
+                            operation = "CREATE",
+                            baseVersion = null,
+                        )
+                }
+                "UPDATE" -> {
+                    val baseB =
+                        checkNotNull(operation.baseVersion) {
+                            "UPDATE predecessor baseVersion null olamaz."
+                        }
+                    check(baseB >= 1L && baseB < Long.MAX_VALUE) {
+                        "UPDATE predecessor baseVersion geçersiz: $baseB"
+                    }
+                    check(local.sync.syncStatus == "PENDING_UPDATE") {
+                        "UPDATE predecessor için yerel syncStatus PENDING_UPDATE olmalıdır: ${local.sync.syncStatus}"
+                    }
+                    check(local.sync.version == baseB) {
+                        "UPDATE predecessor için yerel version ($baseB) ile eşleşmelidir: ${local.sync.version}"
+                    }
+                    check(local.sync.baseVersion == baseB) {
+                        "UPDATE predecessor için yerel baseVersion ($baseB) ile eşleşmelidir: ${local.sync.baseVersion}"
+                    }
+                    check(successor.operationTypeCode == "UPDATE") {
+                        "UPDATE predecessor zincirinde successor operationTypeCode UPDATE olmalıdır: ${successor.operationTypeCode}"
+                    }
+                    check(successor.baseVersion == baseB) {
+                        "UPDATE predecessor zincirinde successor baseVersion predecessor baseVersion ($baseB) ile eşleşmelidir: ${successor.baseVersion}"
+                    }
+                    decodedSuccessorPayload =
+                        UserMerchantVerificationPayloadCodec.parseAndValidate(
+                            jsonString = successorPayload,
+                            operation = "UPDATE",
+                            baseVersion = baseB,
+                        )
+                }
+                "DELETE" -> {
+                    val baseB =
+                        checkNotNull(operation.baseVersion) {
+                            "DELETE predecessor baseVersion null olamaz."
+                        }
+                    check(baseB >= 1L && baseB < Long.MAX_VALUE) {
+                        "DELETE predecessor baseVersion geçersiz: $baseB"
+                    }
+                    check(local.sync.syncStatus == "PENDING_UPDATE") {
+                        "DELETE predecessor için resurrection yerel syncStatus PENDING_UPDATE olmalıdır: ${local.sync.syncStatus}"
+                    }
+                    check(local.sync.version == baseB) {
+                        "DELETE predecessor için yerel version ($baseB) ile eşleşmelidir: ${local.sync.version}"
+                    }
+                    check(local.sync.baseVersion == baseB) {
+                        "DELETE predecessor için yerel baseVersion ($baseB) ile eşleşmelidir: ${local.sync.baseVersion}"
+                    }
+                    check(local.sync.deletedAtEpochMillis == null) {
+                        "DELETE predecessor için resurrection yerel deletedAtEpochMillis null olmalıdır: ${local.sync.deletedAtEpochMillis}"
+                    }
+                    check(successor.operationTypeCode == "UPDATE") {
+                        "DELETE predecessor zincirinde resurrection successor operationTypeCode UPDATE olmalıdır: ${successor.operationTypeCode}"
+                    }
+                    check(successor.baseVersion == baseB) {
+                        "DELETE predecessor zincirinde resurrection successor baseVersion ($baseB) ile eşleşmelidir: ${successor.baseVersion}"
+                    }
+                    decodedSuccessorPayload =
+                        UserMerchantVerificationPayloadCodec.parseAndValidate(
+                            jsonString = successorPayload,
+                            operation = "UPDATE",
+                            baseVersion = baseB,
+                        )
+                }
+                else -> error("Desteklenmeyen predecessor operationTypeCode: ${operation.operationTypeCode}")
+            }
+
+            check(decodedSuccessorPayload.id == local.id) {
+                "Successor payload id (${decodedSuccessorPayload.id}) yerel id (${local.id}) ile eşleşmelidir."
+            }
+            check(decodedSuccessorPayload.userId == local.ownerId) {
+                "Successor payload userId (${decodedSuccessorPayload.userId}) yerel ownerId (${local.ownerId}) ile eşleşmelidir."
+            }
+            check(decodedSuccessorPayload.workspaceId == local.workspaceId) {
+                "Successor payload workspaceId (${decodedSuccessorPayload.workspaceId}) yerel workspaceId (${local.workspaceId}) ile eşleşmelidir."
+            }
+            check(decodedSuccessorPayload.normalizedAlias == local.normalizedAlias) {
+                "Successor payload alias (${decodedSuccessorPayload.normalizedAlias}) yerel alias (${local.normalizedAlias}) ile eşleşmelidir."
+            }
+            check(decodedSuccessorPayload.decisionCode == local.decisionCode) {
+                "Successor payload decisionCode (${decodedSuccessorPayload.decisionCode}) yerel karar (${local.decisionCode}) ile eşleşmelidir."
+            }
+            check(decodedSuccessorPayload.merchantId == local.merchantId) {
+                "Successor payload merchantId (${decodedSuccessorPayload.merchantId}) yerel merchantId (${local.merchantId}) ile eşleşmelidir."
+            }
+            check(decodedSuccessorPayload.scopeCode == local.scopeCode) {
+                "Successor payload scopeCode (${decodedSuccessorPayload.scopeCode}) yerel scopeCode (${local.scopeCode}) ile eşleşmelidir."
+            }
+
+            check(rebaseUserMerchantVerificationVersion(record.id, record.version!!, nowEpochMillis) == 1) {
+                "Merchant verification sürümü rebase edilemedi: ${record.id}"
+            }
+            deleteConflictRow(syncScopeKey, "USER_MERCHANT_VERIFICATION", record.id)
+            check(deleteOutboxRow(syncScopeKey, operationId) == 1) {
+                "Merchant verification outbox kaydı silinemedi: $operationId"
+            }
+            check(unblockSuccessor(syncScopeKey, successor.operationId, operationId, record.version!!, nowEpochMillis) == 1) {
+                "Merchant verification successor kaydı açılamadı: ${successor.operationId}"
+            }
+        }
+        return true
+    }
+
+    private sealed interface CanonicalMerchantVerificationTailTopology {
+        data object CleanNoTail : CanonicalMerchantVerificationTailTopology
+
+        data class EligiblePendingRootCreate(
+            val op: SyncOperationEntity,
+        ) : CanonicalMerchantVerificationTailTopology
+
+        data class InFlightRootCreate(
+            val op: SyncOperationEntity,
+        ) : CanonicalMerchantVerificationTailTopology
+
+        data class BlockedPreAckUpdateSuccessor(
+            val op: SyncOperationEntity,
+            val predecessor: SyncOperationEntity,
+        ) : CanonicalMerchantVerificationTailTopology
+
+        data class RebasedUnblockedUpdateTail(
+            val op: SyncOperationEntity,
+        ) : CanonicalMerchantVerificationTailTopology
+
+        data class RebasedUnblockedDeleteTail(
+            val op: SyncOperationEntity,
+        ) : CanonicalMerchantVerificationTailTopology
+    }
+
+    @Transaction
+    suspend fun mutateUserMerchantVerificationV2(
+        syncScopeKey: String,
+        entity: UserMerchantVerificationEntity,
+        type: OutboxOperationType,
+        payloadJson: String,
+        operationIdFactory: () -> String,
+        nowEpochMillis: Long,
+    ): V2EnqueueResult {
+        val userScope = SyncScopeKey.requireUserScope(syncScopeKey)
+        require(entity.scopeKey == "user:${userScope.userId}") {
+            "Entity scopeKey (${entity.scopeKey}) yetkili kullanıcı kapsamı ile eşleşmelidir."
+        }
+        val tailCandidates = getActiveTailCandidates(syncScopeKey, "USER_MERCHANT_VERIFICATION", entity.id)
+        check(tailCandidates.size <= 1) { "Birden fazla aktif kuyruk sonu (tail) tespit edildi: ${entity.id}" }
+        val tail = tailCandidates.firstOrNull()
+
+        val topology: CanonicalMerchantVerificationTailTopology =
+            if (tail == null) {
+                CanonicalMerchantVerificationTailTopology.CleanNoTail
+            } else {
+                check(tail.protocolVersion == 2) { "Aktif tail protocolVersion 2 olmalıdır: ${tail.operationId}" }
+                check(tail.syncScopeKey == syncScopeKey) { "Aktif tail syncScopeKey eşleşmelidir: ${tail.syncScopeKey}" }
+                check(
+                    tail.entityTypeCode == "USER_MERCHANT_VERIFICATION",
+                ) { "Aktif tail entityTypeCode eşleşmelidir: ${tail.entityTypeCode}" }
+                check(tail.entityId == entity.id) { "Aktif tail entityId eşleşmelidir: ${tail.entityId}" }
+
+                if (!tail.isBlocked) {
+                    when (tail.operationTypeCode) {
+                        "CREATE" -> {
+                            require(tail.predecessorOperationId == null) {
+                                "Kök CREATE operasyonunun predecessor'ı olamaz: ${tail.predecessorOperationId}"
+                            }
+                            require(tail.baseVersion == null) {
+                                "CREATE operasyonu için baseVersion null olmalıdır: ${tail.baseVersion}"
+                            }
+                            when (tail.statusCode) {
+                                "PENDING" -> {
+                                    require(tail.attemptCount == 0) {
+                                        "Denenmemiş kök CREATE attemptCount 0 olmalıdır: ${tail.attemptCount}"
+                                    }
+                                    require(
+                                        entity.sync.baseVersion == null &&
+                                            entity.sync.version == 0L &&
+                                            (
+                                                entity.sync.syncStatus == "PENDING_CREATE" ||
+                                                    (type == OutboxOperationType.DELETE && entity.sync.syncStatus == "PENDING_DELETE")
+                                            ),
+                                    ) {
+                                        "Entity denenmemiş kök CREATE ile uyumsuz: $entity"
+                                    }
+                                    CanonicalMerchantVerificationTailTopology.EligiblePendingRootCreate(tail)
+                                }
+                                "IN_FLIGHT" -> {
+                                    require(entity.sync.baseVersion == null && entity.sync.version == 0L) {
+                                        "Entity in-flight kök CREATE version/baseVersion ile uyumsuz: $entity"
+                                    }
+                                    require(entity.sync.syncStatus == "PENDING_CREATE") {
+                                        "In-flight kök CREATE entity syncStatus PENDING_CREATE olmalıdır: ${entity.sync.syncStatus}"
+                                    }
+                                    CanonicalMerchantVerificationTailTopology.InFlightRootCreate(tail)
+                                }
+                                else -> throw IllegalStateException("Geçersiz kök CREATE durumu: ${tail.statusCode}")
+                            }
+                        }
+                        "UPDATE" -> {
+                            check(tail.baseVersion != null && tail.baseVersion >= 1L) {
+                                "Unblocked UPDATE operasyonu için baseVersion en az 1 olmalıdır: ${tail.baseVersion}"
+                            }
+                            require(entity.sync.syncStatus == "PENDING_UPDATE") {
+                                "Rebased UPDATE entity syncStatus PENDING_UPDATE olmalıdır: ${entity.sync.syncStatus}"
+                            }
+                            val currentLocal = getUserMerchantVerificationRow(entity.id)
+                            if (currentLocal != null) {
+                                require(currentLocal.sync.syncStatus == "PENDING_UPDATE") {
+                                    "Rebased UPDATE yerel entity syncStatus PENDING_UPDATE olmalıdır: ${currentLocal.sync.syncStatus}"
+                                }
+                            }
+                            require(entity.sync.version >= 1L) {
+                                "Rebased UPDATE entity version en az 1 olmalıdır: ${entity.sync.version}"
+                            }
+                            require(entity.sync.baseVersion != null && entity.sync.baseVersion >= 1L) {
+                                "Rebased UPDATE entity baseVersion en az 1 olmalıdır: ${entity.sync.baseVersion}"
+                            }
+                            require(entity.sync.baseVersion <= entity.sync.version) {
+                                "Rebased UPDATE entity baseVersion (${entity.sync.baseVersion}) version'dan (${entity.sync.version}) büyük olamaz."
+                            }
+                            require(entity.sync.baseVersion == entity.sync.version) {
+                                "Rebased UPDATE entity baseVersion (${entity.sync.baseVersion}) version (${entity.sync.version}) ile eşit olmalıdır."
+                            }
+                            require(tail.baseVersion == entity.sync.baseVersion) {
+                                "Tail baseVersion (${tail.baseVersion}) entity baseVersion (${entity.sync.baseVersion}) ile eşleşmelidir."
+                            }
+                            if (tail.predecessorOperationId != null) {
+                                val livePred = getOutboxById(syncScopeKey, tail.predecessorOperationId)
+                                check(livePred == null) {
+                                    "Unblocked rebased UPDATE tail için canlı predecessor bulunamaz: ${tail.predecessorOperationId}"
+                                }
+                            }
+                            when (tail.statusCode) {
+                                "PENDING" -> {
+                                    check(tail.attemptCount == 0) {
+                                        "Denenmemiş UPDATE attemptCount 0 olmalıdır: ${tail.attemptCount}"
+                                    }
+                                    CanonicalMerchantVerificationTailTopology.RebasedUnblockedUpdateTail(tail)
+                                }
+                                "IN_FLIGHT" -> {
+                                    check(!tail.isBlocked) { "IN_FLIGHT tail blocked olamaz: ${tail.operationId}" }
+                                    CanonicalMerchantVerificationTailTopology.RebasedUnblockedUpdateTail(tail)
+                                }
+                                else -> throw IllegalStateException("Geçersiz UPDATE durumu: ${tail.statusCode}")
+                            }
+                        }
+                        "DELETE" -> {
+                            check(tail.baseVersion != null && tail.baseVersion >= 1L) {
+                                "Unblocked DELETE operasyonu için baseVersion en az 1 olmalıdır: ${tail.baseVersion}"
+                            }
+                            if (type == OutboxOperationType.DELETE) {
+                                require(entity.sync.syncStatus == "PENDING_DELETE") {
+                                    "Rebased DELETE entity syncStatus PENDING_DELETE olmalıdır: ${entity.sync.syncStatus}"
+                                }
+                                require(entity.sync.deletedAtEpochMillis != null) {
+                                    "Rebased DELETE entity deletedAt zorunludur: $entity"
+                                }
+                            } else {
+                                require(entity.sync.syncStatus == "PENDING_UPDATE") {
+                                    "Rebased UPDATE after DELETE entity syncStatus PENDING_UPDATE olmalıdır: ${entity.sync.syncStatus}"
+                                }
+                            }
+                            val currentLocal = getUserMerchantVerificationRow(entity.id)
+                            if (currentLocal != null) {
+                                require(currentLocal.sync.syncStatus == "PENDING_DELETE") {
+                                    "Rebased DELETE yerel entity syncStatus PENDING_DELETE olmalıdır: ${currentLocal.sync.syncStatus}"
+                                }
+                            }
+                            require(entity.sync.version >= 1L) {
+                                "Rebased DELETE/UPDATE entity version en az 1 olmalıdır: ${entity.sync.version}"
+                            }
+                            require(entity.sync.baseVersion != null && entity.sync.baseVersion >= 1L) {
+                                "Rebased DELETE/UPDATE entity baseVersion en az 1 olmalıdır: ${entity.sync.baseVersion}"
+                            }
+                            require(entity.sync.baseVersion <= entity.sync.version) {
+                                "Rebased DELETE/UPDATE entity baseVersion (${entity.sync.baseVersion}) version'dan (${entity.sync.version}) büyük olamaz."
+                            }
+                            require(entity.sync.baseVersion == entity.sync.version) {
+                                "Rebased DELETE/UPDATE entity baseVersion (${entity.sync.baseVersion}) version (${entity.sync.version}) ile eşit olmalıdır."
+                            }
+                            require(tail.baseVersion == entity.sync.baseVersion) {
+                                "Tail baseVersion (${tail.baseVersion}) entity baseVersion (${entity.sync.baseVersion}) ile eşleşmelidir."
+                            }
+                            if (tail.predecessorOperationId != null) {
+                                val livePred = getOutboxById(syncScopeKey, tail.predecessorOperationId)
+                                check(livePred == null) {
+                                    "Unblocked rebased DELETE tail için canlı predecessor bulunamaz: ${tail.predecessorOperationId}"
+                                }
+                            }
+                            when (tail.statusCode) {
+                                "PENDING" -> {
+                                    check(tail.attemptCount == 0) {
+                                        "Denenmemiş DELETE attemptCount 0 olmalıdır: ${tail.attemptCount}"
+                                    }
+                                    CanonicalMerchantVerificationTailTopology.RebasedUnblockedDeleteTail(tail)
+                                }
+                                "IN_FLIGHT" -> {
+                                    check(!tail.isBlocked) { "IN_FLIGHT tail blocked olamaz: ${tail.operationId}" }
+                                    CanonicalMerchantVerificationTailTopology.RebasedUnblockedDeleteTail(tail)
+                                }
+                                else -> throw IllegalStateException("Geçersiz DELETE durumu: ${tail.statusCode}")
+                            }
+                        }
+                        else -> throw IllegalStateException("Desteklenmeyen operasyon türü: ${tail.operationTypeCode}")
+                    }
+                } else {
+                    require(tail.predecessorOperationId != null) {
+                        "Kök outbox operasyonu blocked olamaz: ${tail.operationId}"
+                    }
+                    check(tail.operationTypeCode == "UPDATE") {
+                        "Blocked successor operationType UPDATE olmalıdır: ${tail.operationTypeCode}"
+                    }
+                    check(tail.statusCode == "PENDING") {
+                        "Successor tail statusCode PENDING olmalıdır: ${tail.statusCode}"
+                    }
+                    check(tail.attemptCount == 0) {
+                        "Successor tail attemptCount 0 olmalıdır: ${tail.attemptCount}"
+                    }
+                    check(tail.baseVersion == null) {
+                        "Pre-ACK blocked successor baseVersion null olmalıdır: ${tail.baseVersion}"
+                    }
+
+                    val pred =
+                        getOutboxById(syncScopeKey, tail.predecessorOperationId)
+                            ?: throw IllegalStateException(
+                                "Orphan successor tespit edildi; predecessor bulunamadı: ${tail.predecessorOperationId}",
+                            )
+                    check(pred.protocolVersion == 2) { "Predecessor protocolVersion 2 olmalıdır: ${pred.operationId}" }
+                    check(pred.syncScopeKey == syncScopeKey) { "Predecessor syncScopeKey eşleşmelidir: ${pred.syncScopeKey}" }
+                    check(
+                        pred.entityTypeCode == "USER_MERCHANT_VERIFICATION",
+                    ) { "Predecessor entityTypeCode eşleşmelidir: ${pred.entityTypeCode}" }
+                    check(pred.entityId == entity.id) { "Predecessor entityId eşleşmelidir: ${pred.entityId}" }
+                    check(
+                        pred.operationTypeCode == "CREATE",
+                    ) { "Predecessor operationTypeCode CREATE olmalıdır: ${pred.operationTypeCode}" }
+                    check(pred.statusCode == "IN_FLIGHT") { "Predecessor statusCode IN_FLIGHT olmalıdır: ${pred.statusCode}" }
+                    check(pred.predecessorOperationId == null) { "Predecessor kök olmalıdır: ${pred.predecessorOperationId}" }
+                    check(!pred.isBlocked) { "Predecessor isBlocked false olmalıdır: ${pred.operationId}" }
+                    check(pred.baseVersion == null) { "Predecessor baseVersion null olmalıdır: ${pred.baseVersion}" }
+
+                    require(entity.sync.syncStatus == "PENDING_CREATE") {
+                        "BlockedPreAckUpdateSuccessor entity syncStatus PENDING_CREATE olmalıdır: ${entity.sync.syncStatus}"
+                    }
+                    require(entity.sync.version == 0L) {
+                        "BlockedPreAckUpdateSuccessor entity version 0 olmalıdır: ${entity.sync.version}"
+                    }
+                    require(entity.sync.baseVersion == null) {
+                        "BlockedPreAckUpdateSuccessor entity baseVersion null olmalıdır: ${entity.sync.baseVersion}"
+                    }
+
+                    val currentLocal =
+                        getUserMerchantVerificationRow(entity.id)
+                            ?: throw IllegalStateException("Successor için yerel entity bulunamadı: ${entity.id}")
+                    check(currentLocal.sync.syncStatus == "PENDING_CREATE") {
+                        "Mevcut yerel entity syncStatus PENDING_CREATE olmalıdır: ${currentLocal.sync.syncStatus}"
+                    }
+                    check(currentLocal.sync.version == 0L) {
+                        "Mevcut yerel entity version 0 olmalıdır: ${currentLocal.sync.version}"
+                    }
+                    check(currentLocal.sync.baseVersion == null) {
+                        "Mevcut yerel entity baseVersion null olmalıdır: ${currentLocal.sync.baseVersion}"
+                    }
+
+                    val tailPayload =
+                        checkNotNull(tail.payloadJson?.takeIf { it.isNotBlank() }) {
+                            "Successor tail payload_json boş olamaz: ${tail.operationId}"
+                        }
+                    val validatedTailPayload =
+                        UserMerchantVerificationPayloadCodec.parseAndValidate(
+                            jsonString = tailPayload,
+                            operation = "CREATE",
+                            baseVersion = null,
+                        )
+                    check(validatedTailPayload.id == currentLocal.id) { "Successor payload id yerel id ile eşleşmelidir" }
+                    check(validatedTailPayload.userId == currentLocal.ownerId) { "Successor payload userId yerel ownerId ile eşleşmelidir" }
+                    check(
+                        validatedTailPayload.workspaceId == currentLocal.workspaceId,
+                    ) { "Successor payload workspaceId yerel workspaceId ile eşleşmelidir" }
+                    check(
+                        validatedTailPayload.normalizedAlias == currentLocal.normalizedAlias,
+                    ) { "Successor payload alias yerel alias ile eşleşmelidir" }
+                    check(
+                        validatedTailPayload.decisionCode == currentLocal.decisionCode,
+                    ) { "Successor payload decisionCode yerel karar ile eşleşmelidir" }
+                    check(
+                        validatedTailPayload.merchantId == currentLocal.merchantId,
+                    ) { "Successor payload merchantId yerel merchantId ile eşleşmelidir" }
+                    check(validatedTailPayload.scopeCode == "PERSONAL") { "Successor payload scopeCode PERSONAL olmalıdır" }
+
+                    CanonicalMerchantVerificationTailTopology.BlockedPreAckUpdateSuccessor(tail, pred)
+                }
+            }
+
+        val validatedPayload =
+            when (type) {
+                OutboxOperationType.CREATE -> {
+                    require(topology is CanonicalMerchantVerificationTailTopology.CleanNoTail) {
+                        "CREATE operasyonu yalnız aktif kuyruk olmadığında yürütülebilir: ${entity.id}"
+                    }
+                    require(entity.sync.baseVersion == null) {
+                        "CREATE operasyonu için baseVersion null olmalıdır: ${entity.sync.baseVersion}"
+                    }
+                    com.feniqo.mobile.data.remote.codec.UserMerchantVerificationPayloadCodec.parseAndValidate(
+                        jsonString = payloadJson,
+                        operation = "CREATE",
+                        baseVersion = null,
+                    )
+                }
+                OutboxOperationType.UPDATE -> {
+                    when (topology) {
+                        is CanonicalMerchantVerificationTailTopology.CleanNoTail -> {
+                            require(entity.sync.baseVersion != null && entity.sync.baseVersion >= 1L) {
+                                "Kuyruksuz UPDATE operasyonu için baseVersion en az 1 olmalıdır: ${entity.sync.baseVersion}"
+                            }
+                            com.feniqo.mobile.data.remote.codec.UserMerchantVerificationPayloadCodec.parseAndValidate(
+                                jsonString = payloadJson,
+                                operation = "UPDATE",
+                                baseVersion = entity.sync.baseVersion,
+                            )
+                        }
+                        is CanonicalMerchantVerificationTailTopology.EligiblePendingRootCreate,
+                        is CanonicalMerchantVerificationTailTopology.InFlightRootCreate,
+                        is CanonicalMerchantVerificationTailTopology.BlockedPreAckUpdateSuccessor,
+                        -> {
+                            require(entity.sync.baseVersion == null) {
+                                "Pre-ACK UPDATE mutasyonlarında baseVersion null olmalıdır: ${entity.sync.baseVersion}"
+                            }
+                            com.feniqo.mobile.data.remote.codec.UserMerchantVerificationPayloadCodec.parseAndValidate(
+                                jsonString = payloadJson,
+                                operation = "CREATE",
+                                baseVersion = null,
+                            )
+                        }
+                        is CanonicalMerchantVerificationTailTopology.RebasedUnblockedUpdateTail -> {
+                            require(entity.sync.baseVersion != null && entity.sync.baseVersion >= 1L) {
+                                "Rebased UPDATE operasyonu için baseVersion en az 1 olmalıdır: ${entity.sync.baseVersion}"
+                            }
+                            com.feniqo.mobile.data.remote.codec.UserMerchantVerificationPayloadCodec.parseAndValidate(
+                                jsonString = payloadJson,
+                                operation = "UPDATE",
+                                baseVersion = entity.sync.baseVersion,
+                            )
+                        }
+                        is CanonicalMerchantVerificationTailTopology.RebasedUnblockedDeleteTail -> {
+                            require(entity.sync.baseVersion != null && entity.sync.baseVersion >= 1L) {
+                                "Rebased UPDATE operasyonu için baseVersion en az 1 olmalıdır: ${entity.sync.baseVersion}"
+                            }
+                            com.feniqo.mobile.data.remote.codec.UserMerchantVerificationPayloadCodec.parseAndValidate(
+                                jsonString = payloadJson,
+                                operation = "UPDATE",
+                                baseVersion = entity.sync.baseVersion,
+                            )
+                        }
+                    }
+                }
+                OutboxOperationType.DELETE -> {
+                    when (topology) {
+                        is CanonicalMerchantVerificationTailTopology.CleanNoTail -> {
+                            require(entity.sync.baseVersion != null && entity.sync.baseVersion >= 1L) {
+                                "Kuyruksuz DELETE operasyonu için baseVersion en az 1 olmalıdır: ${entity.sync.baseVersion}"
+                            }
+                            com.feniqo.mobile.data.remote.codec.UserMerchantVerificationPayloadCodec.parseAndValidate(
+                                jsonString = payloadJson,
+                                operation = "DELETE",
+                                baseVersion = entity.sync.baseVersion,
+                            )
+                        }
+                        is CanonicalMerchantVerificationTailTopology.EligiblePendingRootCreate -> {
+                            require(entity.sync.baseVersion == null) {
+                                "Pre-ACK DELETE operasyonunda baseVersion null olmalıdır: ${entity.sync.baseVersion}"
+                            }
+                            com.feniqo.mobile.data.remote.codec.UserMerchantVerificationPayloadCodec.parseAndValidate(
+                                jsonString = payloadJson,
+                                operation = "CREATE",
+                                baseVersion = null,
+                            )
+                        }
+                        is CanonicalMerchantVerificationTailTopology.InFlightRootCreate,
+                        is CanonicalMerchantVerificationTailTopology.BlockedPreAckUpdateSuccessor,
+                        -> {
+                            throw IllegalArgumentException(
+                                "Pre-ACK kök/successor üzerine DELETE successor eklenemez: ${entity.id}",
+                            )
+                        }
+                        is CanonicalMerchantVerificationTailTopology.RebasedUnblockedUpdateTail,
+                        is CanonicalMerchantVerificationTailTopology.RebasedUnblockedDeleteTail,
+                        -> {
+                            val tailOp =
+                                when (topology) {
+                                    is CanonicalMerchantVerificationTailTopology.RebasedUnblockedUpdateTail -> topology.op
+                                    is CanonicalMerchantVerificationTailTopology.RebasedUnblockedDeleteTail -> topology.op
+                                }
+                            require(tailOp.statusCode != "IN_FLIGHT") {
+                                "IN_FLIGHT predecessor üzerine DELETE successor üretilemez: ${entity.id}"
+                            }
+                            require(entity.sync.baseVersion != null && entity.sync.baseVersion >= 1L) {
+                                "Rebased DELETE operasyonu için baseVersion en az 1 olmalıdır: ${entity.sync.baseVersion}"
+                            }
+                            com.feniqo.mobile.data.remote.codec.UserMerchantVerificationPayloadCodec.parseAndValidate(
+                                jsonString = payloadJson,
+                                operation = "DELETE",
+                                baseVersion = entity.sync.baseVersion,
+                            )
+                        }
+                    }
+                }
+            }
+        require(validatedPayload.id == entity.id) { "Payload id entity ile eşleşmelidir." }
+        require(validatedPayload.userId == entity.ownerId) { "Payload user_id entity ile eşleşmelidir." }
+        require(validatedPayload.normalizedAlias == entity.normalizedAlias) { "Payload normalized_alias entity ile eşleşmelidir." }
+        require(validatedPayload.decisionCode == entity.decisionCode) { "Payload decision_code entity ile eşleşmelidir." }
+        require(validatedPayload.merchantId == entity.merchantId) { "Payload merchant_id entity ile eşleşmelidir." }
+
+        when (topology) {
+            is CanonicalMerchantVerificationTailTopology.CleanNoTail -> {
+                upsertUserMerchantVerificationRow(entity)
+                val newOpId = operationIdFactory()
+                validateOperationId(newOpId)
+                val op =
+                    SyncOperationEntity(
+                        syncScopeKey = syncScopeKey,
+                        operationId = newOpId,
+                        entityTypeCode = "USER_MERCHANT_VERIFICATION",
+                        entityId = entity.id,
+                        operationTypeCode = type.name,
+                        baseVersion = entity.sync.baseVersion,
+                        payloadJson = payloadJson,
+                        predecessorOperationId = null,
+                        isBlocked = false,
+                        protocolVersion = 2,
+                        statusCode = "PENDING",
+                        attemptCount = 0,
+                        lastError = null,
+                        nextAttemptAtEpochMillis = nowEpochMillis,
+                        createdAtEpochMillis = nowEpochMillis,
+                        updatedAtEpochMillis = nowEpochMillis,
+                    )
+                insertOutboxRow(op)
+                return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+            }
+            is CanonicalMerchantVerificationTailTopology.EligiblePendingRootCreate -> {
+                val tailOp = topology.op
+                if (type == OutboxOperationType.UPDATE) {
+                    upsertUserMerchantVerificationRow(entity)
+                    val updated = coalescePendingPayload(syncScopeKey, tailOp.operationId, payloadJson, nowEpochMillis)
+                    check(updated == 1) { "Outbox payload coalesce edilemedi: ${tailOp.operationId}" }
+                    return V2EnqueueResult(tailOp.operationId, V2EnqueueDecision.COALESCED)
+                } else if (type == OutboxOperationType.DELETE) {
+                    deleteUserMerchantVerificationRow(entity.id)
+                    val deleted = deleteOutboxRow(syncScopeKey, tailOp.operationId)
+                    check(deleted == 1) { "Outbox kaydı silinemedi: ${tailOp.operationId}" }
+                    return V2EnqueueResult(tailOp.operationId, V2EnqueueDecision.HARD_DELETED)
+                } else {
+                    error("EligiblePendingRootCreate üzerine yeni CREATE eklenemez: ${entity.id}")
+                }
+            }
+            is CanonicalMerchantVerificationTailTopology.InFlightRootCreate -> {
+                require(type == OutboxOperationType.UPDATE) {
+                    "IN_FLIGHT kök CREATE üzerine yalnız UPDATE successor eklenebilir: ${entity.id}, type=$type"
+                }
+                val tailOp = topology.op
+                upsertUserMerchantVerificationRow(entity)
+                val newOpId = operationIdFactory()
+                validateOperationId(newOpId)
+                val successor =
+                    SyncOperationEntity(
+                        syncScopeKey = syncScopeKey,
+                        operationId = newOpId,
+                        entityTypeCode = "USER_MERCHANT_VERIFICATION",
+                        entityId = entity.id,
+                        operationTypeCode = "UPDATE",
+                        baseVersion = null,
+                        payloadJson = payloadJson,
+                        predecessorOperationId = tailOp.operationId,
+                        isBlocked = true,
+                        protocolVersion = 2,
+                        statusCode = "PENDING",
+                        attemptCount = 0,
+                        lastError = null,
+                        nextAttemptAtEpochMillis = nowEpochMillis,
+                        createdAtEpochMillis = nowEpochMillis,
+                        updatedAtEpochMillis = nowEpochMillis,
+                    )
+                insertOutboxRow(successor)
+                return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+            }
+            is CanonicalMerchantVerificationTailTopology.BlockedPreAckUpdateSuccessor -> {
+                val tailOp = topology.op
+                if (type == OutboxOperationType.UPDATE) {
+                    upsertUserMerchantVerificationRow(entity)
+                    val updated = coalescePendingPayload(syncScopeKey, tailOp.operationId, payloadJson, nowEpochMillis)
+                    check(updated == 1) { "Outbox payload coalesce edilemedi: ${tailOp.operationId}" }
+                    return V2EnqueueResult(tailOp.operationId, V2EnqueueDecision.COALESCED)
+                } else {
+                    error("BlockedPreAckUpdateSuccessor üzerine yalnızca UPDATE coalesce edilebilir: ${entity.id}")
+                }
+            }
+            is CanonicalMerchantVerificationTailTopology.RebasedUnblockedUpdateTail -> {
+                val tailOp = topology.op
+                if (tailOp.statusCode == "PENDING" && tailOp.attemptCount == 0) {
+                    if (type == OutboxOperationType.UPDATE) {
+                        upsertUserMerchantVerificationRow(entity)
+                        val updated = coalescePendingPayload(syncScopeKey, tailOp.operationId, payloadJson, nowEpochMillis)
+                        check(updated == 1) { "Outbox payload coalesce edilemedi: ${tailOp.operationId}" }
+                        return V2EnqueueResult(tailOp.operationId, V2EnqueueDecision.COALESCED)
+                    } else if (type == OutboxOperationType.DELETE) {
+                        upsertUserMerchantVerificationRow(entity)
+                        val updated = convertToPendingDelete(syncScopeKey, tailOp.operationId, payloadJson, nowEpochMillis)
+                        check(updated == 1) { "Outbox kaydı DELETE'e dönüştürülemedi: ${tailOp.operationId}" }
+                        return V2EnqueueResult(tailOp.operationId, V2EnqueueDecision.CONVERTED_TO_DELETE)
+                    } else {
+                        error("RebasedUnblockedUpdateTail üzerine yeni CREATE eklenemez: ${entity.id}")
+                    }
+                } else if (tailOp.statusCode == "IN_FLIGHT") {
+                    require(type == OutboxOperationType.UPDATE) {
+                        "IN_FLIGHT UPDATE predecessor üzerine DELETE successor eklenemez: ${entity.id}, type=$type"
+                    }
+                    upsertUserMerchantVerificationRow(entity)
+                    val newOpId = operationIdFactory()
+                    validateOperationId(newOpId)
+                    val successor =
+                        SyncOperationEntity(
+                            syncScopeKey = syncScopeKey,
+                            operationId = newOpId,
+                            entityTypeCode = "USER_MERCHANT_VERIFICATION",
+                            entityId = entity.id,
+                            operationTypeCode = "UPDATE",
+                            baseVersion = entity.sync.baseVersion,
+                            payloadJson = payloadJson,
+                            predecessorOperationId = tailOp.operationId,
+                            isBlocked = true,
+                            protocolVersion = 2,
+                            statusCode = "PENDING",
+                            attemptCount = 0,
+                            lastError = null,
+                            nextAttemptAtEpochMillis = nowEpochMillis,
+                            createdAtEpochMillis = nowEpochMillis,
+                            updatedAtEpochMillis = nowEpochMillis,
+                        )
+                    insertOutboxRow(successor)
+                    return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+                } else {
+                    error("Desteklenmeyen rebased tail durumu: ${tailOp.statusCode}")
+                }
+            }
+            is CanonicalMerchantVerificationTailTopology.RebasedUnblockedDeleteTail -> {
+                val tailOp = topology.op
+                if (tailOp.statusCode == "PENDING" && tailOp.attemptCount == 0) {
+                    if (type == OutboxOperationType.UPDATE) {
+                        upsertUserMerchantVerificationRow(entity)
+                        val updated = convertPendingDeleteToUpdate(syncScopeKey, tailOp.operationId, payloadJson, nowEpochMillis)
+                        check(updated == 1) { "Outbox kaydı UPDATE'e dönüştürülemedi: ${tailOp.operationId}" }
+                        return V2EnqueueResult(tailOp.operationId, V2EnqueueDecision.CONVERTED_TO_UPDATE)
+                    } else if (type == OutboxOperationType.DELETE) {
+                        upsertUserMerchantVerificationRow(entity)
+                        val updated = coalescePendingPayload(syncScopeKey, tailOp.operationId, payloadJson, nowEpochMillis)
+                        check(updated == 1) { "Outbox payload coalesce edilemedi: ${tailOp.operationId}" }
+                        return V2EnqueueResult(tailOp.operationId, V2EnqueueDecision.COALESCED)
+                    } else {
+                        error("RebasedUnblockedDeleteTail üzerine yeni CREATE eklenemez: ${entity.id}")
+                    }
+                } else if (tailOp.statusCode == "IN_FLIGHT") {
+                    require(type == OutboxOperationType.UPDATE) {
+                        "IN_FLIGHT DELETE predecessor üzerine DELETE successor eklenemez: ${entity.id}, type=$type"
+                    }
+                    upsertUserMerchantVerificationRow(entity)
+                    val newOpId = operationIdFactory()
+                    validateOperationId(newOpId)
+                    val successor =
+                        SyncOperationEntity(
+                            syncScopeKey = syncScopeKey,
+                            operationId = newOpId,
+                            entityTypeCode = "USER_MERCHANT_VERIFICATION",
+                            entityId = entity.id,
+                            operationTypeCode = "UPDATE",
+                            baseVersion = entity.sync.baseVersion,
+                            payloadJson = payloadJson,
+                            predecessorOperationId = tailOp.operationId,
+                            isBlocked = true,
+                            protocolVersion = 2,
+                            statusCode = "PENDING",
+                            attemptCount = 0,
+                            lastError = null,
+                            nextAttemptAtEpochMillis = nowEpochMillis,
+                            createdAtEpochMillis = nowEpochMillis,
+                            updatedAtEpochMillis = nowEpochMillis,
+                        )
+                    insertOutboxRow(successor)
+                    return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+                } else {
+                    error("Desteklenmeyen rebased delete tail durumu: ${tailOp.statusCode}")
+                }
+            }
+        }
+    }
+
+    @Transaction
+    suspend fun applyTransactionMerchantCorrectionV2(
+        syncScopeKey: String,
+        actorUserId: String,
+        transactionId: String,
+        isAssign: Boolean,
+        assignedMerchantId: String?,
+        assignedCatalogVersion: Int?,
+        operationIdFactory: () -> String,
+        nowEpochMillis: Long,
+    ): V2EnqueueResult {
+        val userScope = SyncScopeKey.requireUserScope(syncScopeKey)
+        require(userScope.userId == actorUserId) {
+            "syncScopeKey ($syncScopeKey) actorUserId ($actorUserId) ile eşleşmelidir."
+        }
+
+        val catalogMerchant =
+            if (isAssign) {
+                require(!assignedMerchantId.isNullOrBlank()) { "ASSIGN için assignedMerchantId zorunludur." }
+                requireNotNull(assignedCatalogVersion) { "ASSIGN için assignedCatalogVersion zorunludur." }
+                val found =
+                    StarterMerchantCatalog.merchants.firstOrNull { it.id == assignedMerchantId }
+                        ?: throw IllegalArgumentException("Katalogda bulunmayan merchant: $assignedMerchantId")
+                require(assignedCatalogVersion == found.catalogVersion) {
+                    "Geçersiz katalog sürümü (beklenen: ${found.catalogVersion}, gelen: $assignedCatalogVersion)"
+                }
+                require(found.catalogVersion >= 1) {
+                    "Katalog sürümü en az 1 olmalıdır: ${found.catalogVersion}"
+                }
+                found
+            } else {
+                require(assignedMerchantId == null && assignedCatalogVersion == null) {
+                    "BLOCK için assignedMerchantId ve assignedCatalogVersion null olmalıdır."
+                }
+                null
+            }
+
+        val existingTrx =
+            getTransactionRow(transactionId)
+                ?: throw IllegalArgumentException("Transaction bulunamadı: $transactionId")
+
+        require(existingTrx.ownerId == actorUserId) {
+            "Transaction sahibi (${existingTrx.ownerId}) actorUserId ($actorUserId) ile eşleşmelidir."
+        }
+        require(existingTrx.workspaceId == null) {
+            "Yalnız kişisel transaction üzerinde merchant düzeltmesi yapılabilir (workspaceId null olmalıdır): $transactionId"
+        }
+        require(existingTrx.sync.deletedAtEpochMillis == null) {
+            "Silinmiş transaction üzerinde merchant düzeltmesi yapılamaz: $transactionId"
+        }
+
+        val rawDesc = existingTrx.description
+        require(!rawDesc.isNullOrBlank()) {
+            "Transaction description boş olamaz: $transactionId"
+        }
+
+        val normalizedAlias = TurkishDescriptionNormalizer.normalize(rawDesc)
+        require(normalizedAlias.isNotBlank()) {
+            "Transaction alias boş olamaz: $transactionId"
+        }
+        require(normalizedAlias.length <= com.feniqo.mobile.domain.model.Transaction.MAX_DESCRIPTION_LENGTH) {
+            "Transaction alias uzunluk sınırını (${com.feniqo.mobile.domain.model.Transaction.MAX_DESCRIPTION_LENGTH}) aşıyor: $transactionId"
+        }
+        require(normalizedAlias !in DISALLOWED_STANDALONE_GENERIC_TOKENS) {
+            "Transaction alias genel sözcükler kümesinde ($normalizedAlias) yer alamaz."
+        }
+
+        require(!TransactionMerchantEligibility.isExcluded(normalizedAlias)) {
+            "EXCLUDED_TRANSACTION üzerinde merchant düzeltmesi yapılamaz: $transactionId"
+        }
+
+        val deterministicId = UuidHelper.deterministicMerchantVerificationUuid(actorUserId, normalizedAlias)
+        val existingVerification = getUserMerchantVerificationRow(deterministicId)
+
+        val decisionCode = if (isAssign) "ASSIGN" else "BLOCK"
+        val targetMerchantId = catalogMerchant?.id
+
+        val (entityToSave, opType) =
+            if (existingVerification == null) {
+                val newEntity =
+                    UserMerchantVerificationEntity(
+                        id = deterministicId,
+                        ownerId = actorUserId,
+                        workspaceId = null,
+                        scopeKey = "user:$actorUserId",
+                        normalizedAlias = normalizedAlias,
+                        decisionCode = decisionCode,
+                        merchantId = targetMerchantId,
+                        scopeCode = "PERSONAL",
+                        createdAtEpochMillis = nowEpochMillis,
+                        sync =
+                            com.feniqo.mobile.data.local.entity.SyncMetadata(
+                                syncStatus = SyncStatus.PENDING_CREATE.name,
+                                updatedAtEpochMillis = nowEpochMillis,
+                                localUpdatedAtEpochMillis = nowEpochMillis,
+                                deletedAtEpochMillis = null,
+                                version = 0L,
+                                baseVersion = null,
+                                lastSyncError = null,
+                            ),
+                    )
+                newEntity to OutboxOperationType.CREATE
+            } else {
+                require(existingVerification.ownerId == actorUserId) {
+                    "Mevcut verification sahibi ($actorUserId) ile eşleşmelidir."
+                }
+                require(existingVerification.scopeKey == "user:$actorUserId") {
+                    "Mevcut verification scopeKey user:$actorUserId ile eşleşmelidir."
+                }
+                require(existingVerification.workspaceId == null) {
+                    "Mevcut verification workspaceId null olmalıdır."
+                }
+                require(existingVerification.scopeCode == "PERSONAL") {
+                    "Mevcut verification scopeCode PERSONAL olmalıdır."
+                }
+                require(existingVerification.normalizedAlias == normalizedAlias) {
+                    "Mevcut verification alias ($normalizedAlias) ile eşleşmelidir."
+                }
+                require(existingVerification.id == deterministicId) {
+                    "Mevcut verification id ($deterministicId) ile eşleşmelidir."
+                }
+
+                val isDeleted = existingVerification.sync.deletedAtEpochMillis != null
+                val nextStatus =
+                    if (existingVerification.sync.syncStatus == SyncStatus.PENDING_CREATE.name && !isDeleted) {
+                        SyncStatus.PENDING_CREATE.name
+                    } else {
+                        SyncStatus.PENDING_UPDATE.name
+                    }
+
+                val updatedEntity =
+                    existingVerification.copy(
+                        decisionCode = decisionCode,
+                        merchantId = targetMerchantId,
+                        sync =
+                            existingVerification.sync.copy(
+                                syncStatus = nextStatus,
+                                localUpdatedAtEpochMillis = nowEpochMillis,
+                                deletedAtEpochMillis = null,
+                                baseVersion = if (existingVerification.sync.version > 0L) existingVerification.sync.version else null,
+                            ),
+                    )
+                updatedEntity to OutboxOperationType.UPDATE
+            }
+
+        val payloadJson =
+            when (opType) {
+                OutboxOperationType.CREATE -> UserMerchantVerificationPayloadCodec.encodeCreate(entityToSave)
+                OutboxOperationType.UPDATE -> UserMerchantVerificationPayloadCodec.encodeUpdate(entityToSave)
+                OutboxOperationType.DELETE -> error("DELETE desteklenmez")
+            }
+
+        val enqueueResult =
+            mutateUserMerchantVerificationV2(
+                syncScopeKey = syncScopeKey,
+                entity = entityToSave,
+                type = opType,
+                payloadJson = payloadJson,
+                operationIdFactory = operationIdFactory,
+                nowEpochMillis = nowEpochMillis,
+            )
+
+        val updatedRowCount =
+            updateTransactionMerchantAttribution(
+                transactionId = transactionId,
+                merchantId = catalogMerchant?.id,
+                merchantMatchSourceCode = if (isAssign) "USER_VERIFIED" else null,
+                merchantConfidence = if (isAssign) 100 else null,
+                merchantCatalogVersion = catalogMerchant?.catalogVersion,
+            )
+        check(updatedRowCount == 1) {
+            "Transaction merchant attribution satırı güncellenemedi: $transactionId"
+        }
+
+        return enqueueResult
+    }
+
+    @Transaction
+    suspend fun createTransactionWithMerchantDecisionV2(
+        syncScopeKey: String,
+        actorUserId: String,
+        transactionEntity: TransactionEntity,
+        tags: List<TagEntity> = emptyList(),
+        tagLinks: List<TransactionTagCrossRef> = emptyList(),
+        transactionPayloadJson: String,
+        decision: TransactionMerchantCreateDecision,
+        operationIdFactory: () -> String,
+        nowEpochMillis: Long,
+    ): TransactionCreationWithMerchantResult {
+        val userScope = SyncScopeKey.requireUserScope(syncScopeKey)
+        require(userScope.userId == actorUserId) {
+            "syncScopeKey ($syncScopeKey) actorUserId ($actorUserId) ile eşleşmelidir."
+        }
+        require(transactionEntity.ownerId == actorUserId) {
+            "Transaction sahibi (${transactionEntity.ownerId}) actorUserId ($actorUserId) ile eşleşmelidir."
+        }
+
+        return when (decision) {
+            is TransactionMerchantCreateDecision.Auto -> {
+                val txResult =
+                    mutateTransactionV2(
+                        syncScopeKey = syncScopeKey,
+                        entity = transactionEntity,
+                        tags = tags,
+                        tagLinks = tagLinks,
+                        type = OutboxOperationType.CREATE,
+                        payloadJson = transactionPayloadJson,
+                        operationIdFactory = operationIdFactory,
+                        nowEpochMillis = nowEpochMillis,
+                    )
+                TransactionCreationWithMerchantResult(
+                    transactionOperationId = txResult.operationId,
+                    verificationOperationId = null,
+                )
+            }
+            is TransactionMerchantCreateDecision.KnownMerchant,
+            is TransactionMerchantCreateDecision.UseTransactionName,
+            -> {
+                require(transactionEntity.workspaceId == null) {
+                    "Explicit merchant kararı yalnız kişisel işlemlerde geçerlidir (workspaceId null olmalıdır): ${transactionEntity.id}"
+                }
+                require(transactionEntity.typeCode == "EXPENSE") {
+                    "Explicit merchant kararı yalnız EXPENSE işlem türünde geçerlidir: ${transactionEntity.typeCode}"
+                }
+
+                val aliasResult =
+                    TransactionMerchantVerificationAliasResolver.resolve(
+                        rawDescription = transactionEntity.description,
+                        decision = decision,
+                    )
+                val resolvedAlias =
+                    when (aliasResult) {
+                        is TransactionMerchantVerificationAliasResolver.Result.Resolved -> aliasResult.normalizedAlias
+                        is TransactionMerchantVerificationAliasResolver.Result.Rejected -> {
+                            throw IllegalArgumentException("Merchant kararı doğrulama alias'ı geçersiz: ${aliasResult.reason}")
+                        }
+                    }
+
+                val category =
+                    getCategoryRow(transactionEntity.categoryId)
+                        ?: throw IllegalArgumentException("Kategori bulunamadı: ${transactionEntity.categoryId}")
+                require(category.sync.deletedAtEpochMillis == null) {
+                    "Silinmiş kategori kullanılamaz: ${transactionEntity.categoryId}"
+                }
+                require(category.typeCode == "EXPENSE") {
+                    "Kategori türü EXPENSE olmalıdır: ${category.typeCode}"
+                }
+                require(category.workspaceId == null) {
+                    "Kategori kişisel kapsamda olmalıdır (workspaceId null olmalıdır): ${category.id}"
+                }
+                val isValidSystem = category.isDefault && category.ownerId == null && category.workspaceId == null
+                val isValidPersonal = !category.isDefault && category.ownerId == actorUserId && category.workspaceId == null
+                require(isValidSystem || isValidPersonal) {
+                    "Kategori yalnız sistem (isDefault=true, ownerId=null, workspaceId=null) veya kişisel (isDefault=false, ownerId=$actorUserId, workspaceId=null) olabilir: ${category.id}"
+                }
+
+                val isAssign: Boolean
+                val targetMerchantId: String?
+                val catalogVersion: Int?
+
+                when (decision) {
+                    is TransactionMerchantCreateDecision.KnownMerchant -> {
+                        val cleanId = decision.merchantId.value.trim()
+                        require(cleanId.isNotBlank()) { "Merchant kimliği boş olamaz." }
+                        val found =
+                            StarterMerchantCatalog.merchants.firstOrNull { it.id == cleanId }
+                                ?: throw IllegalArgumentException("Katalogda bulunmayan merchant: $cleanId")
+                        require(found.catalogVersion >= 1) {
+                            "Katalog sürümü en az 1 olmalıdır: ${found.catalogVersion}"
+                        }
+                        require(CategoryMerchantCandidateResolver.isCompatible(category.iconKey, found)) {
+                            "Kategori iconKey (${category.iconKey}) merchant (${found.id}/${found.categoryIconKey.key}) ile uyuşmuyor."
+                        }
+                        isAssign = true
+                        targetMerchantId = found.id
+                        catalogVersion = found.catalogVersion
+                    }
+                    is TransactionMerchantCreateDecision.UseTransactionName -> {
+                        isAssign = false
+                        targetMerchantId = null
+                        catalogVersion = null
+                    }
+                    is TransactionMerchantCreateDecision.Auto -> error("Impossible")
+                }
+
+                val deterministicId = UuidHelper.deterministicMerchantVerificationUuid(actorUserId, resolvedAlias)
+                val existingVerification = getUserMerchantVerificationRow(deterministicId)
+
+                val decisionCode = if (isAssign) "ASSIGN" else "BLOCK"
+
+                val (verificationEntityToSave, verificationOpType) =
+                    if (existingVerification == null) {
+                        val newEntity =
+                            UserMerchantVerificationEntity(
+                                id = deterministicId,
+                                ownerId = actorUserId,
+                                workspaceId = null,
+                                scopeKey = "user:$actorUserId",
+                                normalizedAlias = resolvedAlias,
+                                decisionCode = decisionCode,
+                                merchantId = targetMerchantId,
+                                scopeCode = "PERSONAL",
+                                createdAtEpochMillis = nowEpochMillis,
+                                sync =
+                                    com.feniqo.mobile.data.local.entity.SyncMetadata(
+                                        syncStatus = SyncStatus.PENDING_CREATE.name,
+                                        updatedAtEpochMillis = nowEpochMillis,
+                                        localUpdatedAtEpochMillis = nowEpochMillis,
+                                        deletedAtEpochMillis = null,
+                                        version = 0L,
+                                        baseVersion = null,
+                                        lastSyncError = null,
+                                    ),
+                            )
+                        newEntity to OutboxOperationType.CREATE
+                    } else {
+                        require(existingVerification.ownerId == actorUserId) {
+                            "Mevcut verification sahibi ($actorUserId) ile eşleşmelidir."
+                        }
+                        require(existingVerification.scopeKey == "user:$actorUserId") {
+                            "Mevcut verification scopeKey user:$actorUserId ile eşleşmelidir."
+                        }
+                        require(existingVerification.workspaceId == null) {
+                            "Mevcut verification workspaceId null olmalıdır."
+                        }
+                        require(existingVerification.scopeCode == "PERSONAL") {
+                            "Mevcut verification scopeCode PERSONAL olmalıdır."
+                        }
+                        require(existingVerification.normalizedAlias == resolvedAlias) {
+                            "Mevcut verification alias ($resolvedAlias) ile eşleşmelidir."
+                        }
+                        require(existingVerification.id == deterministicId) {
+                            "Mevcut verification id ($deterministicId) ile eşleşmelidir."
+                        }
+
+                        val isDeleted = existingVerification.sync.deletedAtEpochMillis != null
+                        val nextStatus =
+                            if (existingVerification.sync.syncStatus == SyncStatus.PENDING_CREATE.name && !isDeleted) {
+                                SyncStatus.PENDING_CREATE.name
+                            } else {
+                                SyncStatus.PENDING_UPDATE.name
+                            }
+
+                        val updatedEntity =
+                            existingVerification.copy(
+                                decisionCode = decisionCode,
+                                merchantId = targetMerchantId,
+                                sync =
+                                    existingVerification.sync.copy(
+                                        syncStatus = nextStatus,
+                                        localUpdatedAtEpochMillis = nowEpochMillis,
+                                        deletedAtEpochMillis = null,
+                                        baseVersion =
+                                            if (existingVerification.sync.version >
+                                                0L
+                                            ) {
+                                                existingVerification.sync.version
+                                            } else {
+                                                null
+                                            },
+                                    ),
+                            )
+                        updatedEntity to OutboxOperationType.UPDATE
+                    }
+
+                val verificationPayloadJson =
+                    when (verificationOpType) {
+                        OutboxOperationType.CREATE -> UserMerchantVerificationPayloadCodec.encodeCreate(verificationEntityToSave)
+                        OutboxOperationType.UPDATE -> UserMerchantVerificationPayloadCodec.encodeUpdate(verificationEntityToSave)
+                        OutboxOperationType.DELETE -> error("DELETE desteklenmez")
+                    }
+
+                val verificationEnqueueResult =
+                    mutateUserMerchantVerificationV2(
+                        syncScopeKey = syncScopeKey,
+                        entity = verificationEntityToSave,
+                        type = verificationOpType,
+                        payloadJson = verificationPayloadJson,
+                        operationIdFactory = operationIdFactory,
+                        nowEpochMillis = nowEpochMillis,
+                    )
+
+                val finalTransactionEntity =
+                    if (isAssign) {
+                        transactionEntity.copy(
+                            merchantId = targetMerchantId,
+                            merchantMatchSourceCode = "USER_VERIFIED",
+                            merchantConfidence = 100,
+                            merchantCatalogVersion = catalogVersion,
+                        )
+                    } else {
+                        transactionEntity.copy(
+                            merchantId = null,
+                            merchantMatchSourceCode = null,
+                            merchantConfidence = null,
+                            merchantCatalogVersion = null,
+                        )
+                    }
+
+                val txResult =
+                    mutateTransactionV2(
+                        syncScopeKey = syncScopeKey,
+                        entity = finalTransactionEntity,
+                        tags = tags,
+                        tagLinks = tagLinks,
+                        type = OutboxOperationType.CREATE,
+                        payloadJson = transactionPayloadJson,
+                        operationIdFactory = operationIdFactory,
+                        nowEpochMillis = nowEpochMillis,
+                    )
+
+                TransactionCreationWithMerchantResult(
+                    transactionOperationId = txResult.operationId,
+                    verificationOperationId = verificationEnqueueResult.operationId,
+                )
+            }
+        }
+    }
 
     @Transaction
     suspend fun mutateProfileV2(
@@ -2039,16 +4230,43 @@ interface LocalMutationDao {
             upsertProfileRow(entity)
             val newOpId = operationIdFactory()
             validateOperationId(newOpId)
-            val successor = SyncOperationEntity(
+            val successor =
+                SyncOperationEntity(
+                    syncScopeKey = syncScopeKey,
+                    operationId = newOpId,
+                    entityTypeCode = "PROFILE",
+                    entityId = entity.id,
+                    operationTypeCode = type.name,
+                    baseVersion = null,
+                    payloadJson = payloadJson,
+                    predecessorOperationId = tail.operationId,
+                    isBlocked = true,
+                    protocolVersion = 2,
+                    statusCode = "PENDING",
+                    attemptCount = 0,
+                    lastError = null,
+                    nextAttemptAtEpochMillis = nowEpochMillis,
+                    createdAtEpochMillis = nowEpochMillis,
+                    updatedAtEpochMillis = nowEpochMillis,
+                )
+            insertOutboxRow(successor)
+            return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+        }
+
+        upsertProfileRow(entity)
+        val newOpId = operationIdFactory()
+        validateOperationId(newOpId)
+        val op =
+            SyncOperationEntity(
                 syncScopeKey = syncScopeKey,
                 operationId = newOpId,
                 entityTypeCode = "PROFILE",
                 entityId = entity.id,
                 operationTypeCode = type.name,
-                baseVersion = null,
+                baseVersion = entity.sync.baseVersion,
                 payloadJson = payloadJson,
-                predecessorOperationId = tail.operationId,
-                isBlocked = true,
+                predecessorOperationId = tail?.operationId,
+                isBlocked = tail != null,
                 protocolVersion = 2,
                 statusCode = "PENDING",
                 attemptCount = 0,
@@ -2057,31 +4275,6 @@ interface LocalMutationDao {
                 createdAtEpochMillis = nowEpochMillis,
                 updatedAtEpochMillis = nowEpochMillis,
             )
-            insertOutboxRow(successor)
-            return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
-        }
-
-        upsertProfileRow(entity)
-        val newOpId = operationIdFactory()
-        validateOperationId(newOpId)
-        val op = SyncOperationEntity(
-            syncScopeKey = syncScopeKey,
-            operationId = newOpId,
-            entityTypeCode = "PROFILE",
-            entityId = entity.id,
-            operationTypeCode = type.name,
-            baseVersion = entity.sync.baseVersion,
-            payloadJson = payloadJson,
-            predecessorOperationId = tail?.operationId,
-            isBlocked = tail != null,
-            protocolVersion = 2,
-            statusCode = "PENDING",
-            attemptCount = 0,
-            lastError = null,
-            nextAttemptAtEpochMillis = nowEpochMillis,
-            createdAtEpochMillis = nowEpochMillis,
-            updatedAtEpochMillis = nowEpochMillis,
-        )
         insertOutboxRow(op)
         return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
     }
@@ -2126,16 +4319,43 @@ interface LocalMutationDao {
             upsertCategoryRow(entity)
             val newOpId = operationIdFactory()
             validateOperationId(newOpId)
-            val successor = SyncOperationEntity(
+            val successor =
+                SyncOperationEntity(
+                    syncScopeKey = syncScopeKey,
+                    operationId = newOpId,
+                    entityTypeCode = "CATEGORY",
+                    entityId = entity.id,
+                    operationTypeCode = type.name,
+                    baseVersion = null,
+                    payloadJson = payloadJson,
+                    predecessorOperationId = tail.operationId,
+                    isBlocked = true,
+                    protocolVersion = 2,
+                    statusCode = "PENDING",
+                    attemptCount = 0,
+                    lastError = null,
+                    nextAttemptAtEpochMillis = nowEpochMillis,
+                    createdAtEpochMillis = nowEpochMillis,
+                    updatedAtEpochMillis = nowEpochMillis,
+                )
+            insertOutboxRow(successor)
+            return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+        }
+
+        upsertCategoryRow(entity)
+        val newOpId = operationIdFactory()
+        validateOperationId(newOpId)
+        val op =
+            SyncOperationEntity(
                 syncScopeKey = syncScopeKey,
                 operationId = newOpId,
                 entityTypeCode = "CATEGORY",
                 entityId = entity.id,
                 operationTypeCode = type.name,
-                baseVersion = null,
+                baseVersion = entity.sync.baseVersion,
                 payloadJson = payloadJson,
-                predecessorOperationId = tail.operationId,
-                isBlocked = true,
+                predecessorOperationId = tail?.operationId,
+                isBlocked = tail != null,
                 protocolVersion = 2,
                 statusCode = "PENDING",
                 attemptCount = 0,
@@ -2144,31 +4364,6 @@ interface LocalMutationDao {
                 createdAtEpochMillis = nowEpochMillis,
                 updatedAtEpochMillis = nowEpochMillis,
             )
-            insertOutboxRow(successor)
-            return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
-        }
-
-        upsertCategoryRow(entity)
-        val newOpId = operationIdFactory()
-        validateOperationId(newOpId)
-        val op = SyncOperationEntity(
-            syncScopeKey = syncScopeKey,
-            operationId = newOpId,
-            entityTypeCode = "CATEGORY",
-            entityId = entity.id,
-            operationTypeCode = type.name,
-            baseVersion = entity.sync.baseVersion,
-            payloadJson = payloadJson,
-            predecessorOperationId = tail?.operationId,
-            isBlocked = tail != null,
-            protocolVersion = 2,
-            statusCode = "PENDING",
-            attemptCount = 0,
-            lastError = null,
-            nextAttemptAtEpochMillis = nowEpochMillis,
-            createdAtEpochMillis = nowEpochMillis,
-            updatedAtEpochMillis = nowEpochMillis,
-        )
         insertOutboxRow(op)
         return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
     }
@@ -2208,24 +4403,25 @@ interface LocalMutationDao {
                     if (tagLinks.isNotEmpty()) upsertTransactionTagRows(tagLinks)
                     val newOpId = operationIdFactory()
                     validateOperationId(newOpId)
-                    val freshCreate = SyncOperationEntity(
-                        syncScopeKey = syncScopeKey,
-                        operationId = newOpId,
-                        entityTypeCode = "TRANSACTION",
-                        entityId = entity.id,
-                        operationTypeCode = OutboxOperationType.CREATE.name,
-                        baseVersion = null,
-                        payloadJson = payloadJson,
-                        predecessorOperationId = null,
-                        isBlocked = false,
-                        protocolVersion = 2,
-                        statusCode = "PENDING",
-                        attemptCount = 0,
-                        lastError = null,
-                        nextAttemptAtEpochMillis = nowEpochMillis,
-                        createdAtEpochMillis = nowEpochMillis,
-                        updatedAtEpochMillis = nowEpochMillis,
-                    )
+                    val freshCreate =
+                        SyncOperationEntity(
+                            syncScopeKey = syncScopeKey,
+                            operationId = newOpId,
+                            entityTypeCode = "TRANSACTION",
+                            entityId = entity.id,
+                            operationTypeCode = OutboxOperationType.CREATE.name,
+                            baseVersion = null,
+                            payloadJson = payloadJson,
+                            predecessorOperationId = null,
+                            isBlocked = false,
+                            protocolVersion = 2,
+                            statusCode = "PENDING",
+                            attemptCount = 0,
+                            lastError = null,
+                            nextAttemptAtEpochMillis = nowEpochMillis,
+                            createdAtEpochMillis = nowEpochMillis,
+                            updatedAtEpochMillis = nowEpochMillis,
+                        )
                     insertOutboxRow(freshCreate)
                     return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
                 }
@@ -2254,24 +4450,25 @@ interface LocalMutationDao {
             if (tagLinks.isNotEmpty()) upsertTransactionTagRows(tagLinks)
             val newOpId = operationIdFactory()
             validateOperationId(newOpId)
-            val successor = SyncOperationEntity(
-                syncScopeKey = syncScopeKey,
-                operationId = newOpId,
-                entityTypeCode = "TRANSACTION",
-                entityId = entity.id,
-                operationTypeCode = type.name,
-                baseVersion = null,
-                payloadJson = payloadJson,
-                predecessorOperationId = tail.operationId,
-                isBlocked = true,
-                protocolVersion = 2,
-                statusCode = "PENDING",
-                attemptCount = 0,
-                lastError = null,
-                nextAttemptAtEpochMillis = nowEpochMillis,
-                createdAtEpochMillis = nowEpochMillis,
-                updatedAtEpochMillis = nowEpochMillis,
-            )
+            val successor =
+                SyncOperationEntity(
+                    syncScopeKey = syncScopeKey,
+                    operationId = newOpId,
+                    entityTypeCode = "TRANSACTION",
+                    entityId = entity.id,
+                    operationTypeCode = type.name,
+                    baseVersion = null,
+                    payloadJson = payloadJson,
+                    predecessorOperationId = tail.operationId,
+                    isBlocked = true,
+                    protocolVersion = 2,
+                    statusCode = "PENDING",
+                    attemptCount = 0,
+                    lastError = null,
+                    nextAttemptAtEpochMillis = nowEpochMillis,
+                    createdAtEpochMillis = nowEpochMillis,
+                    updatedAtEpochMillis = nowEpochMillis,
+                )
             insertOutboxRow(successor)
             return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
         }
@@ -2282,24 +4479,25 @@ interface LocalMutationDao {
         if (tagLinks.isNotEmpty()) upsertTransactionTagRows(tagLinks)
         val newOpId = operationIdFactory()
         validateOperationId(newOpId)
-        val op = SyncOperationEntity(
-            syncScopeKey = syncScopeKey,
-            operationId = newOpId,
-            entityTypeCode = "TRANSACTION",
-            entityId = entity.id,
-            operationTypeCode = type.name,
-            baseVersion = entity.sync.baseVersion,
-            payloadJson = payloadJson,
-            predecessorOperationId = tail?.operationId,
-            isBlocked = tail != null,
-            protocolVersion = 2,
-            statusCode = "PENDING",
-            attemptCount = 0,
-            lastError = null,
-            nextAttemptAtEpochMillis = nowEpochMillis,
-            createdAtEpochMillis = nowEpochMillis,
-            updatedAtEpochMillis = nowEpochMillis,
-        )
+        val op =
+            SyncOperationEntity(
+                syncScopeKey = syncScopeKey,
+                operationId = newOpId,
+                entityTypeCode = "TRANSACTION",
+                entityId = entity.id,
+                operationTypeCode = type.name,
+                baseVersion = entity.sync.baseVersion,
+                payloadJson = payloadJson,
+                predecessorOperationId = tail?.operationId,
+                isBlocked = tail != null,
+                protocolVersion = 2,
+                statusCode = "PENDING",
+                attemptCount = 0,
+                lastError = null,
+                nextAttemptAtEpochMillis = nowEpochMillis,
+                createdAtEpochMillis = nowEpochMillis,
+                updatedAtEpochMillis = nowEpochMillis,
+            )
         insertOutboxRow(op)
         return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
     }
@@ -2334,24 +4532,25 @@ interface LocalMutationDao {
                     upsertTransactionRow(entity)
                     val newOpId = operationIdFactory()
                     validateOperationId(newOpId)
-                    val freshCreate = SyncOperationEntity(
-                        syncScopeKey = syncScopeKey,
-                        operationId = newOpId,
-                        entityTypeCode = "TRANSACTION",
-                        entityId = entity.id,
-                        operationTypeCode = OutboxOperationType.CREATE.name,
-                        baseVersion = null,
-                        payloadJson = payloadJson,
-                        predecessorOperationId = null,
-                        isBlocked = false,
-                        protocolVersion = 2,
-                        statusCode = "PENDING",
-                        attemptCount = 0,
-                        lastError = null,
-                        nextAttemptAtEpochMillis = nowEpochMillis,
-                        createdAtEpochMillis = nowEpochMillis,
-                        updatedAtEpochMillis = nowEpochMillis,
-                    )
+                    val freshCreate =
+                        SyncOperationEntity(
+                            syncScopeKey = syncScopeKey,
+                            operationId = newOpId,
+                            entityTypeCode = "TRANSACTION",
+                            entityId = entity.id,
+                            operationTypeCode = OutboxOperationType.CREATE.name,
+                            baseVersion = null,
+                            payloadJson = payloadJson,
+                            predecessorOperationId = null,
+                            isBlocked = false,
+                            protocolVersion = 2,
+                            statusCode = "PENDING",
+                            attemptCount = 0,
+                            lastError = null,
+                            nextAttemptAtEpochMillis = nowEpochMillis,
+                            createdAtEpochMillis = nowEpochMillis,
+                            updatedAtEpochMillis = nowEpochMillis,
+                        )
                     insertOutboxRow(freshCreate)
                     return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
                 }
@@ -2374,16 +4573,43 @@ interface LocalMutationDao {
             upsertTransactionRow(entity)
             val newOpId = operationIdFactory()
             validateOperationId(newOpId)
-            val successor = SyncOperationEntity(
+            val successor =
+                SyncOperationEntity(
+                    syncScopeKey = syncScopeKey,
+                    operationId = newOpId,
+                    entityTypeCode = "TRANSACTION",
+                    entityId = entity.id,
+                    operationTypeCode = type.name,
+                    baseVersion = null,
+                    payloadJson = payloadJson,
+                    predecessorOperationId = tail.operationId,
+                    isBlocked = true,
+                    protocolVersion = 2,
+                    statusCode = "PENDING",
+                    attemptCount = 0,
+                    lastError = null,
+                    nextAttemptAtEpochMillis = nowEpochMillis,
+                    createdAtEpochMillis = nowEpochMillis,
+                    updatedAtEpochMillis = nowEpochMillis,
+                )
+            insertOutboxRow(successor)
+            return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+        }
+
+        upsertTransactionRow(entity)
+        val newOpId = operationIdFactory()
+        validateOperationId(newOpId)
+        val op =
+            SyncOperationEntity(
                 syncScopeKey = syncScopeKey,
                 operationId = newOpId,
                 entityTypeCode = "TRANSACTION",
                 entityId = entity.id,
                 operationTypeCode = type.name,
-                baseVersion = null,
+                baseVersion = entity.sync.baseVersion,
                 payloadJson = payloadJson,
-                predecessorOperationId = tail.operationId,
-                isBlocked = true,
+                predecessorOperationId = tail?.operationId,
+                isBlocked = tail != null,
                 protocolVersion = 2,
                 statusCode = "PENDING",
                 attemptCount = 0,
@@ -2392,31 +4618,6 @@ interface LocalMutationDao {
                 createdAtEpochMillis = nowEpochMillis,
                 updatedAtEpochMillis = nowEpochMillis,
             )
-            insertOutboxRow(successor)
-            return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
-        }
-
-        upsertTransactionRow(entity)
-        val newOpId = operationIdFactory()
-        validateOperationId(newOpId)
-        val op = SyncOperationEntity(
-            syncScopeKey = syncScopeKey,
-            operationId = newOpId,
-            entityTypeCode = "TRANSACTION",
-            entityId = entity.id,
-            operationTypeCode = type.name,
-            baseVersion = entity.sync.baseVersion,
-            payloadJson = payloadJson,
-            predecessorOperationId = tail?.operationId,
-            isBlocked = tail != null,
-            protocolVersion = 2,
-            statusCode = "PENDING",
-            attemptCount = 0,
-            lastError = null,
-            nextAttemptAtEpochMillis = nowEpochMillis,
-            createdAtEpochMillis = nowEpochMillis,
-            updatedAtEpochMillis = nowEpochMillis,
-        )
         insertOutboxRow(op)
         return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
     }
@@ -2468,16 +4669,43 @@ interface LocalMutationDao {
             upsertBudgetRow(entity)
             val newOpId = operationIdFactory()
             validateOperationId(newOpId)
-            val successor = SyncOperationEntity(
+            val successor =
+                SyncOperationEntity(
+                    syncScopeKey = syncScopeKey,
+                    operationId = newOpId,
+                    entityTypeCode = "BUDGET",
+                    entityId = entity.id,
+                    operationTypeCode = type.name,
+                    baseVersion = null,
+                    payloadJson = payloadJson,
+                    predecessorOperationId = tail.operationId,
+                    isBlocked = true,
+                    protocolVersion = 2,
+                    statusCode = "PENDING",
+                    attemptCount = 0,
+                    lastError = null,
+                    nextAttemptAtEpochMillis = nowEpochMillis,
+                    createdAtEpochMillis = nowEpochMillis,
+                    updatedAtEpochMillis = nowEpochMillis,
+                )
+            insertOutboxRow(successor)
+            return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+        }
+
+        upsertBudgetRow(entity)
+        val newOpId = operationIdFactory()
+        validateOperationId(newOpId)
+        val op =
+            SyncOperationEntity(
                 syncScopeKey = syncScopeKey,
                 operationId = newOpId,
                 entityTypeCode = "BUDGET",
                 entityId = entity.id,
                 operationTypeCode = type.name,
-                baseVersion = null,
+                baseVersion = if (tail != null) null else entity.sync.baseVersion,
                 payloadJson = payloadJson,
-                predecessorOperationId = tail.operationId,
-                isBlocked = true,
+                predecessorOperationId = tail?.operationId,
+                isBlocked = tail != null,
                 protocolVersion = 2,
                 statusCode = "PENDING",
                 attemptCount = 0,
@@ -2486,31 +4714,6 @@ interface LocalMutationDao {
                 createdAtEpochMillis = nowEpochMillis,
                 updatedAtEpochMillis = nowEpochMillis,
             )
-            insertOutboxRow(successor)
-            return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
-        }
-
-        upsertBudgetRow(entity)
-        val newOpId = operationIdFactory()
-        validateOperationId(newOpId)
-        val op = SyncOperationEntity(
-            syncScopeKey = syncScopeKey,
-            operationId = newOpId,
-            entityTypeCode = "BUDGET",
-            entityId = entity.id,
-            operationTypeCode = type.name,
-            baseVersion = if (tail != null) null else entity.sync.baseVersion,
-            payloadJson = payloadJson,
-            predecessorOperationId = tail?.operationId,
-            isBlocked = tail != null,
-            protocolVersion = 2,
-            statusCode = "PENDING",
-            attemptCount = 0,
-            lastError = null,
-            nextAttemptAtEpochMillis = nowEpochMillis,
-            createdAtEpochMillis = nowEpochMillis,
-            updatedAtEpochMillis = nowEpochMillis,
-        )
         insertOutboxRow(op)
         return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
     }
@@ -2562,16 +4765,43 @@ interface LocalMutationDao {
             upsertRecurringTransactionRow(entity)
             val newOpId = operationIdFactory()
             validateOperationId(newOpId)
-            val successor = SyncOperationEntity(
+            val successor =
+                SyncOperationEntity(
+                    syncScopeKey = syncScopeKey,
+                    operationId = newOpId,
+                    entityTypeCode = "RECURRING_TRANSACTION",
+                    entityId = entity.id,
+                    operationTypeCode = type.name,
+                    baseVersion = null,
+                    payloadJson = payloadJson,
+                    predecessorOperationId = tail.operationId,
+                    isBlocked = true,
+                    protocolVersion = 2,
+                    statusCode = "PENDING",
+                    attemptCount = 0,
+                    lastError = null,
+                    nextAttemptAtEpochMillis = nowEpochMillis,
+                    createdAtEpochMillis = nowEpochMillis,
+                    updatedAtEpochMillis = nowEpochMillis,
+                )
+            insertOutboxRow(successor)
+            return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+        }
+
+        upsertRecurringTransactionRow(entity)
+        val newOpId = operationIdFactory()
+        validateOperationId(newOpId)
+        val op =
+            SyncOperationEntity(
                 syncScopeKey = syncScopeKey,
                 operationId = newOpId,
                 entityTypeCode = "RECURRING_TRANSACTION",
                 entityId = entity.id,
                 operationTypeCode = type.name,
-                baseVersion = null,
+                baseVersion = if (tail != null) null else entity.sync.baseVersion,
                 payloadJson = payloadJson,
-                predecessorOperationId = tail.operationId,
-                isBlocked = true,
+                predecessorOperationId = tail?.operationId,
+                isBlocked = tail != null,
                 protocolVersion = 2,
                 statusCode = "PENDING",
                 attemptCount = 0,
@@ -2580,31 +4810,6 @@ interface LocalMutationDao {
                 createdAtEpochMillis = nowEpochMillis,
                 updatedAtEpochMillis = nowEpochMillis,
             )
-            insertOutboxRow(successor)
-            return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
-        }
-
-        upsertRecurringTransactionRow(entity)
-        val newOpId = operationIdFactory()
-        validateOperationId(newOpId)
-        val op = SyncOperationEntity(
-            syncScopeKey = syncScopeKey,
-            operationId = newOpId,
-            entityTypeCode = "RECURRING_TRANSACTION",
-            entityId = entity.id,
-            operationTypeCode = type.name,
-            baseVersion = if (tail != null) null else entity.sync.baseVersion,
-            payloadJson = payloadJson,
-            predecessorOperationId = tail?.operationId,
-            isBlocked = tail != null,
-            protocolVersion = 2,
-            statusCode = "PENDING",
-            attemptCount = 0,
-            lastError = null,
-            nextAttemptAtEpochMillis = nowEpochMillis,
-            createdAtEpochMillis = nowEpochMillis,
-            updatedAtEpochMillis = nowEpochMillis,
-        )
         insertOutboxRow(op)
         return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
     }
@@ -2655,16 +4860,43 @@ interface LocalMutationDao {
             upsertSubscriptionRow(entity)
             val newOpId = operationIdFactory()
             validateOperationId(newOpId)
-            val successor = SyncOperationEntity(
+            val successor =
+                SyncOperationEntity(
+                    syncScopeKey = syncScopeKey,
+                    operationId = newOpId,
+                    entityTypeCode = "SUBSCRIPTION",
+                    entityId = entity.id,
+                    operationTypeCode = type.name,
+                    baseVersion = null,
+                    payloadJson = payloadJson,
+                    predecessorOperationId = tail.operationId,
+                    isBlocked = true,
+                    protocolVersion = 2,
+                    statusCode = "PENDING",
+                    attemptCount = 0,
+                    lastError = null,
+                    nextAttemptAtEpochMillis = nowEpochMillis,
+                    createdAtEpochMillis = nowEpochMillis,
+                    updatedAtEpochMillis = nowEpochMillis,
+                )
+            insertOutboxRow(successor)
+            return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+        }
+
+        upsertSubscriptionRow(entity)
+        val newOpId = operationIdFactory()
+        validateOperationId(newOpId)
+        val op =
+            SyncOperationEntity(
                 syncScopeKey = syncScopeKey,
                 operationId = newOpId,
                 entityTypeCode = "SUBSCRIPTION",
                 entityId = entity.id,
                 operationTypeCode = type.name,
-                baseVersion = null,
+                baseVersion = if (tail != null) null else entity.sync.baseVersion,
                 payloadJson = payloadJson,
-                predecessorOperationId = tail.operationId,
-                isBlocked = true,
+                predecessorOperationId = tail?.operationId,
+                isBlocked = tail != null,
                 protocolVersion = 2,
                 statusCode = "PENDING",
                 attemptCount = 0,
@@ -2673,31 +4905,6 @@ interface LocalMutationDao {
                 createdAtEpochMillis = nowEpochMillis,
                 updatedAtEpochMillis = nowEpochMillis,
             )
-            insertOutboxRow(successor)
-            return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
-        }
-
-        upsertSubscriptionRow(entity)
-        val newOpId = operationIdFactory()
-        validateOperationId(newOpId)
-        val op = SyncOperationEntity(
-            syncScopeKey = syncScopeKey,
-            operationId = newOpId,
-            entityTypeCode = "SUBSCRIPTION",
-            entityId = entity.id,
-            operationTypeCode = type.name,
-            baseVersion = if (tail != null) null else entity.sync.baseVersion,
-            payloadJson = payloadJson,
-            predecessorOperationId = tail?.operationId,
-            isBlocked = tail != null,
-            protocolVersion = 2,
-            statusCode = "PENDING",
-            attemptCount = 0,
-            lastError = null,
-            nextAttemptAtEpochMillis = nowEpochMillis,
-            createdAtEpochMillis = nowEpochMillis,
-            updatedAtEpochMillis = nowEpochMillis,
-        )
         insertOutboxRow(op)
         return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
     }
@@ -2764,11 +4971,12 @@ interface LocalMutationDao {
             when (type) {
                 OutboxOperationType.UPDATE -> {
                     upsertAssetRow(entity)
-                    val updated = if (tail.operationTypeCode == OutboxOperationType.DELETE.name) {
-                        convertPendingDeleteToUpdate(syncScopeKey, tail.operationId, payloadJson, nowEpochMillis)
-                    } else {
-                        coalescePendingPayload(syncScopeKey, tail.operationId, payloadJson, nowEpochMillis)
-                    }
+                    val updated =
+                        if (tail.operationTypeCode == OutboxOperationType.DELETE.name) {
+                            convertPendingDeleteToUpdate(syncScopeKey, tail.operationId, payloadJson, nowEpochMillis)
+                        } else {
+                            coalescePendingPayload(syncScopeKey, tail.operationId, payloadJson, nowEpochMillis)
+                        }
                     check(updated == 1) { "Varlık outbox kaydı güncellenemedi: ${tail.operationId}" }
                     return V2EnqueueResult(
                         tail.operationId,
@@ -2852,14 +5060,22 @@ interface LocalMutationDao {
                     }
                 } else if (type == OutboxOperationType.DELETE) {
                     if (tail.operationTypeCode == OutboxOperationType.CREATE.name && tail.predecessorOperationId == null) {
-                        tombstoneGoalContributionsForDeletedGoal(entity.id, entity.sync.deletedAtEpochMillis ?: nowEpochMillis, nowEpochMillis)
+                        tombstoneGoalContributionsForDeletedGoal(
+                            entity.id,
+                            entity.sync.deletedAtEpochMillis ?: nowEpochMillis,
+                            nowEpochMillis,
+                        )
                         deleteGoalRow(entity.id)
                         val deleted = deleteOutboxRow(syncScopeKey, tail.operationId)
                         check(deleted == 1) { "Outbox kaydı silinemedi: ${tail.operationId}" }
                         return V2EnqueueResult(tail.operationId, V2EnqueueDecision.HARD_DELETED)
                     } else {
                         upsertGoalRow(entity)
-                        tombstoneGoalContributionsForDeletedGoal(entity.id, entity.sync.deletedAtEpochMillis ?: nowEpochMillis, nowEpochMillis)
+                        tombstoneGoalContributionsForDeletedGoal(
+                            entity.id,
+                            entity.sync.deletedAtEpochMillis ?: nowEpochMillis,
+                            nowEpochMillis,
+                        )
                         val updated = convertToPendingDelete(syncScopeKey, tail.operationId, payloadJson, nowEpochMillis)
                         check(updated == 1) { "Outbox kaydı DELETE'e dönüştürülemedi: ${tail.operationId}" }
                         return V2EnqueueResult(tail.operationId, V2EnqueueDecision.CONVERTED_TO_DELETE)
@@ -2873,24 +5089,25 @@ interface LocalMutationDao {
             }
             val newOpId = operationIdFactory()
             validateOperationId(newOpId)
-            val successor = SyncOperationEntity(
-                syncScopeKey = syncScopeKey,
-                operationId = newOpId,
-                entityTypeCode = "GOAL",
-                entityId = entity.id,
-                operationTypeCode = type.name,
-                baseVersion = null,
-                payloadJson = payloadJson,
-                predecessorOperationId = tail.operationId,
-                isBlocked = true,
-                protocolVersion = 2,
-                statusCode = "PENDING",
-                attemptCount = 0,
-                lastError = null,
-                nextAttemptAtEpochMillis = nowEpochMillis,
-                createdAtEpochMillis = nowEpochMillis,
-                updatedAtEpochMillis = nowEpochMillis,
-            )
+            val successor =
+                SyncOperationEntity(
+                    syncScopeKey = syncScopeKey,
+                    operationId = newOpId,
+                    entityTypeCode = "GOAL",
+                    entityId = entity.id,
+                    operationTypeCode = type.name,
+                    baseVersion = null,
+                    payloadJson = payloadJson,
+                    predecessorOperationId = tail.operationId,
+                    isBlocked = true,
+                    protocolVersion = 2,
+                    statusCode = "PENDING",
+                    attemptCount = 0,
+                    lastError = null,
+                    nextAttemptAtEpochMillis = nowEpochMillis,
+                    createdAtEpochMillis = nowEpochMillis,
+                    updatedAtEpochMillis = nowEpochMillis,
+                )
             insertOutboxRow(successor)
             return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
         }
@@ -2901,24 +5118,25 @@ interface LocalMutationDao {
         }
         val newOpId = operationIdFactory()
         validateOperationId(newOpId)
-        val op = SyncOperationEntity(
-            syncScopeKey = syncScopeKey,
-            operationId = newOpId,
-            entityTypeCode = "GOAL",
-            entityId = entity.id,
-            operationTypeCode = type.name,
-            baseVersion = if (tail != null) null else entity.sync.baseVersion,
-            payloadJson = payloadJson,
-            predecessorOperationId = tail?.operationId,
-            isBlocked = tail != null,
-            protocolVersion = 2,
-            statusCode = "PENDING",
-            attemptCount = 0,
-            lastError = null,
-            nextAttemptAtEpochMillis = nowEpochMillis,
-            createdAtEpochMillis = nowEpochMillis,
-            updatedAtEpochMillis = nowEpochMillis,
-        )
+        val op =
+            SyncOperationEntity(
+                syncScopeKey = syncScopeKey,
+                operationId = newOpId,
+                entityTypeCode = "GOAL",
+                entityId = entity.id,
+                operationTypeCode = type.name,
+                baseVersion = if (tail != null) null else entity.sync.baseVersion,
+                payloadJson = payloadJson,
+                predecessorOperationId = tail?.operationId,
+                isBlocked = tail != null,
+                protocolVersion = 2,
+                statusCode = "PENDING",
+                attemptCount = 0,
+                lastError = null,
+                nextAttemptAtEpochMillis = nowEpochMillis,
+                createdAtEpochMillis = nowEpochMillis,
+                updatedAtEpochMillis = nowEpochMillis,
+            )
         insertOutboxRow(op)
         return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
     }
@@ -2945,24 +5163,25 @@ interface LocalMutationDao {
         val newOpId = operationIdFactory()
         validateOperationId(newOpId)
 
-        val op = SyncOperationEntity(
-            syncScopeKey = syncScopeKey,
-            operationId = newOpId,
-            entityTypeCode = "GOAL_CONTRIBUTION",
-            entityId = entity.id,
-            operationTypeCode = OutboxOperationType.CREATE.name,
-            baseVersion = if (tail != null) null else updatedGoal.sync.baseVersion,
-            payloadJson = payloadJson,
-            predecessorOperationId = tail?.operationId,
-            isBlocked = tail != null,
-            protocolVersion = 2,
-            statusCode = "PENDING",
-            attemptCount = 0,
-            lastError = null,
-            nextAttemptAtEpochMillis = nowEpochMillis,
-            createdAtEpochMillis = nowEpochMillis,
-            updatedAtEpochMillis = nowEpochMillis,
-        )
+        val op =
+            SyncOperationEntity(
+                syncScopeKey = syncScopeKey,
+                operationId = newOpId,
+                entityTypeCode = "GOAL_CONTRIBUTION",
+                entityId = entity.id,
+                operationTypeCode = OutboxOperationType.CREATE.name,
+                baseVersion = if (tail != null) null else updatedGoal.sync.baseVersion,
+                payloadJson = payloadJson,
+                predecessorOperationId = tail?.operationId,
+                isBlocked = tail != null,
+                protocolVersion = 2,
+                statusCode = "PENDING",
+                attemptCount = 0,
+                lastError = null,
+                nextAttemptAtEpochMillis = nowEpochMillis,
+                createdAtEpochMillis = nowEpochMillis,
+                updatedAtEpochMillis = nowEpochMillis,
+            )
         insertOutboxRow(op)
         return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
     }
@@ -3018,24 +5237,25 @@ interface LocalMutationDao {
             }
             val newOpId = operationIdFactory()
             validateOperationId(newOpId)
-            val successor = SyncOperationEntity(
-                syncScopeKey = syncScopeKey,
-                operationId = newOpId,
-                entityTypeCode = "DEBT",
-                entityId = entity.id,
-                operationTypeCode = type.name,
-                baseVersion = null,
-                payloadJson = payloadJson,
-                predecessorOperationId = tail.operationId,
-                isBlocked = true,
-                protocolVersion = 2,
-                statusCode = "PENDING",
-                attemptCount = 0,
-                lastError = null,
-                nextAttemptAtEpochMillis = nowEpochMillis,
-                createdAtEpochMillis = nowEpochMillis,
-                updatedAtEpochMillis = nowEpochMillis,
-            )
+            val successor =
+                SyncOperationEntity(
+                    syncScopeKey = syncScopeKey,
+                    operationId = newOpId,
+                    entityTypeCode = "DEBT",
+                    entityId = entity.id,
+                    operationTypeCode = type.name,
+                    baseVersion = null,
+                    payloadJson = payloadJson,
+                    predecessorOperationId = tail.operationId,
+                    isBlocked = true,
+                    protocolVersion = 2,
+                    statusCode = "PENDING",
+                    attemptCount = 0,
+                    lastError = null,
+                    nextAttemptAtEpochMillis = nowEpochMillis,
+                    createdAtEpochMillis = nowEpochMillis,
+                    updatedAtEpochMillis = nowEpochMillis,
+                )
             insertOutboxRow(successor)
             return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
         }
@@ -3046,24 +5266,25 @@ interface LocalMutationDao {
         }
         val newOpId = operationIdFactory()
         validateOperationId(newOpId)
-        val op = SyncOperationEntity(
-            syncScopeKey = syncScopeKey,
-            operationId = newOpId,
-            entityTypeCode = "DEBT",
-            entityId = entity.id,
-            operationTypeCode = type.name,
-            baseVersion = if (tail != null) null else entity.sync.baseVersion,
-            payloadJson = payloadJson,
-            predecessorOperationId = tail?.operationId,
-            isBlocked = tail != null,
-            protocolVersion = 2,
-            statusCode = "PENDING",
-            attemptCount = 0,
-            lastError = null,
-            nextAttemptAtEpochMillis = nowEpochMillis,
-            createdAtEpochMillis = nowEpochMillis,
-            updatedAtEpochMillis = nowEpochMillis,
-        )
+        val op =
+            SyncOperationEntity(
+                syncScopeKey = syncScopeKey,
+                operationId = newOpId,
+                entityTypeCode = "DEBT",
+                entityId = entity.id,
+                operationTypeCode = type.name,
+                baseVersion = if (tail != null) null else entity.sync.baseVersion,
+                payloadJson = payloadJson,
+                predecessorOperationId = tail?.operationId,
+                isBlocked = tail != null,
+                protocolVersion = 2,
+                statusCode = "PENDING",
+                attemptCount = 0,
+                lastError = null,
+                nextAttemptAtEpochMillis = nowEpochMillis,
+                createdAtEpochMillis = nowEpochMillis,
+                updatedAtEpochMillis = nowEpochMillis,
+            )
         insertOutboxRow(op)
         return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
     }
@@ -3088,28 +5309,28 @@ interface LocalMutationDao {
         val newOpId = operationIdFactory()
         validateOperationId(newOpId)
 
-        val op = SyncOperationEntity(
-            syncScopeKey = syncScopeKey,
-            operationId = newOpId,
-            entityTypeCode = "DEBT_PAYMENT",
-            entityId = entity.id,
-            operationTypeCode = OutboxOperationType.CREATE.name,
-            baseVersion = if (tail != null) null else updatedDebt.sync.baseVersion,
-            payloadJson = payloadJson,
-            predecessorOperationId = tail?.operationId,
-            isBlocked = tail != null,
-            protocolVersion = 2,
-            statusCode = "PENDING",
-            attemptCount = 0,
-            lastError = null,
-            nextAttemptAtEpochMillis = nowEpochMillis,
-            createdAtEpochMillis = nowEpochMillis,
-            updatedAtEpochMillis = nowEpochMillis,
-        )
+        val op =
+            SyncOperationEntity(
+                syncScopeKey = syncScopeKey,
+                operationId = newOpId,
+                entityTypeCode = "DEBT_PAYMENT",
+                entityId = entity.id,
+                operationTypeCode = OutboxOperationType.CREATE.name,
+                baseVersion = if (tail != null) null else updatedDebt.sync.baseVersion,
+                payloadJson = payloadJson,
+                predecessorOperationId = tail?.operationId,
+                isBlocked = tail != null,
+                protocolVersion = 2,
+                statusCode = "PENDING",
+                attemptCount = 0,
+                lastError = null,
+                nextAttemptAtEpochMillis = nowEpochMillis,
+                createdAtEpochMillis = nowEpochMillis,
+                updatedAtEpochMillis = nowEpochMillis,
+            )
         insertOutboxRow(op)
         return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
     }
-
 
     @Transaction
     suspend fun mutateWorkspaceV2(
@@ -3203,24 +5424,25 @@ interface LocalMutationDao {
             if (members.isNotEmpty()) upsertWorkspaceMemberRows(members)
             val newOpId = operationIdFactory()
             validateOperationId(newOpId)
-            val successor = SyncOperationEntity(
-                syncScopeKey = syncScopeKey,
-                operationId = newOpId,
-                entityTypeCode = "WORKSPACE",
-                entityId = entity.id,
-                operationTypeCode = type.name,
-                baseVersion = null,
-                payloadJson = payloadJson,
-                predecessorOperationId = tail.operationId,
-                isBlocked = true,
-                protocolVersion = 2,
-                statusCode = "PENDING",
-                attemptCount = 0,
-                lastError = null,
-                nextAttemptAtEpochMillis = nowEpochMillis,
-                createdAtEpochMillis = nowEpochMillis,
-                updatedAtEpochMillis = nowEpochMillis,
-            )
+            val successor =
+                SyncOperationEntity(
+                    syncScopeKey = syncScopeKey,
+                    operationId = newOpId,
+                    entityTypeCode = "WORKSPACE",
+                    entityId = entity.id,
+                    operationTypeCode = type.name,
+                    baseVersion = null,
+                    payloadJson = payloadJson,
+                    predecessorOperationId = tail.operationId,
+                    isBlocked = true,
+                    protocolVersion = 2,
+                    statusCode = "PENDING",
+                    attemptCount = 0,
+                    lastError = null,
+                    nextAttemptAtEpochMillis = nowEpochMillis,
+                    createdAtEpochMillis = nowEpochMillis,
+                    updatedAtEpochMillis = nowEpochMillis,
+                )
             insertOutboxRow(successor)
             return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
         }
@@ -3229,24 +5451,25 @@ interface LocalMutationDao {
         if (members.isNotEmpty()) upsertWorkspaceMemberRows(members)
         val newOpId = operationIdFactory()
         validateOperationId(newOpId)
-        val op = SyncOperationEntity(
-            syncScopeKey = syncScopeKey,
-            operationId = newOpId,
-            entityTypeCode = "WORKSPACE",
-            entityId = entity.id,
-            operationTypeCode = type.name,
-            baseVersion = if (tail != null) null else entity.sync.baseVersion,
-            payloadJson = payloadJson,
-            predecessorOperationId = tail?.operationId,
-            isBlocked = tail != null,
-            protocolVersion = 2,
-            statusCode = "PENDING",
-            attemptCount = 0,
-            lastError = null,
-            nextAttemptAtEpochMillis = nowEpochMillis,
-            createdAtEpochMillis = nowEpochMillis,
-            updatedAtEpochMillis = nowEpochMillis,
-        )
+        val op =
+            SyncOperationEntity(
+                syncScopeKey = syncScopeKey,
+                operationId = newOpId,
+                entityTypeCode = "WORKSPACE",
+                entityId = entity.id,
+                operationTypeCode = type.name,
+                baseVersion = if (tail != null) null else entity.sync.baseVersion,
+                payloadJson = payloadJson,
+                predecessorOperationId = tail?.operationId,
+                isBlocked = tail != null,
+                protocolVersion = 2,
+                statusCode = "PENDING",
+                attemptCount = 0,
+                lastError = null,
+                nextAttemptAtEpochMillis = nowEpochMillis,
+                createdAtEpochMillis = nowEpochMillis,
+                updatedAtEpochMillis = nowEpochMillis,
+            )
         insertOutboxRow(op)
         return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
     }
@@ -3288,24 +5511,25 @@ interface LocalMutationDao {
 
         val newOpId = operationIdFactory()
         validateOperationId(newOpId)
-        val op = SyncOperationEntity(
-            syncScopeKey = syncScopeKey,
-            operationId = newOpId,
-            entityTypeCode = "WORKSPACE_INVITATION",
-            entityId = entity.id,
-            operationTypeCode = OutboxOperationType.CREATE.name,
-            baseVersion = if (tail != null) null else entity.sync.baseVersion,
-            payloadJson = payloadJson,
-            predecessorOperationId = tail?.operationId,
-            isBlocked = tail != null,
-            protocolVersion = 2,
-            statusCode = "PENDING",
-            attemptCount = 0,
-            lastError = null,
-            nextAttemptAtEpochMillis = nowEpochMillis,
-            createdAtEpochMillis = nowEpochMillis,
-            updatedAtEpochMillis = nowEpochMillis,
-        )
+        val op =
+            SyncOperationEntity(
+                syncScopeKey = syncScopeKey,
+                operationId = newOpId,
+                entityTypeCode = "WORKSPACE_INVITATION",
+                entityId = entity.id,
+                operationTypeCode = OutboxOperationType.CREATE.name,
+                baseVersion = if (tail != null) null else entity.sync.baseVersion,
+                payloadJson = payloadJson,
+                predecessorOperationId = tail?.operationId,
+                isBlocked = tail != null,
+                protocolVersion = 2,
+                statusCode = "PENDING",
+                attemptCount = 0,
+                lastError = null,
+                nextAttemptAtEpochMillis = nowEpochMillis,
+                createdAtEpochMillis = nowEpochMillis,
+                updatedAtEpochMillis = nowEpochMillis,
+            )
         insertOutboxRow(op)
         return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
     }
@@ -3354,16 +5578,43 @@ interface LocalMutationDao {
             upsertWorkspaceMemberRow(entity)
             val newOpId = operationIdFactory()
             validateOperationId(newOpId)
-            val successor = SyncOperationEntity(
+            val successor =
+                SyncOperationEntity(
+                    syncScopeKey = syncScopeKey,
+                    operationId = newOpId,
+                    entityTypeCode = "WORKSPACE_MEMBER",
+                    entityId = canonicalEntityId,
+                    operationTypeCode = OutboxOperationType.UPDATE.name,
+                    baseVersion = null,
+                    payloadJson = payloadJson,
+                    predecessorOperationId = tail.operationId,
+                    isBlocked = true,
+                    protocolVersion = 2,
+                    statusCode = "PENDING",
+                    attemptCount = 0,
+                    lastError = null,
+                    nextAttemptAtEpochMillis = nowEpochMillis,
+                    createdAtEpochMillis = nowEpochMillis,
+                    updatedAtEpochMillis = nowEpochMillis,
+                )
+            insertOutboxRow(successor)
+            return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
+        }
+
+        upsertWorkspaceMemberRow(entity)
+        val newOpId = operationIdFactory()
+        validateOperationId(newOpId)
+        val op =
+            SyncOperationEntity(
                 syncScopeKey = syncScopeKey,
                 operationId = newOpId,
                 entityTypeCode = "WORKSPACE_MEMBER",
                 entityId = canonicalEntityId,
                 operationTypeCode = OutboxOperationType.UPDATE.name,
-                baseVersion = null,
+                baseVersion = baseVersion,
                 payloadJson = payloadJson,
-                predecessorOperationId = tail.operationId,
-                isBlocked = true,
+                predecessorOperationId = null,
+                isBlocked = false,
                 protocolVersion = 2,
                 statusCode = "PENDING",
                 attemptCount = 0,
@@ -3372,31 +5623,6 @@ interface LocalMutationDao {
                 createdAtEpochMillis = nowEpochMillis,
                 updatedAtEpochMillis = nowEpochMillis,
             )
-            insertOutboxRow(successor)
-            return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
-        }
-
-        upsertWorkspaceMemberRow(entity)
-        val newOpId = operationIdFactory()
-        validateOperationId(newOpId)
-        val op = SyncOperationEntity(
-            syncScopeKey = syncScopeKey,
-            operationId = newOpId,
-            entityTypeCode = "WORKSPACE_MEMBER",
-            entityId = canonicalEntityId,
-            operationTypeCode = OutboxOperationType.UPDATE.name,
-            baseVersion = baseVersion,
-            payloadJson = payloadJson,
-            predecessorOperationId = null,
-            isBlocked = false,
-            protocolVersion = 2,
-            statusCode = "PENDING",
-            attemptCount = 0,
-            lastError = null,
-            nextAttemptAtEpochMillis = nowEpochMillis,
-            createdAtEpochMillis = nowEpochMillis,
-            updatedAtEpochMillis = nowEpochMillis,
-        )
         insertOutboxRow(op)
         return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
     }
@@ -3452,24 +5678,25 @@ interface LocalMutationDao {
             }
             val newOpId = operationIdFactory()
             validateOperationId(newOpId)
-            val successor = SyncOperationEntity(
-                syncScopeKey = syncScopeKey,
-                operationId = newOpId,
-                entityTypeCode = "WORKSPACE_MEMBER",
-                entityId = canonicalEntityId,
-                operationTypeCode = OutboxOperationType.DELETE.name,
-                baseVersion = null,
-                payloadJson = payloadJson,
-                predecessorOperationId = tail.operationId,
-                isBlocked = true,
-                protocolVersion = 2,
-                statusCode = "PENDING",
-                attemptCount = 0,
-                lastError = null,
-                nextAttemptAtEpochMillis = nowEpochMillis,
-                createdAtEpochMillis = nowEpochMillis,
-                updatedAtEpochMillis = nowEpochMillis,
-            )
+            val successor =
+                SyncOperationEntity(
+                    syncScopeKey = syncScopeKey,
+                    operationId = newOpId,
+                    entityTypeCode = "WORKSPACE_MEMBER",
+                    entityId = canonicalEntityId,
+                    operationTypeCode = OutboxOperationType.DELETE.name,
+                    baseVersion = null,
+                    payloadJson = payloadJson,
+                    predecessorOperationId = tail.operationId,
+                    isBlocked = true,
+                    protocolVersion = 2,
+                    statusCode = "PENDING",
+                    attemptCount = 0,
+                    lastError = null,
+                    nextAttemptAtEpochMillis = nowEpochMillis,
+                    createdAtEpochMillis = nowEpochMillis,
+                    updatedAtEpochMillis = nowEpochMillis,
+                )
             insertOutboxRow(successor)
             return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
         }
@@ -3480,24 +5707,25 @@ interface LocalMutationDao {
         }
         val newOpId = operationIdFactory()
         validateOperationId(newOpId)
-        val op = SyncOperationEntity(
-            syncScopeKey = syncScopeKey,
-            operationId = newOpId,
-            entityTypeCode = "WORKSPACE_MEMBER",
-            entityId = canonicalEntityId,
-            operationTypeCode = OutboxOperationType.DELETE.name,
-            baseVersion = baseVersion,
-            payloadJson = payloadJson,
-            predecessorOperationId = null,
-            isBlocked = false,
-            protocolVersion = 2,
-            statusCode = "PENDING",
-            attemptCount = 0,
-            lastError = null,
-            nextAttemptAtEpochMillis = nowEpochMillis,
-            createdAtEpochMillis = nowEpochMillis,
-            updatedAtEpochMillis = nowEpochMillis,
-        )
+        val op =
+            SyncOperationEntity(
+                syncScopeKey = syncScopeKey,
+                operationId = newOpId,
+                entityTypeCode = "WORKSPACE_MEMBER",
+                entityId = canonicalEntityId,
+                operationTypeCode = OutboxOperationType.DELETE.name,
+                baseVersion = baseVersion,
+                payloadJson = payloadJson,
+                predecessorOperationId = null,
+                isBlocked = false,
+                protocolVersion = 2,
+                statusCode = "PENDING",
+                attemptCount = 0,
+                lastError = null,
+                nextAttemptAtEpochMillis = nowEpochMillis,
+                createdAtEpochMillis = nowEpochMillis,
+                updatedAtEpochMillis = nowEpochMillis,
+            )
         insertOutboxRow(op)
         return V2EnqueueResult(newOpId, V2EnqueueDecision.INSERTED)
     }
@@ -3509,8 +5737,8 @@ interface LocalMutationDao {
         payloadJson: String,
         operationIdFactory: () -> String,
         nowEpochMillis: Long,
-    ): V2EnqueueResult {
-        return mutateWorkspaceMemberLeaveV2(
+    ): V2EnqueueResult =
+        mutateWorkspaceMemberLeaveV2(
             syncScopeKey = syncScopeKey,
             entity = entity,
             activeProfileId = null,
@@ -3518,10 +5746,12 @@ interface LocalMutationDao {
             operationIdFactory = operationIdFactory,
             nowEpochMillis = nowEpochMillis,
         )
-    }
 
     @Transaction
-    suspend fun upsertProfileAndEnqueue(entity: UserProfileEntity, operation: SyncOperationEntity) {
+    suspend fun upsertProfileAndEnqueue(
+        entity: UserProfileEntity,
+        operation: SyncOperationEntity,
+    ) {
         SyncScopeKey.requireUserScope(operation.syncScopeKey)
         upsertProfileRow(entity)
         insertOutboxRow(operation)
@@ -3540,14 +5770,20 @@ interface LocalMutationDao {
     }
 
     @Transaction
-    suspend fun upsertCategoryAndEnqueue(entity: CategoryEntity, operation: SyncOperationEntity) {
+    suspend fun upsertCategoryAndEnqueue(
+        entity: CategoryEntity,
+        operation: SyncOperationEntity,
+    ) {
         SyncScopeKey.requireUserScope(operation.syncScopeKey)
         upsertCategoryRow(entity)
         insertOutboxRow(operation)
     }
 
     @Transaction
-    suspend fun upsertBudgetAndEnqueue(entity: BudgetEntity, operation: SyncOperationEntity) {
+    suspend fun upsertBudgetAndEnqueue(
+        entity: BudgetEntity,
+        operation: SyncOperationEntity,
+    ) {
         SyncScopeKey.requireUserScope(operation.syncScopeKey)
         upsertBudgetRow(entity)
         insertOutboxRow(operation)
@@ -3579,9 +5815,7 @@ interface LocalMutationDao {
     }
 
     @Transaction
-    suspend fun upsertTransactionsAndEnqueue(
-        units: List<TransactionMutationUnit>,
-    ) {
+    suspend fun upsertTransactionsAndEnqueue(units: List<TransactionMutationUnit>) {
         for (unit in units) {
             SyncScopeKey.requireUserScope(unit.operation.syncScopeKey)
             upsertTransactionRow(unit.entity)
@@ -3597,9 +5831,7 @@ interface LocalMutationDao {
     }
 
     @Transaction
-    suspend fun upsertTransactionsKeepingTagsAndEnqueue(
-        units: List<TransactionKeepingTagsMutationUnit>,
-    ) {
+    suspend fun upsertTransactionsKeepingTagsAndEnqueue(units: List<TransactionKeepingTagsMutationUnit>) {
         for (unit in units) {
             SyncScopeKey.requireUserScope(unit.operation.syncScopeKey)
             upsertTransactionRow(unit.entity)
@@ -3616,16 +5848,17 @@ interface LocalMutationDao {
     ): List<String> {
         SyncScopeKey.requireUserScope(syncScopeKey)
         return inputs.map { input ->
-            val result = mutateTransactionV2(
-                syncScopeKey = syncScopeKey,
-                entity = input.entity,
-                tags = input.tags,
-                tagLinks = input.tagLinks,
-                type = OutboxOperationType.CREATE,
-                payloadJson = input.payloadJson,
-                operationIdFactory = operationIdFactory,
-                nowEpochMillis = nowEpochMillis,
-            )
+            val result =
+                mutateTransactionV2(
+                    syncScopeKey = syncScopeKey,
+                    entity = input.entity,
+                    tags = input.tags,
+                    tagLinks = input.tagLinks,
+                    type = OutboxOperationType.CREATE,
+                    payloadJson = input.payloadJson,
+                    operationIdFactory = operationIdFactory,
+                    nowEpochMillis = nowEpochMillis,
+                )
             result.operationId
         }
     }
@@ -3646,30 +5879,31 @@ interface LocalMutationDao {
         require(transactionIds.distinct().size == transactionIds.size) { "Yinelenen işlem kimliği." }
         val operationIds = mutableListOf<String>()
         categoryInputs.forEach { input ->
-            operationIds += mutateCategoryV2(
-                syncScopeKey = syncScopeKey,
-                entity = input.entity,
-                type = OutboxOperationType.CREATE,
-                payloadJson = input.payloadJson,
-                operationIdFactory = operationIdFactory,
-                nowEpochMillis = nowEpochMillis,
-            ).operationId
+            operationIds +=
+                mutateCategoryV2(
+                    syncScopeKey = syncScopeKey,
+                    entity = input.entity,
+                    type = OutboxOperationType.CREATE,
+                    payloadJson = input.payloadJson,
+                    operationIdFactory = operationIdFactory,
+                    nowEpochMillis = nowEpochMillis,
+                ).operationId
         }
         transactionInputs.forEach { input ->
-            operationIds += mutateTransactionV2(
-                syncScopeKey = syncScopeKey,
-                entity = input.entity,
-                tags = input.tags,
-                tagLinks = input.tagLinks,
-                type = OutboxOperationType.CREATE,
-                payloadJson = input.payloadJson,
-                operationIdFactory = operationIdFactory,
-                nowEpochMillis = nowEpochMillis,
-            ).operationId
+            operationIds +=
+                mutateTransactionV2(
+                    syncScopeKey = syncScopeKey,
+                    entity = input.entity,
+                    tags = input.tags,
+                    tagLinks = input.tagLinks,
+                    type = OutboxOperationType.CREATE,
+                    payloadJson = input.payloadJson,
+                    operationIdFactory = operationIdFactory,
+                    nowEpochMillis = nowEpochMillis,
+                ).operationId
         }
         return operationIds
     }
-
 
     @Transaction
     suspend fun mutateTransactionDeletionsV2(
@@ -3680,17 +5914,19 @@ interface LocalMutationDao {
     ): List<String> {
         SyncScopeKey.requireUserScope(syncScopeKey)
         return inputs.map { input ->
-            val result = mutateTransactionKeepingTagsV2(
-                syncScopeKey = syncScopeKey,
-                entity = input.entity,
-                type = OutboxOperationType.DELETE,
-                payloadJson = input.payloadJson,
-                operationIdFactory = operationIdFactory,
-                nowEpochMillis = nowEpochMillis,
-            )
+            val result =
+                mutateTransactionKeepingTagsV2(
+                    syncScopeKey = syncScopeKey,
+                    entity = input.entity,
+                    type = OutboxOperationType.DELETE,
+                    payloadJson = input.payloadJson,
+                    operationIdFactory = operationIdFactory,
+                    nowEpochMillis = nowEpochMillis,
+                )
             result.operationId
         }
     }
+
     @Transaction
     suspend fun mutateBudgetsV2(
         syncScopeKey: String,
@@ -3767,12 +6003,13 @@ interface LocalMutationDao {
         }
 
         // 2. CAS ile lastGeneratedDate'i beklenen önceki değerden dueDate'e ilerlet
-        val updatedRows = advanceRecurringLastGeneratedDate(
-            recurringTransactionId = command.recurringTransactionId,
-            expectedPreviousLastGeneratedDate = command.expectedPreviousLastGeneratedDate,
-            newDueDate = command.dueDate,
-            nowEpochMillis = nowEpochMillis,
-        )
+        val updatedRows =
+            advanceRecurringLastGeneratedDate(
+                recurringTransactionId = command.recurringTransactionId,
+                expectedPreviousLastGeneratedDate = command.expectedPreviousLastGeneratedDate,
+                newDueDate = command.dueDate,
+                nowEpochMillis = nowEpochMillis,
+            )
         if (updatedRows == 0) {
             return GenerateRecurringOccurrenceResult.StaleRecurringState
         }
@@ -3786,12 +6023,13 @@ interface LocalMutationDao {
             upsertTransactionTagRows(command.tagLinks)
         }
 
-        val occurrence = RecurringTransactionOccurrenceEntity(
-            recurringTransactionId = command.recurringTransactionId,
-            dueDate = command.dueDate,
-            transactionId = command.transactionEntity.id,
-            createdAtEpochMillis = nowEpochMillis,
-        )
+        val occurrence =
+            RecurringTransactionOccurrenceEntity(
+                recurringTransactionId = command.recurringTransactionId,
+                dueDate = command.dueDate,
+                transactionId = command.transactionEntity.id,
+                createdAtEpochMillis = nowEpochMillis,
+            )
         upsertRecurringOccurrenceRow(occurrence)
         insertOutboxRow(command.outboxOperation)
 

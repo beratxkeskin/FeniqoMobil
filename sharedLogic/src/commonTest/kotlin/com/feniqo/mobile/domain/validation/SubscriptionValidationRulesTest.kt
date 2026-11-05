@@ -18,7 +18,6 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 
 class SubscriptionValidationRulesTest {
-
     private val sampleStartDate = LocalDate(2026, 1, 1)
     private val sampleNextRenewalDate = LocalDate(2026, 2, 1)
     private val sampleAmount = Money(15000L, Currency.TRY)
@@ -57,13 +56,14 @@ class SubscriptionValidationRulesTest {
 
     @Test
     fun validateCreateCommand_validCommand_trimsNameAndSucceeds() {
-        val command = CreateSubscriptionCommand(
-            name = "  YouTube Premium  ",
-            amount = Money(7999L, Currency.TRY),
-            categoryId = EntityId("cat-1"),
-            renewalRule = sampleRule(),
-            nextRenewalDate = sampleNextRenewalDate,
-        )
+        val command =
+            CreateSubscriptionCommand(
+                name = "  YouTube Premium  ",
+                amount = Money(7999L, Currency.TRY),
+                categoryId = EntityId("cat-1"),
+                renewalRule = sampleRule(),
+                nextRenewalDate = sampleNextRenewalDate,
+            )
 
         val result = SubscriptionValidationRules.validateCreateCommand(command)
         val valid = assertIs<SubscriptionValidationResult.Valid<CreateSubscriptionCommand>>(result)
@@ -74,13 +74,14 @@ class SubscriptionValidationRulesTest {
 
     @Test
     fun validateCreateCommand_withNullableCategoryId_succeeds() {
-        val command = CreateSubscriptionCommand(
-            name = "Netflix",
-            amount = sampleAmount,
-            categoryId = null,
-            renewalRule = sampleRule(),
-            nextRenewalDate = sampleNextRenewalDate,
-        )
+        val command =
+            CreateSubscriptionCommand(
+                name = "Netflix",
+                amount = sampleAmount,
+                categoryId = null,
+                renewalRule = sampleRule(),
+                nextRenewalDate = sampleNextRenewalDate,
+            )
 
         val result = SubscriptionValidationRules.validateCreateCommand(command)
         val valid = assertIs<SubscriptionValidationResult.Valid<CreateSubscriptionCommand>>(result)
@@ -89,13 +90,14 @@ class SubscriptionValidationRulesTest {
 
     @Test
     fun validateCreateCommand_withBlankName_returnsNameBlankError() {
-        val emptyCommand = CreateSubscriptionCommand(
-            name = "",
-            amount = sampleAmount,
-            categoryId = null,
-            renewalRule = sampleRule(),
-            nextRenewalDate = sampleNextRenewalDate,
-        )
+        val emptyCommand =
+            CreateSubscriptionCommand(
+                name = "",
+                amount = sampleAmount,
+                categoryId = null,
+                renewalRule = sampleRule(),
+                nextRenewalDate = sampleNextRenewalDate,
+            )
         val spaceCommand = emptyCommand.copy(name = "   ")
 
         assertEquals(
@@ -111,13 +113,14 @@ class SubscriptionValidationRulesTest {
     @Test
     fun validateCreateCommand_withTooLongName_returnsNameTooLongError() {
         val longName = "a".repeat(501)
-        val command = CreateSubscriptionCommand(
-            name = longName,
-            amount = sampleAmount,
-            categoryId = null,
-            renewalRule = sampleRule(),
-            nextRenewalDate = sampleNextRenewalDate,
-        )
+        val command =
+            CreateSubscriptionCommand(
+                name = longName,
+                amount = sampleAmount,
+                categoryId = null,
+                renewalRule = sampleRule(),
+                nextRenewalDate = sampleNextRenewalDate,
+            )
 
         assertEquals(
             SubscriptionValidationResult.Invalid(SubscriptionValidationError.NAME_TOO_LONG),
@@ -128,13 +131,14 @@ class SubscriptionValidationRulesTest {
     @Test
     fun validateCreateCommand_withMaxLengthTrimmedName_succeeds() {
         val exact500Name = "a".repeat(500)
-        val command = CreateSubscriptionCommand(
-            name = "  $exact500Name  ",
-            amount = sampleAmount,
-            categoryId = null,
-            renewalRule = sampleRule(),
-            nextRenewalDate = sampleNextRenewalDate,
-        )
+        val command =
+            CreateSubscriptionCommand(
+                name = "  $exact500Name  ",
+                amount = sampleAmount,
+                categoryId = null,
+                renewalRule = sampleRule(),
+                nextRenewalDate = sampleNextRenewalDate,
+            )
 
         val result = SubscriptionValidationRules.validateCreateCommand(command)
         val valid = assertIs<SubscriptionValidationResult.Valid<CreateSubscriptionCommand>>(result)
@@ -145,13 +149,14 @@ class SubscriptionValidationRulesTest {
     @Test
     fun validateUpdateCommand_withTooLongName_returnsNameTooLongError() {
         val longName = "x".repeat(501)
-        val command = UpdateSubscriptionCommand(
-            id = EntityId("sub-1"),
-            name = longName,
-            amount = sampleAmount,
-            categoryId = null,
-            renewalRule = sampleRule(),
-        )
+        val command =
+            UpdateSubscriptionCommand(
+                id = EntityId("sub-1"),
+                name = longName,
+                amount = sampleAmount,
+                categoryId = null,
+                renewalRule = sampleRule(),
+            )
 
         assertEquals(
             SubscriptionValidationResult.Invalid(SubscriptionValidationError.NAME_TOO_LONG),
@@ -179,13 +184,14 @@ class SubscriptionValidationRulesTest {
             negativeInputResult,
         )
 
-        val zeroCreateCommand = CreateSubscriptionCommand(
-            name = "iCloud",
-            amount = Money(0L, Currency.TRY),
-            categoryId = null,
-            renewalRule = sampleRule(),
-            nextRenewalDate = sampleNextRenewalDate,
-        )
+        val zeroCreateCommand =
+            CreateSubscriptionCommand(
+                name = "iCloud",
+                amount = Money(0L, Currency.TRY),
+                categoryId = null,
+                renewalRule = sampleRule(),
+                nextRenewalDate = sampleNextRenewalDate,
+            )
         assertEquals(
             SubscriptionValidationResult.Invalid(SubscriptionValidationError.AMOUNT_NON_POSITIVE),
             SubscriptionValidationRules.validateCreateCommand(zeroCreateCommand),
@@ -216,29 +222,32 @@ class SubscriptionValidationRulesTest {
     @Test
     fun validateCreateCommand_withNextRenewalDateOutsideRuleBounds_returnsExpectedErrors() {
         // Next renewal date before start date
-        val beforeStartCommand = CreateSubscriptionCommand(
-            name = "Hosting",
-            amount = sampleAmount,
-            categoryId = null,
-            renewalRule = sampleRule(startDate = LocalDate(2026, 5, 1)),
-            nextRenewalDate = LocalDate(2026, 4, 30),
-        )
+        val beforeStartCommand =
+            CreateSubscriptionCommand(
+                name = "Hosting",
+                amount = sampleAmount,
+                categoryId = null,
+                renewalRule = sampleRule(startDate = LocalDate(2026, 5, 1)),
+                nextRenewalDate = LocalDate(2026, 4, 30),
+            )
         assertEquals(
             SubscriptionValidationResult.Invalid(SubscriptionValidationError.NEXT_RENEWAL_BEFORE_START_DATE),
             SubscriptionValidationRules.validateCreateCommand(beforeStartCommand),
         )
 
         // Next renewal date after bounded end date
-        val afterEndCommand = CreateSubscriptionCommand(
-            name = "Hosting",
-            amount = sampleAmount,
-            categoryId = null,
-            renewalRule = sampleRule(
-                startDate = LocalDate(2026, 1, 1),
-                endDate = LocalDate(2026, 6, 1),
-            ),
-            nextRenewalDate = LocalDate(2026, 6, 2),
-        )
+        val afterEndCommand =
+            CreateSubscriptionCommand(
+                name = "Hosting",
+                amount = sampleAmount,
+                categoryId = null,
+                renewalRule =
+                    sampleRule(
+                        startDate = LocalDate(2026, 1, 1),
+                        endDate = LocalDate(2026, 6, 1),
+                    ),
+                nextRenewalDate = LocalDate(2026, 6, 2),
+            )
         assertEquals(
             SubscriptionValidationResult.Invalid(SubscriptionValidationError.NEXT_RENEWAL_AFTER_END_DATE),
             SubscriptionValidationRules.validateCreateCommand(afterEndCommand),
@@ -247,21 +256,23 @@ class SubscriptionValidationRulesTest {
 
     @Test
     fun applySubscriptionUpdate_validCommand_updatesOnlyMutableFieldsAndPreservesImmutableFields() {
-        val original = sampleSubscription(
-            id = "sub-100",
-            name = "Old Name",
-            amount = Money(10000L, Currency.TRY),
-            categoryId = "cat-old",
-            isActive = true,
-        )
+        val original =
+            sampleSubscription(
+                id = "sub-100",
+                name = "Old Name",
+                amount = Money(10000L, Currency.TRY),
+                categoryId = "cat-old",
+                isActive = true,
+            )
 
-        val updateCommand = UpdateSubscriptionCommand(
-            id = EntityId("sub-100"),
-            name = "  New Name  ",
-            amount = Money(25000L, Currency.TRY),
-            categoryId = EntityId("cat-new"),
-            renewalRule = sampleRule(interval = 2),
-        )
+        val updateCommand =
+            UpdateSubscriptionCommand(
+                id = EntityId("sub-100"),
+                name = "  New Name  ",
+                amount = Money(25000L, Currency.TRY),
+                categoryId = EntityId("cat-new"),
+                renewalRule = sampleRule(interval = 2),
+            )
 
         val result = SubscriptionValidationRules.applySubscriptionUpdate(original, updateCommand)
         val valid = assertIs<SubscriptionValidationResult.Valid<Subscription>>(result)
@@ -285,13 +296,14 @@ class SubscriptionValidationRulesTest {
     @Test
     fun applySubscriptionUpdate_idMismatch_failsClosedWithIllegalArgumentException() {
         val original = sampleSubscription(id = "sub-1")
-        val mismatchCommand = UpdateSubscriptionCommand(
-            id = EntityId("sub-2"),
-            name = "Name",
-            amount = sampleAmount,
-            categoryId = null,
-            renewalRule = sampleRule(),
-        )
+        val mismatchCommand =
+            UpdateSubscriptionCommand(
+                id = EntityId("sub-2"),
+                name = "Name",
+                amount = sampleAmount,
+                categoryId = null,
+                renewalRule = sampleRule(),
+            )
 
         assertFailsWith<IllegalArgumentException> {
             SubscriptionValidationRules.applySubscriptionUpdate(original, mismatchCommand)
@@ -300,18 +312,20 @@ class SubscriptionValidationRulesTest {
 
     @Test
     fun applySubscriptionUpdate_whenNewRuleInvalidatesExistingNextRenewalDate_returnsInvalidAndNoEntity() {
-        val original = sampleSubscription(
-            nextRenewalDate = LocalDate(2026, 3, 1),
-        )
+        val original =
+            sampleSubscription(
+                nextRenewalDate = LocalDate(2026, 3, 1),
+            )
 
         // 1. New start date pushed after nextRenewalDate
-        val newStartDateCommand = UpdateSubscriptionCommand(
-            id = original.id,
-            name = "Subscription",
-            amount = sampleAmount,
-            categoryId = null,
-            renewalRule = sampleRule(startDate = LocalDate(2026, 4, 1)),
-        )
+        val newStartDateCommand =
+            UpdateSubscriptionCommand(
+                id = original.id,
+                name = "Subscription",
+                amount = sampleAmount,
+                categoryId = null,
+                renewalRule = sampleRule(startDate = LocalDate(2026, 4, 1)),
+            )
         val result1 = SubscriptionValidationRules.applySubscriptionUpdate(original, newStartDateCommand)
         assertEquals(
             SubscriptionValidationResult.Invalid(SubscriptionValidationError.NEXT_RENEWAL_BEFORE_START_DATE),
@@ -319,16 +333,18 @@ class SubscriptionValidationRulesTest {
         )
 
         // 2. New end date pulled before nextRenewalDate
-        val newEndDateCommand = UpdateSubscriptionCommand(
-            id = original.id,
-            name = "Subscription",
-            amount = sampleAmount,
-            categoryId = null,
-            renewalRule = sampleRule(
-                startDate = LocalDate(2026, 1, 1),
-                endDate = LocalDate(2026, 2, 28),
-            ),
-        )
+        val newEndDateCommand =
+            UpdateSubscriptionCommand(
+                id = original.id,
+                name = "Subscription",
+                amount = sampleAmount,
+                categoryId = null,
+                renewalRule =
+                    sampleRule(
+                        startDate = LocalDate(2026, 1, 1),
+                        endDate = LocalDate(2026, 2, 28),
+                    ),
+            )
         val result2 = SubscriptionValidationRules.applySubscriptionUpdate(original, newEndDateCommand)
         assertEquals(
             SubscriptionValidationResult.Invalid(SubscriptionValidationError.NEXT_RENEWAL_AFTER_END_DATE),

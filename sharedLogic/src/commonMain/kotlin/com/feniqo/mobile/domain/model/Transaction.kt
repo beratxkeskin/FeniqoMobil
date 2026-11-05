@@ -62,7 +62,80 @@ data class Transaction(
     val syncStatus: SyncStatus? = null,
     val splitMode: TransactionSplitMode = TransactionSplitMode.EQUAL,
     val participantShares: List<TransactionParticipantShare> = emptyList(),
+    val merchantInfo: TransactionMerchantInfo? = null,
 ) {
+    val merchantId: EntityId? get() = merchantInfo?.merchantId
+    val merchantMatchSource: MerchantMatchSource? get() = merchantInfo?.matchSource
+    val merchantConfidence: Int? get() = merchantInfo?.confidence
+    val merchantCatalogVersion: Int? get() = merchantInfo?.catalogVersion
+
+    constructor(
+        id: EntityId,
+        ownerId: EntityId,
+        workspaceId: EntityId?,
+        amount: Money,
+        type: TransactionType,
+        categoryId: EntityId,
+        description: String?,
+        paymentMethod: PaymentMethod,
+        transactionDate: LocalDate,
+        receiptPath: ReceiptPath?,
+        installment: InstallmentInfo?,
+        createdAt: Instant,
+        paidByUserId: EntityId = ownerId,
+        participantUserIds: List<EntityId> = listOf(ownerId),
+        note: String? = null,
+        syncStatus: SyncStatus? = null,
+        splitMode: TransactionSplitMode = TransactionSplitMode.EQUAL,
+        participantShares: List<TransactionParticipantShare> = emptyList(),
+        merchantId: EntityId?,
+        merchantMatchSource: MerchantMatchSource?,
+        merchantConfidence: Int?,
+        merchantCatalogVersion: Int?,
+    ) : this(
+        id = id,
+        ownerId = ownerId,
+        workspaceId = workspaceId,
+        amount = amount,
+        type = type,
+        categoryId = categoryId,
+        description = description,
+        paymentMethod = paymentMethod,
+        transactionDate = transactionDate,
+        receiptPath = receiptPath,
+        installment = installment,
+        createdAt = createdAt,
+        paidByUserId = paidByUserId,
+        participantUserIds = participantUserIds,
+        note = note,
+        syncStatus = syncStatus,
+        splitMode = splitMode,
+        participantShares = participantShares,
+        merchantInfo =
+            if (merchantId != null &&
+                merchantMatchSource != null &&
+                merchantConfidence != null &&
+                merchantCatalogVersion != null
+            ) {
+                TransactionMerchantInfo(
+                    merchantId = merchantId,
+                    matchSource = merchantMatchSource,
+                    confidence = merchantConfidence,
+                    catalogVersion = merchantCatalogVersion,
+                )
+            } else {
+                require(
+                    merchantId == null &&
+                        merchantMatchSource == null &&
+                        merchantConfidence == null &&
+                        merchantCatalogVersion == null,
+                ) {
+                    "Tüm merchant alanları birlikte dolu veya birlikte boş olmalıdır."
+                }
+                null
+            },
+    )
+
     init {
         require(amount.amountMinor > 0) { "İşlem tutarı sıfırdan büyük olmalıdır." }
         require(description == null || (description.isNotBlank() && description.length <= MAX_DESCRIPTION_LENGTH)) {

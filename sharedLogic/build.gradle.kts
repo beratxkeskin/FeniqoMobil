@@ -1,5 +1,5 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.gradle.api.tasks.testing.Test
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -12,30 +12,36 @@ plugins {
 kotlin {
     listOf(
         iosArm64(),
-        iosSimulatorArm64()
+        iosSimulatorArm64(),
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
             baseName = "SharedLogic"
             isStatic = true
         }
     }
-    
+
     android {
-       namespace = "com.feniqo.mobile.sharedlogic"
-       compileSdk = libs.versions.android.compileSdk.get().toInt()
-       minSdk = libs.versions.android.minSdk.get().toInt()
-    
-       compilerOptions {
-           jvmTarget = JvmTarget.JVM_11
-       }
-       androidResources {
-           enable = true
-       }
-       withHostTest {
-           isIncludeAndroidResources = true
-       }
+        namespace = "com.feniqo.mobile.sharedlogic"
+        compileSdk =
+            libs.versions.android.compileSdk
+                .get()
+                .toInt()
+        minSdk =
+            libs.versions.android.minSdk
+                .get()
+                .toInt()
+
+        compilerOptions {
+            jvmTarget = JvmTarget.JVM_11
+        }
+        androidResources {
+            enable = true
+        }
+        withHostTest {
+            isIncludeAndroidResources = true
+        }
     }
-    
+
     sourceSets {
         commonMain.dependencies {
             // Platformdan bağımsız iş mantığı bağımlılıkları burada tutulur.
@@ -97,10 +103,11 @@ tasks.withType<Test>().configureEach {
     systemProperty("user.country", "US")
 }
 
-val copySchemasForTest = tasks.register<Copy>("copySchemasForTest") {
-    from(layout.projectDirectory.dir("schemas"))
-    into(layout.buildDirectory.dir("intermediates/assets/androidHostTest/mergeAndroidHostTestAssets"))
-}
+val copySchemasForTest =
+    tasks.register<Copy>("copySchemasForTest") {
+        from(layout.projectDirectory.dir("schemas"))
+        into(layout.buildDirectory.dir("intermediates/assets/androidHostTest/mergeAndroidHostTestAssets"))
+    }
 
 tasks.matching { it.name == "packageAndroidHostTestForUnitTest" }.configureEach {
     dependsOn(copySchemasForTest)

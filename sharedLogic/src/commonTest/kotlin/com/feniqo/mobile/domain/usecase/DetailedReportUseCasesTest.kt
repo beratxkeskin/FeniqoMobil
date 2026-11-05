@@ -22,7 +22,6 @@ import com.feniqo.mobile.domain.model.RecurrenceRule
 import com.feniqo.mobile.domain.model.RecurringTransaction
 import com.feniqo.mobile.domain.model.ReportFilter
 import com.feniqo.mobile.domain.model.ReportPeriod
-import com.feniqo.mobile.domain.model.ReportPeriodPreset
 import com.feniqo.mobile.domain.model.Subscription
 import com.feniqo.mobile.domain.model.Transaction
 import com.feniqo.mobile.domain.model.TransactionType
@@ -50,349 +49,536 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class DetailedReportUseCasesTest {
-
     private val referenceDate = LocalDate(2026, 9, 17)
 
     @Test
-    fun observeDetailedReportOverview_calculatesTrendAndTopCategory() = runTest {
-        val tx1 = createTx("t1", 10_000_00L, Currency.TRY, TransactionType.INCOME, "cat-salary", LocalDate(2026, 9, 5))
-        val tx2 = createTx("t2", 2_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 9, 10))
-        val tx3 = createTx("t3", 1_500_00L, Currency.TRY, TransactionType.EXPENSE, "cat-rent", LocalDate(2026, 9, 12))
+    fun observeDetailedReportOverview_calculatesTrendAndTopCategory() =
+        runTest {
+            val tx1 = createTx("t1", 10_000_00L, Currency.TRY, TransactionType.INCOME, "cat-salary", LocalDate(2026, 9, 5))
+            val tx2 = createTx("t2", 2_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 9, 10))
+            val tx3 = createTx("t3", 1_500_00L, Currency.TRY, TransactionType.EXPENSE, "cat-rent", LocalDate(2026, 9, 12))
 
-        val cat1 = Category(EntityId("cat-salary"), EntityId("u1"), null, "Maaş", TransactionType.INCOME, com.feniqo.mobile.domain.model.CategoryColor("#2D5A43"), com.feniqo.mobile.domain.model.CategoryIcon("ic_salary"), false, Instant.fromEpochMilliseconds(0))
-        val cat2 = Category(EntityId("cat-market"), EntityId("u1"), null, "Market", TransactionType.EXPENSE, com.feniqo.mobile.domain.model.CategoryColor("#2D5A43"), com.feniqo.mobile.domain.model.CategoryIcon("ic_cart"), false, Instant.fromEpochMilliseconds(0))
-        val cat3 = Category(EntityId("cat-rent"), EntityId("u1"), null, "Kira", TransactionType.EXPENSE, com.feniqo.mobile.domain.model.CategoryColor("#2D5A43"), com.feniqo.mobile.domain.model.CategoryIcon("ic_home"), false, Instant.fromEpochMilliseconds(0))
+            val cat1 =
+                Category(
+                    EntityId("cat-salary"),
+                    EntityId("u1"),
+                    null,
+                    "Maaş",
+                    TransactionType.INCOME,
+                    com.feniqo.mobile.domain.model
+                        .CategoryColor("#2D5A43"),
+                    com.feniqo.mobile.domain.model
+                        .CategoryIcon("ic_salary"),
+                    false,
+                    Instant.fromEpochMilliseconds(0),
+                )
+            val cat2 =
+                Category(
+                    EntityId("cat-market"),
+                    EntityId("u1"),
+                    null,
+                    "Market",
+                    TransactionType.EXPENSE,
+                    com.feniqo.mobile.domain.model
+                        .CategoryColor("#2D5A43"),
+                    com.feniqo.mobile.domain.model
+                        .CategoryIcon("ic_cart"),
+                    false,
+                    Instant.fromEpochMilliseconds(0),
+                )
+            val cat3 =
+                Category(
+                    EntityId("cat-rent"),
+                    EntityId("u1"),
+                    null,
+                    "Kira",
+                    TransactionType.EXPENSE,
+                    com.feniqo.mobile.domain.model
+                        .CategoryColor("#2D5A43"),
+                    com.feniqo.mobile.domain.model
+                        .CategoryIcon("ic_home"),
+                    false,
+                    Instant.fromEpochMilliseconds(0),
+                )
 
-        val useCase = ObserveDetailedReportOverviewUseCase(
-            transactionRepository = FakeTxRepo(listOf(tx1, tx2, tx3)),
-            categoryRepository = FakeCategoryRepo(listOf(cat1, cat2, cat3)),
-        )
+            val useCase =
+                ObserveDetailedReportOverviewUseCase(
+                    transactionRepository = FakeTxRepo(listOf(tx1, tx2, tx3)),
+                    categoryRepository = FakeCategoryRepo(listOf(cat1, cat2, cat3)),
+                )
 
-        val result = useCase(ReportFilter(), null, referenceDate).first()
+            val result = useCase(ReportFilter(), null, referenceDate).first()
 
-        assertEquals(6, result.trendPoints.size)
-        assertNotNull(result.topCategory)
-        assertEquals("Market", result.topCategory!!.categoryName)
-        assertEquals(2_000_00L, result.topCategory!!.amount.amountMinor)
-        assertEquals(DetailedReportInsight.TransactionCountOnly(count = 2), result.insight)
-        assertNotNull(result.financialRhythm.busiestDay)
-    }
-
-    @Test
-    fun observeDetailedReportOverview_expenseDecreased_producesTypedExpenseChanged() = runTest {
-        val prevTx = createTx("prev", 5_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 8, 15))
-        val curTx = createTx("cur", 4_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 9, 10))
-
-        val useCase = ObserveDetailedReportOverviewUseCase(
-            transactionRepository = FakeTxRepo(listOf(prevTx, curTx)),
-            categoryRepository = FakeCategoryRepo(emptyList()),
-        )
-
-        val result = useCase(ReportFilter(), null, referenceDate).first()
-        assertTrue(result.insight is DetailedReportInsight.ExpenseChanged)
-        val insight = result.insight as DetailedReportInsight.ExpenseChanged
-        assertEquals(2000, insight.changeBasisPoints)
-        assertEquals(-1_000_00L, insight.difference.amountMinor)
-        assertTrue(insight.difference.amountMinor < 0L)
-    }
-
-    @Test
-    fun observeDetailedReportOverview_expenseIncreased_producesTypedExpenseChanged() = runTest {
-        val prevTx = createTx("prev", 2_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 8, 15))
-        val curTx = createTx("cur", 3_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 9, 10))
-
-        val useCase = ObserveDetailedReportOverviewUseCase(
-            transactionRepository = FakeTxRepo(listOf(prevTx, curTx)),
-            categoryRepository = FakeCategoryRepo(emptyList()),
-        )
-
-        val result = useCase(ReportFilter(), null, referenceDate).first()
-        assertTrue(result.insight is DetailedReportInsight.ExpenseChanged)
-        val insight = result.insight as DetailedReportInsight.ExpenseChanged
-        assertEquals(5000, insight.changeBasisPoints)
-        assertEquals(1_000_00L, insight.difference.amountMinor)
-        assertTrue(insight.difference.amountMinor > 0L)
-    }
-
-    @Test
-    fun observeDetailedReportOverview_previousExpenseZero_producesTransactionCountOnly() = runTest {
-        val curTx1 = createTx("t1", 1_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 9, 5))
-        val curTx2 = createTx("t2", 1_500_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 9, 10))
-
-        val useCase = ObserveDetailedReportOverviewUseCase(
-            transactionRepository = FakeTxRepo(listOf(curTx1, curTx2)),
-            categoryRepository = FakeCategoryRepo(emptyList()),
-        )
-
-        val result = useCase(ReportFilter(), null, referenceDate).first()
-        assertEquals(DetailedReportInsight.TransactionCountOnly(count = 2), result.insight)
-    }
-
-    @Test
-    fun observeDetailedReportOverview_rhythmReturnsDayOfWeekOrNull() = runTest {
-        val useCaseNoExpenses = ObserveDetailedReportOverviewUseCase(
-            transactionRepository = FakeTxRepo(emptyList()),
-            categoryRepository = FakeCategoryRepo(emptyList()),
-        )
-        val emptyResult = useCaseNoExpenses(ReportFilter(), null, referenceDate).first()
-        assertNull(emptyResult.financialRhythm.busiestDay)
-        assertEquals(0L, emptyResult.financialRhythm.busiestDayExpense.amountMinor)
-
-        val mondayTx = createTx("m", 3_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 9, 7)) // Monday
-        val useCaseWithExpense = ObserveDetailedReportOverviewUseCase(
-            transactionRepository = FakeTxRepo(listOf(mondayTx)),
-            categoryRepository = FakeCategoryRepo(emptyList()),
-        )
-        val result = useCaseWithExpense(ReportFilter(), null, referenceDate).first()
-        assertEquals(DayOfWeek.MONDAY, result.financialRhythm.busiestDay)
-        assertEquals(3_000_00L, result.financialRhythm.busiestDayExpense.amountMinor)
-    }
-
-    @Test
-    fun observeDetailedReportOverview_missingCategory_producesNullCategoryName() = runTest {
-        val tx = createTx("t1", 5_000_00L, Currency.TRY, TransactionType.EXPENSE, "deleted-cat", LocalDate(2026, 9, 10))
-        val useCase = ObserveDetailedReportOverviewUseCase(
-            transactionRepository = FakeTxRepo(listOf(tx)),
-            categoryRepository = FakeCategoryRepo(emptyList()),
-        )
-        val result = useCase(ReportFilter(), null, referenceDate).first()
-        assertNotNull(result.topCategory)
-        assertEquals(EntityId("deleted-cat"), result.topCategory!!.categoryId)
-        assertNull(result.topCategory!!.categoryName)
-        assertEquals(5_000_00L, result.topCategory!!.amount.amountMinor)
-    }
-
-    @Test
-    fun observeCashFlow_calculatesMonthlyPointsAndAverages() = runTest {
-        val tx1 = createTx("t1", 5_000_00L, Currency.TRY, TransactionType.INCOME, "cat-1", LocalDate(2026, 9, 1))
-        val tx2 = createTx("t2", 3_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-2", LocalDate(2026, 9, 15))
-        val tx3 = createTx("t3", 4_000_00L, Currency.TRY, TransactionType.INCOME, "cat-1", LocalDate(2026, 8, 1))
-        val tx4 = createTx("t4", 2_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-2", LocalDate(2026, 8, 15))
-
-        val useCase = ObserveCashFlowUseCase(FakeTxRepo(listOf(tx1, tx2, tx3, tx4)))
-        val summary = useCase(monthCount = 6, currency = Currency.TRY, workspaceId = null, referenceDate = referenceDate).first()
-
-        assertEquals(6, summary.points.size)
-        assertTrue(summary.averageIncome.amountMinor > 0)
-        assertTrue(summary.averageExpense.amountMinor > 0)
-    }
-
-    @Test
-    fun observeSpendingCalendar_calculatesDailyTotals() = runTest {
-        val tx1 = createTx("t1", 1_200_00L, Currency.TRY, TransactionType.EXPENSE, "c1", LocalDate(2026, 9, 5))
-        val tx2 = createTx("t2", 800_00L, Currency.TRY, TransactionType.EXPENSE, "c_missing", LocalDate(2026, 9, 5))
-        val tx3 = createTx("t3", 500_00L, Currency.TRY, TransactionType.EXPENSE, "c2", LocalDate(2026, 9, 12))
-
-        val cat1 = Category(EntityId("c1"), EntityId("u1"), null, "Market", TransactionType.EXPENSE, com.feniqo.mobile.domain.model.CategoryColor("#2D5A43"), com.feniqo.mobile.domain.model.CategoryIcon("ic_cart"), false, Instant.fromEpochMilliseconds(0))
-        val cat2 = Category(EntityId("c2"), EntityId("u1"), null, "Ulaşım", TransactionType.EXPENSE, com.feniqo.mobile.domain.model.CategoryColor("#2D5A43"), com.feniqo.mobile.domain.model.CategoryIcon("ic_bus"), false, Instant.fromEpochMilliseconds(0))
-
-        val useCase = ObserveSpendingCalendarUseCase(
-            transactionRepository = FakeTxRepo(listOf(tx1, tx2, tx3)),
-            categoryRepository = FakeCategoryRepo(listOf(cat1, cat2)),
-        )
-
-        val summary = useCase(YearMonth.from(2026, 9), Currency.TRY, null).first()
-
-        assertEquals(30, summary.days.size)
-        assertEquals(2_500_00L, summary.totalMonthExpense.amountMinor)
-        assertEquals(LocalDate(2026, 9, 5), summary.highestExpenseDay)
-
-        val day5 = summary.days.find { it.date == LocalDate(2026, 9, 5) }
-        assertNotNull(day5)
-        assertEquals(2_000_00L, day5.expense.amountMinor)
-        assertEquals(2, day5.transactionCount)
-
-        // Known category mapping
-        val txSummaryKnown = day5.transactions.find { it.id == EntityId("t1") }
-        assertNotNull(txSummaryKnown)
-        assertEquals("Market", txSummaryKnown.categoryName)
-        assertFalse(txSummaryKnown.isCategoryMissing)
-        assertEquals(EntityId("c1"), txSummaryKnown.categoryId)
-
-        // Missing / unresolvable category mapping
-        val txSummaryMissing = day5.transactions.find { it.id == EntityId("t2") }
-        assertNotNull(txSummaryMissing)
-        assertNull(txSummaryMissing.categoryName)
-        assertTrue(txSummaryMissing.isCategoryMissing)
-        assertEquals(EntityId("c_missing"), txSummaryMissing.categoryId)
-
-        // Verify domain produces no human fallback strings
-        day5.transactions.forEach { txSummary ->
-            assertFalse(txSummary.categoryName == "Kategorisiz")
-            assertFalse(txSummary.categoryName == "Silinmiş kategori")
+            assertEquals(6, result.trendPoints.size)
+            assertNotNull(result.topCategory)
+            assertEquals("Market", result.topCategory!!.categoryName)
+            assertEquals(2_000_00L, result.topCategory!!.amount.amountMinor)
+            assertEquals(DetailedReportInsight.TransactionCountOnly(count = 2), result.insight)
+            assertNotNull(result.financialRhythm.busiestDay)
         }
-    }
 
     @Test
-    fun observeBudgetPerformance_calculatesOnTrackAndExceeded() = runTest {
-        val b1 = Budget(EntityId("b1"), EntityId("u1"), null, EntityId("c1"), YearMonth.from(2026, 9), Money(5_000_00L, Currency.TRY), Instant.fromEpochMilliseconds(0))
-        val b2 = Budget(EntityId("b2"), EntityId("u1"), null, EntityId("c2"), YearMonth.from(2026, 9), Money(2_000_00L, Currency.TRY), Instant.fromEpochMilliseconds(0))
+    fun observeDetailedReportOverview_expenseDecreased_producesTypedExpenseChanged() =
+        runTest {
+            val prevTx = createTx("prev", 5_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 8, 15))
+            val curTx = createTx("cur", 4_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 9, 10))
 
-        val tx1 = createTx("t1", 4_000_00L, Currency.TRY, TransactionType.EXPENSE, "c1", LocalDate(2026, 9, 5))
-        val tx2 = createTx("t2", 2_500_00L, Currency.TRY, TransactionType.EXPENSE, "c2", LocalDate(2026, 9, 8)) // exceeded
+            val useCase =
+                ObserveDetailedReportOverviewUseCase(
+                    transactionRepository = FakeTxRepo(listOf(prevTx, curTx)),
+                    categoryRepository = FakeCategoryRepo(emptyList()),
+                )
 
-        val cat1 = Category(EntityId("c1"), EntityId("u1"), null, "Market", TransactionType.EXPENSE, com.feniqo.mobile.domain.model.CategoryColor("#2D5A43"), com.feniqo.mobile.domain.model.CategoryIcon("ic_cart"), false, Instant.fromEpochMilliseconds(0))
-        val cat2 = Category(EntityId("c2"), EntityId("u1"), null, "Eğlence", TransactionType.EXPENSE, com.feniqo.mobile.domain.model.CategoryColor("#2D5A43"), com.feniqo.mobile.domain.model.CategoryIcon("ic_game"), false, Instant.fromEpochMilliseconds(0))
-
-        val useCase = ObserveBudgetPerformanceReportUseCase(
-            budgetRepository = FakeBudgetRepo(listOf(b1, b2)),
-            transactionRepository = FakeTxRepo(listOf(tx1, tx2)),
-            categoryRepository = FakeCategoryRepo(listOf(cat1, cat2)),
-        )
-
-        val perf = useCase(YearMonth.from(2026, 9), Currency.TRY, null).first()
-
-        assertEquals(7_000_00L, perf.totalBudget.amountMinor)
-        assertEquals(6_500_00L, perf.totalSpent.amountMinor)
-        assertEquals(1, perf.budgetsOnTrackCount)
-        assertEquals(1, perf.budgetsExceededCount)
-    }
+            val result = useCase(ReportFilter(), null, referenceDate).first()
+            assertTrue(result.insight is DetailedReportInsight.ExpenseChanged)
+            val insight = result.insight as DetailedReportInsight.ExpenseChanged
+            assertEquals(2000, insight.changeBasisPoints)
+            assertEquals(-1_000_00L, insight.difference.amountMinor)
+            assertTrue(insight.difference.amountMinor < 0L)
+        }
 
     @Test
-    fun observeSubscriptionSummary_calculatesMonthlyTotalAndUpcoming() = runTest {
-        val s1 = createSub("s1", "Netflix", 229_00L, Currency.TRY, LocalDate(2026, 9, 20))
-        val s2 = createSub("s2", "Spotify", 60_00L, Currency.TRY, LocalDate(2026, 9, 23))
+    fun observeDetailedReportOverview_expenseIncreased_producesTypedExpenseChanged() =
+        runTest {
+            val prevTx = createTx("prev", 2_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 8, 15))
+            val curTx = createTx("cur", 3_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 9, 10))
 
-        val useCase = ObserveSubscriptionSummaryReportUseCase(
-            subscriptionRepository = FakeSubRepo(listOf(s1, s2)),
-            categoryRepository = FakeCategoryRepo(emptyList()),
-        )
+            val useCase =
+                ObserveDetailedReportOverviewUseCase(
+                    transactionRepository = FakeTxRepo(listOf(prevTx, curTx)),
+                    categoryRepository = FakeCategoryRepo(emptyList()),
+                )
 
-        val summary = useCase(Currency.TRY).first()
-
-        assertEquals(2, summary.activeSubscriptionCount)
-        assertEquals(289_00L, summary.totalMonthlyEstimate.amountMinor)
-        assertEquals(2, summary.upcomingPayments.size)
-        assertEquals("Netflix", summary.upcomingPayments[0].name)
-    }
-
-    @Test
-    fun observeBudgetPerformance_missingCategory_producesNullCategoryNameAndTrueFlag() = runTest {
-        val b1 = Budget(EntityId("b1"), EntityId("u1"), null, EntityId("c-missing"), YearMonth.from(2026, 9), Money(5_000_00L, Currency.TRY), Instant.fromEpochMilliseconds(0))
-        val useCase = ObserveBudgetPerformanceReportUseCase(
-            budgetRepository = FakeBudgetRepo(listOf(b1)),
-            transactionRepository = FakeTxRepo(emptyList()),
-            categoryRepository = FakeCategoryRepo(emptyList()),
-        )
-
-        val perf = useCase(YearMonth.from(2026, 9), Currency.TRY, null).first()
-        val item = perf.categoryProgressList.first()
-
-        assertNull(item.categoryName)
-        assertTrue(item.isCategoryMissing)
-    }
+            val result = useCase(ReportFilter(), null, referenceDate).first()
+            assertTrue(result.insight is DetailedReportInsight.ExpenseChanged)
+            val insight = result.insight as DetailedReportInsight.ExpenseChanged
+            assertEquals(5000, insight.changeBasisPoints)
+            assertEquals(1_000_00L, insight.difference.amountMinor)
+            assertTrue(insight.difference.amountMinor > 0L)
+        }
 
     @Test
-    fun observeSubscriptionSummary_missingCategory_producesNullCategoryNameWithoutTurkishFallback() = runTest {
-        val s1 = createSub("s1", "Netflix", 229_00L, Currency.TRY, LocalDate(2026, 9, 20))
-        val useCase = ObserveSubscriptionSummaryReportUseCase(
-            subscriptionRepository = FakeSubRepo(listOf(s1)),
-            categoryRepository = FakeCategoryRepo(emptyList()),
-        )
+    fun observeDetailedReportOverview_previousExpenseZero_producesTransactionCountOnly() =
+        runTest {
+            val curTx1 = createTx("t1", 1_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 9, 5))
+            val curTx2 = createTx("t2", 1_500_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 9, 10))
 
-        val summary = useCase(Currency.TRY).first()
-        val dist = summary.categoryDistribution.first()
+            val useCase =
+                ObserveDetailedReportOverviewUseCase(
+                    transactionRepository = FakeTxRepo(listOf(curTx1, curTx2)),
+                    categoryRepository = FakeCategoryRepo(emptyList()),
+                )
 
-        assertNull(dist.categoryName)
-        assertTrue(dist.isCategoryMissing)
-        assertNull(dist.categoryId)
-    }
-
-    @Test
-    fun observeDebtSummary_calculatesRemainingAndNet() = runTest {
-        val d1 = Debt(EntityId("d1"), EntityId("u1"), null, "Banka", Money(10_000_00L, Currency.TRY), DebtType.DEBT, LocalDate(2026, 9, 25), DebtStatus.OPEN, null, Instant.fromEpochMilliseconds(0))
-        val d2 = Debt(EntityId("d2"), EntityId("u1"), null, "Ahmet", Money(4_000_00L, Currency.TRY), DebtType.RECEIVABLE, LocalDate(2026, 9, 28), DebtStatus.OPEN, null, Instant.fromEpochMilliseconds(0))
-
-        val useCase = ObserveDebtSummaryReportUseCase(FakeDebtRepo(listOf(d1, d2)))
-        val summary = useCase(Currency.TRY, referenceDate).first()
-
-        assertEquals(10_000_00L, summary.totalDebtRemaining.amountMinor)
-        assertEquals(4_000_00L, summary.totalReceivableRemaining.amountMinor)
-        assertEquals(-6_000_00L, summary.netBalance.amountMinor)
-        assertEquals(2, summary.upcomingDeadlines.size)
-    }
+            val result = useCase(ReportFilter(), null, referenceDate).first()
+            assertEquals(DetailedReportInsight.TransactionCountOnly(count = 2), result.insight)
+        }
 
     @Test
-    fun observeForecastReport_producesTypedSourcesAndNoAssumptionsText() = runTest {
-        val tx1 = createTx("t1", 5_000_00L, Currency.TRY, TransactionType.INCOME, "c1", LocalDate(2026, 9, 1))
-        val tx2 = createTx("t2", 1_000_00L, Currency.TRY, TransactionType.EXPENSE, "c2", LocalDate(2026, 9, 5))
-        val sub1 = createSub("s1", "Netflix", 200_00L, Currency.TRY, LocalDate(2026, 9, 20))
-        val recur1 = createRecur("r1", 300_00L, Currency.TRY, TransactionType.EXPENSE)
+    fun observeDetailedReportOverview_rhythmReturnsDayOfWeekOrNull() =
+        runTest {
+            val useCaseNoExpenses =
+                ObserveDetailedReportOverviewUseCase(
+                    transactionRepository = FakeTxRepo(emptyList()),
+                    categoryRepository = FakeCategoryRepo(emptyList()),
+                )
+            val emptyResult = useCaseNoExpenses(ReportFilter(), null, referenceDate).first()
+            assertNull(emptyResult.financialRhythm.busiestDay)
+            assertEquals(0L, emptyResult.financialRhythm.busiestDayExpense.amountMinor)
 
-        val useCase = ObserveForecastReportUseCase(
-            transactionRepository = FakeTxRepo(listOf(tx1, tx2)),
-            subscriptionRepository = FakeSubRepo(listOf(sub1)),
-            recurringTransactionRepository = FakeRecurringTxRepo(listOf(recur1)),
-        )
-
-        val summary = useCase(Currency.TRY, null, referenceDate, 6).first()
-
-        assertEquals(4, summary.contributingSources.size)
-        assertEquals(ForecastSourceType.SALARY_AND_REGULAR_INCOME, summary.contributingSources[0].type)
-        assertEquals(ForecastSourceType.SUBSCRIPTIONS_AND_BILLS, summary.contributingSources[1].type)
-        assertEquals(ForecastSourceType.RECURRING_TRANSACTIONS, summary.contributingSources[2].type)
-        assertEquals(ForecastSourceType.VARIABLE_EXPENSES_AVERAGE, summary.contributingSources[3].type)
-        assertEquals(2, summary.activeRecurringCount)
-        assertEquals(YearMonth.from(2026, 10), summary.forecastMonth)
-    }
-
-    @Test
-    fun observeForecastReport_emptyRepositories_producesEmptyContributingSources() = runTest {
-        val useCase = ObserveForecastReportUseCase(
-            transactionRepository = FakeTxRepo(emptyList()),
-            subscriptionRepository = FakeSubRepo(emptyList()),
-            recurringTransactionRepository = FakeRecurringTxRepo(emptyList()),
-        )
-
-        val summary = useCase(Currency.TRY, null, referenceDate, 6).first()
-
-        assertTrue(summary.contributingSources.isEmpty())
-        assertEquals(0, summary.activeRecurringCount)
-        assertEquals(Money.zero(Currency.TRY), summary.expectedIncome)
-        assertEquals(Money.zero(Currency.TRY), summary.fixedAndPlannedExpenses)
-        assertEquals(Money.zero(Currency.TRY), summary.variableExpensesEstimate)
-    }
+            val mondayTx = createTx("m", 3_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-market", LocalDate(2026, 9, 7)) // Monday
+            val useCaseWithExpense =
+                ObserveDetailedReportOverviewUseCase(
+                    transactionRepository = FakeTxRepo(listOf(mondayTx)),
+                    categoryRepository = FakeCategoryRepo(emptyList()),
+                )
+            val result = useCaseWithExpense(ReportFilter(), null, referenceDate).first()
+            assertEquals(DayOfWeek.MONDAY, result.financialRhythm.busiestDay)
+            assertEquals(3_000_00L, result.financialRhythm.busiestDayExpense.amountMinor)
+        }
 
     @Test
-    fun observeFinancialInsights_producesTypedInsightsWithoutHardcodedTurkish() = runTest {
-        val curTx = createTx("t1", 1_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-1", LocalDate(2026, 9, 5))
-        val prevTx = createTx("t2", 2_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-1", LocalDate(2026, 8, 5))
-        val cat1 = Category(EntityId("cat-1"), EntityId("u1"), null, "Market", TransactionType.EXPENSE, com.feniqo.mobile.domain.model.CategoryColor("#2D5A43"), com.feniqo.mobile.domain.model.CategoryIcon("ic_cart"), false, Instant.fromEpochMilliseconds(0))
-
-        val useCase = ObserveFinancialInsightsUseCase(
-            transactionRepository = FakeTxRepo(listOf(curTx, prevTx)),
-            categoryRepository = FakeCategoryRepo(listOf(cat1)),
-        )
-
-        val insights = useCase(ReportPeriod(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30)), Currency.TRY, null).first()
-        val catInsight = insights.find { it.type == InsightType.CATEGORY_DECREASE }
-
-        assertNotNull(catInsight)
-        assertEquals(EntityId("cat-1"), catInsight.categoryId)
-        assertEquals("Market", catInsight.categoryName)
-        assertFalse(catInsight.isCategoryMissing)
-        assertEquals(5000, catInsight.changePercentageBasisPoints)
-        assertEquals(-1_000_00L, catInsight.delta.amountMinor)
-    }
+    fun observeDetailedReportOverview_missingCategory_producesNullCategoryName() =
+        runTest {
+            val tx = createTx("t1", 5_000_00L, Currency.TRY, TransactionType.EXPENSE, "deleted-cat", LocalDate(2026, 9, 10))
+            val useCase =
+                ObserveDetailedReportOverviewUseCase(
+                    transactionRepository = FakeTxRepo(listOf(tx)),
+                    categoryRepository = FakeCategoryRepo(emptyList()),
+                )
+            val result = useCase(ReportFilter(), null, referenceDate).first()
+            assertNotNull(result.topCategory)
+            assertEquals(EntityId("deleted-cat"), result.topCategory!!.categoryId)
+            assertNull(result.topCategory!!.categoryName)
+            assertEquals(5_000_00L, result.topCategory!!.amount.amountMinor)
+        }
 
     @Test
-    fun observeFinancialInsights_missingCategory_producesNullCategoryNameAndTrueFlag() = runTest {
-        val curTx = createTx("t1", 1_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-deleted", LocalDate(2026, 9, 5))
-        val prevTx = createTx("t2", 2_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-deleted", LocalDate(2026, 8, 5))
+    fun observeCashFlow_calculatesMonthlyPointsAndAverages() =
+        runTest {
+            val tx1 = createTx("t1", 5_000_00L, Currency.TRY, TransactionType.INCOME, "cat-1", LocalDate(2026, 9, 1))
+            val tx2 = createTx("t2", 3_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-2", LocalDate(2026, 9, 15))
+            val tx3 = createTx("t3", 4_000_00L, Currency.TRY, TransactionType.INCOME, "cat-1", LocalDate(2026, 8, 1))
+            val tx4 = createTx("t4", 2_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-2", LocalDate(2026, 8, 15))
 
-        val useCase = ObserveFinancialInsightsUseCase(
-            transactionRepository = FakeTxRepo(listOf(curTx, prevTx)),
-            categoryRepository = FakeCategoryRepo(emptyList()),
-        )
+            val useCase = ObserveCashFlowUseCase(FakeTxRepo(listOf(tx1, tx2, tx3, tx4)))
+            val summary = useCase(monthCount = 6, currency = Currency.TRY, workspaceId = null, referenceDate = referenceDate).first()
 
-        val insights = useCase(ReportPeriod(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30)), Currency.TRY, null).first()
-        val catInsight = insights.find { it.type == InsightType.CATEGORY_DECREASE }
+            assertEquals(6, summary.points.size)
+            assertTrue(summary.averageIncome.amountMinor > 0)
+            assertTrue(summary.averageExpense.amountMinor > 0)
+        }
 
-        assertNotNull(catInsight)
-        assertNull(catInsight.categoryName)
-        assertTrue(catInsight.isCategoryMissing)
-        assertEquals(5000, catInsight.changePercentageBasisPoints)
-    }
+    @Test
+    fun observeSpendingCalendar_calculatesDailyTotals() =
+        runTest {
+            val tx1 = createTx("t1", 1_200_00L, Currency.TRY, TransactionType.EXPENSE, "c1", LocalDate(2026, 9, 5))
+            val tx2 = createTx("t2", 800_00L, Currency.TRY, TransactionType.EXPENSE, "c_missing", LocalDate(2026, 9, 5))
+            val tx3 = createTx("t3", 500_00L, Currency.TRY, TransactionType.EXPENSE, "c2", LocalDate(2026, 9, 12))
+
+            val cat1 =
+                Category(
+                    EntityId("c1"),
+                    EntityId("u1"),
+                    null,
+                    "Market",
+                    TransactionType.EXPENSE,
+                    com.feniqo.mobile.domain.model
+                        .CategoryColor("#2D5A43"),
+                    com.feniqo.mobile.domain.model
+                        .CategoryIcon("ic_cart"),
+                    false,
+                    Instant.fromEpochMilliseconds(0),
+                )
+            val cat2 =
+                Category(
+                    EntityId("c2"),
+                    EntityId("u1"),
+                    null,
+                    "Ulaşım",
+                    TransactionType.EXPENSE,
+                    com.feniqo.mobile.domain.model
+                        .CategoryColor("#2D5A43"),
+                    com.feniqo.mobile.domain.model
+                        .CategoryIcon("ic_bus"),
+                    false,
+                    Instant.fromEpochMilliseconds(0),
+                )
+
+            val useCase =
+                ObserveSpendingCalendarUseCase(
+                    transactionRepository = FakeTxRepo(listOf(tx1, tx2, tx3)),
+                    categoryRepository = FakeCategoryRepo(listOf(cat1, cat2)),
+                )
+
+            val summary = useCase(YearMonth.from(2026, 9), Currency.TRY, null).first()
+
+            assertEquals(30, summary.days.size)
+            assertEquals(2_500_00L, summary.totalMonthExpense.amountMinor)
+            assertEquals(LocalDate(2026, 9, 5), summary.highestExpenseDay)
+
+            val day5 = summary.days.find { it.date == LocalDate(2026, 9, 5) }
+            assertNotNull(day5)
+            assertEquals(2_000_00L, day5.expense.amountMinor)
+            assertEquals(2, day5.transactionCount)
+
+            // Known category mapping
+            val txSummaryKnown = day5.transactions.find { it.id == EntityId("t1") }
+            assertNotNull(txSummaryKnown)
+            assertEquals("Market", txSummaryKnown.categoryName)
+            assertFalse(txSummaryKnown.isCategoryMissing)
+            assertEquals(EntityId("c1"), txSummaryKnown.categoryId)
+
+            // Missing / unresolvable category mapping
+            val txSummaryMissing = day5.transactions.find { it.id == EntityId("t2") }
+            assertNotNull(txSummaryMissing)
+            assertNull(txSummaryMissing.categoryName)
+            assertTrue(txSummaryMissing.isCategoryMissing)
+            assertEquals(EntityId("c_missing"), txSummaryMissing.categoryId)
+
+            // Verify domain produces no human fallback strings
+            day5.transactions.forEach { txSummary ->
+                assertFalse(txSummary.categoryName == "Kategorisiz")
+                assertFalse(txSummary.categoryName == "Silinmiş kategori")
+            }
+        }
+
+    @Test
+    fun observeBudgetPerformance_calculatesOnTrackAndExceeded() =
+        runTest {
+            val b1 =
+                Budget(
+                    EntityId("b1"),
+                    EntityId("u1"),
+                    null,
+                    EntityId("c1"),
+                    YearMonth.from(2026, 9),
+                    Money(5_000_00L, Currency.TRY),
+                    Instant.fromEpochMilliseconds(0),
+                )
+            val b2 =
+                Budget(
+                    EntityId("b2"),
+                    EntityId("u1"),
+                    null,
+                    EntityId("c2"),
+                    YearMonth.from(2026, 9),
+                    Money(2_000_00L, Currency.TRY),
+                    Instant.fromEpochMilliseconds(0),
+                )
+
+            val tx1 = createTx("t1", 4_000_00L, Currency.TRY, TransactionType.EXPENSE, "c1", LocalDate(2026, 9, 5))
+            val tx2 = createTx("t2", 2_500_00L, Currency.TRY, TransactionType.EXPENSE, "c2", LocalDate(2026, 9, 8)) // exceeded
+
+            val cat1 =
+                Category(
+                    EntityId("c1"),
+                    EntityId("u1"),
+                    null,
+                    "Market",
+                    TransactionType.EXPENSE,
+                    com.feniqo.mobile.domain.model
+                        .CategoryColor("#2D5A43"),
+                    com.feniqo.mobile.domain.model
+                        .CategoryIcon("ic_cart"),
+                    false,
+                    Instant.fromEpochMilliseconds(0),
+                )
+            val cat2 =
+                Category(
+                    EntityId("c2"),
+                    EntityId("u1"),
+                    null,
+                    "Eğlence",
+                    TransactionType.EXPENSE,
+                    com.feniqo.mobile.domain.model
+                        .CategoryColor("#2D5A43"),
+                    com.feniqo.mobile.domain.model
+                        .CategoryIcon("ic_game"),
+                    false,
+                    Instant.fromEpochMilliseconds(0),
+                )
+
+            val useCase =
+                ObserveBudgetPerformanceReportUseCase(
+                    budgetRepository = FakeBudgetRepo(listOf(b1, b2)),
+                    transactionRepository = FakeTxRepo(listOf(tx1, tx2)),
+                    categoryRepository = FakeCategoryRepo(listOf(cat1, cat2)),
+                )
+
+            val perf = useCase(YearMonth.from(2026, 9), Currency.TRY, null).first()
+
+            assertEquals(7_000_00L, perf.totalBudget.amountMinor)
+            assertEquals(6_500_00L, perf.totalSpent.amountMinor)
+            assertEquals(1, perf.budgetsOnTrackCount)
+            assertEquals(1, perf.budgetsExceededCount)
+        }
+
+    @Test
+    fun observeSubscriptionSummary_calculatesMonthlyTotalAndUpcoming() =
+        runTest {
+            val s1 = createSub("s1", "Netflix", 229_00L, Currency.TRY, LocalDate(2026, 9, 20))
+            val s2 = createSub("s2", "Spotify", 60_00L, Currency.TRY, LocalDate(2026, 9, 23))
+
+            val useCase =
+                ObserveSubscriptionSummaryReportUseCase(
+                    subscriptionRepository = FakeSubRepo(listOf(s1, s2)),
+                    categoryRepository = FakeCategoryRepo(emptyList()),
+                )
+
+            val summary = useCase(Currency.TRY).first()
+
+            assertEquals(2, summary.activeSubscriptionCount)
+            assertEquals(289_00L, summary.totalMonthlyEstimate.amountMinor)
+            assertEquals(2, summary.upcomingPayments.size)
+            assertEquals("Netflix", summary.upcomingPayments[0].name)
+        }
+
+    @Test
+    fun observeBudgetPerformance_missingCategory_producesNullCategoryNameAndTrueFlag() =
+        runTest {
+            val b1 =
+                Budget(
+                    EntityId("b1"),
+                    EntityId("u1"),
+                    null,
+                    EntityId("c-missing"),
+                    YearMonth.from(2026, 9),
+                    Money(5_000_00L, Currency.TRY),
+                    Instant.fromEpochMilliseconds(0),
+                )
+            val useCase =
+                ObserveBudgetPerformanceReportUseCase(
+                    budgetRepository = FakeBudgetRepo(listOf(b1)),
+                    transactionRepository = FakeTxRepo(emptyList()),
+                    categoryRepository = FakeCategoryRepo(emptyList()),
+                )
+
+            val perf = useCase(YearMonth.from(2026, 9), Currency.TRY, null).first()
+            val item = perf.categoryProgressList.first()
+
+            assertNull(item.categoryName)
+            assertTrue(item.isCategoryMissing)
+        }
+
+    @Test
+    fun observeSubscriptionSummary_missingCategory_producesNullCategoryNameWithoutTurkishFallback() =
+        runTest {
+            val s1 = createSub("s1", "Netflix", 229_00L, Currency.TRY, LocalDate(2026, 9, 20))
+            val useCase =
+                ObserveSubscriptionSummaryReportUseCase(
+                    subscriptionRepository = FakeSubRepo(listOf(s1)),
+                    categoryRepository = FakeCategoryRepo(emptyList()),
+                )
+
+            val summary = useCase(Currency.TRY).first()
+            val dist = summary.categoryDistribution.first()
+
+            assertNull(dist.categoryName)
+            assertTrue(dist.isCategoryMissing)
+            assertNull(dist.categoryId)
+        }
+
+    @Test
+    fun observeDebtSummary_calculatesRemainingAndNet() =
+        runTest {
+            val d1 =
+                Debt(
+                    EntityId("d1"),
+                    EntityId("u1"),
+                    null,
+                    "Banka",
+                    Money(10_000_00L, Currency.TRY),
+                    DebtType.DEBT,
+                    LocalDate(2026, 9, 25),
+                    DebtStatus.OPEN,
+                    null,
+                    Instant.fromEpochMilliseconds(0),
+                )
+            val d2 =
+                Debt(
+                    EntityId("d2"),
+                    EntityId("u1"),
+                    null,
+                    "Ahmet",
+                    Money(4_000_00L, Currency.TRY),
+                    DebtType.RECEIVABLE,
+                    LocalDate(2026, 9, 28),
+                    DebtStatus.OPEN,
+                    null,
+                    Instant.fromEpochMilliseconds(0),
+                )
+
+            val useCase = ObserveDebtSummaryReportUseCase(FakeDebtRepo(listOf(d1, d2)))
+            val summary = useCase(Currency.TRY, referenceDate).first()
+
+            assertEquals(10_000_00L, summary.totalDebtRemaining.amountMinor)
+            assertEquals(4_000_00L, summary.totalReceivableRemaining.amountMinor)
+            assertEquals(-6_000_00L, summary.netBalance.amountMinor)
+            assertEquals(2, summary.upcomingDeadlines.size)
+        }
+
+    @Test
+    fun observeForecastReport_producesTypedSourcesAndNoAssumptionsText() =
+        runTest {
+            val tx1 = createTx("t1", 5_000_00L, Currency.TRY, TransactionType.INCOME, "c1", LocalDate(2026, 9, 1))
+            val tx2 = createTx("t2", 1_000_00L, Currency.TRY, TransactionType.EXPENSE, "c2", LocalDate(2026, 9, 5))
+            val sub1 = createSub("s1", "Netflix", 200_00L, Currency.TRY, LocalDate(2026, 9, 20))
+            val recur1 = createRecur("r1", 300_00L, Currency.TRY, TransactionType.EXPENSE)
+
+            val useCase =
+                ObserveForecastReportUseCase(
+                    transactionRepository = FakeTxRepo(listOf(tx1, tx2)),
+                    subscriptionRepository = FakeSubRepo(listOf(sub1)),
+                    recurringTransactionRepository = FakeRecurringTxRepo(listOf(recur1)),
+                )
+
+            val summary = useCase(Currency.TRY, null, referenceDate, 6).first()
+
+            assertEquals(4, summary.contributingSources.size)
+            assertEquals(ForecastSourceType.SALARY_AND_REGULAR_INCOME, summary.contributingSources[0].type)
+            assertEquals(ForecastSourceType.SUBSCRIPTIONS_AND_BILLS, summary.contributingSources[1].type)
+            assertEquals(ForecastSourceType.RECURRING_TRANSACTIONS, summary.contributingSources[2].type)
+            assertEquals(ForecastSourceType.VARIABLE_EXPENSES_AVERAGE, summary.contributingSources[3].type)
+            assertEquals(2, summary.activeRecurringCount)
+            assertEquals(YearMonth.from(2026, 10), summary.forecastMonth)
+        }
+
+    @Test
+    fun observeForecastReport_emptyRepositories_producesEmptyContributingSources() =
+        runTest {
+            val useCase =
+                ObserveForecastReportUseCase(
+                    transactionRepository = FakeTxRepo(emptyList()),
+                    subscriptionRepository = FakeSubRepo(emptyList()),
+                    recurringTransactionRepository = FakeRecurringTxRepo(emptyList()),
+                )
+
+            val summary = useCase(Currency.TRY, null, referenceDate, 6).first()
+
+            assertTrue(summary.contributingSources.isEmpty())
+            assertEquals(0, summary.activeRecurringCount)
+            assertEquals(Money.zero(Currency.TRY), summary.expectedIncome)
+            assertEquals(Money.zero(Currency.TRY), summary.fixedAndPlannedExpenses)
+            assertEquals(Money.zero(Currency.TRY), summary.variableExpensesEstimate)
+        }
+
+    @Test
+    fun observeFinancialInsights_producesTypedInsightsWithoutHardcodedTurkish() =
+        runTest {
+            val curTx = createTx("t1", 1_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-1", LocalDate(2026, 9, 5))
+            val prevTx = createTx("t2", 2_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-1", LocalDate(2026, 8, 5))
+            val cat1 =
+                Category(
+                    EntityId("cat-1"),
+                    EntityId("u1"),
+                    null,
+                    "Market",
+                    TransactionType.EXPENSE,
+                    com.feniqo.mobile.domain.model
+                        .CategoryColor("#2D5A43"),
+                    com.feniqo.mobile.domain.model
+                        .CategoryIcon("ic_cart"),
+                    false,
+                    Instant.fromEpochMilliseconds(0),
+                )
+
+            val useCase =
+                ObserveFinancialInsightsUseCase(
+                    transactionRepository = FakeTxRepo(listOf(curTx, prevTx)),
+                    categoryRepository = FakeCategoryRepo(listOf(cat1)),
+                )
+
+            val insights = useCase(ReportPeriod(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30)), Currency.TRY, null).first()
+            val catInsight = insights.find { it.type == InsightType.CATEGORY_DECREASE }
+
+            assertNotNull(catInsight)
+            assertEquals(EntityId("cat-1"), catInsight.categoryId)
+            assertEquals("Market", catInsight.categoryName)
+            assertFalse(catInsight.isCategoryMissing)
+            assertEquals(5000, catInsight.changePercentageBasisPoints)
+            assertEquals(-1_000_00L, catInsight.delta.amountMinor)
+        }
+
+    @Test
+    fun observeFinancialInsights_missingCategory_producesNullCategoryNameAndTrueFlag() =
+        runTest {
+            val curTx = createTx("t1", 1_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-deleted", LocalDate(2026, 9, 5))
+            val prevTx = createTx("t2", 2_000_00L, Currency.TRY, TransactionType.EXPENSE, "cat-deleted", LocalDate(2026, 8, 5))
+
+            val useCase =
+                ObserveFinancialInsightsUseCase(
+                    transactionRepository = FakeTxRepo(listOf(curTx, prevTx)),
+                    categoryRepository = FakeCategoryRepo(emptyList()),
+                )
+
+            val insights = useCase(ReportPeriod(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30)), Currency.TRY, null).first()
+            val catInsight = insights.find { it.type == InsightType.CATEGORY_DECREASE }
+
+            assertNotNull(catInsight)
+            assertNull(catInsight.categoryName)
+            assertTrue(catInsight.isCategoryMissing)
+            assertEquals(5000, catInsight.changePercentageBasisPoints)
+        }
 
     private fun createTx(
         id: String,
@@ -401,20 +587,21 @@ class DetailedReportUseCasesTest {
         type: TransactionType,
         categoryId: String,
         date: LocalDate,
-    ): Transaction = Transaction(
-        id = EntityId(id),
-        ownerId = EntityId("user-1"),
-        workspaceId = null,
-        amount = Money(amountMinor, currency),
-        type = type,
-        categoryId = EntityId(categoryId),
-        description = "Test transaction $id",
-        paymentMethod = PaymentMethod.CREDIT_CARD,
-        transactionDate = date,
-        receiptPath = null,
-        installment = null,
-        createdAt = Instant.fromEpochMilliseconds(1000L),
-    )
+    ): Transaction =
+        Transaction(
+            id = EntityId(id),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            amount = Money(amountMinor, currency),
+            type = type,
+            categoryId = EntityId(categoryId),
+            description = "Test transaction $id",
+            paymentMethod = PaymentMethod.CREDIT_CARD,
+            transactionDate = date,
+            receiptPath = null,
+            installment = null,
+            createdAt = Instant.fromEpochMilliseconds(1000L),
+        )
 
     private fun createSub(
         id: String,
@@ -422,50 +609,56 @@ class DetailedReportUseCasesTest {
         amountMinor: Long,
         currency: Currency,
         renewalDate: LocalDate,
-    ): Subscription = Subscription(
-        id = EntityId(id),
-        ownerId = EntityId("user-1"),
-        workspaceId = null,
-        name = name,
-        amount = Money(amountMinor, currency),
-        categoryId = null,
-        renewalRule = RecurrenceRule(
-            frequency = RecurrenceFrequency.MONTHLY,
-            interval = 1,
-            startDate = LocalDate(2026, 1, 1),
-            endDate = null,
-        ),
-        nextRenewalDate = renewalDate,
-        isActive = true,
-        createdAt = Instant.fromEpochMilliseconds(1000L),
-    )
+    ): Subscription =
+        Subscription(
+            id = EntityId(id),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            name = name,
+            amount = Money(amountMinor, currency),
+            categoryId = null,
+            renewalRule =
+                RecurrenceRule(
+                    frequency = RecurrenceFrequency.MONTHLY,
+                    interval = 1,
+                    startDate = LocalDate(2026, 1, 1),
+                    endDate = null,
+                ),
+            nextRenewalDate = renewalDate,
+            isActive = true,
+            createdAt = Instant.fromEpochMilliseconds(1000L),
+        )
 
     private fun createRecur(
         id: String,
         amountMinor: Long,
         currency: Currency,
         type: TransactionType = TransactionType.EXPENSE,
-    ): RecurringTransaction = RecurringTransaction(
-        id = EntityId(id),
-        ownerId = EntityId("user-1"),
-        workspaceId = null,
-        amount = Money(amountMinor, currency),
-        type = type,
-        categoryId = EntityId("cat-1"),
-        description = "Test recur $id",
-        paymentMethod = PaymentMethod.CREDIT_CARD,
-        rule = RecurrenceRule(
-            frequency = RecurrenceFrequency.MONTHLY,
-            interval = 1,
-            startDate = LocalDate(2026, 1, 1),
-            endDate = null,
-        ),
-        lastGeneratedDate = null,
-        isActive = true,
-        createdAt = Instant.fromEpochMilliseconds(1000L),
-    )
+    ): RecurringTransaction =
+        RecurringTransaction(
+            id = EntityId(id),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            amount = Money(amountMinor, currency),
+            type = type,
+            categoryId = EntityId("cat-1"),
+            description = "Test recur $id",
+            paymentMethod = PaymentMethod.CREDIT_CARD,
+            rule =
+                RecurrenceRule(
+                    frequency = RecurrenceFrequency.MONTHLY,
+                    interval = 1,
+                    startDate = LocalDate(2026, 1, 1),
+                    endDate = null,
+                ),
+            lastGeneratedDate = null,
+            isActive = true,
+            createdAt = Instant.fromEpochMilliseconds(1000L),
+        )
 
-    private class FakeTxRepo(private val transactions: List<Transaction>) : TransactionRepository {
+    private class FakeTxRepo(
+        private val transactions: List<Transaction>,
+    ) : TransactionRepository {
         override fun observeTransactions(filter: TransactionFilter): Flow<List<Transaction>> {
             var res = transactions
             if (filter.period != null) {
@@ -479,63 +672,129 @@ class DetailedReportUseCasesTest {
             }
             return flowOf(res)
         }
+
         override fun observeTransaction(id: EntityId): Flow<Transaction?> = flowOf(transactions.find { it.id == id })
+
         override fun observeInstallmentGroup(groupId: EntityId): Flow<List<Transaction>> = flowOf(emptyList())
+
         override suspend fun create(transaction: Transaction): RepositoryResult<EntityId> = RepositoryResult.Success(transaction.id)
-        override suspend fun createInstallmentGroup(transactions: List<Transaction>): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("g1"))
+
+        override suspend fun createInstallmentGroup(transactions: List<Transaction>): RepositoryResult<EntityId> =
+            RepositoryResult.Success(EntityId("g1"))
+
         override suspend fun update(transaction: Transaction): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+
         override suspend fun softDelete(id: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+
         override suspend fun softDeleteInstallments(ids: Set<EntityId>): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
     }
 
-    private class FakeCategoryRepo(private val categories: List<Category>) : CategoryRepository {
-        override fun observeCategories(type: TransactionType?, workspaceId: EntityId?): Flow<List<Category>> = flowOf(categories)
+    private class FakeCategoryRepo(
+        private val categories: List<Category>,
+    ) : CategoryRepository {
+        override fun observeCategories(
+            type: TransactionType?,
+            workspaceId: EntityId?,
+        ): Flow<List<Category>> = flowOf(categories)
+
         override fun observeCategory(id: EntityId): Flow<Category?> = flowOf(categories.find { it.id == id })
+
         override fun observeCategoriesForHistoryLookup(workspaceId: EntityId?): Flow<List<Category>> = flowOf(categories)
+
         override suspend fun create(category: Category): RepositoryResult<EntityId> = RepositoryResult.Success(category.id)
+
         override suspend fun update(category: Category): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+
         override suspend fun softDelete(id: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
     }
 
-    private class FakeBudgetRepo(private val budgets: List<Budget>) : BudgetRepository {
-        override fun observeBudgets(month: YearMonth, workspaceId: EntityId?): Flow<List<Budget>> =
-            flowOf(budgets.filter { it.month == month })
+    private class FakeBudgetRepo(
+        private val budgets: List<Budget>,
+    ) : BudgetRepository {
+        override fun observeBudgets(
+            month: YearMonth,
+            workspaceId: EntityId?,
+        ): Flow<List<Budget>> = flowOf(budgets.filter { it.month == month })
+
         override fun observeBudget(id: EntityId): Flow<Budget?> = flowOf(budgets.find { it.id == id })
+
         override suspend fun create(command: CreateBudgetCommand): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("b"))
+
         override suspend fun update(command: UpdateBudgetCommand): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+
         override suspend fun softDelete(id: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+
         override suspend fun copyBudgets(command: CopyBudgetsCommand): RepositoryResult<CopyBudgetsResult> =
             RepositoryResult.Success(CopyBudgetsResult(0, emptyList()))
     }
 
-    private class FakeSubRepo(private val subs: List<Subscription>) : SubscriptionRepository {
+    private class FakeSubRepo(
+        private val subs: List<Subscription>,
+    ) : SubscriptionRepository {
         override fun observeSubscriptions(): Flow<List<Subscription>> = flowOf(subs)
+
         override fun observeSubscription(id: EntityId): Flow<Subscription?> = flowOf(subs.find { it.id == id })
-        override suspend fun create(command: com.feniqo.mobile.domain.model.CreateSubscriptionCommand): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("s"))
-        override suspend fun update(command: com.feniqo.mobile.domain.model.UpdateSubscriptionCommand): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
-        override suspend fun setActive(command: com.feniqo.mobile.domain.model.SetSubscriptionActiveCommand): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
-        override suspend fun advanceRenewal(id: EntityId): RepositoryResult<com.feniqo.mobile.domain.validation.SubscriptionRenewalProgressionResult> =
-            RepositoryResult.Failure(com.feniqo.mobile.domain.model.AppError.Unknown("sub"))
+
+        override suspend fun create(command: com.feniqo.mobile.domain.model.CreateSubscriptionCommand): RepositoryResult<EntityId> =
+            RepositoryResult.Success(EntityId("s"))
+
+        override suspend fun update(command: com.feniqo.mobile.domain.model.UpdateSubscriptionCommand): RepositoryResult<Unit> =
+            RepositoryResult.Success(Unit)
+
+        override suspend fun setActive(command: com.feniqo.mobile.domain.model.SetSubscriptionActiveCommand): RepositoryResult<Unit> =
+            RepositoryResult.Success(Unit)
+
+        override suspend fun advanceRenewal(
+            id: EntityId,
+        ): RepositoryResult<com.feniqo.mobile.domain.validation.SubscriptionRenewalProgressionResult> =
+            RepositoryResult.Failure(
+                com.feniqo.mobile.domain.model.AppError
+                    .Unknown("sub"),
+            )
+
         override suspend fun softDelete(id: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
     }
 
-    private class FakeDebtRepo(private val debts: List<Debt>) : DebtRepository {
+    private class FakeDebtRepo(
+        private val debts: List<Debt>,
+    ) : DebtRepository {
         override fun observeDebts(): Flow<List<Debt>> = flowOf(debts)
+
         override fun observeDebt(id: EntityId): Flow<Debt?> = flowOf(debts.find { it.id == id })
+
         override fun observePayments(debtId: EntityId): Flow<List<DebtPayment>> = flowOf(emptyList())
-        override suspend fun create(command: com.feniqo.mobile.domain.model.CreateDebtCommand): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("d"))
-        override suspend fun update(command: com.feniqo.mobile.domain.model.UpdateDebtCommand): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
-        override suspend fun addPayment(command: com.feniqo.mobile.domain.model.AddDebtPaymentCommand): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("p"))
+
+        override suspend fun create(command: com.feniqo.mobile.domain.model.CreateDebtCommand): RepositoryResult<EntityId> =
+            RepositoryResult.Success(EntityId("d"))
+
+        override suspend fun update(command: com.feniqo.mobile.domain.model.UpdateDebtCommand): RepositoryResult<Unit> =
+            RepositoryResult.Success(Unit)
+
+        override suspend fun addPayment(command: com.feniqo.mobile.domain.model.AddDebtPaymentCommand): RepositoryResult<EntityId> =
+            RepositoryResult.Success(EntityId("p"))
+
         override suspend fun softDelete(id: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
     }
 
-    private class FakeRecurringTxRepo(private val recurs: List<RecurringTransaction> = emptyList()) : RecurringTransactionRepository {
+    private class FakeRecurringTxRepo(
+        private val recurs: List<RecurringTransaction> = emptyList(),
+    ) : RecurringTransactionRepository {
         override fun observeRecurringTransactions(): Flow<List<RecurringTransaction>> = flowOf(recurs)
+
         override fun observeRecurringTransaction(id: EntityId): Flow<RecurringTransaction?> = flowOf(recurs.find { it.id == id })
-        override suspend fun create(command: com.feniqo.mobile.domain.model.CreateRecurringTransactionCommand): RepositoryResult<EntityId> = RepositoryResult.Success(EntityId("r"))
-        override suspend fun update(command: com.feniqo.mobile.domain.model.UpdateRecurringTransactionCommand): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
-        override suspend fun setActive(command: com.feniqo.mobile.domain.model.SetRecurringTransactionActiveCommand): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+
+        override suspend fun create(command: com.feniqo.mobile.domain.model.CreateRecurringTransactionCommand): RepositoryResult<EntityId> =
+            RepositoryResult.Success(EntityId("r"))
+
+        override suspend fun update(command: com.feniqo.mobile.domain.model.UpdateRecurringTransactionCommand): RepositoryResult<Unit> =
+            RepositoryResult.Success(Unit)
+
+        override suspend fun setActive(
+            command: com.feniqo.mobile.domain.model.SetRecurringTransactionActiveCommand,
+        ): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+
         override suspend fun softDelete(id: EntityId): RepositoryResult<Unit> = RepositoryResult.Success(Unit)
+
         override suspend fun generateDueTransactions(
             throughDate: LocalDate,
             maxOccurrencesPerRule: Int,

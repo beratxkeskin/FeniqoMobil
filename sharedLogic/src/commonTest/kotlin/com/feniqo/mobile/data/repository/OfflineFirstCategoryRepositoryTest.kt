@@ -16,7 +16,6 @@ import com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity
 import com.feniqo.mobile.data.local.outbox.OfflineWriteQueue
 import com.feniqo.mobile.data.local.outbox.OutboxOperationType
 import com.feniqo.mobile.data.mapper.newSyncMetadata
-import com.feniqo.mobile.data.mapper.toDomain
 import com.feniqo.mobile.data.mapper.toEntity
 import com.feniqo.mobile.domain.model.Category
 import com.feniqo.mobile.domain.model.CategoryColor
@@ -45,287 +44,342 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class OfflineFirstCategoryRepositoryTest {
+    @Test
+    fun observeCategories_whenNoSession_returnsEmptyList() =
+        runTest {
+            val authRepo = FakeCategoryAuthRepository(null)
+            val dao = FakeCategoryDao()
+            val queue = FakeCategoryOfflineWriteQueueHolder()
+            val repository = OfflineFirstCategoryRepository(authRepo, dao, queue.queue)
+
+            val list = repository.observeCategories().first()
+            assertTrue(list.isEmpty())
+        }
 
     @Test
-    fun observeCategories_whenNoSession_returnsEmptyList() = runTest {
-        val authRepo = FakeCategoryAuthRepository(null)
-        val dao = FakeCategoryDao()
-        val queue = FakeCategoryOfflineWriteQueueHolder()
-        val repository = OfflineFirstCategoryRepository(authRepo, dao, queue.queue)
+    fun observeCategory_whenNoSession_returnsNull() =
+        runTest {
+            val authRepo = FakeCategoryAuthRepository(null)
+            val dao = FakeCategoryDao()
+            val queue = FakeCategoryOfflineWriteQueueHolder()
+            val repository = OfflineFirstCategoryRepository(authRepo, dao, queue.queue)
 
-        val list = repository.observeCategories().first()
-        assertTrue(list.isEmpty())
-    }
-
-    @Test
-    fun observeCategory_whenNoSession_returnsNull() = runTest {
-        val authRepo = FakeCategoryAuthRepository(null)
-        val dao = FakeCategoryDao()
-        val queue = FakeCategoryOfflineWriteQueueHolder()
-        val repository = OfflineFirstCategoryRepository(authRepo, dao, queue.queue)
-
-        val item = repository.observeCategory(EntityId("c1")).first()
-        assertNull(item)
-    }
+            val item = repository.observeCategory(EntityId("c1")).first()
+            assertNull(item)
+        }
 
     @Test
-    fun observeCategory_canObserveDefaultCategorySafely() = runTest {
-        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
-        val defaultEntity = sampleCategoryEntity(id = "c-default", ownerId = null, isDefault = true)
-        val dao = FakeCategoryDao(listOf(defaultEntity))
-        val queue = FakeCategoryOfflineWriteQueueHolder()
-        val repository = OfflineFirstCategoryRepository(authRepo, dao, queue.queue)
+    fun observeCategory_canObserveDefaultCategorySafely() =
+        runTest {
+            val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
+            val defaultEntity = sampleCategoryEntity(id = "c-default", ownerId = null, isDefault = true)
+            val dao = FakeCategoryDao(listOf(defaultEntity))
+            val queue = FakeCategoryOfflineWriteQueueHolder()
+            val repository = OfflineFirstCategoryRepository(authRepo, dao, queue.queue)
 
-        val item = repository.observeCategory(EntityId("c-default")).first()
-        assertEquals("c-default", item?.id?.value)
-        assertTrue(item?.isDefault == true)
-    }
-
-    @Test
-    fun observeCategories_doesNotIncludeDeletedCategories() = runTest {
-        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
-        val active = sampleCategoryEntity(id = "c-active", ownerId = "11111111-1111-4111-8111-111111111111")
-        val deletedSync = newSyncMetadata(1_000L).copy(deletedAtEpochMillis = 2_000L)
-        val deleted = sampleCategoryEntity(id = "c-del", ownerId = "11111111-1111-4111-8111-111111111111", sync = deletedSync)
-        val dao = FakeCategoryDao(listOf(active, deleted))
-        val queue = FakeCategoryOfflineWriteQueueHolder()
-        val repository = OfflineFirstCategoryRepository(authRepo, dao, queue.queue)
-
-        val list = repository.observeCategories().first()
-        assertEquals(1, list.size)
-        assertEquals("c-active", list.first().id.value)
-    }
+            val item = repository.observeCategory(EntityId("c-default")).first()
+            assertEquals("c-default", item?.id?.value)
+            assertTrue(item?.isDefault == true)
+        }
 
     @Test
-    fun observeCategoriesForHistoryLookup_includesSameOwnerDeletedCategories() = runTest {
-        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
-        val active = sampleCategoryEntity(id = "c-act", ownerId = "11111111-1111-4111-8111-111111111111")
-        val deletedSync = newSyncMetadata(1_000L).copy(deletedAtEpochMillis = 2_000L)
-        val deleted = sampleCategoryEntity(id = "c-del", ownerId = "11111111-1111-4111-8111-111111111111", sync = deletedSync)
-        val otherDeleted = sampleCategoryEntity(id = "c-other-del", ownerId = "22222222-2222-4222-8222-222222222222", sync = deletedSync)
-        val dao = FakeCategoryDao(listOf(active, deleted, otherDeleted))
-        val queue = FakeCategoryOfflineWriteQueueHolder()
-        val repository = OfflineFirstCategoryRepository(authRepo, dao, queue.queue)
+    fun observeCategories_doesNotIncludeDeletedCategories() =
+        runTest {
+            val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
+            val active = sampleCategoryEntity(id = "c-active", ownerId = "11111111-1111-4111-8111-111111111111")
+            val deletedSync = newSyncMetadata(1_000L).copy(deletedAtEpochMillis = 2_000L)
+            val deleted = sampleCategoryEntity(id = "c-del", ownerId = "11111111-1111-4111-8111-111111111111", sync = deletedSync)
+            val dao = FakeCategoryDao(listOf(active, deleted))
+            val queue = FakeCategoryOfflineWriteQueueHolder()
+            val repository = OfflineFirstCategoryRepository(authRepo, dao, queue.queue)
 
-        val list = repository.observeCategoriesForHistoryLookup().first()
-        assertEquals(2, list.size)
-        assertTrue(list.any { it.id.value == "c-act" })
-        assertTrue(list.any { it.id.value == "c-del" })
-        assertTrue(list.none { it.id.value == "c-other-del" }) // Başka kullanıcının silinmişi görünmez
-    }
+            val list = repository.observeCategories().first()
+            assertEquals(1, list.size)
+            assertEquals("c-active", list.first().id.value)
+        }
 
     @Test
-    fun create_rejectsDefaultOrNullOwnerCategoryCreation() = runTest {
-        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
-        val dao = FakeCategoryDao()
-        val queue = FakeCategoryOfflineWriteQueueHolder()
-        val repository = OfflineFirstCategoryRepository(authRepo, dao, queue.queue)
+    fun observeCategoriesForHistoryLookup_includesSameOwnerDeletedCategories() =
+        runTest {
+            val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
+            val active = sampleCategoryEntity(id = "c-act", ownerId = "11111111-1111-4111-8111-111111111111")
+            val deletedSync = newSyncMetadata(1_000L).copy(deletedAtEpochMillis = 2_000L)
+            val deleted = sampleCategoryEntity(id = "c-del", ownerId = "11111111-1111-4111-8111-111111111111", sync = deletedSync)
+            val otherDeleted =
+                sampleCategoryEntity(id = "c-other-del", ownerId = "22222222-2222-4222-8222-222222222222", sync = deletedSync)
+            val dao = FakeCategoryDao(listOf(active, deleted, otherDeleted))
+            val queue = FakeCategoryOfflineWriteQueueHolder()
+            val repository = OfflineFirstCategoryRepository(authRepo, dao, queue.queue)
 
-        val defaultCat = sampleCategory("c-def", ownerId = null, isDefault = true)
-        val result = repository.create(defaultCat)
-
-        val failure = assertIs<RepositoryResult.Failure>(result)
-        assertEquals("category_default_cannot_be_created_locally", failure.error.code)
-    }
-
-    @Test
-    fun create_enqueuesPendingCreateWithVersion0AndNullBaseVersion() = runTest {
-        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
-        val dao = FakeCategoryDao()
-        val queue = FakeCategoryOfflineWriteQueueHolder()
-        val repository = OfflineFirstCategoryRepository(
-            authRepo,
-            dao,
-            queue.queue,
-            nowEpochMillisProvider = { 10_000L },
-        )
-
-        val cat = sampleCategory("c-new", ownerId = "11111111-1111-4111-8111-111111111111")
-        val result = repository.create(cat)
-
-        assertIs<RepositoryResult.Success<EntityId>>(result)
-        val enqueued = queue.lastEnqueuedCategory
-        assertEquals("c-new", enqueued?.id)
-        assertNull(enqueued?.slug)
-        assertEquals(SyncStatus.PENDING_CREATE.name, enqueued?.sync?.syncStatus)
-        assertEquals(0L, enqueued?.sync?.version)
-        assertNull(enqueued?.sync?.baseVersion)
-        assertEquals(OutboxOperationType.CREATE.name, queue.lastInsertedOperation?.operationTypeCode)
-        assertTrue(queue.lastInsertedOperation?.payloadJson?.contains("\"slug\":null") == true)
-    }
+            val list = repository.observeCategoriesForHistoryLookup().first()
+            assertEquals(2, list.size)
+            assertTrue(list.any { it.id.value == "c-act" })
+            assertTrue(list.any { it.id.value == "c-del" })
+            assertTrue(list.none { it.id.value == "c-other-del" }) // Başka kullanıcının silinmişi görünmez
+        }
 
     @Test
-    fun update_preservesRemoteVersionAndSetsPendingUpdate() = runTest {
-        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
-        val existingSync = SyncMetadata(
-            syncStatus = SyncStatus.SYNCED.name,
-            updatedAtEpochMillis = 5_000L,
-            localUpdatedAtEpochMillis = 5_000L,
-            deletedAtEpochMillis = null,
-            version = 5L,
-            baseVersion = 5L,
-            lastSyncError = null,
-        )
-        val existingEntity = sampleCategoryEntity(id = "c-remote", ownerId = "11111111-1111-4111-8111-111111111111", sync = existingSync)
-        val dao = FakeCategoryDao(listOf(existingEntity))
-        val queue = FakeCategoryOfflineWriteQueueHolder()
-        val repository = OfflineFirstCategoryRepository(
-            authRepo,
-            dao,
-            queue.queue,
-            nowEpochMillisProvider = { 15_000L },
-        )
+    fun create_rejectsDefaultOrNullOwnerCategoryCreation() =
+        runTest {
+            val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
+            val dao = FakeCategoryDao()
+            val queue = FakeCategoryOfflineWriteQueueHolder()
+            val repository = OfflineFirstCategoryRepository(authRepo, dao, queue.queue)
 
-        val updatedCat = sampleCategory(id = "c-remote", ownerId = "11111111-1111-4111-8111-111111111111", name = "Yeni Kategori")
-        val result = repository.update(updatedCat)
+            val defaultCat = sampleCategory("c-def", ownerId = null, isDefault = true)
+            val result = repository.create(defaultCat)
 
-        assertIs<RepositoryResult.Success<Unit>>(result)
-        val enqueued = queue.lastEnqueuedCategory
-        assertEquals("c-remote", enqueued?.id)
-        assertNull(enqueued?.slug)
-        assertEquals(SyncStatus.PENDING_UPDATE.name, enqueued?.sync?.syncStatus)
-        assertEquals(5L, enqueued?.sync?.version)
-        assertEquals(5L, enqueued?.sync?.baseVersion)
-        assertEquals(15_000L, enqueued?.sync?.localUpdatedAtEpochMillis)
-        assertEquals(OutboxOperationType.UPDATE.name, queue.lastInsertedOperation?.operationTypeCode)
-        assertTrue(queue.lastInsertedOperation?.payloadJson?.contains("\"slug\":null") == true)
-    }
+            val failure = assertIs<RepositoryResult.Failure>(result)
+            assertEquals("category_default_cannot_be_created_locally", failure.error.code)
+        }
 
     @Test
-    fun update_withExistingSlug_preservesSlugInEntityAndDtoSnapshot() = runTest {
-        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
-        val existingSync = SyncMetadata(
-            syncStatus = SyncStatus.SYNCED.name,
-            updatedAtEpochMillis = 5_000L,
-            localUpdatedAtEpochMillis = 5_000L,
-            deletedAtEpochMillis = null,
-            version = 5L,
-            baseVersion = 5L,
-            lastSyncError = null,
-        )
-        val existingEntity = sampleCategoryEntity(id = "c-slug", ownerId = "11111111-1111-4111-8111-111111111111", sync = existingSync).copy(slug = "food-dining")
-        val dao = FakeCategoryDao(listOf(existingEntity))
-        val queue = FakeCategoryOfflineWriteQueueHolder()
-        val repository = OfflineFirstCategoryRepository(
-            authRepo,
-            dao,
-            queue.queue,
-            nowEpochMillisProvider = { 15_000L },
-        )
+    fun create_enqueuesPendingCreateWithVersion0AndNullBaseVersion() =
+        runTest {
+            val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
+            val dao = FakeCategoryDao()
+            val queue = FakeCategoryOfflineWriteQueueHolder()
+            val repository =
+                OfflineFirstCategoryRepository(
+                    authRepo,
+                    dao,
+                    queue.queue,
+                    nowEpochMillisProvider = { 10_000L },
+                )
 
-        val updatedCat = sampleCategory(id = "c-slug", ownerId = "11111111-1111-4111-8111-111111111111", name = "Yemek Düzenleme")
-        val result = repository.update(updatedCat)
+            val cat = sampleCategory("c-new", ownerId = "11111111-1111-4111-8111-111111111111")
+            val result = repository.create(cat)
 
-        assertIs<RepositoryResult.Success<Unit>>(result)
-        val enqueued = queue.lastEnqueuedCategory
-        assertEquals("c-slug", enqueued?.id)
-        assertEquals("food-dining", enqueued?.slug)
-        assertTrue(queue.lastInsertedOperation?.payloadJson?.contains("\"slug\":\"food-dining\"") == true)
-    }
+            assertIs<RepositoryResult.Success<EntityId>>(result)
+            val enqueued = queue.lastEnqueuedCategory
+            assertEquals("c-new", enqueued?.id)
+            assertNull(enqueued?.slug)
+            assertEquals(SyncStatus.PENDING_CREATE.name, enqueued?.sync?.syncStatus)
+            assertEquals(0L, enqueued?.sync?.version)
+            assertNull(enqueued?.sync?.baseVersion)
+            assertEquals(OutboxOperationType.CREATE.name, queue.lastInsertedOperation?.operationTypeCode)
+            assertTrue(queue.lastInsertedOperation?.payloadJson?.contains("\"slug\":null") == true)
+        }
 
     @Test
-    fun update_onUnsyncedCategory_preservesPendingCreateAndNullBaseVersion() = runTest {
-        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
-        val existingSync = newSyncMetadata(5_000L) // PENDING_CREATE
-        val existingEntity = sampleCategoryEntity(id = "c-local", ownerId = "11111111-1111-4111-8111-111111111111", sync = existingSync)
-        val dao = FakeCategoryDao(listOf(existingEntity))
-        val queue = FakeCategoryOfflineWriteQueueHolder()
-        val repository = OfflineFirstCategoryRepository(
-            authRepo,
-            dao,
-            queue.queue,
-            nowEpochMillisProvider = { 15_000L },
-        )
+    fun update_preservesRemoteVersionAndSetsPendingUpdate() =
+        runTest {
+            val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
+            val existingSync =
+                SyncMetadata(
+                    syncStatus = SyncStatus.SYNCED.name,
+                    updatedAtEpochMillis = 5_000L,
+                    localUpdatedAtEpochMillis = 5_000L,
+                    deletedAtEpochMillis = null,
+                    version = 5L,
+                    baseVersion = 5L,
+                    lastSyncError = null,
+                )
+            val existingEntity =
+                sampleCategoryEntity(id = "c-remote", ownerId = "11111111-1111-4111-8111-111111111111", sync = existingSync)
+            val dao = FakeCategoryDao(listOf(existingEntity))
+            val queue = FakeCategoryOfflineWriteQueueHolder()
+            val repository =
+                OfflineFirstCategoryRepository(
+                    authRepo,
+                    dao,
+                    queue.queue,
+                    nowEpochMillisProvider = { 15_000L },
+                )
 
-        val updatedCat = sampleCategory(id = "c-local", ownerId = "11111111-1111-4111-8111-111111111111", name = "Yerel Düzenleme")
-        val result = repository.update(updatedCat)
+            val updatedCat = sampleCategory(id = "c-remote", ownerId = "11111111-1111-4111-8111-111111111111", name = "Yeni Kategori")
+            val result = repository.update(updatedCat)
 
-        assertIs<RepositoryResult.Success<Unit>>(result)
-        val enqueued = queue.lastEnqueuedCategory
-        assertEquals(SyncStatus.PENDING_CREATE.name, enqueued?.sync?.syncStatus)
-        assertNull(enqueued?.slug)
-        assertEquals(0L, enqueued?.sync?.version)
-        assertNull(enqueued?.sync?.baseVersion)
-        assertEquals(OutboxOperationType.CREATE.name, queue.lastInsertedOperation?.operationTypeCode)
-        assertTrue(queue.lastInsertedOperation?.payloadJson?.contains("\"slug\":null") == true)
-    }
-
-    @Test
-    fun softDelete_setsPendingDeleteAndDeletedAtTimestamp() = runTest {
-        val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
-        val existingSync = SyncMetadata(
-            syncStatus = SyncStatus.SYNCED.name,
-            updatedAtEpochMillis = 5_000L,
-            localUpdatedAtEpochMillis = 5_000L,
-            deletedAtEpochMillis = null,
-            version = 2L,
-            baseVersion = 2L,
-            lastSyncError = null,
-        )
-        val existingEntity = sampleCategoryEntity(id = "c-del", ownerId = "11111111-1111-4111-8111-111111111111", sync = existingSync)
-        val dao = FakeCategoryDao(listOf(existingEntity))
-        val queue = FakeCategoryOfflineWriteQueueHolder()
-        val repository = OfflineFirstCategoryRepository(
-            authRepo,
-            dao,
-            queue.queue,
-            nowEpochMillisProvider = { 20_000L },
-        )
-
-        val result = repository.softDelete(EntityId("c-del"))
-
-        assertIs<RepositoryResult.Success<Unit>>(result)
-        val enqueued = queue.lastEnqueuedCategory
-        assertEquals(SyncStatus.PENDING_DELETE.name, enqueued?.sync?.syncStatus)
-        assertNull(enqueued?.slug)
-        assertEquals(2L, enqueued?.sync?.version)
-        assertEquals(2L, enqueued?.sync?.baseVersion)
-        assertEquals(20_000L, enqueued?.sync?.deletedAtEpochMillis)
-        assertEquals(OutboxOperationType.DELETE.name, queue.lastInsertedOperation?.operationTypeCode)
-        assertTrue(queue.lastInsertedOperation?.payloadJson?.contains("\"slug\":null") == true)
-    }
+            assertIs<RepositoryResult.Success<Unit>>(result)
+            val enqueued = queue.lastEnqueuedCategory
+            assertEquals("c-remote", enqueued?.id)
+            assertNull(enqueued?.slug)
+            assertEquals(SyncStatus.PENDING_UPDATE.name, enqueued?.sync?.syncStatus)
+            assertEquals(5L, enqueued?.sync?.version)
+            assertEquals(5L, enqueued?.sync?.baseVersion)
+            assertEquals(15_000L, enqueued?.sync?.localUpdatedAtEpochMillis)
+            assertEquals(OutboxOperationType.UPDATE.name, queue.lastInsertedOperation?.operationTypeCode)
+            assertTrue(queue.lastInsertedOperation?.payloadJson?.contains("\"slug\":null") == true)
+        }
 
     @Test
-    fun operations_rethrowCancellationException() = runTest {
-        val authRepo = object : AuthRepository {
-            override fun observeSession(): Flow<AuthSession?> = flow {
-                throw CancellationException("cancelled")
+    fun update_withExistingSlug_preservesSlugInEntityAndDtoSnapshot() =
+        runTest {
+            val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
+            val existingSync =
+                SyncMetadata(
+                    syncStatus = SyncStatus.SYNCED.name,
+                    updatedAtEpochMillis = 5_000L,
+                    localUpdatedAtEpochMillis = 5_000L,
+                    deletedAtEpochMillis = null,
+                    version = 5L,
+                    baseVersion = 5L,
+                    lastSyncError = null,
+                )
+            val existingEntity =
+                sampleCategoryEntity(
+                    id = "c-slug",
+                    ownerId = "11111111-1111-4111-8111-111111111111",
+                    sync = existingSync,
+                ).copy(slug = "food-dining")
+            val dao = FakeCategoryDao(listOf(existingEntity))
+            val queue = FakeCategoryOfflineWriteQueueHolder()
+            val repository =
+                OfflineFirstCategoryRepository(
+                    authRepo,
+                    dao,
+                    queue.queue,
+                    nowEpochMillisProvider = { 15_000L },
+                )
+
+            val updatedCat = sampleCategory(id = "c-slug", ownerId = "11111111-1111-4111-8111-111111111111", name = "Yemek Düzenleme")
+            val result = repository.update(updatedCat)
+
+            assertIs<RepositoryResult.Success<Unit>>(result)
+            val enqueued = queue.lastEnqueuedCategory
+            assertEquals("c-slug", enqueued?.id)
+            assertEquals("food-dining", enqueued?.slug)
+            assertTrue(queue.lastInsertedOperation?.payloadJson?.contains("\"slug\":\"food-dining\"") == true)
+        }
+
+    @Test
+    fun update_onUnsyncedCategory_preservesPendingCreateAndNullBaseVersion() =
+        runTest {
+            val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
+            val existingSync = newSyncMetadata(5_000L) // PENDING_CREATE
+            val existingEntity = sampleCategoryEntity(id = "c-local", ownerId = "11111111-1111-4111-8111-111111111111", sync = existingSync)
+            val dao = FakeCategoryDao(listOf(existingEntity))
+            val queue = FakeCategoryOfflineWriteQueueHolder()
+            val repository =
+                OfflineFirstCategoryRepository(
+                    authRepo,
+                    dao,
+                    queue.queue,
+                    nowEpochMillisProvider = { 15_000L },
+                )
+
+            val updatedCat = sampleCategory(id = "c-local", ownerId = "11111111-1111-4111-8111-111111111111", name = "Yerel Düzenleme")
+            val result = repository.update(updatedCat)
+
+            assertIs<RepositoryResult.Success<Unit>>(result)
+            val enqueued = queue.lastEnqueuedCategory
+            assertEquals(SyncStatus.PENDING_CREATE.name, enqueued?.sync?.syncStatus)
+            assertNull(enqueued?.slug)
+            assertEquals(0L, enqueued?.sync?.version)
+            assertNull(enqueued?.sync?.baseVersion)
+            assertEquals(OutboxOperationType.CREATE.name, queue.lastInsertedOperation?.operationTypeCode)
+            assertTrue(queue.lastInsertedOperation?.payloadJson?.contains("\"slug\":null") == true)
+        }
+
+    @Test
+    fun softDelete_setsPendingDeleteAndDeletedAtTimestamp() =
+        runTest {
+            val authRepo = FakeCategoryAuthRepository(AuthSession(EntityId("11111111-1111-4111-8111-111111111111"), "u1@feniqo.com", NOW))
+            val existingSync =
+                SyncMetadata(
+                    syncStatus = SyncStatus.SYNCED.name,
+                    updatedAtEpochMillis = 5_000L,
+                    localUpdatedAtEpochMillis = 5_000L,
+                    deletedAtEpochMillis = null,
+                    version = 2L,
+                    baseVersion = 2L,
+                    lastSyncError = null,
+                )
+            val existingEntity = sampleCategoryEntity(id = "c-del", ownerId = "11111111-1111-4111-8111-111111111111", sync = existingSync)
+            val dao = FakeCategoryDao(listOf(existingEntity))
+            val queue = FakeCategoryOfflineWriteQueueHolder()
+            val repository =
+                OfflineFirstCategoryRepository(
+                    authRepo,
+                    dao,
+                    queue.queue,
+                    nowEpochMillisProvider = { 20_000L },
+                )
+
+            val result = repository.softDelete(EntityId("c-del"))
+
+            assertIs<RepositoryResult.Success<Unit>>(result)
+            val enqueued = queue.lastEnqueuedCategory
+            assertEquals(SyncStatus.PENDING_DELETE.name, enqueued?.sync?.syncStatus)
+            assertNull(enqueued?.slug)
+            assertEquals(2L, enqueued?.sync?.version)
+            assertEquals(2L, enqueued?.sync?.baseVersion)
+            assertEquals(20_000L, enqueued?.sync?.deletedAtEpochMillis)
+            assertEquals(OutboxOperationType.DELETE.name, queue.lastInsertedOperation?.operationTypeCode)
+            assertTrue(queue.lastInsertedOperation?.payloadJson?.contains("\"slug\":null") == true)
+        }
+
+    @Test
+    fun operations_rethrowCancellationException() =
+        runTest {
+            val authRepo =
+                object : AuthRepository {
+                    override fun observeSession(): Flow<AuthSession?> =
+                        flow {
+                            throw CancellationException("cancelled")
+                        }
+
+                    override fun observeCurrentProfile(): Flow<UserProfile?> = flowOf(null)
+
+                    override suspend fun signIn(
+                        email: String,
+                        password: String,
+                    ) = RepositoryResult.Success(Unit)
+
+                    override suspend fun signUp(
+                        email: String,
+                        password: String,
+                        fullName: String?,
+                    ) = RepositoryResult.Success(EntityId("u-1"))
+
+                    override suspend fun refreshSession() = RepositoryResult.Success(Unit)
+
+                    override suspend fun signOut() = RepositoryResult.Success(Unit)
+                }
+            val dao = FakeCategoryDao()
+            val queue = FakeCategoryOfflineWriteQueueHolder()
+            val repository = OfflineFirstCategoryRepository(authRepo, dao, queue.queue)
+
+            assertFailsWith<CancellationException> {
+                repository.create(sampleCategory("c1", "u1"))
             }
-            override fun observeCurrentProfile(): Flow<UserProfile?> = flowOf(null)
-            override suspend fun signIn(email: String, password: String) = RepositoryResult.Success(Unit)
-            override suspend fun signUp(email: String, password: String, fullName: String?) = RepositoryResult.Success(EntityId("u-1"))
-            override suspend fun refreshSession() = RepositoryResult.Success(Unit)
-            override suspend fun signOut() = RepositoryResult.Success(Unit)
         }
-        val dao = FakeCategoryDao()
-        val queue = FakeCategoryOfflineWriteQueueHolder()
-        val repository = OfflineFirstCategoryRepository(authRepo, dao, queue.queue)
-
-        assertFailsWith<CancellationException> {
-            repository.create(sampleCategory("c1", "u1"))
-        }
-    }
 
     @Test
-    fun operations_rethrowErrorWithoutConvertingToRepositoryResult() = runTest {
-        val authRepo = object : AuthRepository {
-            override fun observeSession(): Flow<AuthSession?> = flow {
-                throw AssertionError("critical_assertion_error")
-            }
-            override fun observeCurrentProfile(): Flow<UserProfile?> = flowOf(null)
-            override suspend fun signIn(email: String, password: String) = RepositoryResult.Success(Unit)
-            override suspend fun signUp(email: String, password: String, fullName: String?) = RepositoryResult.Success(EntityId("u-1"))
-            override suspend fun refreshSession() = RepositoryResult.Success(Unit)
-            override suspend fun signOut() = RepositoryResult.Success(Unit)
-        }
-        val dao = FakeCategoryDao()
-        val queue = FakeCategoryOfflineWriteQueueHolder()
-        val repository = OfflineFirstCategoryRepository(authRepo, dao, queue.queue)
+    fun operations_rethrowErrorWithoutConvertingToRepositoryResult() =
+        runTest {
+            val authRepo =
+                object : AuthRepository {
+                    override fun observeSession(): Flow<AuthSession?> =
+                        flow {
+                            throw AssertionError("critical_assertion_error")
+                        }
 
-        assertFailsWith<AssertionError> {
-            repository.create(sampleCategory("c1", "u1"))
+                    override fun observeCurrentProfile(): Flow<UserProfile?> = flowOf(null)
+
+                    override suspend fun signIn(
+                        email: String,
+                        password: String,
+                    ) = RepositoryResult.Success(Unit)
+
+                    override suspend fun signUp(
+                        email: String,
+                        password: String,
+                        fullName: String?,
+                    ) = RepositoryResult.Success(EntityId("u-1"))
+
+                    override suspend fun refreshSession() = RepositoryResult.Success(Unit)
+
+                    override suspend fun signOut() = RepositoryResult.Success(Unit)
+                }
+            val dao = FakeCategoryDao()
+            val queue = FakeCategoryOfflineWriteQueueHolder()
+            val repository = OfflineFirstCategoryRepository(authRepo, dao, queue.queue)
+
+            assertFailsWith<AssertionError> {
+                repository.create(sampleCategory("c1", "u1"))
+            }
         }
-    }
 
     private fun sampleCategory(
         id: String,
@@ -356,51 +410,85 @@ class OfflineFirstCategoryRepositoryTest {
     }
 }
 
-private class FakeCategoryAuthRepository(session: AuthSession?) : AuthRepository {
+private class FakeCategoryAuthRepository(
+    session: AuthSession?,
+) : AuthRepository {
     val sessionFlow = MutableStateFlow(session)
+
     override fun observeSession(): Flow<AuthSession?> = sessionFlow
+
     override fun observeCurrentProfile(): Flow<UserProfile?> = flowOf(null)
-    override suspend fun signIn(email: String, password: String) = RepositoryResult.Success(Unit)
-    override suspend fun signUp(email: String, password: String, fullName: String?) = RepositoryResult.Success(EntityId("u-1"))
+
+    override suspend fun signIn(
+        email: String,
+        password: String,
+    ) = RepositoryResult.Success(Unit)
+
+    override suspend fun signUp(
+        email: String,
+        password: String,
+        fullName: String?,
+    ) = RepositoryResult.Success(EntityId("u-1"))
+
     override suspend fun refreshSession() = RepositoryResult.Success(Unit)
+
     override suspend fun signOut() = RepositoryResult.Success(Unit)
 }
 
-private class FakeCategoryDao(initial: List<CategoryEntity> = emptyList()) : CategoryDao {
+private class FakeCategoryDao(
+    initial: List<CategoryEntity> = emptyList(),
+) : CategoryDao {
     private val categories = MutableStateFlow(initial)
 
-    override fun observeAll(ownerId: String, workspaceId: String?, typeCode: String?): Flow<List<CategoryEntity>> =
+    override fun observeAll(
+        ownerId: String,
+        workspaceId: String?,
+        typeCode: String?,
+    ): Flow<List<CategoryEntity>> =
         categories.map { list ->
             list.filter {
                 it.sync.deletedAtEpochMillis == null &&
-                (typeCode == null || it.typeCode == typeCode) &&
-                ((it.isDefault && it.ownerId == null) || (it.ownerId == ownerId && (workspaceId == null && it.workspaceId == null || it.workspaceId == workspaceId)))
+                    (typeCode == null || it.typeCode == typeCode) &&
+                    (
+                        (it.isDefault && it.ownerId == null) ||
+                            (it.ownerId == ownerId && (workspaceId == null && it.workspaceId == null || it.workspaceId == workspaceId))
+                    )
             }
         }
 
     override fun observeById(id: String): Flow<CategoryEntity?> =
         categories.map { list -> list.firstOrNull { it.id == id && it.sync.deletedAtEpochMillis == null } }
 
-    override fun observeByIdAndOwner(id: String, ownerId: String): Flow<CategoryEntity?> =
+    override fun observeByIdAndOwner(
+        id: String,
+        ownerId: String,
+    ): Flow<CategoryEntity?> =
         categories.map { list ->
             list.firstOrNull {
                 it.id == id &&
-                it.sync.deletedAtEpochMillis == null &&
-                ((it.isDefault && it.ownerId == null) || it.ownerId == ownerId)
+                    it.sync.deletedAtEpochMillis == null &&
+                    ((it.isDefault && it.ownerId == null) || it.ownerId == ownerId)
             }
         }
 
-    override suspend fun getByIdAndOwner(id: String, ownerId: String): CategoryEntity? =
+    override suspend fun getByIdAndOwner(
+        id: String,
+        ownerId: String,
+    ): CategoryEntity? =
         categories.value.firstOrNull {
             it.id == id &&
-            it.sync.deletedAtEpochMillis == null &&
-            ((it.isDefault && it.ownerId == null) || it.ownerId == ownerId)
+                it.sync.deletedAtEpochMillis == null &&
+                ((it.isDefault && it.ownerId == null) || it.ownerId == ownerId)
         }
 
-    override fun observeAllForHistoryLookup(ownerId: String, workspaceId: String?): Flow<List<CategoryEntity>> =
+    override fun observeAllForHistoryLookup(
+        ownerId: String,
+        workspaceId: String?,
+    ): Flow<List<CategoryEntity>> =
         categories.map { list ->
             list.filter {
-                (it.isDefault && it.ownerId == null) || (it.ownerId == ownerId && (workspaceId == null && it.workspaceId == null || it.workspaceId == workspaceId))
+                (it.isDefault && it.ownerId == null) ||
+                    (it.ownerId == ownerId && (workspaceId == null && it.workspaceId == null || it.workspaceId == workspaceId))
             }
         }
 
@@ -413,145 +501,594 @@ private class FakeCategoryOfflineWriteQueueHolder {
     var lastEnqueuedCategory: CategoryEntity? = null
     var lastInsertedOperation: SyncOperationEntity? = null
 
-    val mutationDao = object : LocalMutationDao {
-        override suspend fun upsertProfileRow(entity: UserProfileEntity) {}
-        override suspend fun upsertWorkspaceRow(entity: WorkspaceEntity) {}
-        override suspend fun upsertWorkspaceMemberRows(entities: List<WorkspaceMemberEntity>) {}
-        override suspend fun upsertCategoryRow(entity: CategoryEntity) {
-            lastEnqueuedCategory = entity
-        }
-        override suspend fun upsertBudgetRow(entity: BudgetEntity) {}
-        override suspend fun upsertTransactionRow(entity: TransactionEntity) {}
-        override suspend fun insertTransactionRow(entity: TransactionEntity) {}
-        override suspend fun upsertTagRows(entities: List<TagEntity>) {}
-        override suspend fun upsertTransactionTagRows(entities: List<TransactionTagCrossRef>) {}
-        override suspend fun upsertRecurringTransactionRow(entity: com.feniqo.mobile.data.local.entity.RecurringTransactionEntity) {}
-        override suspend fun upsertSubscriptionRow(entity: com.feniqo.mobile.data.local.entity.SubscriptionEntity) {}
-        override suspend fun upsertAssetRow(entity: com.feniqo.mobile.data.local.entity.AssetEntity) {}
-        override suspend fun deleteAssetRow(id: String): Int = 0
-        override suspend fun upsertRecurringOccurrenceRow(entity: com.feniqo.mobile.data.local.entity.RecurringTransactionOccurrenceEntity) {}
-        override suspend fun getOccurrence(recurringTransactionId: String, dueDate: String): com.feniqo.mobile.data.local.entity.RecurringTransactionOccurrenceEntity? = null
-        override suspend fun getRecurringTransactionById(id: String): com.feniqo.mobile.data.local.entity.RecurringTransactionEntity? = null
-        override suspend fun advanceRecurringLastGeneratedDate(recurringTransactionId: String, expectedPreviousLastGeneratedDate: String?, newDueDate: String, nowEpochMillis: Long): Int = 0
-        override suspend fun deleteTransactionTagRows(transactionId: String): Int = 0
-        override suspend fun deleteProfileRow(id: String): Int = 0
-        override suspend fun deleteCategoryRow(id: String): Int = 0
-        override suspend fun deleteBudgetRow(id: String): Int = 0
-        override suspend fun deleteTransactionRow(id: String): Int = 0
-        override suspend fun deleteOutboxRow(syncScopeKey: String, operationId: String): Int = 0
-        override suspend fun getOutboxById(syncScopeKey: String, operationId: String): SyncOperationEntity? = null
-        override suspend fun getSuccessors(syncScopeKey: String, predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun getActiveTailCandidates(syncScopeKey: String, entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun coalescePendingPayload(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
-        override suspend fun convertToPendingDelete(syncScopeKey: String, operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 0
-        override suspend fun convertPendingDeleteToUpdate(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 0
-        override suspend fun unblockSuccessor(syncScopeKey: String, operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun insertOutboxRow(operation: SyncOperationEntity) {
-            lastInsertedOperation = operation
-        }
-        override suspend fun deleteConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
-        override suspend fun rebaseProfileVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun rebaseCategoryVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun rebaseTransactionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun rebaseBudgetVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun rebaseRecurringTransactionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun rebaseSubscriptionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun rebaseAssetVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun markAssetSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
-        override suspend fun deleteRecurringTransactionRow(id: String): Int = 0
-        override suspend fun deleteSubscriptionRow(id: String): Int = 0
-        override suspend fun markCategorySyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
-        override suspend fun markTransactionSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
-        override suspend fun markBudgetSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
-        override suspend fun markRecurringTransactionSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
-        override suspend fun markSubscriptionSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
-        override suspend fun deleteWorkspaceRow(id: String): Int = 0
-        override suspend fun deleteWorkspaceMemberRows(workspaceId: String): Int = 0
-        override suspend fun rebaseWorkspaceVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun markWorkspaceSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
-        override suspend fun upsertWorkspaceMemberRow(entity: com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity) {}
-        override suspend fun upsertWorkspaceInvitationRow(entity: com.feniqo.mobile.data.local.entity.WorkspaceInvitationEntity) {}
-        override suspend fun deleteWorkspaceInvitationRow(id: String): Int = 0
-        override suspend fun getWorkspaceInvitationById(id: String): com.feniqo.mobile.data.local.entity.WorkspaceInvitationEntity? = null
-        override suspend fun getWorkspaceInvitationByTokenHash(tokenHash: String): com.feniqo.mobile.data.local.entity.WorkspaceInvitationEntity? = null
-        override suspend fun getWorkspaceMember(workspaceId: String, userId: String): com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity? = null
-        override suspend fun clearActiveWorkspaceIfMatches(profileId: String, workspaceId: String): Int = 0
-        override suspend fun rebaseWorkspaceMemberVersion(workspaceId: String, userId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun rebaseWorkspaceInvitationVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun markWorkspaceMemberSyncedIfDeleted(workspaceId: String, userId: String, nowEpochMillis: Long): Int = 0
-        override suspend fun upsertSubscriptionPriceHistoryRow(entity: com.feniqo.mobile.data.local.entity.SubscriptionPriceHistoryEntity) = Unit
-        override suspend fun upsertSubscriptionPaymentRow(entity: com.feniqo.mobile.data.local.entity.SubscriptionPaymentEntity) = Unit
-        override suspend fun upsertGoalRow(entity: com.feniqo.mobile.data.local.entity.GoalEntity) = Unit
-        override suspend fun upsertGoalContributionRow(entity: com.feniqo.mobile.data.local.entity.GoalContributionEntity) = Unit
-        override suspend fun upsertDebtRow(entity: com.feniqo.mobile.data.local.entity.DebtEntity) = Unit
-        override suspend fun upsertDebtPaymentRow(entity: com.feniqo.mobile.data.local.entity.DebtPaymentEntity) = Unit
-        override suspend fun deleteGoalRow(id: String): Int = 0
-        override suspend fun deleteGoalContributionRow(id: String): Int = 0
-        override suspend fun deleteDebtRow(id: String): Int = 0
-        override suspend fun deleteDebtPaymentRow(id: String): Int = 0
-        override suspend fun getGoalById(id: String): com.feniqo.mobile.data.local.entity.GoalEntity? = null
-        override suspend fun getDebtById(id: String): com.feniqo.mobile.data.local.entity.DebtEntity? = null
-        override suspend fun getGoalContributionById(id: String): com.feniqo.mobile.data.local.entity.GoalContributionEntity? = null
-        override suspend fun getDebtPaymentById(id: String): com.feniqo.mobile.data.local.entity.DebtPaymentEntity? = null
-        override suspend fun getActiveGoalContributions(goalId: String): List<com.feniqo.mobile.data.local.entity.GoalContributionEntity> = emptyList()
-        override suspend fun getActiveDebtPayments(debtId: String): List<com.feniqo.mobile.data.local.entity.DebtPaymentEntity> = emptyList()
-        override suspend fun rebaseGoalVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun rebaseGoalContributionVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun rebaseDebtVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun rebaseDebtPaymentVersion(id: String, appliedVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun markGoalSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
-        override suspend fun markDebtSyncedIfDeleted(id: String, nowEpochMillis: Long): Int = 0
-        override suspend fun tombstoneGoalContributionsForDeletedGoal(goalId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun tombstoneDebtPaymentsForDeletedDebt(debtId: String, deletedAtEpochMillis: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getActiveGoalAggregateTailCandidates(syncScopeKey: String, goalId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun getActiveDebtAggregateTailCandidates(syncScopeKey: String, debtId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun countPendingGoalAggregateOperations(syncScopeKey: String, goalId: String, operationId: String): Int = 0
-        override suspend fun countPendingDebtAggregateOperations(syncScopeKey: String, debtId: String, operationId: String): Int = 0
-        override suspend fun setGoalSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
-        override suspend fun setGoalContributionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
-        override suspend fun setDebtSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
-        override suspend fun setDebtPaymentSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
-        override suspend fun upsertConflictRow(entity: com.feniqo.mobile.data.local.entity.SyncConflictEntity) {}
-        override suspend fun setOutboxStatusConflict(syncScopeKey: String, operationId: String, nowEpochMillis: Long): Int = 1
-        override suspend fun setProfileSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
-        override suspend fun setCategorySyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
-        override suspend fun setTransactionSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
-        override suspend fun setBudgetSyncStatus(id: String, status: String, nowEpochMillis: Long): Int = 1
+    val mutationDao =
+        object : LocalMutationDao {
+            override suspend fun upsertProfileRow(entity: UserProfileEntity) {}
 
-        override suspend fun upsertTransactionKeepingTagsAndEnqueue(
-            entity: TransactionEntity,
-            operation: SyncOperationEntity,
-        ) {}
-    }
+            override suspend fun upsertWorkspaceRow(entity: WorkspaceEntity) {}
 
-    val operationDao = object : SyncOperationDao {
-        override fun observePendingCount(syncScopeKey: String): Flow<Int> = flowOf(0)
-        override fun observeFailedCount(syncScopeKey: String): Flow<Int> = flowOf(0)
-        override suspend fun getReadyOperations(syncScopeKey: String, nowEpochMillis: Long, limit: Int) = emptyList<SyncOperationEntity>()
-        override suspend fun getById(syncScopeKey: String, operationId: String): SyncOperationEntity? = null
-        override suspend fun insert(operation: SyncOperationEntity) {
-            lastInsertedOperation = operation
+            override suspend fun upsertWorkspaceMemberRows(entities: List<WorkspaceMemberEntity>) {}
+
+            override suspend fun upsertCategoryRow(entity: CategoryEntity) {
+                lastEnqueuedCategory = entity
+            }
+
+            override suspend fun upsertBudgetRow(entity: BudgetEntity) {}
+
+            override suspend fun upsertTransactionRow(entity: TransactionEntity) {}
+
+            override suspend fun insertTransactionRow(entity: TransactionEntity) {}
+
+            override suspend fun upsertTagRows(entities: List<TagEntity>) {}
+
+            override suspend fun upsertTransactionTagRows(entities: List<TransactionTagCrossRef>) {}
+
+            override suspend fun upsertRecurringTransactionRow(entity: com.feniqo.mobile.data.local.entity.RecurringTransactionEntity) {}
+
+            override suspend fun upsertSubscriptionRow(entity: com.feniqo.mobile.data.local.entity.SubscriptionEntity) {}
+
+            override suspend fun upsertAssetRow(entity: com.feniqo.mobile.data.local.entity.AssetEntity) {}
+
+            override suspend fun deleteAssetRow(id: String): Int = 0
+
+            override suspend fun upsertRecurringOccurrenceRow(
+                entity: com.feniqo.mobile.data.local.entity.RecurringTransactionOccurrenceEntity,
+            ) {}
+
+            override suspend fun getOccurrence(
+                recurringTransactionId: String,
+                dueDate: String,
+            ): com.feniqo.mobile.data.local.entity.RecurringTransactionOccurrenceEntity? = null
+
+            override suspend fun getRecurringTransactionById(id: String): com.feniqo.mobile.data.local.entity.RecurringTransactionEntity? =
+                null
+
+            override suspend fun advanceRecurringLastGeneratedDate(
+                recurringTransactionId: String,
+                expectedPreviousLastGeneratedDate: String?,
+                newDueDate: String,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun deleteTransactionTagRows(transactionId: String): Int = 0
+
+            override suspend fun deleteProfileRow(id: String): Int = 0
+
+            override suspend fun deleteCategoryRow(id: String): Int = 0
+
+            override suspend fun deleteBudgetRow(id: String): Int = 0
+
+            override suspend fun deleteTransactionRow(id: String): Int = 0
+
+            override suspend fun getTransactionRow(id: String): TransactionEntity? = null
+
+            override suspend fun getCategoryRow(id: String): CategoryEntity? = null
+
+            override suspend fun updateTransactionMerchantAttribution(
+                transactionId: String,
+                merchantId: String?,
+                merchantMatchSourceCode: String?,
+                merchantConfidence: Int?,
+                merchantCatalogVersion: Int?,
+            ): Int = 0
+
+            override suspend fun deleteOutboxRow(
+                syncScopeKey: String,
+                operationId: String,
+            ): Int = 0
+
+            override suspend fun getOutboxById(
+                syncScopeKey: String,
+                operationId: String,
+            ): SyncOperationEntity? = null
+
+            override suspend fun getSuccessors(
+                syncScopeKey: String,
+                predecessorOperationId: String,
+            ): List<SyncOperationEntity> = emptyList()
+
+            override suspend fun getActiveTailCandidates(
+                syncScopeKey: String,
+                entityTypeCode: String,
+                entityId: String,
+            ): List<SyncOperationEntity> = emptyList()
+
+            override suspend fun coalescePendingPayload(
+                syncScopeKey: String,
+                operationId: String,
+                payloadJson: String,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun convertToPendingDelete(
+                syncScopeKey: String,
+                operationId: String,
+                payloadJson: String?,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun convertPendingDeleteToUpdate(
+                syncScopeKey: String,
+                operationId: String,
+                payloadJson: String,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun unblockSuccessor(
+                syncScopeKey: String,
+                operationId: String,
+                predecessorOperationId: String,
+                appliedVersion: Long,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun insertOutboxRow(operation: SyncOperationEntity) {
+                lastInsertedOperation = operation
+            }
+
+            override suspend fun deleteConflictRow(
+                syncScopeKey: String,
+                entityTypeCode: String,
+                entityId: String,
+            ): Int = 0
+
+            override suspend fun rebaseProfileVersion(
+                id: String,
+                appliedVersion: Long,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun rebaseCategoryVersion(
+                id: String,
+                appliedVersion: Long,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun rebaseTransactionVersion(
+                id: String,
+                appliedVersion: Long,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun rebaseBudgetVersion(
+                id: String,
+                appliedVersion: Long,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun rebaseRecurringTransactionVersion(
+                id: String,
+                appliedVersion: Long,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun rebaseSubscriptionVersion(
+                id: String,
+                appliedVersion: Long,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun rebaseAssetVersion(
+                id: String,
+                appliedVersion: Long,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun markAssetSyncedIfDeleted(
+                id: String,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun deleteRecurringTransactionRow(id: String): Int = 0
+
+            override suspend fun deleteSubscriptionRow(id: String): Int = 0
+
+            override suspend fun markCategorySyncedIfDeleted(
+                id: String,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun markTransactionSyncedIfDeleted(
+                id: String,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun markBudgetSyncedIfDeleted(
+                id: String,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun markRecurringTransactionSyncedIfDeleted(
+                id: String,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun markSubscriptionSyncedIfDeleted(
+                id: String,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun deleteWorkspaceRow(id: String): Int = 0
+
+            override suspend fun deleteWorkspaceMemberRows(workspaceId: String): Int = 0
+
+            override suspend fun rebaseWorkspaceVersion(
+                id: String,
+                appliedVersion: Long,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun markWorkspaceSyncedIfDeleted(
+                id: String,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun upsertWorkspaceMemberRow(entity: com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity) {}
+
+            override suspend fun upsertWorkspaceInvitationRow(entity: com.feniqo.mobile.data.local.entity.WorkspaceInvitationEntity) {}
+
+            override suspend fun deleteWorkspaceInvitationRow(id: String): Int = 0
+
+            override suspend fun getWorkspaceInvitationById(id: String): com.feniqo.mobile.data.local.entity.WorkspaceInvitationEntity? =
+                null
+
+            override suspend fun getWorkspaceInvitationByTokenHash(
+                tokenHash: String,
+            ): com.feniqo.mobile.data.local.entity.WorkspaceInvitationEntity? = null
+
+            override suspend fun getWorkspaceMember(
+                workspaceId: String,
+                userId: String,
+            ): com.feniqo.mobile.data.local.entity.WorkspaceMemberEntity? = null
+
+            override suspend fun clearActiveWorkspaceIfMatches(
+                profileId: String,
+                workspaceId: String,
+            ): Int = 0
+
+            override suspend fun rebaseWorkspaceMemberVersion(
+                workspaceId: String,
+                userId: String,
+                appliedVersion: Long,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun rebaseWorkspaceInvitationVersion(
+                id: String,
+                appliedVersion: Long,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun markWorkspaceMemberSyncedIfDeleted(
+                workspaceId: String,
+                userId: String,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun upsertSubscriptionPriceHistoryRow(
+                entity: com.feniqo.mobile.data.local.entity.SubscriptionPriceHistoryEntity,
+            ) = Unit
+
+            override suspend fun upsertSubscriptionPaymentRow(entity: com.feniqo.mobile.data.local.entity.SubscriptionPaymentEntity) = Unit
+
+            override suspend fun upsertGoalRow(entity: com.feniqo.mobile.data.local.entity.GoalEntity) = Unit
+
+            override suspend fun upsertGoalContributionRow(entity: com.feniqo.mobile.data.local.entity.GoalContributionEntity) = Unit
+
+            override suspend fun upsertDebtRow(entity: com.feniqo.mobile.data.local.entity.DebtEntity) = Unit
+
+            override suspend fun upsertDebtPaymentRow(entity: com.feniqo.mobile.data.local.entity.DebtPaymentEntity) = Unit
+
+            override suspend fun deleteGoalRow(id: String): Int = 0
+
+            override suspend fun deleteGoalContributionRow(id: String): Int = 0
+
+            override suspend fun deleteDebtRow(id: String): Int = 0
+
+            override suspend fun deleteDebtPaymentRow(id: String): Int = 0
+
+            override suspend fun getGoalById(id: String): com.feniqo.mobile.data.local.entity.GoalEntity? = null
+
+            override suspend fun getDebtById(id: String): com.feniqo.mobile.data.local.entity.DebtEntity? = null
+
+            override suspend fun getGoalContributionById(id: String): com.feniqo.mobile.data.local.entity.GoalContributionEntity? = null
+
+            override suspend fun getDebtPaymentById(id: String): com.feniqo.mobile.data.local.entity.DebtPaymentEntity? = null
+
+            override suspend fun getActiveGoalContributions(
+                goalId: String,
+            ): List<com.feniqo.mobile.data.local.entity.GoalContributionEntity> = emptyList()
+
+            override suspend fun getActiveDebtPayments(debtId: String): List<com.feniqo.mobile.data.local.entity.DebtPaymentEntity> =
+                emptyList()
+
+            override suspend fun rebaseGoalVersion(
+                id: String,
+                appliedVersion: Long,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun rebaseGoalContributionVersion(
+                id: String,
+                appliedVersion: Long,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun rebaseDebtVersion(
+                id: String,
+                appliedVersion: Long,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun rebaseDebtPaymentVersion(
+                id: String,
+                appliedVersion: Long,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun markGoalSyncedIfDeleted(
+                id: String,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun markDebtSyncedIfDeleted(
+                id: String,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun tombstoneGoalContributionsForDeletedGoal(
+                goalId: String,
+                deletedAtEpochMillis: Long,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun tombstoneDebtPaymentsForDeletedDebt(
+                debtId: String,
+                deletedAtEpochMillis: Long,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun getActiveGoalAggregateTailCandidates(
+                syncScopeKey: String,
+                goalId: String,
+            ): List<SyncOperationEntity> = emptyList()
+
+            override suspend fun getActiveDebtAggregateTailCandidates(
+                syncScopeKey: String,
+                debtId: String,
+            ): List<SyncOperationEntity> = emptyList()
+
+            override suspend fun countPendingGoalAggregateOperations(
+                syncScopeKey: String,
+                goalId: String,
+                operationId: String,
+            ): Int = 0
+
+            override suspend fun countPendingDebtAggregateOperations(
+                syncScopeKey: String,
+                debtId: String,
+                operationId: String,
+            ): Int = 0
+
+            override suspend fun setGoalSyncStatus(
+                id: String,
+                status: String,
+                nowEpochMillis: Long,
+            ): Int = 1
+
+            override suspend fun setGoalContributionSyncStatus(
+                id: String,
+                status: String,
+                nowEpochMillis: Long,
+            ): Int = 1
+
+            override suspend fun setDebtSyncStatus(
+                id: String,
+                status: String,
+                nowEpochMillis: Long,
+            ): Int = 1
+
+            override suspend fun setDebtPaymentSyncStatus(
+                id: String,
+                status: String,
+                nowEpochMillis: Long,
+            ): Int = 1
+
+            override suspend fun upsertConflictRow(entity: com.feniqo.mobile.data.local.entity.SyncConflictEntity) {}
+
+            override suspend fun setOutboxStatusConflict(
+                syncScopeKey: String,
+                operationId: String,
+                nowEpochMillis: Long,
+            ): Int = 1
+
+            override suspend fun setProfileSyncStatus(
+                id: String,
+                status: String,
+                nowEpochMillis: Long,
+            ): Int = 1
+
+            override suspend fun setCategorySyncStatus(
+                id: String,
+                status: String,
+                nowEpochMillis: Long,
+            ): Int = 1
+
+            override suspend fun setTransactionSyncStatus(
+                id: String,
+                status: String,
+                nowEpochMillis: Long,
+            ): Int = 1
+
+            override suspend fun setBudgetSyncStatus(
+                id: String,
+                status: String,
+                nowEpochMillis: Long,
+            ): Int = 1
+
+            override suspend fun upsertUserMerchantVerificationRow(
+                entity: com.feniqo.mobile.data.local.entity.UserMerchantVerificationEntity,
+            ) = Unit
+
+            override suspend fun deleteUserMerchantVerificationRow(id: String): Int = 0
+
+            override suspend fun rebaseUserMerchantVerificationVersion(
+                id: String,
+                appliedVersion: Long,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun markUserMerchantVerificationSyncedIfDeleted(
+                id: String,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun setUserMerchantVerificationSyncStatus(
+                id: String,
+                status: String,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun getUserMerchantVerificationRow(
+                id: String,
+            ): com.feniqo.mobile.data.local.entity.UserMerchantVerificationEntity? = null
+
+            override suspend fun getConflictRow(
+                syncScopeKey: String,
+                entityTypeCode: String,
+                entityId: String,
+            ): com.feniqo.mobile.data.local.entity.SyncConflictEntity? = null
+
+            override suspend fun convertSuccessorToPendingCreate(
+                syncScopeKey: String,
+                operationId: String,
+                predecessorOperationId: String,
+                entityTypeCode: String,
+                entityId: String,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun resetUserMerchantVerificationToPendingCreate(
+                id: String,
+                scopeKey: String,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun upsertTransactionKeepingTagsAndEnqueue(
+                entity: TransactionEntity,
+                operation: SyncOperationEntity,
+            ) {}
         }
-        override suspend fun claimOperation(syncScopeKey: String, operationId: String, nowEpochMillis: Long): Int = 1
-        override suspend fun markFailed(syncScopeKey: String, operationId: String, lastError: String, errorClassification: String?, nextAttemptAtEpochMillis: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun markConflict(syncScopeKey: String, operationId: String, lastError: String, nowEpochMillis: Long): Int = 1
-        override suspend fun recoverStaleInFlight(syncScopeKey: String, staleBeforeEpochMillis: Long, nowEpochMillis: Long, lastError: String): Int = 0
-        override suspend fun retryAllFailed(syncScopeKey: String, nowEpochMillis: Long): Int = 0
-        override suspend fun deleteCompleted(syncScopeKey: String, operationId: String): Int = 1
-        override suspend fun deleteForEntity(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
-        override suspend fun getSuccessors(syncScopeKey: String, predecessorOperationId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun unblockSuccessor(syncScopeKey: String, operationId: String, predecessorOperationId: String, appliedVersion: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun getActiveTailCandidates(syncScopeKey: String, entityTypeCode: String, entityId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun coalescePendingPayload(syncScopeKey: String, operationId: String, payloadJson: String, nowEpochMillis: Long): Int = 1
-        override suspend fun convertToPendingDelete(syncScopeKey: String, operationId: String, payloadJson: String?, nowEpochMillis: Long): Int = 1
-        override fun observeLegacyQuarantineOperationCount(): Flow<Int> = flowOf(0)
-        override suspend fun getLegacyQuarantineOperationCount(): Int = 0
-    }
 
-    val queue = OfflineWriteQueue(
-        mutationDao = mutationDao,
-        operationDao = operationDao,
-        nowEpochMillisProvider = { 1_000L },
-        operationIdFactory = { "0123456789abcdef0123456789abcdef" },
-    )
+    val operationDao =
+        object : SyncOperationDao {
+            override fun observePendingCount(syncScopeKey: String): Flow<Int> = flowOf(0)
+
+            override fun observeFailedCount(syncScopeKey: String): Flow<Int> = flowOf(0)
+
+            override suspend fun getReadyOperations(
+                syncScopeKey: String,
+                nowEpochMillis: Long,
+                limit: Int,
+            ) = emptyList<SyncOperationEntity>()
+
+            override suspend fun getById(
+                syncScopeKey: String,
+                operationId: String,
+            ): SyncOperationEntity? = null
+
+            override suspend fun insert(operation: SyncOperationEntity) {
+                lastInsertedOperation = operation
+            }
+
+            override suspend fun claimOperation(
+                syncScopeKey: String,
+                operationId: String,
+                nowEpochMillis: Long,
+            ): Int = 1
+
+            override suspend fun markFailed(
+                syncScopeKey: String,
+                operationId: String,
+                lastError: String,
+                errorClassification: String?,
+                nextAttemptAtEpochMillis: Long,
+                nowEpochMillis: Long,
+            ): Int = 1
+
+            override suspend fun markConflict(
+                syncScopeKey: String,
+                operationId: String,
+                lastError: String,
+                nowEpochMillis: Long,
+            ): Int = 1
+
+            override suspend fun recoverStaleInFlight(
+                syncScopeKey: String,
+                staleBeforeEpochMillis: Long,
+                nowEpochMillis: Long,
+                lastError: String,
+            ): Int = 0
+
+            override suspend fun retryAllFailed(
+                syncScopeKey: String,
+                nowEpochMillis: Long,
+            ): Int = 0
+
+            override suspend fun deleteCompleted(
+                syncScopeKey: String,
+                operationId: String,
+            ): Int = 1
+
+            override suspend fun deleteForEntity(
+                syncScopeKey: String,
+                entityTypeCode: String,
+                entityId: String,
+            ): Int = 0
+
+            override suspend fun getSuccessors(
+                syncScopeKey: String,
+                predecessorOperationId: String,
+            ): List<SyncOperationEntity> = emptyList()
+
+            override suspend fun unblockSuccessor(
+                syncScopeKey: String,
+                operationId: String,
+                predecessorOperationId: String,
+                appliedVersion: Long,
+                nowEpochMillis: Long,
+            ): Int = 1
+
+            override suspend fun getActiveTailCandidates(
+                syncScopeKey: String,
+                entityTypeCode: String,
+                entityId: String,
+            ): List<SyncOperationEntity> = emptyList()
+
+            override suspend fun coalescePendingPayload(
+                syncScopeKey: String,
+                operationId: String,
+                payloadJson: String,
+                nowEpochMillis: Long,
+            ): Int = 1
+
+            override suspend fun convertToPendingDelete(
+                syncScopeKey: String,
+                operationId: String,
+                payloadJson: String?,
+                nowEpochMillis: Long,
+            ): Int = 1
+
+            override fun observeLegacyQuarantineOperationCount(): Flow<Int> = flowOf(0)
+
+            override suspend fun getLegacyQuarantineOperationCount(): Int = 0
+        }
+
+    val queue =
+        OfflineWriteQueue(
+            mutationDao = mutationDao,
+            operationDao = operationDao,
+            nowEpochMillisProvider = { 1_000L },
+            operationIdFactory = { "0123456789abcdef0123456789abcdef" },
+        )
 }

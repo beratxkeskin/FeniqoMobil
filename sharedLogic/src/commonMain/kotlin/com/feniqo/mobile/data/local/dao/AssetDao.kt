@@ -23,7 +23,10 @@ interface AssetDao {
     fun observeAll(ownerId: String): Flow<List<AssetEntity>>
 
     @Query("SELECT * FROM assets WHERE id = :id AND owner_id = :ownerId AND deleted_at_epoch_ms IS NULL LIMIT 1")
-    fun observeById(id: String, ownerId: String): Flow<AssetEntity?>
+    fun observeById(
+        id: String,
+        ownerId: String,
+    ): Flow<AssetEntity?>
 
     @Query("SELECT * FROM assets WHERE id = :id LIMIT 1")
     suspend fun getAnyById(id: String): AssetEntity?
@@ -32,7 +35,10 @@ interface AssetDao {
     suspend fun upsert(asset: AssetEntity)
 
     @Query("DELETE FROM sync_conflicts WHERE sync_scope_key = :syncScopeKey AND entity_type_code = 'ASSET' AND entity_id = :id")
-    suspend fun deleteConflict(syncScopeKey: String, id: String): Int
+    suspend fun deleteConflict(
+        syncScopeKey: String,
+        id: String,
+    ): Int
 
     @Upsert
     suspend fun upsertConflict(conflict: SyncConflictEntity)
@@ -44,7 +50,11 @@ interface AssetDao {
     suspend fun markConflict(id: String): Int
 
     @Transaction
-    suspend fun applyPull(syncScopeKey: String, asset: AssetEntity, cursor: SyncCursorEntity) {
+    suspend fun applyPull(
+        syncScopeKey: String,
+        asset: AssetEntity,
+        cursor: SyncCursorEntity,
+    ) {
         SyncScopeKey.requireUserScope(syncScopeKey)
         require(cursor.syncScopeKey == syncScopeKey) {
             "Cursor scope mismatch: cursor=${cursor.syncScopeKey}, actor=$syncScopeKey"
@@ -55,7 +65,11 @@ interface AssetDao {
     }
 
     @Transaction
-    suspend fun recordPullConflict(syncScopeKey: String, conflict: SyncConflictEntity, cursor: SyncCursorEntity) {
+    suspend fun recordPullConflict(
+        syncScopeKey: String,
+        conflict: SyncConflictEntity,
+        cursor: SyncCursorEntity,
+    ) {
         SyncScopeKey.requireUserScope(syncScopeKey)
         require(conflict.syncScopeKey == syncScopeKey) {
             "Conflict scope mismatch: conflict=${conflict.syncScopeKey}, actor=$syncScopeKey"
@@ -69,7 +83,11 @@ interface AssetDao {
     }
 
     @Transaction
-    suspend fun applyInitialSnapshot(syncScopeKey: String, assets: List<AssetEntity>, cursor: SyncCursorEntity?) {
+    suspend fun applyInitialSnapshot(
+        syncScopeKey: String,
+        assets: List<AssetEntity>,
+        cursor: SyncCursorEntity?,
+    ) {
         SyncScopeKey.requireUserScope(syncScopeKey)
         if (cursor != null) {
             require(cursor.syncScopeKey == syncScopeKey) {

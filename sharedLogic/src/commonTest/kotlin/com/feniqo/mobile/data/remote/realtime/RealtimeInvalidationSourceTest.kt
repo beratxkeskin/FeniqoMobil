@@ -8,21 +8,22 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class RealtimeInvalidationSourceTest {
-
     @Test
-    fun connection_loss_and_rejoin_emit_two_catch_up_signals() = runTest {
-        val statuses = flowOf(
-            RealtimeChannel.Status.UNSUBSCRIBED,
-            RealtimeChannel.Status.SUBSCRIBING,
-            RealtimeChannel.Status.SUBSCRIBED,
-            RealtimeChannel.Status.UNSUBSCRIBING,
-            RealtimeChannel.Status.UNSUBSCRIBED,
-            RealtimeChannel.Status.SUBSCRIBING,
-            RealtimeChannel.Status.SUBSCRIBED,
-        )
+    fun connection_loss_and_rejoin_emit_two_catch_up_signals() =
+        runTest {
+            val statuses =
+                flowOf(
+                    RealtimeChannel.Status.UNSUBSCRIBED,
+                    RealtimeChannel.Status.SUBSCRIBING,
+                    RealtimeChannel.Status.SUBSCRIBED,
+                    RealtimeChannel.Status.UNSUBSCRIBING,
+                    RealtimeChannel.Status.UNSUBSCRIBED,
+                    RealtimeChannel.Status.SUBSCRIBING,
+                    RealtimeChannel.Status.SUBSCRIBED,
+                )
 
-        val signals = statuses.asConnectionReadySignals().toList()
+            val signals = statuses.asConnectionReadySignals().toList()
 
-        assertEquals(listOf(RealtimeConnectionReady, RealtimeConnectionReady), signals)
-    }
+            assertEquals(listOf(RealtimeConnectionReady, RealtimeConnectionReady), signals)
+        }
 }

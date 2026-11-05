@@ -13,9 +13,10 @@ class MarketPriceFunctionContractTest {
 
     @Test
     fun freshFunctionResponse_preservesExactScaledPriceAndExpiry() {
-        val response = json.decodeFromString<MarketPriceFunctionResponse>(
-            """{"prices":[{"asset_type":"STOCKS","symbol":"AAPL","quote_currency":"USD","price_unscaled":"1875012","price_scale":4,"observed_at":"2026-09-09T10:00:00Z","fetched_at":"2026-09-09T10:00:01Z","expires_at":"2026-09-09T10:05:01Z","source":"test-provider","availability":"FRESH"}],"generated_at":"2026-09-09T10:00:01Z"}""",
-        )
+        val response =
+            json.decodeFromString<MarketPriceFunctionResponse>(
+                """{"prices":[{"asset_type":"STOCKS","symbol":"AAPL","quote_currency":"USD","price_unscaled":"1875012","price_scale":4,"observed_at":"2026-09-09T10:00:00Z","fetched_at":"2026-09-09T10:00:01Z","expires_at":"2026-09-09T10:05:01Z","source":"test-provider","availability":"FRESH"}],"generated_at":"2026-09-09T10:00:01Z"}""",
+            )
 
         val result = response.toRemoteResults().single()
         assertEquals(AssetType.STOCKS, result.quote.assetType)
@@ -28,9 +29,10 @@ class MarketPriceFunctionContractTest {
 
     @Test
     fun unavailableFunctionResponse_usesGeneratedAtAndContainsNoPrice() {
-        val response = json.decodeFromString<MarketPriceFunctionResponse>(
-            """{"prices":[{"asset_type":"CRYPTO","symbol":"BTC","quote_currency":"TRY","availability":"UNAVAILABLE"}],"generated_at":"2026-09-09T11:00:00Z"}""",
-        )
+        val response =
+            json.decodeFromString<MarketPriceFunctionResponse>(
+                """{"prices":[{"asset_type":"CRYPTO","symbol":"BTC","quote_currency":"TRY","availability":"UNAVAILABLE"}],"generated_at":"2026-09-09T11:00:00Z"}""",
+            )
 
         val result = response.toRemoteResults().single()
         assertEquals(MarketPriceAvailability.UNAVAILABLE, result.quote.availability)

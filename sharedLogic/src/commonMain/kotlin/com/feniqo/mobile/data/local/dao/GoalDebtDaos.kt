@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface GoalDao {
-
     @Query(
         """
         SELECT * FROM goals
@@ -103,7 +102,6 @@ interface GoalDao {
 
 @Dao
 interface DebtDao {
-
     @Query(
         """
         SELECT * FROM debts

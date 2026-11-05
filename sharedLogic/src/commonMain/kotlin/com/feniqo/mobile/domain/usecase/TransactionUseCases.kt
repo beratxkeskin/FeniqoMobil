@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.datetime.Instant
 
+import com.feniqo.mobile.domain.model.TransactionMerchantCreateDecision
 import com.feniqo.mobile.domain.model.TransactionParticipantShare
 import com.feniqo.mobile.domain.model.TransactionSplitMode
 
@@ -40,6 +41,7 @@ data class TransactionCommand(
     val note: String? = null,
     val splitMode: TransactionSplitMode = TransactionSplitMode.EQUAL,
     val participantShares: List<TransactionParticipantShare> = emptyList(),
+    val merchantDecision: TransactionMerchantCreateDecision = TransactionMerchantCreateDecision.Auto,
 )
 
 class AddTransactionUseCase(
@@ -109,6 +111,7 @@ class AddTransactionUseCase(
                 splitMode = splitPlan.splitMode,
                 participantShares = splitPlan.participantShares,
             ),
+            merchantDecision = command.merchantDecision,
         )
     }
 }

@@ -9,18 +9,18 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class SupportingFinanceRemoteMappersTest {
-
     @Test
     fun budget_uses_minor_units_and_round_trips() {
-        val budget = BudgetDto(
-            id = "budget-1",
-            userId = "user-1",
-            categoryId = "cat-1",
-            month = "2026-08",
-            limitMinor = 250_000,
-            currency = "TRY",
-            createdAt = "2026-08-13T10:00:00Z",
-        ).toDomain()
+        val budget =
+            BudgetDto(
+                id = "budget-1",
+                userId = "user-1",
+                categoryId = "cat-1",
+                month = "2026-08",
+                limitMinor = 250_000,
+                currency = "TRY",
+                createdAt = "2026-08-13T10:00:00Z",
+            ).toDomain()
 
         assertEquals(250_000L, budget.limit.amountMinor)
         assertEquals(Currency.TRY, budget.limit.currency)
@@ -43,12 +43,13 @@ class SupportingFinanceRemoteMappersTest {
 
     @Test
     fun tag_and_transaction_tag_round_trip() {
-        val tag = TagDto(
-            id = "tag-1",
-            userId = "user-1",
-            name = "Market",
-            createdAt = "2026-08-13T10:00:00Z",
-        ).toDomain()
+        val tag =
+            TagDto(
+                id = "tag-1",
+                userId = "user-1",
+                name = "Market",
+                createdAt = "2026-08-13T10:00:00Z",
+            ).toDomain()
         val relation = TransactionTagDto("tx-1", "tag-1").toDomain()
 
         assertEquals("Market", tag.name)

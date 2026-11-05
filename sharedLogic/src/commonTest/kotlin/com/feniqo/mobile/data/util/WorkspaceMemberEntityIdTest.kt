@@ -7,7 +7,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class WorkspaceMemberEntityIdTest {
-
     private val validWorkspaceId = "11111111-1111-1111-1111-111111111111"
     private val validUserId = "22222222-2222-2222-2222-222222222222"
 

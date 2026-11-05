@@ -13,485 +13,553 @@ import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.SyncStatus
 import com.feniqo.mobile.domain.repository.AuthRecoveryState
 import com.feniqo.mobile.domain.repository.RepositoryResult
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertIs
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 
 class OfflineFirstAuthRepositoryTest {
-
     private companion object {
         const val USER_ID = "11111111-1111-4111-8111-111111111111"
         val SCOPE = SyncScopeKey.user(USER_ID).rawValue
     }
 
     @Test
-    fun update_name_queues_profile_update_instead_of_direct_dao_write() = runTest {
-        val remote = FakeAuthRemoteDataSource().apply {
-            session.value = RemoteAuthSession(USER_ID, "user@example.com", 1_800_000_000)
-        }
-        val profiles = FakeProfileDao()
-        profiles.upsert(profileRow())
-        var queued: UserProfileEntity? = null
-        var operation: OutboxOperationType? = null
-        var payload = ""
-        val repository = OfflineFirstAuthRepository(
-            remote, profiles,
-            enqueueProfileUpdate = { scope, entity, type, json ->
-                assertEquals(SCOPE, scope)
-                queued = entity
-                operation = type
-                payload = json
-                profiles.upsert(entity)
-            },
-            nowEpochMillisProvider = { 2_000L },
-        )
-
-        assertIs<RepositoryResult.Success<Unit>>(repository.updateFullName("  Deniz Yılmaz  "))
-        assertEquals("Deniz Yılmaz", queued?.fullName)
-        assertEquals("PENDING_UPDATE", queued?.sync?.syncStatus)
-        assertEquals(3L, queued?.sync?.baseVersion)
-        assertEquals(OutboxOperationType.UPDATE, operation)
-        assertEquals(true, payload.contains("Deniz Yılmaz"))
-        assertEquals("Deniz Yılmaz", profiles.observeById(USER_ID).first()?.fullName)
-    }
-
-    @Test
-    fun update_name_bootstraps_missing_local_profile_from_remote_before_queuing() = runTest {
-        val remote = FakeAuthRemoteDataSource().apply {
-            session.value = RemoteAuthSession(USER_ID, "user@example.com", 1_800_000_000)
-        }
-        val profiles = FakeProfileDao()
-        var queued: UserProfileEntity? = null
-        val repository = OfflineFirstAuthRepository(
-            remote, profiles,
-            fetchRemoteProfile = { id ->
-                assertEquals(USER_ID, id)
-                ProfileDto(
-                    id = id, email = "user@example.com", fullName = null,
-                    createdAt = "2026-09-20T10:00:00Z", updatedAt = "2026-09-20T10:00:00Z", version = 4,
+    fun update_name_queues_profile_update_instead_of_direct_dao_write() =
+        runTest {
+            val remote =
+                FakeAuthRemoteDataSource().apply {
+                    session.value = RemoteAuthSession(USER_ID, "user@example.com", 1_800_000_000)
+                }
+            val profiles = FakeProfileDao()
+            profiles.upsert(profileRow())
+            var queued: UserProfileEntity? = null
+            var operation: OutboxOperationType? = null
+            var payload = ""
+            val repository =
+                OfflineFirstAuthRepository(
+                    remote,
+                    profiles,
+                    enqueueProfileUpdate = { scope, entity, type, json ->
+                        assertEquals(SCOPE, scope)
+                        queued = entity
+                        operation = type
+                        payload = json
+                        profiles.upsert(entity)
+                    },
+                    nowEpochMillisProvider = { 2_000L },
                 )
-            },
-            enqueueProfileUpdate = { scope, entity, type, _ ->
-                assertEquals(SCOPE, scope)
-                assertEquals(OutboxOperationType.UPDATE, type)
-                queued = entity
-                profiles.upsert(entity)
-            },
-            nowEpochMillisProvider = { 2_000L },
+
+            assertIs<RepositoryResult.Success<Unit>>(repository.updateFullName("  Deniz Yılmaz  "))
+            assertEquals("Deniz Yılmaz", queued?.fullName)
+            assertEquals("PENDING_UPDATE", queued?.sync?.syncStatus)
+            assertEquals(3L, queued?.sync?.baseVersion)
+            assertEquals(OutboxOperationType.UPDATE, operation)
+            assertEquals(true, payload.contains("Deniz Yılmaz"))
+            assertEquals("Deniz Yılmaz", profiles.observeById(USER_ID).first()?.fullName)
+        }
+
+    @Test
+    fun update_name_bootstraps_missing_local_profile_from_remote_before_queuing() =
+        runTest {
+            val remote =
+                FakeAuthRemoteDataSource().apply {
+                    session.value = RemoteAuthSession(USER_ID, "user@example.com", 1_800_000_000)
+                }
+            val profiles = FakeProfileDao()
+            var queued: UserProfileEntity? = null
+            val repository =
+                OfflineFirstAuthRepository(
+                    remote,
+                    profiles,
+                    fetchRemoteProfile = { id ->
+                        assertEquals(USER_ID, id)
+                        ProfileDto(
+                            id = id,
+                            email = "user@example.com",
+                            fullName = null,
+                            createdAt = "2026-09-20T10:00:00Z",
+                            updatedAt = "2026-09-20T10:00:00Z",
+                            version = 4,
+                        )
+                    },
+                    enqueueProfileUpdate = { scope, entity, type, _ ->
+                        assertEquals(SCOPE, scope)
+                        assertEquals(OutboxOperationType.UPDATE, type)
+                        queued = entity
+                        profiles.upsert(entity)
+                    },
+                    nowEpochMillisProvider = { 2_000L },
+                )
+
+            assertIs<RepositoryResult.Success<Unit>>(repository.updateFullName("Deniz Yılmaz"))
+            assertEquals("Deniz Yılmaz", queued?.fullName)
+            assertEquals(4L, queued?.sync?.baseVersion)
+        }
+
+    @Test
+    fun update_name_does_not_claim_success_when_profile_cannot_be_loaded() =
+        runTest {
+            val remote =
+                FakeAuthRemoteDataSource().apply {
+                    session.value = RemoteAuthSession(USER_ID, "user@example.com", 1_800_000_000)
+                }
+            val profiles = FakeProfileDao()
+            var enqueued = false
+            val repository =
+                OfflineFirstAuthRepository(
+                    remote,
+                    profiles,
+                    fetchRemoteProfile = { null },
+                    enqueueProfileUpdate = { _, _, _, _ -> enqueued = true },
+                )
+
+            assertIs<RepositoryResult.Failure>(repository.updateFullName("Deniz Yılmaz"))
+            assertEquals(false, enqueued)
+            assertEquals(null, profiles.observeById(USER_ID).first())
+        }
+
+    private fun profileRow() =
+        UserProfileEntity(
+            id = USER_ID,
+            email = "user@example.com",
+            fullName = null,
+            currencyCode = "TRY",
+            themeCode = "SYSTEM",
+            languageCode = "TR",
+            activeWorkspaceId = null,
+            createdAtEpochMillis = 1_000L,
+            sync = newSyncMetadata(1_000L, SyncStatus.SYNCED).copy(version = 3, baseVersion = 3),
         )
 
-        assertIs<RepositoryResult.Success<Unit>>(repository.updateFullName("Deniz Yılmaz"))
-        assertEquals("Deniz Yılmaz", queued?.fullName)
-        assertEquals(4L, queued?.sync?.baseVersion)
-    }
-
     @Test
-    fun update_name_does_not_claim_success_when_profile_cannot_be_loaded() = runTest {
-        val remote = FakeAuthRemoteDataSource().apply {
-            session.value = RemoteAuthSession(USER_ID, "user@example.com", 1_800_000_000)
+    fun maps_remote_session_without_exposing_supabase_types() =
+        runTest {
+            val remote =
+                FakeAuthRemoteDataSource().apply {
+                    session.value =
+                        RemoteAuthSession(
+                            userId = USER_ID,
+                            email = "user@example.com",
+                            expiresAtEpochSeconds = 1_800_000_000,
+                        )
+                }
+            val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+            val session = repository.observeSession().first()
+
+            assertEquals(USER_ID, session?.userId?.value)
+            assertEquals("user@example.com", session?.email)
+            assertEquals(1_800_000_000, session?.expiresAt?.epochSeconds)
         }
-        val profiles = FakeProfileDao()
-        var enqueued = false
-        val repository = OfflineFirstAuthRepository(
-            remote, profiles,
-            fetchRemoteProfile = { null },
-            enqueueProfileUpdate = { _, _, _, _ -> enqueued = true },
-        )
-
-        assertIs<RepositoryResult.Failure>(repository.updateFullName("Deniz Yılmaz"))
-        assertEquals(false, enqueued)
-        assertEquals(null, profiles.observeById(USER_ID).first())
-    }
-
-    private fun profileRow() = UserProfileEntity(
-        id = USER_ID, email = "user@example.com", fullName = null,
-        currencyCode = "TRY", themeCode = "SYSTEM", languageCode = "TR",
-        activeWorkspaceId = null, createdAtEpochMillis = 1_000L,
-        sync = newSyncMetadata(1_000L, SyncStatus.SYNCED).copy(version = 3, baseVersion = 3),
-    )
 
     @Test
-    fun maps_remote_session_without_exposing_supabase_types() = runTest {
-        val remote = FakeAuthRemoteDataSource().apply {
-            session.value = RemoteAuthSession(
-                userId = USER_ID,
-                email = "user@example.com",
-                expiresAtEpochSeconds = 1_800_000_000,
-            )
+    fun returns_entity_id_after_signup_and_normalizes_email() =
+        runTest {
+            val remote = FakeAuthRemoteDataSource()
+            val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+            val result = repository.signUp("  USER@example.com ", "password", "Feniqo User")
+
+            val success = assertIs<RepositoryResult.Success<EntityId>>(result)
+            assertEquals("created-user", success.value.value)
+            assertEquals("USER@example.com", remote.lastEmail)
         }
-        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
-
-        val session = repository.observeSession().first()
-
-        assertEquals(USER_ID, session?.userId?.value)
-        assertEquals("user@example.com", session?.email)
-        assertEquals(1_800_000_000, session?.expiresAt?.epochSeconds)
-    }
 
     @Test
-    fun returns_entity_id_after_signup_and_normalizes_email() = runTest {
-        val remote = FakeAuthRemoteDataSource()
-        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+    fun converts_unexpected_remote_failure_to_domain_error() =
+        runTest {
+            val remote =
+                FakeAuthRemoteDataSource().apply {
+                    nextError = IllegalStateException("SDK ayrıntısı UI katmanına çıkmamalı")
+                }
+            val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
 
-        val result = repository.signUp("  USER@example.com ", "password", "Feniqo User")
+            val result = repository.signIn("user@example.com", "password")
 
-        val success = assertIs<RepositoryResult.Success<EntityId>>(result)
-        assertEquals("created-user", success.value.value)
-        assertEquals("USER@example.com", remote.lastEmail)
-    }
-
-    @Test
-    fun converts_unexpected_remote_failure_to_domain_error() = runTest {
-        val remote = FakeAuthRemoteDataSource().apply {
-            nextError = IllegalStateException("SDK ayrıntısı UI katmanına çıkmamalı")
+            val failure = assertIs<RepositoryResult.Failure>(result)
+            assertEquals(AppError.Unknown("auth_unknown"), failure.error)
         }
-        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
-
-        val result = repository.signIn("user@example.com", "password")
-
-        val failure = assertIs<RepositoryResult.Failure>(result)
-        assertEquals(AppError.Unknown("auth_unknown"), failure.error)
-    }
 
     @Test
-    fun triggers_schedule_initial_sync_on_successful_sign_in_and_sign_up() = runTest {
-        val remote = FakeAuthRemoteDataSource()
-        val scheduler = FakeBackgroundSyncScheduler()
-        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao(), scheduler)
+    fun triggers_schedule_initial_sync_on_successful_sign_in_and_sign_up() =
+        runTest {
+            val remote = FakeAuthRemoteDataSource()
+            val scheduler = FakeBackgroundSyncScheduler()
+            val repository = OfflineFirstAuthRepository(remote, FakeProfileDao(), scheduler)
 
-        repository.signIn("user@example.com", "password")
-        assertEquals(1, scheduler.initialSyncCalls)
+            repository.signIn("user@example.com", "password")
+            assertEquals(1, scheduler.initialSyncCalls)
 
-        repository.signUp("user2@example.com", "password", "User Two")
-        assertEquals(2, scheduler.initialSyncCalls)
-    }
-
-    @Test
-    fun triggers_cancel_sync_work_on_successful_sign_out() = runTest {
-        val remote = FakeAuthRemoteDataSource()
-        val scheduler = FakeBackgroundSyncScheduler()
-        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao(), scheduler)
-
-        repository.signOut()
-        assertEquals(1, scheduler.cancelSyncCalls)
-    }
-
-    @Test
-    fun successful_sign_out_cancels_unique_sync_work_without_clearing_local_sync_data() = runTest {
-        val remote = FakeAuthRemoteDataSource().apply {
-            session.value = RemoteAuthSession(
-                userId = "11111111-1111-4111-8111-111111111111",
-                email = "user@example.com",
-                expiresAtEpochSeconds = 1_800_000_000,
-            )
+            repository.signUp("user2@example.com", "password", "User Two")
+            assertEquals(2, scheduler.initialSyncCalls)
         }
-        val profiles = FakeProfileDao()
-        val initialProfile = profileRow()
-        profiles.upsert(initialProfile)
-
-        val scheduler = FakeBackgroundSyncScheduler()
-        val repository = OfflineFirstAuthRepository(remote, profiles, scheduler)
-
-        val result = repository.signOut()
-
-        assertIs<RepositoryResult.Success<Unit>>(result)
-        // Background work iptal edilir
-        assertEquals(1, scheduler.cancelSyncCalls)
-        // Çıkış yapıldığında offline-first yerel veriler Room'dan silinmez, korunur
-        val localProfile = profiles.observeById("11111111-1111-4111-8111-111111111111").first()
-        assertEquals(initialProfile, localProfile)
-    }
 
     @Test
-    fun changePassword_without_active_session_returns_session_expired_without_remote_call() = runTest {
-        val remote = FakeAuthRemoteDataSource()
-        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+    fun triggers_cancel_sync_work_on_successful_sign_out() =
+        runTest {
+            val remote = FakeAuthRemoteDataSource()
+            val scheduler = FakeBackgroundSyncScheduler()
+            val repository = OfflineFirstAuthRepository(remote, FakeProfileDao(), scheduler)
 
-        val result = repository.changePassword("oldPass", "newPass")
-
-        val failure = assertIs<RepositoryResult.Failure>(result)
-        assertEquals(AppError.Authentication("auth_session_expired"), failure.error)
-        assertEquals(0, remote.changePasswordCallCount)
-    }
-
-    @Test
-    fun changePassword_with_active_session_passes_email_and_passwords_to_remote() = runTest {
-        val remote = FakeAuthRemoteDataSource().apply {
-            session.value = RemoteAuthSession(
-                userId = "11111111-1111-4111-8111-111111111111",
-                email = "user@example.com",
-                expiresAtEpochSeconds = 1_800_000_000,
-            )
+            repository.signOut()
+            assertEquals(1, scheduler.cancelSyncCalls)
         }
-        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
-
-        val result = repository.changePassword("currentSecret", "newSecret")
-
-        assertIs<RepositoryResult.Success<Unit>>(result)
-        assertEquals(1, remote.changePasswordCallCount)
-        assertEquals("user@example.com", remote.lastChangePasswordEmail)
-        assertEquals("currentSecret", remote.lastChangePasswordCurrentPassword)
-        assertEquals("newSecret", remote.lastChangePasswordNewPassword)
-    }
 
     @Test
-    fun changePassword_remote_failure_maps_to_safe_domain_error() = runTest {
-        val remote = FakeAuthRemoteDataSource().apply {
-            session.value = RemoteAuthSession(
-                userId = "11111111-1111-4111-8111-111111111111",
-                email = "user@example.com",
-                expiresAtEpochSeconds = 1_800_000_000,
-            )
-            nextError = IllegalStateException("SDK internal message")
+    fun successful_sign_out_cancels_unique_sync_work_without_clearing_local_sync_data() =
+        runTest {
+            val remote =
+                FakeAuthRemoteDataSource().apply {
+                    session.value =
+                        RemoteAuthSession(
+                            userId = "11111111-1111-4111-8111-111111111111",
+                            email = "user@example.com",
+                            expiresAtEpochSeconds = 1_800_000_000,
+                        )
+                }
+            val profiles = FakeProfileDao()
+            val initialProfile = profileRow()
+            profiles.upsert(initialProfile)
+
+            val scheduler = FakeBackgroundSyncScheduler()
+            val repository = OfflineFirstAuthRepository(remote, profiles, scheduler)
+
+            val result = repository.signOut()
+
+            assertIs<RepositoryResult.Success<Unit>>(result)
+            // Background work iptal edilir
+            assertEquals(1, scheduler.cancelSyncCalls)
+            // Çıkış yapıldığında offline-first yerel veriler Room'dan silinmez, korunur
+            val localProfile = profiles.observeById("11111111-1111-4111-8111-111111111111").first()
+            assertEquals(initialProfile, localProfile)
         }
-        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
-
-        val result = repository.changePassword("oldPass", "newPass")
-
-        val failure = assertIs<RepositoryResult.Failure>(result)
-        assertEquals(AppError.Unknown("auth_unknown"), failure.error)
-    }
 
     @Test
-    fun changePassword_rethrows_cancellation_exception() = runTest {
-        val remote = FakeAuthRemoteDataSource().apply {
-            session.value = RemoteAuthSession(
-                userId = "11111111-1111-4111-8111-111111111111",
-                email = "user@example.com",
-                expiresAtEpochSeconds = 1_800_000_000,
-            )
-            nextError = CancellationException("Job cancelled")
+    fun changePassword_without_active_session_returns_session_expired_without_remote_call() =
+        runTest {
+            val remote = FakeAuthRemoteDataSource()
+            val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+            val result = repository.changePassword("oldPass", "newPass")
+
+            val failure = assertIs<RepositoryResult.Failure>(result)
+            assertEquals(AppError.Authentication("auth_session_expired"), failure.error)
+            assertEquals(0, remote.changePasswordCallCount)
         }
-        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
 
-        assertFailsWith<CancellationException> {
-            repository.changePassword("oldPass", "newPass")
+    @Test
+    fun changePassword_with_active_session_passes_email_and_passwords_to_remote() =
+        runTest {
+            val remote =
+                FakeAuthRemoteDataSource().apply {
+                    session.value =
+                        RemoteAuthSession(
+                            userId = "11111111-1111-4111-8111-111111111111",
+                            email = "user@example.com",
+                            expiresAtEpochSeconds = 1_800_000_000,
+                        )
+                }
+            val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+            val result = repository.changePassword("currentSecret", "newSecret")
+
+            assertIs<RepositoryResult.Success<Unit>>(result)
+            assertEquals(1, remote.changePasswordCallCount)
+            assertEquals("user@example.com", remote.lastChangePasswordEmail)
+            assertEquals("currentSecret", remote.lastChangePasswordCurrentPassword)
+            assertEquals("newSecret", remote.lastChangePasswordNewPassword)
         }
-    }
 
     @Test
-    fun handleAuthDeepLink_validRecoveryToken_importsTokenAndSetsVerifiedRecoveryState() = runTest {
-        val remote = FakeAuthRemoteDataSource().apply {
-            session.value = RemoteAuthSession(
-                userId = "11111111-1111-4111-8111-111111111111",
-                email = "recovered@feniqo.com",
-                expiresAtEpochSeconds = 1_800_000_000,
-            )
+    fun changePassword_remote_failure_maps_to_safe_domain_error() =
+        runTest {
+            val remote =
+                FakeAuthRemoteDataSource().apply {
+                    session.value =
+                        RemoteAuthSession(
+                            userId = "11111111-1111-4111-8111-111111111111",
+                            email = "user@example.com",
+                            expiresAtEpochSeconds = 1_800_000_000,
+                        )
+                    nextError = IllegalStateException("SDK internal message")
+                }
+            val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+            val result = repository.changePassword("oldPass", "newPass")
+
+            val failure = assertIs<RepositoryResult.Failure>(result)
+            assertEquals(AppError.Unknown("auth_unknown"), failure.error)
         }
-        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
-
-        val deepLink = "feniqo://auth/callback#access_token=acc123&refresh_token=ref456&type=recovery"
-        val result = repository.handleAuthDeepLink(deepLink)
-
-        val success = assertIs<RepositoryResult.Success<com.feniqo.mobile.domain.repository.AuthDeepLinkType>>(result)
-        assertEquals(com.feniqo.mobile.domain.repository.AuthDeepLinkType.RECOVERY, success.value)
-        assertEquals(1, remote.importTokenCallCount)
-        assertEquals("acc123", remote.lastImportAccessToken)
-        assertEquals("ref456", remote.lastImportRefreshToken)
-
-        val recoveryState = repository.observeRecoveryState().first()
-        val verified = assertIs<com.feniqo.mobile.domain.repository.AuthRecoveryState.Verified>(recoveryState)
-        assertEquals("recovered@feniqo.com", verified.email)
-    }
 
     @Test
-    fun handleAuthDeepLink_validSignupConfirmation_importsTokenAndReturnsConfirmationType() = runTest {
-        val remote = FakeAuthRemoteDataSource()
-        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+    fun changePassword_rethrows_cancellation_exception() =
+        runTest {
+            val remote =
+                FakeAuthRemoteDataSource().apply {
+                    session.value =
+                        RemoteAuthSession(
+                            userId = "11111111-1111-4111-8111-111111111111",
+                            email = "user@example.com",
+                            expiresAtEpochSeconds = 1_800_000_000,
+                        )
+                    nextError = CancellationException("Job cancelled")
+                }
+            val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
 
-        val deepLink = "feniqo://auth/callback#access_token=acc123&refresh_token=ref456&type=signup"
-        val result = repository.handleAuthDeepLink(deepLink)
-
-        val success = assertIs<RepositoryResult.Success<com.feniqo.mobile.domain.repository.AuthDeepLinkType>>(result)
-        assertEquals(com.feniqo.mobile.domain.repository.AuthDeepLinkType.EMAIL_CONFIRMATION, success.value)
-        assertEquals(1, remote.importTokenCallCount)
-
-        // Email confirmation recovery durumunu verified yapmamalıdır
-        val recoveryState = repository.observeRecoveryState().first()
-        assertEquals(com.feniqo.mobile.domain.repository.AuthRecoveryState.Idle, recoveryState)
-    }
-
-    @Test
-    fun handleAuthDeepLink_pkceCode_exchangesCodeAndSetsVerifiedRecoveryState() = runTest {
-        val remote = FakeAuthRemoteDataSource().apply {
-            session.value = RemoteAuthSession(
-                userId = "11111111-1111-4111-8111-111111111111",
-                email = "pkce@feniqo.com",
-                expiresAtEpochSeconds = 1_800_000_000,
-            )
+            assertFailsWith<CancellationException> {
+                repository.changePassword("oldPass", "newPass")
+            }
         }
-        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
-
-        val deepLink = "feniqo://auth/callback?code=pkce-auth-code-123"
-        val result = repository.handleAuthDeepLink(deepLink)
-
-        val success = assertIs<RepositoryResult.Success<com.feniqo.mobile.domain.repository.AuthDeepLinkType>>(result)
-        assertEquals(com.feniqo.mobile.domain.repository.AuthDeepLinkType.RECOVERY, success.value)
-        assertEquals(1, remote.exchangeCodeCallCount)
-        assertEquals("pkce-auth-code-123", remote.lastExchangeCode)
-
-        val recoveryState = repository.observeRecoveryState().first()
-        val verified = assertIs<com.feniqo.mobile.domain.repository.AuthRecoveryState.Verified>(recoveryState)
-        assertEquals("pkce@feniqo.com", verified.email)
-    }
 
     @Test
-    fun handleAuthDeepLink_expiredOrBrokenLink_setsInvalidOrExpiredRecoveryState() = runTest {
-        val remote = FakeAuthRemoteDataSource()
-        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+    fun handleAuthDeepLink_validRecoveryToken_importsTokenAndSetsVerifiedRecoveryState() =
+        runTest {
+            val remote =
+                FakeAuthRemoteDataSource().apply {
+                    session.value =
+                        RemoteAuthSession(
+                            userId = "11111111-1111-4111-8111-111111111111",
+                            email = "recovered@feniqo.com",
+                            expiresAtEpochSeconds = 1_800_000_000,
+                        )
+                }
+            val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
 
-        // Supabase error fragment'ı
-        val deepLink = "feniqo://auth/callback#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired"
-        val result = repository.handleAuthDeepLink(deepLink)
+            val deepLink = "feniqo://auth/callback#access_token=acc123&refresh_token=ref456&type=recovery"
+            val result = repository.handleAuthDeepLink(deepLink)
 
-        val failure = assertIs<RepositoryResult.Failure>(result)
-        val recoveryState = repository.observeRecoveryState().first()
-        assertEquals(com.feniqo.mobile.domain.repository.AuthRecoveryState.InvalidOrExpired, recoveryState)
-    }
+            val success = assertIs<RepositoryResult.Success<com.feniqo.mobile.domain.repository.AuthDeepLinkType>>(result)
+            assertEquals(com.feniqo.mobile.domain.repository.AuthDeepLinkType.RECOVERY, success.value)
+            assertEquals(1, remote.importTokenCallCount)
+            assertEquals("acc123", remote.lastImportAccessToken)
+            assertEquals("ref456", remote.lastImportRefreshToken)
 
-    @Test
-    fun handleAuthDeepLink_unsupportedUrl_returnsUnsupportedWithoutAlteringRecoveryState() = runTest {
-        val remote = FakeAuthRemoteDataSource()
-        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
-
-        val deepLink = "feniqo://other/path"
-        val result = repository.handleAuthDeepLink(deepLink)
-
-        val success = assertIs<RepositoryResult.Success<com.feniqo.mobile.domain.repository.AuthDeepLinkType>>(result)
-        assertEquals(com.feniqo.mobile.domain.repository.AuthDeepLinkType.UNSUPPORTED, success.value)
-        assertEquals(com.feniqo.mobile.domain.repository.AuthRecoveryState.Idle, repository.observeRecoveryState().first())
-    }
-
-    @Test
-    fun handleAuthDeepLink_callbackPrefixSpoof_returnsUnsupported() = runTest {
-        val remote = FakeAuthRemoteDataSource()
-        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
-
-        val result = repository.handleAuthDeepLink(
-            "feniqo://auth/callback.attacker#access_token=token&refresh_token=refresh&type=recovery",
-        )
-
-        val success = assertIs<RepositoryResult.Success<com.feniqo.mobile.domain.repository.AuthDeepLinkType>>(result)
-        assertEquals(com.feniqo.mobile.domain.repository.AuthDeepLinkType.UNSUPPORTED, success.value)
-        assertEquals(0, remote.importTokenCallCount)
-    }
-
-    @Test
-    fun configuredHttpsCallback_isUsedForResetAndDeepLinkValidation() = runTest {
-        val remote = FakeAuthRemoteDataSource().apply {
-            session.value = RemoteAuthSession(
-                userId = "11111111-1111-4111-8111-111111111111",
-                email = "recovered@example.com",
-                expiresAtEpochSeconds = 1_800_000_000,
-            )
+            val recoveryState = repository.observeRecoveryState().first()
+            val verified = assertIs<com.feniqo.mobile.domain.repository.AuthRecoveryState.Verified>(recoveryState)
+            assertEquals("recovered@feniqo.com", verified.email)
         }
-        val redirectUrl = "https://auth.example.com/auth/callback"
-        val repository = OfflineFirstAuthRepository(
-            remoteDataSource = remote,
-            profileDao = FakeProfileDao(),
-            authRedirectUrl = redirectUrl,
-        )
-
-        repository.sendPasswordResetEmail("user@example.com")
-        val result = repository.handleAuthDeepLink(
-            "$redirectUrl#access_token=token&refresh_token=refresh&type=recovery",
-        )
-
-        assertEquals(redirectUrl, remote.lastSendResetRedirectUrl)
-        assertIs<RepositoryResult.Success<com.feniqo.mobile.domain.repository.AuthDeepLinkType>>(result)
-        assertEquals(1, remote.importTokenCallCount)
-    }
 
     @Test
-    fun resetPassword_whenRecoveryVerified_updatesPasswordClearsRecoveryAndSignsOut() = runTest {
-        val remote = FakeAuthRemoteDataSource().apply {
-            session.value = RemoteAuthSession(
-                userId = "11111111-1111-4111-8111-111111111111",
-                email = "user@feniqo.com",
-                expiresAtEpochSeconds = 1_800_000_000,
-            )
+    fun handleAuthDeepLink_validSignupConfirmation_importsTokenAndReturnsConfirmationType() =
+        runTest {
+            val remote = FakeAuthRemoteDataSource()
+            val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+            val deepLink = "feniqo://auth/callback#access_token=acc123&refresh_token=ref456&type=signup"
+            val result = repository.handleAuthDeepLink(deepLink)
+
+            val success = assertIs<RepositoryResult.Success<com.feniqo.mobile.domain.repository.AuthDeepLinkType>>(result)
+            assertEquals(com.feniqo.mobile.domain.repository.AuthDeepLinkType.EMAIL_CONFIRMATION, success.value)
+            assertEquals(1, remote.importTokenCallCount)
+
+            // Email confirmation recovery durumunu verified yapmamalıdır
+            val recoveryState = repository.observeRecoveryState().first()
+            assertEquals(com.feniqo.mobile.domain.repository.AuthRecoveryState.Idle, recoveryState)
         }
-        val scheduler = FakeBackgroundSyncScheduler()
-        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao(), scheduler)
-
-        // Önce linki verify et
-        repository.handleAuthDeepLink("feniqo://auth/callback#access_token=token&refresh_token=ref&type=recovery")
-        assertEquals(1, remote.importTokenCallCount)
-
-        // Şimdi şifreyi sıfırla
-        val resetResult = repository.resetPassword("NewSuperSecret123")
-        assertIs<RepositoryResult.Success<Unit>>(resetResult)
-
-        assertEquals(1, remote.updatePasswordCallCount)
-        assertEquals("NewSuperSecret123", remote.lastUpdatePasswordValue)
-        assertEquals(1, remote.signOutCallCount)
-        assertEquals(1, scheduler.cancelSyncCalls)
-        assertEquals(null, remote.session.value)
-
-        // Şifre sıfırlama sonrası recovery Idle olmalı
-        assertEquals(com.feniqo.mobile.domain.repository.AuthRecoveryState.Idle, repository.observeRecoveryState().first())
-    }
 
     @Test
-    fun clearRecoveryState_whenVerified_signsOutCancelsSyncThenPublishesIdle() = runTest {
-        val remote = FakeAuthRemoteDataSource().apply {
-            session.value = RemoteAuthSession(
-                userId = "11111111-1111-4111-8111-111111111111",
-                email = "user@feniqo.com",
-                expiresAtEpochSeconds = 1_800_000_000,
-            )
+    fun handleAuthDeepLink_pkceCode_exchangesCodeAndSetsVerifiedRecoveryState() =
+        runTest {
+            val remote =
+                FakeAuthRemoteDataSource().apply {
+                    session.value =
+                        RemoteAuthSession(
+                            userId = "11111111-1111-4111-8111-111111111111",
+                            email = "pkce@feniqo.com",
+                            expiresAtEpochSeconds = 1_800_000_000,
+                        )
+                }
+            val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+            val deepLink = "feniqo://auth/callback?code=pkce-auth-code-123"
+            val result = repository.handleAuthDeepLink(deepLink)
+
+            val success = assertIs<RepositoryResult.Success<com.feniqo.mobile.domain.repository.AuthDeepLinkType>>(result)
+            assertEquals(com.feniqo.mobile.domain.repository.AuthDeepLinkType.RECOVERY, success.value)
+            assertEquals(1, remote.exchangeCodeCallCount)
+            assertEquals("pkce-auth-code-123", remote.lastExchangeCode)
+
+            val recoveryState = repository.observeRecoveryState().first()
+            val verified = assertIs<com.feniqo.mobile.domain.repository.AuthRecoveryState.Verified>(recoveryState)
+            assertEquals("pkce@feniqo.com", verified.email)
         }
-        val scheduler = FakeBackgroundSyncScheduler()
-        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao(), scheduler)
-        repository.handleAuthDeepLink("feniqo://auth/callback#access_token=token&refresh_token=ref&type=recovery")
-
-        val result = repository.clearRecoveryState()
-
-        assertIs<RepositoryResult.Success<Unit>>(result)
-        assertEquals(1, remote.signOutCallCount)
-        assertEquals(1, scheduler.cancelSyncCalls)
-        assertEquals(null, remote.session.value)
-        assertEquals(AuthRecoveryState.Idle, repository.observeRecoveryState().first())
-    }
 
     @Test
-    fun clearRecoveryState_whenSignOutFails_keepsVerifiedStateAndDoesNotCancelSync() = runTest {
-        val remote = FakeAuthRemoteDataSource().apply {
-            session.value = RemoteAuthSession(
-                userId = "11111111-1111-4111-8111-111111111111",
-                email = "user@feniqo.com",
-                expiresAtEpochSeconds = 1_800_000_000,
-            )
+    fun handleAuthDeepLink_expiredOrBrokenLink_setsInvalidOrExpiredRecoveryState() =
+        runTest {
+            val remote = FakeAuthRemoteDataSource()
+            val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+            // Supabase error fragment'ı
+            val deepLink = "feniqo://auth/callback#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired"
+            val result = repository.handleAuthDeepLink(deepLink)
+
+            val failure = assertIs<RepositoryResult.Failure>(result)
+            val recoveryState = repository.observeRecoveryState().first()
+            assertEquals(com.feniqo.mobile.domain.repository.AuthRecoveryState.InvalidOrExpired, recoveryState)
         }
-        val scheduler = FakeBackgroundSyncScheduler()
-        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao(), scheduler)
-        repository.handleAuthDeepLink("feniqo://auth/callback#access_token=token&refresh_token=ref&type=recovery")
-        remote.nextError = IllegalStateException("sign out failed")
-
-        val result = repository.clearRecoveryState()
-
-        assertIs<RepositoryResult.Failure>(result)
-        assertEquals(0, scheduler.cancelSyncCalls)
-        assertIs<AuthRecoveryState.Verified>(repository.observeRecoveryState().first())
-        assertEquals(1, remote.signOutCallCount)
-    }
 
     @Test
-    fun resetPassword_whenNotVerified_failsWithoutCallingRemote() = runTest {
-        val remote = FakeAuthRemoteDataSource()
-        val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+    fun handleAuthDeepLink_unsupportedUrl_returnsUnsupportedWithoutAlteringRecoveryState() =
+        runTest {
+            val remote = FakeAuthRemoteDataSource()
+            val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
 
-        val result = repository.resetPassword("NewSuperSecret123")
-        val failure = assertIs<RepositoryResult.Failure>(result)
-        assertEquals(AppError.Authentication("auth_recovery_not_authorized"), failure.error)
-        assertEquals(0, remote.updatePasswordCallCount)
-    }
+            val deepLink = "feniqo://other/path"
+            val result = repository.handleAuthDeepLink(deepLink)
+
+            val success = assertIs<RepositoryResult.Success<com.feniqo.mobile.domain.repository.AuthDeepLinkType>>(result)
+            assertEquals(com.feniqo.mobile.domain.repository.AuthDeepLinkType.UNSUPPORTED, success.value)
+            assertEquals(com.feniqo.mobile.domain.repository.AuthRecoveryState.Idle, repository.observeRecoveryState().first())
+        }
+
+    @Test
+    fun handleAuthDeepLink_callbackPrefixSpoof_returnsUnsupported() =
+        runTest {
+            val remote = FakeAuthRemoteDataSource()
+            val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+            val result =
+                repository.handleAuthDeepLink(
+                    "feniqo://auth/callback.attacker#access_token=token&refresh_token=refresh&type=recovery",
+                )
+
+            val success = assertIs<RepositoryResult.Success<com.feniqo.mobile.domain.repository.AuthDeepLinkType>>(result)
+            assertEquals(com.feniqo.mobile.domain.repository.AuthDeepLinkType.UNSUPPORTED, success.value)
+            assertEquals(0, remote.importTokenCallCount)
+        }
+
+    @Test
+    fun configuredHttpsCallback_isUsedForResetAndDeepLinkValidation() =
+        runTest {
+            val remote =
+                FakeAuthRemoteDataSource().apply {
+                    session.value =
+                        RemoteAuthSession(
+                            userId = "11111111-1111-4111-8111-111111111111",
+                            email = "recovered@example.com",
+                            expiresAtEpochSeconds = 1_800_000_000,
+                        )
+                }
+            val redirectUrl = "https://auth.example.com/auth/callback"
+            val repository =
+                OfflineFirstAuthRepository(
+                    remoteDataSource = remote,
+                    profileDao = FakeProfileDao(),
+                    authRedirectUrl = redirectUrl,
+                )
+
+            repository.sendPasswordResetEmail("user@example.com")
+            val result =
+                repository.handleAuthDeepLink(
+                    "$redirectUrl#access_token=token&refresh_token=refresh&type=recovery",
+                )
+
+            assertEquals(redirectUrl, remote.lastSendResetRedirectUrl)
+            assertIs<RepositoryResult.Success<com.feniqo.mobile.domain.repository.AuthDeepLinkType>>(result)
+            assertEquals(1, remote.importTokenCallCount)
+        }
+
+    @Test
+    fun resetPassword_whenRecoveryVerified_updatesPasswordClearsRecoveryAndSignsOut() =
+        runTest {
+            val remote =
+                FakeAuthRemoteDataSource().apply {
+                    session.value =
+                        RemoteAuthSession(
+                            userId = "11111111-1111-4111-8111-111111111111",
+                            email = "user@feniqo.com",
+                            expiresAtEpochSeconds = 1_800_000_000,
+                        )
+                }
+            val scheduler = FakeBackgroundSyncScheduler()
+            val repository = OfflineFirstAuthRepository(remote, FakeProfileDao(), scheduler)
+
+            // Önce linki verify et
+            repository.handleAuthDeepLink("feniqo://auth/callback#access_token=token&refresh_token=ref&type=recovery")
+            assertEquals(1, remote.importTokenCallCount)
+
+            // Şimdi şifreyi sıfırla
+            val resetResult = repository.resetPassword("NewSuperSecret123")
+            assertIs<RepositoryResult.Success<Unit>>(resetResult)
+
+            assertEquals(1, remote.updatePasswordCallCount)
+            assertEquals("NewSuperSecret123", remote.lastUpdatePasswordValue)
+            assertEquals(1, remote.signOutCallCount)
+            assertEquals(1, scheduler.cancelSyncCalls)
+            assertEquals(null, remote.session.value)
+
+            // Şifre sıfırlama sonrası recovery Idle olmalı
+            assertEquals(com.feniqo.mobile.domain.repository.AuthRecoveryState.Idle, repository.observeRecoveryState().first())
+        }
+
+    @Test
+    fun clearRecoveryState_whenVerified_signsOutCancelsSyncThenPublishesIdle() =
+        runTest {
+            val remote =
+                FakeAuthRemoteDataSource().apply {
+                    session.value =
+                        RemoteAuthSession(
+                            userId = "11111111-1111-4111-8111-111111111111",
+                            email = "user@feniqo.com",
+                            expiresAtEpochSeconds = 1_800_000_000,
+                        )
+                }
+            val scheduler = FakeBackgroundSyncScheduler()
+            val repository = OfflineFirstAuthRepository(remote, FakeProfileDao(), scheduler)
+            repository.handleAuthDeepLink("feniqo://auth/callback#access_token=token&refresh_token=ref&type=recovery")
+
+            val result = repository.clearRecoveryState()
+
+            assertIs<RepositoryResult.Success<Unit>>(result)
+            assertEquals(1, remote.signOutCallCount)
+            assertEquals(1, scheduler.cancelSyncCalls)
+            assertEquals(null, remote.session.value)
+            assertEquals(AuthRecoveryState.Idle, repository.observeRecoveryState().first())
+        }
+
+    @Test
+    fun clearRecoveryState_whenSignOutFails_keepsVerifiedStateAndDoesNotCancelSync() =
+        runTest {
+            val remote =
+                FakeAuthRemoteDataSource().apply {
+                    session.value =
+                        RemoteAuthSession(
+                            userId = "11111111-1111-4111-8111-111111111111",
+                            email = "user@feniqo.com",
+                            expiresAtEpochSeconds = 1_800_000_000,
+                        )
+                }
+            val scheduler = FakeBackgroundSyncScheduler()
+            val repository = OfflineFirstAuthRepository(remote, FakeProfileDao(), scheduler)
+            repository.handleAuthDeepLink("feniqo://auth/callback#access_token=token&refresh_token=ref&type=recovery")
+            remote.nextError = IllegalStateException("sign out failed")
+
+            val result = repository.clearRecoveryState()
+
+            assertIs<RepositoryResult.Failure>(result)
+            assertEquals(0, scheduler.cancelSyncCalls)
+            assertIs<AuthRecoveryState.Verified>(repository.observeRecoveryState().first())
+            assertEquals(1, remote.signOutCallCount)
+        }
+
+    @Test
+    fun resetPassword_whenNotVerified_failsWithoutCallingRemote() =
+        runTest {
+            val remote = FakeAuthRemoteDataSource()
+            val repository = OfflineFirstAuthRepository(remote, FakeProfileDao())
+
+            val result = repository.resetPassword("NewSuperSecret123")
+            val failure = assertIs<RepositoryResult.Failure>(result)
+            assertEquals(AppError.Authentication("auth_recovery_not_authorized"), failure.error)
+            assertEquals(0, remote.updatePasswordCallCount)
+        }
 }
 
 private class FakeBackgroundSyncScheduler : com.feniqo.mobile.domain.sync.BackgroundSyncScheduler {
@@ -520,12 +588,19 @@ private class FakeAuthRemoteDataSource : AuthRemoteDataSource {
 
     override fun observeSession(): Flow<RemoteAuthSession?> = session
 
-    override suspend fun signIn(email: String, password: String) {
+    override suspend fun signIn(
+        email: String,
+        password: String,
+    ) {
         throwNextErrorIfPresent()
         lastEmail = email
     }
 
-    override suspend fun signUp(email: String, password: String, fullName: String?): String {
+    override suspend fun signUp(
+        email: String,
+        password: String,
+        fullName: String?,
+    ): String {
         throwNextErrorIfPresent()
         lastEmail = email
         return "created-user"
@@ -573,7 +648,10 @@ private class FakeAuthRemoteDataSource : AuthRemoteDataSource {
         lastChangePasswordNewPassword = newPassword
     }
 
-    override suspend fun sendPasswordResetEmail(email: String, redirectUrl: String) {
+    override suspend fun sendPasswordResetEmail(
+        email: String,
+        redirectUrl: String,
+    ) {
         throwNextErrorIfPresent()
         sendResetEmailCallCount++
         lastSendResetEmail = email
@@ -592,7 +670,10 @@ private class FakeAuthRemoteDataSource : AuthRemoteDataSource {
         lastUpdatePasswordValue = newPassword
     }
 
-    override suspend fun importAuthToken(accessToken: String, refreshToken: String) {
+    override suspend fun importAuthToken(
+        accessToken: String,
+        refreshToken: String,
+    ) {
         throwNextErrorIfPresent()
         importTokenCallCount++
         lastImportAccessToken = accessToken
@@ -625,7 +706,10 @@ private class FakeProfileDao : ProfileDao {
         return 1L
     }
 
-    override suspend fun setActiveWorkspaceGuarded(profileId: String, workspaceId: String): Int {
+    override suspend fun setActiveWorkspaceGuarded(
+        profileId: String,
+        workspaceId: String,
+    ): Int {
         val current = profile.value ?: return 0
         if (current.id != profileId) return 0
         profile.value = current.copy(activeWorkspaceId = workspaceId)

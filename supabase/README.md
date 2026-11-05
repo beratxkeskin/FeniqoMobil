@@ -38,6 +38,7 @@ Uygulama sırası (Kesin 32 sıralı migration zinciri):
 30. `20260926000200_harden_workspace_transaction_viewer_mutations.sql`
 31. `20260926000300_harden_workspace_table_privileges.sql`
 32. `20260927000100_harden_money_compatibility_trigger.sql`
+33. `20261015144943_sync_write_v2_user_merchant_verifications.sql` *(Yerel/Pending: Faz 8.6-D1 kişisel merchant doğrulama tablosu, RLS, 15 entity receipt constraint genişletmesi ve deterministik RFC 9562 UUIDv8 sync_write_v2 wrapper'ı. Yalnızca izole yerel test ortamında doğrulanmıştır; hiçbir uzak ortama [staging/production] uygulanmamıştır. Production ortamında yalnız 32 migration uygulanmış durumu korunmaktadır).*
 
 ## Baseline ve Güvenlik İlkeleri
 

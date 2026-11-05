@@ -5,10 +5,14 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
+import com.feniqo.mobile.logo.RemoteMerchantLogoResolverFactory
+import com.feniqo.mobile.presentation.component.LocalRemoteMerchantLogoResolver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -99,6 +103,8 @@ class MainActivity : FragmentActivity() {
                 }
             }
 
+            val remoteLogoResolver = remember { RemoteMerchantLogoResolverFactory.createFromBuildConfig() }
+
             App(
                 themeMode = themeMode,
                 languageTag =
@@ -107,12 +113,15 @@ class MainActivity : FragmentActivity() {
                         AppLanguage.EN -> "en"
                     },
             ) {
-                com.feniqo.mobile.demo.DemoGate {
-                    if (authState == AppAuthState.Authenticated && appLockState.isLocked) {
-                        AppLockScreen(
-                            errorMessage = appLockState.error?.toLocalizedMessage(),
-                            onUnlock = { authenticate(AppLockAuthenticationAction.UNLOCK, userSettings.language) },
-                        )
+                CompositionLocalProvider(
+                    LocalRemoteMerchantLogoResolver provides remoteLogoResolver,
+                ) {
+                    com.feniqo.mobile.demo.DemoGate {
+                        if (authState == AppAuthState.Authenticated && appLockState.isLocked) {
+                            AppLockScreen(
+                                errorMessage = appLockState.error?.toLocalizedMessage(),
+                                onUnlock = { authenticate(AppLockAuthenticationAction.UNLOCK, userSettings.language) },
+                            )
                     } else {
                         FeniqoNavigation(
                             authState = authState,
@@ -144,6 +153,7 @@ class MainActivity : FragmentActivity() {
                 }
             }
         }
+    }
     }
 
     override fun onStart() {

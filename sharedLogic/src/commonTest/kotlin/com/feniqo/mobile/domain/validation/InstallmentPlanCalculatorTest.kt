@@ -9,7 +9,6 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class InstallmentPlanCalculatorTest {
-
     @Test
     fun calculate_with120000MinorAnd3Count_allocatesEqualAmounts() {
         val total = Money(120_000L, Currency.TRY)
@@ -48,12 +47,13 @@ class InstallmentPlanCalculatorTest {
 
     @Test
     fun calculate_allocationsSumExactlyMatchesTotalAmount() {
-        val testCases = listOf(
-            Pair(Money(9999L, Currency.TRY), 7),
-            Pair(Money(123456L, Currency.USD), 13),
-            Pair(Money(5000000L, Currency.EUR), 60),
-            Pair(Money(10L, Currency.TRY), 2),
-        )
+        val testCases =
+            listOf(
+                Pair(Money(9999L, Currency.TRY), 7),
+                Pair(Money(123456L, Currency.USD), 13),
+                Pair(Money(5000000L, Currency.EUR), 60),
+                Pair(Money(10L, Currency.TRY), 2),
+            )
 
         for ((total, count) in testCases) {
             val result = InstallmentPlanCalculator.calculate(total, count, LocalDate(2026, 1, 15))

@@ -220,9 +220,16 @@ Kullanıcı doğrulaması tahminden üstündür, özel alias genel aliastan önc
 hareketleri katalog taramasından önce elenir. Alias türü ve kişisel/çalışma alanı/genel kapsamı
 domain sözleşmesidir; doğrulama kaynakları kişisel, çalışma alanı ve banka kimliği sırasını izler.
 Farklı merchant adaylarının puan farkı 10'dan azsa motor fail-closed biçimde belirsiz sonuç verir.
-Bu ilk dilimde Room, Supabase, DTO, outbox, sync,
-UI veya logo sağlayıcısı bağlantısı yoktur. Gelecekteki logo adaptörü ham finansal açıklama alamaz
-ve uygulamanın temel çalışması için zorunlu bağımlılık olamaz.
+Mevcut ilk domain diliminde Room, Supabase, DTO, outbox, sync, UI veya logo sağlayıcısı bağlantısı
+yoktur. Onaylanan devam planında kullanıcı tarafından yazılan transaction açıklaması da açık bir
+tanıma kaynağıdır; otomatik sonuç repository sınırında nullable transaction merchant bağlantısına
+dönüşür ve kullanıcı doğrulaması Room SSOT'ta tahminden ayrı saklanır. Açıklama değiştiğinde yalnız
+sistem tahmini yeniden hesaplanabilir; kullanıcı doğrulaması sessizce değiştirilemez. UI yalnız
+domain/presentation modelinden gelen merchant kimliği ve güven durumunu ortak logo bileşeninde
+çözer. Gelecekteki logo adaptörü ham finansal açıklama, not, kullanıcı veya workspace verisi alamaz
+ve uygulamanın temel çalışması için zorunlu bağımlılık olamaz. Ayrıntılı dilimler
+[merchant tanıma ve logo uygulama planında](docs/MERCHANT_TANIMA_VE_LOGO_UYGULAMA_PLANI.md)
+tanımlıdır.
 
 - Saf domain ve use case kuralları `commonTest` içinde test edilir.
 - Sync motoru fake remote/DAO sınırlarıyla deterministik test edilir.
@@ -233,9 +240,14 @@ ve uygulamanın temel çalışması için zorunlu bağımlılık olamaz.
 ## 11. Mimari değişiklik süreci
 
 Geliştirme demo varyantı (`com.feniqo.mobile.demo`) aynı Room/repository/UI zincirini kullanır.
-Yalnız Auth/Sync adaptörleri yereldir; INTERNET izni kaldırılır ve uzak yapılandırma `.invalid`
-hedefine sabitlenir. Fixture'lar normal entity + outbox yoluyla yazılır. Ayrıntı ve sandbox
-sıfırlama sınırı: [Demo kullanım rehberi](docs/DEMO_KULLANIM.md).
+`BuildConfig.DEMO=true` ve Supabase URL `https://demo.invalid` olarak tanımlıdır; Auth ve Sync
+adaptörleri yereldir (`DemoAuthRepository`, `DemoSyncRepository`). Başlangıç işleri, WorkManager outbox
+ve Realtime demo kapılarıyla çalıştırılmaz. Demo manifestinde standart `android.permission.INTERNET` izni
+bulunur; ancak bu izin Android seviyesinde host filtrelemesi yapmaz ve işletim sistemi düzeyinde yalnızca
+Logo.dev trafiği garantisi verilmez. Uygulama düzeyinde uzak logo çözümleyicisi yalnızca
+`MerchantLogoDomainAllowlist` içindeki doğrulanmış anahtarlar için Logo.dev HTTPS CDN isteği üretir;
+`UseTransactionName` veya serbest adlar çözümleyiciye doğrulanmış anahtar sağlamaz. Fixture'lar normal
+entity + outbox yoluyla yazılır. Ayrıntı ve sandbox sıfırlama sınırı: [Demo kullanım rehberi](docs/DEMO_KULLANIM.md).
 
 ### Veri taşınabilirliği sınırı
 

@@ -5,8 +5,10 @@ import com.feniqo.mobile.data.local.dao.SyncOperationDao
 import com.feniqo.mobile.data.local.dao.SyncStateDao
 import com.feniqo.mobile.data.local.entity.SyncConflictEntity
 import com.feniqo.mobile.data.local.entity.SyncOperationEntity
+import com.feniqo.mobile.data.remote.codec.UserMerchantVerificationPayloadCodec
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
+import com.feniqo.mobile.domain.usecase.TransactionMerchantAttributionResolver
 import kotlinx.serialization.json.Json
 
 /**
@@ -48,7 +50,34 @@ class ConflictRecoveryService(
             }
             "TRANSACTION" -> {
                 val remoteDto = runCatching { json.decodeFromString<TransactionDto>(conflict.remotePayloadJson) }.getOrNull() ?: return false
-                localMutationDao.recoverEquivalentTransaction(syncScopeKey, operation.operationId, remoteDto, now)
+                val candidateMerchant = TransactionMerchantAttributionResolver.resolve(remoteDto.description)
+                localMutationDao.recoverEquivalentTransaction(syncScopeKey, operation.operationId, remoteDto, now, candidateMerchant)
+            }
+            "USER_MERCHANT_VERIFICATION" -> {
+                if (operation.protocolVersion != 2) return false
+                val expectedLocalEntity = localMutationDao.getUserMerchantVerificationRow(conflict.entityId) ?: return false
+                val remoteDto = try {
+                    UserMerchantVerificationPayloadCodec.decodeAndValidateSnapshot(conflict.remotePayloadJson)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    return false
+                }
+                try {
+                    localMutationDao.recoverEquivalentUserMerchantVerification(
+                        syncScopeKey = syncScopeKey,
+                        operationId = operation.operationId,
+                        remoteRecord = remoteDto,
+                        nowEpochMillis = now,
+                        expectedLocalEntity = expectedLocalEntity,
+                    )
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: IllegalArgumentException) {
+                    false
+                } catch (e: IllegalStateException) {
+                    false
+                }
             }
             else -> false
         }
@@ -104,9 +133,11 @@ class ConflictRecoveryService(
         // Taksit grubunun tamamı CONFLICT ve eşdeğer: tek Room transaction içinde atomik çöz
         val now = nowEpochMillisProvider()
         val units = pairs.mapIndexed { index, (_, op) ->
-            op.operationId to remoteDtos[index]
+            val dto = remoteDtos[index]
+            val candidate = TransactionMerchantAttributionResolver.resolve(dto.description)
+            Triple(op.operationId, dto, candidate)
         }
-        return localMutationDao.recoverEquivalentTransactionGroup(syncScopeKey, units, now)
+        return localMutationDao.recoverEquivalentTransactionUnits(syncScopeKey, units, now)
     }
 
     /**
@@ -156,6 +187,15 @@ class ConflictRecoveryService(
         val categoryConflicts = syncStateDao.getConflictsByEntityType(syncScopeKey, "CATEGORY")
         for (conflict in categoryConflicts) {
             val success = recoverSingleEquivalentCreate(syncScopeKey, "CATEGORY", conflict.entityId)
+            if (success) {
+                recoveredCount++
+            }
+        }
+
+        // 4. USER_MERCHANT_VERIFICATION çakışmalarını çöz
+        val merchantConflicts = syncStateDao.getConflictsByEntityType(syncScopeKey, "USER_MERCHANT_VERIFICATION")
+        for (conflict in merchantConflicts) {
+            val success = recoverSingleEquivalentCreate(syncScopeKey, "USER_MERCHANT_VERIFICATION", conflict.entityId)
             if (success) {
                 recoveredCount++
             }

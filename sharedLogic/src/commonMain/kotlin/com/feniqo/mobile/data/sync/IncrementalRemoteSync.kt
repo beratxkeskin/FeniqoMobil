@@ -15,6 +15,7 @@ import com.feniqo.mobile.data.local.entity.SyncConflictEntity
 import com.feniqo.mobile.data.local.entity.SyncCursorEntity
 import com.feniqo.mobile.data.local.entity.TransactionEntity
 import com.feniqo.mobile.data.local.entity.UserProfileEntity
+import com.feniqo.mobile.data.local.entity.UserMerchantVerificationEntity
 import com.feniqo.mobile.data.mapper.toDomain
 import com.feniqo.mobile.data.mapper.toEntity
 import com.feniqo.mobile.data.remote.core.CategoryRemoteQuery
@@ -31,6 +32,7 @@ import com.feniqo.mobile.data.remote.core.RemoteSyncCursor
 import com.feniqo.mobile.data.remote.core.RemoteWorkspaceScope
 import com.feniqo.mobile.data.remote.core.SubscriptionRemoteQuery
 import com.feniqo.mobile.data.remote.core.TransactionRemoteQuery
+import com.feniqo.mobile.data.remote.core.UserMerchantVerificationRemoteQuery
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.AssetDto
 import com.feniqo.mobile.data.remote.dto.DebtDto
@@ -41,11 +43,14 @@ import com.feniqo.mobile.data.remote.dto.ProfileDto
 import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
 import com.feniqo.mobile.data.remote.dto.SubscriptionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
+import com.feniqo.mobile.data.remote.dto.UserMerchantVerificationDto
+import com.feniqo.mobile.data.remote.dto.toDto
 import com.feniqo.mobile.data.remote.mapper.toDomain
 import com.feniqo.mobile.data.remote.mapper.toDto
 
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.SyncStatus
+import com.feniqo.mobile.domain.usecase.TransactionMerchantAttributionResolver
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.time.Instant
@@ -224,7 +229,20 @@ class IncrementalRemoteSync(
             conflicts += result.conflicts
         }
 
-
+        val merchantVerificationCursor = syncStateDao.getCursor(syncScopeKey, USER_MERCHANT_VERIFICATION)
+        val merchantVerifications = fetchAll { page ->
+            remote.fetchMerchantVerifications(
+                UserMerchantVerificationRemoteQuery(
+                    page = page,
+                    updatedAfter = merchantVerificationCursor?.toRemoteCursor(),
+                ),
+            )
+        }
+        merchantVerifications.forEach { dto ->
+            val result = applyMerchantVerification(dto, syncScopeKey, actorUserId = userId.value)
+            applied += result.applied
+            conflicts += result.conflicts
+        }
 
         val transactionCursor = syncStateDao.getCursor(syncScopeKey, TRANSACTION)
         val transactions = fetchAll { page ->
@@ -254,6 +272,7 @@ class IncrementalRemoteSync(
             receivedGoalContributionCount = goalContributions.size,
             receivedDebtCount = debts.size,
             receivedDebtPaymentCount = debtPayments.size,
+            receivedMerchantVerificationCount = merchantVerifications.size,
         )
     }
 
@@ -594,7 +613,9 @@ class IncrementalRemoteSync(
     ): ApplyResult {
         val cursor = dto.cursor(cursorEntityType, syncScopeKey)
         val local = remoteSyncDao.getTransactionRow(dto.id)
-        val remoteEntity = dto.toDomain().toEntity(dto.toRemoteSyncMetadata(nowEpochMillisProvider()))
+        val candidateMerchant = TransactionMerchantAttributionResolver.resolve(dto.description)
+        val domainTransaction = dto.toDomain().copy(merchantInfo = candidateMerchant)
+        val remoteEntity = domainTransaction.toEntity(dto.toRemoteSyncMetadata(nowEpochMillisProvider()))
         return applyOrConflict(
             local = local,
             remoteVersion = dto.requiredVersion(TRANSACTION),
@@ -619,6 +640,68 @@ class IncrementalRemoteSync(
         )
     }
 
+    private suspend fun applyMerchantVerification(
+        dto: UserMerchantVerificationDto,
+        syncScopeKey: String,
+        actorUserId: String,
+    ): ApplyResult {
+        require(dto.userId == actorUserId) {
+            "DTO userId (${dto.userId}) actor userId ($actorUserId) ile eşleşmiyor."
+        }
+        require(dto.workspaceId == null) {
+            "DTO workspaceId null olmalıdır: ${dto.workspaceId}"
+        }
+        require(dto.scopeCode == "PERSONAL") {
+            "DTO scopeCode PERSONAL olmalıdır: ${dto.scopeCode}"
+        }
+
+        val cursor = dto.merchantCursor(syncScopeKey)
+        val remoteMetadata = dto.toRemoteSyncMetadata(nowEpochMillisProvider())
+        val remoteEntity = dto.toEntity(remoteMetadata)
+        val local = remoteSyncDao.getUserMerchantVerificationRow(dto.id)
+
+        return applyOrConflict(
+            local = local,
+            remoteVersion = dto.requiredVersion(USER_MERCHANT_VERIFICATION),
+            apply = { remoteSyncDao.applyUserMerchantVerificationPull(syncScopeKey, remoteEntity, cursor) },
+            conflict = {
+                val localDomain = local!!.toDomain()
+                val localDto = localDomain.toDto(
+                    version = local.sync.version,
+                    deletedAt = local.sync.deletedAtEpochMillis?.let { kotlinx.datetime.Instant.fromEpochMilliseconds(it) },
+                )
+                val tailOp = requireNotNull(
+                    remoteSyncDao.getActiveMerchantVerificationTailCandidates(syncScopeKey, dto.id).singleOrNull(),
+                ) {
+                    "Merchant verification için tek aktif tail outbox işlemi bulunamadı: ${dto.id}"
+                }
+                remoteSyncDao.recordUserMerchantVerificationPullConflict(
+                    syncScopeKey = syncScopeKey,
+                    conflict = pullConflict(
+                        syncScopeKey = syncScopeKey,
+                        entityType = USER_MERCHANT_VERIFICATION,
+                        entityId = dto.id,
+                        operationId = tailOp.operationId,
+                        localVersion = local.sync.version,
+                        remoteVersion = dto.requiredVersion(USER_MERCHANT_VERIFICATION),
+                        local = localDto,
+                        remote = dto,
+                    ),
+                    remoteEntity = remoteEntity,
+                    cursor = cursor,
+                    expectedLocalEntity = local,
+                )
+            },
+            advance = {
+                remoteSyncDao.advanceUserMerchantVerificationPullCursor(
+                    syncScopeKey = syncScopeKey,
+                    remoteEntity = remoteEntity,
+                    cursor = cursor,
+                )
+            },
+        )
+    }
+
     private suspend fun applyOrConflict(
         local: Any?,
         remoteVersion: Long,
@@ -637,6 +720,7 @@ class IncrementalRemoteSync(
             is GoalContributionEntity -> local.sync
             is DebtEntity -> local.sync
             is DebtPaymentEntity -> local.sync
+            is UserMerchantVerificationEntity -> local.sync
             null -> null
             else -> error("Desteklenmeyen yerel sync entity türü.")
         }
@@ -734,6 +818,24 @@ class IncrementalRemoteSync(
     private fun GoalContributionDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
     private fun DebtDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
     private fun DebtPaymentDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
+    private fun UserMerchantVerificationDto.requiredVersion(entityType: String): Long = requiredVersion(entityType, version)
+
+    private fun UserMerchantVerificationDto.merchantCursor(syncScopeKey: String): SyncCursorEntity {
+        val updatedStr = requireNotNull(updatedAt) {
+            "USER_MERCHANT_VERIFICATION uzak kaydı updatedAt taşımıyor: $id"
+        }
+        val updatedEpochMillis = try {
+            Instant.parse(updatedStr).toEpochMilliseconds()
+        } catch (e: Exception) {
+            throw IllegalArgumentException("USER_MERCHANT_VERIFICATION geçersiz updatedAt formatı: $updatedStr", e)
+        }
+        return SyncCursorEntity(
+            syncScopeKey = syncScopeKey,
+            entityTypeCode = USER_MERCHANT_VERIFICATION,
+            entityId = id,
+            updatedAtEpochMillis = updatedEpochMillis,
+        )
+    }
 
     private fun requiredVersion(entityType: String, version: Long?): Long = requireNotNull(version) {
         "$entityType uzak kaydı version taşımıyor; sync migration uygulanmadan pull yapılamaz."
@@ -755,6 +857,7 @@ class IncrementalRemoteSync(
         const val DEBT = "DEBT"
         const val DEBT_PAYMENT = "DEBT_PAYMENT"
         const val TRANSACTION = "TRANSACTION"
+        const val USER_MERCHANT_VERIFICATION = "USER_MERCHANT_VERIFICATION"
     }
 }
 
@@ -770,6 +873,7 @@ data class IncrementalSyncResult(
     val receivedGoalContributionCount: Int = 0,
     val receivedDebtCount: Int = 0,
     val receivedDebtPaymentCount: Int = 0,
+    val receivedMerchantVerificationCount: Int = 0,
 )
 
 data class WorkspaceFinanceSyncResult(

@@ -33,9 +33,19 @@ dönmek için sıfırla. Varlıklardaki banka/nakit kayıtları mevcut varlık m
 
 ## Sınırlar
 
-Demo APK'sının INTERNET izni yoktur. Supabase yapılandırması gerçek proje yerine `.invalid`
-alanını kullanır; Auth ve Sync yerel demo adaptörleridir. Realtime ve otomatik başlangıç işleri
-çalışmaz; outbox gönderilmez. Çevrimdışı/bekleyen kayıt göstergesi bu nedenle beklenir.
+Demo varyantı finansal veri, Auth, Sync ve Supabase açısından çevrimdışı kalır; Supabase
+yapılandırması gerçek proje yerine `.invalid` alanını kullanır; Auth ve Sync yerel demo adaptörleridir.
+Realtime ve otomatik başlangıç işleri çalışmaz; WorkManager outbox gönderilmez.
+Çevrimdışı/bekleyen kayıt göstergesi bu nedenle beklenir.
+
+Uzak logo ve ağ sözleşmesi: Demo manifestinde standart `android.permission.INTERNET` izni bulunur. Android platformunda `INTERNET` izninin kendisi host bazında bir allowlist uygulamaz ve işletim sistemi düzeyinde yalnızca Logo.dev trafiği garantisi verilmez. Uygulama düzeyindeki kanıtlanabilir sınırlar şunlardır:
+- `BuildConfig.DEMO = true`.
+- Supabase URL `https://demo.invalid` hedefine ayarlıdır.
+- Auth ve Sync adaptörleri yereldir (`DemoAuthRepository`, `DemoSyncRepository`); bulut senkronizasyonu tetiklemez.
+- Başlangıç işleri, WorkManager outbox ve Realtime demo kapılarıyla devre dışıdır.
+- Uzak logo çözümleyicisi yalnızca `MerchantLogoDomainAllowlist` anahtarlarından Logo.dev HTTPS isteği üretir (`feniqo.remoteLogo.provider=logodev` ve `feniqo.logodev.usageAuthorized=true` yapılandırılmışsa).
+- `TransactionMerchantCreateDecision.UseTransactionName` ve serbest metin adlar çözümleyiciye doğrulanmış logo anahtarı sağlamaz; yerel fallback kategori ikonuna düşer.
+
 Bulut giriş/kayıt/parola, davet gönderme/katılma, cihazlar arası senkronizasyon ve canlı piyasa
 verisi bu demo ile test edilemez. Henüz uygulamada olmayan özellikler demo tarafından eklenmez.
 Abonelik ödemeleri mevcut ödeme geçmişini doldurur; mevcut ürün davranışı gereği ayrıca gelir/gider

@@ -8,7 +8,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class UuidHelperTest {
-
     @Test
     fun classify_canonicalLowercaseUuid_returnsCanonical() {
         val canonical = "123e4567-e89b-12d3-a456-426614174000"

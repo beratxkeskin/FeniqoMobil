@@ -1,11 +1,15 @@
 package com.feniqo.mobile.data.sync
 
-import com.feniqo.mobile.data.local.dao.RemoteSyncDao
 import com.feniqo.mobile.data.local.dao.AssetDao
+import com.feniqo.mobile.data.local.dao.InitialMerchantVerificationCommand
+import com.feniqo.mobile.data.local.dao.RemoteSyncDao
+import com.feniqo.mobile.data.local.entity.SyncConflictEntity
 import com.feniqo.mobile.data.local.entity.SyncCursorEntity
+import com.feniqo.mobile.data.mapper.toDomain
 import com.feniqo.mobile.data.mapper.toEntity
-import com.feniqo.mobile.data.remote.core.CategoryRemoteQuery
+import com.feniqo.mobile.data.remote.codec.UserMerchantVerificationPayloadCodec
 import com.feniqo.mobile.data.remote.core.AssetRemoteQuery
+import com.feniqo.mobile.data.remote.core.CategoryRemoteQuery
 import com.feniqo.mobile.data.remote.core.CoreRemoteDataSource
 import com.feniqo.mobile.data.remote.core.DebtPaymentRemoteQuery
 import com.feniqo.mobile.data.remote.core.DebtRemoteQuery
@@ -17,6 +21,7 @@ import com.feniqo.mobile.data.remote.core.RemotePageRequest
 import com.feniqo.mobile.data.remote.core.RemoteWorkspaceScope
 import com.feniqo.mobile.data.remote.core.SubscriptionRemoteQuery
 import com.feniqo.mobile.data.remote.core.TransactionRemoteQuery
+import com.feniqo.mobile.data.remote.core.UserMerchantVerificationRemoteQuery
 import com.feniqo.mobile.data.remote.dto.CategoryDto
 import com.feniqo.mobile.data.remote.dto.DebtDto
 import com.feniqo.mobile.data.remote.dto.DebtPaymentDto
@@ -25,8 +30,16 @@ import com.feniqo.mobile.data.remote.dto.GoalDto
 import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
 import com.feniqo.mobile.data.remote.dto.SubscriptionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
+import com.feniqo.mobile.data.remote.dto.UserMerchantVerificationDto
+import com.feniqo.mobile.data.remote.dto.toDto
 import com.feniqo.mobile.data.remote.mapper.toDomain
+import com.feniqo.mobile.data.util.UuidHelper
+import com.feniqo.mobile.domain.model.DISALLOWED_STANDALONE_GENERIC_TOKENS
 import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.domain.model.TurkishDescriptionNormalizer
+import com.feniqo.mobile.domain.usecase.TransactionMerchantAttributionResolver
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlin.time.Instant
 
 /** İlk girişte V1/V2 kişisel verisini Room'a tek ve atomik bir anlık görüntü olarak uygular. */
@@ -41,6 +54,11 @@ class InitialRemoteSync(
         remoteSyncDao: RemoteSyncDao,
         nowEpochMillisProvider: () -> Long,
     ) : this(remote, remoteSyncDao, nowEpochMillisProvider, null)
+
+    private val snapshotJson = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
 
     suspend fun pullFor(
         userId: EntityId,
@@ -76,6 +94,11 @@ class InitialRemoteSync(
         val debtPayments = fetchAll { page ->
             remote.fetchDebtPayments(DebtPaymentRemoteQuery(page))
         }
+        val merchantVerifications = fetchAll { page ->
+            remote.fetchMerchantVerifications(
+                UserMerchantVerificationRemoteQuery(page = page, updatedAfter = null)
+            )
+        }
 
         val transactions = fetchAll { page ->
             remote.fetchTransactions(TransactionRemoteQuery(page, workspaceScope = RemoteWorkspaceScope.Personal))
@@ -99,7 +122,73 @@ class InitialRemoteSync(
             }
         }
 
+        // Fail-closed DTO validations before any Room write
+        for (dto in merchantVerifications) {
+            validateMerchantVerificationDto(dto, userId.value)
+        }
+
         val receivedAt = nowEpochMillisProvider()
+
+        val sortedMerchantVerifications = merchantVerifications.sortedWith(
+            compareBy<UserMerchantVerificationDto> { Instant.parse(it.updatedAt!!) }.thenBy { it.id }
+        )
+
+        val merchantCommands = mutableListOf<InitialMerchantVerificationCommand>()
+        for (dto in sortedMerchantVerifications) {
+            val local = remoteSyncDao.getUserMerchantVerificationRow(dto.id)
+            val remoteMetadata = dto.toRemoteSyncMetadata(receivedAt)
+            val remoteEntity = dto.toEntity(remoteMetadata)
+            val cursor = dto.merchantCursor(syncScopeKey)
+            val remoteVersion = dto.version!!
+
+            val command = if (local == null || local.sync.syncStatus == "SYNCED") {
+                InitialMerchantVerificationCommand.Apply(
+                    remoteEntity = remoteEntity,
+                    cursor = cursor,
+                )
+            } else {
+                val allowedStatuses = setOf("PENDING_CREATE", "PENDING_UPDATE", "PENDING_DELETE", "CONFLICT")
+                require(local.sync.syncStatus in allowedStatuses) {
+                    "Geçersiz yerel sync durumu: id=${dto.id}, status=${local.sync.syncStatus}"
+                }
+                val localBaseVersion = local.sync.baseVersion ?: 0L
+                if (remoteVersion > localBaseVersion) {
+                    val tailCandidates = remoteSyncDao.getActiveMerchantVerificationTailCandidates(syncScopeKey, dto.id)
+                    require(tailCandidates.size == 1) {
+                        "Merchant verification için tek aktif tail outbox işlemi bulunamadı: id=${dto.id}, count=${tailCandidates.size}"
+                    }
+                    val tailOp = tailCandidates.single()
+                    val localDomain = local.toDomain()
+                    val localDto = localDomain.toDto(
+                        version = local.sync.version,
+                        deletedAt = local.sync.deletedAtEpochMillis?.let { kotlinx.datetime.Instant.fromEpochMilliseconds(it) },
+                    )
+                    val conflict = SyncConflictEntity(
+                        syncScopeKey = syncScopeKey,
+                        entityTypeCode = USER_MERCHANT_VERIFICATION,
+                        entityId = dto.id,
+                        operationId = tailOp.operationId,
+                        localVersion = local.sync.version,
+                        remoteVersion = remoteVersion,
+                        localPayloadJson = UserMerchantVerificationPayloadCodec.encodeSnapshot(localDto),
+                        remotePayloadJson = UserMerchantVerificationPayloadCodec.encodeSnapshot(dto),
+                        detectedAtEpochMillis = receivedAt,
+                    )
+                    InitialMerchantVerificationCommand.Conflict(
+                        conflict = conflict,
+                        remoteEntity = remoteEntity,
+                        cursor = cursor,
+                        expectedLocalEntity = local,
+                    )
+                } else {
+                    InitialMerchantVerificationCommand.Preserve(
+                        remoteEntity = remoteEntity,
+                        cursor = cursor,
+                    )
+                }
+            }
+            merchantCommands += command
+        }
 
         remoteSyncDao.applyInitialSnapshot(
             syncScopeKey = syncScopeKey,
@@ -125,8 +214,11 @@ class InitialRemoteSync(
             debtPayments = debtPayments.map { dto ->
                 dto.toDomain().toEntity(dto.toRemoteSyncMetadata(receivedAt))
             },
+            merchantVerificationCommands = merchantCommands,
             transactions = transactions.map { dto ->
-                dto.toDomain().toEntity(dto.toRemoteSyncMetadata(receivedAt))
+                val candidateMerchant = TransactionMerchantAttributionResolver.resolve(dto.description)
+                val domainTransaction = dto.toDomain().copy(merchantInfo = candidateMerchant)
+                domainTransaction.toEntity(dto.toRemoteSyncMetadata(receivedAt))
             },
             cursors = listOfNotNull(
                 cursorFor(syncScopeKey, PROFILE, listOf(profile.id to (profile.updatedAt ?: profile.createdAt))),
@@ -155,6 +247,87 @@ class InitialRemoteSync(
             goalContributionCount = goalContributions.size,
             debtCount = debts.size,
             debtPaymentCount = debtPayments.size,
+            merchantVerificationCount = merchantVerifications.size,
+        )
+    }
+
+    private fun validateMerchantVerificationDto(dto: UserMerchantVerificationDto, actorUserId: String) {
+        require(dto.userId == actorUserId) {
+            "DTO userId (${dto.userId}) actor userId ($actorUserId) ile eşleşmiyor."
+        }
+        require(dto.workspaceId == null) {
+            "DTO workspaceId null olmalıdır: ${dto.workspaceId}"
+        }
+        require(dto.scopeCode == "PERSONAL") {
+            "DTO scopeCode PERSONAL olmalıdır: ${dto.scopeCode}"
+        }
+        val updatedStr = requireNotNull(dto.updatedAt) {
+            "USER_MERCHANT_VERIFICATION uzak kaydı updatedAt taşımıyor: ${dto.id}"
+        }
+        try {
+            Instant.parse(updatedStr)
+        } catch (e: Exception) {
+            throw IllegalArgumentException("USER_MERCHANT_VERIFICATION geçersiz updatedAt formatı: $updatedStr", e)
+        }
+        if (dto.deletedAt != null) {
+            try {
+                Instant.parse(dto.deletedAt)
+            } catch (e: Exception) {
+                throw IllegalArgumentException("USER_MERCHANT_VERIFICATION geçersiz deletedAt formatı: ${dto.deletedAt}", e)
+            }
+        }
+        val version = requireNotNull(dto.version) {
+            "USER_MERCHANT_VERIFICATION uzak kaydı version taşımıyor: ${dto.id}"
+        }
+        require(version >= 1L) {
+            "USER_MERCHANT_VERIFICATION version en az 1 olmalıdır: $version"
+        }
+        val alias = dto.normalizedAlias
+        require(alias.isNotBlank() && alias.length <= com.feniqo.mobile.domain.model.Transaction.MAX_DESCRIPTION_LENGTH) {
+            "Geçersiz alias uzunluğu: $alias"
+        }
+        require(TurkishDescriptionNormalizer.normalize(alias) == alias) {
+            "Alias normalize edilmiş (canonical) olmalıdır: $alias"
+        }
+        require(alias !in DISALLOWED_STANDALONE_GENERIC_TOKENS) {
+            "Genel sözcükler merchant alias'ı olamaz: $alias"
+        }
+        require(UuidHelper.isCanonicalUuid(dto.id)) {
+            "Geçersiz ID UUID: ${dto.id}"
+        }
+        val expectedId = UuidHelper.deterministicMerchantVerificationUuid(dto.userId, alias)
+        require(dto.id == expectedId) {
+            "Remote ID (${dto.id}) deterministik UUID ($expectedId) ile eşleşmiyor."
+        }
+        when (dto.decisionCode) {
+            "ASSIGN" -> {
+                require(!dto.merchantId.isNullOrBlank()) {
+                    "ASSIGN kararı için merchantId boş olamaz."
+                }
+            }
+            "BLOCK" -> {
+                require(dto.merchantId == null) {
+                    "BLOCK kararı için merchantId null olmalıdır: ${dto.merchantId}"
+                }
+            }
+            else -> throw IllegalArgumentException("Geçersiz decisionCode: ${dto.decisionCode}")
+        }
+    }
+
+    private fun UserMerchantVerificationDto.merchantCursor(syncScopeKey: String): SyncCursorEntity {
+        val updatedStr = requireNotNull(updatedAt) {
+            "USER_MERCHANT_VERIFICATION uzak kaydı updatedAt taşımıyor: $id"
+        }
+        val updatedEpochMillis = try {
+            Instant.parse(updatedStr).toEpochMilliseconds()
+        } catch (e: Exception) {
+            throw IllegalArgumentException("USER_MERCHANT_VERIFICATION geçersiz updatedAt formatı: $updatedStr", e)
+        }
+        return SyncCursorEntity(
+            syncScopeKey = syncScopeKey,
+            entityTypeCode = USER_MERCHANT_VERIFICATION,
+            entityId = id,
+            updatedAtEpochMillis = updatedEpochMillis,
         )
     }
 
@@ -192,6 +365,7 @@ class InitialRemoteSync(
         const val DEBT = "DEBT"
         const val DEBT_PAYMENT = "DEBT_PAYMENT"
         const val TRANSACTION = "TRANSACTION"
+        const val USER_MERCHANT_VERIFICATION = "USER_MERCHANT_VERIFICATION"
     }
 }
 
@@ -205,4 +379,5 @@ data class InitialSyncResult(
     val goalContributionCount: Int = 0,
     val debtCount: Int = 0,
     val debtPaymentCount: Int = 0,
+    val merchantVerificationCount: Int = 0,
 )

@@ -2,8 +2,10 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.net.URI
 import java.util.Properties
 
+val localPropertiesFile = rootProject.file("local.properties")
+val localPropertiesContent = localPropertiesFile.takeIf(File::exists)?.readText()
 val localProperties = Properties().apply {
-    rootProject.file("local.properties").takeIf(File::exists)?.inputStream()?.use(::load)
+    localPropertiesFile.takeIf(File::exists)?.inputStream()?.use(::load)
 }
 
 fun configuredSupabaseValue(
@@ -96,6 +98,152 @@ val productionAuthRedirectUrl = configuredSupabaseValue(
 )
 val developmentAuthRedirectUrl = "feniqo://auth/callback"
 
+val brandfetchClientId = configuredSupabaseValue(
+    environmentName = "FENIQO_BRANDFETCH_CLIENT_ID",
+    localPropertyName = "feniqo.brandfetch.clientId",
+)
+val brandfetchRefererOrigin = configuredSupabaseValue(
+    environmentName = "FENIQO_BRANDFETCH_REFERER_ORIGIN",
+    localPropertyName = "feniqo.brandfetch.refererOrigin",
+)
+
+val remoteLogoProvider = sequenceOf(
+    System.getenv("FENIQO_REMOTE_LOGO_PROVIDER"),
+    localProperties.getProperty("feniqo.remoteLogo.provider"),
+).mapNotNull { it?.trim()?.takeIf(String::isNotEmpty) }.firstOrNull() ?: "none"
+
+// ÖNEMLİ: Logo.dev publishable key Properties.load() ile okunmaz; Properties.getProperty() leading whitespace'i
+// sildiği için ham local.properties metni üzerinden exact prefix ile ayrıştırılır.
+abstract class VerifyLogoDevRawKeyParserTask : DefaultTask() {
+    companion object {
+        fun parseRawLogoDevPublishableKeyFromText(text: String?): String? {
+            if (text == null) return null
+            val targetPrefix = "feniqo.logodev.publishableKey="
+            val ambiguousKeyPrefix = "feniqo.logodev.publishableKey"
+
+            var foundValue: String? = null
+            var foundCount = 0
+
+            val lines = text.lines()
+            for (line in lines) {
+                val trimmedLeading = line.trimStart()
+                if (trimmedLeading.startsWith("#") || trimmedLeading.startsWith("!")) {
+                    continue
+                }
+                if (trimmedLeading.isEmpty()) {
+                    continue
+                }
+
+                if (line.startsWith(targetPrefix)) {
+                    val rawValue = line.substring(targetPrefix.length)
+                    if (rawValue.contains('\\')) {
+                        return null // Continuation veya escape formatı belirsizdir -> fail-closed
+                    }
+                    if (rawValue.isEmpty()) {
+                        return null // Değer boş -> fail-closed
+                    }
+                    foundValue = rawValue
+                    foundCount++
+                } else if (trimmedLeading.startsWith(ambiguousKeyPrefix)) {
+                    val remainder = trimmedLeading.removePrefix(ambiguousKeyPrefix)
+                    if (remainder.isEmpty() || remainder.first() in charArrayOf('=', ':', ' ', '\t')) {
+                        return null // Key çevresinde boşluk veya alternatif ayraç -> fail-closed
+                    }
+                }
+            }
+
+            if (foundCount != 1) {
+                return null // 0 eşleşme veya mükerrer (duplicate > 1) key -> fail-closed
+            }
+
+            return foundValue
+        }
+
+        fun resolveLogoDevPublishableKey(
+            envValue: String?,
+            localPropertiesContent: String?,
+        ): String? {
+            if (!envValue.isNullOrEmpty()) {
+                return envValue
+            }
+            return parseRawLogoDevPublishableKeyFromText(localPropertiesContent)
+        }
+    }
+
+    @TaskAction
+    fun runVerification() {
+        // 1. key=pk_valid -> pk_valid
+        val standard = parseRawLogoDevPublishableKeyFromText("feniqo.logodev.publishableKey=pk_valid")
+        check(standard == "pk_valid") { "standard key parse basarisiz" }
+
+        // 2. key= pk_valid -> bastaki bosluk korunur
+        val leadingSpace = parseRawLogoDevPublishableKeyFromText("feniqo.logodev.publishableKey= pk_valid")
+        check(leadingSpace == " pk_valid") { "leading space korunmadi" }
+
+        // 3. key=pk_valid  -> sondaki bosluk korunur
+        val trailingSpace = parseRawLogoDevPublishableKeyFromText("feniqo.logodev.publishableKey=pk_valid ")
+        check(trailingSpace == "pk_valid ") { "trailing space korunmadi" }
+
+        // 4. internal whitespace korunur
+        val internalSpace = parseRawLogoDevPublishableKeyFromText("feniqo.logodev.publishableKey=pk_val id")
+        check(internalSpace == "pk_val id") { "internal space korunmadi" }
+
+        // 5. duplicate exact key -> fail-closed (null)
+        val duplicate = parseRawLogoDevPublishableKeyFromText(
+            "feniqo.logodev.publishableKey=pk_first\nfeniqo.logodev.publishableKey=pk_second",
+        )
+        check(duplicate == null) { "duplicate key fail-closed olmali" }
+
+        // 6. key =pk_valid -> fail-closed (null)
+        val spaceBeforeEq = parseRawLogoDevPublishableKeyFromText("feniqo.logodev.publishableKey =pk_valid")
+        check(spaceBeforeEq == null) { "space before equals fail-closed olmali" }
+
+        val colonSeparator = parseRawLogoDevPublishableKeyFromText("feniqo.logodev.publishableKey:pk_valid")
+        check(colonSeparator == null) { "colon separator fail-closed olmali" }
+
+        val leadingSpaceKey = parseRawLogoDevPublishableKeyFromText(" feniqo.logodev.publishableKey=pk_valid")
+        check(leadingSpaceKey == null) { "leading space before key fail-closed olmali" }
+
+        val continuation = parseRawLogoDevPublishableKeyFromText("feniqo.logodev.publishableKey=pk_val\\")
+        check(continuation == null) { "continuation fail-closed olmali" }
+
+        // 7. empty value -> null / fail-closed
+        val emptyVal = parseRawLogoDevPublishableKeyFromText("feniqo.logodev.publishableKey=")
+        check(emptyVal == null) { "empty value fail-closed olmali" }
+
+        // 8. environment leading/trailing whitespace korunur ve environment onceliklidir
+        val envLeading = resolveLogoDevPublishableKey(" pk_env", "feniqo.logodev.publishableKey=pk_local")
+        check(envLeading == " pk_env") { "env leading space korunmadi" }
+
+        val envTrailing = resolveLogoDevPublishableKey("pk_env ", "feniqo.logodev.publishableKey=pk_local")
+        check(envTrailing == "pk_env ") { "env trailing space korunmadi" }
+
+        val envInternal = resolveLogoDevPublishableKey("pk_ env", "feniqo.logodev.publishableKey=pk_local")
+        check(envInternal == "pk_ env") { "env internal space korunmadi" }
+
+        val envEmptyFallsBackToLocal = resolveLogoDevPublishableKey("", "feniqo.logodev.publishableKey=pk_local")
+        check(envEmptyFallsBackToLocal == "pk_local") { "empty env local fallback basarisiz" }
+
+        val envNullFallsBackToLocal = resolveLogoDevPublishableKey(null, "feniqo.logodev.publishableKey=pk_local")
+        check(envNullFallsBackToLocal == "pk_local") { "null env local fallback basarisiz" }
+
+        logger.lifecycle("Logo.dev raw key parser dogrulama kapisi basariyla gecti.")
+    }
+}
+
+val logodevPublishableKey = VerifyLogoDevRawKeyParserTask.resolveLogoDevPublishableKey(
+    envValue = System.getenv("FENIQO_LOGODEV_PUBLISHABLE_KEY"),
+    localPropertiesContent = localPropertiesContent,
+)
+
+val logodevUsageAuthorizedRaw = sequenceOf(
+    System.getenv("FENIQO_LOGODEV_USAGE_AUTHORIZED"),
+    localProperties.getProperty("feniqo.logodev.usageAuthorized"),
+).mapNotNull { it?.trim()?.takeIf(String::isNotEmpty) }.firstOrNull()
+
+val logodevUsageAuthorized =
+    logodevUsageAuthorizedRaw?.equals("true", ignoreCase = true) == true
+
 val stagingConfigurationError = when {
     stagingSupabaseUrl == null ->
         "Staging Supabase URL eksik. FENIQO_STAGING_SUPABASE_URL veya feniqo.supabase.staging.url tanımlayın."
@@ -128,8 +276,14 @@ val productionConfigurationError = when {
     }.exceptionOrNull()?.message
 }
 
-val releaseAuthRedirectUri = runCatching { URI(productionAuthRedirectUrl.orEmpty()) }
-    .getOrElse { URI("https://invalid.invalid/auth/callback") }
+val releaseAuthRedirectUri = productionAuthRedirectUrl
+    ?.let { runCatching { URI(it) }.getOrNull() }
+    ?.takeIf { uri ->
+        !uri.scheme.isNullOrBlank() &&
+            !uri.host.isNullOrBlank() &&
+            !uri.path.isNullOrBlank()
+    }
+    ?: URI("https://invalid.invalid/auth/callback")
 
 val validateProductionSupabaseConfiguration = tasks.register("validateProductionSupabaseConfiguration") {
     group = "verification"
@@ -206,6 +360,7 @@ dependencies {
     testImplementation(libs.androidx.work.testing)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.compose.ui.test.junit4)
+    testImplementation(libs.coil.compose)
     androidTestImplementation(libs.androidx.testExt.junit)
     androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.androidx.work.testing)
@@ -226,6 +381,11 @@ android {
         versionName = configuredReleaseVersionName ?: "0.0.0-dev"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("boolean", "DEMO", "false")
+        buildConfigField("String", "BRANDFETCH_CLIENT_ID", brandfetchClientId.orEmpty().asBuildConfigString())
+        buildConfigField("String", "BRANDFETCH_REFERER_ORIGIN", brandfetchRefererOrigin.orEmpty().asBuildConfigString())
+        buildConfigField("String", "REMOTE_LOGO_PROVIDER", remoteLogoProvider.asBuildConfigString())
+        buildConfigField("String", "LOGODEV_PUBLISHABLE_KEY", logodevPublishableKey.orEmpty().asBuildConfigString())
+        buildConfigField("boolean", "LOGODEV_USAGE_AUTHORIZED", logodevUsageAuthorized.toString())
     }
     packaging {
         resources {
@@ -317,6 +477,17 @@ tasks.withType<Test>().configureEach {
     // Robolectric/Conscrypt, Türkçe Windows yerel ayarında native kütüphane adını hatalı küçültüyor.
     systemProperty("user.language", "en")
     systemProperty("user.country", "US")
+}
+
+val verifyLogoDevRawKeyParser = tasks.register<VerifyLogoDevRawKeyParserTask>("verifyLogoDevRawKeyParser") {
+    group = "verification"
+    description = "Logo.dev ham local.properties ve environment anahtar ayrıştırma kurallarını doğrular."
+}
+
+tasks.matching {
+    it.name in setOf("preDebugBuild", "preDebugUnitTestBuild", "preDemoBuild")
+}.configureEach {
+    dependsOn(verifyLogoDevRawKeyParser)
 }
 
 androidComponents {

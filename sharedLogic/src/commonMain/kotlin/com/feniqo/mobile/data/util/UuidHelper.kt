@@ -46,4 +46,54 @@ object UuidHelper {
         isLegacyCompactHex(value) -> compactToCanonicalUuid(value)
         else -> null
     }
+
+    /**
+     * Kullanıcı kimliği ve kanonik alias için deterministik RFC 9562 UUIDv8 kimliği üretir.
+     * UTF-8 girdi: "feniqo:user-merchant-verification:v1\u0000" + canonicalUserId + "\u0000" + normalizedAlias
+     */
+    fun deterministicMerchantVerificationUuid(userId: String, normalizedAlias: String): String {
+        require(isCanonicalUuid(userId)) {
+            "Kullanıcı kimliği kanonik küçük harf UUID biçiminde olmalıdır: $userId"
+        }
+        require(normalizedAlias.isNotBlank()) {
+            "Kanonik alias boş olamaz."
+        }
+        require(normalizedAlias.length <= com.feniqo.mobile.domain.model.Transaction.MAX_DESCRIPTION_LENGTH) {
+            "Kanonik alias en fazla ${com.feniqo.mobile.domain.model.Transaction.MAX_DESCRIPTION_LENGTH} karakter olabilir: $normalizedAlias"
+        }
+        val canonicalAlias = com.feniqo.mobile.domain.model.TurkishDescriptionNormalizer.normalize(normalizedAlias)
+        require(normalizedAlias == canonicalAlias) {
+            "Alias kanonik normalizasyon biçiminde olmalıdır (beklenen: '$canonicalAlias', gelen: '$normalizedAlias')."
+        }
+        require(normalizedAlias !in com.feniqo.mobile.domain.model.DISALLOWED_STANDALONE_GENERIC_TOKENS) {
+            "Genel token tek başına merchant alias olamaz: $normalizedAlias"
+        }
+
+        val utf8Bytes = buildString {
+            append("feniqo:user-merchant-verification:v1")
+            append('\u0000')
+            append(userId)
+            append('\u0000')
+            append(normalizedAlias)
+        }.encodeToByteArray()
+
+        val digest = FeniqoDigest.sha256(utf8Bytes)
+        val raw16 = digest.copyOfRange(0, 16)
+
+        // RFC 9562 UUIDv8: Octet 6 version = 8 (0b1000xxxx)
+        raw16[6] = ((raw16[6].toInt() and 0x0F) or 0x80).toByte()
+        // RFC 9562 UUIDv8: Octet 8 variant = 1 (0b10xxxxxx)
+        raw16[8] = ((raw16[8].toInt() and 0x3F) or 0x80).toByte()
+
+        return buildString(36) {
+            for (i in 0 until 16) {
+                if (i == 4 || i == 6 || i == 8 || i == 10) append('-')
+                val v = raw16[i].toInt() and 0xFF
+                append(HEX_DIGITS[v ushr 4])
+                append(HEX_DIGITS[v and 0x0F])
+            }
+        }
+    }
+
+    private val HEX_DIGITS = "0123456789abcdef".toCharArray()
 }

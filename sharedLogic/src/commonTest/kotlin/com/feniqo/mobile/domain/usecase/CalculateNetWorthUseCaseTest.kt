@@ -15,15 +15,16 @@ class CalculateNetWorthUseCaseTest {
 
     @Test
     fun calculatesTotalsPerCurrencyWithoutImplicitConversion() {
-        val result = assertIs<NetWorthCalculationResult.Success>(
-            calculator(
-                listOf(
-                    asset("try-1", 10_000L, Currency.TRY),
-                    asset("usd-1", 2_500L, Currency.USD),
-                    asset("try-2", 20_000L, Currency.TRY),
+        val result =
+            assertIs<NetWorthCalculationResult.Success>(
+                calculator(
+                    listOf(
+                        asset("try-1", 10_000L, Currency.TRY),
+                        asset("usd-1", 2_500L, Currency.USD),
+                        asset("try-2", 20_000L, Currency.TRY),
+                    ),
                 ),
-            ),
-        )
+            )
 
         assertEquals(listOf(Money(30_000L, Currency.TRY), Money(2_500L, Currency.USD)), result.totals)
         assertEquals(3, result.assetCount)
@@ -43,7 +44,11 @@ class CalculateNetWorthUseCaseTest {
         )
     }
 
-    private fun asset(id: String, amountMinor: Long, currency: Currency) = Asset(
+    private fun asset(
+        id: String,
+        amountMinor: Long,
+        currency: Currency,
+    ) = Asset(
         id = EntityId(id),
         ownerId = EntityId("owner-1"),
         workspaceId = null,

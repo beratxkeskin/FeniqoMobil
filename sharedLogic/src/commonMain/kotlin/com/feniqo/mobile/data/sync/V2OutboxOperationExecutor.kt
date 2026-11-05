@@ -5,6 +5,7 @@ import com.feniqo.mobile.data.local.entity.SyncOperationEntity
 import com.feniqo.mobile.data.remote.core.ConditionalRemoteWriteResult
 import com.feniqo.mobile.data.remote.core.IdempotentConditionalRemoteWriter
 import com.feniqo.mobile.data.remote.core.RemoteWriteOperation
+import com.feniqo.mobile.data.remote.codec.UserMerchantVerificationPayloadCodec
 import com.feniqo.mobile.data.remote.codec.WorkspaceMembershipPayloadCodec
 import com.feniqo.mobile.data.remote.codec.WorkspacePayloadCodec
 import com.feniqo.mobile.data.remote.dto.BudgetDto
@@ -18,9 +19,11 @@ import com.feniqo.mobile.data.remote.dto.ProfileDto
 import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
 import com.feniqo.mobile.data.remote.dto.SubscriptionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
+import com.feniqo.mobile.data.remote.dto.UserMerchantVerificationDto
 import com.feniqo.mobile.data.remote.mapper.RemoteMappingException
 import com.feniqo.mobile.data.util.UuidHelper
 import com.feniqo.mobile.domain.repository.SyncEntityType
+import com.feniqo.mobile.domain.usecase.TransactionMerchantAttributionResolver
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
@@ -151,6 +154,7 @@ class V2OutboxOperationExecutor(
             SyncEntityType.WORKSPACE -> executeWorkspace(operation, writeOp, payloadJson)
             SyncEntityType.WORKSPACE_MEMBER -> executeWorkspaceMember(operation, writeOp, payloadJson)
             SyncEntityType.WORKSPACE_INVITATION -> executeWorkspaceInvitation(operation, writeOp, payloadJson)
+            SyncEntityType.USER_MERCHANT_VERIFICATION -> executeUserMerchantVerification(operation, writeOp, payloadJson)
         }
     }
 
@@ -256,7 +260,10 @@ class V2OutboxOperationExecutor(
         val dto = parseAndValidateDto<TransactionDto>(payloadJson, operation) { it.id }
 
         return when (val result = writer.writeTransaction(operation.operationId, writeOp, operation.baseVersion, dto)) {
-            is ConditionalRemoteWriteResult.Applied -> OutboxExecutionResult.TransactionApplied(result.record)
+            is ConditionalRemoteWriteResult.Applied -> {
+                val candidateMerchant = TransactionMerchantAttributionResolver.resolve(result.record.description)
+                OutboxExecutionResult.TransactionApplied(result.record, candidateMerchant)
+            }
             is ConditionalRemoteWriteResult.Conflict -> OutboxExecutionResult.ConflictDetected(
                 SyncConflictEntity(
                     syncScopeKey = operation.syncScopeKey,
@@ -655,6 +662,122 @@ class V2OutboxOperationExecutor(
             ConditionalRemoteWriteResult.NotFound -> {
                 error("Workspace daveti koşullu yazma sırasında bulunamadı (NOT_FOUND): ${operation.entityId}")
             }
+        }
+    }
+
+    private suspend fun executeUserMerchantVerification(
+        operation: SyncOperationEntity,
+        writeOp: RemoteWriteOperation,
+        payloadJson: String,
+    ): OutboxExecutionResult {
+        val validatedPayload = try {
+            UserMerchantVerificationPayloadCodec.parseAndValidate(
+                jsonString = payloadJson,
+                operation = writeOp.name,
+                baseVersion = operation.baseVersion,
+            )
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (e: SerializationException) {
+            throw DefinitiveOutboxFailureException("invalid_user_merchant_verification_payload")
+        } catch (e: IllegalArgumentException) {
+            throw DefinitiveOutboxFailureException("invalid_user_merchant_verification_payload")
+        } catch (e: IllegalStateException) {
+            throw DefinitiveOutboxFailureException("invalid_user_merchant_verification_payload")
+        } catch (e: RemoteMappingException) {
+            throw DefinitiveOutboxFailureException("invalid_user_merchant_verification_payload")
+        }
+
+        val expectedOwnerId = try {
+            SyncScopeKey.requireUserScope(operation.syncScopeKey).userId
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            throw DefinitiveOutboxFailureException("invalid_sync_scope_key")
+        }
+
+        if (expectedOwnerId != validatedPayload.userId) {
+            throw DefinitiveOutboxFailureException(
+                "Payload user_id işlem syncScopeKey ile uyuşmuyor (payload_user_id_mismatch)"
+            )
+        }
+
+        val expectedDeterministicId = UuidHelper.deterministicMerchantVerificationUuid(
+            userId = validatedPayload.userId,
+            normalizedAlias = validatedPayload.normalizedAlias,
+        )
+        if (validatedPayload.id != expectedDeterministicId || operation.entityId != expectedDeterministicId) {
+            throw DefinitiveOutboxFailureException(
+                "Payload ID deterministik ID ile uyuşmuyor (deterministic_id_mismatch)"
+            )
+        }
+
+        val dto = UserMerchantVerificationDto(
+            id = validatedPayload.id,
+            userId = validatedPayload.userId,
+            workspaceId = validatedPayload.workspaceId,
+            normalizedAlias = validatedPayload.normalizedAlias,
+            decisionCode = validatedPayload.decisionCode,
+            merchantId = validatedPayload.merchantId,
+            scopeCode = validatedPayload.scopeCode,
+            createdAt = kotlinx.datetime.Instant.fromEpochMilliseconds(nowEpochMillisProvider()).toString(),
+            version = operation.baseVersion,
+        )
+
+        return when (val result = writer.writeMerchantVerification(operation.operationId, writeOp, operation.baseVersion, dto)) {
+            is ConditionalRemoteWriteResult.Applied -> {
+                validateRemoteVerificationDto(result.record, operation, expectedOwnerId)
+                OutboxExecutionResult.UserMerchantVerificationApplied(result.record)
+            }
+            is ConditionalRemoteWriteResult.Conflict -> {
+                validateRemoteVerificationDto(result.remoteRecord, operation, expectedOwnerId)
+                val safeRemoteVersion = result.remoteRecord.version
+                    ?: throw DefinitiveOutboxFailureException("invalid_remote_user_merchant_verification")
+                OutboxExecutionResult.ConflictDetected(
+                    SyncConflictEntity(
+                        syncScopeKey = operation.syncScopeKey,
+                        entityTypeCode = operation.entityTypeCode,
+                        entityId = operation.entityId,
+                        operationId = operation.operationId,
+                        localVersion = operation.baseVersion ?: 0L,
+                        remoteVersion = safeRemoteVersion,
+                        localPayloadJson = payloadJson,
+                        remotePayloadJson = json.encodeToString(result.remoteRecord),
+                        detectedAtEpochMillis = nowEpochMillisProvider(),
+                    )
+                )
+            }
+            ConditionalRemoteWriteResult.NotFound -> {
+                if (writeOp == RemoteWriteOperation.DELETE) {
+                    OutboxExecutionResult.MissingDeleteAcknowledged
+                } else {
+                    throw DefinitiveOutboxFailureException(
+                        "Kişisel merchant verification CREATE/UPDATE sırasında sunucuda bulunamadı (NOT_FOUND): ${operation.entityId}"
+                    )
+                }
+            }
+        }
+    }
+
+    private fun validateRemoteVerificationDto(
+        record: UserMerchantVerificationDto,
+        operation: SyncOperationEntity,
+        expectedOwnerId: String,
+    ) {
+        if (record.id != operation.entityId) {
+            throw DefinitiveOutboxFailureException("invalid_remote_user_merchant_verification")
+        }
+        if (record.userId != expectedOwnerId) {
+            throw DefinitiveOutboxFailureException("invalid_remote_user_merchant_verification")
+        }
+        if (record.workspaceId != null || record.scopeCode != "PERSONAL") {
+            throw DefinitiveOutboxFailureException("invalid_remote_user_merchant_verification")
+        }
+        if (record.version == null || record.version < 1L) {
+            throw DefinitiveOutboxFailureException("invalid_remote_user_merchant_verification")
+        }
+        if (record.toDomainOrNull() == null) {
+            throw DefinitiveOutboxFailureException("invalid_remote_user_merchant_verification")
         }
     }
 }

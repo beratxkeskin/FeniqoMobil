@@ -136,4 +136,12 @@ data class TransactionEntity(
     val splitMode: String = TransactionSplitMode.EQUAL.name,
     @ColumnInfo(name = "participant_shares_json", defaultValue = "'[]'")
     val participantSharesJson: String = "[]",
+    @ColumnInfo(name = "merchant_id")
+    val merchantId: String? = null,
+    @ColumnInfo(name = "merchant_match_source_code")
+    val merchantMatchSourceCode: String? = null,
+    @ColumnInfo(name = "merchant_confidence")
+    val merchantConfidence: Int? = null,
+    @ColumnInfo(name = "merchant_catalog_version")
+    val merchantCatalogVersion: Int? = null,
 )

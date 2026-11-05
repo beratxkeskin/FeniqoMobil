@@ -11,7 +11,6 @@ import com.feniqo.mobile.data.local.entity.SubscriptionPaymentReminderReceiptEnt
  */
 @Dao
 interface SubscriptionPaymentReminderReceiptDao {
-
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIgnore(entity: SubscriptionPaymentReminderReceiptEntity): Long
 
@@ -21,9 +20,7 @@ interface SubscriptionPaymentReminderReceiptDao {
      * @param entity Eklenecek makbuz kaydı.
      * @return İlk claim başarılı olduğunda `true`, stable_key zaten mevcutsa `false` döner.
      */
-    suspend fun claim(entity: SubscriptionPaymentReminderReceiptEntity): Boolean {
-        return insertIgnore(entity) != -1L
-    }
+    suspend fun claim(entity: SubscriptionPaymentReminderReceiptEntity): Boolean = insertIgnore(entity) != -1L
 
     @Query(
         """

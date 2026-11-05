@@ -160,7 +160,56 @@ data class TransactionDisplayModel(
     val syncStatus: com.feniqo.mobile.domain.model.SyncStatus? = null,
     val canEdit: Boolean = true,
     val canDelete: Boolean = true,
+    val merchant: TransactionMerchantDisplayModel? = null,
+    val canCorrectMerchant: Boolean = false,
 )
+
+/**
+ * İşlem satırında ve yüzeylerde gösterilecek tipli merchant sunum modelidir.
+ */
+data class TransactionMerchantDisplayModel(
+    val merchantId: EntityId,
+    val displayName: String,
+    val verifiedLogoKey: String?,
+    val canShowMerchantLogo: Boolean,
+)
+
+/**
+ * Merchant seçici içinde listelenecek modeldir.
+ */
+data class MerchantSelectorItem(
+    val id: EntityId,
+    val displayName: String,
+    val categoryIconKey: String?,
+    val verifiedLogoKey: String?,
+)
+
+/**
+ * Merchant düzeltme akışının tipli UI durumudur.
+ */
+data class TransactionMerchantCorrectionUiState(
+    val isSelectorOpen: Boolean = false,
+    val searchQuery: String = "",
+    val searchResults: List<MerchantSelectorItem> = emptyList(),
+    val selectedMerchantId: EntityId? = null,
+    val isBlockConfirmDialogOpen: Boolean = false,
+    val isInProgress: Boolean = false,
+    val error: MerchantCorrectionUiError? = null,
+)
+
+/**
+ * Merchant düzeltme akışının tipli hata durumlarıdır.
+ * ViewModel hazır cümle taşımaz; saf tipli enum olarak UI'a iletilir.
+ */
+enum class MerchantCorrectionUiError {
+    AUTH_REQUIRED,
+    TRANSACTION_NOT_FOUND,
+    OWNER_MISMATCH,
+    WORKSPACE_RESTRICTED,
+    NOT_ELIGIBLE,
+    UNKNOWN_MERCHANT,
+    GENERIC,
+}
 
 /**
  * Taksitli işlem rozeti display modelidir.

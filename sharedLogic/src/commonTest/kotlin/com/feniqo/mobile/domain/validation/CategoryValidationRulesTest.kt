@@ -6,7 +6,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class CategoryValidationRulesTest {
-
     @Test
     fun validateName_withValidAndBlankNames_returnsExpectedResults() {
         val valid = CategoryValidationRules.validateName("  Market  ")

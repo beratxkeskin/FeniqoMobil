@@ -3,26 +3,31 @@ package com.feniqo.mobile.data.local.database
 import com.feniqo.mobile.data.local.dao.RemoteSyncDao
 import com.feniqo.mobile.data.local.entity.CategoryEntity
 import com.feniqo.mobile.data.local.entity.SyncMetadata
-import com.feniqo.mobile.domain.model.SyncStatus
 import com.feniqo.mobile.domain.model.ExpenseCategoryVisualCatalog
 import com.feniqo.mobile.domain.model.IncomeCategoryVisualCatalog
+import com.feniqo.mobile.domain.model.SyncStatus
 
 /** Canonical sistem kategorilerini ağdan bağımsız olarak Room'da hazır tutar. */
 class DefaultCategorySeeder(
     private val remoteSyncDao: RemoteSyncDao,
-    private val nowEpochMillis: () -> Long = { kotlin.time.Clock.System.now().toEpochMilliseconds() },
+    private val nowEpochMillis: () -> Long = {
+        kotlin.time.Clock.System
+            .now()
+            .toEpochMilliseconds()
+    },
 ) {
     suspend fun seed() {
         val now = nowEpochMillis()
-        val sync = SyncMetadata(
-            syncStatus = SyncStatus.SYNCED.name,
-            updatedAtEpochMillis = 0L,
-            localUpdatedAtEpochMillis = now,
-            deletedAtEpochMillis = null,
-            version = 1L,
-            baseVersion = 1L,
-            lastSyncError = null,
-        )
+        val sync =
+            SyncMetadata(
+                syncStatus = SyncStatus.SYNCED.name,
+                updatedAtEpochMillis = 0L,
+                localUpdatedAtEpochMillis = now,
+                deletedAtEpochMillis = null,
+                version = 1L,
+                baseVersion = 1L,
+                lastSyncError = null,
+            )
         remoteSyncDao.ensureDefaultCategoryRows(
             DEFAULT_CATEGORIES.map { category ->
                 CategoryEntity(
@@ -70,22 +75,30 @@ class DefaultCategorySeeder(
                     typeCode = "INCOME",
                     colorHex = visual.color.hex,
                 )
-            } + ExpenseCategoryVisualCatalog.definitions.zip(EXPENSE_IDS).map { (visual, suffix) ->
-                definition(
-                    suffix = suffix,
-                    name = visual.turkishName,
-                    key = visual.key.key,
-                    typeCode = "EXPENSE",
-                    colorHex = visual.color.hex,
-                )
-            }
+            } +
+                ExpenseCategoryVisualCatalog.definitions.zip(EXPENSE_IDS).map { (visual, suffix) ->
+                    definition(
+                        suffix = suffix,
+                        name = visual.turkishName,
+                        key = visual.key.key,
+                        typeCode = "EXPENSE",
+                        colorHex = visual.color.hex,
+                    )
+                }
 
-        val LEGACY_AMBIGUOUS_CATEGORY_IDS = listOf(
-            "11111111-1111-4111-8111-111111111120",
-            "11111111-1111-4111-8111-111111111121",
-        )
+        val LEGACY_AMBIGUOUS_CATEGORY_IDS =
+            listOf(
+                "11111111-1111-4111-8111-111111111120",
+                "11111111-1111-4111-8111-111111111121",
+            )
 
-        fun definition(suffix: Int, name: String, key: String, typeCode: String, colorHex: String) = DefaultCategory(
+        fun definition(
+            suffix: Int,
+            name: String,
+            key: String,
+            typeCode: String,
+            colorHex: String,
+        ) = DefaultCategory(
             id = "11111111-1111-4111-8111-${suffix.toString().padStart(12, '1')}",
             name = name,
             normalizedName = name.lowercase(),

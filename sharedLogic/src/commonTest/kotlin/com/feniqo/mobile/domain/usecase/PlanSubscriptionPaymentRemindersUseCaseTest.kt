@@ -7,7 +7,6 @@ import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.RecurrenceFrequency
 import com.feniqo.mobile.domain.model.RecurrenceRule
 import com.feniqo.mobile.domain.model.Subscription
-import com.feniqo.mobile.domain.model.SubscriptionPaymentReminderCandidate
 import com.feniqo.mobile.domain.model.SubscriptionPaymentReminderKey
 import com.feniqo.mobile.domain.model.SubscriptionReminderKind
 import kotlinx.datetime.Instant
@@ -17,23 +16,24 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class PlanSubscriptionPaymentRemindersUseCaseTest {
-
     private val useCase = PlanSubscriptionPaymentRemindersUseCase()
     private val today = LocalDate(2026, 9, 1)
 
     @Test
     fun exactSevenDaysBeforeRenewal_producesUpcomingCandidate() {
-        val subscription = createSubscription(
-            id = "sub-netflix",
-            name = "Netflix",
-            nextRenewalDate = LocalDate(2026, 9, 8),
-            isActive = true,
-        )
+        val subscription =
+            createSubscription(
+                id = "sub-netflix",
+                name = "Netflix",
+                nextRenewalDate = LocalDate(2026, 9, 8),
+                isActive = true,
+            )
 
-        val candidates = useCase(
-            subscriptions = listOf(subscription),
-            today = today,
-        )
+        val candidates =
+            useCase(
+                subscriptions = listOf(subscription),
+                today = today,
+            )
 
         assertEquals(1, candidates.size)
         val candidate = candidates[0]
@@ -57,17 +57,19 @@ class PlanSubscriptionPaymentRemindersUseCaseTest {
         val daysBeforeList = listOf(6, 5, 4, 3, 2, 1)
         for (days in daysBeforeList) {
             val renewalDate = LocalDate(2026, 9, 1 + days)
-            val subscription = createSubscription(
-                id = "sub-$days",
-                name = "Sub $days",
-                nextRenewalDate = renewalDate,
-                isActive = true,
-            )
+            val subscription =
+                createSubscription(
+                    id = "sub-$days",
+                    name = "Sub $days",
+                    nextRenewalDate = renewalDate,
+                    isActive = true,
+                )
 
-            val candidates = useCase(
-                subscriptions = listOf(subscription),
-                today = today,
-            )
+            val candidates =
+                useCase(
+                    subscriptions = listOf(subscription),
+                    today = today,
+                )
 
             assertTrue(
                 candidates.isEmpty(),
@@ -78,17 +80,19 @@ class PlanSubscriptionPaymentRemindersUseCaseTest {
 
     @Test
     fun dueToday_producesDueTodayCandidate() {
-        val subscription = createSubscription(
-            id = "sub-spotify",
-            name = "Spotify",
-            nextRenewalDate = today,
-            isActive = true,
-        )
+        val subscription =
+            createSubscription(
+                id = "sub-spotify",
+                name = "Spotify",
+                nextRenewalDate = today,
+                isActive = true,
+            )
 
-        val candidates = useCase(
-            subscriptions = listOf(subscription),
-            today = today,
-        )
+        val candidates =
+            useCase(
+                subscriptions = listOf(subscription),
+                today = today,
+            )
 
         assertEquals(1, candidates.size)
         val candidate = candidates[0]
@@ -109,72 +113,83 @@ class PlanSubscriptionPaymentRemindersUseCaseTest {
 
     @Test
     fun inactivePastOrFarScheduledSubscriptions_produceNoCandidate() {
-        val inactiveDueToday = createSubscription(
-            id = "sub-inactive-due",
-            nextRenewalDate = today,
-            isActive = false,
-        )
-        val inactiveUpcoming = createSubscription(
-            id = "sub-inactive-up",
-            nextRenewalDate = LocalDate(2026, 9, 8),
-            isActive = false,
-        )
-        val overdueSubscription = createSubscription(
-            id = "sub-overdue",
-            nextRenewalDate = LocalDate(2026, 8, 31),
-            isActive = true,
-        )
-        val farScheduledSubscription = createSubscription(
-            id = "sub-far",
-            nextRenewalDate = LocalDate(2026, 9, 15),
-            isActive = true,
-        )
+        val inactiveDueToday =
+            createSubscription(
+                id = "sub-inactive-due",
+                nextRenewalDate = today,
+                isActive = false,
+            )
+        val inactiveUpcoming =
+            createSubscription(
+                id = "sub-inactive-up",
+                nextRenewalDate = LocalDate(2026, 9, 8),
+                isActive = false,
+            )
+        val overdueSubscription =
+            createSubscription(
+                id = "sub-overdue",
+                nextRenewalDate = LocalDate(2026, 8, 31),
+                isActive = true,
+            )
+        val farScheduledSubscription =
+            createSubscription(
+                id = "sub-far",
+                nextRenewalDate = LocalDate(2026, 9, 15),
+                isActive = true,
+            )
 
-        val candidates = useCase(
-            subscriptions = listOf(
-                inactiveDueToday,
-                inactiveUpcoming,
-                overdueSubscription,
-                farScheduledSubscription,
-            ),
-            today = today,
-        )
+        val candidates =
+            useCase(
+                subscriptions =
+                    listOf(
+                        inactiveDueToday,
+                        inactiveUpcoming,
+                        overdueSubscription,
+                        farScheduledSubscription,
+                    ),
+                today = today,
+            )
 
         assertTrue(candidates.isEmpty())
     }
 
     @Test
     fun candidates_areDeterministicallySortedByRenewalDateThenId() {
-        val subTodayB = createSubscription(
-            id = "sub-b",
-            name = "Sub B",
-            nextRenewalDate = today,
-            isActive = true,
-        )
-        val subTodayA = createSubscription(
-            id = "sub-a",
-            name = "Sub A",
-            nextRenewalDate = today,
-            isActive = true,
-        )
-        val subUpcoming2 = createSubscription(
-            id = "sub-2",
-            name = "Sub 2",
-            nextRenewalDate = LocalDate(2026, 9, 8),
-            isActive = true,
-        )
-        val subUpcoming1 = createSubscription(
-            id = "sub-1",
-            name = "Sub 1",
-            nextRenewalDate = LocalDate(2026, 9, 8),
-            isActive = true,
-        )
+        val subTodayB =
+            createSubscription(
+                id = "sub-b",
+                name = "Sub B",
+                nextRenewalDate = today,
+                isActive = true,
+            )
+        val subTodayA =
+            createSubscription(
+                id = "sub-a",
+                name = "Sub A",
+                nextRenewalDate = today,
+                isActive = true,
+            )
+        val subUpcoming2 =
+            createSubscription(
+                id = "sub-2",
+                name = "Sub 2",
+                nextRenewalDate = LocalDate(2026, 9, 8),
+                isActive = true,
+            )
+        val subUpcoming1 =
+            createSubscription(
+                id = "sub-1",
+                name = "Sub 1",
+                nextRenewalDate = LocalDate(2026, 9, 8),
+                isActive = true,
+            )
 
         // Pass in random order
-        val candidates = useCase(
-            subscriptions = listOf(subUpcoming2, subTodayB, subUpcoming1, subTodayA),
-            today = today,
-        )
+        val candidates =
+            useCase(
+                subscriptions = listOf(subUpcoming2, subTodayB, subUpcoming1, subTodayA),
+                today = today,
+            )
 
         assertEquals(4, candidates.size)
         assertEquals("sub-a", candidates[0].subscriptionId.value)
@@ -196,11 +211,12 @@ class PlanSubscriptionPaymentRemindersUseCaseTest {
 
     @Test
     fun duplicateInput_failsClosedWithIllegalArgumentException() {
-        val sub = createSubscription(
-            id = "sub-dup",
-            nextRenewalDate = today,
-            isActive = true,
-        )
+        val sub =
+            createSubscription(
+                id = "sub-dup",
+                nextRenewalDate = today,
+                isActive = true,
+            )
 
         assertFailsWith<IllegalArgumentException> {
             useCase(
@@ -212,11 +228,12 @@ class PlanSubscriptionPaymentRemindersUseCaseTest {
 
     @Test
     fun negativeUpcomingWindow_failsClosedWithIllegalArgumentException() {
-        val sub = createSubscription(
-            id = "sub-1",
-            nextRenewalDate = today,
-            isActive = true,
-        )
+        val sub =
+            createSubscription(
+                id = "sub-1",
+                nextRenewalDate = today,
+                isActive = true,
+            )
 
         assertFailsWith<IllegalArgumentException> {
             useCase(
@@ -229,61 +246,68 @@ class PlanSubscriptionPaymentRemindersUseCaseTest {
 
     @Test
     fun reminderDisabled_producesNoCandidate() {
-        val subscription = createSubscription(
-            id = "sub-disabled",
-            name = "Disabled Reminder",
-            nextRenewalDate = LocalDate(2026, 9, 8),
-            reminderEnabled = false,
-        )
+        val subscription =
+            createSubscription(
+                id = "sub-disabled",
+                name = "Disabled Reminder",
+                nextRenewalDate = LocalDate(2026, 9, 8),
+                reminderEnabled = false,
+            )
 
-        val candidates = useCase(
-            subscriptions = listOf(subscription),
-            today = today,
-        )
+        val candidates =
+            useCase(
+                subscriptions = listOf(subscription),
+                today = today,
+            )
 
         assertTrue(candidates.isEmpty())
     }
 
     @Test
     fun pausedOrCancelled_producesNoCandidate() {
-        val paused = createSubscription(
-            id = "sub-paused",
-            name = "Paused Sub",
-            nextRenewalDate = LocalDate(2026, 9, 8),
-            lifecycleStatus = com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.PAUSED,
-            isActive = false,
-        )
-        val cancelled = createSubscription(
-            id = "sub-cancelled",
-            name = "Cancelled Sub",
-            nextRenewalDate = LocalDate(2026, 9, 8),
-            lifecycleStatus = com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.CANCELLED,
-            cancellationDate = LocalDate(2026, 8, 20),
-            isActive = false,
-        )
+        val paused =
+            createSubscription(
+                id = "sub-paused",
+                name = "Paused Sub",
+                nextRenewalDate = LocalDate(2026, 9, 8),
+                lifecycleStatus = com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.PAUSED,
+                isActive = false,
+            )
+        val cancelled =
+            createSubscription(
+                id = "sub-cancelled",
+                name = "Cancelled Sub",
+                nextRenewalDate = LocalDate(2026, 9, 8),
+                lifecycleStatus = com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.CANCELLED,
+                cancellationDate = LocalDate(2026, 8, 20),
+                isActive = false,
+            )
 
-        val candidates = useCase(
-            subscriptions = listOf(paused, cancelled),
-            today = today,
-        )
+        val candidates =
+            useCase(
+                subscriptions = listOf(paused, cancelled),
+                today = today,
+            )
 
         assertTrue(candidates.isEmpty())
     }
 
     @Test
     fun trialEndingInThreeDays_producesTrialEndingSoonCandidate() {
-        val trialSub = createSubscription(
-            id = "sub-trial",
-            name = "Figma Trial",
-            nextRenewalDate = LocalDate(2026, 9, 20),
-            lifecycleStatus = com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.TRIAL,
-            trialEndDate = LocalDate(2026, 9, 4), // 3 days after today (2026-09-01)
-        )
+        val trialSub =
+            createSubscription(
+                id = "sub-trial",
+                name = "Figma Trial",
+                nextRenewalDate = LocalDate(2026, 9, 20),
+                lifecycleStatus = com.feniqo.mobile.domain.model.SubscriptionLifecycleStatus.TRIAL,
+                trialEndDate = LocalDate(2026, 9, 4), // 3 days after today (2026-09-01)
+            )
 
-        val candidates = useCase(
-            subscriptions = listOf(trialSub),
-            today = today,
-        )
+        val candidates =
+            useCase(
+                subscriptions = listOf(trialSub),
+                today = today,
+            )
 
         assertEquals(1, candidates.size)
         val candidate = candidates[0]
@@ -302,20 +326,21 @@ class PlanSubscriptionPaymentRemindersUseCaseTest {
         trialEndDate: LocalDate? = null,
         cancellationDate: LocalDate? = null,
         reminderEnabled: Boolean = true,
-    ): Subscription {
-        return Subscription(
+    ): Subscription =
+        Subscription(
             id = EntityId(id),
             ownerId = EntityId("user-1"),
             workspaceId = null,
             name = name,
             amount = Money(2999L, Currency.TRY),
             categoryId = null,
-            renewalRule = RecurrenceRule(
-                frequency = RecurrenceFrequency.MONTHLY,
-                interval = 1,
-                startDate = LocalDate(2026, 1, 1),
-                endDate = null,
-            ),
+            renewalRule =
+                RecurrenceRule(
+                    frequency = RecurrenceFrequency.MONTHLY,
+                    interval = 1,
+                    startDate = LocalDate(2026, 1, 1),
+                    endDate = null,
+                ),
             nextRenewalDate = nextRenewalDate,
             isActive = isActive,
             lifecycleStatus = lifecycleStatus,
@@ -324,5 +349,4 @@ class PlanSubscriptionPaymentRemindersUseCaseTest {
             reminderEnabled = reminderEnabled,
             createdAt = Instant.fromEpochMilliseconds(1000L),
         )
-    }
 }

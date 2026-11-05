@@ -4,8 +4,8 @@ import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.LocalDate
 import com.feniqo.mobile.domain.model.PaymentMethod
+import com.feniqo.mobile.domain.model.TransactionMerchantCreateDecision
 import com.feniqo.mobile.domain.model.TransactionType
-import com.feniqo.mobile.presentation.category.CategoryDisplayModel
 import com.feniqo.mobile.presentation.common.FinanceUiMessage
 import com.feniqo.mobile.presentation.workspace.WorkspaceMemberUiModel
 
@@ -41,39 +41,42 @@ enum class TransactionFormFieldError {
     SPLIT_CUSTOM_MEMBER_NOT_ACTIVE,
     SPLIT_PARTICIPANT_SET_MISMATCH,
     SPLIT_CUSTOM_NOT_ALLOWED_IN_PERSONAL,
-    SPLIT_CUSTOM_NOT_SUPPORTED_WITH_INSTALLMENT;
+    SPLIT_CUSTOM_NOT_SUPPORTED_WITH_INSTALLMENT,
+    ;
 
-    fun toDisplayText(): String = when (this) {
-        AMOUNT_REQUIRED -> "Tutar boş bırakılamaz."
-        AMOUNT_INVALID -> "Geçerli bir tutar girin."
-        AMOUNT_NON_POSITIVE -> "Tutar sıfırdan büyük olmalıdır."
-        AMOUNT_TOO_LARGE -> "Tutar izin verilen sınırı aşıyor."
-        CATEGORY_REQUIRED -> "Lütfen bir kategori seçin."
-        CATEGORY_UNAVAILABLE -> "Bu kategori artık kullanılamıyor. Lütfen başka bir kategori seçin."
-        DATE_REQUIRED -> "Lütfen bir tarih seçin."
-        DATE_IN_FUTURE -> "İşlem tarihi bugünden ileri olamaz."
-        TITLE_REQUIRED -> "İşlem adı boş bırakılamaz."
-        TITLE_TOO_LONG -> "İşlem adı 100 karakterden uzun olamaz."
-        NOTE_TOO_LONG -> "Not 500 karakterden uzun olamaz."
-        DESCRIPTION_TOO_LONG -> "Açıklama 100 karakterden uzun olamaz."
-        INSTALLMENT_COUNT_INVALID -> "Taksit sayısı 2 ile 60 arasında olmalıdır."
-        INSTALLMENT_AMOUNT_TOO_SMALL -> "Toplam tutar seçilen taksit sayısı için çok küçük."
-        SPLIT_PAYER_REQUIRED -> "Lütfen harcamayı ödeyen kişiyi seçin."
-        SPLIT_PARTICIPANTS_REQUIRED -> "En az bir katılımcı seçilmelidir."
-        SPLIT_PAYER_NOT_IN_PARTICIPANTS -> "Ödeyen kişi katılımcılar arasında olmalıdır."
-        SPLIT_CUSTOM_SHARES_REQUIRED -> "Özel dağıtım için tüm katılımcıların payları girilmelidir."
-        SPLIT_CUSTOM_SHARE_REQUIRED -> "Pay tutarı boş bırakılamaz."
-        SPLIT_CUSTOM_SHARE_INVALID -> "Geçerli bir pay tutarı girin."
-        SPLIT_CUSTOM_NON_PAYER_ZERO_SHARE_NOT_ALLOWED -> "Yalnızca harcamayı ödeyen kişi 0 ₺ pay alabilir."
-        SPLIT_CUSTOM_SHARE_NEGATIVE -> "Pay tutarı negatif olamaz."
-        SPLIT_CUSTOM_SHARE_TOO_LARGE -> "Pay tutarı izin verilen sınırı aşıyor."
-        SPLIT_CUSTOM_TOTAL_MISMATCH -> "Paylar toplamı harcama tutarına eşit olmalıdır."
-        SPLIT_CUSTOM_TOTAL_OVERFLOW -> "Paylar toplamı sayı sınırını aşıyor."
-        SPLIT_CUSTOM_MEMBER_NOT_ACTIVE -> "Pay sahibi çalışma alanında aktif bir üye olmalıdır."
-        SPLIT_PARTICIPANT_SET_MISMATCH -> "Katılımcılar ile pay sahipleri aynı küme olmalıdır."
-        SPLIT_CUSTOM_NOT_ALLOWED_IN_PERSONAL -> "Özel dağıtım yalnızca ortak çalışma alanı harcamalarında kullanılabilir."
-        SPLIT_CUSTOM_NOT_SUPPORTED_WITH_INSTALLMENT -> "Özel tutarlı paylaşım taksitli işlemlerde kullanılamaz. Lütfen eşit paylaşımı seçin veya taksiti kapatın."
-    }
+    fun toDisplayText(): String =
+        when (this) {
+            AMOUNT_REQUIRED -> "Tutar boş bırakılamaz."
+            AMOUNT_INVALID -> "Geçerli bir tutar girin."
+            AMOUNT_NON_POSITIVE -> "Tutar sıfırdan büyük olmalıdır."
+            AMOUNT_TOO_LARGE -> "Tutar izin verilen sınırı aşıyor."
+            CATEGORY_REQUIRED -> "Lütfen bir kategori seçin."
+            CATEGORY_UNAVAILABLE -> "Bu kategori artık kullanılamıyor. Lütfen başka bir kategori seçin."
+            DATE_REQUIRED -> "Lütfen bir tarih seçin."
+            DATE_IN_FUTURE -> "İşlem tarihi bugünden ileri olamaz."
+            TITLE_REQUIRED -> "İşlem adı boş bırakılamaz."
+            TITLE_TOO_LONG -> "İşlem adı 100 karakterden uzun olamaz."
+            NOTE_TOO_LONG -> "Not 500 karakterden uzun olamaz."
+            DESCRIPTION_TOO_LONG -> "Açıklama 100 karakterden uzun olamaz."
+            INSTALLMENT_COUNT_INVALID -> "Taksit sayısı 2 ile 60 arasında olmalıdır."
+            INSTALLMENT_AMOUNT_TOO_SMALL -> "Toplam tutar seçilen taksit sayısı için çok küçük."
+            SPLIT_PAYER_REQUIRED -> "Lütfen harcamayı ödeyen kişiyi seçin."
+            SPLIT_PARTICIPANTS_REQUIRED -> "En az bir katılımcı seçilmelidir."
+            SPLIT_PAYER_NOT_IN_PARTICIPANTS -> "Ödeyen kişi katılımcılar arasında olmalıdır."
+            SPLIT_CUSTOM_SHARES_REQUIRED -> "Özel dağıtım için tüm katılımcıların payları girilmelidir."
+            SPLIT_CUSTOM_SHARE_REQUIRED -> "Pay tutarı boş bırakılamaz."
+            SPLIT_CUSTOM_SHARE_INVALID -> "Geçerli bir pay tutarı girin."
+            SPLIT_CUSTOM_NON_PAYER_ZERO_SHARE_NOT_ALLOWED -> "Yalnızca harcamayı ödeyen kişi 0 ₺ pay alabilir."
+            SPLIT_CUSTOM_SHARE_NEGATIVE -> "Pay tutarı negatif olamaz."
+            SPLIT_CUSTOM_SHARE_TOO_LARGE -> "Pay tutarı izin verilen sınırı aşıyor."
+            SPLIT_CUSTOM_TOTAL_MISMATCH -> "Paylar toplamı harcama tutarına eşit olmalıdır."
+            SPLIT_CUSTOM_TOTAL_OVERFLOW -> "Paylar toplamı sayı sınırını aşıyor."
+            SPLIT_CUSTOM_MEMBER_NOT_ACTIVE -> "Pay sahibi çalışma alanında aktif bir üye olmalıdır."
+            SPLIT_PARTICIPANT_SET_MISMATCH -> "Katılımcılar ile pay sahipleri aynı küme olmalıdır."
+            SPLIT_CUSTOM_NOT_ALLOWED_IN_PERSONAL -> "Özel dağıtım yalnızca ortak çalışma alanı harcamalarında kullanılabilir."
+            SPLIT_CUSTOM_NOT_SUPPORTED_WITH_INSTALLMENT ->
+                "Özel tutarlı paylaşım taksitli işlemlerde kullanılamaz. Lütfen eşit paylaşımı seçin veya taksiti kapatın."
+        }
 }
 
 /**
@@ -133,20 +136,33 @@ data class TransactionFormUiState(
     val descriptionError: TransactionFormFieldError? = titleError,
     val installmentCountError: TransactionFormFieldError? = null,
     val generalMessage: FinanceUiMessage? = null,
+    val merchantDecision: TransactionMerchantCreateDecision = TransactionMerchantCreateDecision.Auto,
+    val merchantSuggestedCandidates: List<MerchantSelectorItem> = emptyList(),
+    val merchantSearchableCandidates: List<MerchantSelectorItem> = emptyList(),
+    val isMerchantSelectionEligible: Boolean = false,
     val hasUnsavedChanges: Boolean = false,
 ) {
+    val selectedMerchantCandidate: MerchantSelectorItem?
+        get() =
+            (merchantDecision as? TransactionMerchantCreateDecision.KnownMerchant)?.let { known ->
+                merchantSearchableCandidates.firstOrNull { it.id == known.merchantId }
+            }
+
     val isInstallmentOptionAvailable: Boolean
         get() = !isEditMode && type == TransactionType.EXPENSE && paymentMethod == PaymentMethod.CREDIT_CARD
 
     val isSharedExpense: Boolean
-        get() = activeWorkspaceId != null &&
-            activeWorkspaceType == com.feniqo.mobile.domain.model.WorkspaceType.SHARED &&
-            type == TransactionType.EXPENSE
+        get() =
+            activeWorkspaceId != null &&
+                activeWorkspaceType == com.feniqo.mobile.domain.model.WorkspaceType.SHARED &&
+                type == TransactionType.EXPENSE
 
     val canManageSplit: Boolean
-        get() = isSharedExpense && workspaceMembers.any {
-            it.isCurrentUser && it.role != com.feniqo.mobile.domain.model.WorkspaceRole.VIEWER
-        }
+        get() =
+            isSharedExpense &&
+                workspaceMembers.any {
+                    it.isCurrentUser && it.role != com.feniqo.mobile.domain.model.WorkspaceRole.VIEWER
+                }
 
     val eligibleSplitMembers: List<WorkspaceMemberUiModel>
         get() = workspaceMembers
@@ -155,7 +171,10 @@ data class TransactionFormUiState(
         get() {
             if (!isSharedExpense) return true
             if (isLoadingWorkspaceMembers) return false
-            if (isInstallmentOptionAvailable && isInstallmentEnabled && splitMode == com.feniqo.mobile.domain.model.TransactionSplitMode.CUSTOM) {
+            if (isInstallmentOptionAvailable &&
+                isInstallmentEnabled &&
+                splitMode == com.feniqo.mobile.domain.model.TransactionSplitMode.CUSTOM
+            ) {
                 return false
             }
             val payer = selectedPaidByUserId ?: return false

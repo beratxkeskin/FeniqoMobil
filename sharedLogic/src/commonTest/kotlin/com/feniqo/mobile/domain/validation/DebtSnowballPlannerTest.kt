@@ -15,7 +15,6 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class DebtSnowballPlannerTest {
-
     private fun createDebt(
         id: String,
         amountMinor: Long,
@@ -23,8 +22,8 @@ class DebtSnowballPlannerTest {
         dueDate: LocalDate = LocalDate(2026, 12, 31),
         status: DebtStatus = DebtStatus.OPEN,
         currency: Currency = Currency.TRY,
-    ): Debt {
-        return Debt(
+    ): Debt =
+        Debt(
             id = EntityId(id),
             ownerId = EntityId("user-1"),
             workspaceId = null,
@@ -36,7 +35,6 @@ class DebtSnowballPlannerTest {
             description = null,
             createdAt = Instant.fromEpochMilliseconds(1000L),
         )
-    }
 
     private fun createPayment(
         id: String,
@@ -44,26 +42,26 @@ class DebtSnowballPlannerTest {
         amountMinor: Long,
         currency: Currency = Currency.TRY,
         paidOn: LocalDate = LocalDate(2026, 9, 1),
-    ): DebtPayment {
-        return DebtPayment(
+    ): DebtPayment =
+        DebtPayment(
             id = EntityId(id),
             debtId = EntityId(debtId),
             amount = Money(amountMinor, currency),
             paidOn = paidOn,
             createdAt = Instant.fromEpochMilliseconds(2000L),
         )
-    }
 
     @Test
     fun calculate_singleDebt_simulatesCorrectMonthsAndAllocations() {
         val debt = createDebt(id = "d-1", amountMinor = 5000_00L) // 5,000 TRY
         val budget = Money(2000_00L, Currency.TRY) // 2,000 TRY / month
 
-        val plan = DebtSnowballPlanner.calculate(
-            debts = listOf(debt),
-            payments = emptyList(),
-            monthlyPaymentBudget = budget,
-        )
+        val plan =
+            DebtSnowballPlanner.calculate(
+                debts = listOf(debt),
+                payments = emptyList(),
+                monthlyPaymentBudget = budget,
+            )
 
         assertEquals(Currency.TRY, plan.currency)
         assertEquals(3, plan.totalMonths)
@@ -94,11 +92,12 @@ class DebtSnowballPlannerTest {
         val debtB = createDebt(id = "d-b", amountMinor = 1500_00L)
         val budget = Money(1000_00L, Currency.TRY)
 
-        val plan = DebtSnowballPlanner.calculate(
-            debts = listOf(debtA, debtB),
-            payments = emptyList(),
-            monthlyPaymentBudget = budget,
-        )
+        val plan =
+            DebtSnowballPlanner.calculate(
+                debts = listOf(debtA, debtB),
+                payments = emptyList(),
+                monthlyPaymentBudget = budget,
+            )
 
         assertEquals(2, plan.totalMonths)
         assertEquals(Money(2000_00L, Currency.TRY), plan.totalDebtAmount)
@@ -144,11 +143,12 @@ class DebtSnowballPlannerTest {
         val debt3 = createDebt(id = "d-b", amountMinor = 1000_00L, dueDate = LocalDate(2026, 9, 1))
         val debt4 = createDebt(id = "d-small", amountMinor = 500_00L, dueDate = LocalDate(2026, 12, 1))
 
-        val plan = DebtSnowballPlanner.calculate(
-            debts = listOf(debt1, debt2, debt3, debt4),
-            payments = emptyList(),
-            monthlyPaymentBudget = Money(10000_00L, Currency.TRY),
-        )
+        val plan =
+            DebtSnowballPlanner.calculate(
+                debts = listOf(debt1, debt2, debt3, debt4),
+                payments = emptyList(),
+                monthlyPaymentBudget = Money(10000_00L, Currency.TRY),
+            )
 
         // Beklenen sıralama:
         // 1. d-small (bakiye 500 < 1000)
@@ -170,11 +170,12 @@ class DebtSnowballPlannerTest {
         val debtB = createDebt(id = "d-b", amountMinor = 5000_00L)
         val paymentA = createPayment(id = "p-1", debtId = "d-a", amountMinor = 7000_00L)
 
-        val plan = DebtSnowballPlanner.calculate(
-            debts = listOf(debtA, debtB),
-            payments = listOf(paymentA),
-            monthlyPaymentBudget = Money(3000_00L, Currency.TRY),
-        )
+        val plan =
+            DebtSnowballPlanner.calculate(
+                debts = listOf(debtA, debtB),
+                payments = listOf(paymentA),
+                monthlyPaymentBudget = Money(3000_00L, Currency.TRY),
+            )
 
         // Kalan bakiyelere göre Debt A (3000) önce gelir, Debt B (5000) sonra gelir
         assertEquals(2, plan.debtPlans.size)
@@ -195,11 +196,12 @@ class DebtSnowballPlannerTest {
         val fullyPaidDebt = createDebt(id = "d-paid", amountMinor = 1000_00L, type = DebtType.DEBT)
         val paymentPaid = createPayment(id = "p-paid", debtId = "d-paid", amountMinor = 1000_00L)
 
-        val plan = DebtSnowballPlanner.calculate(
-            debts = listOf(activeDebt, receivable, settledDebt, fullyPaidDebt),
-            payments = listOf(paymentPaid),
-            monthlyPaymentBudget = Money(1000_00L, Currency.TRY),
-        )
+        val plan =
+            DebtSnowballPlanner.calculate(
+                debts = listOf(activeDebt, receivable, settledDebt, fullyPaidDebt),
+                payments = listOf(paymentPaid),
+                monthlyPaymentBudget = Money(1000_00L, Currency.TRY),
+            )
 
         // Sadece activeDebt plana dahil olmalıdır
         assertEquals(1, plan.debtPlans.size)
@@ -212,11 +214,12 @@ class DebtSnowballPlannerTest {
     fun calculate_emptyEligibleDebts_returnsEmptyValidPlan() {
         val receivable = createDebt(id = "r-1", amountMinor = 5000_00L, type = DebtType.RECEIVABLE)
 
-        val plan = DebtSnowballPlanner.calculate(
-            debts = listOf(receivable),
-            payments = emptyList(),
-            monthlyPaymentBudget = Money(1000_00L, Currency.TRY),
-        )
+        val plan =
+            DebtSnowballPlanner.calculate(
+                debts = listOf(receivable),
+                payments = emptyList(),
+                monthlyPaymentBudget = Money(1000_00L, Currency.TRY),
+            )
 
         assertEquals(Currency.TRY, plan.currency)
         assertEquals(0, plan.totalMonths)
@@ -345,13 +348,13 @@ class DebtSnowballPlannerTest {
         }
     }
 
-
     @Test
     fun calculate_failClosed_whenSimulationExceedsMaximumMonths() {
-        val debt = createDebt(
-            id = "d-large",
-            amountMinor = (DebtSnowballPlanner.MAX_SIMULATION_MONTHS + 1) * 100_00L,
-        )
+        val debt =
+            createDebt(
+                id = "d-large",
+                amountMinor = (DebtSnowballPlanner.MAX_SIMULATION_MONTHS + 1) * 100_00L,
+            )
 
         assertFailsWith<IllegalStateException> {
             DebtSnowballPlanner.calculate(
@@ -362,4 +365,3 @@ class DebtSnowballPlannerTest {
         }
     }
 }
-

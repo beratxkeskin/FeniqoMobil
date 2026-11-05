@@ -36,7 +36,8 @@ class FeniqoBackupFormatTest {
 
     @Test
     fun legacyBackupWithoutNote_decodesWithNullNote() {
-        val legacyJson = """
+        val legacyJson =
+            """
             {
                 "format_version": 1,
                 "created_at": "2026-09-10T12:00:00Z",
@@ -57,16 +58,22 @@ class FeniqoBackupFormatTest {
                     }
                 ]
             }
-        """.trimIndent()
+            """.trimIndent()
         val result = assertIs<BackupDecodeResult.Valid>(FeniqoBackupCodec.decode(legacyJson))
-        assertEquals(null, result.backup.transactions.first().note)
+        assertEquals(
+            null,
+            result.backup.transactions
+                .first()
+                .note,
+        )
     }
 
     @Test
     fun backupWithNote_roundTripsCorrectly() {
-        val withNote = sample().let {
-            it.copy(transactions = listOf(it.transactions.first().copy(note = "Önemli not")))
-        }
+        val withNote =
+            sample().let {
+                it.copy(transactions = listOf(it.transactions.first().copy(note = "Önemli not")))
+            }
         val encoded = FeniqoBackupCodec.encode(withNote)
         val decoded = assertIs<BackupDecodeResult.Valid>(FeniqoBackupCodec.decode(encoded)).backup
         assertEquals("Önemli not", decoded.transactions.first().note)
@@ -74,15 +81,23 @@ class FeniqoBackupFormatTest {
 
     private fun invalid(raw: String) = assertIs<BackupDecodeResult.Invalid>(FeniqoBackupCodec.decode(raw)).reason
 
-    private fun sample() = FeniqoBackupV1(
-        createdAt = "2026-09-10T12:00:00Z",
-        categories = listOf(BackupCategoryV1("cat-1", "Market", "EXPENSE", "#112233", "cart")),
-        transactions = listOf(
-            BackupTransactionV1(
-                id = "tx-1", amountMinor = 12_550, currency = "TRY", type = "EXPENSE",
-                categoryId = "cat-1", description = "Haftalık", paymentMethod = "CREDIT_CARD",
-                transactionDate = "2026-09-10", createdAt = "2026-09-10T10:00:00Z",
-            ),
-        ),
-    )
+    private fun sample() =
+        FeniqoBackupV1(
+            createdAt = "2026-09-10T12:00:00Z",
+            categories = listOf(BackupCategoryV1("cat-1", "Market", "EXPENSE", "#112233", "cart")),
+            transactions =
+                listOf(
+                    BackupTransactionV1(
+                        id = "tx-1",
+                        amountMinor = 12_550,
+                        currency = "TRY",
+                        type = "EXPENSE",
+                        categoryId = "cat-1",
+                        description = "Haftalık",
+                        paymentMethod = "CREDIT_CARD",
+                        transactionDate = "2026-09-10",
+                        createdAt = "2026-09-10T10:00:00Z",
+                    ),
+                ),
+        )
 }

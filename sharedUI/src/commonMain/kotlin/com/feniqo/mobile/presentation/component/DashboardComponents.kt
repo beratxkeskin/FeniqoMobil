@@ -878,10 +878,17 @@ private fun HomeTransactionItemRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        CategoryTonalIcon(
-            iconKey = trx.categoryIconKey,
-            color = categoryColor,
-            containerSize = 40.dp,
+        val fallbackLabel = trx.merchant?.displayName
+            ?: trx.description?.takeIf { it.isNotBlank() }
+            ?: trx.categoryName
+        MerchantLogo(
+            verifiedLogoKey = trx.merchant?.verifiedLogoKey,
+            canShowMerchantLogo = trx.merchant?.canShowMerchantLogo == true,
+            categoryIconKey = trx.categoryIconKey,
+            categoryColor = categoryColor,
+            fallbackLabel = fallbackLabel,
+            size = 40.dp,
+            contentDescription = null,
         )
 
         Column(

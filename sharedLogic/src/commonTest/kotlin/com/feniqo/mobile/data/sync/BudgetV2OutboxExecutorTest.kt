@@ -15,144 +15,159 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 
 class BudgetV2OutboxExecutorTest {
-
     @Test
-    fun budget_create_applied_returns_budget_applied() = runTest {
-        val remoteDto = remoteBudget(version = 1L)
-        val writer = RecordingBudgetWriter(
-            budgetResult = ConditionalRemoteWriteResult.Applied(remoteDto),
-        )
-        val executor = V2OutboxOperationExecutor(writer) { 1000L }
+    fun budget_create_applied_returns_budget_applied() =
+        runTest {
+            val remoteDto = remoteBudget(version = 1L)
+            val writer =
+                RecordingBudgetWriter(
+                    budgetResult = ConditionalRemoteWriteResult.Applied(remoteDto),
+                )
+            val executor = V2OutboxOperationExecutor(writer) { 1000L }
 
-        val snapshotJson = budgetSnapshotJson(id = BUDGET_ID, version = null)
-        val op = budgetOperation(
-            operationType = "CREATE",
-            baseVersion = null,
-            payloadJson = snapshotJson,
-        )
+            val snapshotJson = budgetSnapshotJson(id = BUDGET_ID, version = null)
+            val op =
+                budgetOperation(
+                    operationType = "CREATE",
+                    baseVersion = null,
+                    payloadJson = snapshotJson,
+                )
 
-        val result = executor.execute(op)
+            val result = executor.execute(op)
 
-        assertIs<OutboxExecutionResult.BudgetApplied>(result)
-        assertEquals(BUDGET_ID, result.record.id)
-        assertEquals(1L, result.record.version)
-        assertEquals(OP_ID, writer.lastOperationId)
-        assertEquals(RemoteWriteOperation.CREATE, writer.lastOperation)
-        assertEquals(null, writer.lastBaseVersion)
-        assertEquals(500000L, writer.lastBudgetDto?.limitMinor)
-    }
-
-    @Test
-    fun budget_update_conflict_returns_conflict_detected_and_preserves_remote_version() = runTest {
-        val remoteDto = remoteBudget(version = 4L, limitMinor = 750000L)
-        val writer = RecordingBudgetWriter(
-            budgetResult = ConditionalRemoteWriteResult.Conflict(remoteDto),
-        )
-        val executor = V2OutboxOperationExecutor(writer) { 2000L }
-
-        val snapshotJson = budgetSnapshotJson(id = BUDGET_ID, version = 2L, limit = 600000L)
-        val op = budgetOperation(
-            operationType = "UPDATE",
-            baseVersion = 2L,
-            payloadJson = snapshotJson,
-        )
-
-        val result = executor.execute(op)
-
-        assertIs<OutboxExecutionResult.ConflictDetected>(result)
-        assertEquals(OP_ID, result.conflict.operationId)
-        assertEquals("BUDGET", result.conflict.entityTypeCode)
-        assertEquals(BUDGET_ID, result.conflict.entityId)
-        assertEquals(2L, result.conflict.localVersion)
-        assertEquals(4L, result.conflict.remoteVersion)
-        assertEquals(2000L, result.conflict.detectedAtEpochMillis)
-        assertEquals(RemoteWriteOperation.UPDATE, writer.lastOperation)
-        assertEquals(2L, writer.lastBaseVersion)
-    }
-
-    @Test
-    fun budget_delete_not_found_returns_missing_delete_acknowledged() = runTest {
-        val writer = RecordingBudgetWriter(
-            budgetResult = ConditionalRemoteWriteResult.NotFound,
-        )
-        val executor = V2OutboxOperationExecutor(writer) { 1000L }
-
-        val snapshotJson = budgetSnapshotJson(id = BUDGET_ID, version = 3L)
-        val op = budgetOperation(
-            operationType = "DELETE",
-            baseVersion = 3L,
-            payloadJson = snapshotJson,
-        )
-
-        val result = executor.execute(op)
-
-        assertIs<OutboxExecutionResult.MissingDeleteAcknowledged>(result)
-        assertEquals(RemoteWriteOperation.DELETE, writer.lastOperation)
-        assertEquals(3L, writer.lastBaseVersion)
-    }
-
-    @Test
-    fun budget_rejects_payload_id_mismatch_without_calling_writer() = runTest {
-        val writer = RecordingBudgetWriter()
-        val executor = V2OutboxOperationExecutor(writer) { 1000L }
-
-        val snapshotJson = budgetSnapshotJson(id = "99999999-9999-4999-8999-999999999999", version = null)
-        val op = budgetOperation(
-            operationType = "CREATE",
-            baseVersion = null,
-            payloadJson = snapshotJson,
-        )
-
-        assertFailsWith<IllegalArgumentException> {
-            executor.execute(op)
-        }
-        assertEquals(null, writer.lastOperationId)
-    }
-
-    @Test
-    fun budget_create_with_non_null_base_version_is_rejected() = runTest {
-        val writer = RecordingBudgetWriter()
-        val executor = V2OutboxOperationExecutor(writer) { 1000L }
-
-        val snapshotJson = budgetSnapshotJson(id = BUDGET_ID, version = 1L)
-        val op = budgetOperation(
-            operationType = "CREATE",
-            baseVersion = 1L,
-            payloadJson = snapshotJson,
-        )
-
-        assertFailsWith<IllegalArgumentException> {
-            executor.execute(op)
-        }
-        assertEquals(null, writer.lastOperationId)
-    }
-
-    @Test
-    fun budget_update_and_delete_with_null_base_version_are_rejected() = runTest {
-        val writer = RecordingBudgetWriter()
-        val executor = V2OutboxOperationExecutor(writer) { 1000L }
-
-        val snapshotJson = budgetSnapshotJson(id = BUDGET_ID, version = null)
-
-        val updateOp = budgetOperation(
-            operationType = "UPDATE",
-            baseVersion = null,
-            payloadJson = snapshotJson,
-        )
-        assertFailsWith<IllegalArgumentException> {
-            executor.execute(updateOp)
+            assertIs<OutboxExecutionResult.BudgetApplied>(result)
+            assertEquals(BUDGET_ID, result.record.id)
+            assertEquals(1L, result.record.version)
+            assertEquals(OP_ID, writer.lastOperationId)
+            assertEquals(RemoteWriteOperation.CREATE, writer.lastOperation)
+            assertEquals(null, writer.lastBaseVersion)
+            assertEquals(500000L, writer.lastBudgetDto?.limitMinor)
         }
 
-        val deleteOp = budgetOperation(
-            operationType = "DELETE",
-            baseVersion = null,
-            payloadJson = snapshotJson,
-        )
-        assertFailsWith<IllegalArgumentException> {
-            executor.execute(deleteOp)
+    @Test
+    fun budget_update_conflict_returns_conflict_detected_and_preserves_remote_version() =
+        runTest {
+            val remoteDto = remoteBudget(version = 4L, limitMinor = 750000L)
+            val writer =
+                RecordingBudgetWriter(
+                    budgetResult = ConditionalRemoteWriteResult.Conflict(remoteDto),
+                )
+            val executor = V2OutboxOperationExecutor(writer) { 2000L }
+
+            val snapshotJson = budgetSnapshotJson(id = BUDGET_ID, version = 2L, limit = 600000L)
+            val op =
+                budgetOperation(
+                    operationType = "UPDATE",
+                    baseVersion = 2L,
+                    payloadJson = snapshotJson,
+                )
+
+            val result = executor.execute(op)
+
+            assertIs<OutboxExecutionResult.ConflictDetected>(result)
+            assertEquals(OP_ID, result.conflict.operationId)
+            assertEquals("BUDGET", result.conflict.entityTypeCode)
+            assertEquals(BUDGET_ID, result.conflict.entityId)
+            assertEquals(2L, result.conflict.localVersion)
+            assertEquals(4L, result.conflict.remoteVersion)
+            assertEquals(2000L, result.conflict.detectedAtEpochMillis)
+            assertEquals(RemoteWriteOperation.UPDATE, writer.lastOperation)
+            assertEquals(2L, writer.lastBaseVersion)
         }
-        assertEquals(null, writer.lastOperationId)
-    }
+
+    @Test
+    fun budget_delete_not_found_returns_missing_delete_acknowledged() =
+        runTest {
+            val writer =
+                RecordingBudgetWriter(
+                    budgetResult = ConditionalRemoteWriteResult.NotFound,
+                )
+            val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+            val snapshotJson = budgetSnapshotJson(id = BUDGET_ID, version = 3L)
+            val op =
+                budgetOperation(
+                    operationType = "DELETE",
+                    baseVersion = 3L,
+                    payloadJson = snapshotJson,
+                )
+
+            val result = executor.execute(op)
+
+            assertIs<OutboxExecutionResult.MissingDeleteAcknowledged>(result)
+            assertEquals(RemoteWriteOperation.DELETE, writer.lastOperation)
+            assertEquals(3L, writer.lastBaseVersion)
+        }
+
+    @Test
+    fun budget_rejects_payload_id_mismatch_without_calling_writer() =
+        runTest {
+            val writer = RecordingBudgetWriter()
+            val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+            val snapshotJson = budgetSnapshotJson(id = "99999999-9999-4999-8999-999999999999", version = null)
+            val op =
+                budgetOperation(
+                    operationType = "CREATE",
+                    baseVersion = null,
+                    payloadJson = snapshotJson,
+                )
+
+            assertFailsWith<IllegalArgumentException> {
+                executor.execute(op)
+            }
+            assertEquals(null, writer.lastOperationId)
+        }
+
+    @Test
+    fun budget_create_with_non_null_base_version_is_rejected() =
+        runTest {
+            val writer = RecordingBudgetWriter()
+            val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+            val snapshotJson = budgetSnapshotJson(id = BUDGET_ID, version = 1L)
+            val op =
+                budgetOperation(
+                    operationType = "CREATE",
+                    baseVersion = 1L,
+                    payloadJson = snapshotJson,
+                )
+
+            assertFailsWith<IllegalArgumentException> {
+                executor.execute(op)
+            }
+            assertEquals(null, writer.lastOperationId)
+        }
+
+    @Test
+    fun budget_update_and_delete_with_null_base_version_are_rejected() =
+        runTest {
+            val writer = RecordingBudgetWriter()
+            val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+            val snapshotJson = budgetSnapshotJson(id = BUDGET_ID, version = null)
+
+            val updateOp =
+                budgetOperation(
+                    operationType = "UPDATE",
+                    baseVersion = null,
+                    payloadJson = snapshotJson,
+                )
+            assertFailsWith<IllegalArgumentException> {
+                executor.execute(updateOp)
+            }
+
+            val deleteOp =
+                budgetOperation(
+                    operationType = "DELETE",
+                    baseVersion = null,
+                    payloadJson = snapshotJson,
+                )
+            assertFailsWith<IllegalArgumentException> {
+                executor.execute(deleteOp)
+            }
+            assertEquals(null, writer.lastOperationId)
+        }
 
     private class RecordingBudgetWriter(
         var budgetResult: ConditionalRemoteWriteResult<BudgetDto> = ConditionalRemoteWriteResult.NotFound,
@@ -211,8 +226,6 @@ class BudgetV2OutboxExecutorTest {
         ): ConditionalRemoteWriteResult<com.feniqo.mobile.data.remote.dto.SubscriptionDto> = error("Test kapsamı dışı")
     }
 
-
-
     private companion object {
         const val OP_ID = "0123456789abcdef0123456789abcdef"
         const val BUDGET_ID = "11111111-1111-4111-8111-111111111111"
@@ -221,7 +234,10 @@ class BudgetV2OutboxExecutorTest {
         const val MONTH = "2026-08"
         const val CREATED_AT = "2026-08-25T17:00:00Z"
 
-        fun remoteBudget(version: Long, limitMinor: Long = 500000L) = BudgetDto(
+        fun remoteBudget(
+            version: Long,
+            limitMinor: Long = 500000L,
+        ) = BudgetDto(
             id = BUDGET_ID,
             userId = USER_ID,
             workspaceId = null,
@@ -239,7 +255,8 @@ class BudgetV2OutboxExecutorTest {
             id: String,
             version: Long?,
             limit: Long = 500000L,
-        ): String = """
+        ): String =
+            """
             {
                 "id": "$id",
                 "user_id": "$USER_ID",
@@ -251,7 +268,7 @@ class BudgetV2OutboxExecutorTest {
                 "created_at": "$CREATED_AT",
                 "version": ${version ?: "null"}
             }
-        """.trimIndent()
+            """.trimIndent()
 
         fun budgetOperation(
             operationType: String = "CREATE",

@@ -22,14 +22,18 @@ import com.feniqo.mobile.presentation.common.resolveLocalizedText
 import com.feniqo.mobile.presentation.component.ErrorState
 import com.feniqo.mobile.presentation.component.InstallmentTransactionDeleteDialog
 import com.feniqo.mobile.presentation.component.LoadingContent
+import com.feniqo.mobile.presentation.component.MerchantBlockConfirmDialog
+import com.feniqo.mobile.presentation.component.MerchantSelectorBottomSheet
 import com.feniqo.mobile.presentation.component.SingleTransactionDeleteDialog
 import com.feniqo.mobile.presentation.component.TransactionConflictDialog
+import com.feniqo.mobile.presentation.component.toLocalizedText
 import com.feniqo.mobile.presentation.screen.TransactionDetailScreen
 import com.feniqo.mobile.presentation.transaction.toLocalizedText
 import com.feniqo.mobile.presentation.transaction.transactionDetailLoadingText
 import com.feniqo.mobile.presentation.transaction.transactionDetailOpenFailedText
 import com.feniqo.mobile.presentation.transaction.transactionDetailReturnText
 import com.feniqo.mobile.presentation.transaction.transactionDetailUnavailableText
+import com.feniqo.mobile.presentation.transaction.transactionMerchantSuccessText
 
 /** Bağımsız işlem detay destination'ının Compose adaptörüdür. */
 @Composable
@@ -50,6 +54,7 @@ fun TransactionDetailScreenRoute(
     val activeConflict = state.item?.id?.let { itemId ->
         conflicts.find { it.entityId == itemId }
     }
+    val merchantSuccessMessage = transactionMerchantSuccessText()
 
     LaunchedEffect(activeConflict, showConflict) {
         if (showConflict && activeConflict == null) showConflict = false
@@ -58,6 +63,9 @@ fun TransactionDetailScreenRoute(
         viewModel.events.collect { event ->
             when (event) {
                 TransactionDetailEvent.Deleted -> onDeleted()
+                TransactionDetailEvent.MerchantCorrectionApplied -> {
+                    snackbarHostState.showSnackbar(merchantSuccessMessage)
+                }
             }
         }
     }
@@ -83,6 +91,9 @@ fun TransactionDetailScreenRoute(
                     } else {
                         null
                     },
+                    onOpenMerchantSelector = viewModel::openMerchantSelector,
+                    onOpenBlockConfirmDialog = viewModel::openBlockConfirmDialog,
+                    isCorrectionInProgress = state.merchantCorrection.isInProgress,
                 )
             }
             else -> ErrorState(
@@ -119,6 +130,30 @@ fun TransactionDetailScreenRoute(
                 error = conflictError,
                 onResolve = { conflictViewModel.resolve(activeConflict.entityId, it) },
                 onDismiss = { showConflict = false },
+            )
+        }
+
+        if (state.merchantCorrection.isBlockConfirmDialogOpen) {
+            MerchantBlockConfirmDialog(
+                isInProgress = state.merchantCorrection.isInProgress,
+                onConfirm = viewModel::confirmBlock,
+                onDismiss = viewModel::dismissBlockConfirmDialog,
+                error = state.merchantCorrection.error,
+            )
+        }
+
+        if (state.merchantCorrection.isSelectorOpen) {
+            MerchantSelectorBottomSheet(
+                isSelectorOpen = state.merchantCorrection.isSelectorOpen,
+                searchQuery = state.merchantCorrection.searchQuery,
+                searchResults = state.merchantCorrection.searchResults,
+                selectedMerchantId = state.merchantCorrection.selectedMerchantId,
+                isInProgress = state.merchantCorrection.isInProgress,
+                error = state.merchantCorrection.error,
+                onSearchQueryChanged = viewModel::onSearchQueryChanged,
+                onSelectMerchant = viewModel::selectMerchant,
+                onConfirm = viewModel::confirmAssign,
+                onDismiss = viewModel::dismissMerchantSelector,
             )
         }
 

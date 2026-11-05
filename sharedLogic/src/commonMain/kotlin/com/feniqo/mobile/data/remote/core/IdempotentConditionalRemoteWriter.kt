@@ -13,6 +13,7 @@ import com.feniqo.mobile.data.remote.dto.ProfileDto
 import com.feniqo.mobile.data.remote.dto.RecurringTransactionDto
 import com.feniqo.mobile.data.remote.dto.SubscriptionDto
 import com.feniqo.mobile.data.remote.dto.TransactionDto
+import com.feniqo.mobile.data.remote.dto.UserMerchantVerificationDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceInvitationDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceMemberDto
@@ -22,7 +23,15 @@ import kotlinx.serialization.json.JsonObject
  * Outbox işlemini operation_id ile sunucuda idempotent ve koşullu olarak uygulayan V2 uzak yazıcı sözleşmesi.
  */
 interface IdempotentConditionalRemoteWriter {
+    suspend fun writeMerchantVerification(
+        operationId: String,
+        operation: RemoteWriteOperation,
+        baseVersion: Long?,
+        dto: UserMerchantVerificationDto,
+    ): ConditionalRemoteWriteResult<UserMerchantVerificationDto> = error("writeMerchantVerification not implemented in test fake")
+
     suspend fun writeAsset(
+
         operationId: String,
         operation: RemoteWriteOperation,
         baseVersion: Long?,

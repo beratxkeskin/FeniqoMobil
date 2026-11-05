@@ -8,7 +8,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SyncScopeKeyTest {
-
     private val validUuid = "11111111-1111-4111-8111-111111111111"
     private val compactUuid = "11111111111141118111111111111111"
 
@@ -83,9 +82,10 @@ class SyncScopeKeyTest {
     // 6. requireUserScope("LEGACY_UNRESOLVED") reddeder
     @Test
     fun requireUserScope_rejects_legacy_unresolved() {
-        val ex = assertFailsWith<IllegalArgumentException> {
-            SyncScopeKey.requireUserScope("LEGACY_UNRESOLVED")
-        }
+        val ex =
+            assertFailsWith<IllegalArgumentException> {
+                SyncScopeKey.requireUserScope("LEGACY_UNRESOLVED")
+            }
         assertTrue(ex.message!!.contains("Expected USER scope"))
     }
 

@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface RecurringTransactionDao {
-
     @Query(
         """
         SELECT * FROM recurring_transactions
@@ -48,7 +47,6 @@ interface RecurringTransactionDao {
     )
     suspend fun getAnyById(id: String): RecurringTransactionEntity?
 
-
     @Query(
         """
         SELECT * FROM recurring_transactions
@@ -78,9 +76,7 @@ interface RecurringTransactionDao {
         ORDER BY due_date ASC
         """,
     )
-    fun observeOccurrencesForRecurring(
-        recurringTransactionId: String,
-    ): Flow<List<RecurringTransactionOccurrenceEntity>>
+    fun observeOccurrencesForRecurring(recurringTransactionId: String): Flow<List<RecurringTransactionOccurrenceEntity>>
 
     @Upsert
     suspend fun upsert(entity: RecurringTransactionEntity)

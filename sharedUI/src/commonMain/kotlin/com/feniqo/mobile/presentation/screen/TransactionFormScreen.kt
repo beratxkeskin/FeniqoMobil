@@ -54,6 +54,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
@@ -78,6 +79,7 @@ import com.feniqo.mobile.presentation.component.TransactionCategoryPicker
 import com.feniqo.mobile.presentation.component.TransactionDatePickerField
 import com.feniqo.mobile.presentation.component.TransactionExistingInstallmentBadge
 import com.feniqo.mobile.presentation.component.TransactionInstallmentSection
+import com.feniqo.mobile.presentation.component.TransactionMerchantSection
 import com.feniqo.mobile.presentation.component.TransactionNoteField
 import com.feniqo.mobile.presentation.component.TransactionPaymentMethodSelector
 import com.feniqo.mobile.presentation.component.TransactionSplitSection
@@ -150,6 +152,9 @@ fun TransactionFormScreen(
         splitMode: TransactionSplitMode,
         customSharesText: Map<EntityId, String>,
     ) -> Unit = { _, _, _, _ -> },
+    onKnownMerchantSelected: (EntityId) -> Unit = {},
+    onUseTransactionNameSelected: () -> Unit = {},
+    onClearMerchantDecision: () -> Unit = {},
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -164,7 +169,8 @@ fun TransactionFormScreen(
             )
         },
         bottomBar = {
-            if (!uiState.isLoadingTransaction && uiState.loadError == null) {
+            val isImeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+            if (!uiState.isLoadingTransaction && uiState.loadError == null && !isImeVisible) {
                 TransactionFormBottomBar(
                     isEditMode = uiState.isEditMode,
                     type = uiState.type,
@@ -219,6 +225,9 @@ fun TransactionFormScreen(
                     onPaidByUserSelected = onPaidByUserSelected,
                     onParticipantToggled = onParticipantToggled,
                     onSplitDetailsApplied = onSplitDetailsApplied,
+                    onKnownMerchantSelected = onKnownMerchantSelected,
+                    onUseTransactionNameSelected = onUseTransactionNameSelected,
+                    onClearMerchantDecision = onClearMerchantDecision,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues),
@@ -334,6 +343,9 @@ private fun TransactionFormContent(
         customSharesText: Map<EntityId, String>,
     ) -> Unit,
     modifier: Modifier = Modifier,
+    onKnownMerchantSelected: (EntityId) -> Unit = {},
+    onUseTransactionNameSelected: () -> Unit = {},
+    onClearMerchantDecision: () -> Unit = {},
 ) {
     val scrollState = rememberScrollState()
     val isFormEnabled = !uiState.isSubmitting
@@ -464,6 +476,17 @@ private fun TransactionFormContent(
             onAddCategoryClick = { onAddCategory(uiState.type) },
             modifier = Modifier.focusRequester(categoryFocusRequester),
         )
+
+        // 4.1. İş Yeri / Marka Seçimi
+        if (uiState.isMerchantSelectionEligible) {
+            TransactionMerchantSection(
+                uiState = uiState,
+                enabled = isFormEnabled,
+                onKnownMerchantSelected = onKnownMerchantSelected,
+                onUseTransactionNameSelected = onUseTransactionNameSelected,
+                onClearMerchantDecision = onClearMerchantDecision,
+            )
+        }
 
         // 5. Ödeme Yöntemi
         TransactionPaymentMethodSelector(

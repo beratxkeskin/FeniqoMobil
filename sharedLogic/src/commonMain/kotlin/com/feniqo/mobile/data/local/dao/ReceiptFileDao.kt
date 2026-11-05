@@ -17,7 +17,10 @@ import com.feniqo.mobile.data.local.entity.ReceiptFileEntity
 @Dao
 abstract class ReceiptFileDao {
     @Query("SELECT * FROM receipt_files WHERE attachment_id = :attachmentId AND owner_id = :ownerId")
-    abstract suspend fun getByAttachmentId(attachmentId: String, ownerId: String): ReceiptFileEntity?
+    abstract suspend fun getByAttachmentId(
+        attachmentId: String,
+        ownerId: String,
+    ): ReceiptFileEntity?
 
     @Query("SELECT * FROM receipt_files WHERE owner_id = :ownerId ORDER BY created_at_epoch_ms DESC")
     abstract suspend fun listByOwner(ownerId: String): List<ReceiptFileEntity>
@@ -43,16 +46,17 @@ abstract class ReceiptFileDao {
             insertInternal(file)
             return file
         }
-        val matches = existing.ownerId == file.ownerId &&
-            existing.contentSha256 == file.contentSha256 &&
-            existing.fileSizeBytes == file.fileSizeBytes &&
-            existing.mimeType == file.mimeType &&
-            existing.remotePath == file.remotePath
+        val matches =
+            existing.ownerId == file.ownerId &&
+                existing.contentSha256 == file.contentSha256 &&
+                existing.fileSizeBytes == file.fileSizeBytes &&
+                existing.mimeType == file.mimeType &&
+                existing.remotePath == file.remotePath
 
         if (!matches) {
             error(
                 "Attachment '${file.attachmentId}' zaten farklı metadata ile mevcut. " +
-                    "Değişmez dosya metadata'sı üzerine yazılamaz. Mevcut sahip=${existing.ownerId}, yeni sahip=${file.ownerId}"
+                    "Değişmez dosya metadata'sı üzerine yazılamaz. Mevcut sahip=${existing.ownerId}, yeni sahip=${file.ownerId}",
             )
         }
         return existing

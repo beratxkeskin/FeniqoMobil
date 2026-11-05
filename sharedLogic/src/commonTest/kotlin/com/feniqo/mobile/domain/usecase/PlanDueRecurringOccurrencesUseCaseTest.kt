@@ -11,15 +11,14 @@ import com.feniqo.mobile.domain.model.RecurringDueOccurrence
 import com.feniqo.mobile.domain.model.RecurringOccurrenceKey
 import com.feniqo.mobile.domain.model.RecurringTransaction
 import com.feniqo.mobile.domain.model.TransactionType
+import kotlinx.datetime.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
-import kotlinx.datetime.Instant
 
 class PlanDueRecurringOccurrencesUseCaseTest {
-
     private val useCase = PlanDueRecurringOccurrencesUseCase()
 
     private fun createRecurring(
@@ -30,39 +29,43 @@ class PlanDueRecurringOccurrencesUseCaseTest {
         endDate: LocalDate? = null,
         lastGeneratedDate: LocalDate? = null,
         isActive: Boolean = true,
-    ): RecurringTransaction = RecurringTransaction(
-        id = EntityId(id),
-        ownerId = EntityId("user-1"),
-        workspaceId = null,
-        amount = Money(5000L, Currency.TRY),
-        type = TransactionType.EXPENSE,
-        categoryId = EntityId("cat-1"),
-        description = "Deneme tekrar",
-        paymentMethod = PaymentMethod.CREDIT_CARD,
-        rule = RecurrenceRule(
-            frequency = frequency,
-            interval = interval,
-            startDate = startDate,
-            endDate = endDate,
-        ),
-        lastGeneratedDate = lastGeneratedDate,
-        isActive = isActive,
-        createdAt = Instant.fromEpochMilliseconds(1700000000000L),
-    )
+    ): RecurringTransaction =
+        RecurringTransaction(
+            id = EntityId(id),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            amount = Money(5000L, Currency.TRY),
+            type = TransactionType.EXPENSE,
+            categoryId = EntityId("cat-1"),
+            description = "Deneme tekrar",
+            paymentMethod = PaymentMethod.CREDIT_CARD,
+            rule =
+                RecurrenceRule(
+                    frequency = frequency,
+                    interval = interval,
+                    startDate = startDate,
+                    endDate = endDate,
+                ),
+            lastGeneratedDate = lastGeneratedDate,
+            isActive = isActive,
+            createdAt = Instant.fromEpochMilliseconds(1700000000000L),
+        )
 
     @Test
     fun activeRule_generatesExpectedCandidates() {
-        val recurring = createRecurring(
-            id = "rec-1",
-            frequency = RecurrenceFrequency.DAILY,
-            interval = 1,
-            startDate = LocalDate(2026, 8, 1),
-        )
+        val recurring =
+            createRecurring(
+                id = "rec-1",
+                frequency = RecurrenceFrequency.DAILY,
+                interval = 1,
+                startDate = LocalDate(2026, 8, 1),
+            )
 
-        val result = useCase(
-            recurringTransactions = listOf(recurring),
-            throughDate = LocalDate(2026, 8, 3),
-        )
+        val result =
+            useCase(
+                recurringTransactions = listOf(recurring),
+                throughDate = LocalDate(2026, 8, 3),
+            )
 
         assertEquals(3, result.size)
         assertEquals(LocalDate(2026, 8, 1), result[0].dueDate)
@@ -73,18 +76,20 @@ class PlanDueRecurringOccurrencesUseCaseTest {
 
     @Test
     fun inactiveRule_generatesZeroCandidates() {
-        val inactive = createRecurring(
-            id = "rec-inactive",
-            frequency = RecurrenceFrequency.DAILY,
-            interval = 1,
-            startDate = LocalDate(2026, 8, 1),
-            isActive = false,
-        )
+        val inactive =
+            createRecurring(
+                id = "rec-inactive",
+                frequency = RecurrenceFrequency.DAILY,
+                interval = 1,
+                startDate = LocalDate(2026, 8, 1),
+                isActive = false,
+            )
 
-        val result = useCase(
-            recurringTransactions = listOf(inactive),
-            throughDate = LocalDate(2026, 8, 10),
-        )
+        val result =
+            useCase(
+                recurringTransactions = listOf(inactive),
+                throughDate = LocalDate(2026, 8, 10),
+            )
 
         assertTrue(result.isEmpty())
     }
@@ -94,10 +99,11 @@ class PlanDueRecurringOccurrencesUseCaseTest {
         val rec1 = createRecurring(id = "rec-1", startDate = LocalDate(2026, 8, 1))
         val rec2 = createRecurring(id = "rec-2", startDate = LocalDate(2026, 8, 1))
 
-        val result = useCase(
-            recurringTransactions = listOf(rec1, rec2),
-            throughDate = LocalDate(2026, 8, 1),
-        )
+        val result =
+            useCase(
+                recurringTransactions = listOf(rec1, rec2),
+                throughDate = LocalDate(2026, 8, 1),
+            )
 
         assertEquals(2, result.size)
         assertEquals(LocalDate(2026, 8, 1), result[0].dueDate)
@@ -112,10 +118,11 @@ class PlanDueRecurringOccurrencesUseCaseTest {
         val recB = createRecurring(id = "rec-b", interval = 2, startDate = LocalDate(2026, 8, 1))
         val recA = createRecurring(id = "rec-a", interval = 1, startDate = LocalDate(2026, 8, 1))
 
-        val result = useCase(
-            recurringTransactions = listOf(recB, recA),
-            throughDate = LocalDate(2026, 8, 3),
-        )
+        val result =
+            useCase(
+                recurringTransactions = listOf(recB, recA),
+                throughDate = LocalDate(2026, 8, 3),
+            )
 
         // recB produces: 2026-08-01, 2026-08-03
         // recA produces: 2026-08-01, 2026-08-02, 2026-08-03
@@ -135,19 +142,21 @@ class PlanDueRecurringOccurrencesUseCaseTest {
 
     @Test
     fun boundaries_endDate_lastGeneratedDate_throughDate_appliedCorrectly() {
-        val recurring = createRecurring(
-            id = "rec-1",
-            frequency = RecurrenceFrequency.DAILY,
-            interval = 1,
-            startDate = LocalDate(2026, 8, 1),
-            endDate = LocalDate(2026, 8, 4),
-            lastGeneratedDate = LocalDate(2026, 8, 2),
-        )
+        val recurring =
+            createRecurring(
+                id = "rec-1",
+                frequency = RecurrenceFrequency.DAILY,
+                interval = 1,
+                startDate = LocalDate(2026, 8, 1),
+                endDate = LocalDate(2026, 8, 4),
+                lastGeneratedDate = LocalDate(2026, 8, 2),
+            )
 
-        val result = useCase(
-            recurringTransactions = listOf(recurring),
-            throughDate = LocalDate(2026, 8, 10),
-        )
+        val result =
+            useCase(
+                recurringTransactions = listOf(recurring),
+                throughDate = LocalDate(2026, 8, 10),
+            )
 
         // lastGenerated is Aug 2 -> next are Aug 3, Aug 4. (Aug 5 > endDate, so stopped).
         assertEquals(listOf(LocalDate(2026, 8, 3), LocalDate(2026, 8, 4)), result.map { it.dueDate })
@@ -161,12 +170,13 @@ class PlanDueRecurringOccurrencesUseCaseTest {
         // Per rule limit = 2 -> rec-1: Aug 1, Aug 2; rec-2: Aug 1, Aug 2
         // Total limit = 3 -> First 3 items in sorted order:
         // (Aug 1, rec-1), (Aug 1, rec-2), (Aug 2, rec-1)
-        val result = useCase(
-            recurringTransactions = listOf(rec1, rec2),
-            throughDate = LocalDate(2026, 8, 10),
-            maxOccurrencesPerRule = 2,
-            maxTotalOccurrences = 3,
-        )
+        val result =
+            useCase(
+                recurringTransactions = listOf(rec1, rec2),
+                throughDate = LocalDate(2026, 8, 10),
+                maxOccurrencesPerRule = 2,
+                maxTotalOccurrences = 3,
+            )
 
         assertEquals(3, result.size)
         assertEquals(LocalDate(2026, 8, 1) to "rec-1", result[0].dueDate to result[0].recurringTransaction.id.value)
@@ -198,12 +208,13 @@ class PlanDueRecurringOccurrencesUseCaseTest {
     @Test
     fun invalidScheduleStateFromCalculator_isNotSwallowed() {
         // lastGeneratedDate is off-interval (1 -> 4 -> 7, but lastGenerated is 2)
-        val recWithBadState = createRecurring(
-            id = "rec-bad",
-            interval = 3,
-            startDate = LocalDate(2026, 8, 1),
-            lastGeneratedDate = LocalDate(2026, 8, 2),
-        )
+        val recWithBadState =
+            createRecurring(
+                id = "rec-bad",
+                interval = 3,
+                startDate = LocalDate(2026, 8, 1),
+                lastGeneratedDate = LocalDate(2026, 8, 2),
+            )
 
         assertFailsWith<IllegalArgumentException> {
             useCase(
@@ -219,11 +230,12 @@ class PlanDueRecurringOccurrencesUseCaseTest {
         val validKey = RecurringOccurrenceKey(EntityId("rec-1"), LocalDate(2026, 8, 1))
 
         // Valid
-        val occurrence = RecurringDueOccurrence(
-            key = validKey,
-            recurringTransaction = rec,
-            dueDate = LocalDate(2026, 8, 1),
-        )
+        val occurrence =
+            RecurringDueOccurrence(
+                key = validKey,
+                recurringTransaction = rec,
+                dueDate = LocalDate(2026, 8, 1),
+            )
         assertEquals(LocalDate(2026, 8, 1), occurrence.dueDate)
 
         // Mismatched dueDate
@@ -248,38 +260,42 @@ class PlanDueRecurringOccurrencesUseCaseTest {
 
     @Test
     fun throughDateBeforeStartDate_returnsEmptyList_andGeneratesNoFutureCandidates() {
-        val recurring = createRecurring(
-            id = "rec-1",
-            frequency = RecurrenceFrequency.DAILY,
-            interval = 1,
-            startDate = LocalDate(2026, 8, 10),
-            endDate = LocalDate(2026, 8, 20),
-        )
+        val recurring =
+            createRecurring(
+                id = "rec-1",
+                frequency = RecurrenceFrequency.DAILY,
+                interval = 1,
+                startDate = LocalDate(2026, 8, 10),
+                endDate = LocalDate(2026, 8, 20),
+            )
 
-        val result = useCase(
-            recurringTransactions = listOf(recurring),
-            throughDate = LocalDate(2026, 8, 5),
-        )
+        val result =
+            useCase(
+                recurringTransactions = listOf(recurring),
+                throughDate = LocalDate(2026, 8, 5),
+            )
 
         assertTrue(result.isEmpty(), "Başlangıçtan önceki throughDate için hiçbir aday üretilmemelidir.")
     }
 
     @Test
     fun duplicateRecurringTransactionInput_failsClosedWithIllegalArgumentException() {
-        val rec = createRecurring(
-            id = "rec-duplicate",
-            frequency = RecurrenceFrequency.DAILY,
-            interval = 1,
-            startDate = LocalDate(2026, 8, 1),
-        )
+        val rec =
+            createRecurring(
+                id = "rec-duplicate",
+                frequency = RecurrenceFrequency.DAILY,
+                interval = 1,
+                startDate = LocalDate(2026, 8, 1),
+            )
 
         // Same recurring transaction provided twice in input list
-        val exception = assertFailsWith<IllegalArgumentException> {
-            useCase(
-                recurringTransactions = listOf(rec, rec),
-                throughDate = LocalDate(2026, 8, 5),
-            )
-        }
+        val exception =
+            assertFailsWith<IllegalArgumentException> {
+                useCase(
+                    recurringTransactions = listOf(rec, rec),
+                    throughDate = LocalDate(2026, 8, 5),
+                )
+            }
 
         assertTrue(
             exception.message?.contains("Mükerrer aday tekrar anahtarı") == true,

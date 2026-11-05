@@ -38,11 +38,12 @@ class AndroidFeniqoDatabaseFactory(
         val databaseFile = applicationContext.getDatabasePath(databaseName)
         val openHelperFactory = SupportOpenHelperFactory(passphrase.copyOf())
 
-        return Room.databaseBuilder<FeniqoDatabase>(
-            context = applicationContext,
-            name = databaseFile.absolutePath,
-            factory = { FeniqoDatabaseConstructor.initialize() },
-        )
+        return Room
+            .databaseBuilder<FeniqoDatabase>(
+                context = applicationContext,
+                name = databaseFile.absolutePath,
+                factory = { FeniqoDatabaseConstructor.initialize() },
+            )
             // setDriver kullanılmaz: SQLCipher, Android SupportSQLite uyumluluk katmanıdır.
             .openHelperFactory(openHelperFactory)
             .addMigrations(
@@ -67,8 +68,9 @@ class AndroidFeniqoDatabaseFactory(
                 ANDROID_MIGRATION_19_20,
                 ANDROID_MIGRATION_20_21,
                 ANDROID_MIGRATION_21_22,
-            )
-            .setQueryCoroutineContext(Dispatchers.IO)
+                ANDROID_MIGRATION_22_23,
+                ANDROID_MIGRATION_23_24,
+            ).setQueryCoroutineContext(Dispatchers.IO)
             .build()
     }
 

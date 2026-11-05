@@ -36,8 +36,35 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
+import com.feniqo.mobile.domain.repository.UserMerchantVerificationLookupResult
+import com.feniqo.mobile.domain.repository.UserMerchantVerificationRepository
+
 @RunWith(RobolectricTestRunner::class)
 class PersonalBackupImporterActorScopeTest {
+
+    private class FakeNotFoundUserMerchantVerificationRepository : UserMerchantVerificationRepository {
+        override fun observeActiveVerifications(): Flow<List<com.feniqo.mobile.domain.model.UserMerchantVerification>> =
+            flowOf(emptyList())
+
+        override suspend fun getDecisionForAlias(rawOrNormalizedAlias: String): UserMerchantVerificationLookupResult =
+            UserMerchantVerificationLookupResult.NotFound
+
+        override suspend fun assignMerchant(
+            alias: String,
+            merchantId: String,
+        ): RepositoryResult<com.feniqo.mobile.domain.model.UserMerchantVerification> =
+            throw UnsupportedOperationException()
+
+        override suspend fun blockMerchant(
+            alias: String,
+        ): RepositoryResult<com.feniqo.mobile.domain.model.UserMerchantVerification> =
+            throw UnsupportedOperationException()
+
+        override suspend fun deleteVerification(
+            alias: String,
+        ): RepositoryResult<Unit> =
+            throw UnsupportedOperationException()
+    }
 
     private lateinit var database: FeniqoDatabase
     private lateinit var categoryDao: CategoryDao
@@ -116,7 +143,10 @@ class PersonalBackupImporterActorScopeTest {
         syncOperationDao = database.syncOperationDao()
         localMutationDao = database.localMutationDao()
         writeQueue = OfflineWriteQueue(localMutationDao, syncOperationDao)
-        planner = BackupImportPlanner(SequentialIdGenerator("import-gen"))
+        planner = BackupImportPlanner(
+            idGenerator = SequentialIdGenerator("import-gen"),
+            userMerchantVerificationRepository = FakeNotFoundUserMerchantVerificationRepository(),
+        )
     }
 
     @After

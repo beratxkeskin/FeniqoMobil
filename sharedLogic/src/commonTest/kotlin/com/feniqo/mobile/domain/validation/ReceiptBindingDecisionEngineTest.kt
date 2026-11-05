@@ -16,7 +16,6 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 
 class ReceiptBindingDecisionEngineTest {
-
     private val defaultOwnerId = EntityId("user-123")
     private val defaultTxId = EntityId("tx-001")
     private val defaultAttachmentIdA = EntityId("att-aaa")
@@ -107,13 +106,14 @@ class ReceiptBindingDecisionEngineTest {
         val outcome = createDefaultOutcome()
         val txState = createDefaultTxState()
 
-        val decision = ReceiptBindingDecisionEngine.evaluateBindingDecision(
-            linkage = linkage,
-            outcome = outcome,
-            transactionState = txState,
-            expectedFile = file,
-            currentSession = session,
-        )
+        val decision =
+            ReceiptBindingDecisionEngine.evaluateBindingDecision(
+                linkage = linkage,
+                outcome = outcome,
+                transactionState = txState,
+                expectedFile = file,
+                currentSession = session,
+            )
 
         assertIs<ReceiptBindingDecision.Applicable>(decision)
         assertEquals(defaultTxId, decision.transactionId)
@@ -128,13 +128,14 @@ class ReceiptBindingDecisionEngineTest {
         val outcome = createDefaultOutcome()
         val txState = createDefaultTxState()
 
-        val decision = ReceiptBindingDecisionEngine.evaluateBindingDecision(
-            linkage = linkage,
-            outcome = outcome,
-            transactionState = txState,
-            expectedFile = file,
-            currentSession = null,
-        )
+        val decision =
+            ReceiptBindingDecisionEngine.evaluateBindingDecision(
+                linkage = linkage,
+                outcome = outcome,
+                transactionState = txState,
+                expectedFile = file,
+                currentSession = null,
+            )
 
         assertIs<ReceiptBindingDecision.SessionMismatch>(decision)
     }
@@ -147,13 +148,14 @@ class ReceiptBindingDecisionEngineTest {
         val outcome = createDefaultOutcome()
         val txState = createDefaultTxState()
 
-        val decision = ReceiptBindingDecisionEngine.evaluateBindingDecision(
-            linkage = linkage,
-            outcome = outcome,
-            transactionState = txState,
-            expectedFile = file,
-            currentSession = differentUserSession,
-        )
+        val decision =
+            ReceiptBindingDecisionEngine.evaluateBindingDecision(
+                linkage = linkage,
+                outcome = outcome,
+                transactionState = txState,
+                expectedFile = file,
+                currentSession = differentUserSession,
+            )
 
         assertIs<ReceiptBindingDecision.SessionMismatch>(decision)
     }
@@ -168,13 +170,14 @@ class ReceiptBindingDecisionEngineTest {
         val oldOutcome = createDefaultOutcome(sessionEpoch = 1L)
         val txState = createDefaultTxState()
 
-        val decision = ReceiptBindingDecisionEngine.evaluateBindingDecision(
-            linkage = oldLinkage,
-            outcome = oldOutcome,
-            transactionState = txState,
-            expectedFile = file,
-            currentSession = newSession,
-        )
+        val decision =
+            ReceiptBindingDecisionEngine.evaluateBindingDecision(
+                linkage = oldLinkage,
+                outcome = oldOutcome,
+                transactionState = txState,
+                expectedFile = file,
+                currentSession = newSession,
+            )
 
         assertIs<ReceiptBindingDecision.SessionMismatch>(decision)
     }
@@ -187,13 +190,14 @@ class ReceiptBindingDecisionEngineTest {
         val otherTxOutcome = createDefaultOutcome(transactionId = EntityId("tx-other-999"))
         val txState = createDefaultTxState(transactionId = defaultTxId)
 
-        val decision = ReceiptBindingDecisionEngine.evaluateBindingDecision(
-            linkage = linkage,
-            outcome = otherTxOutcome,
-            transactionState = txState,
-            expectedFile = file,
-            currentSession = session,
-        )
+        val decision =
+            ReceiptBindingDecisionEngine.evaluateBindingDecision(
+                linkage = linkage,
+                outcome = otherTxOutcome,
+                transactionState = txState,
+                expectedFile = file,
+                currentSession = session,
+            )
 
         assertIs<ReceiptBindingDecision.TransactionMismatch>(decision)
         assertEquals("target_transaction_mismatch", decision.reason)
@@ -207,13 +211,14 @@ class ReceiptBindingDecisionEngineTest {
         val outcome = createDefaultOutcome(transactionId = defaultTxId)
         val otherTxState = createDefaultTxState(transactionId = EntityId("tx-other-888"))
 
-        val decision = ReceiptBindingDecisionEngine.evaluateBindingDecision(
-            linkage = linkage,
-            outcome = outcome,
-            transactionState = otherTxState,
-            expectedFile = file,
-            currentSession = session,
-        )
+        val decision =
+            ReceiptBindingDecisionEngine.evaluateBindingDecision(
+                linkage = linkage,
+                outcome = outcome,
+                transactionState = otherTxState,
+                expectedFile = file,
+                currentSession = session,
+            )
 
         assertIs<ReceiptBindingDecision.TransactionMismatch>(decision)
         assertEquals("target_transaction_mismatch", decision.reason)
@@ -228,13 +233,14 @@ class ReceiptBindingDecisionEngineTest {
         val outcome = createDefaultOutcome(attachmentId = defaultAttachmentIdA)
         val txState = createDefaultTxState()
 
-        val decision = ReceiptBindingDecisionEngine.evaluateBindingDecision(
-            linkage = linkage,
-            outcome = outcome,
-            transactionState = txState,
-            expectedFile = fileWithDifferentId,
-            currentSession = session,
-        )
+        val decision =
+            ReceiptBindingDecisionEngine.evaluateBindingDecision(
+                linkage = linkage,
+                outcome = outcome,
+                transactionState = txState,
+                expectedFile = fileWithDifferentId,
+                currentSession = session,
+            )
 
         assertIs<ReceiptBindingDecision.IntegrityMismatch>(decision)
         assertEquals("attachment_id_mismatch", decision.reason)
@@ -248,13 +254,14 @@ class ReceiptBindingDecisionEngineTest {
         val outcome = createDefaultOutcome()
         val txState = createDefaultTxState()
 
-        val decision = ReceiptBindingDecisionEngine.evaluateBindingDecision(
-            linkage = linkage,
-            outcome = outcome,
-            transactionState = txState,
-            expectedFile = fileWithDifferentOwner,
-            currentSession = session,
-        )
+        val decision =
+            ReceiptBindingDecisionEngine.evaluateBindingDecision(
+                linkage = linkage,
+                outcome = outcome,
+                transactionState = txState,
+                expectedFile = fileWithDifferentOwner,
+                currentSession = session,
+            )
 
         assertIs<ReceiptBindingDecision.SessionMismatch>(decision)
     }
@@ -267,13 +274,14 @@ class ReceiptBindingDecisionEngineTest {
         val outcome = createDefaultOutcome()
         val txState = createDefaultTxState()
 
-        val decision = ReceiptBindingDecisionEngine.evaluateBindingDecision(
-            linkage = linkageWithAlienOwner,
-            outcome = outcome,
-            transactionState = txState,
-            expectedFile = file,
-            currentSession = session,
-        )
+        val decision =
+            ReceiptBindingDecisionEngine.evaluateBindingDecision(
+                linkage = linkageWithAlienOwner,
+                outcome = outcome,
+                transactionState = txState,
+                expectedFile = file,
+                currentSession = session,
+            )
 
         assertIs<ReceiptBindingDecision.SessionMismatch>(decision)
     }
@@ -286,13 +294,14 @@ class ReceiptBindingDecisionEngineTest {
         val outcomeWithAlienOwner = createDefaultOutcome(ownerId = EntityId("user-alien"))
         val txState = createDefaultTxState()
 
-        val decision = ReceiptBindingDecisionEngine.evaluateBindingDecision(
-            linkage = linkage,
-            outcome = outcomeWithAlienOwner,
-            transactionState = txState,
-            expectedFile = file,
-            currentSession = session,
-        )
+        val decision =
+            ReceiptBindingDecisionEngine.evaluateBindingDecision(
+                linkage = linkage,
+                outcome = outcomeWithAlienOwner,
+                transactionState = txState,
+                expectedFile = file,
+                currentSession = session,
+            )
 
         assertIs<ReceiptBindingDecision.SessionMismatch>(decision)
     }
@@ -305,13 +314,14 @@ class ReceiptBindingDecisionEngineTest {
         val outcome = createDefaultOutcome()
         val txStateWithAlienOwner = createDefaultTxState(ownerId = EntityId("user-alien"))
 
-        val decision = ReceiptBindingDecisionEngine.evaluateBindingDecision(
-            linkage = linkage,
-            outcome = outcome,
-            transactionState = txStateWithAlienOwner,
-            expectedFile = file,
-            currentSession = session,
-        )
+        val decision =
+            ReceiptBindingDecisionEngine.evaluateBindingDecision(
+                linkage = linkage,
+                outcome = outcome,
+                transactionState = txStateWithAlienOwner,
+                expectedFile = file,
+                currentSession = session,
+            )
 
         assertIs<ReceiptBindingDecision.SessionMismatch>(decision)
     }
@@ -327,21 +337,23 @@ class ReceiptBindingDecisionEngineTest {
         assertEquals(defaultAttachmentIdB, updatedLinkage.activeAttachmentId)
 
         // 3. A'nın upload işi sonradan başarılı bitti ve sonuç döndü (Gen 1 ile)
-        val outcomeA = createDefaultOutcome(
-            attachmentId = defaultAttachmentIdA,
-            generation = 1L,
-            remotePath = defaultRemotePathA,
-        )
+        val outcomeA =
+            createDefaultOutcome(
+                attachmentId = defaultAttachmentIdA,
+                generation = 1L,
+                remotePath = defaultRemotePathA,
+            )
         val fileA = createDefaultFileDescriptor(attachmentId = defaultAttachmentIdA, remotePath = defaultRemotePathA)
         val txState = createDefaultTxState()
 
-        val decision = ReceiptBindingDecisionEngine.evaluateBindingDecision(
-            linkage = updatedLinkage,
-            outcome = outcomeA,
-            transactionState = txState,
-            expectedFile = fileA,
-            currentSession = session,
-        )
+        val decision =
+            ReceiptBindingDecisionEngine.evaluateBindingDecision(
+                linkage = updatedLinkage,
+                outcome = outcomeA,
+                transactionState = txState,
+                expectedFile = fileA,
+                currentSession = session,
+            )
 
         assertIs<ReceiptBindingDecision.StaleGeneration>(decision)
         assertEquals(2L, decision.expectedGeneration)
@@ -363,13 +375,14 @@ class ReceiptBindingDecisionEngineTest {
         val fileA = createDefaultFileDescriptor()
         val txState = createDefaultTxState()
 
-        val decision = ReceiptBindingDecisionEngine.evaluateBindingDecision(
-            linkage = removedLinkage,
-            outcome = outcomeA,
-            transactionState = txState,
-            expectedFile = fileA,
-            currentSession = session,
-        )
+        val decision =
+            ReceiptBindingDecisionEngine.evaluateBindingDecision(
+                linkage = removedLinkage,
+                outcome = outcomeA,
+                transactionState = txState,
+                expectedFile = fileA,
+                currentSession = session,
+            )
 
         assertIs<ReceiptBindingDecision.StaleGeneration>(decision)
         assertEquals(2L, decision.expectedGeneration)
@@ -384,13 +397,14 @@ class ReceiptBindingDecisionEngineTest {
         val outcome = createDefaultOutcome()
         val txState = createDefaultTxState(isSoftDeleted = true)
 
-        val decision = ReceiptBindingDecisionEngine.evaluateBindingDecision(
-            linkage = linkage,
-            outcome = outcome,
-            transactionState = txState,
-            expectedFile = file,
-            currentSession = session,
-        )
+        val decision =
+            ReceiptBindingDecisionEngine.evaluateBindingDecision(
+                linkage = linkage,
+                outcome = outcome,
+                transactionState = txState,
+                expectedFile = file,
+                currentSession = session,
+            )
 
         assertIs<ReceiptBindingDecision.TransactionUnavailable>(decision)
         assertEquals("transaction_soft_deleted", decision.reason)
@@ -404,13 +418,14 @@ class ReceiptBindingDecisionEngineTest {
         val outcome = createDefaultOutcome()
         val txState = createDefaultTxState(exists = false)
 
-        val decision = ReceiptBindingDecisionEngine.evaluateBindingDecision(
-            linkage = linkage,
-            outcome = outcome,
-            transactionState = txState,
-            expectedFile = file,
-            currentSession = session,
-        )
+        val decision =
+            ReceiptBindingDecisionEngine.evaluateBindingDecision(
+                linkage = linkage,
+                outcome = outcome,
+                transactionState = txState,
+                expectedFile = file,
+                currentSession = session,
+            )
 
         assertIs<ReceiptBindingDecision.TransactionUnavailable>(decision)
         assertEquals("transaction_not_found", decision.reason)
@@ -424,13 +439,14 @@ class ReceiptBindingDecisionEngineTest {
         val outcomeWrongSize = createDefaultOutcome(sizeBytes = 9999L)
         val txState = createDefaultTxState()
 
-        val decision = ReceiptBindingDecisionEngine.evaluateBindingDecision(
-            linkage = linkage,
-            outcome = outcomeWrongSize,
-            transactionState = txState,
-            expectedFile = file,
-            currentSession = session,
-        )
+        val decision =
+            ReceiptBindingDecisionEngine.evaluateBindingDecision(
+                linkage = linkage,
+                outcome = outcomeWrongSize,
+                transactionState = txState,
+                expectedFile = file,
+                currentSession = session,
+            )
 
         assertIs<ReceiptBindingDecision.IntegrityMismatch>(decision)
         assertEquals("file_size_mismatch", decision.reason)
@@ -445,13 +461,14 @@ class ReceiptBindingDecisionEngineTest {
         val outcomeWrongHash = createDefaultOutcome(sha256 = otherHash)
         val txState = createDefaultTxState()
 
-        val decision = ReceiptBindingDecisionEngine.evaluateBindingDecision(
-            linkage = linkage,
-            outcome = outcomeWrongHash,
-            transactionState = txState,
-            expectedFile = file,
-            currentSession = session,
-        )
+        val decision =
+            ReceiptBindingDecisionEngine.evaluateBindingDecision(
+                linkage = linkage,
+                outcome = outcomeWrongHash,
+                transactionState = txState,
+                expectedFile = file,
+                currentSession = session,
+            )
 
         assertIs<ReceiptBindingDecision.IntegrityMismatch>(decision)
         assertEquals("sha256_hash_mismatch", decision.reason)
@@ -465,13 +482,14 @@ class ReceiptBindingDecisionEngineTest {
         val outcome = createDefaultOutcome()
         val txState = createDefaultTxState(workspaceId = EntityId("ws-team-1"))
 
-        val decision = ReceiptBindingDecisionEngine.evaluateBindingDecision(
-            linkage = workspaceLinkage,
-            outcome = outcome,
-            transactionState = txState,
-            expectedFile = file,
-            currentSession = session,
-        )
+        val decision =
+            ReceiptBindingDecisionEngine.evaluateBindingDecision(
+                linkage = workspaceLinkage,
+                outcome = outcome,
+                transactionState = txState,
+                expectedFile = file,
+                currentSession = session,
+            )
 
         assertIs<ReceiptBindingDecision.UnsupportedScope>(decision)
     }
@@ -502,35 +520,38 @@ class ReceiptBindingDecisionEngineTest {
         val updatedLinkage1 = linkage1.withRemovedAttachment()
 
         // 1. Taksit 1 için gecikmiş outcome1 değerlendirildiğinde reddedilmeli (StaleGeneration)
-        val decision1 = ReceiptBindingDecisionEngine.evaluateBindingDecision(
-            linkage = updatedLinkage1,
-            outcome = outcome1,
-            transactionState = tx1State,
-            expectedFile = file1,
-            currentSession = session,
-        )
+        val decision1 =
+            ReceiptBindingDecisionEngine.evaluateBindingDecision(
+                linkage = updatedLinkage1,
+                outcome = outcome1,
+                transactionState = tx1State,
+                expectedFile = file1,
+                currentSession = session,
+            )
         assertIs<ReceiptBindingDecision.StaleGeneration>(decision1)
 
         // 2. Taksit 2'nin kendi sonucu değerlendirildiğinde uygulanabilir olmalı (Applicable)
-        val decision2 = ReceiptBindingDecisionEngine.evaluateBindingDecision(
-            linkage = linkage2,
-            outcome = outcome2,
-            transactionState = tx2State,
-            expectedFile = file2,
-            currentSession = session,
-        )
+        val decision2 =
+            ReceiptBindingDecisionEngine.evaluateBindingDecision(
+                linkage = linkage2,
+                outcome = outcome2,
+                transactionState = tx2State,
+                expectedFile = file2,
+                currentSession = session,
+            )
         assertIs<ReceiptBindingDecision.Applicable>(decision2)
         assertEquals(tx2Id, decision2.transactionId)
         assertEquals(sharedAttachmentId, decision2.attachmentId)
 
         // 3. Taksit 1'in sonucu Taksit 2 için kullanılmaya çalışılırsa reddedilmeli (TransactionMismatch)
-        val crossDecision = ReceiptBindingDecisionEngine.evaluateBindingDecision(
-            linkage = linkage2,
-            outcome = outcome1, // outcome1'in transactionId'si tx1Id'dir
-            transactionState = tx2State,
-            expectedFile = file2,
-            currentSession = session,
-        )
+        val crossDecision =
+            ReceiptBindingDecisionEngine.evaluateBindingDecision(
+                linkage = linkage2,
+                outcome = outcome1, // outcome1'in transactionId'si tx1Id'dir
+                transactionState = tx2State,
+                expectedFile = file2,
+                currentSession = session,
+            )
         assertIs<ReceiptBindingDecision.TransactionMismatch>(crossDecision)
     }
 
@@ -551,12 +572,13 @@ class ReceiptBindingDecisionEngineTest {
     fun reconcileIndeterminateUpload_withMatchingPathHashAndSize_evaluatesToMatch() {
         val file = createDefaultFileDescriptor(sha256 = validSha256, sizeBytes = validSizeBytes)
 
-        val result = ReceiptBindingDecisionEngine.reconcileIndeterminateUpload(
-            expectedFile = file,
-            remotePath = file.remotePath,
-            remoteFileSizeBytes = validSizeBytes,
-            remoteContentSha256 = validSha256,
-        )
+        val result =
+            ReceiptBindingDecisionEngine.reconcileIndeterminateUpload(
+                expectedFile = file,
+                remotePath = file.remotePath,
+                remoteFileSizeBytes = validSizeBytes,
+                remoteContentSha256 = validSha256,
+            )
 
         assertIs<ReconcileIndeterminateUploadDecision.Match>(result)
         assertEquals(file.remotePath, result.verifiedRemotePath)
@@ -567,12 +589,13 @@ class ReceiptBindingDecisionEngineTest {
         val file = createDefaultFileDescriptor(sha256 = validSha256, sizeBytes = validSizeBytes)
         val differentPath = ReceiptPath("user-123/tx-other/diff.jpg")
 
-        val result = ReceiptBindingDecisionEngine.reconcileIndeterminateUpload(
-            expectedFile = file,
-            remotePath = differentPath,
-            remoteFileSizeBytes = validSizeBytes,
-            remoteContentSha256 = validSha256,
-        )
+        val result =
+            ReceiptBindingDecisionEngine.reconcileIndeterminateUpload(
+                expectedFile = file,
+                remotePath = differentPath,
+                remoteFileSizeBytes = validSizeBytes,
+                remoteContentSha256 = validSha256,
+            )
 
         assertIs<ReconcileIndeterminateUploadDecision.Conflict>(result)
         assertEquals("remote_path_mismatch", result.reason)
@@ -583,22 +606,24 @@ class ReceiptBindingDecisionEngineTest {
         val file = createDefaultFileDescriptor(sha256 = validSha256, sizeBytes = validSizeBytes)
 
         // Boyut uyuşmazlığı
-        val sizeMismatch = ReceiptBindingDecisionEngine.reconcileIndeterminateUpload(
-            expectedFile = file,
-            remotePath = file.remotePath,
-            remoteFileSizeBytes = validSizeBytes + 1L,
-            remoteContentSha256 = validSha256,
-        )
+        val sizeMismatch =
+            ReceiptBindingDecisionEngine.reconcileIndeterminateUpload(
+                expectedFile = file,
+                remotePath = file.remotePath,
+                remoteFileSizeBytes = validSizeBytes + 1L,
+                remoteContentSha256 = validSha256,
+            )
         assertIs<ReconcileIndeterminateUploadDecision.Conflict>(sizeMismatch)
         assertEquals("remote_object_exists_with_differing_content", sizeMismatch.reason)
 
         // Hash uyuşmazlığı
-        val hashMismatch = ReceiptBindingDecisionEngine.reconcileIndeterminateUpload(
-            expectedFile = file,
-            remotePath = file.remotePath,
-            remoteFileSizeBytes = validSizeBytes,
-            remoteContentSha256 = "b".repeat(64),
-        )
+        val hashMismatch =
+            ReceiptBindingDecisionEngine.reconcileIndeterminateUpload(
+                expectedFile = file,
+                remotePath = file.remotePath,
+                remoteFileSizeBytes = validSizeBytes,
+                remoteContentSha256 = "b".repeat(64),
+            )
         assertIs<ReconcileIndeterminateUploadDecision.Conflict>(hashMismatch)
         assertEquals("remote_object_exists_with_differing_content", hashMismatch.reason)
     }

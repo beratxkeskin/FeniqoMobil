@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SubscriptionPaymentDao {
-
     @Query(
         """
         SELECT * FROM subscription_payments

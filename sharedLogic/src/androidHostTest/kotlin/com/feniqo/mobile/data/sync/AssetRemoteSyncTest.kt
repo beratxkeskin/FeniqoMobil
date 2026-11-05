@@ -82,6 +82,9 @@ class AssetRemoteSyncTest {
         override suspend fun fetchDebts(query: DebtRemoteQuery) = RemotePage<DebtDto>(emptyList(), query.page, 0)
         override suspend fun fetchDebtPayments(query: DebtPaymentRemoteQuery) = RemotePage<DebtPaymentDto>(emptyList(), query.page, 0)
         override suspend fun fetchTags(scope: RemoteWorkspaceScope, page: RemotePageRequest) = RemotePage<TagDto>(emptyList(), page, 0)
+        override suspend fun fetchMerchantVerifications(
+            query: com.feniqo.mobile.data.remote.core.UserMerchantVerificationRemoteQuery,
+        ) = RemotePage<com.feniqo.mobile.data.remote.dto.UserMerchantVerificationDto>(emptyList(), query.page, 0)
         override suspend fun fetchTransactionTags(transactionId: String) = emptyList<TransactionTagDto>()
         override suspend fun upsertProfile(dto: ProfileDto) = Unit
         override suspend fun upsertCategory(dto: CategoryDto) = Unit

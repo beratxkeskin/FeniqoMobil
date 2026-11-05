@@ -8,7 +8,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class RemoteQueryModelsTest {
-
     @Test
     fun calculates_inclusive_postgrest_ranges() {
         assertEquals(0L..49L, RemotePageRequest().range)

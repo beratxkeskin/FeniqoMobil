@@ -7,7 +7,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class NotificationPolicyTest {
-
     @Test
     fun isWithinQuietHours_overnightRange_detectsCorrectly() {
         // 22:00 – 08:00
@@ -54,16 +53,17 @@ class NotificationPolicyTest {
 
     @Test
     fun shouldDeliverImmediateReminder_respectsCategoriesAndQuietHours() {
-        val prefs = NotificationPreferences(
-            enabled = true,
-            remindSubscriptions = true,
-            remindDebts = false,
-            quietHoursEnabled = true,
-            quietHoursStartHour = 22,
-            quietHoursStartMinute = 0,
-            quietHoursEndHour = 8,
-            quietHoursEndMinute = 0,
-        )
+        val prefs =
+            NotificationPreferences(
+                enabled = true,
+                remindSubscriptions = true,
+                remindDebts = false,
+                quietHoursEnabled = true,
+                quietHoursStartHour = 22,
+                quietHoursStartMinute = 0,
+                quietHoursEndHour = 8,
+                quietHoursEndMinute = 0,
+            )
 
         // Subscriptions enabled, daytime -> should deliver
         assertTrue(

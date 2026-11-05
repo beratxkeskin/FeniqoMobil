@@ -16,7 +16,6 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class BudgetValidationRulesTest {
-
     @Test
     fun valid_amount_strings_parse_to_minor_units_correctly() {
         val resultComma = BudgetValidationRules.validateAmount("1250,50", Currency.TRY)
@@ -153,39 +152,43 @@ class BudgetValidationRulesTest {
 
     @Test
     fun command_contracts_do_not_contain_owner_or_sync_metadata() {
-        val createCmd = CreateBudgetCommand(
-            categoryId = EntityId("cat_1"),
-            month = YearMonth("2026-08"),
-            limit = Money(500000L, Currency.TRY),
-        )
+        val createCmd =
+            CreateBudgetCommand(
+                categoryId = EntityId("cat_1"),
+                month = YearMonth("2026-08"),
+                limit = Money(500000L, Currency.TRY),
+            )
         assertEquals(EntityId("cat_1"), createCmd.categoryId)
         assertEquals(YearMonth("2026-08"), createCmd.month)
         assertEquals(500000L, createCmd.limit.amountMinor)
 
-        val updateCmd = UpdateBudgetCommand(
-            id = EntityId("budget_1"),
-            limit = Money(600000L, Currency.TRY),
-        )
+        val updateCmd =
+            UpdateBudgetCommand(
+                id = EntityId("budget_1"),
+                limit = Money(600000L, Currency.TRY),
+            )
         assertEquals(EntityId("budget_1"), updateCmd.id)
         assertEquals(600000L, updateCmd.limit.amountMinor)
 
         val deleteCmd = DeleteBudgetCommand(id = EntityId("budget_1"))
         assertEquals(EntityId("budget_1"), deleteCmd.id)
 
-        val copyCmd = CopyBudgetsCommand(
-            sourceMonth = YearMonth("2026-07"),
-            targetMonth = YearMonth("2026-08"),
-        )
+        val copyCmd =
+            CopyBudgetsCommand(
+                sourceMonth = YearMonth("2026-07"),
+                targetMonth = YearMonth("2026-08"),
+            )
         assertEquals(YearMonth("2026-07"), copyCmd.sourceMonth)
         assertEquals(YearMonth("2026-08"), copyCmd.targetMonth)
     }
 
     @Test
     fun copy_budgets_result_derives_skipped_count_and_enforces_non_negative_counters() {
-        val validResult = CopyBudgetsResult(
-            copiedCount = 3,
-            skippedCategoryIds = listOf(EntityId("cat_skip_1"), EntityId("cat_skip_2")),
-        )
+        val validResult =
+            CopyBudgetsResult(
+                copiedCount = 3,
+                skippedCategoryIds = listOf(EntityId("cat_skip_1"), EntityId("cat_skip_2")),
+            )
         assertEquals(3, validResult.copiedCount)
         assertEquals(2, validResult.skippedCount)
         assertEquals(listOf(EntityId("cat_skip_1"), EntityId("cat_skip_2")), validResult.skippedCategoryIds)

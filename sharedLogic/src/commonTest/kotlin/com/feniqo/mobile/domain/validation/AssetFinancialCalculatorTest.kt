@@ -8,7 +8,6 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 
 class AssetFinancialCalculatorTest {
-
     @Test
     fun calculateCost_scalesQuantityAndRoundsHalfUp() {
         // 30 birim @ 4.000,00 TRY = 120.000,00 TRY
@@ -57,9 +56,10 @@ class AssetFinancialCalculatorTest {
         // Oran: +%25 (2500 bps)
         val currentValue = Money(15_000_000L, Currency.TRY)
         val cost = Money(12_000_000L, Currency.TRY)
-        val diffResult = assertIs<DifferenceCalculationResult.Success>(
-            AssetFinancialCalculator.calculateDifference(currentValue, cost),
-        )
+        val diffResult =
+            assertIs<DifferenceCalculationResult.Success>(
+                AssetFinancialCalculator.calculateDifference(currentValue, cost),
+            )
         assertEquals(3_000_000L, diffResult.difference.amountMinor)
         assertEquals(2500, diffResult.percentageBps) // +25%
     }
@@ -69,16 +69,18 @@ class AssetFinancialCalculatorTest {
         // Negatif fark: güncel 80.000 TRY, maliyet 100.000 TRY -> -20.000 TRY (-%20)
         val current = Money(8_000_000L, Currency.TRY)
         val cost = Money(10_000_000L, Currency.TRY)
-        val diffNegative = assertIs<DifferenceCalculationResult.Success>(
-            AssetFinancialCalculator.calculateDifference(current, cost),
-        )
+        val diffNegative =
+            assertIs<DifferenceCalculationResult.Success>(
+                AssetFinancialCalculator.calculateDifference(current, cost),
+            )
         assertEquals(-2_000_000L, diffNegative.difference.amountMinor)
         assertEquals(-2000, diffNegative.percentageBps) // -20%
 
         // Sıfır maliyet: yüzde hesaplanmamalı
-        val diffZeroCost = assertIs<DifferenceCalculationResult.Success>(
-            AssetFinancialCalculator.calculateDifference(current, Money.zero(Currency.TRY)),
-        )
+        val diffZeroCost =
+            assertIs<DifferenceCalculationResult.Success>(
+                AssetFinancialCalculator.calculateDifference(current, Money.zero(Currency.TRY)),
+            )
         assertEquals(8_000_000L, diffZeroCost.difference.amountMinor)
         assertNull(diffZeroCost.percentageBps)
 
@@ -94,13 +96,14 @@ class AssetFinancialCalculatorTest {
         // Değerli metal: 150.000 TRY (%60)
         // Hisse senedi: 75.000 TRY (%30)
         // Nakit: 25.000 TRY (%10)
-        val assets = listOf(
-            createTestAsset("1", "Gram Altın", AssetType.PRECIOUS_METALS, 15_000_000L, Currency.TRY),
-            createTestAsset("2", "Hisse Portföyü", AssetType.STOCKS, 7_500_000L, Currency.TRY),
-            createTestAsset("3", "Nakit Birikim", AssetType.CASH, 2_500_000L, Currency.TRY),
-            // USD varlığı filtre dışı kalmalı
-            createTestAsset("4", "Dolar", AssetType.CASH, 200_000L, Currency.USD),
-        )
+        val assets =
+            listOf(
+                createTestAsset("1", "Gram Altın", AssetType.PRECIOUS_METALS, 15_000_000L, Currency.TRY),
+                createTestAsset("2", "Hisse Portföyü", AssetType.STOCKS, 7_500_000L, Currency.TRY),
+                createTestAsset("3", "Nakit Birikim", AssetType.CASH, 2_500_000L, Currency.TRY),
+                // USD varlığı filtre dışı kalmalı
+                createTestAsset("4", "Dolar", AssetType.CASH, 200_000L, Currency.USD),
+            )
 
         val distribution = AssetFinancialCalculator.calculateDistribution(assets, Currency.TRY)
         assertEquals(25_000_000L, distribution.overallTotal.amountMinor) // 250.000 TRY

@@ -4,7 +4,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.feniqo.mobile.domain.model.AppError
+import com.feniqo.mobile.domain.model.EntityId
+import com.feniqo.mobile.domain.model.TransactionMerchantCorrection
 import com.feniqo.mobile.domain.repository.RepositoryResult
+import com.feniqo.mobile.domain.repository.TransactionMerchantCorrectionRepository
 import com.feniqo.mobile.domain.usecase.DeleteTransactionUseCase
 import com.feniqo.mobile.domain.usecase.InstallmentDeleteScope
 import com.feniqo.mobile.domain.usecase.ObserveCategoriesForHistoryLookupUseCase
@@ -30,6 +34,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class TransactionDetailUiState(
@@ -39,10 +44,12 @@ data class TransactionDetailUiState(
     val deleteDialog: TransactionDeleteDialogState? = null,
     val isDeleteInProgress: Boolean = false,
     val userMessage: FinanceUiMessage? = null,
+    val merchantCorrection: TransactionMerchantCorrectionUiState = TransactionMerchantCorrectionUiState(),
 )
 
 sealed interface TransactionDetailEvent {
     data object Deleted : TransactionDetailEvent
+    data object MerchantCorrectionApplied : TransactionDetailEvent
 }
 
 private data class TransactionDetailContent(
@@ -51,7 +58,7 @@ private data class TransactionDetailContent(
     val errorMessage: TransactionSurfaceUiMessage?,
 )
 
-/** Bağımsız detay rotasının Room SSOT yükleme ve silme yaşam döngüsünü yönetir. */
+/** Bağımsız detay rotasının Room SSOT yükleme, silme ve merchant düzeltme yaşam döngüsünü yönetir. */
 @HiltViewModel
 class TransactionDetailViewModel @Inject constructor(
     observeTransactionUseCase: ObserveTransactionUseCase,
@@ -59,6 +66,7 @@ class TransactionDetailViewModel @Inject constructor(
     private val deleteTransactionUseCase: DeleteTransactionUseCase,
     currentDateProvider: CurrentDateProvider,
     savedStateHandle: SavedStateHandle,
+    private val merchantCorrectionRepository: TransactionMerchantCorrectionRepository,
 ) : ViewModel() {
     private val routeIdResult = parseTransactionDetailRouteId(
         rawId = runCatching { savedStateHandle.get<String>("transactionId") }.getOrNull()
@@ -70,8 +78,14 @@ class TransactionDetailViewModel @Inject constructor(
     private val deleteDialog = MutableStateFlow<TransactionDeleteDialogState?>(null)
     private val isDeleteInProgress = MutableStateFlow(false)
     private val userMessage = MutableStateFlow<FinanceUiMessage?>(null)
+    private val merchantCorrection = MutableStateFlow(
+        TransactionMerchantCorrectionUiState(
+            searchResults = MerchantSearchFilter.filter(""),
+        ),
+    )
     private val eventChannel = Channel<TransactionDetailEvent>(Channel.BUFFERED)
     private var activeDeleteJob: Job? = null
+    private var activeCorrectionJob: Job? = null
 
     val events: Flow<TransactionDetailEvent> = eventChannel.receiveAsFlow()
 
@@ -122,7 +136,8 @@ class TransactionDetailViewModel @Inject constructor(
         deleteDialog,
         isDeleteInProgress,
         userMessage,
-    ) { content, dialog, deleting, message ->
+        merchantCorrection,
+    ) { content, dialog, deleting, message, correction ->
         TransactionDetailUiState(
             isLoading = content.isLoading,
             item = content.item,
@@ -130,6 +145,7 @@ class TransactionDetailViewModel @Inject constructor(
             deleteDialog = dialog,
             isDeleteInProgress = deleting,
             userMessage = message,
+            merchantCorrection = correction,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -165,8 +181,184 @@ class TransactionDetailViewModel @Inject constructor(
         userMessage.value = null
     }
 
+    // --- Merchant Correction UI Eylemleri ---
+
+    fun openMerchantSelector() {
+        val currentItem = uiState.value.item ?: return
+        if (!currentItem.canCorrectMerchant) return
+        val currentSelectedId = currentItem.merchant?.merchantId
+        merchantCorrection.update {
+            it.copy(
+                isSelectorOpen = true,
+                searchQuery = "",
+                searchResults = MerchantSearchFilter.filter(""),
+                selectedMerchantId = currentSelectedId,
+                error = null,
+            )
+        }
+    }
+
+    fun dismissMerchantSelector() {
+        if (merchantCorrection.value.isInProgress) return
+        merchantCorrection.update {
+            it.copy(
+                isSelectorOpen = false,
+                searchQuery = "",
+                searchResults = MerchantSearchFilter.filter(""),
+                selectedMerchantId = null,
+                error = null,
+            )
+        }
+    }
+
+    fun onSearchQueryChanged(query: String) {
+        merchantCorrection.update {
+            it.copy(
+                searchQuery = query,
+                searchResults = MerchantSearchFilter.filter(query),
+            )
+        }
+    }
+
+    fun selectMerchant(merchantId: EntityId) {
+        merchantCorrection.update {
+            it.copy(selectedMerchantId = merchantId)
+        }
+    }
+
+    fun confirmAssign() {
+        val targetMerchantId = merchantCorrection.value.selectedMerchantId ?: return
+        executeAssign(targetMerchantId)
+    }
+
+    fun openBlockConfirmDialog() {
+        val currentItem = uiState.value.item ?: return
+        if (!currentItem.canCorrectMerchant) return
+        merchantCorrection.update {
+            it.copy(
+                isBlockConfirmDialogOpen = true,
+                error = null,
+            )
+        }
+    }
+
+    fun dismissBlockConfirmDialog() {
+        if (merchantCorrection.value.isInProgress) return
+        merchantCorrection.update {
+            it.copy(
+                isBlockConfirmDialogOpen = false,
+                error = null,
+            )
+        }
+    }
+
+    fun confirmBlock() {
+        executeBlock()
+    }
+
+    private fun executeAssign(merchantId: EntityId) {
+        if (merchantCorrection.value.isInProgress || activeCorrectionJob != null) return
+        val currentItem = uiState.value.item ?: return
+        if (!currentItem.canCorrectMerchant) return
+        val targetTransactionId = currentItem.id
+
+        merchantCorrection.update { it.copy(isInProgress = true, error = null) }
+
+        val job = viewModelScope.launch(start = CoroutineStart.LAZY) {
+            try {
+                val latest = uiState.value.item
+                if (latest == null || latest.id != targetTransactionId) {
+                    return@launch
+                }
+
+                val correction = TransactionMerchantCorrection.Assign(
+                    transactionId = targetTransactionId,
+                    merchantId = merchantId,
+                )
+                when (val result = merchantCorrectionRepository.correctMerchant(correction)) {
+                    is RepositoryResult.Success -> {
+                        merchantCorrection.update {
+                            it.copy(
+                                isSelectorOpen = false,
+                                isBlockConfirmDialogOpen = false,
+                                searchQuery = "",
+                                searchResults = MerchantSearchFilter.filter(""),
+                                selectedMerchantId = null,
+                                error = null,
+                            )
+                        }
+                        eventChannel.send(TransactionDetailEvent.MerchantCorrectionApplied)
+                    }
+                    is RepositoryResult.Failure -> {
+                        val uiError = result.error.toMerchantCorrectionUiError()
+                        merchantCorrection.update { it.copy(error = uiError) }
+                    }
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                merchantCorrection.update { it.copy(error = MerchantCorrectionUiError.GENERIC) }
+            } finally {
+                merchantCorrection.update { it.copy(isInProgress = false) }
+                activeCorrectionJob = null
+            }
+        }
+        activeCorrectionJob = job
+        job.start()
+    }
+
+    private fun executeBlock() {
+        if (merchantCorrection.value.isInProgress || activeCorrectionJob != null) return
+        val currentItem = uiState.value.item ?: return
+        if (!currentItem.canCorrectMerchant) return
+        val targetTransactionId = currentItem.id
+
+        merchantCorrection.update { it.copy(isInProgress = true, error = null) }
+
+        val job = viewModelScope.launch(start = CoroutineStart.LAZY) {
+            try {
+                val latest = uiState.value.item
+                if (latest == null || latest.id != targetTransactionId) {
+                    return@launch
+                }
+
+                val correction = TransactionMerchantCorrection.Block(
+                    transactionId = targetTransactionId,
+                )
+                when (val result = merchantCorrectionRepository.correctMerchant(correction)) {
+                    is RepositoryResult.Success -> {
+                        merchantCorrection.update {
+                            it.copy(
+                                isSelectorOpen = false,
+                                isBlockConfirmDialogOpen = false,
+                                searchQuery = "",
+                                searchResults = MerchantSearchFilter.filter(""),
+                                selectedMerchantId = null,
+                                error = null,
+                            )
+                        }
+                        eventChannel.send(TransactionDetailEvent.MerchantCorrectionApplied)
+                    }
+                    is RepositoryResult.Failure -> {
+                        val uiError = result.error.toMerchantCorrectionUiError()
+                        merchantCorrection.update { it.copy(error = uiError) }
+                    }
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                merchantCorrection.update { it.copy(error = MerchantCorrectionUiError.GENERIC) }
+            } finally {
+                merchantCorrection.update { it.copy(isInProgress = false) }
+                activeCorrectionJob = null
+            }
+        }
+        activeCorrectionJob = job
+        job.start()
+    }
+
     private fun executeDelete(
-        id: com.feniqo.mobile.domain.model.EntityId,
+        id: EntityId,
         scope: InstallmentDeleteScope?,
     ) {
         if (isDeleteInProgress.value || activeDeleteJob != null) return
@@ -196,4 +388,25 @@ class TransactionDetailViewModel @Inject constructor(
         activeDeleteJob = job
         job.start()
     }
+}
+
+/**
+ * AppError'ı ViewModel'in tipli UI hata durumuna dönüştürür.
+ * ViewModel Türkçe/İngilizce metin üretmez.
+ */
+fun AppError.toMerchantCorrectionUiError(): MerchantCorrectionUiError = when (this) {
+    is AppError.Authentication -> when (code) {
+        "auth_session_required", "auth_session_expired" -> MerchantCorrectionUiError.AUTH_REQUIRED
+        "owner_mismatch", "transaction_owner_mismatch" -> MerchantCorrectionUiError.OWNER_MISMATCH
+        else -> MerchantCorrectionUiError.GENERIC
+    }
+    is AppError.Validation -> when (code) {
+        "workspace_restricted" -> MerchantCorrectionUiError.WORKSPACE_RESTRICTED
+        "transaction_not_found" -> MerchantCorrectionUiError.TRANSACTION_NOT_FOUND
+        "unknown_merchant" -> MerchantCorrectionUiError.UNKNOWN_MERCHANT
+        "excluded_transaction", "invalid_description", "invalid_alias", "alias_too_long", "generic_alias_not_allowed" ->
+            MerchantCorrectionUiError.NOT_ELIGIBLE
+        else -> MerchantCorrectionUiError.GENERIC
+    }
+    else -> MerchantCorrectionUiError.GENERIC
 }

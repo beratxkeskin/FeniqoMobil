@@ -59,131 +59,151 @@ import kotlin.test.assertTrue
 import kotlin.time.Instant
 
 class TransactionSplitSyncRoundTripTest {
+    @Test
+    fun v2_executor_executes_transaction_create_with_split_payload_and_handles_ack() =
+        runTest {
+            val remoteDto =
+                remoteTransaction(
+                    version = 1L,
+                    paidByUserId = "user-2",
+                    participantUserIds = listOf("user-1", "user-2", "user-3"),
+                )
+            val writer =
+                RecordingTransactionWriter(
+                    transactionResult = ConditionalRemoteWriteResult.Applied(remoteDto),
+                )
+            val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+            val snapshotJson =
+                transactionSnapshotJson(
+                    id = TX_ID,
+                    version = null,
+                    paidByUserId = "user-2",
+                    participantUserIds = listOf("user-1", "user-2", "user-3"),
+                )
+            val op =
+                transactionOperation(
+                    operationType = "CREATE",
+                    baseVersion = null,
+                    payloadJson = snapshotJson,
+                )
+
+            val result = executor.execute(op)
+
+            assertIs<OutboxExecutionResult.TransactionApplied>(result)
+            assertEquals(TX_ID, result.record.id)
+            assertEquals(1L, result.record.version)
+            assertEquals(OP_ID, writer.lastOperationId)
+            assertEquals(RemoteWriteOperation.CREATE, writer.lastOperation)
+            assertEquals(null, writer.lastBaseVersion)
+            assertEquals("user-2", writer.lastTransactionDto?.paidByUserId)
+            assertEquals(listOf("user-1", "user-2", "user-3"), writer.lastTransactionDto?.participantUserIds)
+        }
 
     @Test
-    fun v2_executor_executes_transaction_create_with_split_payload_and_handles_ack() = runTest {
-        val remoteDto = remoteTransaction(
-            version = 1L,
-            paidByUserId = "user-2",
-            participantUserIds = listOf("user-1", "user-2", "user-3"),
-        )
-        val writer = RecordingTransactionWriter(
-            transactionResult = ConditionalRemoteWriteResult.Applied(remoteDto),
-        )
-        val executor = V2OutboxOperationExecutor(writer) { 1000L }
+    fun v2_executor_executes_transaction_update_with_split_payload_and_handles_conflict() =
+        runTest {
+            val remoteDto =
+                remoteTransaction(
+                    version = 4L,
+                    paidByUserId = "user-3",
+                    participantUserIds = listOf("user-1", "user-3"),
+                )
+            val writer =
+                RecordingTransactionWriter(
+                    transactionResult = ConditionalRemoteWriteResult.Conflict(remoteDto),
+                )
+            val executor = V2OutboxOperationExecutor(writer) { 2000L }
 
-        val snapshotJson = transactionSnapshotJson(
-            id = TX_ID,
-            version = null,
-            paidByUserId = "user-2",
-            participantUserIds = listOf("user-1", "user-2", "user-3"),
-        )
-        val op = transactionOperation(
-            operationType = "CREATE",
-            baseVersion = null,
-            payloadJson = snapshotJson,
-        )
+            val snapshotJson =
+                transactionSnapshotJson(
+                    id = TX_ID,
+                    version = 2L,
+                    paidByUserId = "user-2",
+                    participantUserIds = listOf("user-1", "user-2"),
+                )
+            val op =
+                transactionOperation(
+                    operationType = "UPDATE",
+                    baseVersion = 2L,
+                    payloadJson = snapshotJson,
+                )
 
-        val result = executor.execute(op)
+            val result = executor.execute(op)
 
-        assertIs<OutboxExecutionResult.TransactionApplied>(result)
-        assertEquals(TX_ID, result.record.id)
-        assertEquals(1L, result.record.version)
-        assertEquals(OP_ID, writer.lastOperationId)
-        assertEquals(RemoteWriteOperation.CREATE, writer.lastOperation)
-        assertEquals(null, writer.lastBaseVersion)
-        assertEquals("user-2", writer.lastTransactionDto?.paidByUserId)
-        assertEquals(listOf("user-1", "user-2", "user-3"), writer.lastTransactionDto?.participantUserIds)
-    }
-
-    @Test
-    fun v2_executor_executes_transaction_update_with_split_payload_and_handles_conflict() = runTest {
-        val remoteDto = remoteTransaction(
-            version = 4L,
-            paidByUserId = "user-3",
-            participantUserIds = listOf("user-1", "user-3"),
-        )
-        val writer = RecordingTransactionWriter(
-            transactionResult = ConditionalRemoteWriteResult.Conflict(remoteDto),
-        )
-        val executor = V2OutboxOperationExecutor(writer) { 2000L }
-
-        val snapshotJson = transactionSnapshotJson(
-            id = TX_ID,
-            version = 2L,
-            paidByUserId = "user-2",
-            participantUserIds = listOf("user-1", "user-2"),
-        )
-        val op = transactionOperation(
-            operationType = "UPDATE",
-            baseVersion = 2L,
-            payloadJson = snapshotJson,
-        )
-
-        val result = executor.execute(op)
-
-        assertIs<OutboxExecutionResult.ConflictDetected>(result)
-        assertEquals(OP_ID, result.conflict.operationId)
-        assertEquals("TRANSACTION", result.conflict.entityTypeCode)
-        assertEquals(TX_ID, result.conflict.entityId)
-        assertEquals(2L, result.conflict.localVersion)
-        assertEquals(4L, result.conflict.remoteVersion)
-        assertTrue(result.conflict.localPayloadJson.contains("paid_by_user_id") && result.conflict.localPayloadJson.contains("user-2"))
-        assertTrue(result.conflict.remotePayloadJson.contains("paid_by_user_id") && result.conflict.remotePayloadJson.contains("user-3"))
-    }
+            assertIs<OutboxExecutionResult.ConflictDetected>(result)
+            assertEquals(OP_ID, result.conflict.operationId)
+            assertEquals("TRANSACTION", result.conflict.entityTypeCode)
+            assertEquals(TX_ID, result.conflict.entityId)
+            assertEquals(2L, result.conflict.localVersion)
+            assertEquals(4L, result.conflict.remoteVersion)
+            assertTrue(result.conflict.localPayloadJson.contains("paid_by_user_id") && result.conflict.localPayloadJson.contains("user-2"))
+            assertTrue(
+                result.conflict.remotePayloadJson.contains("paid_by_user_id") && result.conflict.remotePayloadJson.contains("user-3"),
+            )
+        }
 
     @Test
-    fun incremental_pull_applies_remote_transaction_split_and_persists_to_room() = runTest {
-        val cursors = mutableMapOf(TRANSACTION_CURSOR_KEY to storedTransactionCursor())
-        val dao = RecordingTransactionRemoteSyncDao(cursors = cursors)
-        val remote = FakeRemoteTransactionDataSource(
-            transaction = remoteTransaction(
-                version = 2L,
-                paidByUserId = "user-2",
-                participantUserIds = listOf("user-1", "user-2"),
-            ),
-        )
+    fun incremental_pull_applies_remote_transaction_split_and_persists_to_room() =
+        runTest {
+            val cursors = mutableMapOf(TRANSACTION_CURSOR_KEY to storedTransactionCursor())
+            val dao = RecordingTransactionRemoteSyncDao(cursors = cursors)
+            val remote =
+                FakeRemoteTransactionDataSource(
+                    transaction =
+                        remoteTransaction(
+                            version = 2L,
+                            paidByUserId = "user-2",
+                            participantUserIds = listOf("user-1", "user-2"),
+                        ),
+                )
 
-        val result = IncrementalRemoteSync(remote, dao, FakeSyncStateDao(cursors)) { RECEIVED_AT }
-            .pullFor(EntityId(USER_ID), USER_SCOPE)
+            val result =
+                IncrementalRemoteSync(remote, dao, FakeSyncStateDao(cursors)) { RECEIVED_AT }
+                    .pullFor(EntityId(USER_ID), USER_SCOPE)
 
-        assertEquals(1, result.appliedCount)
-        assertEquals(0, result.conflictCount)
-        assertEquals("SYNCED", dao.transaction?.sync?.syncStatus)
-        assertEquals(2L, dao.transaction?.sync?.version)
-        assertEquals("user-2", dao.transaction?.paidByUserId)
-        assertEquals("""["user-1","user-2"]""", dao.transaction?.participantUserIdsJson)
-        assertEquals(TX_ID, cursors[TRANSACTION_CURSOR_KEY]?.entityId)
-    }
+            assertEquals(1, result.appliedCount)
+            assertEquals(0, result.conflictCount)
+            assertEquals("SYNCED", dao.transaction?.sync?.syncStatus)
+            assertEquals(2L, dao.transaction?.sync?.version)
+            assertEquals("user-2", dao.transaction?.paidByUserId)
+            assertEquals("""["user-1","user-2"]""", dao.transaction?.participantUserIdsJson)
+            assertEquals(TX_ID, cursors[TRANSACTION_CURSOR_KEY]?.entityId)
+        }
 
     @Test
-    fun incremental_pull_with_different_remote_split_detects_pending_local_conflict() = runTest {
-        val cursors = mutableMapOf(TRANSACTION_CURSOR_KEY to storedTransactionCursor())
-        val local = localPendingTransaction(
-            paidByUserId = "user-1",
-            participantUserIdsJson = """["user-1","user-2"]""",
-        )
-        val dao = RecordingTransactionRemoteSyncDao(transaction = local, cursors = cursors)
-        val remote = FakeRemoteTransactionDataSource(
-            transaction = remoteTransaction(
-                version = 3L,
-                paidByUserId = "user-2",
-                participantUserIds = listOf("user-1", "user-2"),
-            ),
-        )
+    fun incremental_pull_with_different_remote_split_detects_pending_local_conflict() =
+        runTest {
+            val cursors = mutableMapOf(TRANSACTION_CURSOR_KEY to storedTransactionCursor())
+            val local =
+                localPendingTransaction(
+                    paidByUserId = "user-1",
+                    participantUserIdsJson = """["user-1","user-2"]""",
+                )
+            val dao = RecordingTransactionRemoteSyncDao(transaction = local, cursors = cursors)
+            val remote =
+                FakeRemoteTransactionDataSource(
+                    transaction =
+                        remoteTransaction(
+                            version = 3L,
+                            paidByUserId = "user-2",
+                            participantUserIds = listOf("user-1", "user-2"),
+                        ),
+                )
 
-        val result = IncrementalRemoteSync(remote, dao, FakeSyncStateDao(cursors)) { RECEIVED_AT }
-            .pullFor(EntityId(USER_ID), USER_SCOPE)
+            val result =
+                IncrementalRemoteSync(remote, dao, FakeSyncStateDao(cursors)) { RECEIVED_AT }
+                    .pullFor(EntityId(USER_ID), USER_SCOPE)
 
-        assertEquals(0, result.appliedCount)
-        assertEquals(1, result.conflictCount)
-        assertEquals("CONFLICT", dao.transaction?.sync?.syncStatus)
-        val conflict = assertNotNull(dao.conflict)
-        assertEquals(1L, conflict.localVersion)
-        assertEquals(3L, conflict.remoteVersion)
-        assertTrue(conflict.localPayloadJson.contains("paid_by_user_id") && conflict.localPayloadJson.contains("user-1"))
-        assertTrue(conflict.remotePayloadJson.contains("paid_by_user_id") && conflict.remotePayloadJson.contains("user-2"))
-    }
+            assertEquals(0, result.appliedCount)
+            assertEquals(1, result.conflictCount)
+            assertEquals("CONFLICT", dao.transaction?.sync?.syncStatus)
+            val conflict = assertNotNull(dao.conflict)
+            assertEquals(1L, conflict.localVersion)
+            assertEquals(3L, conflict.remoteVersion)
+            assertTrue(conflict.localPayloadJson.contains("paid_by_user_id") && conflict.localPayloadJson.contains("user-1"))
+            assertTrue(conflict.remotePayloadJson.contains("paid_by_user_id") && conflict.remotePayloadJson.contains("user-2"))
+        }
 
     private class RecordingTransactionWriter(
         var transactionResult: ConditionalRemoteWriteResult<TransactionDto> = ConditionalRemoteWriteResult.NotFound,
@@ -249,94 +269,353 @@ class TransactionSplitSyncRoundTripTest {
         var conflict: SyncConflictEntity? = null
 
         override suspend fun getProfileRow(id: String): UserProfileEntity? = null
+
         override suspend fun getCategoryRow(id: String): CategoryEntity? = null
+
         override suspend fun getTransactionRow(id: String): TransactionEntity? = transaction?.takeIf { it.id == id }
+
         override suspend fun getRecurringTransactionRow(id: String): RecurringTransactionEntity? = null
+
         override suspend fun getSubscriptionRow(id: String): SubscriptionEntity? = null
+
         override suspend fun getGoalRow(id: String): GoalEntity? = null
+
         override suspend fun getGoalContributionRow(id: String): GoalContributionEntity? = null
+
         override suspend fun getDebtRow(id: String): DebtEntity? = null
+
         override suspend fun getDebtPaymentRow(id: String): DebtPaymentEntity? = null
+
         override suspend fun getWorkspaceRow(id: String): WorkspaceEntity? = null
-        override suspend fun getWorkspaceMemberRow(workspaceId: String, userId: String): WorkspaceMemberEntity? = null
+
+        override suspend fun getWorkspaceMemberRow(
+            workspaceId: String,
+            userId: String,
+        ): WorkspaceMemberEntity? = null
+
         override suspend fun getWorkspaceMemberRows(workspaceId: String): List<WorkspaceMemberEntity> = emptyList()
+
         override suspend fun getAllKnownLiveWorkspaceIds(): List<String> = emptyList()
-        override suspend fun getFirstOutboxOperationId(syncScopeKey: String, entityTypeCode: String, entityId: String): String? =
-            if (transaction?.id == entityId) OP_ID else null
-        override suspend fun countOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = if (transaction?.id == entityId) 1 else 0
+
+        override suspend fun getFirstOutboxOperationId(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+        ): String? = if (transaction?.id == entityId) OP_ID else null
+
+        override suspend fun countOutboxRows(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+        ): Int =
+            if (transaction?.id ==
+                entityId
+            ) {
+                1
+            } else {
+                0
+            }
+
         override suspend fun upsertProfileRow(entity: UserProfileEntity) = Unit
+
         override suspend fun upsertWorkspaceRows(entities: List<WorkspaceEntity>) = Unit
+
         override suspend fun upsertWorkspaceMemberRows(entities: List<WorkspaceMemberEntity>) = Unit
-        override suspend fun clearActiveWorkspaceIfMatches(profileId: String, workspaceId: String): Int = 0
+
+        override suspend fun clearActiveWorkspaceIfMatches(
+            profileId: String,
+            workspaceId: String,
+        ): Int = 0
+
         override suspend fun upsertCategoryRows(entities: List<CategoryEntity>) = Unit
+
         override suspend fun upsertTransactionRows(entities: List<TransactionEntity>) {
             transaction = entities.single()
         }
+
         override suspend fun upsertRecurringTransactionRows(entities: List<RecurringTransactionEntity>) = Unit
+
         override suspend fun upsertSubscriptionRows(entities: List<SubscriptionEntity>) = Unit
+
         override suspend fun upsertGoalRows(entities: List<GoalEntity>) = Unit
+
         override suspend fun upsertGoalContributionRows(entities: List<GoalContributionEntity>) = Unit
+
         override suspend fun upsertDebtRows(entities: List<DebtEntity>) = Unit
+
         override suspend fun upsertDebtPaymentRows(entities: List<DebtPaymentEntity>) = Unit
+
         override suspend fun upsertConflictRow(conflict: SyncConflictEntity) {
             this.conflict = conflict
         }
+
         override suspend fun upsertCursorRows(cursors: List<SyncCursorEntity>) {
             cursors.forEach { this.cursors[it.entityTypeCode] = it }
         }
-        override suspend fun deleteConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
-        override suspend fun markProfileConflict(entityId: String, error: String): Int = 1
-        override suspend fun markCategoryConflict(entityId: String, error: String): Int = 1
-        override suspend fun markTransactionConflict(entityId: String, error: String): Int {
+
+        override suspend fun deleteConflictRow(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+        ): Int = 0
+
+        override suspend fun markProfileConflict(
+            entityId: String,
+            error: String,
+        ): Int = 1
+
+        override suspend fun markCategoryConflict(
+            entityId: String,
+            error: String,
+        ): Int = 1
+
+        override suspend fun markTransactionConflict(
+            entityId: String,
+            error: String,
+        ): Int {
             transaction = transaction?.copy(sync = transaction!!.sync.copy(syncStatus = "CONFLICT", lastSyncError = error))
             return 1
         }
-        override suspend fun markRecurringTransactionConflict(entityId: String, error: String): Int = 1
-        override suspend fun markSubscriptionConflict(entityId: String, error: String): Int = 1
-        override suspend fun markGoalConflict(entityId: String, error: String): Int = 1
-        override suspend fun markGoalContributionConflict(entityId: String, error: String): Int = 1
-        override suspend fun markDebtConflict(entityId: String, error: String): Int = 1
-        override suspend fun markDebtPaymentConflict(entityId: String, error: String): Int = 1
-        override suspend fun deleteOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
-        override suspend fun deleteOtherOutboxRows(syncScopeKey: String, entityTypeCode: String, entityId: String, keptOperationId: String): Int = 0
-        override suspend fun resetConflictOperation(syncScopeKey: String, operationId: String, operationTypeCode: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun rebaseProfileForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun rebaseCategoryForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun rebaseTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun rebaseRecurringTransactionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun rebaseSubscriptionForRetry(entityId: String, remoteVersion: Long, nowEpochMillis: Long): Int = 1
-        override suspend fun getActiveWorkspaceTailOperation(syncScopeKey: String, workspaceId: String): SyncOperationEntity? = null
-        override suspend fun markWorkspaceConflict(entityId: String, error: String): Int = 1
-        override suspend fun getAllWorkspaceOperations(syncScopeKey: String, workspaceId: String): List<SyncOperationEntity> = emptyList()
-        override suspend fun deleteSpecificWorkspaceOperations(syncScopeKey: String, workspaceId: String, operationIds: List<String>): Int = 0
-        override suspend fun rebaseWorkspaceForRetry(workspaceId: String, syncStatus: String, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun resetWorkspaceConflictOperation(syncScopeKey: String, operationId: String, operationTypeCode: String, payloadJson: String?, remoteVersion: Long, nowEpochMillis: Long): Int = 0
-        override suspend fun getConflictRow(syncScopeKey: String, entityTypeCode: String, entityId: String): SyncConflictEntity? = null
+
+        override suspend fun markRecurringTransactionConflict(
+            entityId: String,
+            error: String,
+        ): Int = 1
+
+        override suspend fun markSubscriptionConflict(
+            entityId: String,
+            error: String,
+        ): Int = 1
+
+        override suspend fun markGoalConflict(
+            entityId: String,
+            error: String,
+        ): Int = 1
+
+        override suspend fun markGoalContributionConflict(
+            entityId: String,
+            error: String,
+        ): Int = 1
+
+        override suspend fun markDebtConflict(
+            entityId: String,
+            error: String,
+        ): Int = 1
+
+        override suspend fun markDebtPaymentConflict(
+            entityId: String,
+            error: String,
+        ): Int = 1
+
+        override suspend fun getUserMerchantVerificationRow(
+            id: String,
+        ): com.feniqo.mobile.data.local.entity.UserMerchantVerificationEntity? = null
+
+        override suspend fun getUserMerchantVerificationOutboxRow(
+            syncScopeKey: String,
+            entityId: String,
+            operationId: String,
+        ): com.feniqo.mobile.data.local.entity.SyncOperationEntity? = null
+
+        override suspend fun getActiveMerchantVerificationTailCandidates(
+            syncScopeKey: String,
+            entityId: String,
+        ): List<com.feniqo.mobile.data.local.entity.SyncOperationEntity> = emptyList()
+
+        override suspend fun upsertUserMerchantVerificationRows(
+            entities: List<com.feniqo.mobile.data.local.entity.UserMerchantVerificationEntity>,
+        ) = Unit
+
+        override suspend fun upsertUserMerchantVerificationRow(entity: com.feniqo.mobile.data.local.entity.UserMerchantVerificationEntity) =
+            Unit
+
+        override suspend fun markUserMerchantVerificationConflict(
+            scopeKey: String,
+            entityId: String,
+            error: String,
+        ): Int = 1
+
+        override suspend fun deleteOutboxRows(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+        ): Int = 0
+
+        override suspend fun deleteOtherOutboxRows(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+            keptOperationId: String,
+        ): Int = 0
+
+        override suspend fun resetConflictOperation(
+            syncScopeKey: String,
+            operationId: String,
+            operationTypeCode: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 1
+
+        override suspend fun rebaseProfileForRetry(
+            entityId: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 1
+
+        override suspend fun rebaseCategoryForRetry(
+            entityId: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 1
+
+        override suspend fun rebaseTransactionForRetry(
+            entityId: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 1
+
+        override suspend fun rebaseRecurringTransactionForRetry(
+            entityId: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 1
+
+        override suspend fun rebaseSubscriptionForRetry(
+            entityId: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 1
+
+        override suspend fun getActiveWorkspaceTailOperation(
+            syncScopeKey: String,
+            workspaceId: String,
+        ): SyncOperationEntity? = null
+
+        override suspend fun markWorkspaceConflict(
+            entityId: String,
+            error: String,
+        ): Int = 1
+
+        override suspend fun getAllWorkspaceOperations(
+            syncScopeKey: String,
+            workspaceId: String,
+        ): List<SyncOperationEntity> = emptyList()
+
+        override suspend fun deleteSpecificWorkspaceOperations(
+            syncScopeKey: String,
+            workspaceId: String,
+            operationIds: List<String>,
+        ): Int = 0
+
+        override suspend fun rebaseWorkspaceForRetry(
+            workspaceId: String,
+            syncStatus: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun resetWorkspaceConflictOperation(
+            syncScopeKey: String,
+            operationId: String,
+            operationTypeCode: String,
+            payloadJson: String?,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun getAllUserMerchantVerificationOperations(
+            syncScopeKey: String,
+            verificationId: String,
+        ): List<SyncOperationEntity> = emptyList()
+
+        override suspend fun deleteSpecificUserMerchantVerificationOperations(
+            syncScopeKey: String,
+            verificationId: String,
+            operationIds: List<String>,
+        ): Int = 0
+
+        override suspend fun rebaseUserMerchantVerificationForRetry(
+            verificationId: String,
+            syncScopeKey: String,
+            syncStatus: String,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun resetUserMerchantVerificationConflictOperation(
+            syncScopeKey: String,
+            operationId: String,
+            operationTypeCode: String,
+            payloadJson: String?,
+            remoteVersion: Long,
+            nowEpochMillis: Long,
+        ): Int = 0
+
+        override suspend fun getConflictRow(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+        ): SyncConflictEntity? = null
     }
 
     private class FakeSyncStateDao(
         private val cursors: MutableMap<String, SyncCursorEntity>,
     ) : SyncStateDao {
-        override suspend fun getCursor(syncScopeKey: String, entityTypeCode: String): SyncCursorEntity? = cursors[entityTypeCode]
+        override suspend fun getCursor(
+            syncScopeKey: String,
+            entityTypeCode: String,
+        ): SyncCursorEntity? = cursors[entityTypeCode]
+
         override suspend fun getWorkspaceMemberCursors(syncScopeKey: String): List<SyncCursorEntity> = emptyList()
-        override suspend fun getConflict(syncScopeKey: String, entityId: String): SyncConflictEntity? = null
-        override suspend fun getConflict(syncScopeKey: String, entityTypeCode: String, entityId: String): SyncConflictEntity? = null
-        override suspend fun getConflictsByEntityType(syncScopeKey: String, entityTypeCode: String): List<SyncConflictEntity> = emptyList()
+
+        override suspend fun getConflict(
+            syncScopeKey: String,
+            entityId: String,
+        ): SyncConflictEntity? = null
+
+        override suspend fun getConflict(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+        ): SyncConflictEntity? = null
+
+        override suspend fun getConflictsByEntityType(
+            syncScopeKey: String,
+            entityTypeCode: String,
+        ): List<SyncConflictEntity> = emptyList()
+
         override suspend fun getAllConflicts(syncScopeKey: String): List<SyncConflictEntity> = emptyList()
+
         override suspend fun upsertCursor(cursor: SyncCursorEntity) {
             cursors[cursor.entityTypeCode] = cursor
         }
-        override suspend fun deleteConflict(syncScopeKey: String, entityTypeCode: String, entityId: String): Int = 0
+
+        override suspend fun deleteConflict(
+            syncScopeKey: String,
+            entityTypeCode: String,
+            entityId: String,
+        ): Int = 0
+
         override fun observeConflicts(syncScopeKey: String): Flow<List<SyncConflictEntity>> = flowOf(emptyList())
+
         override fun observeConflictCount(syncScopeKey: String): Flow<Int> = flowOf(0)
+
         override suspend fun getConflictCount(syncScopeKey: String): Int = 0
+
         override suspend fun upsertConflict(conflict: SyncConflictEntity) = Unit
+
         override fun observeLegacyQuarantineCursorCount(): Flow<Int> = flowOf(0)
+
         override suspend fun getLegacyQuarantineCursorCount(): Int = 0
+
         override fun observeLegacyQuarantineConflictCount(): Flow<Int> = flowOf(0)
+
         override suspend fun getLegacyQuarantineConflictCount(): Int = 0
+
         override fun observeLastSuccessfulSyncAt(userId: String): Flow<Long?> = flowOf(null)
+
         override suspend fun getUserState(userId: String): com.feniqo.mobile.data.local.entity.SyncUserStateEntity? = null
+
         override suspend fun upsertUserState(state: com.feniqo.mobile.data.local.entity.SyncUserStateEntity) = Unit
     }
 
@@ -344,30 +623,59 @@ class TransactionSplitSyncRoundTripTest {
         private val transaction: TransactionDto? = null,
     ) : CoreRemoteDataSource {
         override suspend fun fetchProfile(userId: String): ProfileDto? = null
+
         override suspend fun fetchCategories(query: CategoryRemoteQuery) = RemotePage<CategoryDto>(emptyList(), query.page, totalCount = 0)
-        override suspend fun fetchTransactions(
-            query: TransactionRemoteQuery,
-        ): RemotePage<TransactionDto> {
+
+        override suspend fun fetchTransactions(query: TransactionRemoteQuery): RemotePage<TransactionDto> {
             val items = listOfNotNull(transaction)
             return RemotePage(items, query.page, totalCount = items.size.toLong())
         }
 
         override suspend fun fetchBudgets(query: BudgetRemoteQuery) = RemotePage<BudgetDto>(emptyList(), query.page, totalCount = 0)
-        override suspend fun fetchRecurringTransactions(query: RecurringTransactionRemoteQuery) = RemotePage<RecurringTransactionDto>(emptyList(), query.page, totalCount = 0)
-        override suspend fun fetchSubscriptions(query: SubscriptionRemoteQuery) = RemotePage<SubscriptionDto>(emptyList(), query.page, totalCount = 0)
+
+        override suspend fun fetchRecurringTransactions(query: RecurringTransactionRemoteQuery) =
+            RemotePage<RecurringTransactionDto>(emptyList(), query.page, totalCount = 0)
+
+        override suspend fun fetchSubscriptions(query: SubscriptionRemoteQuery) =
+            RemotePage<SubscriptionDto>(emptyList(), query.page, totalCount = 0)
+
         override suspend fun fetchTransactionTags(transactionId: String) = emptyList<TransactionTagDto>()
+
         override suspend fun fetchGoals(query: GoalRemoteQuery) = RemotePage<GoalDto>(emptyList(), query.page, totalCount = 0)
-        override suspend fun fetchGoalContributions(query: GoalContributionRemoteQuery) = RemotePage<GoalContributionDto>(emptyList(), query.page, totalCount = 0)
+
+        override suspend fun fetchGoalContributions(query: GoalContributionRemoteQuery) =
+            RemotePage<GoalContributionDto>(emptyList(), query.page, totalCount = 0)
+
         override suspend fun fetchDebts(query: DebtRemoteQuery) = RemotePage<DebtDto>(emptyList(), query.page, totalCount = 0)
-        override suspend fun fetchDebtPayments(query: DebtPaymentRemoteQuery) = RemotePage<DebtPaymentDto>(emptyList(), query.page, totalCount = 0)
-        override suspend fun fetchTags(scope: RemoteWorkspaceScope, page: RemotePageRequest) = RemotePage<TagDto>(emptyList(), page, totalCount = 0)
+
+        override suspend fun fetchDebtPayments(query: DebtPaymentRemoteQuery) =
+            RemotePage<DebtPaymentDto>(emptyList(), query.page, totalCount = 0)
+
+        override suspend fun fetchTags(
+            scope: RemoteWorkspaceScope,
+            page: RemotePageRequest,
+        ) = RemotePage<TagDto>(emptyList(), page, totalCount = 0)
+
+        override suspend fun fetchMerchantVerifications(query: com.feniqo.mobile.data.remote.core.UserMerchantVerificationRemoteQuery) =
+            RemotePage<com.feniqo.mobile.data.remote.dto.UserMerchantVerificationDto>(emptyList(), query.page, totalCount = 0)
+
         override suspend fun fetchWorkspaces(page: RemotePageRequest) = RemotePage<WorkspaceDto>(emptyList(), page, totalCount = 0)
-        override suspend fun fetchWorkspaceMembers(workspaceId: String, page: RemotePageRequest) = RemotePage<WorkspaceMemberDto>(emptyList(), page, totalCount = 0)
+
+        override suspend fun fetchWorkspaceMembers(
+            workspaceId: String,
+            page: RemotePageRequest,
+        ) = RemotePage<WorkspaceMemberDto>(emptyList(), page, totalCount = 0)
+
         override suspend fun upsertProfile(dto: ProfileDto) = error("Test kapsamı dışı")
+
         override suspend fun upsertCategory(dto: CategoryDto) = error("Test kapsamı dışı")
+
         override suspend fun upsertTransaction(dto: TransactionDto) = error("Test kapsamı dışı")
+
         override suspend fun upsertBudget(dto: BudgetDto) = error("Test kapsamı dışı")
+
         override suspend fun upsertTag(dto: TagDto) = error("Test kapsamı dışı")
+
         override suspend fun upsertTransactionTag(dto: TransactionTagDto) = error("Test kapsamı dışı")
     }
 
@@ -383,12 +691,13 @@ class TransactionSplitSyncRoundTripTest {
         const val TRANSACTION_CURSOR_KEY = "TRANSACTION"
         const val RECEIVED_AT = 1756141200000L
 
-        fun storedTransactionCursor() = SyncCursorEntity(
-            syncScopeKey = USER_SCOPE,
-            entityTypeCode = TRANSACTION_CURSOR_KEY,
-            updatedAtEpochMillis = Instant.parse(STORED_UPDATED_AT).toEpochMilliseconds(),
-            entityId = STORED_ID,
-        )
+        fun storedTransactionCursor() =
+            SyncCursorEntity(
+                syncScopeKey = USER_SCOPE,
+                entityTypeCode = TRANSACTION_CURSOR_KEY,
+                updatedAtEpochMillis = Instant.parse(STORED_UPDATED_AT).toEpochMilliseconds(),
+                entityId = STORED_ID,
+            )
 
         fun localPendingTransaction(
             paidByUserId: String = USER_ID,
@@ -412,15 +721,16 @@ class TransactionSplitSyncRoundTripTest {
             paidByUserId = paidByUserId,
             participantUserIdsJson = participantUserIdsJson,
             searchText = "",
-            sync = SyncMetadata(
-                syncStatus = "PENDING_UPDATE",
-                updatedAtEpochMillis = 1000L,
-                localUpdatedAtEpochMillis = 1000L,
-                deletedAtEpochMillis = null,
-                version = 1,
-                baseVersion = 1,
-                lastSyncError = null,
-            ),
+            sync =
+                SyncMetadata(
+                    syncStatus = "PENDING_UPDATE",
+                    updatedAtEpochMillis = 1000L,
+                    localUpdatedAtEpochMillis = 1000L,
+                    deletedAtEpochMillis = null,
+                    version = 1,
+                    baseVersion = 1,
+                    lastSyncError = null,
+                ),
         )
 
         fun remoteTransaction(
@@ -455,7 +765,8 @@ class TransactionSplitSyncRoundTripTest {
             version: Long?,
             paidByUserId: String? = null,
             participantUserIds: List<String>? = null,
-        ): String = """
+        ): String =
+            """
             {
                 "id": "$id",
                 "user_id": "$USER_ID",
@@ -474,9 +785,16 @@ class TransactionSplitSyncRoundTripTest {
                 "created_at": "$CREATED_AT",
                 "version": ${version ?: "null"},
                 "paid_by_user_id": ${if (paidByUserId != null) "\"$paidByUserId\"" else "null"},
-                "participant_user_ids": ${if (participantUserIds != null) participantUserIds.joinToString(prefix = "[", postfix = "]") { "\"$it\"" } else "[]"}
+                "participant_user_ids": ${if (participantUserIds != null) {
+                participantUserIds.joinToString(
+                    prefix = "[",
+                    postfix = "]",
+                ) { "\"$it\"" }
+            } else {
+                "[]"
+            }}
             }
-        """.trimIndent()
+            """.trimIndent()
 
         fun transactionOperation(
             operationType: String = "CREATE",

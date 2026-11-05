@@ -26,9 +26,10 @@ class AndroidDatabaseKeyManager(
     keyMaterialFileName: String = DEFAULT_KEY_MATERIAL_FILE_NAME,
 ) {
     private val applicationContext = context.applicationContext
-    private val keyMaterialFile = AtomicFile(
-        File(applicationContext.noBackupFilesDir, keyMaterialFileName),
-    )
+    private val keyMaterialFile =
+        AtomicFile(
+            File(applicationContext.noBackupFilesDir, keyMaterialFileName),
+        )
 
     /**
      * Var olan parolayı çözer veya ilk kurulumda kriptografik olarak rastgele parola üretir.
@@ -79,11 +80,12 @@ class AndroidDatabaseKeyManager(
     }
 
     private fun decryptStoredPassphrase(): ByteArray {
-        val wrappingKey = getExistingWrappingKey()
-            ?: throw DatabaseKeyUnavailableException(
-                reason = DatabaseKeyFailure.KEYSTORE_ENTRY_MISSING,
-                message = "Android Keystore veritabanı anahtarı bulunamadı.",
-            )
+        val wrappingKey =
+            getExistingWrappingKey()
+                ?: throw DatabaseKeyUnavailableException(
+                    reason = DatabaseKeyFailure.KEYSTORE_ENTRY_MISSING,
+                    message = "Android Keystore veritabanı anahtarı bulunamadı.",
+                )
 
         try {
             val material = readKeyMaterial()
@@ -119,19 +121,18 @@ class AndroidDatabaseKeyManager(
             .getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
             .apply {
                 init(
-                    KeyGenParameterSpec.Builder(
-                        keyStoreAlias,
-                        KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
-                    )
-                        .setKeySize(AES_KEY_SIZE_BITS)
+                    KeyGenParameterSpec
+                        .Builder(
+                            keyStoreAlias,
+                            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
+                        ).setKeySize(AES_KEY_SIZE_BITS)
                         .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                         .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                         // Arka plan senkronizasyonu DB'yi açabilmeli; biyometri ayrı bir uygulama kilididir.
                         .setUserAuthenticationRequired(false)
                         .build(),
                 )
-            }
-            .generateKey()
+            }.generateKey()
 
     private fun getExistingWrappingKey(): SecretKey? {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }

@@ -16,6 +16,7 @@ import com.feniqo.mobile.data.remote.mapper.toDomain
 import com.feniqo.mobile.data.remote.mapper.toDto
 import com.feniqo.mobile.domain.model.SyncStatus
 import com.feniqo.mobile.domain.repository.SyncEntityType
+import com.feniqo.mobile.domain.usecase.TransactionMerchantAttributionResolver
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -88,10 +89,14 @@ class V1OutboxOperationExecutor(
         }
         val dto = local.toDomain().toDto()
         when (val result = writer.writeTransaction(local.sync.writeOperation(), local.sync.baseVersion, dto)) {
-            is ConditionalRemoteWriteResult.Applied -> remoteSyncDao.applyTransactionWrite(
-                operation.syncScopeKey,
-                result.record.toDomain().toEntity(result.record.syncedMetadata()),
-            )
+            is ConditionalRemoteWriteResult.Applied -> {
+                val candidateMerchant = TransactionMerchantAttributionResolver.resolve(result.record.description)
+                val domainTransaction = result.record.toDomain().copy(merchantInfo = candidateMerchant)
+                remoteSyncDao.applyTransactionWrite(
+                    operation.syncScopeKey,
+                    domainTransaction.toEntity(result.record.syncedMetadata()),
+                )
+            }
             is ConditionalRemoteWriteResult.Conflict -> {
                 remoteSyncDao.recordTransactionConflict(operation.syncScopeKey, operation.conflict(local.sync, dto, result.remoteRecord))
                 throw OutboxConflictException(RemoteSyncDao.CONFLICT_ERROR)

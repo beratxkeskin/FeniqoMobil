@@ -11,19 +11,34 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface SyncStateDao {
     @Query("SELECT * FROM sync_cursors WHERE sync_scope_key = :syncScopeKey AND entity_type_code = :entityTypeCode LIMIT 1")
-    suspend fun getCursor(syncScopeKey: String, entityTypeCode: String): SyncCursorEntity?
+    suspend fun getCursor(
+        syncScopeKey: String,
+        entityTypeCode: String,
+    ): SyncCursorEntity?
 
     @Query("SELECT * FROM sync_cursors WHERE sync_scope_key = :syncScopeKey AND entity_type_code LIKE 'WORKSPACE_MEMBER:%'")
     suspend fun getWorkspaceMemberCursors(syncScopeKey: String): List<SyncCursorEntity>
 
     @Query("SELECT * FROM sync_conflicts WHERE sync_scope_key = :syncScopeKey AND entity_id = :entityId LIMIT 1")
-    suspend fun getConflict(syncScopeKey: String, entityId: String): SyncConflictEntity?
+    suspend fun getConflict(
+        syncScopeKey: String,
+        entityId: String,
+    ): SyncConflictEntity?
 
-    @Query("SELECT * FROM sync_conflicts WHERE sync_scope_key = :syncScopeKey AND entity_type_code = :entityTypeCode AND entity_id = :entityId LIMIT 1")
-    suspend fun getConflict(syncScopeKey: String, entityTypeCode: String, entityId: String): SyncConflictEntity?
+    @Query(
+        "SELECT * FROM sync_conflicts WHERE sync_scope_key = :syncScopeKey AND entity_type_code = :entityTypeCode AND entity_id = :entityId LIMIT 1",
+    )
+    suspend fun getConflict(
+        syncScopeKey: String,
+        entityTypeCode: String,
+        entityId: String,
+    ): SyncConflictEntity?
 
     @Query("SELECT * FROM sync_conflicts WHERE sync_scope_key = :syncScopeKey AND entity_type_code = :entityTypeCode")
-    suspend fun getConflictsByEntityType(syncScopeKey: String, entityTypeCode: String): List<SyncConflictEntity>
+    suspend fun getConflictsByEntityType(
+        syncScopeKey: String,
+        entityTypeCode: String,
+    ): List<SyncConflictEntity>
 
     @Query("SELECT * FROM sync_conflicts WHERE sync_scope_key = :syncScopeKey")
     suspend fun getAllConflicts(syncScopeKey: String): List<SyncConflictEntity>
@@ -58,7 +73,11 @@ interface SyncStateDao {
     @Query(
         "DELETE FROM sync_conflicts WHERE sync_scope_key = :syncScopeKey AND entity_type_code = :entityTypeCode AND entity_id = :entityId",
     )
-    suspend fun deleteConflict(syncScopeKey: String, entityTypeCode: String, entityId: String): Int
+    suspend fun deleteConflict(
+        syncScopeKey: String,
+        entityTypeCode: String,
+        entityId: String,
+    ): Int
 
     @Query("SELECT last_successful_sync_at_epoch_ms FROM sync_user_states WHERE user_id = :userId LIMIT 1")
     fun observeLastSuccessfulSyncAt(userId: String): Flow<Long?>

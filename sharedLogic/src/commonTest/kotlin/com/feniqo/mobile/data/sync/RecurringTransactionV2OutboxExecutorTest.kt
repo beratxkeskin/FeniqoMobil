@@ -16,144 +16,159 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 
 class RecurringTransactionV2OutboxExecutorTest {
-
     @Test
-    fun recurring_transaction_create_applied_returns_recurring_transaction_applied() = runTest {
-        val remoteDto = remoteRecurringTransaction(version = 1L)
-        val writer = RecordingRecurringTransactionWriter(
-            recurringResult = ConditionalRemoteWriteResult.Applied(remoteDto),
-        )
-        val executor = V2OutboxOperationExecutor(writer) { 1000L }
+    fun recurring_transaction_create_applied_returns_recurring_transaction_applied() =
+        runTest {
+            val remoteDto = remoteRecurringTransaction(version = 1L)
+            val writer =
+                RecordingRecurringTransactionWriter(
+                    recurringResult = ConditionalRemoteWriteResult.Applied(remoteDto),
+                )
+            val executor = V2OutboxOperationExecutor(writer) { 1000L }
 
-        val snapshotJson = recurringTransactionSnapshotJson(id = REC_ID, version = null)
-        val op = recurringTransactionOperation(
-            operationType = "CREATE",
-            baseVersion = null,
-            payloadJson = snapshotJson,
-        )
+            val snapshotJson = recurringTransactionSnapshotJson(id = REC_ID, version = null)
+            val op =
+                recurringTransactionOperation(
+                    operationType = "CREATE",
+                    baseVersion = null,
+                    payloadJson = snapshotJson,
+                )
 
-        val result = executor.execute(op)
+            val result = executor.execute(op)
 
-        assertIs<OutboxExecutionResult.RecurringTransactionApplied>(result)
-        assertEquals(REC_ID, result.record.id)
-        assertEquals(1L, result.record.version)
-        assertEquals(OP_ID, writer.lastOperationId)
-        assertEquals(RemoteWriteOperation.CREATE, writer.lastOperation)
-        assertEquals(null, writer.lastBaseVersion)
-        assertEquals(50000L, writer.lastRecurringDto?.amountMinor)
-    }
-
-    @Test
-    fun recurring_transaction_update_conflict_returns_conflict_detected_and_preserves_remote_version() = runTest {
-        val remoteDto = remoteRecurringTransaction(version = 4L, amountMinor = 75000L)
-        val writer = RecordingRecurringTransactionWriter(
-            recurringResult = ConditionalRemoteWriteResult.Conflict(remoteDto),
-        )
-        val executor = V2OutboxOperationExecutor(writer) { 2000L }
-
-        val snapshotJson = recurringTransactionSnapshotJson(id = REC_ID, version = 2L, amountMinor = 60000L)
-        val op = recurringTransactionOperation(
-            operationType = "UPDATE",
-            baseVersion = 2L,
-            payloadJson = snapshotJson,
-        )
-
-        val result = executor.execute(op)
-
-        assertIs<OutboxExecutionResult.ConflictDetected>(result)
-        assertEquals(OP_ID, result.conflict.operationId)
-        assertEquals("RECURRING_TRANSACTION", result.conflict.entityTypeCode)
-        assertEquals(REC_ID, result.conflict.entityId)
-        assertEquals(2L, result.conflict.localVersion)
-        assertEquals(4L, result.conflict.remoteVersion)
-        assertEquals(2000L, result.conflict.detectedAtEpochMillis)
-        assertEquals(RemoteWriteOperation.UPDATE, writer.lastOperation)
-        assertEquals(2L, writer.lastBaseVersion)
-    }
-
-    @Test
-    fun recurring_transaction_delete_not_found_returns_missing_delete_acknowledged() = runTest {
-        val writer = RecordingRecurringTransactionWriter(
-            recurringResult = ConditionalRemoteWriteResult.NotFound,
-        )
-        val executor = V2OutboxOperationExecutor(writer) { 1000L }
-
-        val snapshotJson = recurringTransactionSnapshotJson(id = REC_ID, version = 3L)
-        val op = recurringTransactionOperation(
-            operationType = "DELETE",
-            baseVersion = 3L,
-            payloadJson = snapshotJson,
-        )
-
-        val result = executor.execute(op)
-
-        assertIs<OutboxExecutionResult.MissingDeleteAcknowledged>(result)
-        assertEquals(RemoteWriteOperation.DELETE, writer.lastOperation)
-        assertEquals(3L, writer.lastBaseVersion)
-    }
-
-    @Test
-    fun recurring_transaction_rejects_payload_id_mismatch_without_calling_writer() = runTest {
-        val writer = RecordingRecurringTransactionWriter()
-        val executor = V2OutboxOperationExecutor(writer) { 1000L }
-
-        val snapshotJson = recurringTransactionSnapshotJson(id = "99999999-9999-4999-8999-999999999999", version = null)
-        val op = recurringTransactionOperation(
-            operationType = "CREATE",
-            baseVersion = null,
-            payloadJson = snapshotJson,
-        )
-
-        assertFailsWith<IllegalArgumentException> {
-            executor.execute(op)
-        }
-        assertEquals(null, writer.lastOperationId)
-    }
-
-    @Test
-    fun recurring_transaction_create_with_non_null_base_version_is_rejected() = runTest {
-        val writer = RecordingRecurringTransactionWriter()
-        val executor = V2OutboxOperationExecutor(writer) { 1000L }
-
-        val snapshotJson = recurringTransactionSnapshotJson(id = REC_ID, version = 1L)
-        val op = recurringTransactionOperation(
-            operationType = "CREATE",
-            baseVersion = 1L,
-            payloadJson = snapshotJson,
-        )
-
-        assertFailsWith<IllegalArgumentException> {
-            executor.execute(op)
-        }
-        assertEquals(null, writer.lastOperationId)
-    }
-
-    @Test
-    fun recurring_transaction_update_and_delete_with_null_base_version_are_rejected() = runTest {
-        val writer = RecordingRecurringTransactionWriter()
-        val executor = V2OutboxOperationExecutor(writer) { 1000L }
-
-        val snapshotJson = recurringTransactionSnapshotJson(id = REC_ID, version = null)
-
-        val updateOp = recurringTransactionOperation(
-            operationType = "UPDATE",
-            baseVersion = null,
-            payloadJson = snapshotJson,
-        )
-        assertFailsWith<IllegalArgumentException> {
-            executor.execute(updateOp)
+            assertIs<OutboxExecutionResult.RecurringTransactionApplied>(result)
+            assertEquals(REC_ID, result.record.id)
+            assertEquals(1L, result.record.version)
+            assertEquals(OP_ID, writer.lastOperationId)
+            assertEquals(RemoteWriteOperation.CREATE, writer.lastOperation)
+            assertEquals(null, writer.lastBaseVersion)
+            assertEquals(50000L, writer.lastRecurringDto?.amountMinor)
         }
 
-        val deleteOp = recurringTransactionOperation(
-            operationType = "DELETE",
-            baseVersion = null,
-            payloadJson = snapshotJson,
-        )
-        assertFailsWith<IllegalArgumentException> {
-            executor.execute(deleteOp)
+    @Test
+    fun recurring_transaction_update_conflict_returns_conflict_detected_and_preserves_remote_version() =
+        runTest {
+            val remoteDto = remoteRecurringTransaction(version = 4L, amountMinor = 75000L)
+            val writer =
+                RecordingRecurringTransactionWriter(
+                    recurringResult = ConditionalRemoteWriteResult.Conflict(remoteDto),
+                )
+            val executor = V2OutboxOperationExecutor(writer) { 2000L }
+
+            val snapshotJson = recurringTransactionSnapshotJson(id = REC_ID, version = 2L, amountMinor = 60000L)
+            val op =
+                recurringTransactionOperation(
+                    operationType = "UPDATE",
+                    baseVersion = 2L,
+                    payloadJson = snapshotJson,
+                )
+
+            val result = executor.execute(op)
+
+            assertIs<OutboxExecutionResult.ConflictDetected>(result)
+            assertEquals(OP_ID, result.conflict.operationId)
+            assertEquals("RECURRING_TRANSACTION", result.conflict.entityTypeCode)
+            assertEquals(REC_ID, result.conflict.entityId)
+            assertEquals(2L, result.conflict.localVersion)
+            assertEquals(4L, result.conflict.remoteVersion)
+            assertEquals(2000L, result.conflict.detectedAtEpochMillis)
+            assertEquals(RemoteWriteOperation.UPDATE, writer.lastOperation)
+            assertEquals(2L, writer.lastBaseVersion)
         }
-        assertEquals(null, writer.lastOperationId)
-    }
+
+    @Test
+    fun recurring_transaction_delete_not_found_returns_missing_delete_acknowledged() =
+        runTest {
+            val writer =
+                RecordingRecurringTransactionWriter(
+                    recurringResult = ConditionalRemoteWriteResult.NotFound,
+                )
+            val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+            val snapshotJson = recurringTransactionSnapshotJson(id = REC_ID, version = 3L)
+            val op =
+                recurringTransactionOperation(
+                    operationType = "DELETE",
+                    baseVersion = 3L,
+                    payloadJson = snapshotJson,
+                )
+
+            val result = executor.execute(op)
+
+            assertIs<OutboxExecutionResult.MissingDeleteAcknowledged>(result)
+            assertEquals(RemoteWriteOperation.DELETE, writer.lastOperation)
+            assertEquals(3L, writer.lastBaseVersion)
+        }
+
+    @Test
+    fun recurring_transaction_rejects_payload_id_mismatch_without_calling_writer() =
+        runTest {
+            val writer = RecordingRecurringTransactionWriter()
+            val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+            val snapshotJson = recurringTransactionSnapshotJson(id = "99999999-9999-4999-8999-999999999999", version = null)
+            val op =
+                recurringTransactionOperation(
+                    operationType = "CREATE",
+                    baseVersion = null,
+                    payloadJson = snapshotJson,
+                )
+
+            assertFailsWith<IllegalArgumentException> {
+                executor.execute(op)
+            }
+            assertEquals(null, writer.lastOperationId)
+        }
+
+    @Test
+    fun recurring_transaction_create_with_non_null_base_version_is_rejected() =
+        runTest {
+            val writer = RecordingRecurringTransactionWriter()
+            val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+            val snapshotJson = recurringTransactionSnapshotJson(id = REC_ID, version = 1L)
+            val op =
+                recurringTransactionOperation(
+                    operationType = "CREATE",
+                    baseVersion = 1L,
+                    payloadJson = snapshotJson,
+                )
+
+            assertFailsWith<IllegalArgumentException> {
+                executor.execute(op)
+            }
+            assertEquals(null, writer.lastOperationId)
+        }
+
+    @Test
+    fun recurring_transaction_update_and_delete_with_null_base_version_are_rejected() =
+        runTest {
+            val writer = RecordingRecurringTransactionWriter()
+            val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+            val snapshotJson = recurringTransactionSnapshotJson(id = REC_ID, version = null)
+
+            val updateOp =
+                recurringTransactionOperation(
+                    operationType = "UPDATE",
+                    baseVersion = null,
+                    payloadJson = snapshotJson,
+                )
+            assertFailsWith<IllegalArgumentException> {
+                executor.execute(updateOp)
+            }
+
+            val deleteOp =
+                recurringTransactionOperation(
+                    operationType = "DELETE",
+                    baseVersion = null,
+                    payloadJson = snapshotJson,
+                )
+            assertFailsWith<IllegalArgumentException> {
+                executor.execute(deleteOp)
+            }
+            assertEquals(null, writer.lastOperationId)
+        }
 
     private class RecordingRecurringTransactionWriter(
         var recurringResult: ConditionalRemoteWriteResult<RecurringTransactionDto> = ConditionalRemoteWriteResult.NotFound,
@@ -212,7 +227,6 @@ class RecurringTransactionV2OutboxExecutorTest {
         ): ConditionalRemoteWriteResult<com.feniqo.mobile.data.remote.dto.SubscriptionDto> = error("Test kapsamı dışı")
     }
 
-
     private companion object {
         const val OP_ID = "0123456789abcdef0123456789abcdef"
         const val REC_ID = "11111111-1111-4111-8111-111111111111"
@@ -223,24 +237,25 @@ class RecurringTransactionV2OutboxExecutorTest {
             operationType: String,
             baseVersion: Long?,
             payloadJson: String?,
-        ): SyncOperationEntity = SyncOperationEntity(
-            syncScopeKey = "USER:test-user",
-            operationId = OP_ID,
-            entityTypeCode = "RECURRING_TRANSACTION",
-            entityId = REC_ID,
-            operationTypeCode = operationType,
-            baseVersion = baseVersion,
-            payloadJson = payloadJson,
-            predecessorOperationId = null,
-            isBlocked = false,
-            protocolVersion = 2,
-            statusCode = "IN_FLIGHT",
-            attemptCount = 1,
-            lastError = null,
-            nextAttemptAtEpochMillis = 0L,
-            createdAtEpochMillis = 0L,
-            updatedAtEpochMillis = 0L,
-        )
+        ): SyncOperationEntity =
+            SyncOperationEntity(
+                syncScopeKey = "USER:test-user",
+                operationId = OP_ID,
+                entityTypeCode = "RECURRING_TRANSACTION",
+                entityId = REC_ID,
+                operationTypeCode = operationType,
+                baseVersion = baseVersion,
+                payloadJson = payloadJson,
+                predecessorOperationId = null,
+                isBlocked = false,
+                protocolVersion = 2,
+                statusCode = "IN_FLIGHT",
+                attemptCount = 1,
+                lastError = null,
+                nextAttemptAtEpochMillis = 0L,
+                createdAtEpochMillis = 0L,
+                updatedAtEpochMillis = 0L,
+            )
 
         fun recurringTransactionSnapshotJson(
             id: String,
@@ -254,26 +269,27 @@ class RecurringTransactionV2OutboxExecutorTest {
         fun remoteRecurringTransaction(
             version: Long,
             amountMinor: Long = 50000L,
-        ): RecurringTransactionDto = RecurringTransactionDto(
-            id = REC_ID,
-            userId = USER_ID,
-            workspaceId = null,
-            amountMinor = amountMinor,
-            currency = "TRY",
-            type = "expense",
-            categoryId = CAT_ID,
-            description = "Internet",
-            paymentMethod = "CREDIT_CARD",
-            frequency = "MONTHLY",
-            interval = 1,
-            startDate = "2026-08-01",
-            endDate = null,
-            lastGeneratedDate = null,
-            isActive = true,
-            createdAt = "2026-08-01T10:00:00Z",
-            updatedAt = "2026-08-01T10:00:00Z",
-            deletedAt = null,
-            version = version,
-        )
+        ): RecurringTransactionDto =
+            RecurringTransactionDto(
+                id = REC_ID,
+                userId = USER_ID,
+                workspaceId = null,
+                amountMinor = amountMinor,
+                currency = "TRY",
+                type = "expense",
+                categoryId = CAT_ID,
+                description = "Internet",
+                paymentMethod = "CREDIT_CARD",
+                frequency = "MONTHLY",
+                interval = 1,
+                startDate = "2026-08-01",
+                endDate = null,
+                lastGeneratedDate = null,
+                isActive = true,
+                createdAt = "2026-08-01T10:00:00Z",
+                updatedAt = "2026-08-01T10:00:00Z",
+                deletedAt = null,
+                version = version,
+            )
     }
 }

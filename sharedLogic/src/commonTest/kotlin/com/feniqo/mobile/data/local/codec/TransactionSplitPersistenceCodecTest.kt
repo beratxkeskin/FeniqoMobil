@@ -9,24 +9,25 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class TransactionSplitPersistenceCodecTest {
-
     private val user1 = EntityId("user-1")
     private val user2 = EntityId("user-2")
     private val user3 = EntityId("user-3")
 
     @Test
     fun customShares_encodeDecodeRoundTrip_preservesAllData() {
-        val originalShares = listOf(
-            TransactionParticipantShare(user1, 5_000L),
-            TransactionParticipantShare(user2, 3_000L),
-            TransactionParticipantShare(user3, 2_000L),
-        )
+        val originalShares =
+            listOf(
+                TransactionParticipantShare(user1, 5_000L),
+                TransactionParticipantShare(user2, 3_000L),
+                TransactionParticipantShare(user3, 2_000L),
+            )
 
         val encoded = TransactionSplitPersistenceCodec.encode(originalShares)
-        val decodedResult = TransactionSplitPersistenceCodec.decode(
-            splitModeCode = "CUSTOM",
-            participantSharesJson = encoded,
-        )
+        val decodedResult =
+            TransactionSplitPersistenceCodec.decode(
+                splitModeCode = "CUSTOM",
+                participantSharesJson = encoded,
+            )
 
         val valid = assertIs<TransactionSplitDecodeResult.Valid>(decodedResult)
         assertEquals(TransactionSplitMode.CUSTOM, valid.splitMode)
@@ -38,16 +39,18 @@ class TransactionSplitPersistenceCodecTest {
 
     @Test
     fun differentInputOrder_producesIdenticalCanonicalJson() {
-        val sharesOrderA = listOf(
-            TransactionParticipantShare(user3, 2_000L),
-            TransactionParticipantShare(user1, 5_000L),
-            TransactionParticipantShare(user2, 3_000L),
-        )
-        val sharesOrderB = listOf(
-            TransactionParticipantShare(user2, 3_000L),
-            TransactionParticipantShare(user3, 2_000L),
-            TransactionParticipantShare(user1, 5_000L),
-        )
+        val sharesOrderA =
+            listOf(
+                TransactionParticipantShare(user3, 2_000L),
+                TransactionParticipantShare(user1, 5_000L),
+                TransactionParticipantShare(user2, 3_000L),
+            )
+        val sharesOrderB =
+            listOf(
+                TransactionParticipantShare(user2, 3_000L),
+                TransactionParticipantShare(user3, 2_000L),
+                TransactionParticipantShare(user1, 5_000L),
+            )
 
         val encodedA = TransactionSplitPersistenceCodec.encode(sharesOrderA)
         val encodedB = TransactionSplitPersistenceCodec.encode(sharesOrderB)
@@ -63,9 +66,10 @@ class TransactionSplitPersistenceCodecTest {
     @Test
     fun largeLongValues_preservedWithoutPrecisionLoss() {
         val largeAmountMinor = Long.MAX_VALUE - 1000L
-        val shares = listOf(
-            TransactionParticipantShare(user1, largeAmountMinor),
-        )
+        val shares =
+            listOf(
+                TransactionParticipantShare(user1, largeAmountMinor),
+            )
 
         val encoded = TransactionSplitPersistenceCodec.encode(shares)
         val decoded = TransactionSplitPersistenceCodec.decode("CUSTOM", encoded)

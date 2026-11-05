@@ -48,15 +48,20 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.decodeFromString
 import kotlin.coroutines.coroutineContext
 
+import com.feniqo.mobile.data.local.dao.UserMerchantVerificationConflictStaleResolutionException
+import com.feniqo.mobile.data.local.dao.UserMerchantVerificationResolutionPrecondition
 import com.feniqo.mobile.data.local.dao.WorkspaceConflictStaleResolutionException
 import com.feniqo.mobile.data.local.dao.WorkspaceResolutionPrecondition
 import com.feniqo.mobile.data.local.dao.toSnapshot
 import com.feniqo.mobile.data.local.dao.validateWorkspaceChain
 import com.feniqo.mobile.data.local.outbox.OutboxOperationType
+import com.feniqo.mobile.data.remote.codec.UserMerchantVerificationPayloadCodec
 import com.feniqo.mobile.data.remote.codec.WorkspacePayloadCodec
+import com.feniqo.mobile.data.remote.dto.UserMerchantVerificationDto
 import com.feniqo.mobile.data.remote.dto.WorkspaceDto
 import com.feniqo.mobile.data.remote.mapper.toEntity
 import com.feniqo.mobile.domain.model.SyncStatus
+import com.feniqo.mobile.domain.usecase.TransactionMerchantAttributionResolver
 import com.feniqo.mobile.data.local.entity.SyncUserStateEntity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flatMapLatest
@@ -158,9 +163,15 @@ class OfflineFirstSyncRepository(
                         remoteVersion = conflict.remoteVersion,
                         localTransaction = decodeTransactionConflictSnapshot(conflict.entityTypeCode, conflict.localPayloadJson),
                         remoteTransaction = decodeTransactionConflictSnapshot(conflict.entityTypeCode, conflict.remotePayloadJson),
-                        remoteDeleted = if (conflict.entityTypeCode == SyncEntityType.TRANSACTION.name) {
-                            runCatching { snapshotJson.decodeFromString<TransactionDto>(conflict.remotePayloadJson).deletedAt != null }.getOrDefault(false)
-                        } else false,
+                        remoteDeleted = when (conflict.entityTypeCode) {
+                            SyncEntityType.TRANSACTION.name -> {
+                                runCatching { snapshotJson.decodeFromString<TransactionDto>(conflict.remotePayloadJson).deletedAt != null }.getOrDefault(false)
+                            }
+                            SyncEntityType.USER_MERCHANT_VERIFICATION.name -> {
+                                runCatching { snapshotJson.decodeFromString<UserMerchantVerificationDto>(conflict.remotePayloadJson).deletedAt != null }.getOrDefault(false)
+                            }
+                            else -> false
+                        },
                     )
                 }
             }
@@ -363,9 +374,13 @@ class OfflineFirstSyncRepository(
             RepositoryResult.Success(Unit)
         } catch (cancelled: CancellationException) {
             throw cancelled
+        } catch (fatal: Error) {
+            throw fatal
         } catch (stale: WorkspaceConflictStaleResolutionException) {
             RepositoryResult.Failure(AppError.Conflict("sync.conflict_resolution_stale"))
-        } catch (_: Throwable) {
+        } catch (stale: UserMerchantVerificationConflictStaleResolutionException) {
+            RepositoryResult.Failure(AppError.Conflict("sync.conflict_resolution_stale"))
+        } catch (_: Exception) {
             RepositoryResult.Failure(AppError.Storage("sync.conflict_resolution_failed"))
         }
     }
@@ -411,7 +426,12 @@ class OfflineFirstSyncRepository(
             }
             SyncEntityType.TRANSACTION -> {
                 val dto = snapshotJson.decodeFromString<TransactionDto>(conflict.remotePayloadJson)
-                remoteSyncDao.resolveTransactionKeepRemote(activeSyncScopeKey, dto.toDomain().toEntity(dto.toRemoteSyncMetadata(receivedAt)))
+                val candidateMerchant = TransactionMerchantAttributionResolver.resolve(dto.description)
+                val domainTransaction = dto.toDomain().copy(merchantInfo = candidateMerchant)
+                remoteSyncDao.resolveTransactionKeepRemote(
+                    activeSyncScopeKey,
+                    domainTransaction.toEntity(dto.toRemoteSyncMetadata(receivedAt)),
+                )
             }
             SyncEntityType.RECURRING_TRANSACTION -> {
                 val dto = snapshotJson.decodeFromString<RecurringTransactionDto>(conflict.remotePayloadJson)
@@ -419,6 +439,33 @@ class OfflineFirstSyncRepository(
                     "Uzak snapshot kimliği (${dto.id}) çakışan varlık kimliği (${conflict.entityId}) ile uyuşmuyor."
                 }
                 remoteSyncDao.resolveRecurringTransactionKeepRemote(activeSyncScopeKey, dto.toDomain().toEntity(dto.toRemoteSyncMetadata(receivedAt)))
+            }
+            SyncEntityType.USER_MERCHANT_VERIFICATION -> {
+                val dto = runCatching {
+                    UserMerchantVerificationPayloadCodec.decodeAndValidateSnapshot(conflict.remotePayloadJson)
+                }.getOrElse {
+                    return AppError.Conflict("sync.conflict_resolution_stale")
+                }
+                if (dto.id != conflict.entityId) {
+                    return AppError.Conflict("sync.conflict_resolution_stale")
+                }
+                val localEntity = remoteSyncDao.getUserMerchantVerificationRow(conflict.entityId)
+                    ?: return AppError.Conflict("sync.conflict_resolution_stale")
+                val operations = remoteSyncDao.getAllUserMerchantVerificationOperations(activeSyncScopeKey, conflict.entityId)
+                val opSnapshots = operations.map { it.toSnapshot() }
+                val precondition = UserMerchantVerificationResolutionPrecondition(
+                    expectedConflict = conflict.toSnapshot(),
+                    expectedLocalEntity = localEntity,
+                    expectedOperations = opSnapshots,
+                )
+                val remoteSyncMetadata = dto.toRemoteSyncMetadataOrNull(receivedAt)
+                    ?: return AppError.Conflict("sync.conflict_resolution_stale")
+                val remoteEntity = dto.toEntity(remoteSyncMetadata)
+                remoteSyncDao.resolveUserMerchantVerificationKeepRemote(
+                    syncScopeKey = activeSyncScopeKey,
+                    precondition = precondition,
+                    remoteEntity = remoteEntity,
+                )
             }
             else -> error("V1/V2 conflict çözümü ${conflict.entityTypeCode} türünü desteklemiyor.")
         }
@@ -429,6 +476,7 @@ class OfflineFirstSyncRepository(
         val now = nowEpochMillisProvider()
         return when (SyncEntityType.valueOf(conflict.entityTypeCode)) {
             SyncEntityType.WORKSPACE -> keepLocalWorkspace(conflict, activeSyncScopeKey, now)
+            SyncEntityType.USER_MERCHANT_VERIFICATION -> keepLocalUserMerchantVerification(conflict, activeSyncScopeKey, now)
             else -> {
                 remoteSyncDao.resolveKeepLocal(
                     syncScopeKey = activeSyncScopeKey,
@@ -439,6 +487,64 @@ class OfflineFirstSyncRepository(
                 null
             }
         }
+    }
+
+    private suspend fun keepLocalUserMerchantVerification(
+        conflict: SyncConflictEntity,
+        activeSyncScopeKey: String,
+        nowEpochMillis: Long,
+    ): AppError? {
+        val verificationId = conflict.entityId
+        runCatching {
+            UserMerchantVerificationPayloadCodec.decodeAndValidateSnapshot(conflict.localPayloadJson)
+            UserMerchantVerificationPayloadCodec.decodeAndValidateSnapshot(conflict.remotePayloadJson)
+        }.getOrElse {
+            return AppError.Conflict("sync.conflict_resolution_stale")
+        }
+
+        val localEntity = remoteSyncDao.getUserMerchantVerificationRow(verificationId)
+            ?: return AppError.Conflict("sync.conflict_resolution_stale")
+        val operations = remoteSyncDao.getAllUserMerchantVerificationOperations(activeSyncScopeKey, verificationId)
+        val opSnapshots = operations.map { it.toSnapshot() }
+
+        val targetOperationType = if (localEntity.sync.deletedAtEpochMillis != null) "DELETE" else "UPDATE"
+        val targetPayloadJson = if (localEntity.sync.deletedAtEpochMillis != null) {
+            UserMerchantVerificationPayloadCodec.encodeDelete(localEntity)
+        } else {
+            UserMerchantVerificationPayloadCodec.encodeUpdate(localEntity)
+        }
+
+        val tail = operations.singleOrNull { op ->
+            operations.none { other -> other.predecessorOperationId == op.operationId }
+        } ?: return AppError.Conflict("sync.conflict_resolution_stale")
+
+        val expectedConflictOpId = if (operations.size == 2) {
+            val root = operations.singleOrNull { it.predecessorOperationId == null }
+                ?: return AppError.Conflict("sync.conflict_resolution_stale")
+            root.operationId
+        } else {
+            tail.operationId
+        }
+
+        if (expectedConflictOpId != conflict.operationId) {
+            return AppError.Conflict("sync.conflict_resolution_stale")
+        }
+
+        val precondition = UserMerchantVerificationResolutionPrecondition(
+            expectedConflict = conflict.toSnapshot(),
+            expectedLocalEntity = localEntity,
+            expectedOperations = opSnapshots,
+        )
+
+        remoteSyncDao.resolveUserMerchantVerificationKeepLocal(
+            syncScopeKey = activeSyncScopeKey,
+            precondition = precondition,
+            retainedOperationId = tail.operationId,
+            targetOperationTypeCode = targetOperationType,
+            targetPayloadJson = targetPayloadJson,
+            nowEpochMillis = nowEpochMillis,
+        )
+        return null
     }
 
     private suspend fun keepLocalWorkspace(

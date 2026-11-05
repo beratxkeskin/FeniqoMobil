@@ -249,13 +249,20 @@ fun TransactionListItem(
                 .padding(horizontal = 14.dp, vertical = 9.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Sol: 42dp Tonal Kategori İkonu
+            // Sol: 42dp MerchantLogo
             val categoryColor = ColorParser.parseHexColorOrNull(item.categoryColorHex)
                 ?: Color(0xFF4E735F)
-            CategoryTonalIcon(
-                iconKey = item.categoryIconKey,
-                color = categoryColor,
-                containerSize = 42.dp,
+            val fallbackLabel = item.merchant?.displayName
+                ?: item.description?.takeIf { it.isNotBlank() }
+                ?: item.categoryName
+            MerchantLogo(
+                verifiedLogoKey = item.merchant?.verifiedLogoKey,
+                canShowMerchantLogo = item.merchant?.canShowMerchantLogo == true,
+                categoryIconKey = item.categoryIconKey,
+                categoryColor = categoryColor,
+                fallbackLabel = fallbackLabel,
+                size = 42.dp,
+                contentDescription = null,
             )
 
             Spacer(modifier = Modifier.width(12.dp))

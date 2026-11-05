@@ -17,144 +17,159 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 
 class SubscriptionV2OutboxExecutorTest {
-
     @Test
-    fun subscription_create_applied_returns_subscription_applied() = runTest {
-        val remoteDto = remoteSubscription(version = 1L)
-        val writer = RecordingSubscriptionWriter(
-            subscriptionResult = ConditionalRemoteWriteResult.Applied(remoteDto),
-        )
-        val executor = V2OutboxOperationExecutor(writer) { 1000L }
+    fun subscription_create_applied_returns_subscription_applied() =
+        runTest {
+            val remoteDto = remoteSubscription(version = 1L)
+            val writer =
+                RecordingSubscriptionWriter(
+                    subscriptionResult = ConditionalRemoteWriteResult.Applied(remoteDto),
+                )
+            val executor = V2OutboxOperationExecutor(writer) { 1000L }
 
-        val snapshotJson = subscriptionSnapshotJson(id = SUB_ID, version = null)
-        val op = subscriptionOperation(
-            operationType = "CREATE",
-            baseVersion = null,
-            payloadJson = snapshotJson,
-        )
+            val snapshotJson = subscriptionSnapshotJson(id = SUB_ID, version = null)
+            val op =
+                subscriptionOperation(
+                    operationType = "CREATE",
+                    baseVersion = null,
+                    payloadJson = snapshotJson,
+                )
 
-        val result = executor.execute(op)
+            val result = executor.execute(op)
 
-        assertIs<OutboxExecutionResult.SubscriptionApplied>(result)
-        assertEquals(SUB_ID, result.record.id)
-        assertEquals(1L, result.record.version)
-        assertEquals(OP_ID, writer.lastOperationId)
-        assertEquals(RemoteWriteOperation.CREATE, writer.lastOperation)
-        assertEquals(null, writer.lastBaseVersion)
-        assertEquals(5999L, writer.lastSubscriptionDto?.amountMinor)
-    }
-
-    @Test
-    fun subscription_update_conflict_returns_conflict_detected_and_preserves_remote_version() = runTest {
-        val remoteDto = remoteSubscription(version = 4L, amountMinor = 7999L)
-        val writer = RecordingSubscriptionWriter(
-            subscriptionResult = ConditionalRemoteWriteResult.Conflict(remoteDto),
-        )
-        val executor = V2OutboxOperationExecutor(writer) { 2000L }
-
-        val snapshotJson = subscriptionSnapshotJson(id = SUB_ID, version = 2L, amountMinor = 6999L)
-        val op = subscriptionOperation(
-            operationType = "UPDATE",
-            baseVersion = 2L,
-            payloadJson = snapshotJson,
-        )
-
-        val result = executor.execute(op)
-
-        assertIs<OutboxExecutionResult.ConflictDetected>(result)
-        assertEquals(OP_ID, result.conflict.operationId)
-        assertEquals("SUBSCRIPTION", result.conflict.entityTypeCode)
-        assertEquals(SUB_ID, result.conflict.entityId)
-        assertEquals(2L, result.conflict.localVersion)
-        assertEquals(4L, result.conflict.remoteVersion)
-        assertEquals(2000L, result.conflict.detectedAtEpochMillis)
-        assertEquals(RemoteWriteOperation.UPDATE, writer.lastOperation)
-        assertEquals(2L, writer.lastBaseVersion)
-    }
-
-    @Test
-    fun subscription_delete_not_found_returns_missing_delete_acknowledged() = runTest {
-        val writer = RecordingSubscriptionWriter(
-            subscriptionResult = ConditionalRemoteWriteResult.NotFound,
-        )
-        val executor = V2OutboxOperationExecutor(writer) { 1000L }
-
-        val snapshotJson = subscriptionSnapshotJson(id = SUB_ID, version = 3L)
-        val op = subscriptionOperation(
-            operationType = "DELETE",
-            baseVersion = 3L,
-            payloadJson = snapshotJson,
-        )
-
-        val result = executor.execute(op)
-
-        assertIs<OutboxExecutionResult.MissingDeleteAcknowledged>(result)
-        assertEquals(RemoteWriteOperation.DELETE, writer.lastOperation)
-        assertEquals(3L, writer.lastBaseVersion)
-    }
-
-    @Test
-    fun subscription_rejects_payload_id_mismatch_without_calling_writer() = runTest {
-        val writer = RecordingSubscriptionWriter()
-        val executor = V2OutboxOperationExecutor(writer) { 1000L }
-
-        val snapshotJson = subscriptionSnapshotJson(id = "99999999-9999-4999-8999-999999999999", version = null)
-        val op = subscriptionOperation(
-            operationType = "CREATE",
-            baseVersion = null,
-            payloadJson = snapshotJson,
-        )
-
-        assertFailsWith<IllegalArgumentException> {
-            executor.execute(op)
-        }
-        assertEquals(null, writer.lastOperationId)
-    }
-
-    @Test
-    fun subscription_create_with_non_null_base_version_is_rejected() = runTest {
-        val writer = RecordingSubscriptionWriter()
-        val executor = V2OutboxOperationExecutor(writer) { 1000L }
-
-        val snapshotJson = subscriptionSnapshotJson(id = SUB_ID, version = 1L)
-        val op = subscriptionOperation(
-            operationType = "CREATE",
-            baseVersion = 1L,
-            payloadJson = snapshotJson,
-        )
-
-        assertFailsWith<IllegalArgumentException> {
-            executor.execute(op)
-        }
-        assertEquals(null, writer.lastOperationId)
-    }
-
-    @Test
-    fun subscription_update_and_delete_with_null_base_version_are_rejected() = runTest {
-        val writer = RecordingSubscriptionWriter()
-        val executor = V2OutboxOperationExecutor(writer) { 1000L }
-
-        val snapshotJson = subscriptionSnapshotJson(id = SUB_ID, version = null)
-
-        val updateOp = subscriptionOperation(
-            operationType = "UPDATE",
-            baseVersion = null,
-            payloadJson = snapshotJson,
-        )
-        assertFailsWith<IllegalArgumentException> {
-            executor.execute(updateOp)
+            assertIs<OutboxExecutionResult.SubscriptionApplied>(result)
+            assertEquals(SUB_ID, result.record.id)
+            assertEquals(1L, result.record.version)
+            assertEquals(OP_ID, writer.lastOperationId)
+            assertEquals(RemoteWriteOperation.CREATE, writer.lastOperation)
+            assertEquals(null, writer.lastBaseVersion)
+            assertEquals(5999L, writer.lastSubscriptionDto?.amountMinor)
         }
 
-        val deleteOp = subscriptionOperation(
-            operationType = "DELETE",
-            baseVersion = null,
-            payloadJson = snapshotJson,
-        )
-        assertFailsWith<IllegalArgumentException> {
-            executor.execute(deleteOp)
+    @Test
+    fun subscription_update_conflict_returns_conflict_detected_and_preserves_remote_version() =
+        runTest {
+            val remoteDto = remoteSubscription(version = 4L, amountMinor = 7999L)
+            val writer =
+                RecordingSubscriptionWriter(
+                    subscriptionResult = ConditionalRemoteWriteResult.Conflict(remoteDto),
+                )
+            val executor = V2OutboxOperationExecutor(writer) { 2000L }
+
+            val snapshotJson = subscriptionSnapshotJson(id = SUB_ID, version = 2L, amountMinor = 6999L)
+            val op =
+                subscriptionOperation(
+                    operationType = "UPDATE",
+                    baseVersion = 2L,
+                    payloadJson = snapshotJson,
+                )
+
+            val result = executor.execute(op)
+
+            assertIs<OutboxExecutionResult.ConflictDetected>(result)
+            assertEquals(OP_ID, result.conflict.operationId)
+            assertEquals("SUBSCRIPTION", result.conflict.entityTypeCode)
+            assertEquals(SUB_ID, result.conflict.entityId)
+            assertEquals(2L, result.conflict.localVersion)
+            assertEquals(4L, result.conflict.remoteVersion)
+            assertEquals(2000L, result.conflict.detectedAtEpochMillis)
+            assertEquals(RemoteWriteOperation.UPDATE, writer.lastOperation)
+            assertEquals(2L, writer.lastBaseVersion)
         }
-        assertEquals(null, writer.lastOperationId)
-    }
+
+    @Test
+    fun subscription_delete_not_found_returns_missing_delete_acknowledged() =
+        runTest {
+            val writer =
+                RecordingSubscriptionWriter(
+                    subscriptionResult = ConditionalRemoteWriteResult.NotFound,
+                )
+            val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+            val snapshotJson = subscriptionSnapshotJson(id = SUB_ID, version = 3L)
+            val op =
+                subscriptionOperation(
+                    operationType = "DELETE",
+                    baseVersion = 3L,
+                    payloadJson = snapshotJson,
+                )
+
+            val result = executor.execute(op)
+
+            assertIs<OutboxExecutionResult.MissingDeleteAcknowledged>(result)
+            assertEquals(RemoteWriteOperation.DELETE, writer.lastOperation)
+            assertEquals(3L, writer.lastBaseVersion)
+        }
+
+    @Test
+    fun subscription_rejects_payload_id_mismatch_without_calling_writer() =
+        runTest {
+            val writer = RecordingSubscriptionWriter()
+            val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+            val snapshotJson = subscriptionSnapshotJson(id = "99999999-9999-4999-8999-999999999999", version = null)
+            val op =
+                subscriptionOperation(
+                    operationType = "CREATE",
+                    baseVersion = null,
+                    payloadJson = snapshotJson,
+                )
+
+            assertFailsWith<IllegalArgumentException> {
+                executor.execute(op)
+            }
+            assertEquals(null, writer.lastOperationId)
+        }
+
+    @Test
+    fun subscription_create_with_non_null_base_version_is_rejected() =
+        runTest {
+            val writer = RecordingSubscriptionWriter()
+            val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+            val snapshotJson = subscriptionSnapshotJson(id = SUB_ID, version = 1L)
+            val op =
+                subscriptionOperation(
+                    operationType = "CREATE",
+                    baseVersion = 1L,
+                    payloadJson = snapshotJson,
+                )
+
+            assertFailsWith<IllegalArgumentException> {
+                executor.execute(op)
+            }
+            assertEquals(null, writer.lastOperationId)
+        }
+
+    @Test
+    fun subscription_update_and_delete_with_null_base_version_are_rejected() =
+        runTest {
+            val writer = RecordingSubscriptionWriter()
+            val executor = V2OutboxOperationExecutor(writer) { 1000L }
+
+            val snapshotJson = subscriptionSnapshotJson(id = SUB_ID, version = null)
+
+            val updateOp =
+                subscriptionOperation(
+                    operationType = "UPDATE",
+                    baseVersion = null,
+                    payloadJson = snapshotJson,
+                )
+            assertFailsWith<IllegalArgumentException> {
+                executor.execute(updateOp)
+            }
+
+            val deleteOp =
+                subscriptionOperation(
+                    operationType = "DELETE",
+                    baseVersion = null,
+                    payloadJson = snapshotJson,
+                )
+            assertFailsWith<IllegalArgumentException> {
+                executor.execute(deleteOp)
+            }
+            assertEquals(null, writer.lastOperationId)
+        }
 
     private class RecordingSubscriptionWriter(
         var subscriptionResult: ConditionalRemoteWriteResult<SubscriptionDto> = ConditionalRemoteWriteResult.NotFound,
@@ -223,24 +238,25 @@ class SubscriptionV2OutboxExecutorTest {
             operationType: String,
             baseVersion: Long?,
             payloadJson: String?,
-        ): SyncOperationEntity = SyncOperationEntity(
-            syncScopeKey = "USER:test-user",
-            operationId = OP_ID,
-            entityTypeCode = "SUBSCRIPTION",
-            entityId = SUB_ID,
-            operationTypeCode = operationType,
-            baseVersion = baseVersion,
-            payloadJson = payloadJson,
-            predecessorOperationId = null,
-            isBlocked = false,
-            protocolVersion = 2,
-            statusCode = "IN_FLIGHT",
-            attemptCount = 1,
-            lastError = null,
-            nextAttemptAtEpochMillis = 0L,
-            createdAtEpochMillis = 0L,
-            updatedAtEpochMillis = 0L,
-        )
+        ): SyncOperationEntity =
+            SyncOperationEntity(
+                syncScopeKey = "USER:test-user",
+                operationId = OP_ID,
+                entityTypeCode = "SUBSCRIPTION",
+                entityId = SUB_ID,
+                operationTypeCode = operationType,
+                baseVersion = baseVersion,
+                payloadJson = payloadJson,
+                predecessorOperationId = null,
+                isBlocked = false,
+                protocolVersion = 2,
+                statusCode = "IN_FLIGHT",
+                attemptCount = 1,
+                lastError = null,
+                nextAttemptAtEpochMillis = 0L,
+                createdAtEpochMillis = 0L,
+                updatedAtEpochMillis = 0L,
+            )
 
         fun subscriptionSnapshotJson(
             id: String,
@@ -254,24 +270,25 @@ class SubscriptionV2OutboxExecutorTest {
         fun remoteSubscription(
             version: Long,
             amountMinor: Long = 5999L,
-        ): SubscriptionDto = SubscriptionDto(
-            id = SUB_ID,
-            userId = USER_ID,
-            workspaceId = null,
-            name = "Spotify",
-            amountMinor = amountMinor,
-            currency = "TRY",
-            categoryId = CAT_ID,
-            frequency = "MONTHLY",
-            interval = 1,
-            startDate = "2026-08-01",
-            endDate = null,
-            nextRenewalDate = "2026-09-01",
-            isActive = true,
-            createdAt = "2026-08-01T10:00:00Z",
-            updatedAt = "2026-08-01T10:00:00Z",
-            deletedAt = null,
-            version = version,
-        )
+        ): SubscriptionDto =
+            SubscriptionDto(
+                id = SUB_ID,
+                userId = USER_ID,
+                workspaceId = null,
+                name = "Spotify",
+                amountMinor = amountMinor,
+                currency = "TRY",
+                categoryId = CAT_ID,
+                frequency = "MONTHLY",
+                interval = 1,
+                startDate = "2026-08-01",
+                endDate = null,
+                nextRenewalDate = "2026-09-01",
+                isActive = true,
+                createdAt = "2026-08-01T10:00:00Z",
+                updatedAt = "2026-08-01T10:00:00Z",
+                deletedAt = null,
+                version = version,
+            )
     }
 }

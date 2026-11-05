@@ -1,5 +1,6 @@
 package com.feniqo.mobile.domain.repository
 
+import com.feniqo.mobile.domain.model.AppError
 import com.feniqo.mobile.domain.model.Budget
 import com.feniqo.mobile.domain.model.Category
 import com.feniqo.mobile.domain.model.CopyBudgetsCommand
@@ -9,6 +10,7 @@ import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.PaymentMethod
 import com.feniqo.mobile.domain.model.ReportPeriod
 import com.feniqo.mobile.domain.model.Transaction
+import com.feniqo.mobile.domain.model.TransactionMerchantCreateDecision
 import com.feniqo.mobile.domain.model.TransactionType
 import com.feniqo.mobile.domain.model.UpdateBudgetCommand
 import com.feniqo.mobile.domain.model.YearMonth
@@ -31,6 +33,23 @@ interface TransactionRepository {
     fun observeInstallmentGroup(groupId: EntityId): Flow<List<Transaction>>
 
     suspend fun create(transaction: Transaction): RepositoryResult<EntityId>
+
+    suspend fun create(
+        transaction: Transaction,
+        merchantDecision: TransactionMerchantCreateDecision,
+    ): RepositoryResult<EntityId> =
+        when (merchantDecision) {
+            TransactionMerchantCreateDecision.Auto -> create(transaction)
+            is TransactionMerchantCreateDecision.KnownMerchant,
+            TransactionMerchantCreateDecision.UseTransactionName,
+            -> {
+                RepositoryResult.Failure(
+                    AppError.Validation(
+                        code = "explicit_merchant_decision_not_supported_by_default_repository",
+                    ),
+                )
+            }
+        }
 
     suspend fun createInstallmentGroup(transactions: List<Transaction>): RepositoryResult<EntityId>
 

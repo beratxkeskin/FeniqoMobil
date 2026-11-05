@@ -5,8 +5,6 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-import com.feniqo.mobile.data.sync.SyncScopeKey
-
 /** Sunucuya gönderilmeyi bekleyen, kalıcı ve sıralı yerel yazma işlemi. */
 @Entity(
     tableName = "sync_operations",

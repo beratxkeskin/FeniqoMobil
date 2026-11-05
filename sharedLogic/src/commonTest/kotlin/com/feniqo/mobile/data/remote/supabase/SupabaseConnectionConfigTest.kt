@@ -7,10 +7,11 @@ import kotlin.test.assertFailsWith
 class SupabaseConnectionConfigTest {
     @Test
     fun accepts_publishable_key_without_exposing_a_real_project_value() {
-        val config = SupabaseConnectionConfig(
-            projectUrl = "https://example.supabase.co",
-            publishableKey = "sb_publishable_12345678901234567890",
-        )
+        val config =
+            SupabaseConnectionConfig(
+                projectUrl = "https://example.supabase.co",
+                publishableKey = "sb_publishable_12345678901234567890",
+            )
 
         assertEquals("https://example.supabase.co", config.projectUrl)
     }
