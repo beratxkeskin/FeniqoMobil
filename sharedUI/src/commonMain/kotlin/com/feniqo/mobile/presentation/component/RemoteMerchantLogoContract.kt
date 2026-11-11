@@ -25,6 +25,57 @@ enum class RemoteMerchantLogoCachePolicy {
 }
 
 /**
+ * Uzak logo render edilirken uygulanacak görsel yüzey politikası sözleşmesi.
+ * Sağlayıcı adından bağımsızdır (provider-neutral).
+ */
+enum class RemoteMerchantLogoSurfacePolicy {
+    /**
+     * Mevcut ve varsayılan yüzey davranışı.
+     * Logo yüzeyi standart kategori arkaplan rengini ve stilini kullanır.
+     */
+    DEFAULT,
+
+    /**
+     * Sabit açık nötr logo yüzeyi (Logo.dev sözleşmesi).
+     * Şeffaf veya koyu amblemli logoların açık ve koyu temalarda kontrast güvenliğini
+     * sağlamak için dairesel açık nötr (beyaz) zemin üzerinde çizilmesini sağlar.
+     */
+    LIGHT_NEUTRAL,
+
+    /**
+     * Sabit koyu nötr logo yüzeyi (Netflix gibi şeffaf kırmızı amblemli markalar için).
+     * Şeffaf arka planlı kırmızı amblemin siyah zemin üzerinde uygulama ikonu benzeri
+     * kontrast güvenliğiyle çizilmesini sağlar.
+     */
+    DARK_NEUTRAL,
+}
+
+/**
+ * Uzak logonun çiziminde uygulanacak içerik ölçeklendirme politikası sözleşmesi.
+ */
+enum class RemoteMerchantLogoContentScalePolicy(
+    val scaleFactor: Float,
+) {
+    /**
+     * Standart ölçekleme (ölçek çarpanı 1.0f).
+     * Logo görseli sınırları koruyarak standart boyutunda çizilir.
+     */
+    DEFAULT(1.0f),
+
+    /**
+     * Uygulama ikonu benzeri vurgulu ölçekleme (ölçek çarpanı 1.8f).
+     * Geniş iç boşluk taşıyan şeffaf logoların (örn. Netflix 'N') daire sınırında kırpılma
+     * oluşturmadan alanın çoğunu dengeli kaplamasını sağlar.
+     */
+    APP_ICON_EMPHASIZED(1.8f),
+    ;
+
+    companion object {
+        const val APP_ICON_EMPHASIZED_SCALE: Float = 1.8f
+    }
+}
+
+/**
  * Sağlayıcıdan bağımsız (provider-neutral) uzak logo istek tanımı.
  * Brandfetch, Coil veya herhangi bir üçüncü parti sağlayıcı/kütüphane bağımlılığı içermez.
  */
@@ -32,6 +83,8 @@ data class RemoteMerchantLogoRequest(
     val url: String,
     val headers: Map<String, String> = emptyMap(),
     val cachePolicy: RemoteMerchantLogoCachePolicy = RemoteMerchantLogoCachePolicy.STRICT_NO_STORE,
+    val surfacePolicy: RemoteMerchantLogoSurfacePolicy = RemoteMerchantLogoSurfacePolicy.DEFAULT,
+    val contentScalePolicy: RemoteMerchantLogoContentScalePolicy = RemoteMerchantLogoContentScalePolicy.DEFAULT,
 ) {
     override fun toString(): String {
         val safeUrl =
@@ -43,7 +96,9 @@ data class RemoteMerchantLogoRequest(
             "url=$safeUrl, " +
             "headers=[$headerNames], " +
             "headersCount=${headers.size}, " +
-            "cachePolicy=$cachePolicy" +
+            "cachePolicy=$cachePolicy, " +
+            "surfacePolicy=$surfacePolicy, " +
+            "contentScalePolicy=$contentScalePolicy" +
             ")"
     }
 

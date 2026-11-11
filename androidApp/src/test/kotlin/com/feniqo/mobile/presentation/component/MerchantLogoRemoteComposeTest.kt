@@ -462,4 +462,234 @@ class MerchantLogoRemoteComposeTest {
         compose.onNodeWithTag("toggle_logo").assertIsDisplayed()
         assertEquals(1, trackingResolver.callCount)
     }
+
+    private fun extractBackgroundColor(node: androidx.compose.ui.semantics.SemanticsNode): Color {
+        val bgModifier =
+            node.layoutInfo
+                .getModifierInfo()
+                .map { it.modifier }
+                .firstOrNull { it.javaClass.simpleName == "BackgroundElement" || it.toString().contains("Background") }
+                ?: throw AssertionError("Background modifier not found on node")
+        val colorField = bgModifier.javaClass.getDeclaredField("color")
+        colorField.isAccessible = true
+        val rawValue = colorField.get(bgModifier)
+        return when (rawValue) {
+            is Color -> rawValue
+            is Long -> Color(rawValue.toULong())
+            else -> throw AssertionError("Unexpected color field type: ${rawValue?.javaClass}")
+        }
+    }
+
+    @Test
+    fun lightNeutralSurfacePolicy_appliesWhiteBackground_andRendersRemoteLogoOnSuccess() {
+        val fakeRenderer = FakeRemoteMerchantLogoRenderer(state = FakeRemoteMerchantLogoRenderer.RenderState.Success)
+        val lightNeutralRequest =
+            RemoteMerchantLogoRequest(
+                url = "https://img.logo.dev/apple.com?token=pk_test&size=128&format=png&theme=light&fallback=404",
+                cachePolicy = RemoteMerchantLogoCachePolicy.PROVIDER_HEADERS_NO_LOCAL_STORAGE,
+                surfacePolicy = RemoteMerchantLogoSurfacePolicy.LIGHT_NEUTRAL,
+            )
+        val trackingResolver = TrackingRemoteMerchantLogoResolver(sampleRequest = lightNeutralRequest)
+
+        compose.setContent {
+            FeniqoTheme(darkTheme = false) {
+                CompositionLocalProvider(
+                    LocalRemoteMerchantLogoResolver provides trackingResolver,
+                    LocalRemoteMerchantLogoRenderer provides fakeRenderer,
+                ) {
+                    MerchantLogo(
+                        verifiedLogoKey = "migros",
+                        canShowMerchantLogo = true,
+                        categoryIconKey = "subscriptions",
+                        categoryColor = Color.Blue,
+                        fallbackLabel = "Apple",
+                        contentDescription = "Apple Harcaması",
+                        modifier = Modifier.testTag("apple_logo"),
+                    )
+                }
+            }
+        }
+
+        // 1. Renderer LIGHT_NEUTRAL yüzey politikasını aldı
+        assertNotNull(fakeRenderer.renderedRequest)
+        assertEquals(RemoteMerchantLogoSurfacePolicy.LIGHT_NEUTRAL, fakeRenderer.renderedRequest?.surfacePolicy)
+
+        // 2. SemanticsNode üzerinden background modifiyerinin Color.White olduğunu doğrula
+        val node = compose.onNodeWithTag("apple_logo").fetchSemanticsNode()
+        val actualColor = extractBackgroundColor(node)
+        assertEquals("Açık nötr yüzey Color.White olmalıdır", Color.White, actualColor)
+
+        // 3. Success durumunda remote logo görseli görünür
+        compose.onNodeWithTag("fake_remote_logo_image", useUnmergedTree = true).assertIsDisplayed()
+
+        // 4. Semantics tekil anons üretir, çift anons veya sızıntı yoktur
+        compose.onNodeWithContentDescription("Apple Harcaması").assertIsDisplayed()
+    }
+
+    @Test
+    fun darkNeutralSurfacePolicy_appliesBlackBackground_andRendersRemoteLogoOnSuccess() {
+        val fakeRenderer = FakeRemoteMerchantLogoRenderer(state = FakeRemoteMerchantLogoRenderer.RenderState.Success)
+        val darkNeutralRequest =
+            RemoteMerchantLogoRequest(
+                url = "https://img.logo.dev/netflix.com?token=pk_test&size=128&format=png&theme=dark&fallback=404",
+                cachePolicy = RemoteMerchantLogoCachePolicy.PROVIDER_HEADERS_NO_LOCAL_STORAGE,
+                surfacePolicy = RemoteMerchantLogoSurfacePolicy.DARK_NEUTRAL,
+                contentScalePolicy = RemoteMerchantLogoContentScalePolicy.APP_ICON_EMPHASIZED,
+            )
+        val trackingResolver = TrackingRemoteMerchantLogoResolver(sampleRequest = darkNeutralRequest)
+
+        compose.setContent {
+            FeniqoTheme(darkTheme = false) {
+                CompositionLocalProvider(
+                    LocalRemoteMerchantLogoResolver provides trackingResolver,
+                    LocalRemoteMerchantLogoRenderer provides fakeRenderer,
+                ) {
+                    MerchantLogo(
+                        verifiedLogoKey = "migros",
+                        canShowMerchantLogo = true,
+                        categoryIconKey = "subscriptions",
+                        categoryColor = Color.Red,
+                        fallbackLabel = "Netflix",
+                        contentDescription = "Netflix Harcaması",
+                        modifier = Modifier.testTag("netflix_logo"),
+                    )
+                }
+            }
+        }
+
+        // 1. Renderer DARK_NEUTRAL ve APP_ICON_EMPHASIZED politikalarını aldı
+        assertNotNull(fakeRenderer.renderedRequest)
+        assertEquals(RemoteMerchantLogoSurfacePolicy.DARK_NEUTRAL, fakeRenderer.renderedRequest?.surfacePolicy)
+        assertEquals(RemoteMerchantLogoContentScalePolicy.APP_ICON_EMPHASIZED, fakeRenderer.renderedRequest?.contentScalePolicy)
+
+        // 2. SemanticsNode üzerinden background modifiyerinin Color.Black olduğunu doğrula
+        val node = compose.onNodeWithTag("netflix_logo").fetchSemanticsNode()
+        val actualColor = extractBackgroundColor(node)
+        assertEquals("Koyu nötr yüzey Color.Black olmalıdır", Color.Black, actualColor)
+
+        // 3. Success durumunda remote logo görseli görünür
+        compose.onNodeWithTag("fake_remote_logo_image", useUnmergedTree = true).assertIsDisplayed()
+
+        // 4. Semantics tekil anons üretir
+        compose.onNodeWithContentDescription("Netflix Harcaması").assertIsDisplayed()
+    }
+
+    @Test
+    fun defaultSurfacePolicy_preservesCategoryColorBackground() {
+        val fakeRenderer = FakeRemoteMerchantLogoRenderer(state = FakeRemoteMerchantLogoRenderer.RenderState.Success)
+        val defaultRequest =
+            RemoteMerchantLogoRequest(
+                url = "https://cdn.brandfetch.io/icon",
+                surfacePolicy = RemoteMerchantLogoSurfacePolicy.DEFAULT,
+            )
+        val trackingResolver = TrackingRemoteMerchantLogoResolver(sampleRequest = defaultRequest)
+        val testCategoryColor = Color(0xFF00FF00) // Yeşil
+
+        compose.setContent {
+            FeniqoTheme(darkTheme = false) {
+                CompositionLocalProvider(
+                    LocalRemoteMerchantLogoResolver provides trackingResolver,
+                    LocalRemoteMerchantLogoRenderer provides fakeRenderer,
+                ) {
+                    MerchantLogo(
+                        verifiedLogoKey = "migros",
+                        canShowMerchantLogo = true,
+                        categoryIconKey = "groceries",
+                        categoryColor = testCategoryColor,
+                        fallbackLabel = "Migros",
+                        modifier = Modifier.testTag("default_policy_logo"),
+                    )
+                }
+            }
+        }
+
+        assertEquals(RemoteMerchantLogoSurfacePolicy.DEFAULT, fakeRenderer.renderedRequest?.surfacePolicy)
+
+        val node = compose.onNodeWithTag("default_policy_logo").fetchSemanticsNode()
+        val actualColor = extractBackgroundColor(node)
+        assertEquals(
+            "Varsayılan yüzey kategori renginin %12 alpha türevi olmalıdır",
+            testCategoryColor.copy(alpha = 0.12f),
+            actualColor,
+        )
+    }
+
+    @Test
+    fun lightNeutralSurfacePolicy_loadingAndErrorStates_showFallbackWithoutCrash() {
+        val fakeRenderer = FakeRemoteMerchantLogoRenderer(state = FakeRemoteMerchantLogoRenderer.RenderState.Loading)
+        val lightNeutralRequest =
+            RemoteMerchantLogoRequest(
+                url = "https://img.logo.dev/apple.com",
+                surfacePolicy = RemoteMerchantLogoSurfacePolicy.LIGHT_NEUTRAL,
+            )
+        val trackingResolver = TrackingRemoteMerchantLogoResolver(sampleRequest = lightNeutralRequest)
+
+        compose.setContent {
+            FeniqoTheme(darkTheme = false) {
+                CompositionLocalProvider(
+                    LocalRemoteMerchantLogoResolver provides trackingResolver,
+                    LocalRemoteMerchantLogoRenderer provides fakeRenderer,
+                ) {
+                    MerchantLogo(
+                        verifiedLogoKey = "migros",
+                        canShowMerchantLogo = true,
+                        categoryIconKey = "groceries",
+                        categoryColor = Color.Blue,
+                        fallbackLabel = "Apple",
+                        modifier = Modifier.testTag("loading_logo"),
+                    )
+                }
+            }
+        }
+
+        // Loading durumunda fallback görünür, remote logo henüz çizilmez
+        compose.onNodeWithTag("fake_remote_logo_image").assertDoesNotExist()
+        compose.onNodeWithTag("loading_logo").assertIsDisplayed()
+
+        // Error durumuna geçiş
+        fakeRenderer.state = FakeRemoteMerchantLogoRenderer.RenderState.Error
+        compose.waitForIdle()
+
+        compose.onNodeWithTag("fake_remote_logo_image").assertDoesNotExist()
+        compose.onNodeWithTag("loading_logo").assertIsDisplayed()
+    }
+
+    @Test
+    fun lightNeutralSurfacePolicy_inDarkTheme_composesWithoutCrash_andPreservesWhiteSurface() {
+        val fakeRenderer = FakeRemoteMerchantLogoRenderer(state = FakeRemoteMerchantLogoRenderer.RenderState.Success)
+        val lightNeutralRequest =
+            RemoteMerchantLogoRequest(
+                url = "https://img.logo.dev/apple.com",
+                surfacePolicy = RemoteMerchantLogoSurfacePolicy.LIGHT_NEUTRAL,
+            )
+        val trackingResolver = TrackingRemoteMerchantLogoResolver(sampleRequest = lightNeutralRequest)
+
+        compose.setContent {
+            // KOYU TEMA
+            FeniqoTheme(darkTheme = true) {
+                CompositionLocalProvider(
+                    LocalRemoteMerchantLogoResolver provides trackingResolver,
+                    LocalRemoteMerchantLogoRenderer provides fakeRenderer,
+                ) {
+                    MerchantLogo(
+                        verifiedLogoKey = "migros",
+                        canShowMerchantLogo = true,
+                        categoryIconKey = "subscriptions",
+                        categoryColor = Color.Blue,
+                        fallbackLabel = "Apple",
+                        contentDescription = "Koyu Tema Apple",
+                        modifier = Modifier.testTag("dark_theme_apple_logo"),
+                    )
+                }
+            }
+        }
+
+        // Koyu temada da yüzey beyaz kalır ve siyah logo görünür kalır
+        val node = compose.onNodeWithTag("dark_theme_apple_logo").fetchSemanticsNode()
+        val actualColor = extractBackgroundColor(node)
+        assertEquals("Koyu temada da açık nötr yüzey Color.White olmalıdır", Color.White, actualColor)
+
+        compose.onNodeWithTag("fake_remote_logo_image", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithContentDescription("Koyu Tema Apple").assertIsDisplayed()
+    }
 }

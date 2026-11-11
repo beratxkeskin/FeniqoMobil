@@ -399,7 +399,7 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertEquals("migros", savedTx.merchantId)
             assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
             assertEquals(100, savedTx.merchantConfidence)
-            assertEquals(10, savedTx.merchantCatalogVersion)
+            assertEquals(18, savedTx.merchantCatalogVersion)
 
             val verifications = getAllVerificationsSnapshot()
             assertEquals(1, verifications.size)
@@ -448,7 +448,7 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertEquals("kofteci_yusuf", savedTx.merchantId)
             assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
             assertEquals(100, savedTx.merchantConfidence)
-            assertEquals(10, savedTx.merchantCatalogVersion)
+            assertEquals(18, savedTx.merchantCatalogVersion)
 
             // 2. Verification entity snapshot verification
             val verifications = getAllVerificationsSnapshot()
@@ -540,7 +540,7 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertEquals("vatan_bilgisayar", savedTx.merchantId)
             assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
             assertEquals(100, savedTx.merchantConfidence)
-            assertEquals(10, savedTx.merchantCatalogVersion)
+            assertEquals(18, savedTx.merchantCatalogVersion)
 
             // 2. Verification entity snapshot verification
             val verifications = getAllVerificationsSnapshot()
@@ -632,7 +632,7 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertEquals("gratis", savedTx.merchantId)
             assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
             assertEquals(100, savedTx.merchantConfidence)
-            assertEquals(10, savedTx.merchantCatalogVersion)
+            assertEquals(18, savedTx.merchantCatalogVersion)
 
             // 2. Verification entity snapshot verification
             val verifications = getAllVerificationsSnapshot()
@@ -757,7 +757,7 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertEquals("turknet", savedTx.merchantId)
             assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
             assertEquals(100, savedTx.merchantConfidence)
-            assertEquals(10, savedTx.merchantCatalogVersion)
+            assertEquals(18, savedTx.merchantCatalogVersion)
 
             // 2. Verification entity snapshot verification
             val verifications = getAllVerificationsSnapshot()
@@ -910,7 +910,7 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertEquals("istanbulkart", savedTx.merchantId)
             assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
             assertEquals(100, savedTx.merchantConfidence)
-            assertEquals(10, savedTx.merchantCatalogVersion)
+            assertEquals(18, savedTx.merchantCatalogVersion)
 
             // 2. Verification entity snapshot verification
             val verifications = getAllVerificationsSnapshot()
@@ -1020,7 +1020,7 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertEquals("ajet", savedTx.merchantId)
             assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
             assertEquals(100, savedTx.merchantConfidence)
-            assertEquals(10, savedTx.merchantCatalogVersion)
+            assertEquals(18, savedTx.merchantCatalogVersion)
 
             val verifications = getAllVerificationsSnapshot()
             assertEquals(1, verifications.size)
@@ -2160,7 +2160,7 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertEquals("yemeksepeti", savedTx.merchantId)
             assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
             assertEquals(100, savedTx.merchantConfidence)
-            assertEquals(10, savedTx.merchantCatalogVersion)
+            assertEquals(18, savedTx.merchantCatalogVersion)
 
             // 2. Verification entity snapshot verification: canonical YEMEKSEPETI, NOT generic YEMEK
             val verifications = getAllVerificationsSnapshot()
@@ -2233,6 +2233,225 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertTrue(getAllTransactionsSnapshot().isEmpty(), "Transaction entity must be rolled back")
             assertTrue(getAllVerificationsSnapshot().isEmpty(), "Verification entity must be rolled back")
             assertTrue(getAllOperationsSnapshot().isEmpty(), "Sync operations must be rolled back")
+        }
+
+    @Test
+    fun entertainmentCategory_withEntertainmentMerchantSteam_atomicallySucceeds() =
+        runTest {
+            val entertainmentCatId = "cat-ent-atom-1"
+            db.categoryDao().upsert(
+                CategoryEntity(
+                    id = entertainmentCatId,
+                    ownerId = userId,
+                    workspaceId = null,
+                    scopeKey = "user:$userId",
+                    name = "Eğlence",
+                    normalizedName = "EGLENCE",
+                    slug = "entertainment-atom-1",
+                    typeCode = "EXPENSE",
+                    colorHex = "#EC4899",
+                    iconKey = "entertainment",
+                    isDefault = false,
+                    createdAtEpochMillis = 1000L,
+                    sync =
+                        SyncMetadata(
+                            syncStatus = SyncStatus.SYNCED.name,
+                            updatedAtEpochMillis = 1000L,
+                            localUpdatedAtEpochMillis = 1000L,
+                            deletedAtEpochMillis = null,
+                            version = 1L,
+                            baseVersion = 1L,
+                            lastSyncError = null,
+                        ),
+                ),
+            )
+
+            val tx = buildTransactionEntity(id = "tx-atom-steam-ent", description = "STEAM OYUN", categoryId = entertainmentCatId)
+            val expectedTxPayload = """{"transaction_id":"tx-atom-steam-ent","amount":25000,"currency":"TRY"}"""
+
+            val result =
+                mutationDao.createTransactionWithMerchantDecisionV2(
+                    syncScopeKey = syncScopeKey,
+                    actorUserId = userId,
+                    transactionEntity = tx,
+                    transactionPayloadJson = expectedTxPayload,
+                    decision = TransactionMerchantCreateDecision.KnownMerchant("steam"),
+                    operationIdFactory = { (++opIndex).toString(16).padStart(32, '0') },
+                    nowEpochMillis = 1000L,
+                )
+
+            assertNotNull(result.transactionOperationId)
+            assertNotNull(result.verificationOperationId)
+            assertTrue(result.transactionOperationId != result.verificationOperationId)
+
+            val txSnapshot = getAllTransactionsSnapshot()
+            assertEquals(1, txSnapshot.size)
+            val createdTx = txSnapshot.first()
+            assertEquals("tx-atom-steam-ent", createdTx.id)
+            assertEquals(userId, createdTx.ownerId)
+            assertNull(createdTx.workspaceId)
+            assertEquals("steam", createdTx.merchantId)
+            assertEquals("USER_VERIFIED", createdTx.merchantMatchSourceCode)
+            assertEquals(100, createdTx.merchantConfidence)
+            assertEquals(18, createdTx.merchantCatalogVersion)
+
+            val verSnapshot = getAllVerificationsSnapshot()
+            assertEquals(1, verSnapshot.size)
+            val createdVer = verSnapshot.first()
+            assertEquals(userId, createdVer.ownerId)
+            assertNull(createdVer.workspaceId)
+            assertEquals("STEAM OYUN", createdVer.normalizedAlias)
+            assertEquals("ASSIGN", createdVer.decisionCode)
+            assertEquals("steam", createdVer.merchantId)
+            assertEquals("PERSONAL", createdVer.scopeCode)
+
+            val ops = getAllOperationsSnapshot()
+            assertEquals(2, ops.size)
+
+            val txOp = ops.first { it.entityTypeCode == "TRANSACTION" }
+            assertEquals("CREATE", txOp.operationTypeCode)
+            assertEquals(2, txOp.protocolVersion, "Transaction outbox must use protocol_version = 2")
+            assertEquals(createdTx.id, txOp.entityId)
+            assertEquals(result.transactionOperationId, txOp.operationId)
+            assertEquals(syncScopeKey, txOp.syncScopeKey)
+            assertEquals(expectedTxPayload, txOp.payloadJson)
+            assertNull(txOp.baseVersion)
+
+            val verifOp = ops.first { it.entityTypeCode == "USER_MERCHANT_VERIFICATION" }
+            assertEquals("CREATE", verifOp.operationTypeCode)
+            assertEquals(2, verifOp.protocolVersion, "Verification outbox must use protocol_version = 2")
+            assertEquals(createdVer.id, verifOp.entityId)
+            assertEquals(result.verificationOperationId, verifOp.operationId)
+            assertEquals(syncScopeKey, verifOp.syncScopeKey)
+            assertNull(verifOp.baseVersion)
+            assertNotNull(verifOp.payloadJson)
+
+            val decodedPayload =
+                UserMerchantVerificationPayloadCodec.parseAndValidate(
+                    jsonString = verifOp.payloadJson,
+                    operation = "CREATE",
+                    baseVersion = null,
+                )
+            assertEquals(createdVer.id, decodedPayload.id)
+            assertEquals(userId, decodedPayload.userId)
+            assertNull(decodedPayload.workspaceId)
+            assertEquals(createdVer.normalizedAlias, decodedPayload.normalizedAlias)
+            assertEquals("ASSIGN", decodedPayload.decisionCode)
+            assertEquals("steam", decodedPayload.merchantId)
+            assertEquals("PERSONAL", decodedPayload.scopeCode)
+        }
+
+    @Test
+    fun entertainmentCategory_withEntertainmentMerchantSteam_triggerAbortMidway_leavesRelevantTableSnapshotsUnchanged() =
+        runTest {
+            val entertainmentCatId = "cat-ent-atom-fail"
+            db.categoryDao().upsert(
+                CategoryEntity(
+                    id = entertainmentCatId,
+                    ownerId = userId,
+                    workspaceId = null,
+                    scopeKey = "user:$userId",
+                    name = "Eğlence",
+                    normalizedName = "EGLENCE",
+                    slug = "entertainment-atom-fail",
+                    typeCode = "EXPENSE",
+                    colorHex = "#EC4899",
+                    iconKey = "entertainment",
+                    isDefault = false,
+                    createdAtEpochMillis = 1000L,
+                    sync =
+                        SyncMetadata(
+                            syncStatus = SyncStatus.SYNCED.name,
+                            updatedAtEpochMillis = 1000L,
+                            localUpdatedAtEpochMillis = 1000L,
+                            deletedAtEpochMillis = null,
+                            version = 1L,
+                            baseVersion = 1L,
+                            lastSyncError = null,
+                        ),
+                ),
+            )
+
+            db.openHelper.writableDatabase.execSQL(
+                """
+                CREATE TRIGGER abort_steam_tx_outbox_insert
+                BEFORE INSERT ON sync_operations
+                WHEN NEW.entity_type_code = 'TRANSACTION'
+                BEGIN
+                    SELECT RAISE(ABORT, 'Simulated SQLite abort on steam transaction outbox');
+                END;
+                """.trimIndent(),
+            )
+
+            val tx = buildTransactionEntity(id = "tx-atom-steam-fail", description = "STEAM OYUN", categoryId = entertainmentCatId)
+
+            val ex =
+                assertFailsWith<android.database.sqlite.SQLiteException> {
+                    mutationDao.createTransactionWithMerchantDecisionV2(
+                        syncScopeKey = syncScopeKey,
+                        actorUserId = userId,
+                        transactionEntity = tx,
+                        transactionPayloadJson = "{}",
+                        decision = TransactionMerchantCreateDecision.KnownMerchant("steam"),
+                        operationIdFactory = { (++opIndex).toString(16).padStart(32, '0') },
+                        nowEpochMillis = 1000L,
+                    )
+                }
+            assertTrue(ex.message?.contains("Simulated SQLite abort on steam transaction outbox") == true)
+
+            assertTrue(getAllTransactionsSnapshot().isEmpty(), "Transaction table must remain unchanged")
+            assertTrue(getAllVerificationsSnapshot().isEmpty(), "Verification table must remain unchanged")
+            assertTrue(getAllOperationsSnapshot().isEmpty(), "Sync operations table must remain unchanged")
+        }
+
+    @Test
+    fun housingCategory_withEntertainmentMerchantSteam_failsClosedWithoutWrites() =
+        runTest {
+            val housingCatId = "cat-housing-atom-1"
+            db.categoryDao().upsert(
+                CategoryEntity(
+                    id = housingCatId,
+                    ownerId = userId,
+                    workspaceId = null,
+                    scopeKey = "user:$userId",
+                    name = "Kira ve Barınma",
+                    normalizedName = "KIRA VE BARINMA",
+                    slug = "housing-atom-1",
+                    typeCode = "EXPENSE",
+                    colorHex = "#64748B",
+                    iconKey = "housing",
+                    isDefault = false,
+                    createdAtEpochMillis = 1000L,
+                    sync =
+                        SyncMetadata(
+                            syncStatus = SyncStatus.SYNCED.name,
+                            updatedAtEpochMillis = 1000L,
+                            localUpdatedAtEpochMillis = 1000L,
+                            deletedAtEpochMillis = null,
+                            version = 1L,
+                            baseVersion = 1L,
+                            lastSyncError = null,
+                        ),
+                ),
+            )
+
+            val tx = buildTransactionEntity(id = "tx-atom-housing-steam", description = "STEAM OYUN", categoryId = housingCatId)
+
+            assertFailsWith<IllegalArgumentException> {
+                mutationDao.createTransactionWithMerchantDecisionV2(
+                    syncScopeKey = syncScopeKey,
+                    actorUserId = userId,
+                    transactionEntity = tx,
+                    transactionPayloadJson = "{}",
+                    decision = TransactionMerchantCreateDecision.KnownMerchant("steam"),
+                    operationIdFactory = { (++opIndex).toString(16).padStart(32, '0') },
+                    nowEpochMillis = 1000L,
+                )
+            }
+
+            assertTrue(getAllTransactionsSnapshot().isEmpty())
+            assertTrue(getAllVerificationsSnapshot().isEmpty())
+            assertTrue(getAllOperationsSnapshot().isEmpty())
         }
 
     private class SpyBackgroundSyncScheduler : BackgroundSyncScheduler {

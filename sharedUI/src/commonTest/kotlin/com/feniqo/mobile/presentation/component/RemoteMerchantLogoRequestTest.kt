@@ -92,9 +92,46 @@ class RemoteMerchantLogoRequestTest {
                 "url=https://cdn.brandfetch.io/domain/a101.com.tr/icon, " +
                 "headers=[], " +
                 "headersCount=0, " +
-                "cachePolicy=STRICT_NO_STORE)",
+                "cachePolicy=STRICT_NO_STORE, " +
+                "surfacePolicy=DEFAULT, " +
+                "contentScalePolicy=DEFAULT)",
             noClientParamRequest.toString(),
         )
+    }
+
+    @Test
+    fun defaultPolicies_matchContract_andSupportDarkNeutralAndEmphasizedScale() {
+        val defaultRequest = RemoteMerchantLogoRequest(url = "https://example.com/logo.png")
+        assertEquals(RemoteMerchantLogoSurfacePolicy.DEFAULT, defaultRequest.surfacePolicy)
+        assertEquals(RemoteMerchantLogoContentScalePolicy.DEFAULT, defaultRequest.contentScalePolicy)
+        assertEquals(1.0f, RemoteMerchantLogoContentScalePolicy.DEFAULT.scaleFactor)
+
+        val lightNeutralRequest =
+            RemoteMerchantLogoRequest(
+                url = "https://img.logo.dev/example.com",
+                surfacePolicy = RemoteMerchantLogoSurfacePolicy.LIGHT_NEUTRAL,
+                contentScalePolicy = RemoteMerchantLogoContentScalePolicy.DEFAULT,
+            )
+        assertEquals(RemoteMerchantLogoSurfacePolicy.LIGHT_NEUTRAL, lightNeutralRequest.surfacePolicy)
+        assertEquals(RemoteMerchantLogoContentScalePolicy.DEFAULT, lightNeutralRequest.contentScalePolicy)
+        assertTrue(lightNeutralRequest.toString().contains("surfacePolicy=LIGHT_NEUTRAL"))
+        assertTrue(lightNeutralRequest.toString().contains("contentScalePolicy=DEFAULT"))
+
+        val darkNeutralEmphasizedRequest =
+            RemoteMerchantLogoRequest(
+                url = "https://img.logo.dev/netflix.com?token=pk_test_123&theme=dark",
+                surfacePolicy = RemoteMerchantLogoSurfacePolicy.DARK_NEUTRAL,
+                contentScalePolicy = RemoteMerchantLogoContentScalePolicy.APP_ICON_EMPHASIZED,
+            )
+        assertEquals(RemoteMerchantLogoSurfacePolicy.DARK_NEUTRAL, darkNeutralEmphasizedRequest.surfacePolicy)
+        assertEquals(RemoteMerchantLogoContentScalePolicy.APP_ICON_EMPHASIZED, darkNeutralEmphasizedRequest.contentScalePolicy)
+        assertEquals(1.8f, RemoteMerchantLogoContentScalePolicy.APP_ICON_EMPHASIZED.scaleFactor)
+        assertEquals(1.8f, RemoteMerchantLogoContentScalePolicy.APP_ICON_EMPHASIZED_SCALE)
+        val str = darkNeutralEmphasizedRequest.toString()
+        assertTrue(str.contains("surfacePolicy=DARK_NEUTRAL"))
+        assertTrue(str.contains("contentScalePolicy=APP_ICON_EMPHASIZED"))
+        assertFalse(str.contains("pk_test_123"))
+        assertTrue(str.contains("token=***"))
     }
 
     @Test
@@ -102,13 +139,14 @@ class RemoteMerchantLogoRequestTest {
         val secretToken = "pk_synthetic_secret_key_12345"
         val request =
             RemoteMerchantLogoRequest(
-                url = "https://img.logo.dev/migros.com.tr?token=$secretToken&size=128&format=png&fallback=404",
+                url = "https://img.logo.dev/migros.com.tr?token=$secretToken&size=128&format=png&theme=light&fallback=404",
                 headers =
                     mapOf(
                         "Authorization" to "Bearer sensitive_auth_token",
                         "User-Agent" to "FeniqoMobil/1.0.0",
                     ),
                 cachePolicy = RemoteMerchantLogoCachePolicy.PROVIDER_HEADERS_NO_LOCAL_STORAGE,
+                surfacePolicy = RemoteMerchantLogoSurfacePolicy.LIGHT_NEUTRAL,
             )
 
         val str = request.toString()
@@ -117,9 +155,10 @@ class RemoteMerchantLogoRequestTest {
         assertFalse(str.contains("secret_key_12345"), "Token içeriği toString()'e sızamaz: $str")
         assertFalse(str.contains("sensitive_auth_token"), "Header değeri toString()'e sızamaz: $str")
         assertTrue(str.contains("token=***"), "token parametresi maskelenmelidir: $str")
-        assertTrue(str.contains("size=128&format=png&fallback=404"), "URL'nin güvenli kısımları korunmalıdır: $str")
+        assertTrue(str.contains("size=128&format=png&theme=light&fallback=404"), "URL'nin güvenli kısımları korunmalıdır: $str")
         assertTrue(str.contains("headers=[Authorization, User-Agent]"), "Header adları sıralı gösterilmelidir: $str")
         assertTrue(str.contains("cachePolicy=PROVIDER_HEADERS_NO_LOCAL_STORAGE"), "Cache policy gösterilmelidir: $str")
+        assertTrue(str.contains("surfacePolicy=LIGHT_NEUTRAL"), "Surface policy gösterilmelidir: $str")
     }
 
     @Test

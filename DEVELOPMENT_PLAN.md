@@ -8,6 +8,98 @@
 
 ## Güncel durum
 
+- **Merchant Logo Allowlist Genişletmesi H4-G2-ENT — Eğlence Markaları ve Oyun Mağazaları (Teknik ve Fiziksel Cihaz Manuel Kabulü Tamamlandı — 2026-11-11):**
+  - **Güncel katalog ve dağılım:** `StarterMerchantCatalog` sürümü v18'e yükseltildi (`CATALOG_VERSION = 18`); toplam 184 merchant (147 doğrulanmış uzak logolu, 37 güvenli yerel fallback), `MerchantLogoDomainAllowlist` boyutu 141 doğrulanmış anahtardır.
+  - **Entertainment sonucu:** Entertainment kategorisindeki 17/17 merchant doğrulanmış gerçek uzak logoya kavuştu; Samsung Galaxy A71 (SM-A715F) fiziksel cihazında güncel Demo APK (`com.feniqo.mobile.demo`) ile proje sahibi görsel kabulünde 17/17 PASS olarak onaylandı (veri mutasyonu yoktur).
+  - **Mimari ve veri bütünlüğü:** Room şema sürümü (v24), Supabase sözleşmeleri, D1 hash'leri (`00c4ffbc3811960fd9a9cf897c5f58bf684c522f`, `0119fe9633ab32cd28bfa6eda3ec32a8610ee349`) ve sıfır kullanıcı-metni uzak istek/allowlist gizlilik sınırı korunmuştur. Ayrıntılı sıralama sözleşmesi ve kanonik domain envanteri için bkz. [MERCHANT_TANIMA_VE_LOGO_UYGULAMA_PLANI.md](docs/MERCHANT_TANIMA_VE_LOGO_UYGULAMA_PLANI.md) ve [MERCHANT_LOGO_KAYNAK_VE_IZIN_ENVANTERI.md](docs/MERCHANT_LOGO_KAYNAK_VE_IZIN_ENVANTERI.md).
+  - **Sıradaki adım:** Sonraki kategori için salt-okunur (read-only) kapsam ve marka envanteri; henüz sonraki kategoride marka ekleme kararı verilmemiştir.
+
+- **Merchant Logo Allowlist Genişletmesi H4-G2-F — Ulaşım ve Seyahat Markaları (Teknik ve Fiziksel Cihaz Manuel Kabulü Tamamlandı — 2026-11-09):**
+  - **Katalog Sürümü ve Dağılım:** `StarterMerchantCatalog` sürümü v16'ya yükseltildi (`CATALOG_VERSION = 16`); toplam merchant kayıt sayısı 167'dir. Doğrulanmış uzak logo anahtarı (`verifiedLogoKey`) taşıyan merchant sayısı 130'a (118 doğrudan + 12 çatı logosu paylaşan abonelik) yükseltildi. Kalan 37 kayıt uzak logo anahtarı taşımaz (`verifiedLogoKey = null`) ve güvenli yerel fallback (`CATEGORY_ICON`) zincirinde kalır. 167 markanın tamamında gerçek uzak logo bulunduğu iddiasında bulunulmaz.
+  - **Merkezi Allowlist:** `MerchantLogoDomainAllowlist` 126 stable key → kanonik domain eşlemesine ulaştı (17 yeni ulaşım ve seyahat domaini eklendi).
+  - **Eklenen 17 Ulaşım ve Seyahat Markası:** `istanbulkart` (istanbulkart.istanbul), `tcdd` (tcdd.gov.tr), `bitaksi` (bitaksi.com), `marti` (marti.tech), `ispark` (ispark.istanbul), `metro_turizm` (metroturizm.com.tr), `pamukkale_turizm` (pamukkale.com.tr), `varan_turizm` (varan.com.tr), `ido` (ido.com.tr), `ajet` (ajet.com), `sunexpress` (sunexpress.com.tr), `corendon` (corendonairlines.com — displayName: `Corendon`), `booking` (booking.com), `airbnb` (airbnb.com), `ets_tur` (etstur.com), `jolly_tur` (jollytur.com), `setur` (setur.com.tr).
+  - **Kasıtlı Fallback Olarak Korunan 5 Marka:** `tiktak` (tiktak.com.tr Logo.dev 404; tiktak.com yabancı), `tatilbudur` (tatilbudur.com Logo.dev 404), `kamil_koc` (FlixBus çatı kimliği engeli), `budo` (BURULAŞ çatı kimliği engeli), `getir_arac` (TikTak devri/yaşam döngüsü belirsizliği).
+  - **Kimlik ve İzolasyon Koruması:** 17 markanın `merchantId`, `displayName` (`corendon` için `Corendon`), kategori ve alias yapıları eksiksiz korunmuştur.
+  - **Güvenlik Güvencesi:** Statik verifiedLogoKey ve merkezi allowlist sınırı, kullanıcı girdisinden domain/URL üretilmesini engeller.
+  - **Logo.dev Tema ve Kontrast Sözleşmesi:** 17 marka için PNG/WebP formatında `theme=light`, `LIGHT_NEUTRAL` (beyaz dairesel yüzey) ve `DEFAULT` (1.0f ölçek) uygulanır; JPG formatı themesiz URL üretir; `fallback=404` korunur.
+  - **Veri ve Migration Bütünlüğü:** Room şema sürümü (v24), Supabase sözleşmeleri ve D1 hash'leri (`00c4ffbc3811960fd9a9cf897c5f58bf684c522f`, `0119fe9633ab32cd28bfa6eda3ec32a8610ee349`) birebir korunmuştur. Veri mutasyonu veya uzak şema değişikliği yoktur.
+  - **Durum:** Teknik doğrulama ve Samsung Galaxy A71 (SM-A715F) fiziksel cihazında proje sahibi görsel kabulü TAMAMLANDI (17 yeni gerçek uzak logo PASS, 5 bilinçli fallback PASS, 5 regresyon logosu PASS). Bu görsel kabul doğrudan ağ trafiğini kanıtlamaz; gizlilik garantisi statik verifiedLogoKey ve merkezi allowlist mimarisinden gelir. Ayrıntılı envanter ve analiz için bkz. [MERCHANT_LOGO_KAYNAK_VE_IZIN_ENVANTERI.md](docs/MERCHANT_LOGO_KAYNAK_VE_IZIN_ENVANTERI.md) ve [MERCHANT_TANIMA_VE_LOGO_UYGULAMA_PLANI.md](docs/MERCHANT_TANIMA_VE_LOGO_UYGULAMA_PLANI.md).
+
+- **Merchant Logo Allowlist Genişletmesi H4-G2-E — Kişisel Bakım Markaları (Teknik ve Fiziksel Cihaz Manuel Kabulü Tamamlandı — 2026-11-08):**
+  - **Katalog Sürümü ve Dağılım:** `StarterMerchantCatalog` sürümü v15'e yükseltildi (`CATALOG_VERSION = 15`); toplam merchant kayıt sayısı 167'dir. Doğrulanmış uzak logo anahtarı (`verifiedLogoKey`) taşıyan merchant sayısı 113'e (101 doğrudan + 12 çatı logosu paylaşan abonelik) yükseltildi. Kalan 54 kayıt uzak logo anahtarı taşımaz (`verifiedLogoKey = null`) ve güvenli yerel fallback (`CATEGORY_ICON`) zincirinde kalır. 167 markanın tamamında gerçek uzak logo bulunduğu iddiasında bulunulmaz.
+  - **Merkezi Allowlist:** `MerchantLogoDomainAllowlist` 109 stable key → kanonik domain eşlemesine ulaştı (15 yeni kişisel bakım domaini eklendi).
+  - **Eklenen 15 Kişisel Bakım Markası:** `gratis` (gratis.com), `watsons` (watsons.com.tr), `rossmann` (rossmann.com.tr), `sephora` (sephora.com.tr), `eve_shop` (eveshop.com.tr), `flormar` (flormar.com.tr), `golden_rose` (goldenrose.com), `yves_rocher` (yvesrocher.com.tr), `the_body_shop` (thebodyshop.com.tr), `kiko_milano` (kikomilano.com.tr), `mac_cosmetics` (maccosmetics.com), `clinique` (clinique.com.tr), `avon` (avon.com.tr), `oriflame` (oriflame.com.tr), `farmasi` (farmasi.com.tr).
+  - **Kimlik ve İzolasyon Koruması:** 15 markanın `merchantId`, `displayName`, kategori ve alias yapıları eksiksiz korunmuştur.
+  - **Güvenlik Güvencesi:** Statik verifiedLogoKey ve merkezi allowlist sınırı, kullanıcı girdisinden domain/URL üretilmesini engeller.
+  - **Logo.dev Tema ve Kontrast Sözleşmesi:** 15 kişisel bakım markası için PNG/WebP formatında `theme=light`, `LIGHT_NEUTRAL` (beyaz dairesel yüzey) ve `DEFAULT` (1.0f ölçek) uygulanır; JPG formatı themesiz URL üretir; `fallback=404` korunur.
+  - **Veri ve Migration Bütünlüğü:** Room şema sürümü (v24), Supabase sözleşmeleri ve D1 hash'leri (`00c4ffbc3811960fd9a9cf897c5f58bf684c522f`, `0119fe9633ab32cd28bfa6eda3ec32a8610ee349`) birebir korunmuştur. Veri mutasyonu veya uzak şema değişikliği yoktur.
+  - **Durum:** Teknik doğrulama ve Samsung Galaxy A71 (SM-A715F) fiziksel cihazında proje sahibi görsel kabulü TAMAMLANDI (15/15 kişisel bakım logosu hepsi PASS). Bu görsel kabul doğrudan ağ trafiğini kanıtlamaz; gizlilik garantisi statik verifiedLogoKey ve merkezi allowlist mimarisinden gelir. Sonraki kategori henüz başlatılmamıştır.
+
+- **Merchant Logo Allowlist Genişletmesi H4-G2-C2-C1 — 12 Abonelik Hizmetine Doğrulanmış Çatı Marka Logosu Bağlama (Teknik ve Fiziksel Cihaz Manuel Kabulü Tamamlandı — 2026-11-07):**
+  - **Katalog Sürümü ve Dağılım:** `StarterMerchantCatalog` sürümü v13'e yükseltildi (`CATALOG_VERSION = 13`); toplam merchant kayıt sayısı 167'dir. Doğrulanmış uzak logo anahtarı (`verifiedLogoKey`) taşıyan merchant sayısı 63'ten 75'e (63 doğrudan + 12 çatı logosu paylaşan abonelik) yükseltildi. Kalan 92 kayıt uzak logo anahtarı taşımaz (`verifiedLogoKey = null`) ve güvenli yerel fallback (`CATEGORY_ICON`) zincirinde kalır. 167 markanın tamamında gerçek uzak logo bulunduğu iddiasında bulunulmaz.
+  - **Merkezi Allowlist:** `MerchantLogoDomainAllowlist` 71 stable key → kanonik domain eşlemesine genişletildi (8 yeni çatı marka anahtarı eklendi).
+  - **Eklenen 8 Çatı Marka Anahtarı ve Kanonik Domainler:**
+    - `youtube` → `youtube.com`
+    - `google` → `google.com`
+    - `microsoft` → `microsoft.com`
+    - `playstation` → `playstation.com`
+    - `xbox` → `xbox.com`
+    - `linkedin` → `linkedin.com`
+    - `nintendo` → `nintendo.com`
+    - `ea` → `ea.com`
+  - **Çatı Marka Logolarına Bağlanan 12 Abonelik Hizmeti:**
+    - 8 Yeni Çatı Marka Anahtarına Bağlananlar:
+      - `youtube_premium` → `verifiedLogoKey = "youtube"` (Kanonik domain: `youtube.com`, displayName: `YouTube Premium`)
+      - `google_one` → `verifiedLogoKey = "google"` (Kanonik domain: `google.com`, displayName: `Google One`)
+      - `microsoft_365` → `verifiedLogoKey = "microsoft"` (Kanonik domain: `microsoft.com`, displayName: `Microsoft 365`)
+      - `playstation_plus` → `verifiedLogoKey = "playstation"` (Kanonik domain: `playstation.com`, displayName: `PlayStation Plus`)
+      - `xbox_game_pass` → `verifiedLogoKey = "xbox"` (Kanonik domain: `xbox.com`, displayName: `Xbox Game Pass`)
+      - `linkedin_premium` → `verifiedLogoKey = "linkedin"` (Kanonik domain: `linkedin.com`, displayName: `LinkedIn Premium`)
+      - `nintendo_switch_online` → `verifiedLogoKey = "nintendo"` (Kanonik domain: `nintendo.com`, displayName: `Nintendo Switch Online`)
+      - `ea_play` → `verifiedLogoKey = "ea"` (Kanonik domain: `ea.com`, displayName: `EA Play`)
+    - 4 Mevcut Çatı Marka Anahtarına Bağlananlar:
+      - `amazon_prime` → `verifiedLogoKey = "amazon"` (Kanonik domain: `amazon.com.tr`, displayName: `Amazon Prime`)
+      - `hepsiburada_premium` → `verifiedLogoKey = "hepsiburada"` (Kanonik domain: `hepsiburada.com`, displayName: `Hepsiburada Premium`)
+      - `money_gold` → `verifiedLogoKey = "migros"` (Kanonik domain: `migros.com.tr`, displayName: `Money Gold`)
+      - `ypro` → `verifiedLogoKey = "yemeksepeti"` (Kanonik domain: `yemeksepeti.com`, displayName: `Yemeksepeti Pro (YPRO)`)
+  - **Kimlik ve İzolasyon Koruması:** Hizmetlerin `merchantId`, `displayName`, kategori ve alias yapıları kesinlikle değiştirilmemiştir; N:1 çatı logo paylaşımı yalnız `verifiedLogoKey` üzerinden gerçekleşir.
+  - **Güvenlik Güvencesi:** Statik verifiedLogoKey ve merkezi allowlist sınırı, kullanıcı girdisinden domain/URL üretilmesini engeller.
+  - **Logo.dev Tema ve Kontrast Sözleşmesi:** Netflix stable logo key için PNG/WebP `theme=dark`, `DARK_NEUTRAL` (siyah dairesel yüzey) ve `APP_ICON_EMPHASIZED` (1.8f scale) uygulanır. Diğer 70 doğrulanmış logo anahtarı için PNG/WebP `theme=light`, `LIGHT_NEUTRAL` (beyaz dairesel yüzey) ve `DEFAULT` (1.0f scale) korunur. JPG formatı themesiz URL üretmeye devam eder; `fallback=404` ve fail-closed ilkeleri korunur. Muud (`muud.com.tr`) resmî minimalist siyah logo varyantı olarak `LIGHT_NEUTRAL` üzerinde onaylanmıştır.
+  - **Veri ve Migration Bütünlüğü:** Room şema sürümü (v24), Supabase sözleşmeleri ve D1 hash'leri (`00c4ffbc3811960fd9a9cf897c5f58bf684c522f`, `0119fe9633ab32cd28bfa6eda3ec32a8610ee349`) birebir korunmuştur. Veri mutasyonu veya uzak şema değişikliği yoktur.
+  - **Durum:** Teknik doğrulama ve Samsung Galaxy A71 (SM-A715F) fiziksel cihazında proje sahibi görsel kabulü TAMAMLANDI (Netflix siyah dairesel yüzey + büyütülmüş kırmızı N PASS, Muud resmî minimalist logo PASS, 34 abonelik logosu paketi PASS).
+
+- **Merchant Logo Allowlist Genişletmesi H4-G2-C2-B1 — Dijital Abonelik ve HBO Max (Teknik ve Fiziksel Cihaz Manuel Kabulü Tamamlandı — 2026-11-06 / 2026-11-07):**
+  - **Katalog Sürümü ve Dağılım:** `StarterMerchantCatalog` sürümü v12'ye yükseltildi (`CATALOG_VERSION = 12`); toplam merchant kayıt sayısı C1 ile eklenen 16 kayıtla birlikte 167'dir. Uzak logo anahtarı (`verifiedLogoKey`) taşıyan merchant sayısı 44'ten 63'e yükseltildi. Kalan 104 kayıt uzak logo anahtarı taşımaz (`verifiedLogoKey = null`) ve güvenli yerel fallback (`CATEGORY_ICON`) zincirinde kalır. 167 markanın tamamında gerçek uzak logo bulunduğu iddiasında bulunulmaz.
+  - **Merkezi Allowlist:** `MerchantLogoDomainAllowlist` 63 stable key → kanonik domain eşlemesine genişletildi.
+  - **Eklenen 19 Doğrudan Abonelik Markası ve Kanonik Domainler:**
+    - `max` → `max.com` (Stable merchant ID `max` korundu; Warner Bros. Discovery marka kılavuzu gereğince displayName `HBO Max` yapıldı; alias `MAX` öncelik 20)
+    - `exxen` → `exxen.com`
+    - `gain` → `gain.tv`
+    - `mubi` → `mubi.com`
+    - `tod` → `todtv.com.tr`
+    - `tabii` → `tabii.com`
+    - `apple_services` → `apple.com`
+    - `adobe` → `adobe.com`
+    - `canva` → `canva.com`
+    - `s_sport_plus` → `ssportplus.com`
+    - `tv_plus` → `tvplus.com.tr`
+    - `tivibu` → `tivibu.com.tr`
+    - `d_smart_go` → `dsmartgo.com.tr`
+    - `deezer` → `deezer.com`
+    - `fizy` → `fizy.com`
+    - `muud` → `muud.com.tr`
+    - `storytel` → `storytel.com`
+    - `audible` → `audible.com`
+    - `dropbox` → `dropbox.com`
+  - **Aynen Korunan 3 DIRECT Abonelik:** `netflix` (`netflix.com`), `spotify` (`spotify.com`), `disney_plus` (`disneyplus.com`) aynen korundu (toplam DIRECT abonelik: 22).
+  - **Uzak Logosuz Kalan 12 Abonelik Kaydı (verifiedLogoKey = null):**
+    - 9 OWNER-Hizmet kaydı: `youtube_premium`, `amazon_prime`, `google_one`, `microsoft_365`, `playstation_plus`, `xbox_game_pass`, `linkedin_premium`, `nintendo_switch_online`, `ea_play`.
+    - 3 FALLBACK-only kayıt: `hepsiburada_premium`, `money_gold`, `ypro`.
+    Bu 12 kayıt çatı marka veya belirsiz logo nedeniyle güvenli yerel kategori ikonu fallback'inde tutulur.
+  - **Logo.dev Tema ve Kontrast Sözleşmesi:** Netflix için `theme=dark`, `DARK_NEUTRAL` (siyah dairesel yüzey) ve `APP_ICON_EMPHASIZED` (1.8f); diğer anahtarlar için `theme=light`, `LIGHT_NEUTRAL` ve `DEFAULT` ölçek; JPG themesiz; `fallback=404` korunur.
+  - **Veri ve Migration Bütünlüğü:** Room şema sürümü (v24), Supabase sözleşmeleri ve D1 hash'leri (`00c4ffbc3811960fd9a9cf897c5f58bf684c522f`, `0119fe9633ab32cd28bfa6eda3ec32a8610ee349`) birebir korunmuştur. Veri mutasyonu veya uzak şema değişikliği yoktur.
+  - **Durum:** Teknik doğrulama ve Samsung Galaxy A71 (SM-A715F) fiziksel cihazında proje sahibi görsel kabulü TAMAMLANDI (H4-G2-C2-C2 kapsamında 34 abonelik logosu, Netflix ve Muud ile birlikte fiziksel cihazda doğrulanıp onaylanmıştır).
+
 - **Merchant Logo Allowlist Genişletmesi H4-G2-B — Yemek ve Kafe (Teknik ve Canlı Cihaz Kabulü Tamamlandı — 2026-11-05):**
   - **Katalog Sürümü ve Dağılım:** `StarterMerchantCatalog` sürümü v10'a yükseltildi (`CATALOG_VERSION = 10`); toplam merchant kayıt sayısı 151 olarak korundu. Uzak logo anahtarı (`verifiedLogoKey`) taşıyan merchant sayısı 28'den 44'e yükseltildi. Kalan 107 kayıt uzak logo anahtarı taşımaz ve güvenli yerel fallback (`CATEGORY_ICON`) zincirinde kalır. 151 markanın tamamında gerçek uzak logo bulunduğu iddiasında bulunulmaz.
   - **Merkezi Allowlist:** `MerchantLogoDomainAllowlist` 44 stable key → kanonik domain eşlemesine genişletildi.
@@ -67,7 +159,7 @@
   - **Kapsam ve Katalog Temeli:** H3-A…H3-F aşamaları v7 katalog temeliyle tamamlandı; toplam benzersiz kayıt sayısı 151'dir. H4-G1 logo allowlist genişletmesi katalog sürümünü v8'e yükseltmiş, kayıt sayısını değiştirmemiştir. Son H3 paketi olan H3-F ile Ulaşım (10 kayıt) ve Seyahat (10 kayıt) kategorilerine 20 yeni merchant eklenmişti.
   - **Kategori Profilleri ve Yönlülük:** Ulaşım kategorisinde 8 önerilen / 21 aranabilir, Seyahat kategorisinde 8 önerilen / 13 aranabilir kayıt yapılandırıldı. Ulaşım üzerinden seyahat platformları aranabilirken, Seyahat Ulaşım-özel kayıtları arayamaz; ilgisiz kategoriler fail-closed izole edilmiştir.
   - **Veri ve Şema Etkisi Yok:** Room şeması (v24 korunmuştur) ve Supabase/migration etkisi yoktur; uzaktan veri tabanı değişikliği yapılmamıştır.
-  - **Uzak Logo ve Fallback:** Yeni 20 kaydın `verifiedLogoKey` değerleri `null`'dır; uzak logo anahtarı taşımazlar. Görsel gösterimde güvenli `CATEGORY_ICON` fallback'i devrededir. Olası bir logo-domain genişletmesi (allowlist/hukuki inceleme) ayrı bir dilim olarak ele alınacaktır.
+  - **Uzak Logo ve Fallback:** Yeni 20 kaydın `verifiedLogoKey` değerleri `null`'dır; uzak logo anahtarı taşımazlar. Görsel gösterimde güvenli `CATEGORY_ICON` fallback'i devrededir. Olası bir logo-domain genişletmesi (allowlist/hukuki inceleme) ayrı bir dilim olarak ele alınacaktır. *(Tarihsel Not: Bu durum H3 dönemine ait tarihsel snapshot olup, 2026-11-09 tarihli H4-G2-F aşaması ile bu kayıtların 17'si doğrulanmış uzak logoya bağlanmış ve bu tarihsel durum supersede edilmiştir; bkz. Güncel Durum ve docs/MERCHANT_LOGO_KAYNAK_VE_IZIN_ENVANTERI.md).*
   - **Atomiklik ve Canlı Kabul:** KnownMerchant seçimi iki V2 outbox kaydı ile tek Room transaction'ında atomik yazılır ve trigger abort rollback kanıtlanmıştır. Pixel_8 emülatöründe salt-okunur UI kabulü (H3-F3-A) başarıyla tamamlanmıştır.
 
 - **Faz 8.6-G — Uzak Logo Adaptörü ve Güvenli CDN Entegrasyonu (Tamamlandı — 2026-10-30):**

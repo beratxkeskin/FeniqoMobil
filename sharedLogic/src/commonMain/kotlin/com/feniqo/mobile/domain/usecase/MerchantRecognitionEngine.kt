@@ -253,7 +253,7 @@ class MerchantRecognitionEngine(
 }
 
 object StarterMerchantCatalog {
-    const val CATALOG_VERSION: Int = 10
+    const val CATALOG_VERSION: Int = 18
     val merchants: List<Merchant> =
         listOf(
             // Dijital abonelik
@@ -278,6 +278,7 @@ object StarterMerchantCatalog {
                 alias("YOUTUBE PREMIUM", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
                 alias("YOUTUBE MUSIC", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
                 alias("GOOGLE YOUTUBE", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "youtube",
             ),
             merchant(
                 "amazon_prime",
@@ -286,6 +287,7 @@ object StarterMerchantCatalog {
                 alias("AMAZON PRIME", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
                 alias("PRIME VIDEO", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
                 alias("AMAZON PRIME VIDEO", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                verifiedLogoKey = "amazon",
             ),
             merchant(
                 "disney_plus",
@@ -296,18 +298,21 @@ object StarterMerchantCatalog {
             ),
             merchant(
                 "max",
-                "Max",
+                "HBO Max",
                 "subscriptions",
                 alias("HBO MAX", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                alias("MAX", MerchantAliasType.SHORT, priority = 20),
                 alias("MAX HBO", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
                 alias("BLUTV", priority = 10),
                 alias("BLU TV", priority = 10),
+                verifiedLogoKey = "max",
             ),
             merchant(
                 "exxen",
                 "Exxen",
                 "subscriptions",
                 alias("EXXEN"),
+                verifiedLogoKey = "exxen",
             ),
             merchant(
                 "gain",
@@ -315,12 +320,14 @@ object StarterMerchantCatalog {
                 "subscriptions",
                 alias("GAIN", MerchantAliasType.SHORT),
                 alias("GAIN MEDYA", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "gain",
             ),
             merchant(
                 "mubi",
                 "MUBI",
                 "subscriptions",
                 alias("MUBI", MerchantAliasType.SHORT),
+                verifiedLogoKey = "mubi",
             ),
             merchant(
                 "tod",
@@ -330,6 +337,7 @@ object StarterMerchantCatalog {
                 alias("TOD TV", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
                 alias("BEIN CONNECT", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
                 alias("BEINCONNECT", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "tod",
             ),
             merchant(
                 "tabii",
@@ -337,6 +345,7 @@ object StarterMerchantCatalog {
                 "subscriptions",
                 alias("TABII"),
                 alias("TRT TABII", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "tabii",
             ),
             merchant(
                 "apple_services",
@@ -345,6 +354,7 @@ object StarterMerchantCatalog {
                 alias("APPLE COM BILL", MerchantAliasType.BRAND_AND_SERVICE),
                 alias("APPLE SERVICES", MerchantAliasType.BRAND_AND_SERVICE),
                 alias("ITUNES COM BILL", MerchantAliasType.BRAND_AND_SERVICE),
+                verifiedLogoKey = "apple_services",
             ),
             merchant(
                 "google_one",
@@ -352,6 +362,7 @@ object StarterMerchantCatalog {
                 "subscriptions",
                 alias("GOOGLE ONE", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
                 alias("GOOGLE STORAGE", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "google",
             ),
             merchant(
                 "microsoft_365",
@@ -360,6 +371,7 @@ object StarterMerchantCatalog {
                 alias("MICROSOFT 365", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
                 alias("MSFT 365", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
                 alias("MICROSOFT OFFICE", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "microsoft",
             ),
             merchant(
                 "adobe",
@@ -367,6 +379,7 @@ object StarterMerchantCatalog {
                 "subscriptions",
                 alias("ADOBE"),
                 alias("ADOBE SYSTEMS", MerchantAliasType.LEGAL_NAME),
+                verifiedLogoKey = "adobe",
             ),
             merchant(
                 "canva",
@@ -374,6 +387,7 @@ object StarterMerchantCatalog {
                 "subscriptions",
                 alias("CANVA"),
                 alias("CANVA PRO", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "canva",
             ),
             merchant(
                 "playstation_plus",
@@ -382,6 +396,7 @@ object StarterMerchantCatalog {
                 alias("PLAYSTATION PLUS", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
                 alias("PS PLUS", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
                 alias("PLAYSTATION NETWORK", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "playstation",
             ),
             merchant(
                 "xbox_game_pass",
@@ -390,6 +405,130 @@ object StarterMerchantCatalog {
                 alias("XBOX GAME PASS", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
                 alias("GAME PASS", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
                 alias("XBOX PASS", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "xbox",
+            ),
+            merchant(
+                "s_sport_plus",
+                "S Sport Plus",
+                "subscriptions",
+                alias("S SPORT PLUS", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                alias("SSPORT PLUS", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "s_sport_plus",
+            ),
+            merchant(
+                "tv_plus",
+                "TV+",
+                "subscriptions",
+                alias("TV PLUS", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                alias("TURKCELL TV PLUS", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                alias("TVPLUS", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "tv_plus",
+            ),
+            merchant(
+                "tivibu",
+                "Tivibu",
+                "subscriptions",
+                alias("TIVIBU"),
+                alias("TIVIBU GO", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                alias("TTNET TIVIBU", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                alias("TURK TELEKOM TIVIBU", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                verifiedLogoKey = "tivibu",
+            ),
+            merchant(
+                "d_smart_go",
+                "D-Smart GO",
+                "subscriptions",
+                alias("D SMART GO", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                alias("DSMART GO", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                verifiedLogoKey = "d_smart_go",
+            ),
+            merchant(
+                "deezer",
+                "Deezer",
+                "subscriptions",
+                alias("DEEZER"),
+                verifiedLogoKey = "deezer",
+            ),
+            merchant(
+                "fizy",
+                "Fizy",
+                "subscriptions",
+                alias("FIZY"),
+                alias("TURKCELL FIZY", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                verifiedLogoKey = "fizy",
+            ),
+            merchant(
+                "muud",
+                "Muud",
+                "subscriptions",
+                alias("MUUD"),
+                alias("TURK TELEKOM MUUD", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                verifiedLogoKey = "muud",
+            ),
+            merchant(
+                "storytel",
+                "Storytel",
+                "subscriptions",
+                alias("STORYTEL"),
+                verifiedLogoKey = "storytel",
+            ),
+            merchant(
+                "audible",
+                "Audible",
+                "subscriptions",
+                alias("AUDIBLE"),
+                verifiedLogoKey = "audible",
+            ),
+            merchant(
+                "dropbox",
+                "Dropbox",
+                "subscriptions",
+                alias("DROPBOX"),
+                verifiedLogoKey = "dropbox",
+            ),
+            merchant(
+                "linkedin_premium",
+                "LinkedIn Premium",
+                "subscriptions",
+                alias("LINKEDIN PREMIUM", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                verifiedLogoKey = "linkedin",
+            ),
+            merchant(
+                "nintendo_switch_online",
+                "Nintendo Switch Online",
+                "subscriptions",
+                alias("NINTENDO SWITCH ONLINE", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                verifiedLogoKey = "nintendo",
+            ),
+            merchant(
+                "ea_play",
+                "EA Play",
+                "subscriptions",
+                alias("EA PLAY", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                verifiedLogoKey = "ea",
+            ),
+            merchant(
+                "hepsiburada_premium",
+                "Hepsiburada Premium",
+                "subscriptions",
+                alias("HEPSIBURADA PREMIUM", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                alias("HB PREMIUM", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "hepsiburada",
+            ),
+            merchant(
+                "money_gold",
+                "Money Gold",
+                "subscriptions",
+                alias("MONEY GOLD", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                verifiedLogoKey = "migros",
+            ),
+            merchant(
+                "ypro",
+                "Ypro",
+                "subscriptions",
+                alias("YPRO"),
+                alias("YEMEKSEPETI YPRO", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                verifiedLogoKey = "yemeksepeti",
             ),
             // Alışveriş
             merchant(
@@ -407,11 +546,12 @@ object StarterMerchantCatalog {
                 "shopping",
                 alias("HEPSIBURADA"),
                 alias("D-MARKET", MerchantAliasType.LEGAL_NAME),
+                negative = listOf("HEPSIBURADA PREMIUM", "HB PREMIUM"),
                 verifiedLogoKey = "hepsiburada",
             ),
             merchant(
                 "amazon",
-                "Amazon.com.tr",
+                "Amazon",
                 "shopping",
                 alias("AMAZON"),
                 alias("AMAZON COM TR"),
@@ -425,6 +565,7 @@ object StarterMerchantCatalog {
                 "shopping",
                 alias("N11", MerchantAliasType.SHORT),
                 alias("DOGUS PLANET", MerchantAliasType.LEGAL_NAME),
+                verifiedLogoKey = "n11",
             ),
             merchant(
                 "ciceksepeti",
@@ -432,6 +573,7 @@ object StarterMerchantCatalog {
                 "shopping",
                 alias("CICEKSEPETI"),
                 alias("CICEK SEPETI"),
+                verifiedLogoKey = "ciceksepeti",
             ),
             merchant(
                 "pazarama",
@@ -439,6 +581,7 @@ object StarterMerchantCatalog {
                 "shopping",
                 alias("PAZARAMA"),
                 alias("TOPKAPI DANISMANLIK", MerchantAliasType.LEGAL_NAME),
+                verifiedLogoKey = "pazarama",
             ),
             merchant(
                 "boyner",
@@ -446,6 +589,7 @@ object StarterMerchantCatalog {
                 "shopping",
                 alias("BOYNER"),
                 alias("BOYNER BUYUK MAGAZACILIK", MerchantAliasType.LEGAL_NAME),
+                verifiedLogoKey = "boyner",
             ),
             merchant(
                 "lc_waikiki",
@@ -454,6 +598,7 @@ object StarterMerchantCatalog {
                 alias("LC WAIKIKI"),
                 alias("LCWAIKIKI"),
                 alias("LCW", MerchantAliasType.SHORT),
+                verifiedLogoKey = "lc_waikiki",
             ),
             merchant(
                 "defacto",
@@ -461,6 +606,7 @@ object StarterMerchantCatalog {
                 "shopping",
                 alias("DEFACTO"),
                 alias("DE FACTO"),
+                verifiedLogoKey = "defacto",
             ),
             merchant(
                 "teknosa",
@@ -468,6 +614,7 @@ object StarterMerchantCatalog {
                 "shopping",
                 alias("TEKNOSA"),
                 alias("TEKNOSA IC VE DIS TICARET", MerchantAliasType.LEGAL_NAME),
+                verifiedLogoKey = "teknosa",
             ),
             merchant(
                 "mediamarkt",
@@ -475,6 +622,7 @@ object StarterMerchantCatalog {
                 "shopping",
                 alias("MEDIAMARKT"),
                 alias("MEDIA MARKT"),
+                verifiedLogoKey = "mediamarkt",
             ),
             merchant(
                 "flo",
@@ -482,6 +630,7 @@ object StarterMerchantCatalog {
                 "shopping",
                 alias("FLO", MerchantAliasType.SHORT),
                 alias("FLO MAGAZACILIK", MerchantAliasType.LEGAL_NAME),
+                verifiedLogoKey = "flo",
             ),
             merchant(
                 "koton",
@@ -489,6 +638,7 @@ object StarterMerchantCatalog {
                 "shopping",
                 alias("KOTON"),
                 alias("KOTON MAGAZACILIK", MerchantAliasType.LEGAL_NAME),
+                verifiedLogoKey = "koton",
             ),
             merchant(
                 "mavi",
@@ -496,6 +646,7 @@ object StarterMerchantCatalog {
                 "shopping",
                 alias("MAVI GIYIM", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
                 alias("MAVI JEANS", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "mavi",
             ),
             merchant(
                 "zara",
@@ -503,6 +654,7 @@ object StarterMerchantCatalog {
                 "shopping",
                 alias("ZARA", MerchantAliasType.SHORT),
                 alias("ZARA GIYIM", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "zara",
             ),
             merchant(
                 "hm",
@@ -512,6 +664,7 @@ object StarterMerchantCatalog {
                 alias("H AND M", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
                 alias("HENNES MAURITZ", MerchantAliasType.LEGAL_NAME),
                 alias("H M GIYIM", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "hm",
             ),
             merchant(
                 "pull_and_bear",
@@ -520,6 +673,7 @@ object StarterMerchantCatalog {
                 alias("PULL BEAR"),
                 alias("PULL AND BEAR", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
                 alias("PULLBEAR"),
+                verifiedLogoKey = "pull_and_bear",
             ),
             merchant(
                 "bershka",
@@ -527,12 +681,14 @@ object StarterMerchantCatalog {
                 "shopping",
                 alias("BERSHKA"),
                 alias("BERSHKA TEKSTIL", MerchantAliasType.LEGAL_NAME),
+                verifiedLogoKey = "bershka",
             ),
             merchant(
                 "stradivarius",
                 "Stradivarius",
                 "shopping",
                 alias("STRADIVARIUS"),
+                verifiedLogoKey = "stradivarius",
             ),
             merchant(
                 "beymen",
@@ -540,6 +696,7 @@ object StarterMerchantCatalog {
                 "shopping",
                 alias("BEYMEN"),
                 alias("BEYMEN MAGAZACILIK", MerchantAliasType.LEGAL_NAME),
+                verifiedLogoKey = "beymen",
             ),
             merchant(
                 "vakko",
@@ -547,6 +704,7 @@ object StarterMerchantCatalog {
                 "shopping",
                 alias("VAKKO"),
                 alias("VAKKO TEKSTIL", MerchantAliasType.LEGAL_NAME),
+                verifiedLogoKey = "vakko",
             ),
             merchant(
                 "ikea",
@@ -554,6 +712,7 @@ object StarterMerchantCatalog {
                 "shopping",
                 alias("IKEA", MerchantAliasType.SHORT),
                 alias("IKEA MOBILYA", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "ikea",
             ),
             merchant(
                 "koctas",
@@ -561,6 +720,7 @@ object StarterMerchantCatalog {
                 "shopping",
                 alias("KOCTAS"),
                 alias("KOCTAS YAPI MARKET", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "koctas",
             ),
             merchant(
                 "bauhaus",
@@ -568,6 +728,7 @@ object StarterMerchantCatalog {
                 "shopping",
                 alias("BAUHAUS"),
                 alias("BAUHAUS YAPI MARKET", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "bauhaus",
             ),
             merchant(
                 "vatan_bilgisayar",
@@ -575,6 +736,7 @@ object StarterMerchantCatalog {
                 "shopping",
                 alias("VATAN BILGISAYAR"),
                 alias("VATAN BILG", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "vatan_bilgisayar",
             ),
             merchant(
                 "ebebek",
@@ -583,6 +745,7 @@ object StarterMerchantCatalog {
                 alias("EBEBEK"),
                 alias("E BEBEK"),
                 alias("EBEBEK MAGAZACILIK", MerchantAliasType.LEGAL_NAME),
+                verifiedLogoKey = "ebebek",
             ),
             // Market ve hızlı teslimat
             merchant(
@@ -591,7 +754,7 @@ object StarterMerchantCatalog {
                 "groceries",
                 alias("MIGROS"),
                 alias("MIGROS TICARET", MerchantAliasType.LEGAL_NAME),
-                negative = listOf("MIGROS YEMEK", "MIGROS SANAL MARKET", "MIGROS HEMEN"),
+                negative = listOf("MIGROS YEMEK", "MIGROS SANAL MARKET", "MIGROS HEMEN", "MONEY GOLD"),
                 verifiedLogoKey = "migros",
             ),
             merchant(
@@ -748,7 +911,7 @@ object StarterMerchantCatalog {
                 "food_dining",
                 alias("YEMEKSEPETI"),
                 alias("YEMEK SEPETI"),
-                negative = listOf("YEMEKSEPETI MARKET", "YEMEK SEPETI MARKET", "BANABI"),
+                negative = listOf("YEMEKSEPETI MARKET", "YEMEK SEPETI MARKET", "BANABI", "YEMEKSEPETI YPRO"),
                 verifiedLogoKey = "yemeksepeti",
             ),
             merchant(
@@ -890,7 +1053,14 @@ object StarterMerchantCatalog {
                 "utilities",
                 alias("TURKCELL"),
                 alias("TURKCELL ILETISIM", MerchantAliasType.LEGAL_NAME),
-                negative = listOf("SUPERONLINE", "TURKCELL SUPERONLINE"),
+                negative =
+                    listOf(
+                        "SUPERONLINE",
+                        "TURKCELL SUPERONLINE",
+                        "TURKCELL TV PLUS",
+                        "TV PLUS",
+                        "TURKCELL FIZY",
+                    ),
                 verifiedLogoKey = "turkcell",
             ),
             merchant(
@@ -908,6 +1078,7 @@ object StarterMerchantCatalog {
                 alias("TURK TELEKOM"),
                 alias("TURK TELEKOMUNIKASYON", MerchantAliasType.LEGAL_NAME),
                 alias("AVEA"),
+                negative = listOf("TURK TELEKOM MUUD", "TURK TELEKOM TIVIBU"),
             ),
             merchant(
                 "superonline",
@@ -980,6 +1151,7 @@ object StarterMerchantCatalog {
                 "travel",
                 alias("SUNEXPRESS"),
                 alias("SUN EXPRESS"),
+                verifiedLogoKey = "sunexpress",
             ),
             merchant(
                 "tcdd",
@@ -987,6 +1159,7 @@ object StarterMerchantCatalog {
                 "transportation",
                 alias("TCDD", MerchantAliasType.SHORT),
                 alias("TCDD TASIMACILIK", MerchantAliasType.LEGAL_NAME),
+                verifiedLogoKey = "tcdd",
             ),
             merchant(
                 "uber",
@@ -1001,6 +1174,7 @@ object StarterMerchantCatalog {
                 "transportation",
                 alias("BITAKSI"),
                 alias("BI TAKSI"),
+                verifiedLogoKey = "bitaksi",
             ),
             merchant(
                 "marti",
@@ -1010,6 +1184,7 @@ object StarterMerchantCatalog {
                 alias("MARTI ILERI TEKNOLOJI", MerchantAliasType.LEGAL_NAME),
                 alias("MARTI TAG", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
                 alias("MARTI SCOOTER", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "marti",
             ),
             // Kafe
             merchant(
@@ -1026,72 +1201,84 @@ object StarterMerchantCatalog {
                 "Gratis",
                 "personal_care",
                 alias("GRATIS"),
+                verifiedLogoKey = "gratis",
             ),
             merchant(
                 "watsons",
                 "Watsons",
                 "personal_care",
                 alias("WATSONS"),
+                verifiedLogoKey = "watsons",
             ),
             merchant(
                 "rossmann",
                 "Rossmann",
                 "personal_care",
                 alias("ROSSMANN"),
+                verifiedLogoKey = "rossmann",
             ),
             merchant(
                 "sephora",
                 "Sephora",
                 "personal_care",
                 alias("SEPHORA"),
+                verifiedLogoKey = "sephora",
             ),
             merchant(
                 "eve_shop",
                 "EVE",
                 "personal_care",
                 alias("EVE SHOP"),
+                verifiedLogoKey = "eve_shop",
             ),
             merchant(
                 "flormar",
                 "Flormar",
                 "personal_care",
                 alias("FLORMAR"),
+                verifiedLogoKey = "flormar",
             ),
             merchant(
                 "golden_rose",
                 "Golden Rose",
                 "personal_care",
                 alias("GOLDEN ROSE"),
+                verifiedLogoKey = "golden_rose",
             ),
             merchant(
                 "yves_rocher",
                 "Yves Rocher",
                 "personal_care",
                 alias("YVES ROCHER"),
+                verifiedLogoKey = "yves_rocher",
             ),
             merchant(
                 "the_body_shop",
                 "The Body Shop",
                 "personal_care",
                 alias("THE BODY SHOP", MerchantAliasType.BRAND_AND_SERVICE),
+                verifiedLogoKey = "the_body_shop",
             ),
             merchant(
                 "kiko_milano",
                 "KIKO Milano",
                 "personal_care",
                 alias("KIKO MILANO"),
+                verifiedLogoKey = "kiko_milano",
             ),
             merchant(
                 "mac_cosmetics",
                 "MAC Cosmetics",
                 "personal_care",
                 alias("MAC COSMETICS"),
+                verifiedLogoKey = "mac_cosmetics",
             ),
             merchant(
                 "clinique",
                 "Clinique",
                 "personal_care",
                 alias("CLINIQUE"),
+                verifiedLogoKey = "clinique",
             ),
             merchant(
                 "avon",
@@ -1099,18 +1286,21 @@ object StarterMerchantCatalog {
                 "personal_care",
                 alias("AVON", MerchantAliasType.SHORT),
                 alias("AVON KOZMETIK", MerchantAliasType.BRAND_AND_SERVICE),
+                verifiedLogoKey = "avon",
             ),
             merchant(
                 "oriflame",
                 "Oriflame",
                 "personal_care",
                 alias("ORIFLAME"),
+                verifiedLogoKey = "oriflame",
             ),
             merchant(
                 "farmasi",
                 "Farmasi",
                 "personal_care",
                 alias("FARMASI"),
+                verifiedLogoKey = "farmasi",
             ),
             // Fatura & Altyapı Sağlayıcıları (Utilities)
             merchant(
@@ -1217,6 +1407,7 @@ object StarterMerchantCatalog {
                 alias("BELBIM", MerchantAliasType.LEGAL_NAME, priority = 20),
                 alias("BELBIM ELEKTRONIK PARA", MerchantAliasType.LEGAL_NAME, priority = 10),
                 alias("ISTANBUL KART", priority = 10),
+                verifiedLogoKey = "istanbulkart",
             ),
             merchant(
                 "ispark",
@@ -1225,6 +1416,7 @@ object StarterMerchantCatalog {
                 alias("ISPARK", priority = 20),
                 alias("ISTANBUL OTOPARK", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
                 alias("ISPARK OTOPARK", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "ispark",
             ),
             merchant(
                 "tiktak",
@@ -1257,6 +1449,7 @@ object StarterMerchantCatalog {
                 "transportation",
                 alias("METRO TURIZM", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
                 alias("METRO TURIZM TASIMACILIK", MerchantAliasType.LEGAL_NAME, priority = 10),
+                verifiedLogoKey = "metro_turizm",
             ),
             merchant(
                 "pamukkale_turizm",
@@ -1265,6 +1458,7 @@ object StarterMerchantCatalog {
                 alias("PAMUKKALE TURIZM", priority = 20),
                 alias("PAMUKKALE SEYAHAT", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
                 alias("PAMUKKALE OTOBUS", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "pamukkale_turizm",
             ),
             merchant(
                 "varan_turizm",
@@ -1272,6 +1466,7 @@ object StarterMerchantCatalog {
                 "transportation",
                 alias("VARAN TURIZM", priority = 20),
                 alias("VARAN SEYAHAT", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "varan_turizm",
             ),
             merchant(
                 "ido",
@@ -1280,6 +1475,7 @@ object StarterMerchantCatalog {
                 alias("IDO DENIZ OTOBUSLERI", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
                 alias("ISTANBUL DENIZ OTOBUSLERI", MerchantAliasType.LEGAL_NAME, priority = 20),
                 alias("IDO", MerchantAliasType.SHORT, priority = 10),
+                verifiedLogoKey = "ido",
             ),
             merchant(
                 "budo",
@@ -1298,6 +1494,7 @@ object StarterMerchantCatalog {
                 alias("ANADOLUJET", priority = 20),
                 alias("ANADOLU JET", priority = 20),
                 alias("AJET", MerchantAliasType.SHORT, priority = 10),
+                verifiedLogoKey = "ajet",
             ),
             merchant(
                 "corendon",
@@ -1306,6 +1503,7 @@ object StarterMerchantCatalog {
                 alias("CORENDON", priority = 20),
                 alias("CORENDON AIRLINES", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
                 alias("CORENDON HAVA YOLLARI", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "corendon",
             ),
             merchant(
                 "obilet",
@@ -1332,6 +1530,7 @@ object StarterMerchantCatalog {
                 alias("ETS TUR", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
                 alias("ERSOY TURISTIK SERVISLERI", MerchantAliasType.LEGAL_NAME, priority = 10),
                 alias("ETS", MerchantAliasType.SHORT, priority = 10),
+                verifiedLogoKey = "ets_tur",
             ),
             merchant(
                 "jolly_tur",
@@ -1341,6 +1540,7 @@ object StarterMerchantCatalog {
                 alias("JOLLY TURIZM", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
                 alias("JOLLY", priority = 10),
                 negative = listOf("JOKER"),
+                verifiedLogoKey = "jolly_tur",
             ),
             merchant(
                 "tatilbudur",
@@ -1357,6 +1557,7 @@ object StarterMerchantCatalog {
                 alias("SETUR", priority = 20),
                 alias("SETUR SERVIS TURISTIK", MerchantAliasType.LEGAL_NAME, priority = 10),
                 alias("SETUR TURIZM", MerchantAliasType.BRAND_AND_SERVICE, priority = 10),
+                verifiedLogoKey = "setur",
             ),
             merchant(
                 "airbnb",
@@ -1365,6 +1566,7 @@ object StarterMerchantCatalog {
                 alias("AIRBNB", priority = 20),
                 alias("AIRBNB IRELAND", MerchantAliasType.LEGAL_NAME, priority = 10),
                 alias("AIRBNB PAYMENTS", MerchantAliasType.LEGAL_NAME, priority = 10),
+                verifiedLogoKey = "airbnb",
             ),
             merchant(
                 "booking",
@@ -1373,6 +1575,154 @@ object StarterMerchantCatalog {
                 alias("BOOKING COM", priority = 20),
                 alias("BOOKINGCOM", priority = 20),
                 alias("BOOKING BV", MerchantAliasType.LEGAL_NAME, priority = 10),
+                verifiedLogoKey = "booking",
+            ),
+            // Eğlence
+            merchant(
+                "paribu_cineverse",
+                "Paribu Cineverse",
+                "entertainment",
+                alias("PARIBU CINEVERSE", priority = 20),
+                alias("CINEVERSE", priority = 20),
+                alias("CGV MARS", MerchantAliasType.LEGAL_NAME, priority = 10),
+                alias("CINEMAXIMUM", priority = 10),
+                negative = listOf("PARIBU TEKNOLOJI"),
+                verifiedLogoKey = "paribu_cineverse",
+            ),
+            merchant(
+                "biletix",
+                "Biletix",
+                "entertainment",
+                alias("BILETIX", priority = 20),
+                alias("BILETIX BILET DAGITIM", MerchantAliasType.LEGAL_NAME, priority = 10),
+                verifiedLogoKey = "biletix",
+            ),
+            merchant(
+                "steam",
+                "Steam",
+                "entertainment",
+                alias("STEAM GAMES", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                alias("STEAMPOWERED COM", priority = 20),
+                alias("VALVE SOFTWARE", MerchantAliasType.LEGAL_NAME, priority = 10),
+                negative = listOf("STEAM CLEANING"),
+                verifiedLogoKey = "steam",
+            ),
+            merchant(
+                "biletinial",
+                "Biletinial",
+                "entertainment",
+                alias("BILETINIAL", priority = 20),
+                alias("BILETINIAL COM", priority = 20),
+                verifiedLogoKey = "biletinial",
+            ),
+            merchant(
+                "bubilet",
+                "Bubilet",
+                "entertainment",
+                alias("BUBILET", priority = 20),
+                alias("BUBILET BILET BASIM", MerchantAliasType.LEGAL_NAME, priority = 10),
+                alias("BUBILET BILET DAGITIM", MerchantAliasType.LEGAL_NAME, priority = 10),
+                verifiedLogoKey = "bubilet",
+            ),
+            merchant(
+                "passo",
+                "Passo",
+                "entertainment",
+                alias("PASSO", priority = 20),
+                alias("PASSO DIJITAL HIZMETLER", MerchantAliasType.LEGAL_NAME, priority = 10),
+                negative = listOf("PASSOLIG"),
+                verifiedLogoKey = "passo",
+            ),
+            merchant(
+                "mobilet",
+                "Mobilet",
+                "entertainment",
+                alias("MOBILET", priority = 20),
+                alias("EVENT MASTER", MerchantAliasType.LEGAL_NAME, priority = 10),
+                verifiedLogoKey = "mobilet",
+            ),
+            merchant(
+                "biletino",
+                "Biletino",
+                "entertainment",
+                alias("BILETINO", priority = 20),
+                verifiedLogoKey = "biletino",
+            ),
+            merchant(
+                "bugece",
+                "BUGECE",
+                "entertainment",
+                alias("BUGECE", priority = 20),
+                alias("BUGECE CO", priority = 20),
+                verifiedLogoKey = "bugece",
+            ),
+            merchant(
+                "epic_games",
+                "Epic Games",
+                "entertainment",
+                alias("EPIC GAMES", priority = 20),
+                alias("EPICGAMES", priority = 20),
+                negative = listOf("EPIC HOTEL"),
+                verifiedLogoKey = "epic_games",
+            ),
+            merchant(
+                "playstation_store",
+                "PlayStation Store",
+                "entertainment",
+                alias("PLAYSTATION STORE", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                alias("SONY PLAYSTATION STORE", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                negative = listOf("PLAYSTATION PLUS"),
+                verifiedLogoKey = "playstation",
+            ),
+            merchant(
+                "xbox_store",
+                "Xbox Store",
+                "entertainment",
+                alias("XBOX STORE", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                alias("MICROSOFT XBOX STORE", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                negative = listOf("XBOX GAME PASS"),
+                verifiedLogoKey = "xbox",
+            ),
+            merchant(
+                "riot_games",
+                "Riot Games",
+                "entertainment",
+                alias("RIOT GAMES", priority = 20),
+                alias("RIOTGAMES", priority = 20),
+                verifiedLogoKey = "riot_games",
+            ),
+            merchant(
+                "battle_net",
+                "Battle.net",
+                "entertainment",
+                alias("BATTLE NET", priority = 20),
+                alias("BATTLENET", priority = 20),
+                alias("BLIZZARD ENTERTAINMENT", MerchantAliasType.LEGAL_NAME, priority = 10),
+                verifiedLogoKey = "battle_net",
+            ),
+            merchant(
+                "ubisoft_store",
+                "Ubisoft Store",
+                "entertainment",
+                alias("UBISOFT STORE", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                alias("UBISOFT CONNECT", MerchantAliasType.BRAND_AND_SERVICE, priority = 20),
+                alias("UBISOFT", priority = 10),
+                verifiedLogoKey = "ubisoft_store",
+            ),
+            merchant(
+                "cinemarine",
+                "Cinemarine",
+                "entertainment",
+                alias("CINEMARINE", priority = 20),
+                verifiedLogoKey = "cinemarine",
+            ),
+            merchant(
+                "vialand",
+                "Vialand",
+                "entertainment",
+                alias("VIALAND", priority = 20),
+                alias("ISFANBUL", priority = 10),
+                verifiedLogoKey = "vialand",
             ),
         )
 

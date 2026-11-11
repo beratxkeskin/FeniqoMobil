@@ -30,7 +30,7 @@ class LogoDevLogoPolicyTest {
     // -------------------------------------------------------------
 
     @Test
-    fun allowlist_resolvesAllFortyFourVerifiedKeysCorrectly() {
+    fun allowlist_resolvesAllOneHundredNineVerifiedKeysCorrectly() {
         expectedAllowlist.forEach { (key, domain) ->
             assertEquals(domain, MerchantLogoDomainAllowlist.resolveDomain(key))
         }
@@ -60,7 +60,11 @@ class LogoDevLogoPolicyTest {
         assertNull(MerchantLogoDomainAllowlist.resolveDomain("getiryemek"))
         assertNull(MerchantLogoDomainAllowlist.resolveDomain("migros_yemek"))
         assertNull(MerchantLogoDomainAllowlist.resolveDomain("turk_telekom"))
-        assertNull(MerchantLogoDomainAllowlist.resolveDomain("istanbulkart"))
+        assertNull(MerchantLogoDomainAllowlist.resolveDomain("kamil_koc"))
+        assertNull(MerchantLogoDomainAllowlist.resolveDomain("budo"))
+        assertNull(MerchantLogoDomainAllowlist.resolveDomain("getir_arac"))
+        assertNull(MerchantLogoDomainAllowlist.resolveDomain("tiktak"))
+        assertNull(MerchantLogoDomainAllowlist.resolveDomain("tatilbudur"))
     }
 
     @Test
@@ -83,7 +87,7 @@ class LogoDevLogoPolicyTest {
     @Test
     fun starterCatalog_everyNonNullVerifiedLogoKey_resolvesInAllowlist() {
         val nonNullMerchants = StarterMerchantCatalog.merchants.filter { it.verifiedLogoKey != null }
-        assertEquals(44, nonNullMerchants.size, "Yalnızca doğrulanmış 44 merchant logo anahtarı taşımalı")
+        assertEquals(147, nonNullMerchants.size, "Yalnızca doğrulanmış 147 merchant logo anahtarı taşımalı")
 
         for (merchant in nonNullMerchants) {
             val resolvedDomain = MerchantLogoDomainAllowlist.resolveDomain(merchant.verifiedLogoKey)
@@ -260,8 +264,46 @@ class LogoDevLogoPolicyTest {
             assertTrue(request.url.contains("token=pk_test_synthetic_key_12345"))
             assertTrue(request.url.contains("size=128"))
             assertTrue(request.url.contains("format=png"))
+            if (key == "netflix") {
+                assertTrue(request.url.contains("theme=dark"), "netflix için theme=dark olmalıdır: ${request.url}")
+                assertFalse(request.url.contains("theme=light"), "netflix için theme=light olmamalıdır: ${request.url}")
+                assertEquals(LogoDevKeyPresentationPolicy.DARK_NEUTRAL, request.presentationPolicy)
+            } else {
+                assertTrue(request.url.contains("theme=light"), "$key için theme=light olmalıdır: ${request.url}")
+                assertFalse(request.url.contains("theme=dark"), "$key için theme=dark olmamalıdır: ${request.url}")
+                assertEquals(LogoDevKeyPresentationPolicy.LIGHT_NEUTRAL, request.presentationPolicy)
+            }
             assertTrue(request.url.contains("fallback=404"))
         }
+    }
+
+    @Test
+    fun resolver_netflix_producesThemeDarkForPngAndWebp_andThemeslessForJpg() {
+        val pngConfig = validSyntheticConfig.copy(format = LogoDevImageFormat.PNG)
+        val webpConfig = validSyntheticConfig.copy(format = LogoDevImageFormat.WEBP)
+        val jpgConfig = validSyntheticConfig.copy(format = LogoDevImageFormat.JPG)
+
+        val pngResolution = LogoDevLogoUrlResolver.resolve("netflix", pngConfig)
+        val pngAvailable = assertIs<LogoDevLogoResolutionResult.Available>(pngResolution)
+        val pngUrl = io.ktor.http.Url(pngAvailable.request.url)
+        assertEquals("dark", pngUrl.parameters["theme"], "Netflix PNG için theme parametresi 'dark' olmalıdır")
+        assertEquals(1, pngUrl.parameters.getAll("theme")?.size, "Netflix PNG için theme tekil olmalıdır")
+        assertEquals(LogoDevKeyPresentationPolicy.DARK_NEUTRAL, pngAvailable.request.presentationPolicy)
+
+        val webpResolution = LogoDevLogoUrlResolver.resolve("netflix", webpConfig)
+        val webpAvailable = assertIs<LogoDevLogoResolutionResult.Available>(webpResolution)
+        val webpUrl = io.ktor.http.Url(webpAvailable.request.url)
+        assertEquals("dark", webpUrl.parameters["theme"], "Netflix WebP için theme parametresi 'dark' olmalıdır")
+        assertEquals(1, webpUrl.parameters.getAll("theme")?.size, "Netflix WebP için theme tekil olmalıdır")
+        assertEquals(LogoDevKeyPresentationPolicy.DARK_NEUTRAL, webpAvailable.request.presentationPolicy)
+
+        val jpgResolution = LogoDevLogoUrlResolver.resolve("netflix", jpgConfig)
+        val jpgAvailable = assertIs<LogoDevLogoResolutionResult.Available>(jpgResolution)
+        val jpgUrl = io.ktor.http.Url(jpgAvailable.request.url)
+        assertFalse(jpgUrl.parameters.contains("theme"), "Netflix JPG için theme parametresi bulunmamalıdır")
+        assertNull(jpgUrl.parameters["theme"], "Netflix JPG için theme parametresi null olmalıdır")
+        assertFalse(jpgAvailable.request.url.contains("theme="), "Netflix JPG raw URL'si theme içermemelidir")
+        assertEquals(LogoDevKeyPresentationPolicy.DARK_NEUTRAL, jpgAvailable.request.presentationPolicy)
     }
 
     private val expectedAllowlist =
@@ -310,6 +352,71 @@ class LogoDevLogoPolicyTest {
             "espressolab" to "espressolab.com",
             "simit_sarayi" to "simitsarayi.com",
             "bigchefs" to "bigchefs.com.tr",
+            "max" to "max.com",
+            "exxen" to "exxen.com",
+            "gain" to "gain.tv",
+            "mubi" to "mubi.com",
+            "tod" to "todtv.com.tr",
+            "tabii" to "tabii.com",
+            "apple_services" to "apple.com",
+            "adobe" to "adobe.com",
+            "canva" to "canva.com",
+            "s_sport_plus" to "ssportplus.com",
+            "tv_plus" to "tvplus.com.tr",
+            "tivibu" to "tivibu.com.tr",
+            "d_smart_go" to "dsmartgo.com.tr",
+            "deezer" to "deezer.com",
+            "fizy" to "fizy.com",
+            "muud" to "muud.com.tr",
+            "storytel" to "storytel.com",
+            "audible" to "audible.com",
+            "dropbox" to "dropbox.com",
+            "youtube" to "youtube.com",
+            "google" to "google.com",
+            "microsoft" to "microsoft.com",
+            "playstation" to "playstation.com",
+            "xbox" to "xbox.com",
+            "linkedin" to "linkedin.com",
+            "nintendo" to "nintendo.com",
+            "ea" to "ea.com",
+            "n11" to "n11.com",
+            "ciceksepeti" to "ciceksepeti.com",
+            "pazarama" to "pazarama.com",
+            "boyner" to "boyner.com.tr",
+            "lc_waikiki" to "lcwaikiki.bg",
+            "defacto" to "defacto.com.tr",
+            "teknosa" to "teknosa.com",
+            "mediamarkt" to "mediamarkt.com.tr",
+            "flo" to "flo.com.tr",
+            "koton" to "koton.com",
+            "mavi" to "mavi.com",
+            "zara" to "zara.com",
+            "hm" to "hm.com",
+            "pull_and_bear" to "pullandbear.com",
+            "bershka" to "bershka.com",
+            "stradivarius" to "stradivarius.com",
+            "beymen" to "beymen.com",
+            "vakko" to "vakko.com",
+            "ikea" to "ikea.com.tr",
+            "koctas" to "koctas.com.tr",
+            "bauhaus" to "bauhaus.com.tr",
+            "vatan_bilgisayar" to "vatanbilgisayar.com",
+            "ebebek" to "e-bebek.com",
+            "gratis" to "gratis.com",
+            "watsons" to "watsons.com.tr",
+            "rossmann" to "rossmann.com.tr",
+            "sephora" to "sephora.com.tr",
+            "eve_shop" to "eveshop.com.tr",
+            "flormar" to "flormar.com.tr",
+            "golden_rose" to "goldenrose.com",
+            "yves_rocher" to "yvesrocher.com.tr",
+            "the_body_shop" to "thebodyshop.com.tr",
+            "kiko_milano" to "kikomilano.com.tr",
+            "mac_cosmetics" to "maccosmetics.com",
+            "clinique" to "clinique.com.tr",
+            "avon" to "avon.com.tr",
+            "oriflame" to "oriflame.com.tr",
+            "farmasi" to "farmasi.com.tr",
         )
 
     @Test
@@ -327,6 +434,29 @@ class LogoDevLogoPolicyTest {
     }
 
     @Test
+    fun resolver_themeParameter_pngAndWebpHaveSingleLight_jpgHasNoTheme() {
+        val pngConfig = validSyntheticConfig.copy(format = LogoDevImageFormat.PNG)
+        val webpConfig = validSyntheticConfig.copy(format = LogoDevImageFormat.WEBP)
+        val jpgConfig = validSyntheticConfig.copy(format = LogoDevImageFormat.JPG)
+
+        val pngResolution = LogoDevLogoUrlResolver.resolve("migros", pngConfig)
+        val pngUrl = io.ktor.http.Url(assertIs<LogoDevLogoResolutionResult.Available>(pngResolution).request.url)
+        assertEquals("light", pngUrl.parameters["theme"], "PNG için theme parametresi 'light' olmalıdır")
+        assertEquals(1, pngUrl.parameters.getAll("theme")?.size, "PNG için theme parametresi tam bir kez bulunmalıdır")
+
+        val webpResolution = LogoDevLogoUrlResolver.resolve("migros", webpConfig)
+        val webpUrl = io.ktor.http.Url(assertIs<LogoDevLogoResolutionResult.Available>(webpResolution).request.url)
+        assertEquals("light", webpUrl.parameters["theme"], "WebP için theme parametresi 'light' olmalıdır")
+        assertEquals(1, webpUrl.parameters.getAll("theme")?.size, "WebP için theme parametresi tam bir kez bulunmalıdır")
+
+        val jpgResult = assertIs<LogoDevLogoResolutionResult.Available>(LogoDevLogoUrlResolver.resolve("migros", jpgConfig))
+        val jpgUrl = io.ktor.http.Url(jpgResult.request.url)
+        assertFalse(jpgUrl.parameters.contains("theme"), "JPG için theme parametresi URL'de bulunmamalıdır")
+        assertNull(jpgUrl.parameters["theme"], "JPG için theme parametresi null olmalıdır")
+        assertFalse(jpgResult.request.url.contains("theme="), "JPG raw URL'si theme parametresi içermemelidir")
+    }
+
+    @Test
     fun resolver_isDeterministic() {
         val result1 = LogoDevLogoUrlResolver.resolve("bim", validSyntheticConfig)
         val result2 = LogoDevLogoUrlResolver.resolve("bim", validSyntheticConfig)
@@ -334,6 +464,16 @@ class LogoDevLogoPolicyTest {
         val avail1 = assertIs<LogoDevLogoResolutionResult.Available>(result1)
         val avail2 = assertIs<LogoDevLogoResolutionResult.Available>(result2)
         assertEquals(avail1.request.url, avail2.request.url)
+    }
+
+    @Test
+    fun resolver_isDeterministic_forAllThreeFormats() {
+        for (format in LogoDevImageFormat.entries) {
+            val config = validSyntheticConfig.copy(format = format)
+            val result1 = assertIs<LogoDevLogoResolutionResult.Available>(LogoDevLogoUrlResolver.resolve("bim", config))
+            val result2 = assertIs<LogoDevLogoResolutionResult.Available>(LogoDevLogoUrlResolver.resolve("bim", config))
+            assertEquals(result1.request.url, result2.request.url, "$format formatı için çözümleme deterministik olmalıdır")
+        }
     }
 
     // -------------------------------------------------------------
@@ -352,13 +492,23 @@ class LogoDevLogoPolicyTest {
     fun request_toString_masksTokenInUrl() {
         val request =
             LogoDevRemoteLogoRequest(
-                url = "https://img.logo.dev/migros.com.tr?token=pk_test_secret_sample_key_999&size=128&format=png&fallback=404",
+                url = "https://img.logo.dev/migros.com.tr?token=pk_test_secret_sample_key_999&size=128&format=png&theme=light&fallback=404",
                 domain = "migros.com.tr",
                 headers = emptyMap(),
             )
         val str = request.toString()
         assertFalse(str.contains("secret_sample_key_999"), "Token değeri request.toString()'e sızamaz: $str")
         assertTrue(str.contains("token=pk_***"), "Token query parametresi maskelenmelidir: $str")
+    }
+
+    @Test
+    fun resolver_themeParameter_isAlwaysLightAndSingleInUrl() {
+        val result = LogoDevLogoUrlResolver.resolve("migros", validSyntheticConfig)
+        val available = assertIs<LogoDevLogoResolutionResult.Available>(result)
+        val parsedUrl = io.ktor.http.Url(available.request.url)
+
+        assertEquals("light", parsedUrl.parameters["theme"], "theme parametresi 'light' olmalıdır")
+        assertEquals(1, parsedUrl.parameters.getAll("theme")?.size, "theme parametresi tekil olmalıdır")
     }
 
     @Test
@@ -403,6 +553,42 @@ class LogoDevLogoPolicyTest {
                 str.contains("://"),
                 "toString raw URL sızdıramaz: $str",
             )
+        }
+    }
+
+    @Test
+    fun personalCareFifteenMerchants_defaultPresentationPolicyContract() {
+        val personalCareKeys =
+            listOf(
+                "gratis",
+                "watsons",
+                "rossmann",
+                "sephora",
+                "eve_shop",
+                "flormar",
+                "golden_rose",
+                "yves_rocher",
+                "the_body_shop",
+                "kiko_milano",
+                "mac_cosmetics",
+                "clinique",
+                "avon",
+                "oriflame",
+                "farmasi",
+            )
+        for (key in personalCareKeys) {
+            val merchant = StarterMerchantCatalog.merchants.first { it.id == key }
+            assertEquals(key, merchant.verifiedLogoKey)
+            assertEquals("personal_care", merchant.categoryIconKey.key)
+            val policy = LogoDevKeyPresentationPolicy.forLogoKey(key)
+            assertEquals(LogoDevKeyPresentationPolicy.LIGHT_NEUTRAL, policy)
+            assertEquals("light", policy.themeParameterValue)
+
+            val resolution = LogoDevLogoUrlResolver.resolve(key, validSyntheticConfig)
+            val available = assertIs<LogoDevLogoResolutionResult.Available>(resolution)
+            assertEquals(LogoDevKeyPresentationPolicy.LIGHT_NEUTRAL, available.request.presentationPolicy)
+            assertTrue(available.request.url.contains("theme=light"))
+            assertTrue(available.request.url.contains("fallback=404"))
         }
     }
 }

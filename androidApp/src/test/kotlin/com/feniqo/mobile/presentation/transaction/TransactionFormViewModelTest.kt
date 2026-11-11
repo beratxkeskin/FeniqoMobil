@@ -2356,6 +2356,19 @@ class TransactionFormViewModelTest {
         createdAt = Instant.parse("2026-08-01T00:00:00Z"),
     )
 
+    private val sampleEntertainmentCategory =
+        Category(
+            id = EntityId("cat-entertainment"),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            name = "Eğlence",
+            type = TransactionType.EXPENSE,
+            color = CategoryColor("#EC4899"),
+            icon = CategoryIcon("entertainment"),
+            isDefault = false,
+            createdAt = Instant.parse("2026-08-01T00:00:00Z"),
+        )
+
     @Test
     fun merchantDecision_01_newFormDefaultsToAuto_andProducesNoMutation() = runTest {
         val viewModel = createViewModel(TransactionFormRoute(null))
@@ -3378,5 +3391,127 @@ class TransactionFormViewModelTest {
 
             job.cancel()
             eventJob.cancel()
+        }
+
+    @Test
+    fun merchantDecision_33_entertainment_showsCandidates_reconcilesOnCategoryChange_andPreservesUseTransactionName() =
+        runTest {
+            catRepo.activeCategoriesFlow.value =
+                listOf(
+                    sampleEntertainmentCategory,
+                    sampleUnsupportedExpenseCategory,
+                    sampleGroceriesCategory,
+                )
+            val viewModel = createViewModel(TransactionFormRoute(null))
+            val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+            advanceUntilIdle()
+
+            // 1. Eğlence kategorisi seçildiğinde önerilen 8 aday ve aranabilir 17 aday görünür
+            viewModel.onCategoryChanged(sampleEntertainmentCategory.id)
+            viewModel.onAmountChanged("250")
+            viewModel.onTitleChanged("Steam Oyun")
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.isMerchantSelectionEligible)
+            val expectedSuggestedCandidateIds =
+                listOf(
+                    EntityId("paribu_cineverse"),
+                    EntityId("biletix"),
+                    EntityId("biletinial"),
+                    EntityId("bubilet"),
+                    EntityId("passo"),
+                    EntityId("steam"),
+                    EntityId("epic_games"),
+                    EntityId("playstation_store"),
+                )
+            val expectedSearchableCandidateIds =
+                listOf(
+                    EntityId("paribu_cineverse"),
+                    EntityId("biletix"),
+                    EntityId("biletinial"),
+                    EntityId("bubilet"),
+                    EntityId("passo"),
+                    EntityId("mobilet"),
+                    EntityId("biletino"),
+                    EntityId("bugece"),
+                    EntityId("steam"),
+                    EntityId("epic_games"),
+                    EntityId("playstation_store"),
+                    EntityId("xbox_store"),
+                    EntityId("riot_games"),
+                    EntityId("battle_net"),
+                    EntityId("ubisoft_store"),
+                    EntityId("cinemarine"),
+                    EntityId("vialand"),
+                )
+            assertEquals(
+                expectedSuggestedCandidateIds,
+                viewModel.uiState.value.merchantSuggestedCandidates
+                    .map { it.id },
+            )
+            assertEquals(
+                expectedSearchableCandidateIds,
+                viewModel.uiState.value.merchantSearchableCandidates
+                    .map { it.id },
+            )
+
+            // 2. KnownMerchant("steam") seçimi
+            viewModel.onKnownMerchantSelected(EntityId("steam"))
+            advanceUntilIdle()
+
+            assertEquals(
+                TransactionMerchantCreateDecision.KnownMerchant(EntityId("steam")),
+                viewModel.uiState.value.merchantDecision,
+            )
+            assertEquals(
+                "Steam",
+                viewModel.uiState.value.selectedMerchantCandidate
+                    ?.displayName,
+            )
+
+            // 3. Uyumsuz kategoriye geçildiğinde KnownMerchant Auto'ya döner
+            viewModel.onCategoryChanged(sampleUnsupportedExpenseCategory.id)
+            advanceUntilIdle()
+
+            assertEquals(TransactionMerchantCreateDecision.Auto, viewModel.uiState.value.merchantDecision)
+            assertNull(viewModel.uiState.value.selectedMerchantCandidate)
+
+            // 4. Tekrar eğlence seçilir ve UseTransactionName açıkça seçilir
+            viewModel.onCategoryChanged(sampleEntertainmentCategory.id)
+            advanceUntilIdle()
+            viewModel.onUseTransactionNameSelected()
+            advanceUntilIdle()
+
+            assertEquals(
+                TransactionMerchantCreateDecision.UseTransactionName,
+                viewModel.uiState.value.merchantDecision,
+            )
+
+            // 5. Form uygun kaldığı sürece (kişisel tekil expense purchase) UseTransactionName korunur
+            viewModel.onCategoryChanged(sampleGroceriesCategory.id)
+            advanceUntilIdle()
+            assertEquals(
+                TransactionMerchantCreateDecision.UseTransactionName,
+                viewModel.uiState.value.merchantDecision,
+            )
+
+            viewModel.onCategoryChanged(sampleUnsupportedExpenseCategory.id)
+            advanceUntilIdle()
+            assertEquals(
+                TransactionMerchantCreateDecision.UseTransactionName,
+                viewModel.uiState.value.merchantDecision,
+            )
+
+            // 6. Submit başarılı tek ekleme çağrısı üretir
+            viewModel.submit()
+            advanceUntilIdle()
+
+            assertNotNull(trxRepo.lastCreatedTransaction)
+            assertEquals(
+                TransactionMerchantCreateDecision.UseTransactionName,
+                trxRepo.lastMerchantDecision,
+            )
+
+            job.cancel()
         }
 }

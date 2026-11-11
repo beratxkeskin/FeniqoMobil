@@ -363,7 +363,7 @@ class TransactionMerchantSyncTest {
                 assertEquals("Spotify", row.description)
                 assertEquals("spotify", row.merchantId)
                 assertEquals(95, row.merchantConfidence)
-                assertEquals(10, row.merchantCatalogVersion)
+                assertEquals(18, row.merchantCatalogVersion)
             } finally {
                 db.close()
             }
@@ -612,7 +612,7 @@ class TransactionMerchantSyncTest {
                 assertEquals("Spotify", updated.description)
                 assertEquals("spotify", updated.merchantId)
                 assertEquals(95, updated.merchantConfidence)
-                assertEquals(10, updated.merchantCatalogVersion)
+                assertEquals(18, updated.merchantCatalogVersion)
             } finally {
                 db.close()
             }
@@ -711,7 +711,7 @@ class TransactionMerchantSyncTest {
                 assertEquals("tx-new-spot", inserted.id)
                 assertEquals("spotify", inserted.merchantId)
                 assertEquals(95, inserted.merchantConfidence)
-                assertEquals(10, inserted.merchantCatalogVersion)
+                assertEquals(18, inserted.merchantCatalogVersion)
             } finally {
                 db.close()
             }
@@ -819,7 +819,7 @@ class TransactionMerchantSyncTest {
                 assertEquals("Spotify", resolved.description)
                 assertEquals("spotify", resolved.merchantId)
                 assertEquals(95, resolved.merchantConfidence)
-                assertEquals(10, resolved.merchantCatalogVersion)
+                assertEquals(18, resolved.merchantCatalogVersion)
             } finally {
                 db.close()
             }

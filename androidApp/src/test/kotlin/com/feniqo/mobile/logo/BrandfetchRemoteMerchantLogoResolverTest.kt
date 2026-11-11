@@ -2,6 +2,7 @@ package com.feniqo.mobile.logo
 
 import com.feniqo.mobile.data.remote.logo.BrandfetchDomainAllowlist
 import com.feniqo.mobile.data.remote.logo.BrandfetchLogoConfig
+import com.feniqo.mobile.presentation.component.RemoteMerchantLogoSurfacePolicy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -89,7 +90,11 @@ class BrandfetchRemoteMerchantLogoResolverTest {
         assertNull(resolver.resolve("yemeksepeti_market"))
         assertNull(resolver.resolve("migros_sanal_market"))
         assertNull(resolver.resolve("turk_telekom"))
-        assertNull(resolver.resolve("istanbulkart"))
+        assertNull(resolver.resolve("kamil_koc"))
+        assertNull(resolver.resolve("budo"))
+        assertNull(resolver.resolve("getir_arac"))
+        assertNull(resolver.resolve("tiktak"))
+        assertNull(resolver.resolve("tatilbudur"))
     }
 
     @Test
@@ -103,7 +108,7 @@ class BrandfetchRemoteMerchantLogoResolverTest {
     @Test
     fun allowlistKeys_matchApprovedMerchantLogoRegistry() {
         val keys = BrandfetchDomainAllowlist.allowlistKeys()
-        assertEquals(44, keys.size)
+        assertEquals(141, keys.size)
         assertTrue(keys.containsAll(approvedLogoKeys))
     }
 
@@ -126,6 +131,10 @@ class BrandfetchRemoteMerchantLogoResolverTest {
             // 3. Header kontrolleri
             assertEquals("https://app.feniqo.com", request.headers["Referer"])
             assertEquals("FeniqoMobil/1.0.0 (Android 34)", request.headers["User-Agent"])
+
+            // 4. Surface Policy varsayılan DEFAULT olarak kalmalı ve Logo.dev theme parametresi sızmamalı
+            assertEquals(RemoteMerchantLogoSurfacePolicy.DEFAULT, request.surfacePolicy)
+            assertFalse("Brandfetch URL'ine Logo.dev theme parametresi sızamaz", request.url.contains("theme="))
         }
     }
 
@@ -175,6 +184,88 @@ class BrandfetchRemoteMerchantLogoResolverTest {
             "espressolab",
             "simit_sarayi",
             "bigchefs",
+            "max",
+            "exxen",
+            "gain",
+            "mubi",
+            "tod",
+            "tabii",
+            "apple_services",
+            "adobe",
+            "canva",
+            "s_sport_plus",
+            "tv_plus",
+            "tivibu",
+            "d_smart_go",
+            "deezer",
+            "fizy",
+            "muud",
+            "storytel",
+            "audible",
+            "dropbox",
+            "youtube",
+            "google",
+            "microsoft",
+            "playstation",
+            "xbox",
+            "linkedin",
+            "nintendo",
+            "ea",
+            "n11",
+            "ciceksepeti",
+            "pazarama",
+            "boyner",
+            "lc_waikiki",
+            "defacto",
+            "teknosa",
+            "mediamarkt",
+            "flo",
+            "koton",
+            "mavi",
+            "zara",
+            "hm",
+            "pull_and_bear",
+            "bershka",
+            "stradivarius",
+            "beymen",
+            "vakko",
+            "ikea",
+            "koctas",
+            "bauhaus",
+            "vatan_bilgisayar",
+            "ebebek",
+            "gratis",
+            "watsons",
+            "rossmann",
+            "sephora",
+            "eve_shop",
+            "flormar",
+            "golden_rose",
+            "yves_rocher",
+            "the_body_shop",
+            "kiko_milano",
+            "mac_cosmetics",
+            "clinique",
+            "avon",
+            "oriflame",
+            "farmasi",
+            "istanbulkart",
+            "tcdd",
+            "bitaksi",
+            "marti",
+            "ispark",
+            "metro_turizm",
+            "pamukkale_turizm",
+            "varan_turizm",
+            "ido",
+            "ajet",
+            "sunexpress",
+            "corendon",
+            "booking",
+            "airbnb",
+            "ets_tur",
+            "jolly_tur",
+            "setur",
         )
 
     @Test
@@ -202,5 +293,25 @@ class BrandfetchRemoteMerchantLogoResolverTest {
         assertFalse(userAgent.contains("@"))
         assertFalse(userAgent.contains("migros"))
         assertFalse(userAgent.contains("TL"))
+    }
+
+    @Test
+    fun brandfetchResolver_preservesDefaultSurfacePolicy_andNeverLeaksLogoDevSurfacePolicy() {
+        val resolver = BrandfetchRemoteMerchantLogoResolver(config = validConfig)
+        for (key in approvedLogoKeys) {
+            val request = resolver.resolve(key)
+            assertNotNull(request)
+            requireNotNull(request)
+
+            assertEquals(
+                "Brandfetch isteği varsayılan DEFAULT yüzey politikasında kalmalıdır: $key",
+                RemoteMerchantLogoSurfacePolicy.DEFAULT,
+                request.surfacePolicy,
+            )
+            assertFalse(
+                "Brandfetch isteği Logo.dev URL'i veya parametresi içeremez: ${request.url}",
+                request.url.contains("theme="),
+            )
+        }
     }
 }

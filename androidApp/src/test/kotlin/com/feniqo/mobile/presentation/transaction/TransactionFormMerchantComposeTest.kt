@@ -1086,4 +1086,93 @@ class TransactionFormMerchantComposeTest {
         compose.onNodeWithTag("merchant_search_all_button").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("merchant_use_transaction_name_button").performScrollTo().assertIsDisplayed()
     }
+
+    @Test
+    fun entertainment_merchant_selector_runtime_locale_switch_tr_en_preserves_merchant_brand_names() {
+        var languageTag by mutableStateOf("tr")
+
+        val entertainmentCandidates =
+            listOf(
+                MerchantSelectorItem(EntityId("paribu_cineverse"), "Paribu Cineverse", "entertainment", "paribu_cineverse"),
+                MerchantSelectorItem(EntityId("biletix"), "Biletix", "entertainment", "biletix"),
+                MerchantSelectorItem(EntityId("steam"), "Steam", "entertainment", "steam"),
+            )
+
+        val entertainmentCategories =
+            listOf(
+                TransactionCategoryOptionUiModel(
+                    id = EntityId("cat-entertainment"),
+                    name = "Eğlence",
+                    type = TransactionType.EXPENSE,
+                    colorHex = "#EC4899",
+                    iconKey = "entertainment",
+                    isSelectable = true,
+                    isHistorical = false,
+                ),
+            )
+
+        val entertainmentFormState =
+            eligibleFormState(
+                suggestedCandidates = entertainmentCandidates,
+                searchableCandidates = entertainmentCandidates,
+            ).copy(
+                selectedCategoryId = EntityId("cat-entertainment"),
+                availableCategories = entertainmentCategories,
+                title = "Konser ve Oyun",
+            )
+
+        compose.setContent {
+            App(languageTag = languageTag) {
+                TransactionFormScreen(
+                    uiState = entertainmentFormState,
+                    onAmountChange = {},
+                    onCurrencyChange = {},
+                    onTypeChange = {},
+                    onCategoryChange = {},
+                    onDateClick = {},
+                    onDescriptionChange = {},
+                    onPaymentMethodChange = {},
+                    onInstallmentToggle = {},
+                    onInstallmentCountChange = {},
+                    onRetryCategories = {},
+                    onSubmit = {},
+                    onBack = {},
+                    onDismissMessage = {},
+                    onAttachReceipt = {},
+                    onRemoveReceipt = {},
+                )
+            }
+        }
+
+        // 1. TR modunda yerelleştirilmiş seçici metinleri ve 3 marka adı
+        compose.onNodeWithText("İş yeri / marka").assertIsDisplayed()
+        compose.onNodeWithText("İsteğe bağlı").assertIsDisplayed()
+        compose.onNodeWithText("Önerilen iş yerleri").assertIsDisplayed()
+        compose.onNodeWithText("Tümünü ara").assertIsDisplayed()
+        compose.onNodeWithText("Listede yok").assertIsDisplayed()
+        compose.onNodeWithText("Paribu Cineverse").assertIsDisplayed()
+        compose.onNodeWithText("Biletix").assertIsDisplayed()
+        compose.onNodeWithText("Steam").assertIsDisplayed()
+
+        // 2. EN moduna geçiş: Seçici başlıkları İngilizce olur, marka adları aynen korunur
+        compose.runOnIdle { languageTag = "en" }
+
+        compose.onNodeWithText("Merchant or brand").assertIsDisplayed()
+        compose.onNodeWithText("Optional").assertIsDisplayed()
+        compose.onNodeWithText("Suggested merchants").assertIsDisplayed()
+        compose.onNodeWithText("Search all").assertIsDisplayed()
+        compose.onNodeWithText("Not listed").assertIsDisplayed()
+        compose.onNodeWithText("Paribu Cineverse").assertIsDisplayed()
+        compose.onNodeWithText("Biletix").assertIsDisplayed()
+        compose.onNodeWithText("Steam").assertIsDisplayed()
+
+        // 3. Tekrar TR moduna dönüş
+        compose.runOnIdle { languageTag = "tr" }
+
+        compose.onNodeWithText("İş yeri / marka").assertIsDisplayed()
+        compose.onNodeWithText("Önerilen iş yerleri").assertIsDisplayed()
+        compose.onNodeWithText("Paribu Cineverse").assertIsDisplayed()
+        compose.onNodeWithText("Biletix").assertIsDisplayed()
+        compose.onNodeWithText("Steam").assertIsDisplayed()
+    }
 }

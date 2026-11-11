@@ -97,6 +97,26 @@ data class LogoDevLogoConfig(
 }
 
 /**
+ * Logo.dev sağlayıcısı için logo anahtarı bazlı sunum ve tema politikası.
+ * URL tema parametresi ve yüzey/ölçekleme kararlarının tek tipli kaynağıdır.
+ */
+enum class LogoDevKeyPresentationPolicy(
+    val themeParameterValue: String,
+) {
+    LIGHT_NEUTRAL(LogoDevLogoUrlResolver.THEME_PARAMETER_VALUE_LIGHT),
+    DARK_NEUTRAL(LogoDevLogoUrlResolver.THEME_PARAMETER_VALUE_DARK),
+    ;
+
+    companion object {
+        fun forLogoKey(logoKey: String?): LogoDevKeyPresentationPolicy =
+            when (logoKey?.trim()?.lowercase()) {
+                "netflix" -> DARK_NEUTRAL
+                else -> LIGHT_NEUTRAL
+            }
+    }
+}
+
+/**
  * Logo.dev CDN için doğrulanmış logo isteği tanımı.
  *
  * Header Sözleşmesi:
@@ -109,10 +129,12 @@ data class LogoDevRemoteLogoRequest(
     val url: String,
     val domain: String,
     val headers: Map<String, String> = emptyMap(),
+    val presentationPolicy: LogoDevKeyPresentationPolicy = LogoDevKeyPresentationPolicy.LIGHT_NEUTRAL,
 ) {
     override fun toString(): String {
         val safeUrl = url.replace(Regex("(?<=[?&])token=[^&#]*"), "token=pk_***")
-        return "LogoDevRemoteLogoRequest(url=$safeUrl, domain=$domain, headersCount=${headers.size})"
+        return "LogoDevRemoteLogoRequest(url=$safeUrl, domain=$domain, " +
+            "headersCount=${headers.size}, presentationPolicy=$presentationPolicy)"
     }
 }
 
@@ -146,6 +168,11 @@ object LogoDevLogoUrlResolver {
     const val EXPECTED_SCHEME: String = "https"
     const val EXPECTED_HOST: String = "img.logo.dev"
     const val FALLBACK_PARAMETER_VALUE: String = "404"
+    const val THEME_PARAMETER_VALUE_LIGHT: String = "light"
+    const val THEME_PARAMETER_VALUE_DARK: String = "dark"
+
+    @Deprecated("THEME_PARAMETER_VALUE_LIGHT kullanın", ReplaceWith("THEME_PARAMETER_VALUE_LIGHT"))
+    const val THEME_PARAMETER_VALUE: String = "light"
 
     /**
      * Tek tipli giriş noktası: stable [logoKey] ve runtime [config].
@@ -176,10 +203,19 @@ object LogoDevLogoUrlResolver {
         val key = config.publishableKey!!
         val size = config.iconSizePx
         val format = config.format.extension
+        val presentationPolicy = LogoDevKeyPresentationPolicy.forLogoKey(logoKey)
+        val expectedThemeValue = presentationPolicy.themeParameterValue
+        val themeSegment =
+            when (config.format) {
+                LogoDevImageFormat.PNG,
+                LogoDevImageFormat.WEBP,
+                -> "&theme=$expectedThemeValue"
+                LogoDevImageFormat.JPG -> ""
+            }
 
         val encodedKey = percentEncode(key)
         val rawUrl =
-            "$EXPECTED_SCHEME://$EXPECTED_HOST/$domain?token=$encodedKey&size=$size&format=$format&fallback=$FALLBACK_PARAMETER_VALUE"
+            "$EXPECTED_SCHEME://$EXPECTED_HOST/$domain?token=$encodedKey&size=$size&format=$format$themeSegment&fallback=$FALLBACK_PARAMETER_VALUE"
 
         val parsedUrl =
             try {
@@ -209,6 +245,23 @@ object LogoDevLogoUrlResolver {
         if (parsedUrl.parameters["format"] != format) {
             return LogoDevLogoResolutionResult.Unavailable.InvalidConfiguration("format_parameter_mismatch")
         }
+        when (config.format) {
+            LogoDevImageFormat.PNG,
+            LogoDevImageFormat.WEBP,
+            -> {
+                if (parsedUrl.parameters["theme"] != expectedThemeValue) {
+                    return LogoDevLogoResolutionResult.Unavailable.InvalidConfiguration("theme_parameter_mismatch")
+                }
+                if (parsedUrl.parameters.getAll("theme")?.size != 1) {
+                    return LogoDevLogoResolutionResult.Unavailable.InvalidConfiguration("theme_parameter_duplicate")
+                }
+            }
+            LogoDevImageFormat.JPG -> {
+                if (parsedUrl.parameters.contains("theme") || parsedUrl.parameters["theme"] != null) {
+                    return LogoDevLogoResolutionResult.Unavailable.InvalidConfiguration("theme_parameter_forbidden_for_jpg")
+                }
+            }
+        }
         if (parsedUrl.parameters["fallback"] != FALLBACK_PARAMETER_VALUE) {
             return LogoDevLogoResolutionResult.Unavailable.InvalidConfiguration("fallback_parameter_mismatch")
         }
@@ -224,6 +277,7 @@ object LogoDevLogoUrlResolver {
                 url = rawUrl,
                 domain = domain,
                 headers = emptyMap(),
+                presentationPolicy = presentationPolicy,
             )
         return LogoDevLogoResolutionResult.Available(request)
     }

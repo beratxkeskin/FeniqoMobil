@@ -3,7 +3,10 @@ package com.feniqo.mobile.logo
 import com.feniqo.mobile.data.remote.logo.LogoDevImageFormat
 import com.feniqo.mobile.data.remote.logo.LogoDevLogoConfig
 import com.feniqo.mobile.data.remote.logo.MerchantLogoDomainAllowlist
+import com.feniqo.mobile.domain.usecase.StarterMerchantCatalog
 import com.feniqo.mobile.presentation.component.RemoteMerchantLogoCachePolicy
+import com.feniqo.mobile.presentation.component.RemoteMerchantLogoContentScalePolicy
+import com.feniqo.mobile.presentation.component.RemoteMerchantLogoSurfacePolicy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -38,10 +41,16 @@ class LogoDevRemoteMerchantLogoResolverTest {
             // 2. Allowlist domain path'i
             assertTrue("Domain path allowlist'ten gelmelidir: ${request.url}", request.url.contains("/$expectedDomain?"))
 
-            // 3. Fallback, Size ve Format parametreleri
+            // 3. Fallback, Size, Format ve Theme parametreleri
             assertTrue("fallback=404 parametresi bulunmalıdır: ${request.url}", request.url.contains("fallback=404"))
             assertTrue("size parametresi 128 olmalıdır: ${request.url}", request.url.contains("size=128"))
             assertTrue("format parametresi png olmalıdır: ${request.url}", request.url.contains("format=png"))
+            if (key == "netflix") {
+                assertTrue("Netflix için theme=dark parametresi bulunmalıdır: ${request.url}", request.url.contains("theme=dark"))
+                assertFalse("Netflix için theme=light parametresi bulunmamalıdır: ${request.url}", request.url.contains("theme=light"))
+            } else {
+                assertTrue("Diğer key'ler için theme=light parametresi bulunmalıdır: ${request.url}", request.url.contains("theme=light"))
+            }
 
             // 4. Token parametresi URL içinde mevcut
             val expectedTokenQuery = "token=pk_test_sample_valid_key_12345"
@@ -56,6 +65,31 @@ class LogoDevRemoteMerchantLogoResolverTest {
                 RemoteMerchantLogoCachePolicy.PROVIDER_HEADERS_NO_LOCAL_STORAGE,
                 request.cachePolicy,
             )
+
+            // 6. Surface Policy ve ContentScale Policy
+            if (key == "netflix") {
+                assertEquals(
+                    "Netflix surface policy DARK_NEUTRAL olmalıdır",
+                    RemoteMerchantLogoSurfacePolicy.DARK_NEUTRAL,
+                    request.surfacePolicy,
+                )
+                assertEquals(
+                    "Netflix contentScalePolicy APP_ICON_EMPHASIZED olmalıdır",
+                    RemoteMerchantLogoContentScalePolicy.APP_ICON_EMPHASIZED,
+                    request.contentScalePolicy,
+                )
+            } else {
+                assertEquals(
+                    "Diğer key'ler için surface policy LIGHT_NEUTRAL olmalıdır: $key",
+                    RemoteMerchantLogoSurfacePolicy.LIGHT_NEUTRAL,
+                    request.surfacePolicy,
+                )
+                assertEquals(
+                    "Diğer key'ler için contentScalePolicy DEFAULT olmalıdır: $key",
+                    RemoteMerchantLogoContentScalePolicy.DEFAULT,
+                    request.contentScalePolicy,
+                )
+            }
         }
     }
 
@@ -99,7 +133,11 @@ class LogoDevRemoteMerchantLogoResolverTest {
                 "migros_yemek",
                 "yemeksepeti_market",
                 "turk_telekom",
-                "istanbulkart",
+                "kamil_koc",
+                "budo",
+                "getir_arac",
+                "tiktak",
+                "tatilbudur",
                 "migros_sanal_market",
                 "migros_jet",
                 "https://migros.com.tr",
@@ -173,8 +211,11 @@ class LogoDevRemoteMerchantLogoResolverTest {
         assertTrue("Safe path korunmalıdır: $str", str.contains("/bim.com.tr"))
         assertTrue("Safe size korunmalıdır: $str", str.contains("size=64"))
         assertTrue("Safe format korunmalıdır: $str", str.contains("format=webp"))
+        assertTrue("Safe theme korunmalıdır: $str", str.contains("theme=light"))
         assertTrue("Safe fallback korunmalıdır: $str", str.contains("fallback=404"))
         assertTrue("Cache policy görünmelidir: $str", str.contains("cachePolicy=PROVIDER_HEADERS_NO_LOCAL_STORAGE"))
+        assertTrue("Surface policy görünmelidir: $str", str.contains("surfacePolicy=LIGHT_NEUTRAL"))
+        assertTrue("Content scale policy görünmelidir: $str", str.contains("contentScalePolicy=DEFAULT"))
     }
 
     @Test
@@ -233,9 +274,10 @@ class LogoDevRemoteMerchantLogoResolverTest {
 
             val expectedUrl =
                 "https://img.logo.dev/$expectedDomain" +
-                    "?token=pk_test_sample_valid_key_12345&size=128&format=png&fallback=404"
+                    "?token=pk_test_sample_valid_key_12345&size=128&format=png&theme=light&fallback=404"
             assertEquals(expectedUrl, request.url)
             assertEquals(RemoteMerchantLogoCachePolicy.PROVIDER_HEADERS_NO_LOCAL_STORAGE, request.cachePolicy)
+            assertEquals(RemoteMerchantLogoSurfacePolicy.LIGHT_NEUTRAL, request.surfacePolicy)
             assertTrue("Header sahte bilgi içermez", request.headers.isEmpty())
         }
 
@@ -281,9 +323,10 @@ class LogoDevRemoteMerchantLogoResolverTest {
 
             val expectedUrl =
                 "https://img.logo.dev/$expectedDomain" +
-                    "?token=pk_test_sample_valid_key_12345&size=128&format=png&fallback=404"
+                    "?token=pk_test_sample_valid_key_12345&size=128&format=png&theme=light&fallback=404"
             assertEquals(expectedUrl, request.url)
             assertEquals(RemoteMerchantLogoCachePolicy.PROVIDER_HEADERS_NO_LOCAL_STORAGE, request.cachePolicy)
+            assertEquals(RemoteMerchantLogoSurfacePolicy.LIGHT_NEUTRAL, request.surfacePolicy)
             assertTrue("Header sahte bilgi içermez", request.headers.isEmpty())
         }
 
@@ -300,5 +343,243 @@ class LogoDevRemoteMerchantLogoResolverTest {
             "migros_yemek fallback'te kalmalı",
             resolver.resolve("migros_yemek"),
         )
+    }
+
+    @Test
+    fun logoDevRequest_carriesExpectedSurfaceAndScalePolicy_forAllVerifiedKeys() {
+        val resolver = LogoDevRemoteMerchantLogoResolver(config = validSyntheticConfig)
+        val verifiedKeys = MerchantLogoDomainAllowlist.allowlistKeys()
+
+        for (key in verifiedKeys) {
+            val request = resolver.resolve(key)
+            assertNotNull("Doğrulanmış key '$key' için request üretilmeliydi", request)
+            requireNotNull(request)
+
+            if (key == "netflix") {
+                assertEquals(
+                    "Netflix isteği koyu nötr yüzey politikası taşımalıdır",
+                    RemoteMerchantLogoSurfacePolicy.DARK_NEUTRAL,
+                    request.surfacePolicy,
+                )
+                assertEquals(
+                    "Netflix isteği vurgulu ölçek politikası taşımalıdır",
+                    RemoteMerchantLogoContentScalePolicy.APP_ICON_EMPHASIZED,
+                    request.contentScalePolicy,
+                )
+            } else {
+                assertEquals(
+                    "Logo.dev isteği açık nötr yüzey politikası taşımalıdır: $key",
+                    RemoteMerchantLogoSurfacePolicy.LIGHT_NEUTRAL,
+                    request.surfacePolicy,
+                )
+                assertEquals(
+                    "Logo.dev isteği varsayılan ölçek politikası taşımalıdır: $key",
+                    RemoteMerchantLogoContentScalePolicy.DEFAULT,
+                    request.contentScalePolicy,
+                )
+            }
+            assertEquals(
+                "Logo.dev önbellek politikası PROVIDER_HEADERS_NO_LOCAL_STORAGE kalmalıdır: $key",
+                RemoteMerchantLogoCachePolicy.PROVIDER_HEADERS_NO_LOCAL_STORAGE,
+                request.cachePolicy,
+            )
+        }
+    }
+
+    @Test
+    fun netflix_resolvesWithThemeDark_darkNeutralSurface_andEmphasizedScale() {
+        val resolver = LogoDevRemoteMerchantLogoResolver(config = validSyntheticConfig)
+        val request = resolver.resolve("netflix")
+        assertNotNull("netflix için request üretilmelidir", request)
+        requireNotNull(request)
+
+        assertTrue("netflix.com içermelidir: ${request.url}", request.url.contains("/netflix.com?"))
+        assertTrue("theme=dark içermelidir: ${request.url}", request.url.contains("theme=dark"))
+        assertFalse("theme=light içermemelidir: ${request.url}", request.url.contains("theme=light"))
+        assertEquals(RemoteMerchantLogoSurfacePolicy.DARK_NEUTRAL, request.surfacePolicy)
+        assertEquals(RemoteMerchantLogoContentScalePolicy.APP_ICON_EMPHASIZED, request.contentScalePolicy)
+        assertEquals(1.8f, request.contentScalePolicy.scaleFactor, 0.001f)
+        assertEquals(RemoteMerchantLogoCachePolicy.PROVIDER_HEADERS_NO_LOCAL_STORAGE, request.cachePolicy)
+        assertTrue("Headers boş kalmalıdır", request.headers.isEmpty())
+
+        // Bilinmeyen türevler veya serbest metin fail-closed null dönmelidir
+        assertNull("Bilinmeyen 'netflix_turkiye' URL'ye dönüştürülemez", resolver.resolve("netflix_turkiye"))
+        assertNull("Bilinmeyen 'netflix_premium' URL'ye dönüştürülemez", resolver.resolve("netflix_premium"))
+    }
+
+    @Test
+    fun roofBrandSubscriptions_resolveThroughVerifiedLogoKeys_notRawMerchantIds() {
+        val resolver = LogoDevRemoteMerchantLogoResolver(config = validSyntheticConfig)
+
+        // 1. Yeni sekiz çatı logo key'inin doğru kanonik domaine çözümlendiğini doğrula
+        val newEightRoofKeys =
+            mapOf(
+                "youtube" to "youtube.com",
+                "google" to "google.com",
+                "microsoft" to "microsoft.com",
+                "playstation" to "playstation.com",
+                "xbox" to "xbox.com",
+                "linkedin" to "linkedin.com",
+                "nintendo" to "nintendo.com",
+                "ea" to "ea.com",
+            )
+        for ((key, expectedDomain) in newEightRoofKeys) {
+            val request = resolver.resolve(key)
+            assertNotNull("Çatı key '$key' için request üretilmelidir", request)
+            requireNotNull(request)
+            assertTrue("Domain $expectedDomain olmalıdır: ${request.url}", request.url.contains("/$expectedDomain?"))
+            assertEquals(RemoteMerchantLogoCachePolicy.PROVIDER_HEADERS_NO_LOCAL_STORAGE, request.cachePolicy)
+            assertEquals(RemoteMerchantLogoSurfacePolicy.LIGHT_NEUTRAL, request.surfacePolicy)
+            assertTrue("Headers boş kalmalıdır", request.headers.isEmpty())
+        }
+
+        // 2. En az bir mevcut-key paylaşımı: amazon_prime -> verifiedLogoKey amazon -> amazon.com.tr
+        val amazonPrimeMerchant = StarterMerchantCatalog.merchants.first { it.id == "amazon_prime" }
+        assertEquals("amazon", amazonPrimeMerchant.verifiedLogoKey)
+        val amazonRequest = resolver.resolve(amazonPrimeMerchant.verifiedLogoKey)
+        assertNotNull(amazonRequest)
+        requireNotNull(amazonRequest)
+        assertTrue(amazonRequest.url.contains("/amazon.com.tr?"))
+
+        // 3. En az bir yeni-key paylaşımı: youtube_premium -> verifiedLogoKey youtube -> youtube.com
+        val ytMerchant = StarterMerchantCatalog.merchants.first { it.id == "youtube_premium" }
+        assertEquals("youtube", ytMerchant.verifiedLogoKey)
+        val ytRequest = resolver.resolve(ytMerchant.verifiedLogoKey)
+        assertNotNull(ytRequest)
+        requireNotNull(ytRequest)
+        assertTrue(ytRequest.url.contains("/youtube.com?"))
+
+        // 4. Ham merchant ID veya displayName URL'ye dönüştürülemez (fail-closed null döner)
+        assertNull("Ham merchantId 'amazon_prime' URL'ye dönüştürülemez", resolver.resolve("amazon_prime"))
+        assertNull("Ham merchantId 'youtube_premium' URL'ye dönüştürülemez", resolver.resolve("youtube_premium"))
+        assertNull("DisplayName 'Amazon Prime' URL'ye dönüştürülemez", resolver.resolve("Amazon Prime"))
+        assertNull("DisplayName 'YouTube Premium' URL'ye dönüştürülemez", resolver.resolve("YouTube Premium"))
+    }
+
+    @Test
+    fun shoppingTwentyThreeMerchants_resolveToExpectedCanonicalDomainsAndLogoDevUrls() {
+        val resolver = LogoDevRemoteMerchantLogoResolver(config = validSyntheticConfig)
+
+        val approvedShopping =
+            mapOf(
+                "n11" to "n11.com",
+                "ciceksepeti" to "ciceksepeti.com",
+                "pazarama" to "pazarama.com",
+                "boyner" to "boyner.com.tr",
+                "lc_waikiki" to "lcwaikiki.bg",
+                "defacto" to "defacto.com.tr",
+                "teknosa" to "teknosa.com",
+                "mediamarkt" to "mediamarkt.com.tr",
+                "flo" to "flo.com.tr",
+                "koton" to "koton.com",
+                "mavi" to "mavi.com",
+                "zara" to "zara.com",
+                "hm" to "hm.com",
+                "pull_and_bear" to "pullandbear.com",
+                "bershka" to "bershka.com",
+                "stradivarius" to "stradivarius.com",
+                "beymen" to "beymen.com",
+                "vakko" to "vakko.com",
+                "ikea" to "ikea.com.tr",
+                "koctas" to "koctas.com.tr",
+                "bauhaus" to "bauhaus.com.tr",
+                "vatan_bilgisayar" to "vatanbilgisayar.com",
+                "ebebek" to "e-bebek.com",
+            )
+
+        for ((key, expectedDomain) in approvedShopping) {
+            val request = resolver.resolve(key)
+            assertNotNull("Approved shopping key '$key' için request null olamaz", request)
+            requireNotNull(request)
+
+            val expectedUrl =
+                "https://img.logo.dev/$expectedDomain" +
+                    "?token=pk_test_sample_valid_key_12345&size=128&format=png&theme=light&fallback=404"
+            assertEquals(expectedUrl, request.url)
+            assertEquals(RemoteMerchantLogoCachePolicy.PROVIDER_HEADERS_NO_LOCAL_STORAGE, request.cachePolicy)
+            assertEquals(RemoteMerchantLogoSurfacePolicy.LIGHT_NEUTRAL, request.surfacePolicy)
+            assertEquals(RemoteMerchantLogoContentScalePolicy.DEFAULT, request.contentScalePolicy)
+            assertTrue("Header sahte bilgi içermez", request.headers.isEmpty())
+        }
+
+        // Benzer fakat yanlış/yönlenen domainlerin veya serbest/hatalı anahtarların fail-closed null dönmesi
+        val rejectedShoppingDomains =
+            listOf(
+                "boyner.com",
+                "mediamarkt.com",
+                "ikea.com",
+                "lcw.com",
+                "ebebek.com",
+                "boyner_online",
+                "mediamarkt_tr",
+                "ikea_turkiye",
+                "https://boyner.com.tr",
+            )
+        for (rejected in rejectedShoppingDomains) {
+            assertNull("Yanlış domain veya raw string fail-closed null dönmelidir: $rejected", resolver.resolve(rejected))
+        }
+    }
+
+    @Test
+    fun personalCareFifteenMerchants_resolveToExpectedCanonicalDomainsAndLogoDevUrls() {
+        val resolver = LogoDevRemoteMerchantLogoResolver(config = validSyntheticConfig)
+
+        val approvedPersonalCare =
+            mapOf(
+                "gratis" to "gratis.com",
+                "watsons" to "watsons.com.tr",
+                "rossmann" to "rossmann.com.tr",
+                "sephora" to "sephora.com.tr",
+                "eve_shop" to "eveshop.com.tr",
+                "flormar" to "flormar.com.tr",
+                "golden_rose" to "goldenrose.com",
+                "yves_rocher" to "yvesrocher.com.tr",
+                "the_body_shop" to "thebodyshop.com.tr",
+                "kiko_milano" to "kikomilano.com.tr",
+                "mac_cosmetics" to "maccosmetics.com",
+                "clinique" to "clinique.com.tr",
+                "avon" to "avon.com.tr",
+                "oriflame" to "oriflame.com.tr",
+                "farmasi" to "farmasi.com.tr",
+            )
+
+        for ((key, expectedDomain) in approvedPersonalCare) {
+            val request = resolver.resolve(key)
+            assertNotNull("Approved personal care key '$key' için request null olamaz", request)
+            requireNotNull(request)
+
+            val expectedUrl =
+                "https://img.logo.dev/$expectedDomain" +
+                    "?token=pk_test_sample_valid_key_12345&size=128&format=png&theme=light&fallback=404"
+            assertEquals(expectedUrl, request.url)
+            assertEquals(RemoteMerchantLogoCachePolicy.PROVIDER_HEADERS_NO_LOCAL_STORAGE, request.cachePolicy)
+            assertEquals(RemoteMerchantLogoSurfacePolicy.LIGHT_NEUTRAL, request.surfacePolicy)
+            assertEquals(RemoteMerchantLogoContentScalePolicy.DEFAULT, request.contentScalePolicy)
+            assertTrue("Header sahte bilgi içermez", request.headers.isEmpty())
+        }
+
+        // Seçilmemiş veya istenmeyen logo varyantı domainlerinin fail-closed null dönmesi
+        val unselectedPersonalCareDomains =
+            listOf(
+                "eve.com",
+                "maccosmetics.com.tr",
+                "goldenrose.com.tr",
+                "watsons.com",
+                "flormar.com",
+                "thebodyshop.com",
+                "kikomilano.com",
+                "clinique.com",
+                "avon.com",
+                "oriflame.com",
+                "https://gratis.com",
+                "gratis_magaza",
+                "sephora_turkiye",
+            )
+        for (unselected in unselectedPersonalCareDomains) {
+            assertNull(
+                "Seçilmemiş domain veya raw string fail-closed null dönmelidir: $unselected",
+                resolver.resolve(unselected),
+            )
+        }
     }
 }

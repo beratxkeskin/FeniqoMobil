@@ -1,11 +1,14 @@
 package com.feniqo.mobile.logo
 
+import com.feniqo.mobile.data.remote.logo.LogoDevKeyPresentationPolicy
 import com.feniqo.mobile.data.remote.logo.LogoDevLogoConfig
 import com.feniqo.mobile.data.remote.logo.LogoDevLogoResolutionResult
 import com.feniqo.mobile.data.remote.logo.LogoDevLogoUrlResolver
 import com.feniqo.mobile.presentation.component.RemoteMerchantLogoCachePolicy
+import com.feniqo.mobile.presentation.component.RemoteMerchantLogoContentScalePolicy
 import com.feniqo.mobile.presentation.component.RemoteMerchantLogoRequest
 import com.feniqo.mobile.presentation.component.RemoteMerchantLogoResolver
+import com.feniqo.mobile.presentation.component.RemoteMerchantLogoSurfacePolicy
 
 /**
  * Android platformu için Logo.dev Logo API çözümleyicisini
@@ -29,10 +32,22 @@ class LogoDevRemoteMerchantLogoResolver(
 
         return when (val result = LogoDevLogoUrlResolver.resolve(verifiedLogoKey, config)) {
             is LogoDevLogoResolutionResult.Available -> {
+                val surfacePolicy =
+                    when (result.request.presentationPolicy) {
+                        LogoDevKeyPresentationPolicy.DARK_NEUTRAL -> RemoteMerchantLogoSurfacePolicy.DARK_NEUTRAL
+                        LogoDevKeyPresentationPolicy.LIGHT_NEUTRAL -> RemoteMerchantLogoSurfacePolicy.LIGHT_NEUTRAL
+                    }
+                val contentScalePolicy =
+                    when (result.request.presentationPolicy) {
+                        LogoDevKeyPresentationPolicy.DARK_NEUTRAL -> RemoteMerchantLogoContentScalePolicy.APP_ICON_EMPHASIZED
+                        LogoDevKeyPresentationPolicy.LIGHT_NEUTRAL -> RemoteMerchantLogoContentScalePolicy.DEFAULT
+                    }
                 RemoteMerchantLogoRequest(
                     url = result.request.url,
                     headers = result.request.headers,
                     cachePolicy = RemoteMerchantLogoCachePolicy.PROVIDER_HEADERS_NO_LOCAL_STORAGE,
+                    surfacePolicy = surfacePolicy,
+                    contentScalePolicy = contentScalePolicy,
                 )
             }
             is LogoDevLogoResolutionResult.Unavailable -> null

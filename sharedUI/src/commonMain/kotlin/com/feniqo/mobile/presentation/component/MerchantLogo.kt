@@ -136,12 +136,20 @@ fun MerchantLogo(
         }
     }
 
+    val surfaceColor =
+        when {
+            packagedLogoResource != null -> categoryColor.copy(alpha = 0.12f)
+            remoteRequest?.surfacePolicy == RemoteMerchantLogoSurfacePolicy.LIGHT_NEUTRAL -> Color.White
+            remoteRequest?.surfacePolicy == RemoteMerchantLogoSurfacePolicy.DARK_NEUTRAL -> Color.Black
+            else -> categoryColor.copy(alpha = 0.12f)
+        }
+
     Box(
         modifier =
             modifier
                 .size(size)
                 .then(semanticsModifier)
-                .background(categoryColor.copy(alpha = 0.12f), CircleShape)
+                .background(surfaceColor, CircleShape)
                 .clip(CircleShape),
         contentAlignment = Alignment.Center,
     ) {

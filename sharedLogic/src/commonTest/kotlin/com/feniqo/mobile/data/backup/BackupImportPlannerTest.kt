@@ -141,7 +141,7 @@ class BackupImportPlannerTest {
             assertNotNull(bimTx.merchantInfo)
             assertEquals("bim", bimTx.merchantInfo?.merchantId?.value)
             assertEquals(95, bimTx.merchantInfo?.confidence)
-            assertEquals(10, bimTx.merchantInfo?.catalogVersion)
+            assertEquals(18, bimTx.merchantInfo?.catalogVersion)
 
             val unknownTx = plan.transactions.first { it.description == "Bilinmeyen Bakkal" }
             assertNull(unknownTx.merchantInfo)

@@ -317,12 +317,88 @@ class MerchantCategoryRecommendationIndexTest {
     }
 
     @Test
+    fun entertainmentProfile_resolvesCatalogRecords() {
+        val expectedSuggested =
+            listOf(
+                "paribu_cineverse",
+                "biletix",
+                "biletinial",
+                "bubilet",
+                "passo",
+                "steam",
+                "epic_games",
+                "playstation_store",
+            )
+        val expectedSearchable =
+            listOf(
+                "paribu_cineverse",
+                "biletix",
+                "biletinial",
+                "bubilet",
+                "passo",
+                "mobilet",
+                "biletino",
+                "bugece",
+                "steam",
+                "epic_games",
+                "playstation_store",
+                "xbox_store",
+                "riot_games",
+                "battle_net",
+                "ubisoft_store",
+                "cinemarine",
+                "vialand",
+            )
+
+        val suggestedIds =
+            MerchantCategoryRecommendationIndex.resolveSuggestedMerchantIds(
+                TransactionType.EXPENSE,
+                "entertainment",
+            )
+        assertEquals(expectedSuggested, suggestedIds.map { it.value })
+
+        val searchableIds =
+            MerchantCategoryRecommendationIndex.resolveSearchableMerchantIds(
+                TransactionType.EXPENSE,
+                "entertainment",
+            )
+        assertEquals(expectedSearchable, searchableIds.map { it.value })
+
+        val suggestedMerchants =
+            MerchantCategoryRecommendationIndex.resolveSuggestedMerchants(
+                TransactionType.EXPENSE,
+                "entertainment",
+            )
+        assertEquals(expectedSuggested, suggestedMerchants.map { it.id })
+
+        val searchableMerchants =
+            MerchantCategoryRecommendationIndex.resolveSearchableMerchants(
+                TransactionType.EXPENSE,
+                "entertainment",
+            )
+        assertEquals(expectedSearchable, searchableMerchants.map { it.id })
+
+        // INCOME türünde fail-closed boş sonuç
+        val incomeSuggested =
+            MerchantCategoryRecommendationIndex.resolveSuggestedMerchantIds(
+                TransactionType.INCOME,
+                "entertainment",
+            )
+        assertTrue(incomeSuggested.isEmpty())
+        val incomeSearchable =
+            MerchantCategoryRecommendationIndex.resolveSearchableMerchantIds(
+                TransactionType.INCOME,
+                "entertainment",
+            )
+        assertTrue(incomeSearchable.isEmpty())
+    }
+
+    @Test
     fun emptyCategoryProfiles_returnEmptySafely() {
         val emptyCategoryKeys =
             listOf(
                 "housing",
                 "healthcare",
-                "entertainment",
                 "education",
                 "family_pets",
                 "financial_expenses",
@@ -694,8 +770,8 @@ class MerchantCategoryRecommendationIndexTest {
             assertTrue(id !in suggested, "$id suggested listesinde bulunmamalı")
         }
 
-        // Starter catalog toplamı 151
-        assertEquals(151, StarterMerchantCatalog.merchants.size)
+        // Starter catalog toplamı 184
+        assertEquals(184, StarterMerchantCatalog.merchants.size)
     }
 
     @Test
@@ -767,8 +843,8 @@ class MerchantCategoryRecommendationIndexTest {
             assertTrue(id !in suggested, "$id suggested listesinde bulunmamalıdır")
         }
 
-        // Starter catalog toplamı 151
-        assertEquals(151, StarterMerchantCatalog.merchants.size)
+        // Starter catalog toplamı 184
+        assertEquals(184, StarterMerchantCatalog.merchants.size)
     }
 
     @Test
@@ -886,8 +962,8 @@ class MerchantCategoryRecommendationIndexTest {
             )
         }
 
-        // Starter catalog toplamı 151
-        assertEquals(151, StarterMerchantCatalog.merchants.size)
+        // Starter catalog toplamı 184
+        assertEquals(184, StarterMerchantCatalog.merchants.size)
     }
 
     @Test
@@ -983,8 +1059,8 @@ class MerchantCategoryRecommendationIndexTest {
             )
         }
 
-        // Starter catalog toplamı 151
-        assertEquals(151, StarterMerchantCatalog.merchants.size)
+        // Starter catalog toplamı 184
+        assertEquals(184, StarterMerchantCatalog.merchants.size)
     }
 
     @Test
@@ -1065,8 +1141,8 @@ class MerchantCategoryRecommendationIndexTest {
             )
         assertTrue(incomeSearchable.isEmpty())
 
-        // Starter catalog toplamı 151
-        assertEquals(151, StarterMerchantCatalog.merchants.size)
+        // Starter catalog toplamı 184
+        assertEquals(184, StarterMerchantCatalog.merchants.size)
     }
 
     @Test
@@ -1166,8 +1242,8 @@ class MerchantCategoryRecommendationIndexTest {
             )
         assertTrue(incomeSearchable.isEmpty())
 
-        // Starter catalog toplamı 151
-        assertEquals(151, StarterMerchantCatalog.merchants.size)
+        // Starter catalog toplamı 184
+        assertEquals(184, StarterMerchantCatalog.merchants.size)
     }
 
     @Test
@@ -1259,7 +1335,99 @@ class MerchantCategoryRecommendationIndexTest {
             )
         assertTrue(incomeSearchable.isEmpty())
 
-        // Starter catalog toplamı 151
-        assertEquals(151, StarterMerchantCatalog.merchants.size)
+        // Starter catalog toplamı 184
+        assertEquals(184, StarterMerchantCatalog.merchants.size)
+    }
+
+    @Test
+    fun subscriptionsExpansion_suggestedEightAndSearchableThirtyFour() {
+        val suggestedIds =
+            MerchantCategoryRecommendationIndex.resolveSuggestedMerchantIds(
+                TransactionType.EXPENSE,
+                "subscriptions",
+            )
+        val suggested = suggestedIds.map { it.value }
+
+        val searchableIds =
+            MerchantCategoryRecommendationIndex.resolveSearchableMerchantIds(
+                TransactionType.EXPENSE,
+                "subscriptions",
+            )
+        val searchable = searchableIds.map { it.value }
+
+        val expectedSuggested =
+            listOf("netflix", "spotify", "youtube_premium", "amazon_prime", "disney_plus", "max", "exxen", "gain")
+        assertEquals(expectedSuggested, suggested)
+        assertEquals(8, suggested.size)
+
+        val newSixteenIds =
+            listOf(
+                "s_sport_plus",
+                "tv_plus",
+                "tivibu",
+                "d_smart_go",
+                "deezer",
+                "fizy",
+                "muud",
+                "storytel",
+                "audible",
+                "dropbox",
+                "linkedin_premium",
+                "nintendo_switch_online",
+                "ea_play",
+                "hepsiburada_premium",
+                "money_gold",
+                "ypro",
+            )
+
+        // 16 yeni kayıt searchable listesinde var, suggested listesinde yok
+        newSixteenIds.forEach { id ->
+            assertTrue(id in searchable, "$id searchable listesinde bulunmalı")
+            assertTrue(id !in suggested, "$id suggested listesinde bulunmamalı")
+        }
+
+        assertEquals(34, searchable.size)
+        assertEquals(34, searchable.distinct().size, "searchable listesinde tekrarlı ID bulunmamalı")
+
+        // Her searchable ID starter katalogda bulunmalıdır
+        val catalogIds = StarterMerchantCatalog.merchants.map { it.id }.toSet()
+        searchable.forEach { id ->
+            assertTrue(id in catalogIds, "$id starter katalogda bulunmalıdır")
+        }
+
+        // Bilinmeyen kategori güvenli boş sonuç vermeli
+        val unknownSuggested =
+            MerchantCategoryRecommendationIndex.resolveSuggestedMerchantIds(
+                TransactionType.EXPENSE,
+                "unknown_category_key",
+            )
+        assertTrue(unknownSuggested.isEmpty())
+        val unknownSearchable =
+            MerchantCategoryRecommendationIndex.resolveSearchableMerchantIds(
+                TransactionType.EXPENSE,
+                "unknown_category_key",
+            )
+        assertTrue(unknownSearchable.isEmpty())
+
+        // Yeni abonelik merchant'ları market veya yemek gibi ilgisiz profillere sızmamalı
+        val groceriesSearchableIds =
+            MerchantCategoryRecommendationIndex.resolveSearchableMerchantIds(
+                TransactionType.EXPENSE,
+                "groceries",
+            )
+        val groceriesSearchable = groceriesSearchableIds.map { it.value }
+        val foodDiningSearchableIds =
+            MerchantCategoryRecommendationIndex.resolveSearchableMerchantIds(
+                TransactionType.EXPENSE,
+                "food_dining",
+            )
+        val foodDiningSearchable = foodDiningSearchableIds.map { it.value }
+
+        newSixteenIds.forEach { id ->
+            assertTrue(id !in groceriesSearchable, "$id groceries profiline sızmamalıdır")
+            assertTrue(id !in foodDiningSearchable, "$id food_dining profiline sızmamalıdır")
+        }
+
+        assertEquals(184, StarterMerchantCatalog.merchants.size)
     }
 }

@@ -1308,4 +1308,74 @@ class CategoryMerchantCandidateResolverTest {
             )
         }
     }
+
+    @Test
+    fun entertainment_exactMatchWithIndex_andCompatibility() {
+        val expectedSuggested =
+            listOf(
+                "paribu_cineverse",
+                "biletix",
+                "biletinial",
+                "bubilet",
+                "passo",
+                "steam",
+                "epic_games",
+                "playstation_store",
+            )
+        val expectedSearchable =
+            listOf(
+                "paribu_cineverse",
+                "biletix",
+                "biletinial",
+                "bubilet",
+                "passo",
+                "mobilet",
+                "biletino",
+                "bugece",
+                "steam",
+                "epic_games",
+                "playstation_store",
+                "xbox_store",
+                "riot_games",
+                "battle_net",
+                "ubisoft_store",
+                "cinemarine",
+                "vialand",
+            )
+
+        val suggested =
+            resolver.resolveSuggestedCandidates(
+                transactionType = TransactionType.EXPENSE,
+                categoryIconKey = "entertainment",
+            )
+        assertEquals(expectedSuggested, suggested.map { it.id })
+
+        val searchable =
+            resolver.resolveSearchableCandidates(
+                transactionType = TransactionType.EXPENSE,
+                categoryIconKey = "entertainment",
+            )
+        assertEquals(expectedSearchable, searchable.map { it.id })
+
+        expectedSearchable.forEach { merchantId ->
+            val m = StarterMerchantCatalog.merchants.first { it.id == merchantId }
+            assertTrue(CategoryMerchantCandidateResolver.isCompatible("entertainment", m))
+            assertFalse(CategoryMerchantCandidateResolver.isCompatible("groceries", m))
+            assertFalse(CategoryMerchantCandidateResolver.isCompatible("subscriptions", m))
+            assertFalse(CategoryMerchantCandidateResolver.isCompatible("housing", m))
+            assertFalse(CategoryMerchantCandidateResolver.isCompatible("other_expense", m))
+        }
+    }
+
+    @Test
+    fun entertainment_missingMerchantInCatalog_failsClosed() {
+        val incompleteCatalog = StarterMerchantCatalog.merchants.filterNot { it.id == "steam" }
+        kotlin.test.assertFailsWith<IllegalArgumentException> {
+            MerchantCategoryRecommendationIndex.resolveSearchableMerchants(
+                TransactionType.EXPENSE,
+                "entertainment",
+                catalog = incompleteCatalog,
+            )
+        }
+    }
 }

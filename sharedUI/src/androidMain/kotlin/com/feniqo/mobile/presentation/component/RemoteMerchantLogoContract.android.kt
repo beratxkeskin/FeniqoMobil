@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
@@ -83,6 +84,7 @@ class AndroidRemoteMerchantLogoRenderer : RemoteMerchantLogoRenderer {
 
         val painter = rememberAsyncImagePainter(model = imageRequest)
         val isSuccess = painter.state is AsyncImagePainter.State.Success
+        val scale = request.contentScalePolicy.scaleFactor
 
         Box(
             modifier = modifier,
@@ -94,7 +96,13 @@ class AndroidRemoteMerchantLogoRenderer : RemoteMerchantLogoRenderer {
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .alpha(if (isSuccess) 1f else 0f),
+                        .then(
+                            if (scale != 1.0f) {
+                                Modifier.scale(scale)
+                            } else {
+                                Modifier
+                            },
+                        ).alpha(if (isSuccess) 1f else 0f),
             )
 
             if (!isSuccess) {

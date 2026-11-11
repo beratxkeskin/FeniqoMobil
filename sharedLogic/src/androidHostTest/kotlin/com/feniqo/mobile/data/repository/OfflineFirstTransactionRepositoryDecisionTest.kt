@@ -9,12 +9,16 @@ import com.feniqo.mobile.data.local.entity.SyncMetadata
 import com.feniqo.mobile.data.local.entity.SyncOperationEntity
 import com.feniqo.mobile.data.local.entity.UserMerchantVerificationEntity
 import com.feniqo.mobile.data.local.outbox.OfflineWriteQueue
+import com.feniqo.mobile.data.mapper.toDomain
+import com.feniqo.mobile.data.remote.codec.UserMerchantVerificationPayloadCodec
+import com.feniqo.mobile.data.remote.dto.TransactionDto
 import com.feniqo.mobile.data.sync.SyncScopeKey
 import com.feniqo.mobile.data.util.UuidHelper
 import com.feniqo.mobile.domain.model.AppError
 import com.feniqo.mobile.domain.model.Currency
 import com.feniqo.mobile.domain.model.EntityId
 import com.feniqo.mobile.domain.model.LocalDate
+import com.feniqo.mobile.domain.model.MerchantMatchSource
 import com.feniqo.mobile.domain.model.Money
 import com.feniqo.mobile.domain.model.PaymentMethod
 import com.feniqo.mobile.domain.model.SyncStatus
@@ -34,6 +38,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Instant
+import kotlinx.serialization.json.Json
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import kotlin.test.AfterTest
@@ -302,6 +307,57 @@ class OfflineFirstTransactionRepositoryDecisionTest {
         return list
     }
 
+    private fun getRealOutboxRows(syncScopeKey: String): List<SyncOperationEntity> {
+        val cursor =
+            db.openHelper.readableDatabase.query(
+                "SELECT * FROM sync_operations WHERE sync_scope_key = ? ORDER BY operation_id",
+                arrayOf(syncScopeKey),
+            )
+        val list = mutableListOf<SyncOperationEntity>()
+        cursor.use { c ->
+            val scopeIdx = c.getColumnIndexOrThrow("sync_scope_key")
+            val idIdx = c.getColumnIndexOrThrow("operation_id")
+            val entityTypeIdx = c.getColumnIndexOrThrow("entity_type_code")
+            val entityIdIdx = c.getColumnIndexOrThrow("entity_id")
+            val opTypeIdx = c.getColumnIndexOrThrow("operation_type_code")
+            val baseVersionIdx = c.getColumnIndexOrThrow("base_version")
+            val payloadJsonIdx = c.getColumnIndexOrThrow("payload_json")
+            val predecessorOpIdIdx = c.getColumnIndexOrThrow("predecessor_operation_id")
+            val isBlockedIdx = c.getColumnIndexOrThrow("is_blocked")
+            val protocolVerIdx = c.getColumnIndexOrThrow("protocol_version")
+            val statusIdx = c.getColumnIndexOrThrow("status_code")
+            val attemptCountIdx = c.getColumnIndexOrThrow("attempt_count")
+            val lastErrorIdx = c.getColumnIndexOrThrow("last_error")
+            val nextAttemptIdx = c.getColumnIndexOrThrow("next_attempt_at_epoch_ms")
+            val createdAtIdx = c.getColumnIndexOrThrow("created_at_epoch_ms")
+            val updatedAtIdx = c.getColumnIndexOrThrow("updated_at_epoch_ms")
+
+            while (c.moveToNext()) {
+                list.add(
+                    SyncOperationEntity(
+                        syncScopeKey = c.getString(scopeIdx),
+                        operationId = c.getString(idIdx),
+                        entityTypeCode = c.getString(entityTypeIdx),
+                        entityId = c.getString(entityIdIdx),
+                        operationTypeCode = c.getString(opTypeIdx),
+                        baseVersion = if (c.isNull(baseVersionIdx)) null else c.getLong(baseVersionIdx),
+                        payloadJson = if (c.isNull(payloadJsonIdx)) null else c.getString(payloadJsonIdx),
+                        predecessorOperationId = if (c.isNull(predecessorOpIdIdx)) null else c.getString(predecessorOpIdIdx),
+                        isBlocked = c.getInt(isBlockedIdx) == 1,
+                        protocolVersion = c.getInt(protocolVerIdx),
+                        statusCode = c.getString(statusIdx),
+                        attemptCount = c.getInt(attemptCountIdx),
+                        lastError = if (c.isNull(lastErrorIdx)) null else c.getString(lastErrorIdx),
+                        nextAttemptAtEpochMillis = c.getLong(nextAttemptIdx),
+                        createdAtEpochMillis = c.getLong(createdAtIdx),
+                        updatedAtEpochMillis = c.getLong(updatedAtIdx),
+                    ),
+                )
+            }
+        }
+        return list
+    }
+
     private suspend fun getVerificationForAlias(alias: String): UserMerchantVerificationEntity? {
         val normalized =
             com.feniqo.mobile.domain.model.TurkishDescriptionNormalizer
@@ -349,7 +405,7 @@ class OfflineFirstTransactionRepositoryDecisionTest {
             assertEquals("migros", entity.merchantId)
             assertEquals("USER_VERIFIED", entity.merchantMatchSourceCode)
             assertEquals(100, entity.merchantConfidence)
-            assertEquals(10, entity.merchantCatalogVersion)
+            assertEquals(18, entity.merchantCatalogVersion)
 
             // 2. Verification entity assertion (PERSONAL ASSIGN)
             val verification = getVerificationForAlias("MIGROS SISLI")
@@ -389,7 +445,7 @@ class OfflineFirstTransactionRepositoryDecisionTest {
             assertEquals("kofteci_yusuf", entity.merchantId)
             assertEquals("USER_VERIFIED", entity.merchantMatchSourceCode)
             assertEquals(100, entity.merchantConfidence)
-            assertEquals(10, entity.merchantCatalogVersion)
+            assertEquals(18, entity.merchantCatalogVersion)
 
             // 2. Verification entity assertion (PERSONAL ASSIGN)
             val verification = getVerificationForAlias("KOFTECI YUSUF")
@@ -430,7 +486,7 @@ class OfflineFirstTransactionRepositoryDecisionTest {
             assertEquals("yemeksepeti", entity.merchantId)
             assertEquals("USER_VERIFIED", entity.merchantMatchSourceCode)
             assertEquals(100, entity.merchantConfidence)
-            assertEquals(10, entity.merchantCatalogVersion)
+            assertEquals(18, entity.merchantCatalogVersion)
 
             // 2. Verification entity assertion: canonical alias YEMEKSEPETI, NOT generic YEMEK
             assertNull(getVerificationForAlias("YEMEK"))
@@ -497,7 +553,7 @@ class OfflineFirstTransactionRepositoryDecisionTest {
             assertEquals("vatan_bilgisayar", entity.merchantId)
             assertEquals("USER_VERIFIED", entity.merchantMatchSourceCode)
             assertEquals(100, entity.merchantConfidence)
-            assertEquals(10, entity.merchantCatalogVersion)
+            assertEquals(18, entity.merchantCatalogVersion)
 
             // 2. Verification entity assertion (PERSONAL ASSIGN)
             val verification = getVerificationForAlias("VATAN BILGISAYAR")
@@ -1054,6 +1110,102 @@ class OfflineFirstTransactionRepositoryDecisionTest {
         }
 
     @Test
+    fun explicitDecision_entertainmentCategoryWithEntertainmentMerchantSteam_succeeds() =
+        runTest {
+            val entertainmentCatId = "cat-ent-repo-1"
+            db.categoryDao().upsert(
+                CategoryEntity(
+                    id = entertainmentCatId,
+                    ownerId = userId,
+                    workspaceId = null,
+                    scopeKey = "user:$userId",
+                    name = "Eğlence",
+                    normalizedName = "EGLENCE",
+                    slug = "entertainment-$userId",
+                    typeCode = "EXPENSE",
+                    colorHex = "#EC4899",
+                    iconKey = "entertainment",
+                    isDefault = false,
+                    createdAtEpochMillis = 1000L,
+                    sync =
+                        SyncMetadata(
+                            syncStatus = SyncStatus.SYNCED.name,
+                            updatedAtEpochMillis = 1000L,
+                            localUpdatedAtEpochMillis = 1000L,
+                            deletedAtEpochMillis = null,
+                            version = 1L,
+                            baseVersion = 1L,
+                            lastSyncError = null,
+                        ),
+                ),
+            )
+
+            val tx = buildTransaction(id = "tx-ent-steam-repo", description = "STEAM OYUN", categoryId = entertainmentCatId)
+
+            val result = repository.create(tx, TransactionMerchantCreateDecision.KnownMerchant("steam"))
+            assertIs<RepositoryResult.Success<EntityId>>(result)
+
+            val created = db.transactionDao().getByIdAndOwner("tx-ent-steam-repo", userId)
+            assertNotNull(created)
+            assertEquals("steam", created.merchantId)
+            assertEquals("USER_VERIFIED", created.merchantMatchSourceCode)
+            assertEquals(100, created.merchantConfidence)
+            assertEquals(18, created.merchantCatalogVersion)
+
+            val verification = getVerificationForAlias("STEAM OYUN")
+            assertNotNull(verification)
+            assertEquals("ASSIGN", verification.decisionCode)
+            assertEquals("steam", verification.merchantId)
+            assertEquals("PERSONAL", verification.scopeCode)
+
+            val domainTx = created.toDomain()
+            assertEquals("steam", domainTx.merchantId?.value)
+            assertEquals(MerchantMatchSource.USER_VERIFIED, domainTx.merchantMatchSource)
+            assertEquals(100, domainTx.merchantConfidence)
+            assertEquals(18, domainTx.merchantCatalogVersion)
+
+            // Gerçek outbox kayıtlarını doğrudan veritabanından oku (sabit test yardımcısı yerine)
+            val realOps = getRealOutboxRows(syncScopeKey)
+            assertEquals(2, realOps.size)
+
+            val txOp = realOps.first { it.entityTypeCode == "TRANSACTION" }
+            assertEquals("CREATE", txOp.operationTypeCode)
+            assertEquals(2, txOp.protocolVersion, "Transaction outbox protocol_version 2 olmalıdır")
+            assertEquals(created.id, txOp.entityId)
+            assertEquals("PENDING", txOp.statusCode)
+            assertNotNull(txOp.payloadJson)
+
+            val txDto = Json.decodeFromString<TransactionDto>(txOp.payloadJson)
+            assertEquals(created.id, txDto.id)
+            assertEquals(userId, txDto.userId)
+            assertEquals("STEAM OYUN", txDto.description)
+            assertEquals(entertainmentCatId, txDto.categoryId)
+            assertEquals(15000L, txDto.amountMinor)
+            assertEquals("expense", txDto.type)
+
+            val verifOp = realOps.first { it.entityTypeCode == "USER_MERCHANT_VERIFICATION" }
+            assertEquals("CREATE", verifOp.operationTypeCode)
+            assertEquals(2, verifOp.protocolVersion, "Verification outbox protocol_version 2 olmalıdır")
+            assertEquals(verification.id, verifOp.entityId)
+            assertEquals("PENDING", verifOp.statusCode)
+            assertNotNull(verifOp.payloadJson)
+
+            val decodedVerifPayload =
+                UserMerchantVerificationPayloadCodec.parseAndValidate(
+                    jsonString = verifOp.payloadJson,
+                    operation = "CREATE",
+                    baseVersion = null,
+                )
+            assertEquals(verification.id, decodedVerifPayload.id)
+            assertEquals(userId, decodedVerifPayload.userId)
+            assertNull(decodedVerifPayload.workspaceId)
+            assertEquals("STEAM OYUN", decodedVerifPayload.normalizedAlias)
+            assertEquals("ASSIGN", decodedVerifPayload.decisionCode)
+            assertEquals("steam", decodedVerifPayload.merchantId)
+            assertEquals("PERSONAL", decodedVerifPayload.scopeCode)
+        }
+
+    @Test
     fun explicitDecision_shoppingCategoryWithGroceriesMerchantMigros_failsClosedWithoutWrites() =
         runTest {
             val shoppingCatId = "cat-shopping-1"
@@ -1136,7 +1288,7 @@ class OfflineFirstTransactionRepositoryDecisionTest {
             assertEquals("gratis", created.merchantId)
             assertEquals("USER_VERIFIED", created.merchantMatchSourceCode)
             assertEquals(100, created.merchantConfidence)
-            assertEquals(10, created.merchantCatalogVersion)
+            assertEquals(18, created.merchantCatalogVersion)
 
             val verification = getVerificationForAlias("GRATIS KOZMETIK")
             assertNotNull(verification)
@@ -1225,7 +1377,7 @@ class OfflineFirstTransactionRepositoryDecisionTest {
             assertEquals("turknet", created.merchantId)
             assertEquals("USER_VERIFIED", created.merchantMatchSourceCode)
             assertEquals(100, created.merchantConfidence)
-            assertEquals(10, created.merchantCatalogVersion)
+            assertEquals(18, created.merchantCatalogVersion)
 
             val verification = getVerificationForAlias("TURKNET INTERNET")
             assertNotNull(verification)
@@ -1332,7 +1484,7 @@ class OfflineFirstTransactionRepositoryDecisionTest {
             assertEquals("istanbulkart", created.merchantId)
             assertEquals("USER_VERIFIED", created.merchantMatchSourceCode)
             assertEquals(100, created.merchantConfidence)
-            assertEquals(10, created.merchantCatalogVersion)
+            assertEquals(18, created.merchantCatalogVersion)
 
             val verification = getVerificationForAlias("ISTANBULKART")
             assertNotNull(verification)
@@ -1393,7 +1545,7 @@ class OfflineFirstTransactionRepositoryDecisionTest {
             assertEquals("ajet", created.merchantId)
             assertEquals("USER_VERIFIED", created.merchantMatchSourceCode)
             assertEquals(100, created.merchantConfidence)
-            assertEquals(10, created.merchantCatalogVersion)
+            assertEquals(18, created.merchantCatalogVersion)
 
             val verification = getVerificationForAlias("AJET UCUS")
             assertNotNull(verification)
@@ -1454,7 +1606,7 @@ class OfflineFirstTransactionRepositoryDecisionTest {
             assertEquals("ajet", created.merchantId)
             assertEquals("USER_VERIFIED", created.merchantMatchSourceCode)
             assertEquals(100, created.merchantConfidence)
-            assertEquals(10, created.merchantCatalogVersion)
+            assertEquals(18, created.merchantCatalogVersion)
 
             val verification = getVerificationForAlias("AJET UCUS")
             assertNotNull(verification)

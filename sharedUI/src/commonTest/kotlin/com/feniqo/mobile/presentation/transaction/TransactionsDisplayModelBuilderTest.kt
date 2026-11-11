@@ -617,11 +617,11 @@ class TransactionsDisplayModelBuilderTest {
     }
 
     @Test
-    fun buildItem_realStarterMerchant_istanbulkart_preservesDisplayNameAndExposesNullKey() {
+    fun buildItem_realStarterMerchant_istanbulkart_preservesDisplayNameAndExposesVerifiedLogoKey() {
         val istanbulkart = StarterMerchantCatalog.merchants.first { it.id == "istanbulkart" }
         assertEquals("İstanbulkart", istanbulkart.displayName)
-        assertNull(istanbulkart.verifiedLogoKey)
-        assertEquals(10, istanbulkart.catalogVersion)
+        assertEquals("istanbulkart", istanbulkart.verifiedLogoKey)
+        assertEquals(18, istanbulkart.catalogVersion)
 
         val info =
             TransactionMerchantInfo(
@@ -637,27 +637,16 @@ class TransactionsDisplayModelBuilderTest {
         val merchant = item.merchant
         assertNotNull(merchant)
         assertEquals("İstanbulkart", merchant.displayName)
-        assertNull(merchant.verifiedLogoKey)
+        assertEquals("istanbulkart", merchant.verifiedLogoKey)
         assertTrue(merchant.canShowMerchantLogo)
-
-        val fallbackDecision =
-            MerchantLogoFallbackResolver.resolve(
-                verifiedLogoKey = merchant.verifiedLogoKey,
-                packagedLogoAvailable = false,
-                categoryIconKey = transCat.icon?.key,
-                fallbackLabel = merchant.displayName,
-            )
-        assertEquals(MerchantLogoVisualKind.CATEGORY_ICON, fallbackDecision.kind)
-        assertNotNull(fallbackDecision.iconVector)
-        assertNull(fallbackDecision.logoKey)
     }
 
     @Test
-    fun buildItem_realStarterMerchant_ajet_preservesDisplayNameAndExposesNullKey() {
+    fun buildItem_realStarterMerchant_ajet_preservesDisplayNameAndExposesVerifiedLogoKey() {
         val ajet = StarterMerchantCatalog.merchants.first { it.id == "ajet" }
         assertEquals("AJet", ajet.displayName)
-        assertNull(ajet.verifiedLogoKey)
-        assertEquals(10, ajet.catalogVersion)
+        assertEquals("ajet", ajet.verifiedLogoKey)
+        assertEquals(18, ajet.catalogVersion)
 
         val info =
             TransactionMerchantInfo(
@@ -673,6 +662,31 @@ class TransactionsDisplayModelBuilderTest {
         val merchant = item.merchant
         assertNotNull(merchant)
         assertEquals("AJet", merchant.displayName)
+        assertEquals("ajet", merchant.verifiedLogoKey)
+        assertTrue(merchant.canShowMerchantLogo)
+    }
+
+    @Test
+    fun buildItem_realStarterMerchant_kamilKocFallback_preservesDisplayNameAndExposesNullKey() {
+        val kamilKoc = StarterMerchantCatalog.merchants.first { it.id == "kamil_koc" }
+        assertEquals("Kâmil Koç", kamilKoc.displayName)
+        assertNull(kamilKoc.verifiedLogoKey)
+        assertEquals(18, kamilKoc.catalogVersion)
+
+        val info =
+            TransactionMerchantInfo(
+                merchantId = EntityId("kamil_koc"),
+                matchSource = MerchantMatchSource.USER_VERIFIED,
+                confidence = 100,
+                catalogVersion = 8,
+            )
+        val transCat = cat1.copy(icon = CategoryIcon("transportation"))
+        val trx = createTrx("t-kk", merchantInfo = info)
+        val item = TransactionsDisplayModelBuilder.buildItem(trx, transCat, catalog = StarterMerchantCatalog.merchants)
+
+        val merchant = item.merchant
+        assertNotNull(merchant)
+        assertEquals("Kâmil Koç", merchant.displayName)
         assertNull(merchant.verifiedLogoKey)
         assertTrue(merchant.canShowMerchantLogo)
 
@@ -680,7 +694,7 @@ class TransactionsDisplayModelBuilderTest {
             MerchantLogoFallbackResolver.resolve(
                 verifiedLogoKey = merchant.verifiedLogoKey,
                 packagedLogoAvailable = false,
-                categoryIconKey = travelCat.icon?.key,
+                categoryIconKey = transCat.icon?.key,
                 fallbackLabel = merchant.displayName,
             )
         assertEquals(MerchantLogoVisualKind.CATEGORY_ICON, fallbackDecision.kind)
@@ -760,6 +774,354 @@ class TransactionsDisplayModelBuilderTest {
         assertEquals("Doğrulanmış Marka", merchant.displayName)
         assertEquals("verified_brand_logo_key", merchant.verifiedLogoKey)
         assertEquals(true, merchant.canShowMerchantLogo)
+    }
+
+    @Test
+    fun buildItem_realStarterMerchant_maxHistoricalV11_resolvesWithHboMaxDisplayNameAndLogoKey() {
+        val maxMerchant = StarterMerchantCatalog.merchants.first { it.id == "max" }
+        assertEquals("HBO Max", maxMerchant.displayName)
+        assertEquals("max", maxMerchant.verifiedLogoKey)
+        assertEquals(18, maxMerchant.catalogVersion)
+
+        val historicalInfo =
+            TransactionMerchantInfo(
+                merchantId = EntityId("max"),
+                matchSource = MerchantMatchSource.EXACT_ALIAS,
+                confidence = 95,
+                catalogVersion = 11,
+            )
+        val subCat = cat1.copy(icon = CategoryIcon("subscriptions"))
+        val trx = createTrx("t-max-hist", merchantInfo = historicalInfo)
+        val item = TransactionsDisplayModelBuilder.buildItem(trx, subCat, catalog = StarterMerchantCatalog.merchants)
+
+        val merchant = item.merchant
+        assertNotNull(merchant)
+        assertEquals("HBO Max", merchant.displayName)
+        assertEquals("max", merchant.verifiedLogoKey)
+        assertTrue(merchant.canShowMerchantLogo)
+    }
+
+    @Test
+    fun buildItem_realStarterMerchant_appleServicesAndMuud_exposesVerifiedLogoKeys() {
+        val appleTrx =
+            createTrx(
+                "t-apple",
+                merchantInfo =
+                    TransactionMerchantInfo(
+                        merchantId = EntityId("apple_services"),
+                        matchSource = MerchantMatchSource.BRAND_AND_SERVICE,
+                        confidence = 90,
+                        catalogVersion = 14,
+                    ),
+            )
+        val muudTrx =
+            createTrx(
+                "t-muud",
+                merchantInfo =
+                    TransactionMerchantInfo(
+                        merchantId = EntityId("muud"),
+                        matchSource = MerchantMatchSource.EXACT_ALIAS,
+                        confidence = 95,
+                        catalogVersion = 14,
+                    ),
+            )
+        val subCat = cat1.copy(icon = CategoryIcon("subscriptions"))
+        val appleItem = TransactionsDisplayModelBuilder.buildItem(appleTrx, subCat, catalog = StarterMerchantCatalog.merchants)
+        val muudItem = TransactionsDisplayModelBuilder.buildItem(muudTrx, subCat, catalog = StarterMerchantCatalog.merchants)
+
+        assertEquals("apple_services", appleItem.merchant?.verifiedLogoKey)
+        assertEquals("Apple Services", appleItem.merchant?.displayName)
+        assertEquals("muud", muudItem.merchant?.verifiedLogoKey)
+        assertEquals("Muud", muudItem.merchant?.displayName)
+    }
+
+    @Test
+    fun buildItem_realStarterMerchant_sharedRoofLogoSubscriptions_preserveIdentityAndResolveRoofLogos() {
+        val subCat = cat1.copy(icon = CategoryIcon("subscriptions"))
+
+        // 1. amazon_prime -> merchantId: amazon_prime, displayName: Amazon Prime, verifiedLogoKey: amazon
+        val amazonTrx =
+            createTrx(
+                "t-amazon-prime",
+                merchantInfo =
+                    TransactionMerchantInfo(
+                        merchantId = EntityId("amazon_prime"),
+                        matchSource = MerchantMatchSource.BRAND_AND_SERVICE,
+                        confidence = 90,
+                        catalogVersion = 14,
+                    ),
+            )
+        val itemAmazon = TransactionsDisplayModelBuilder.buildItem(amazonTrx, subCat, catalog = StarterMerchantCatalog.merchants)
+        val merchantAmazon = itemAmazon.merchant
+        assertNotNull(merchantAmazon)
+        assertEquals("amazon_prime", merchantAmazon.merchantId.value)
+        assertEquals("Amazon Prime", merchantAmazon.displayName)
+        // Ana marka adına ('Amazon') dönüşmediğini doğrula
+        assertTrue(merchantAmazon.displayName != "Amazon")
+        assertEquals("amazon", merchantAmazon.verifiedLogoKey)
+        assertTrue(merchantAmazon.canShowMerchantLogo)
+
+        // 2. youtube_premium -> merchantId: youtube_premium, displayName: YouTube Premium, verifiedLogoKey: youtube
+        val ytTrx =
+            createTrx(
+                "t-yt",
+                merchantInfo =
+                    TransactionMerchantInfo(
+                        merchantId = EntityId("youtube_premium"),
+                        matchSource = MerchantMatchSource.BRAND_AND_SERVICE,
+                        confidence = 90,
+                        catalogVersion = 14,
+                    ),
+            )
+        val itemYt = TransactionsDisplayModelBuilder.buildItem(ytTrx, subCat, catalog = StarterMerchantCatalog.merchants)
+        val merchantYt = itemYt.merchant
+        assertNotNull(merchantYt)
+        assertEquals("youtube_premium", merchantYt.merchantId.value)
+        assertEquals("YouTube Premium", merchantYt.displayName)
+        // Ana marka adına ('YouTube') dönüşmediğini doğrula
+        assertTrue(merchantYt.displayName != "YouTube")
+        assertEquals("youtube", merchantYt.verifiedLogoKey)
+        assertTrue(merchantYt.canShowMerchantLogo)
+
+        // 3. v1..v17 tarihsel attribution'ın güncel v18 katalogla başarıyla çözümlendiğini doğrula
+        for (histVersion in 1..17) {
+            val histTrx =
+                createTrx(
+                    "t-hist-$histVersion",
+                    merchantInfo =
+                        TransactionMerchantInfo(
+                            merchantId = EntityId("amazon_prime"),
+                            matchSource = MerchantMatchSource.BRAND_AND_SERVICE,
+                            confidence = 90,
+                            catalogVersion = histVersion,
+                        ),
+                )
+            val histItem = TransactionsDisplayModelBuilder.buildItem(histTrx, subCat, catalog = StarterMerchantCatalog.merchants)
+            assertNotNull(histItem.merchant, "Tarihsel v$histVersion işlemi v18 katalogla çözümlenmelidir")
+            assertEquals("Amazon Prime", histItem.merchant?.displayName)
+            assertEquals("amazon", histItem.merchant?.verifiedLogoKey)
+        }
+
+        // 4. Gelecekteki v19 attribution'ın fail-closed kaldığını (null döndüğünü) doğrula
+        val futureTrx =
+            createTrx(
+                "t-future-19",
+                merchantInfo =
+                    TransactionMerchantInfo(
+                        merchantId = EntityId("amazon_prime"),
+                        matchSource = MerchantMatchSource.BRAND_AND_SERVICE,
+                        confidence = 90,
+                        catalogVersion = 19,
+                    ),
+            )
+        val futureItem = TransactionsDisplayModelBuilder.buildItem(futureTrx, subCat, catalog = StarterMerchantCatalog.merchants)
+        assertNull(futureItem.merchant, "Gelecekteki v19 attribution fail-closed kalarak null dönmelidir")
+    }
+
+    @Test
+    fun buildItem_realStarterMerchant_shoppingTwentyThreeMerchants_resolveVerifiedLogoKeysAndPreserveIdentity() {
+        val shopCat = cat1.copy(icon = CategoryIcon("shopping"))
+        val shoppingKeys =
+            listOf(
+                "n11" to "n11",
+                "ciceksepeti" to "ciceksepeti",
+                "pazarama" to "pazarama",
+                "boyner" to "boyner",
+                "lc_waikiki" to "lc_waikiki",
+                "defacto" to "defacto",
+                "teknosa" to "teknosa",
+                "mediamarkt" to "mediamarkt",
+                "flo" to "flo",
+                "koton" to "koton",
+                "mavi" to "mavi",
+                "zara" to "zara",
+                "hm" to "hm",
+                "pull_and_bear" to "pull_and_bear",
+                "bershka" to "bershka",
+                "stradivarius" to "stradivarius",
+                "beymen" to "beymen",
+                "vakko" to "vakko",
+                "ikea" to "ikea",
+                "koctas" to "koctas",
+                "bauhaus" to "bauhaus",
+                "vatan_bilgisayar" to "vatan_bilgisayar",
+                "ebebek" to "ebebek",
+            )
+
+        for ((id, expectedLogoKey) in shoppingKeys) {
+            val trx =
+                createTrx(
+                    "t-shop-$id",
+                    merchantInfo =
+                        TransactionMerchantInfo(
+                            merchantId = EntityId(id),
+                            matchSource = MerchantMatchSource.EXACT_ALIAS,
+                            confidence = 95,
+                            catalogVersion = 16,
+                        ),
+                )
+            val item = TransactionsDisplayModelBuilder.buildItem(trx, shopCat, catalog = StarterMerchantCatalog.merchants)
+            val merchant = item.merchant
+            assertNotNull(merchant, "Alışveriş merchant'ı '$id' çözümlenmelidir")
+            assertEquals(id, merchant.merchantId.value)
+            assertEquals(expectedLogoKey, merchant.verifiedLogoKey)
+            assertTrue(merchant.canShowMerchantLogo)
+        }
+    }
+
+    @Test
+    fun buildItem_realStarterMerchant_personalCareFifteenMerchants_resolveVerifiedLogoKeysAndPreserveIdentity() {
+        val careCat = cat1.copy(icon = CategoryIcon("personal_care"))
+        val personalCareKeys =
+            listOf(
+                "gratis" to "gratis",
+                "watsons" to "watsons",
+                "rossmann" to "rossmann",
+                "sephora" to "sephora",
+                "eve_shop" to "eve_shop",
+                "flormar" to "flormar",
+                "golden_rose" to "golden_rose",
+                "yves_rocher" to "yves_rocher",
+                "the_body_shop" to "the_body_shop",
+                "kiko_milano" to "kiko_milano",
+                "mac_cosmetics" to "mac_cosmetics",
+                "clinique" to "clinique",
+                "avon" to "avon",
+                "oriflame" to "oriflame",
+                "farmasi" to "farmasi",
+            )
+
+        for ((id, expectedLogoKey) in personalCareKeys) {
+            val trx =
+                createTrx(
+                    "t-care-$id",
+                    merchantInfo =
+                        TransactionMerchantInfo(
+                            merchantId = EntityId(id),
+                            matchSource = MerchantMatchSource.EXACT_ALIAS,
+                            confidence = 95,
+                            catalogVersion = 16,
+                        ),
+                )
+            val item = TransactionsDisplayModelBuilder.buildItem(trx, careCat, catalog = StarterMerchantCatalog.merchants)
+            val merchant = item.merchant
+            assertNotNull(merchant, "Kişisel bakım merchant'ı '$id' çözümlenmelidir")
+            assertEquals(id, merchant.merchantId.value)
+            assertEquals(expectedLogoKey, merchant.verifiedLogoKey)
+            assertTrue(merchant.canShowMerchantLogo)
+        }
+    }
+
+    @Test
+    fun buildItem_realStarterMerchant_transportationAndTravelSeventeenMerchants_resolveVerifiedLogoKeysAndPreserveIdentity() {
+        val transCat = cat1.copy(icon = CategoryIcon("transportation"))
+        val travelCat = cat1.copy(icon = CategoryIcon("travel"))
+
+        val transportationKeys =
+            listOf(
+                "istanbulkart" to "istanbulkart",
+                "tcdd" to "tcdd",
+                "bitaksi" to "bitaksi",
+                "marti" to "marti",
+                "ispark" to "ispark",
+                "metro_turizm" to "metro_turizm",
+                "pamukkale_turizm" to "pamukkale_turizm",
+                "varan_turizm" to "varan_turizm",
+                "ido" to "ido",
+            )
+
+        for ((id, expectedLogoKey) in transportationKeys) {
+            val trx =
+                createTrx(
+                    "t-trans-$id",
+                    merchantInfo =
+                        TransactionMerchantInfo(
+                            merchantId = EntityId(id),
+                            matchSource = MerchantMatchSource.EXACT_ALIAS,
+                            confidence = 95,
+                            catalogVersion = 16,
+                        ),
+                )
+            val item = TransactionsDisplayModelBuilder.buildItem(trx, transCat, catalog = StarterMerchantCatalog.merchants)
+            val merchant = item.merchant
+            assertNotNull(merchant, "Ulaşım merchant'ı '$id' çözümlenmelidir")
+            assertEquals(id, merchant.merchantId.value)
+            assertEquals(expectedLogoKey, merchant.verifiedLogoKey)
+            assertTrue(merchant.canShowMerchantLogo)
+        }
+
+        val travelKeys =
+            listOf(
+                "ajet" to "ajet",
+                "sunexpress" to "sunexpress",
+                "corendon" to "corendon",
+                "booking" to "booking",
+                "airbnb" to "airbnb",
+                "ets_tur" to "ets_tur",
+                "jolly_tur" to "jolly_tur",
+                "setur" to "setur",
+            )
+
+        for ((id, expectedLogoKey) in travelKeys) {
+            val trx =
+                createTrx(
+                    "t-travel-$id",
+                    merchantInfo =
+                        TransactionMerchantInfo(
+                            merchantId = EntityId(id),
+                            matchSource = MerchantMatchSource.EXACT_ALIAS,
+                            confidence = 95,
+                            catalogVersion = 16,
+                        ),
+                )
+            val item = TransactionsDisplayModelBuilder.buildItem(trx, travelCat, catalog = StarterMerchantCatalog.merchants)
+            val merchant = item.merchant
+            assertNotNull(merchant, "Seyahat merchant'ı '$id' çözümlenmelidir")
+            assertEquals(id, merchant.merchantId.value)
+            assertEquals(expectedLogoKey, merchant.verifiedLogoKey)
+            assertTrue(merchant.canShowMerchantLogo)
+        }
+
+        // Kasıtlı fallback kalan 5 merchant: canShowMerchantLogo = false ve verifiedLogoKey = null
+        val deliberateFallbacks =
+            listOf(
+                "kamil_koc" to transCat,
+                "budo" to transCat,
+                "getir_arac" to transCat,
+                "tiktak" to transCat,
+                "tatilbudur" to travelCat,
+            )
+
+        for ((id, cat) in deliberateFallbacks) {
+            val trx =
+                createTrx(
+                    "t-fallback-$id",
+                    merchantInfo =
+                        TransactionMerchantInfo(
+                            merchantId = EntityId(id),
+                            matchSource = MerchantMatchSource.EXACT_ALIAS,
+                            confidence = 95,
+                            catalogVersion = 16,
+                        ),
+                )
+            val item = TransactionsDisplayModelBuilder.buildItem(trx, cat, catalog = StarterMerchantCatalog.merchants)
+            val merchant = item.merchant
+            assertNotNull(merchant, "Fallback merchant '$id' çözümlenmelidir")
+            assertEquals(id, merchant.merchantId.value)
+            assertNull(merchant.verifiedLogoKey, "Fallback merchant '$id' verifiedLogoKey taşımamalıdır")
+            assertTrue(merchant.canShowMerchantLogo, "Fallback merchant '$id' canShowMerchantLogo true olmalıdır")
+
+            val fallbackDecision =
+                MerchantLogoFallbackResolver.resolve(
+                    verifiedLogoKey = merchant.verifiedLogoKey,
+                    packagedLogoAvailable = false,
+                    categoryIconKey = cat.icon?.key,
+                    fallbackLabel = merchant.displayName,
+                )
+            assertEquals(MerchantLogoVisualKind.CATEGORY_ICON, fallbackDecision.kind)
+            assertNotNull(fallbackDecision.iconVector)
+            assertNull(fallbackDecision.logoKey)
+        }
     }
 
     private fun createTrx(
