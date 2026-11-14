@@ -202,7 +202,7 @@ class TransactionMerchantAttributionTest {
     @Test
     fun starterMerchantCatalog_allMerchantsHavePositiveCatalogVersion() {
         val merchants = StarterMerchantCatalog.merchants
-        assertEquals(184, merchants.size, "Katalog tam olarak 184 merchant içermelidir")
+        assertEquals(234, merchants.size, "Katalog tam olarak 234 merchant içermelidir")
         merchants.forEach { m ->
             assertTrue(m.catalogVersion > 0, "Merchant ${m.id} katalog sürümü pozitif olmalıdır: ${m.catalogVersion}")
             assertEquals(StarterMerchantCatalog.CATALOG_VERSION, m.catalogVersion)
@@ -343,7 +343,7 @@ class TransactionMerchantAttributionTest {
         val merged = remoteChangedToSpotify.mergePreservingLocalMerchant(local)
         assertEquals("spotify", merged.merchantId)
         assertEquals(95, merged.merchantConfidence)
-        assertEquals(18, merged.merchantCatalogVersion)
+        assertEquals(22, merged.merchantCatalogVersion)
         assertEquals("Spotify", merged.description)
         assertEquals(2L, merged.sync.version)
     }
@@ -581,22 +581,22 @@ class TransactionMerchantAttributionTest {
         }
 
     @Test
-    fun catalogV18Snapshot_andAttributionVersionRegressions() {
-        // 1. StarterMerchantCatalog.CATALOG_VERSION == 18
-        assertEquals(18, StarterMerchantCatalog.CATALOG_VERSION)
+    fun catalogV22Snapshot_andAttributionVersionRegressions() {
+        // 1. StarterMerchantCatalog.CATALOG_VERSION == 22
+        assertEquals(22, StarterMerchantCatalog.CATALOG_VERSION)
 
-        // 2. Katalogdaki 184 merchant'ın tamamı catalogVersion == 18
+        // 2. Katalogdaki 234 merchant'ın tamamı catalogVersion == 22
         val merchants = StarterMerchantCatalog.merchants
-        assertEquals(184, merchants.size)
-        assertTrue(merchants.all { it.catalogVersion == 18 }, "Tüm merchant'lar v18 olmalıdır")
+        assertEquals(234, merchants.size)
+        assertTrue(merchants.all { it.catalogVersion == 22 }, "Tüm merchant'lar v22 olmalıdır")
 
-        // 3. Yeni merchant otomatik tanıma sonucu oluşturulan TransactionMerchantInfo.catalogVersion == 18
+        // 3. Yeni merchant otomatik tanıma sonucu oluşturulan TransactionMerchantInfo.catalogVersion == 22
         val newMerchantInfo = TransactionMerchantAttributionResolver.resolve("İstanbulkart")
         assertNotNull(newMerchantInfo)
         assertEquals(EntityId("istanbulkart"), newMerchantInfo.merchantId)
-        assertEquals(18, newMerchantInfo.catalogVersion)
+        assertEquals(22, newMerchantInfo.catalogVersion)
 
-        // 4. v1..v17 tarihsel sürüm kabulü: mapper round-trip ve tarihsel catalogVersion korunması
+        // 4. v1..v21 tarihsel sürüm kabulü: mapper round-trip ve tarihsel catalogVersion korunması
         val historicalVersions =
             listOf(
                 1 to "migros",
@@ -616,6 +616,10 @@ class TransactionMerchantAttributionTest {
                 15 to "gratis",
                 16 to "booking",
                 17 to "steam",
+                18 to "paribu_cineverse",
+                19 to "apsiyon",
+                20 to "acibadem",
+                21 to "udemy",
             )
         historicalVersions.forEach { (version, merchantId) ->
             val historicalInfo =
@@ -634,21 +638,21 @@ class TransactionMerchantAttributionTest {
             assertEquals(version, decoded.merchantCatalogVersion)
         }
 
-        // 5. Gelecek v19 sürümü: persistence/mapper round-trip ve sürümün korunması
+        // 5. Gelecek v23 sürümü: persistence/mapper round-trip ve sürümün korunması
         // Not: Bu test sunum katmanı fail-closed davranışını değil, persistence/mapper round-trip davranışını kanıtlar.
         val futureInfo =
             TransactionMerchantInfo(
                 merchantId = EntityId("migros"),
                 matchSource = MerchantMatchSource.EXACT_ALIAS,
                 confidence = 95,
-                catalogVersion = 19,
+                catalogVersion = 23,
             )
         val futureTx = sampleTransaction(merchantInfo = futureInfo)
-        assertEquals(19, futureTx.merchantCatalogVersion)
+        assertEquals(23, futureTx.merchantCatalogVersion)
         val entityFuture = futureTx.toEntity(SyncMetadata("SYNCED", 1000, 1000, null, 1, null, null))
-        assertEquals(19, entityFuture.merchantCatalogVersion)
+        assertEquals(23, entityFuture.merchantCatalogVersion)
         val decodedFuture = entityFuture.toDomain()
         assertNotNull(decodedFuture.merchantInfo)
-        assertEquals(19, decodedFuture.merchantCatalogVersion)
+        assertEquals(23, decodedFuture.merchantCatalogVersion)
     }
 }

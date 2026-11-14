@@ -6,7 +6,7 @@ package com.feniqo.mobile.domain.model
  * Değişmez sözleşme kuralları:
  * - Kategori kimliği olarak localized ad değil, yalnız kararlı [CategoryIcon] semantik anahtarı kullanılır.
  * - [categoryIconKey] [ExpenseCategoryVisualCatalog] içinde tanımlı kararlı bir gider kategorisi olmalıdır.
- * - [suggestedMerchantIds] listesinde en fazla [MAX_SUGGESTED_COUNT] (8) kayıt bulunabilir.
+ * - [suggestedMerchantIds] listesinde en fazla [MAX_SUGGESTED_COUNT] (9) kayıt bulunabilir.
  * - [suggestedMerchantIds] ve [searchableMerchantIds] listelerinde mükerrer kimlik bulunamaz.
  * - [suggestedMerchantIds], [searchableMerchantIds] listesinin bir alt kümesi olmalıdır.
  * - İndeks saf ve deterministiktir; otomatik seçim veya durum mutasyonu üretmez.
@@ -45,7 +45,7 @@ data class MerchantCategoryRecommendationProfile(
     val hasSearchable: Boolean get() = searchableMerchantIds.isNotEmpty()
 
     companion object {
-        const val MAX_SUGGESTED_COUNT: Int = 8
+        const val MAX_SUGGESTED_COUNT: Int = 9
 
         fun empty(categoryIconKey: CategoryIcon): MerchantCategoryRecommendationProfile =
             MerchantCategoryRecommendationProfile(

@@ -98,7 +98,7 @@ class CategoryMerchantCandidateResolverTest {
     }
 
     @Test
-    fun suggestedCandidates_maxCountIsEightAcrossAllCategories() {
+    fun suggestedCandidates_maxCountIsNineAcrossAllCategories() {
         ExpenseCategoryVisualCatalog.definitions.forEach { def ->
             val suggested =
                 resolver.resolveSuggestedCandidates(
@@ -106,8 +106,8 @@ class CategoryMerchantCandidateResolverTest {
                     categoryIconKey = def.key.key,
                 )
             assertTrue(
-                suggested.size <= 8,
-                "Önerilen aday sayısı en fazla 8 olabilir: ${def.key.key} (${suggested.size})",
+                suggested.size <= 9,
+                "Önerilen aday sayısı en fazla 9 olabilir: ${def.key.key} (${suggested.size})",
             )
         }
     }
@@ -344,7 +344,7 @@ class CategoryMerchantCandidateResolverTest {
 
     @Test
     fun emptyProfileCategories_returnEmpty() {
-        val emptyCategories = listOf("housing", "healthcare", "education", "family_pets", "other_expense")
+        val emptyCategories = listOf("family_pets", "other_expense")
         val thy = StarterMerchantCatalog.merchants.first { it.id == "thy" }
 
         emptyCategories.forEach { catKey ->
@@ -714,6 +714,10 @@ class CategoryMerchantCandidateResolverTest {
                 "bauhaus",
                 "vatan_bilgisayar",
                 "ebebek",
+                "dr",
+                "kitapyurdu",
+                "bkm_kitap",
+                "idefix",
             )
 
         val suggested =
@@ -730,7 +734,7 @@ class CategoryMerchantCandidateResolverTest {
         assertEquals(8, suggested.size)
         assertEquals(expectedSuggested, suggested.map { it.id })
 
-        assertEquals(26, searchable.size)
+        assertEquals(30, searchable.size)
         assertEquals(expectedSearchable, searchable.map { it.id })
 
         // Income her zaman boş liste döner
@@ -801,7 +805,7 @@ class CategoryMerchantCandidateResolverTest {
                 "shopping",
                 catalog = reversedCatalog,
             )
-        assertEquals(26, resolved.size)
+        assertEquals(30, resolved.size)
         assertEquals(
             listOf(
                 "trendyol",
@@ -830,6 +834,10 @@ class CategoryMerchantCandidateResolverTest {
                 "bauhaus",
                 "vatan_bilgisayar",
                 "ebebek",
+                "dr",
+                "kitapyurdu",
+                "bkm_kitap",
+                "idefix",
             ),
             resolved.map { it.id },
         )
@@ -1377,5 +1385,283 @@ class CategoryMerchantCandidateResolverTest {
                 catalog = incompleteCatalog,
             )
         }
+    }
+
+    @Test
+    fun housingCategory_suggestedAndSearchableCandidatesContract() {
+        val suggested =
+            resolver.resolveSuggestedCandidates(
+                transactionType = TransactionType.EXPENSE,
+                categoryIconKey = "housing",
+            )
+        val searchable =
+            resolver.resolveSearchableCandidates(
+                transactionType = TransactionType.EXPENSE,
+                categoryIconKey = "housing",
+            )
+
+        val expectedSuggested =
+            listOf(
+                "apsiyon",
+                "yonetimcell",
+                "armut",
+                "senyonet",
+                "mrusta",
+                "pronet",
+                "kale_alarm",
+            )
+        val expectedSearchable =
+            listOf(
+                "apsiyon",
+                "yonetimcell",
+                "armut",
+                "senyonet",
+                "mrusta",
+                "pronet",
+                "kale_alarm",
+                "koctas",
+                "bauhaus",
+            )
+
+        assertEquals(expectedSuggested, suggested.map { it.id })
+        assertEquals(expectedSearchable, searchable.map { it.id })
+
+        expectedSearchable.forEach { merchantId ->
+            val m = StarterMerchantCatalog.merchants.first { it.id == merchantId }
+            assertTrue(CategoryMerchantCandidateResolver.isCompatible("housing", m))
+        }
+
+        // Koctas ve Bauhaus cross-category uyumlu olmalı
+        val koctas = StarterMerchantCatalog.merchants.first { it.id == "koctas" }
+        val bauhaus = StarterMerchantCatalog.merchants.first { it.id == "bauhaus" }
+        assertTrue(CategoryMerchantCandidateResolver.isCompatible("housing", koctas))
+        assertTrue(CategoryMerchantCandidateResolver.isCompatible("housing", bauhaus))
+
+        // Uyumsuz merchant
+        val thy = StarterMerchantCatalog.merchants.first { it.id == "thy" }
+        assertFalse(CategoryMerchantCandidateResolver.isCompatible("housing", thy))
+    }
+
+    @Test
+    fun healthcareCategory_suggestedAndSearchableCandidatesContract() {
+        val suggested =
+            resolver.resolveSuggestedCandidates(
+                transactionType = TransactionType.EXPENSE,
+                categoryIconKey = "healthcare",
+            )
+        val searchable =
+            resolver.resolveSearchableCandidates(
+                transactionType = TransactionType.EXPENSE,
+                categoryIconKey = "healthcare",
+            )
+
+        val expectedSuggested =
+            listOf(
+                "acibadem",
+                "memorial",
+                "medical_park",
+                "liv_hospital",
+                "medicana",
+                "florence_nightingale",
+                "anadolu_saglik",
+                "amerikan_hastanesi",
+                "dunyagoz",
+            )
+
+        val expectedSearchable =
+            listOf(
+                "acibadem",
+                "memorial",
+                "medical_park",
+                "liv_hospital",
+                "medicana",
+                "florence_nightingale",
+                "anadolu_saglik",
+                "amerikan_hastanesi",
+                "dunyagoz",
+                "medipol",
+                "biruni_hastanesi",
+                "guven_hastanesi",
+                "lokman_hekim",
+                "baskent_hastanesi",
+                "synevo",
+                "duzen_laboratuvari",
+                "dentgroup",
+                "hospitadent",
+                "atasun_optik",
+            )
+
+        assertEquals(expectedSuggested, suggested.map { it.id })
+        assertEquals(expectedSearchable, searchable.map { it.id })
+        assertEquals(9, suggested.size)
+        assertEquals(19, searchable.size)
+
+        // Atasun aramada bulunur ancak suggested değildir
+        assertTrue(searchable.any { it.id == "atasun_optik" })
+        assertFalse(suggested.any { it.id == "atasun_optik" })
+
+        // Atasun'un default categoryIconKey değeri shopping kalmalıdır
+        val atasun = StarterMerchantCatalog.merchants.first { it.id == "atasun_optik" }
+        assertEquals("shopping", atasun.categoryIconKey.key)
+        assertTrue(CategoryMerchantCandidateResolver.isCompatible("healthcare", atasun))
+
+        expectedSearchable.forEach { merchantId ->
+            val m = StarterMerchantCatalog.merchants.first { it.id == merchantId }
+            assertTrue(CategoryMerchantCandidateResolver.isCompatible("healthcare", m))
+        }
+
+        // Uyumsuz merchant
+        val bim = StarterMerchantCatalog.merchants.first { it.id == "bim" }
+        assertFalse(CategoryMerchantCandidateResolver.isCompatible("healthcare", bim))
+    }
+
+    @Test
+    fun educationCategory_suggestedAndSearchableCandidatesContract() {
+        val suggested =
+            resolver.resolveSuggestedCandidates(
+                transactionType = TransactionType.EXPENSE,
+                categoryIconKey = "education",
+            )
+        val searchable =
+            resolver.resolveSearchableCandidates(
+                transactionType = TransactionType.EXPENSE,
+                categoryIconKey = "education",
+            )
+
+        val expectedSuggested =
+            listOf(
+                "udemy",
+                "coursera",
+                "duolingo",
+                "cambly",
+                "kunduz",
+                "tonguc_akademi",
+                "okulistik",
+                "morpa_kampus",
+                "raunt",
+            )
+
+        val expectedSearchable =
+            listOf(
+                "udemy",
+                "coursera",
+                "duolingo",
+                "cambly",
+                "kunduz",
+                "tonguc_akademi",
+                "okulistik",
+                "morpa_kampus",
+                "raunt",
+                "busuu",
+                "preply",
+                "italki",
+                "skillshare",
+                "derslig",
+                "benim_hocam",
+                "pegem_akademi",
+                "english_time",
+                "bilge_adam",
+                "wall_street_english",
+                "amerikankultur",
+                "dr",
+                "kitapyurdu",
+                "bkm_kitap",
+                "idefix",
+                "storytel",
+                "audible",
+                "linkedin_premium",
+            )
+
+        assertEquals(expectedSuggested, suggested.map { it.id })
+        assertEquals(expectedSearchable, searchable.map { it.id })
+        assertEquals(9, suggested.size)
+        assertEquals(27, searchable.size)
+
+        // 8. Suggested kümesi searchable altkümesi
+        assertTrue(expectedSearchable.containsAll(expectedSuggested))
+
+        // 9. Searchable içinde mükerrer ID yok
+        assertEquals(expectedSearchable.toSet().size, expectedSearchable.size)
+
+        // 10. Dört kitapçı: Education searchable, Shopping searchable, iki profilde de suggested değil, candidate resolver iki kategori için compatible
+        val bookstores = listOf("dr", "kitapyurdu", "bkm_kitap", "idefix")
+        val shoppingSuggested =
+            resolver
+                .resolveSuggestedCandidates(
+                    transactionType = TransactionType.EXPENSE,
+                    categoryIconKey = "shopping",
+                ).map { it.id }
+        val shoppingSearchable =
+            resolver
+                .resolveSearchableCandidates(
+                    transactionType = TransactionType.EXPENSE,
+                    categoryIconKey = "shopping",
+                ).map { it.id }
+
+        bookstores.forEach { bookId ->
+            val bookMerchant = StarterMerchantCatalog.merchants.first { it.id == bookId }
+            assertEquals("shopping", bookMerchant.categoryIconKey.key, "Kitapçı '$bookId' default kategorisi shopping olmalıdır")
+
+            // Education kontrolü
+            assertTrue(searchable.any { it.id == bookId }, "Kitapçı '$bookId' education searchable olmalıdır")
+            assertFalse(suggested.any { it.id == bookId }, "Kitapçı '$bookId' education suggested OLMAMALIDIR")
+            assertTrue(
+                CategoryMerchantCandidateResolver.isCompatible("education", bookMerchant),
+                "Kitapçı '$bookId' education ile compatible olmalıdır",
+            )
+
+            // Shopping kontrolü
+            assertTrue(shoppingSearchable.contains(bookId), "Kitapçı '$bookId' shopping searchable olmalıdır")
+            assertFalse(shoppingSuggested.contains(bookId), "Kitapçı '$bookId' shopping suggested OLMAMALIDIR")
+            assertTrue(
+                CategoryMerchantCandidateResolver.isCompatible("shopping", bookMerchant),
+                "Kitapçı '$bookId' shopping ile compatible olmalıdır",
+            )
+        }
+
+        // 11. Storytel, Audible, LinkedIn Premium: tek katalog kaydı, subscriptions sahipliği korunmuş, Education searchable
+        val reusedSubscriptions = listOf("storytel", "audible", "linkedin_premium")
+        val subscriptionSearchable =
+            resolver
+                .resolveSearchableCandidates(
+                    transactionType = TransactionType.EXPENSE,
+                    categoryIconKey = "subscriptions",
+                ).map { it.id }
+
+        reusedSubscriptions.forEach { subId ->
+            val subMerchant = StarterMerchantCatalog.merchants.first { it.id == subId }
+            assertEquals("subscriptions", subMerchant.categoryIconKey.key, "Abonelik '$subId' default kategorisi subscriptions olmalıdır")
+
+            // Education kontrolü
+            assertTrue(searchable.any { it.id == subId }, "Abonelik '$subId' education searchable olmalıdır")
+            assertFalse(suggested.any { it.id == subId }, "Abonelik '$subId' education suggested OLMAMALIDIR")
+            assertTrue(
+                CategoryMerchantCandidateResolver.isCompatible("education", subMerchant),
+                "Abonelik '$subId' education ile compatible olmalıdır",
+            )
+
+            // Subscriptions kontrolü
+            assertTrue(subscriptionSearchable.contains(subId), "Abonelik '$subId' subscriptions searchable olmalıdır")
+            assertTrue(
+                CategoryMerchantCandidateResolver.isCompatible("subscriptions", subMerchant),
+                "Abonelik '$subId' subscriptions ile compatible olmalıdır",
+            )
+        }
+
+        // 12. Amazon, Trendyol, Hepsiburada Education dışında
+        val generalEcommerce = listOf("amazon", "trendyol", "hepsiburada")
+        generalEcommerce.forEach { ecomId ->
+            assertFalse(searchable.any { it.id == ecomId }, "Genel e-ticaret '$ecomId' education searchable OLMAMALIDIR")
+            assertFalse(suggested.any { it.id == ecomId }, "Genel e-ticaret '$ecomId' education suggested OLMAMALIDIR")
+            val ecomMerchant = StarterMerchantCatalog.merchants.first { it.id == ecomId }
+            assertFalse(
+                CategoryMerchantCandidateResolver.isCompatible("education", ecomMerchant),
+                "Genel e-ticaret '$ecomId' education ile compatible OLMAMALIDIR",
+            )
+        }
+
+        // Uyumsuz merchant fail-closed
+        val bim = StarterMerchantCatalog.merchants.first { it.id == "bim" }
+        assertFalse(CategoryMerchantCandidateResolver.isCompatible("education", bim))
     }
 }

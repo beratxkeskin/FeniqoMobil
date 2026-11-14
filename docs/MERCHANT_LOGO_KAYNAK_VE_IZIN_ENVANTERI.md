@@ -474,3 +474,210 @@ FeniqoMobil uygulamasÄ±nda aktif uzak logo saÄŸlayÄ±cÄ±sÄ± olarak **Lo
    - Proje sahibi 2026-11-11 tarihinde Samsung Galaxy A71 (SM-A715F) fiziksel cihazında güncel Demo APK ile yaptığı incelemede 17/17 Eğlence merchant logosunu kontrol ederek doğru göründüklerini açıkça onaylamıştır (17/17 PASS).
    - Kaydet düğmesine basılmamış, işlem/Room mutasyonu üretilmemiştir.
    - Bu görsel kabul doğrudan ağ trafiğini kanıtlamaz; gizlilik garantisi statik `verifiedLogoKey` + merkezi allowlist/request-factory mimarisinden gelir.
+
+### 5.12 Faz H4-G2-H — Ev & Kira / Housing Logo Genişletmesi Kapanışı (2026-11-13)
+
+1. **Kapsam ve Katalog Gerçeği:**
+   - Katalog sürümü: v19 (`StarterMerchantCatalog.CATALOG_VERSION = 19`)
+   - Toplam merchant kayıt sayısı: 191
+   - Uzak logolu merchant sayısı: 154 (140 doğrudan + 14 çatı/paylaşılan logo)
+   - Yerel fallback merchant sayısı: 37 (191 markanın tamamında gerçek logo bulunduğu iddiasında bulunulmaz; bu 37 kayıt güvenli yerel kategori ikonu fallback zincirinde kalır)
+   - Allowlist domain sayısı: 148 (141 → 148; 7 yeni ev ve kira domaini eklendi)
+
+2. **Eklenen 7 Yeni Doğrulanmış Allowlist Anahtarı ve Kanonik Domain Eşlemeleri:**
+   - `apsiyon` → `apsiyon.com` (Site/Apartman Yönetim Platformu)
+   - `yonetimcell` → `yonetimcell.com` (Site/Apartman Yönetim Yazılımı)
+   - `armut` → `armut.com` (Hizmet & Tadilat Platformu)
+   - `senyonet` → `senyonet.net` (Site/Tesis Yönetim Yazılımı)
+   - `mrusta` → `mrusta.com.tr` (Ev Hizmetleri/Usta Platformu)
+   - `pronet` → `pronet.com.tr` (Güvenlik & Alarm Sistemleri)
+   - `kale_alarm` → `kalealarm.com.tr` (Güvenlik & Alarm Sistemleri)
+
+3. **Çapraz Aranabilir Alışveriş Markaları (Mükerrer Kayıt Açılmadan):**
+   - `koctas` → `koctas.com.tr` (Ev Geliştirme & Yapı Market — Mevcut Alışveriş kaydı yeniden kullanıldı)
+   - `bauhaus` → `bauhaus.com.tr` (Ev & Bahçe Yapı Market — Mevcut Alışveriş kaydı yeniden kullanıldı)
+
+4. **Kimlik, Tema ve Güvenlik Bütünlüğü:**
+   - 7 kaydın tamamında stable merchant ID, kategori (`housing`) ve alias yapıları korunmuştur.
+   - Önerilen 7'li sıra (`apsiyon`, `yonetimcell`, `armut`, `senyonet`, `mrusta`, `pronet`, `kale_alarm`) ve aranabilir 9'lu sıra (7 housing + `koctas`, `bauhaus`) uygulanmıştır.
+   - Statik `verifiedLogoKey` ve merkezi allowlist sınırı esastır; kullanıcı girdisinden domain veya URL üretilmez (sıfır kullanıcı-metni uzak istek garantisi).
+   - Logo.dev tema politikası: Housing markaları için PNG/WebP formatında `theme=light`, `LIGHT_NEUTRAL` (beyaz dairesel yüzey) ve `DEFAULT` (1.0f ölçek); JPG formatı için themesiz URL sözleşmesi işletilir; `fallback=404` korunur.
+   - Marka Hakları ve Lisans Beyanı: Gösterilen logolar ve ticari markalar münhasıran ilgili marka sahiplerine aittir. Logoların uygulamada yer alması, ticari marka sahipleri ile Feniqo arasında herhangi bir sponsorluk, ortaklık, onay veya ticari bağ bulunduğu anlamına gelmez; yalnızca bilgilendirme ve işlem tanıma amacıyla kanonik kamuya açık web kaynakları üzerinden çözümlenir.
+   - Logo.dev Community attribution (`https://beratxkeskin.github.io/feniqo-site/`), hotlink ve katı no-cache (`Cache-Control: no-cache, no-store, must-revalidate`) sözleşmeleri değişmemiştir.
+
+5. **Veri Modeli ve Altyapı:**
+   - Room şema sürümü 24'tür (değişmemiştir).
+   - Supabase/migration değişikliği yoktur; D1 dosyaları (`00c4ffbc3811960fd9a9cf897c5f58bf684c522f`, `0119fe9633ab32cd28bfa6eda3ec32a8610ee349`) birebir korunmuştur.
+
+6. **Doğrulama ve Fiziksel Cihaz Canlı Kabulü:**
+   - Full `sharedLogic` test sonucu: 186 suite / 2497 test / 0 failure / 0 error / 0 skipped.
+   - Full `sharedUI` test sonucu: 58 suite / 451 test / 0 failure / 0 error / 0 skipped.
+   - Demo paket: `com.feniqo.mobile.demo`
+   - Fiziksel cihaz: Samsung Galaxy A71 / SM-A715F
+   - Proje sahibi 2026-11-13 tarihinde Samsung Galaxy A71 (SM-A715F) fiziksel cihazında güncel Demo APK ile yaptığı incelemede 7 yeni housing logosu ve 2 çapraz regresyon logosunun (`koctas`, `bauhaus`) sorunsuz çalıştığını kontrol ederek onaylamıştır (9/9 PASS).
+   - Kaydet düğmesine basılmamış, işlem/Room mutasyonu üretilmemiştir.
+   - Bu görsel kabul doğrudan ağ trafiğini kanıtlamaz; gizlilik garantisi statik `verifiedLogoKey` + merkezi allowlist/request-factory mimarisinden gelir.
+
+### 5.13 Faz H4-G2-HLT — Sağlık / Healthcare Logo Genişletmesi Kapanışı (2026-11-13)
+
+1. **Kapsam ve Katalog Gerçeği:**
+   - `StarterMerchantCatalog.CATALOG_VERSION` v20 (20) olarak korunmuş ve tamamlanmıştır.
+   - Toplam merchant sayısı 210'dur (173 uzaktan logolu [159 doğrudan + 14 çatı/paylaşılan logo], 37 güvenli yerel fallback).
+   - `MerchantLogoDomainAllowlist` boyutu 167 doğrulanmış anahtara genişletilmiştir (148 → 167; 19 yeni sağlık/optik domaini eklendi).
+   - 210 markanın tamamında uzak logo bulunduğu iddiasında bulunulmaz; uzak logo anahtarı bulunmayan 37 merchant güvenli yerel kategori ikonu fallback zincirinde kalır.
+
+2. **Eklenen 19 Yeni Doğrulanmış Kayıt ve Kanonik Domainler:**
+   - *İlk 9 Ana Hastane (Önerilenler):*
+     - `acibadem` → `acibadem.com.tr` (Acıbadem Sağlık Grubu)
+     - `memorial` → `memorial.com.tr` (Memorial Sağlık Grubu)
+     - `medical_park` → `medicalpark.com.tr` (Medical Park Hastaneler Grubu)
+     - `liv_hospital` → `livhospital.com` (Liv Hospital)
+     - `medicana` → `medicana.com.tr` (Medicana Sağlık Grubu)
+     - `florence_nightingale` → `florence.com.tr` (Grup Florence Nightingale Hastaneleri)
+     - `anadolu_saglik` → `anadolusaglik.org` (Anadolu Sağlık Merkezi / Johns Hopkins Medicine)
+     - `amerikan_hastanesi` → `amerikanhastanesi.org` (Amerikan Hastanesi / Vehbi Koç Vakfı Sağlık Kuruluşları)
+     - `dunyagoz` → `dunyagoz.com` (Dünyagöz Hastaneler Grubu)
+   - *Kalan 10 Aranabilir Kayıt:*
+     - `medipol` → `medipol.com.tr` (Medipol Sağlık Grubu / Medipol Mega)
+     - `biruni_hastanesi` → `birunihastanesi.com.tr` (Biruni Üniversite Hastanesi)
+     - `guven_hastanesi` → `guven.com.tr` (Güven Sağlık Grubu / Ankara Güven Hastanesi)
+     - `lokman_hekim` → `lokmanhekim.com.tr` (Lokman Hekim Sağlık Grubu)
+     - `baskent_hastanesi` → `baskenthastaneleri.com` (Başkent Üniversitesi Hastaneleri)
+     - `synevo` → `synevo.com.tr` (Synevo Tıbbi Laboratuvarları)
+     - `duzen_laboratuvari` → `duzen.com.tr` (Düzen Laboratuvarlar Grubu)
+     - `dentgroup` → `dentgroup.com.tr` (DentGroup Diş Klinikleri)
+     - `hospitadent` → `hospitadent.com` (Hospitadent Dental Group)
+     - `atasun_optik` → `atasunoptik.com.tr` (Atasun Optik — Çapraz Kategori)
+
+3. **Kimlik, Tema ve Güvenlik Bütünlüğü:**
+   - 19 kaydın tamamında stable merchant ID, kategori ve alias yapıları korunmuştur.
+   - Önerilen sıra (9): `acibadem`, `memorial`, `medical_park`, `liv_hospital`, `medicana`, `florence_nightingale`, `anadolu_saglik`, `amerikan_hastanesi`, `dunyagoz`. Kalan 10 kayıt önerilenlere eklenmemiştir.
+   - Aranabilir sıra (19): 9 önerilen + 10 aranabilir kayıt.
+   - `atasun_optik` kaydının ana katalog kategorisi `shopping` olarak kalır (`categoryIconKey = "shopping"`). Sağlık kategorisinde yalnızca merkezi searchable uyumluluk profili üzerinden aranabilir; sağlık önerilenler listesine girmez.
+   - Çıplak MLP ifadeleri hiçbir merchant'a atanmamış; fail-closed korunmuştur. `MLP SAGLIK HIZMETLERI LIV HOSPITAL` Liv Hospital'a atanmıştır.
+   - Bayındır tesisleri Acıbadem Grubu bünyesine katıldığından ve bağımsız tüzel kişilik/marka yaşam döngüsü Acıbadem çatı markasıyla çeliştiğinden kapsam dışı tutulmuştur.
+   - Amplifon güncel resmî Türkiye tüzel kişiliği, satıcı/payee ve kanonik domain kanıtı yetersiz olduğundan kapsam dışı tutulmuştur.
+   - Statik `verifiedLogoKey` ve merkezi allowlist sınırı esastır; kullanıcı girdisinden domain veya URL üretilmez (sıfır kullanıcı-metni uzak istek garantisi).
+   - Logo.dev tema politikası: Sağlık markaları için PNG/WebP formatında `theme=light`, `LIGHT_NEUTRAL` (beyaz dairesel yüzey) ve `DEFAULT` (1.0f ölçek); JPG formatı için themesiz URL sözleşmesi işletilir; `fallback=404` korunur.
+   - Marka Hakları ve Lisans Beyanı: Gösterilen logolar ve ticari markalar münhasıran ilgili marka sahiplerine aittir. Logoların uygulamada yer alması, ticari marka sahipleri ile Feniqo arasında herhangi bir sponsorluk, ortaklık, onay veya ticari bağ bulunduğu anlamına gelmez; yalnızca bilgilendirme ve işlem tanıma amacıyla kanonik kamuya açık web kaynakları üzerinden çözümlenir.
+   - Logo.dev Community attribution (`https://beratxkeskin.github.io/feniqo-site/`), hotlink ve katı no-cache (`Cache-Control: no-cache, no-store, must-revalidate`) sözleşmeleri değişmemiştir.
+
+4. **Veri Modeli ve Altyapı:**
+   - Room şema sürümü 24'tür (değişmemiştir).
+   - Supabase/migration değişikliği yoktur; D1 dosyaları (`00c4ffbc3811960fd9a9cf897c5f58bf684c522f`, `0119fe9633ab32cd28bfa6eda3ec32a8610ee349`) birebir korunmuştur.
+
+5. **Doğrulama ve Fiziksel Cihaz Canlı Kabulü:**
+   - Full `sharedLogic` test sonucu: 186 suite / 2513 test / 0 failure / 0 error / 0 skipped.
+   - Full `sharedUI` test sonucu: 58 suite / 451 test / 0 failure / 0 error / 0 skipped.
+   - Demo paket: `com.feniqo.mobile.demo`
+   - Fiziksel cihaz: Samsung Galaxy A71 / SM-A715F
+   - Proje sahibi 2026-11-13 tarihinde Samsung Galaxy A71 (SM-A715F) fiziksel cihazında güncel Demo APK ile yaptığı incelemede ilk 9 ana hastane ve kalan 10 aranabilir sağlık markasının logolarını kontrol etmiş ve “sorunsuz çalışıyor görünüyor” açık beyanı ile `VISUAL_ACCEPTED` olarak kabul etmiştir.
+   - Kaydet düğmesine basılmamış, işlem/Room mutasyonu üretilmemiştir.
+   - Bu görsel kabul doğrudan ağ trafiğini kanıtlamaz; gizlilik garantisi statik `verifiedLogoKey` + merkezi allowlist/request-factory mimarisinden gelir.
+
+### 5.14 Faz H4-G2-J1 — Eğitim İlk 9 Marka Kapanışı (2026-11-14)
+
+1. **Kapsam ve Katalog Gerçeği:**
+   - `StarterMerchantCatalog.CATALOG_VERSION` v21 (21)'e yükseltilmiş ve ilk 9 marka için tamamlanmıştır.
+   - Toplam merchant sayısı 219'dur (182 uzaktan logolu, 37 güvenli yerel fallback).
+   - `MerchantLogoDomainAllowlist` boyutu 176 doğrulanmış anahtara genişletilmiştir (167 → 176; 9 yeni eğitim domaini eklendi).
+   - 219 markanın tamamında uzak logo bulunduğu iddiasında bulunulmaz; uzak logo anahtarı bulunmayan 37 merchant güvenli yerel kategori ikonu fallback zincirinde kalır.
+
+2. **Eklenen 9 Doğrulanmış Kayıt ve Kanonik Domainler:**
+   - *9 Önerilen Eğitim Markası (Önerilen ve Aranabilir Eşit 9):*
+     - `udemy` → `udemy.com` (Udemy, Inc.)
+     - `coursera` → `coursera.org` (Coursera, Inc.)
+     - `duolingo` → `duolingo.com` (Duolingo, Inc.)
+     - `cambly` → `cambly.com` (Cambly, Inc.)
+     - `kunduz` → `kunduz.com` (Kunduz Technologies / Kunduz Bilgi Teknolojileri)
+     - `tonguc_akademi` → `tongucakademi.com` (Tonguç Akademi / Tonguç Yayınları)
+     - `okulistik` → `okulistik.com` (Okulistik / Ata Yayıncılık)
+     - `morpa_kampus` → `morpakampus.com` (Morpa Kampüs / Morpa Kültür Yayınları)
+     - `raunt` → `raunt.com` (Raunt / Sebit Eğitim ve Bilgi Teknolojileri)
+
+3. **Kimlik, Tanıma Sözleşmeleri, Tema ve Gizlilik Bütünlüğü:**
+   - 9 kaydın tamamında stable merchant ID, kategori ve alias yapıları doğrulanmıştır.
+   - Tonguç Akademi kanonik normalize domain alias'ı: `TONGUCAKADEMI COM` (domain normalizasyonuyla birebir uyumlu; `TONGUC AKADEMI` marka alias'ı da korunmuştur).
+   - Çıplak ve belirsiz ifadeler fail-closed kalır: `KUNDUZ`, `TONGUC`, `MORPA`, `RAUNT` çıplak biçimde eşleştirilmez; yanlış pozitif tanıma engellenir.
+   - Statik `verifiedLogoKey` ve merkezi allowlist sınırı esastır; kullanıcı girdisinden domain veya URL üretilmez (sıfır kullanıcı-metni uzak istek garantisi).
+   - Kullanıcı girdisi kesinlikle Logo.dev CDN'ine gönderilmez.
+   - Logo.dev Community attribution (`https://beratxkeskin.github.io/feniqo-site/`), hotlink ve katı no-cache (`Cache-Control: no-cache, no-store, must-revalidate`) sözleşmeleri değişmemiştir.
+   - Marka Hakları ve Lisans Beyanı: Gösterilen logolar ve ticari markalar münhasıran ilgili marka sahiplerine aittir. Logoların uygulamada yer alması, ticari marka sahipleri ile Feniqo arasında herhangi bir sponsorluk, ortaklık, onay veya ticari bağ bulunduğu anlamına gelmez; yalnızca bilgilendirme ve işlem tanıma amacıyla kanonik kamuya açık web kaynakları üzerinden çözümlenir.
+
+4. **Veri Modeli ve Altyapı:**
+   - Room şema sürümü 24'tür (değişmemiştir).
+   - Supabase/migration değişikliği yoktur; D1 dosyaları (`00c4ffbc3811960fd9a9cf897c5f58bf684c522f`, `0119fe9633ab32cd28bfa6eda3ec32a8610ee349`) birebir korunmuştur.
+
+5. **Doğrulama ve Fiziksel Cihaz Canlı Kabulü:**
+   - Full `sharedLogic` test sonucu: 186 suite / 2519 test / 0 failure / 0 error / 0 skipped.
+   - Full `sharedUI` test sonucu: 58 suite / 451 test / 0 failure / 0 error / 0 skipped.
+   - androidApp unit test: 110 suite / 1028 test (yalnızca daha önce proje sahibince tarihsel test borcu olarak kabul edilmiş 5 Compose UI failure'ı mevcuttur: `ProfileNavigationTest: 3`, `SyncStatusScreenComposeTest: 2`; bu 5 failure J1 kaynaklı değildir, J1 kapsamındaki tüm testler temizdir).
+   - Brandfetch hedefli regresyon: 11/11 PASS.
+   - iOS Simulator ARM64 compile, assembleDebug ve assembleDemo: başarılı (exit 0).
+   - Demo paket: `com.feniqo.mobile.demo`
+   - Fiziksel cihaz: Samsung Galaxy A71 / SM-A715F
+   - Proje sahibi 2026-11-14 tarihinde Samsung Galaxy A71 (SM-A715F) fiziksel cihazında güncel Demo APK ile yaptığı incelemede 9 Eğitim markasının logolarını, öneri sırasını ve arama işlevini kontrol etmiş ve "sorunsuz çalışıyor" açık beyanı ile kabul etmiştir.
+   - Kaydet düğmesine basılmamış, işlem/Room/outbox mutasyonu üretilmemiştir.
+   - Bu görsel kabul doğrudan ağ trafiğini kanıtlamaz; gizlilik garantisi statik `verifiedLogoKey` + merkezi allowlist/request-factory mimarisi ve testlerden gelir.
+   - **Sonraki Adım Notu:** Kalan 18 aranabilir Eğitim merchant'ı Faz H4-G2-J2 kapsamında tamamlanmış ve kapatılmıştır.
+
+### 5.15 Faz H4-G2-J2 — Eğitim Kalan 18 Arama Kaydı ve Çapraz Kitapçı/Abonelik Kapanışı (2026-11-14)
+
+1. **Kapsam ve Katalog Gerçeği:**
+   - `StarterMerchantCatalog.CATALOG_VERSION` v22 (22)'ye yükseltilmiş ve Eğitim kategorisi 27 aranabilir aday ile tamamlanmıştır.
+   - Toplam merchant sayısı 234'tür (197 uzaktan logolu, 37 güvenli yerel fallback).
+   - `MerchantLogoDomainAllowlist` boyutu 191 doğrulanmış anahtara genişletilmiştir (176 → 191; 15 yeni eğitim ve kitapçı domaini eklendi).
+   - 234 markanın tamamında uzak logo bulunduğu iddiasında bulunulmaz; uzak logo anahtarı bulunmayan 37 merchant güvenli yerel kategori ikonu fallback zincirinde kalır.
+
+2. **Eklenen 15 Doğrulanmış Kayıt ve Kanonik Domainler:**
+   - *11 Yeni Doğrudan Eğitim Markası:*
+     - `busuu` → `busuu.com` (Busuu / Chegg)
+     - `preply` → `preply.com` (Preply, Inc.)
+     - `italki` → `italki.com` (italki HK Limited)
+     - `skillshare` → `skillshare.com` (Skillshare, Inc.)
+     - `derslig` → `derslig.com` (Derslig Eğitim Sistemleri)
+     - `benim_hocam` → `benimhocam.com` (Benim Hocam Yayıncılık)
+     - `pegem_akademi` → `pegem.net` (Pegem Akademi / Pegem Eğitim)
+     - `english_time` → `englishtime.com` (English Time Dil Okulları)
+     - `bilge_adam` → `bilgeadam.com` (Bilge Adam Akademi / Bilge Adam Teknoloji)
+     - `wall_street_english` → `wse.com.tr` (Wall Street English Türkiye)
+     - `amerikankultur` → `amerikankultur.org.tr` (Amerikan Kültür Derneği Dil Okulları)
+   - *4 Yeni Shopping Kitapçısı (Çapraz Aranabilir):*
+     - `dr` → `dr.com.tr` (D&R / Turkuvaz Müzik Kitap Mağazacılık Pazarlama A.Ş.)
+     - `kitapyurdu` → `kitapyurdu.com` (Kitapyurdu Yayıncılık ve İletişim A.Ş.)
+     - `bkm_kitap` → `bkmkitap.com` (BKM Kitap Basım Yayın Dağıtım San. Tic. A.Ş.)
+     - `idefix` → `idefix.com` (İdefix / Turkuvaz Dijital)
+   - *3 Yeniden Kullanılan Subscriptions Markası (Eğitim Çapraz Aranabilir):*
+     - `storytel` → `storytel.com` (Storytel Turkey Yayıncılık Hizmetleri A.Ş.)
+     - `audible` → `audible.com` (Audible, Inc. / Amazon)
+     - `linkedin_premium` → `linkedin.com` (LinkedIn Ireland Unlimited Company)
+
+3. **Kimlik, Tanıma Sözleşmeleri, Tema ve Gizlilik Bütünlüğü:**
+   - 15 yeni kaydın tamamında stable merchant ID, varsayılan kategori ve alias yapıları doğrulanmıştır.
+   - D&R Sözleşmesi: Ham alias `"D&R"` korunmuş; ham `"D R"` ve çıplak `"DR"` alias yapılmamıştır. `USER_ENTERED_DESCRIPTION` `"D&R"` → `MATCHED` (%95, logolu); `BANK_DESCRIPTION` `"D&R"` → `LOW_CONFIDENCE` (%65, logosuz). `"DR AHMET KAYA"`, `"UZM DR"`, `"OP DR"` fail-closed kalır.
+   - Bilge Adam Sözleşmesi: Görünen ad `Bilge Adam` olarak kalmıştır; çıplak `"BILGE ADAM"` veya doğal dil ifadeleri fail-closed `NO_MATCH` olarak engellenmiştir.
+   - BKM Kitap: Çıplak `"BKM"` veya `"BKM EXPRESS"` eşleşmez.
+   - Amerikan Kültür: Çıplak `"AMERIKAN"` eşleşmez; `amerikan_hastanesi` negatif alias'ı ile çakışmaz.
+   - Wall Street English: Çıplak `"WSE"` veya `"WALL STREET"` eşleşmez. Kanonik domain `wse.com.tr`'dir.
+   - Pazaryeri İzolasyonu: Amazon, Trendyol ve Hepsiburada Eğitim adayı olamaz (`CategoryMerchantCandidateResolver` fail-closed).
+   - Statik `verifiedLogoKey` ve merkezi allowlist sınırı esastır; kullanıcı girdisinden domain veya URL üretilmez (sıfır kullanıcı-metni uzak istek garantisi).
+   - Logo.dev Community attribution (`https://beratxkeskin.github.io/feniqo-site/`), hotlink ve katı no-cache (`Cache-Control: no-cache, no-store, must-revalidate`) sözleşmeleri değişmemiştir.
+   - Marka Hakları ve Lisans Beyanı: Gösterilen logolar ve ticari markalar münhasıran ilgili marka sahiplerine aittir. Logoların uygulamada yer alması, ticari marka sahipleri ile Feniqo arasında herhangi bir sponsorluk, ortaklık, onay veya ticari bağ bulunduğu anlamına gelmez; yalnızca bilgilendirme ve işlem tanıma amacıyla kanonik kamuya açık web kaynakları üzerinden çözümlenir.
+
+4. **Veri Modeli ve Altyapı:**
+   - Room şema sürümü 24'tür (değişmemiştir).
+   - Supabase/migration değişikliği yoktur; D1 dosyaları (`00c4ffbc3811960fd9a9cf897c5f58bf684c522f`, `0119fe9633ab32cd28bfa6eda3ec32a8610ee349`) birebir korunmuştur.
+
+5. **Doğrulama ve Fiziksel Cihaz Canlı Kabulü:**
+   - Full `sharedLogic` test sonucu: 186 suite / 2526 test / 0 failure / 0 error / 0 skipped (%100 PASS).
+   - Full `sharedUI` test sonucu: 58 suite / 451 test / 0 failure / 0 error / 0 skipped (%100 PASS).
+   - androidApp unit test: 1029 test / 1024 başarılı (yalnızca daha önce proje sahibince tarihsel test borcu olarak kabul edilmiş 5 Compose UI failure'ı mevcuttur: `ProfileNavigationTest: 3`, `SyncStatusScreenComposeTest: 2`). Logo testleri %100 başarılıdır.
+   - iOS Simulator ARM64 compile, assembleDebug ve assembleDemo: başarılı (exit 0).
+   - Localization politikası: 2512 TR / 2512 EN XML kaynak, 4 iOS catalog tam eşleşme (exit 0).
+   - Fresh ktlint kontrolü: J2 kapsamında değiştirilen dosya satırlarında 0 yeni ihlal.
+   - Demo paket: `com.feniqo.mobile.demo`
+   - Fiziksel cihaz: Samsung Galaxy A71 / SM-A715F
+   - Proje sahibi 2026-11-14 tarihinde Samsung Galaxy A71 (SM-A715F) fiziksel cihazında güncel Demo APK ile yaptığı incelemede 15 yeni Eğitim/kitapçı logosunu, 3 çapraz abonelik logosunu, 9 önerilen sırasını, 27 aranabilir adayını, Shopping çapraz adaylarını ve wordmark kalitesini kontrol etmiş ve "sorunsuz görünüyor" açık beyanı ile kabul etmiştir (`VISUAL_ACCEPTED`).
+   - Kaydet düğmesine basılmamış, işlem/Room/outbox mutasyonu üretilmemiştir.
+   - Bu görsel kabul doğrudan ağ trafiğini kanıtlamaz; gizlilik garantisi statik `verifiedLogoKey` + merkezi allowlist/request-factory mimarisi ve testlerden gelir.
+   - **Sonraki Adım:** Faz H4-G2-J2 tamamlandı; sonraki merchant kategorisi bağımsız ön araştırma ve ürün kararıyla belirlenecektir.

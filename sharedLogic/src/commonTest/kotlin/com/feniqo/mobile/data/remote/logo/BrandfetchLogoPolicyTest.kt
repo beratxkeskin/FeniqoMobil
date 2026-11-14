@@ -75,14 +75,14 @@ class BrandfetchLogoPolicyTest {
 
     @Test
     fun allowlist_sizeAndKeysMatchVerifiedCatalog() {
-        assertEquals(141, BrandfetchDomainAllowlist.size())
+        assertEquals(191, BrandfetchDomainAllowlist.size())
         assertEquals(expectedAllowlist.keys, BrandfetchDomainAllowlist.allowlistKeys())
     }
 
     @Test
     fun starterCatalog_everyNonNullVerifiedLogoKey_resolvesInAllowlist() {
         val nonNullMerchants = StarterMerchantCatalog.merchants.filter { it.verifiedLogoKey != null }
-        assertEquals(147, nonNullMerchants.size, "Yalnızca doğrulanmış 147 merchant logo anahtarı taşımalı")
+        assertEquals(197, nonNullMerchants.size, "Yalnızca doğrulanmış 197 merchant logo anahtarı taşımalı")
 
         for (merchant in nonNullMerchants) {
             val resolvedDomain = BrandfetchDomainAllowlist.resolveDomain(merchant.verifiedLogoKey)
@@ -236,6 +236,57 @@ class BrandfetchLogoPolicyTest {
             "ubisoft_store" to "ubisoft.com",
             "cinemarine" to "cinemarine.com.tr",
             "vialand" to "vialand.com",
+            "apsiyon" to "apsiyon.com",
+            "yonetimcell" to "yonetimcell.com",
+            "armut" to "armut.com",
+            "senyonet" to "senyonet.net",
+            "mrusta" to "mrusta.com.tr",
+            "pronet" to "pronet.com.tr",
+            "kale_alarm" to "kalealarm.com.tr",
+            "acibadem" to "acibadem.com.tr",
+            "memorial" to "memorial.com.tr",
+            "medical_park" to "medicalpark.com.tr",
+            "liv_hospital" to "livhospital.com",
+            "medicana" to "medicana.com.tr",
+            "florence_nightingale" to "florence.com.tr",
+            "anadolu_saglik" to "anadolusaglik.org",
+            "amerikan_hastanesi" to "amerikanhastanesi.org",
+            "dunyagoz" to "dunyagoz.com",
+            "medipol" to "medipol.com.tr",
+            "biruni_hastanesi" to "birunihastanesi.com.tr",
+            "guven_hastanesi" to "guven.com.tr",
+            "lokman_hekim" to "lokmanhekim.com.tr",
+            "baskent_hastanesi" to "baskenthastaneleri.com",
+            "synevo" to "synevo.com.tr",
+            "duzen_laboratuvari" to "duzen.com.tr",
+            "dentgroup" to "dentgroup.com.tr",
+            "hospitadent" to "hospitadent.com",
+            "atasun_optik" to "atasunoptik.com.tr",
+            // Eğitim / Education (H4-G2-J1)
+            "udemy" to "udemy.com",
+            "coursera" to "coursera.org",
+            "duolingo" to "duolingo.com",
+            "cambly" to "cambly.com",
+            "kunduz" to "kunduz.com",
+            "tonguc_akademi" to "tongucakademi.com",
+            "okulistik" to "okulistik.com",
+            "morpa_kampus" to "morpakampus.com",
+            "raunt" to "raunt.com",
+            "busuu" to "busuu.com",
+            "preply" to "preply.com",
+            "italki" to "italki.com",
+            "skillshare" to "skillshare.com",
+            "derslig" to "derslig.com",
+            "benim_hocam" to "benimhocam.com",
+            "pegem_akademi" to "pegem.net",
+            "english_time" to "englishtime.com",
+            "bilge_adam" to "bilgeadam.com",
+            "wall_street_english" to "wse.com.tr",
+            "amerikankultur" to "amerikankultur.org.tr",
+            "dr" to "dr.com.tr",
+            "kitapyurdu" to "kitapyurdu.com",
+            "bkm_kitap" to "bkmkitap.com",
+            "idefix" to "idefix.com",
         )
 
     // -------------------------------------------------------------

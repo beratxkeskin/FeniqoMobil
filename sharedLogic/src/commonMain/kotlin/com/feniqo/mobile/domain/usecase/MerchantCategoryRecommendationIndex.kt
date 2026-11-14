@@ -14,7 +14,7 @@ import com.feniqo.mobile.domain.model.TransactionType
  * - Kategori eşleşmesi localized adla değil, kararlı [CategoryIcon] semantik anahtarıyla yapılır.
  * - Yalnız [ExpenseCategoryVisualCatalog] içindeki kararlı anahtarlar kabul edilir.
  * - Her merchant ID [StarterMerchantCatalog.merchants] içinde bulunmalıdır; bilinmeyen ID fail-closed reddedilir.
- * - Öneriler [MerchantCategoryRecommendationProfile.MAX_SUGGESTED_COUNT] (8) ile sınırlıdır ve aranabilir listenin alt kümesidir.
+ * - Öneriler [MerchantCategoryRecommendationProfile.MAX_SUGGESTED_COUNT] (9) ile sınırlıdır ve aranabilir listenin alt kümesidir.
  * - Mükerrer ID içeremez.
  * - Aynı merchant birden fazla kategori profilinde bulunabilir (örn. travel kayıtlarının transportation'da yer alması).
  * - Aynı girdi için her zaman deterministik sıra üretilir.
@@ -121,6 +121,10 @@ object MerchantCategoryRecommendationIndex {
                         "bauhaus",
                         "vatan_bilgisayar",
                         "ebebek",
+                        "dr",
+                        "kitapyurdu",
+                        "bkm_kitap",
+                        "idefix",
                     ),
             ),
             profile(
@@ -339,10 +343,114 @@ object MerchantCategoryRecommendationIndex {
                         "vialand",
                     ),
             ),
+            profile(
+                key = "housing",
+                suggested =
+                    listOf(
+                        "apsiyon",
+                        "yonetimcell",
+                        "armut",
+                        "senyonet",
+                        "mrusta",
+                        "pronet",
+                        "kale_alarm",
+                    ),
+                searchable =
+                    listOf(
+                        "apsiyon",
+                        "yonetimcell",
+                        "armut",
+                        "senyonet",
+                        "mrusta",
+                        "pronet",
+                        "kale_alarm",
+                        "koctas",
+                        "bauhaus",
+                    ),
+            ),
             // Henüz uygun merchant bulunmayan kategoriler açıkça boş profil taşır
-            emptyProfile("housing"),
-            emptyProfile("healthcare"),
-            emptyProfile("education"),
+            profile(
+                key = "healthcare",
+                suggested =
+                    listOf(
+                        "acibadem",
+                        "memorial",
+                        "medical_park",
+                        "liv_hospital",
+                        "medicana",
+                        "florence_nightingale",
+                        "anadolu_saglik",
+                        "amerikan_hastanesi",
+                        "dunyagoz",
+                    ),
+                searchable =
+                    listOf(
+                        "acibadem",
+                        "memorial",
+                        "medical_park",
+                        "liv_hospital",
+                        "medicana",
+                        "florence_nightingale",
+                        "anadolu_saglik",
+                        "amerikan_hastanesi",
+                        "dunyagoz",
+                        "medipol",
+                        "biruni_hastanesi",
+                        "guven_hastanesi",
+                        "lokman_hekim",
+                        "baskent_hastanesi",
+                        "synevo",
+                        "duzen_laboratuvari",
+                        "dentgroup",
+                        "hospitadent",
+                        "atasun_optik",
+                    ),
+            ),
+            profile(
+                key = "education",
+                suggested =
+                    listOf(
+                        "udemy",
+                        "coursera",
+                        "duolingo",
+                        "cambly",
+                        "kunduz",
+                        "tonguc_akademi",
+                        "okulistik",
+                        "morpa_kampus",
+                        "raunt",
+                    ),
+                searchable =
+                    listOf(
+                        "udemy",
+                        "coursera",
+                        "duolingo",
+                        "cambly",
+                        "kunduz",
+                        "tonguc_akademi",
+                        "okulistik",
+                        "morpa_kampus",
+                        "raunt",
+                        "busuu",
+                        "preply",
+                        "italki",
+                        "skillshare",
+                        "derslig",
+                        "benim_hocam",
+                        "pegem_akademi",
+                        "english_time",
+                        "bilge_adam",
+                        "wall_street_english",
+                        "amerikankultur",
+                        "dr",
+                        "kitapyurdu",
+                        "bkm_kitap",
+                        "idefix",
+                        "storytel",
+                        "audible",
+                        "linkedin_premium",
+                    ),
+            ),
             emptyProfile("family_pets"),
             emptyProfile("financial_expenses"),
             emptyProfile("taxes_fees"),

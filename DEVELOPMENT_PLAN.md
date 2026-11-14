@@ -8,6 +8,30 @@
 
 ## Güncel durum
 
+- **Merchant Logo Genişletmesi H4-G2-J2 — Eğitim / Education Kalan 18 Arama Kaydı ve Çapraz Kitapçı/Abonelik Entegrasyonu (Teknik ve Fiziksel Cihaz Manuel Kabulü Tamamlandı — 2026-11-14):**
+  - **Durum:** Eğitim kategorisinde 15 yeni merchant (11 doğrudan eğitim, 4 kitapçı) eklenmiş; 3 mevcut abonelik (`storytel`, `audible`, `linkedin_premium`) özgün Subscriptions kategori sahipliği korunarak tek katalog kaydıyla Eğitim arama adaylarına dahil edilmiştir. Eğitim öneri profili 9 suggested / 27 searchable olarak genişletilmiştir. 4 kitapçı (`dr`, `kitapyurdu`, `bkm_kitap`, `idefix`) Shopping ve Education profillerinde yalnız searchable yapılmıştır (Shopping profili: 8 suggested / 30 searchable). Samsung Galaxy A71 (SM-A715F) fiziksel cihazında güncel Demo APK (`com.feniqo.mobile.demo`) ile proje sahibi tarafından tam manuel görsel kabul verilmiş (`VISUAL_ACCEPTED`, "sorunsuz görünüyor"); veri mutasyonu üretilmemiştir.
+  - **Güncel katalog ve dağılım:** `StarterMerchantCatalog.CATALOG_VERSION = 22` (v22); toplam 234 merchant (197 uzaktan logolu, 37 güvenli yerel fallback), `MerchantLogoDomainAllowlist` boyutu 191 doğrulanmış anahtardır (176 → 191; 15 yeni eğitim ve kitapçı domaini).
+  - **Mimari ve veri bütünlüğü:** Room şema sürümü (v24), Supabase sözleşmeleri, D1 hash'leri (`00c4ffbc3811960fd9a9cf897c5f58bf684c522f`, `0119fe9633ab32cd28bfa6eda3ec32a8610ee349`) korunmuştur. Sıfır kullanıcı-metni uzak istek garantisi mimariden ve testlerden gelir.
+  - **Sıradaki adım:** Faz H4-G2-J2 tamamlandı; sonraki merchant kategorisi bağımsız ön araştırma ve ürün kararıyla belirlenecektir.
+  - **Ayrıntılı kaynaklar:** Sıralama kuralları, davranış ve test kanıtları için bkz. [MERCHANT_TANIMA_VE_LOGO_UYGULAMA_PLANI.md](docs/MERCHANT_TANIMA_VE_LOGO_UYGULAMA_PLANI.md); kanonik domain envanteri için bkz. [MERCHANT_LOGO_KAYNAK_VE_IZIN_ENVANTERI.md](docs/MERCHANT_LOGO_KAYNAK_VE_IZIN_ENVANTERI.md).
+
+- **Merchant Logo Genişletmesi H4-G2-J1 — Eğitim / Education İlk 9 Marka (Teknik ve Fiziksel Cihaz Manuel Kabulü Tamamlandı — 2026-11-14):**
+  - **Durum:** Eğitim kategorisi ilk 9 marka teknik implementasyonu ve Samsung Galaxy A71 (SM-A715F) fiziksel cihazında proje sahibi görsel kabulü ("sorunsuz çalışıyor") tamamlandı; J1 öneri ve arama profili 9 suggested / 9 searchable olarak doğrulandı.
+  - **Güncel katalog ve dağılım:** `StarterMerchantCatalog.CATALOG_VERSION = 21` (v21); toplam 219 merchant (182 uzaktan logolu, 37 güvenli yerel fallback), `MerchantLogoDomainAllowlist` boyutu 176 doğrulanmış anahtardır (167 → 176; 9 yeni eğitim domaini).
+  - **Sonraki adım:** Faz H4-G2-J2 ile 18 aranabilir aday tamamlanmış ve kapatılmıştır.
+  - **Ayrıntılı kaynaklar:** Sıralama kuralları, davranış ve test kanıtları için bkz. [MERCHANT_TANIMA_VE_LOGO_UYGULAMA_PLANI.md](docs/MERCHANT_TANIMA_VE_LOGO_UYGULAMA_PLANI.md); kanonik domain envanteri için bkz. [MERCHANT_LOGO_KAYNAK_VE_IZIN_ENVANTERI.md](docs/MERCHANT_LOGO_KAYNAK_VE_IZIN_ENVANTERI.md).
+
+- **Merchant Logo Genişletmesi H4-G2-HLT — Sağlık / Healthcare (Teknik ve Fiziksel Cihaz Manuel Kabulü Tamamlandı — 2026-11-13):**
+  - **Durum:** Sağlık kategorisi için teknik uygulama ve Samsung Galaxy A71 (SM-A715F) fiziksel cihazında proje sahibi görsel kabulü (`VISUAL_ACCEPTED`) tamamlandı; profil 9 suggested / 19 searchable olarak doğrulandı.
+  - **Sıradaki adım:** Bir sonraki merchant kategorisi henüz seçilmedi/başlatılmadı; mevcut ana checkbox'lar korunmuştur.
+  - **Ayrıntılı kaynaklar:** Sıralama kuralları, davranış ve test kanıtları için bkz. [MERCHANT_TANIMA_VE_LOGO_UYGULAMA_PLANI.md](docs/MERCHANT_TANIMA_VE_LOGO_UYGULAMA_PLANI.md); kanonik domain envanteri için bkz. [MERCHANT_LOGO_KAYNAK_VE_IZIN_ENVANTERI.md](docs/MERCHANT_LOGO_KAYNAK_VE_IZIN_ENVANTERI.md).
+
+- **Merchant Logo Genişletmesi H4-G2-H — Ev & Kira / Housing (Teknik ve Fiziksel Cihaz Manuel Kabulü Tamamlandı — 2026-11-13):**
+  - **Güncel katalog ve dağılım:** `StarterMerchantCatalog` sürümü v19'a yükseltildi (`CATALOG_VERSION = 19`); toplam 191 merchant (154 doğrulanmış uzak logolu [140 doğrudan + 14 çatı/paylaşılan logo], 37 güvenli yerel fallback), `MerchantLogoDomainAllowlist` boyutu 148 doğrulanmış anahtardır.
+  - **Housing sonucu ve profil:** Ev & Kira kategorisinde 7 yeni merchant (`apsiyon`, `yonetimcell`, `armut`, `senyonet`, `mrusta`, `pronet`, `kale_alarm`) uzak logoyla eklendi. Öneri profili: 7 suggested (`apsiyon`, `yonetimcell`, `armut`, `senyonet`, `mrusta`, `pronet`, `kale_alarm`), 9 searchable (7 housing + `koctas`, `bauhaus`). Samsung Galaxy A71 (SM-A715F) fiziksel cihazında güncel Demo APK (`com.feniqo.mobile.demo`) ile proje sahibi 9'lu görsel kabulünde PASS olarak onaylandı (veri mutasyonu yoktur).
+  - **Mimari ve veri bütünlüğü:** Room şema sürümü (v24), Supabase sözleşmeleri, D1 hash'leri (`00c4ffbc3811960fd9a9cf897c5f58bf684c522f`, `0119fe9633ab32cd28bfa6eda3ec32a8610ee349`) ve sıfır kullanıcı-metni uzak istek/allowlist gizlilik sınırı korunmuştur. Ayrıntılı sıralama sözleşmesi ve kanonik domain envanteri için bkz. [MERCHANT_TANIMA_VE_LOGO_UYGULAMA_PLANI.md](docs/MERCHANT_TANIMA_VE_LOGO_UYGULAMA_PLANI.md) ve [MERCHANT_LOGO_KAYNAK_VE_IZIN_ENVANTERI.md](docs/MERCHANT_LOGO_KAYNAK_VE_IZIN_ENVANTERI.md).
+  - **Sıradaki adım:** Bir sonraki merchant kategorisi henüz başlatılmamıştır; mevcut ana checkbox'lar korunmuştur.
+
 - **Merchant Logo Allowlist Genişletmesi H4-G2-ENT — Eğlence Markaları ve Oyun Mağazaları (Teknik ve Fiziksel Cihaz Manuel Kabulü Tamamlandı — 2026-11-11):**
   - **Güncel katalog ve dağılım:** `StarterMerchantCatalog` sürümü v18'e yükseltildi (`CATALOG_VERSION = 18`); toplam 184 merchant (147 doğrulanmış uzak logolu, 37 güvenli yerel fallback), `MerchantLogoDomainAllowlist` boyutu 141 doğrulanmış anahtardır.
   - **Entertainment sonucu:** Entertainment kategorisindeki 17/17 merchant doğrulanmış gerçek uzak logoya kavuştu; Samsung Galaxy A71 (SM-A715F) fiziksel cihazında güncel Demo APK (`com.feniqo.mobile.demo`) ile proje sahibi görsel kabulünde 17/17 PASS olarak onaylandı (veri mutasyonu yoktur).

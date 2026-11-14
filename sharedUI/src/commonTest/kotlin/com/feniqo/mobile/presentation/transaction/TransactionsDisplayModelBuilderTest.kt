@@ -621,7 +621,7 @@ class TransactionsDisplayModelBuilderTest {
         val istanbulkart = StarterMerchantCatalog.merchants.first { it.id == "istanbulkart" }
         assertEquals("İstanbulkart", istanbulkart.displayName)
         assertEquals("istanbulkart", istanbulkart.verifiedLogoKey)
-        assertEquals(18, istanbulkart.catalogVersion)
+        assertEquals(22, istanbulkart.catalogVersion)
 
         val info =
             TransactionMerchantInfo(
@@ -646,7 +646,7 @@ class TransactionsDisplayModelBuilderTest {
         val ajet = StarterMerchantCatalog.merchants.first { it.id == "ajet" }
         assertEquals("AJet", ajet.displayName)
         assertEquals("ajet", ajet.verifiedLogoKey)
-        assertEquals(18, ajet.catalogVersion)
+        assertEquals(22, ajet.catalogVersion)
 
         val info =
             TransactionMerchantInfo(
@@ -671,7 +671,7 @@ class TransactionsDisplayModelBuilderTest {
         val kamilKoc = StarterMerchantCatalog.merchants.first { it.id == "kamil_koc" }
         assertEquals("Kâmil Koç", kamilKoc.displayName)
         assertNull(kamilKoc.verifiedLogoKey)
-        assertEquals(18, kamilKoc.catalogVersion)
+        assertEquals(22, kamilKoc.catalogVersion)
 
         val info =
             TransactionMerchantInfo(
@@ -781,7 +781,7 @@ class TransactionsDisplayModelBuilderTest {
         val maxMerchant = StarterMerchantCatalog.merchants.first { it.id == "max" }
         assertEquals("HBO Max", maxMerchant.displayName)
         assertEquals("max", maxMerchant.verifiedLogoKey)
-        assertEquals(18, maxMerchant.catalogVersion)
+        assertEquals(22, maxMerchant.catalogVersion)
 
         val historicalInfo =
             TransactionMerchantInfo(
@@ -883,8 +883,8 @@ class TransactionsDisplayModelBuilderTest {
         assertEquals("youtube", merchantYt.verifiedLogoKey)
         assertTrue(merchantYt.canShowMerchantLogo)
 
-        // 3. v1..v17 tarihsel attribution'ın güncel v18 katalogla başarıyla çözümlendiğini doğrula
-        for (histVersion in 1..17) {
+        // 3. v1..v20 tarihsel attribution'ın güncel v21 katalogla başarıyla çözümlendiğini doğrula
+        for (histVersion in 1..20) {
             val histTrx =
                 createTrx(
                     "t-hist-$histVersion",
@@ -897,25 +897,25 @@ class TransactionsDisplayModelBuilderTest {
                         ),
                 )
             val histItem = TransactionsDisplayModelBuilder.buildItem(histTrx, subCat, catalog = StarterMerchantCatalog.merchants)
-            assertNotNull(histItem.merchant, "Tarihsel v$histVersion işlemi v18 katalogla çözümlenmelidir")
+            assertNotNull(histItem.merchant, "Tarihsel v$histVersion işlemi v21 katalogla çözümlenmelidir")
             assertEquals("Amazon Prime", histItem.merchant?.displayName)
             assertEquals("amazon", histItem.merchant?.verifiedLogoKey)
         }
 
-        // 4. Gelecekteki v19 attribution'ın fail-closed kaldığını (null döndüğünü) doğrula
+        // 4. Gelecekteki v23 attribution'ın fail-closed kaldığını (null döndüğünü) doğrula
         val futureTrx =
             createTrx(
-                "t-future-19",
+                "t-future-23",
                 merchantInfo =
                     TransactionMerchantInfo(
                         merchantId = EntityId("amazon_prime"),
                         matchSource = MerchantMatchSource.BRAND_AND_SERVICE,
                         confidence = 90,
-                        catalogVersion = 19,
+                        catalogVersion = 23,
                     ),
             )
         val futureItem = TransactionsDisplayModelBuilder.buildItem(futureTrx, subCat, catalog = StarterMerchantCatalog.merchants)
-        assertNull(futureItem.merchant, "Gelecekteki v19 attribution fail-closed kalarak null dönmelidir")
+        assertNull(futureItem.merchant, "Gelecekteki v23 attribution fail-closed kalarak null dönmelidir")
     }
 
     @Test
@@ -1121,6 +1121,41 @@ class TransactionsDisplayModelBuilderTest {
             assertEquals(MerchantLogoVisualKind.CATEGORY_ICON, fallbackDecision.kind)
             assertNotNull(fallbackDecision.iconVector)
             assertNull(fallbackDecision.logoKey)
+        }
+    }
+
+    @Test
+    fun buildItem_realStarterMerchant_housingSevenMerchants_resolveVerifiedLogoKeysAndPreserveIdentity() {
+        val houseCat = cat1.copy(icon = CategoryIcon("housing"))
+        val housingKeys =
+            listOf(
+                "apsiyon" to "apsiyon",
+                "yonetimcell" to "yonetimcell",
+                "armut" to "armut",
+                "senyonet" to "senyonet",
+                "mrusta" to "mrusta",
+                "pronet" to "pronet",
+                "kale_alarm" to "kale_alarm",
+            )
+
+        for ((id, expectedLogoKey) in housingKeys) {
+            val trx =
+                createTrx(
+                    "t-house-$id",
+                    merchantInfo =
+                        TransactionMerchantInfo(
+                            merchantId = EntityId(id),
+                            matchSource = MerchantMatchSource.EXACT_ALIAS,
+                            confidence = 95,
+                            catalogVersion = 19,
+                        ),
+                )
+            val item = TransactionsDisplayModelBuilder.buildItem(trx, houseCat, catalog = StarterMerchantCatalog.merchants)
+            val merchant = item.merchant
+            assertNotNull(merchant, "Housing merchant '$id' çözümlenmelidir")
+            assertEquals(id, merchant.merchantId.value)
+            assertEquals(expectedLogoKey, merchant.verifiedLogoKey)
+            assertTrue(merchant.canShowMerchantLogo)
         }
     }
 

@@ -3307,8 +3307,8 @@ class TransactionFormViewModelTest {
                 )
             assertEquals(expectedSuggested, state.merchantSuggestedCandidates.map { it.id.value })
 
-            // 26 searchable candidates
-            assertEquals(26, state.merchantSearchableCandidates.size)
+            // 30 searchable candidates (including 4 bookstores)
+            assertEquals(30, state.merchantSearchableCandidates.size)
             assertTrue(state.merchantSearchableCandidates.any { it.id == EntityId("vatan_bilgisayar") })
 
             // vatan_bilgisayar is searchable-only (not in suggested)

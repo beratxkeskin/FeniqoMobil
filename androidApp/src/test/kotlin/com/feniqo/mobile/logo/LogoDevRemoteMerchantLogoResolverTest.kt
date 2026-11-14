@@ -582,4 +582,84 @@ class LogoDevRemoteMerchantLogoResolverTest {
             )
         }
     }
+
+    @Test
+    fun educationNineAndSearchableFifteenMerchants_resolveToExpectedCanonicalDomainsAndLogoDevUrls() {
+        val resolver = LogoDevRemoteMerchantLogoResolver(config = validSyntheticConfig)
+
+        val approvedEducationAndBookstores =
+            mapOf(
+                "udemy" to "udemy.com",
+                "coursera" to "coursera.org",
+                "duolingo" to "duolingo.com",
+                "cambly" to "cambly.com",
+                "kunduz" to "kunduz.com",
+                "tonguc_akademi" to "tongucakademi.com",
+                "okulistik" to "okulistik.com",
+                "morpa_kampus" to "morpakampus.com",
+                "raunt" to "raunt.com",
+                "busuu" to "busuu.com",
+                "preply" to "preply.com",
+                "italki" to "italki.com",
+                "skillshare" to "skillshare.com",
+                "derslig" to "derslig.com",
+                "benim_hocam" to "benimhocam.com",
+                "pegem_akademi" to "pegem.net",
+                "english_time" to "englishtime.com",
+                "bilge_adam" to "bilgeadam.com",
+                "wall_street_english" to "wse.com.tr",
+                "amerikankultur" to "amerikankultur.org.tr",
+                "dr" to "dr.com.tr",
+                "kitapyurdu" to "kitapyurdu.com",
+                "bkm_kitap" to "bkmkitap.com",
+                "idefix" to "idefix.com",
+            )
+
+        for ((key, expectedDomain) in approvedEducationAndBookstores) {
+            val request = resolver.resolve(key)
+            assertNotNull("Approved key '$key' için request null olamaz", request)
+            requireNotNull(request)
+
+            val expectedUrl =
+                "https://img.logo.dev/$expectedDomain" +
+                    "?token=pk_test_sample_valid_key_12345&size=128&format=png&theme=light&fallback=404"
+            assertEquals(expectedUrl, request.url)
+            assertTrue("HTTPS protokolü kullanılmalıdır", request.url.startsWith("https://img.logo.dev/"))
+            assertTrue("theme=light taşımalıdır", request.url.contains("theme=light"))
+            assertTrue("fallback=404 taşımalıdır", request.url.contains("fallback=404"))
+            assertEquals(RemoteMerchantLogoCachePolicy.PROVIDER_HEADERS_NO_LOCAL_STORAGE, request.cachePolicy)
+            assertEquals(RemoteMerchantLogoSurfacePolicy.LIGHT_NEUTRAL, request.surfacePolicy)
+            assertEquals(RemoteMerchantLogoContentScalePolicy.DEFAULT, request.contentScalePolicy)
+            assertTrue("Header sahte bilgi içermez", request.headers.isEmpty())
+        }
+
+        // Benzer / yanlış domainler fail-closed
+        val unselectedDomains =
+            listOf(
+                "busuu.net",
+                "preply.net",
+                "italki.net",
+                "skillshare.net",
+                "derslig.net",
+                "benimhocam.net",
+                "pegem.org",
+                "englishtime.net",
+                "bilgeadam.net",
+                "wse.net",
+                "amerikankultur.com",
+                "dr.com",
+                "kitapyurdu.net",
+                "bkmkitap.net",
+                "idefix.net",
+                "https://dr.com.tr",
+                "dr_magaza",
+                "bilge_adam_akademi",
+            )
+        for (unselected in unselectedDomains) {
+            assertNull(
+                "Seçilmemiş domain veya raw string fail-closed null dönmelidir: $unselected",
+                resolver.resolve(unselected),
+            )
+        }
+    }
 }

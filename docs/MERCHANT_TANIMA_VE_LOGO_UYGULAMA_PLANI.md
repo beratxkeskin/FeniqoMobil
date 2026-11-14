@@ -780,7 +780,117 @@ kullanır. URL'ler transaction, kullanıcı veya workspace verisi içeremez.
 - **Ayrıntılı Envanter:** 17 markanın kanonik domainleri, allowlist kayıtları ve ayrıntılı teknik dökümü için bkz. `docs/MERCHANT_LOGO_KAYNAK_VE_IZIN_ENVANTERI.md` Bölüm 5.11.
 - **Veri ve Mimari Bütünlüğü:** Room şema sürümü (v24), Supabase şemaları/migration'ları ve D1 hash'leri (`00c4ffbc3811960fd9a9cf897c5f58bf684c522f`, `0119fe9633ab32cd28bfa6eda3ec32a8610ee349`) korunmuştur. Form üzerinde işlem kaydedilmemiş, veritabanı/outbox mutasyonu üretilmemiştir. Ekrandaki başarılı görünüm doğrudan ağ trafiğini kanıtlamaz; sıfır kullanıcı-metni uzak istek garantisi mimariden ve testlerden gelir.
 
-## 15. Genel doğrulama ve teslim koşulları
+#### 15. H4-G2-H Ev & Kira / Housing Logo Genişletmesi Kapanışı (2026-11-13)
+- **Teknik ve Canlı Cihaz Kabulü:** 7 yeni ev ve kira markası (`apsiyon`, `yonetimcell`, `armut`, `senyonet`, `mrusta`, `pronet`, `kale_alarm`) doğrulanmış uzak logo desteğine bağlanmış, güncel Demo APK (`com.feniqo.mobile.demo`) ile Samsung Galaxy A71 (SM-A715F) fiziksel cihazında proje sahibi tarafından görsel olarak denetlenmiş ve 7 yeni housing logosu ile 2 çapraz regresyon logosu (`koctas`, `bauhaus`) sorunsuz çalışarak 9/9 eksiksiz PASS ile kabul edilmiştir.
+- **Katalog Sürümü ve Metrikler:** `StarterMerchantCatalog.CATALOG_VERSION = 19` (v19)'a yükseltilmiştir. Toplam merchant sayısı 191 (154 uzak logolu [140 doğrudan + 14 çatı/paylaşılan logo], 37 fallback), allowlist domain sayısı 148'dir (141 → 148; 7 yeni housing domaini eklendi). 191 markanın tamamında uzak logo bulunduğu iddiasında bulunulmaz; uzak logo anahtarı bulunmayan 37 merchant güvenli yerel kategori ikonu fallback zincirinde kalır.
+- **Eklenen 7 Yeni Doğrulanmış Kayıt ve Kanonik Domainler:**
+  1. `apsiyon` → `apsiyon.com` (Site/Apartman Yönetim Platformu)
+  2. `yonetimcell` → `yonetimcell.com` (Site/Apartman Yönetim Yazılımı)
+  3. `armut` → `armut.com` (Hizmet/Tadilat Platformu)
+  4. `senyonet` → `senyonet.net` (Site/Tesis Yönetim Yazılımı)
+  5. `mrusta` → `mrusta.com.tr` (Ev Hizmetleri/Usta Platformu)
+  6. `pronet` → `pronet.com.tr` (Güvenlik & Alarm Sistemleri)
+  7. `kale_alarm` → `kalealarm.com.tr` (Güvenlik & Alarm Sistemleri)
+- **Önerilen ve Aranabilir Sıra Sözleşmesi (Housing Profili):**
+  - **Önerilen Sıra (7 Merchant):** `apsiyon`, `yonetimcell`, `armut`, `senyonet`, `mrusta`, `pronet`, `kale_alarm`.
+  - **Aranabilir Sıra (9 Merchant):** Yukarıdaki 7 kayıt + `koctas` (`koctas.com.tr`), `bauhaus` (`bauhaus.com.tr`).
+  Koçtaş ve Bauhaus için mükerrer kayıt açılmamış; mevcut kararlı shopping kimlikleri çapraz kategori aramasına bağlanarak yeniden kullanılmıştır.
+- **Hukuki Alacaklı ve Payee Ayrımı (Alias Güvenliği):**
+  - Apsiyon, Yönetimcell ve Senyonet nihai hukuki alacaklı değildir; bunlar markalı ödeme/yönetim yazılım kanallarıdır. Generic açıklamalar (örn. "Kira", "Site Aidatı", "Apartman Aidatı", "Ev Sahibi", "Elektrikçi Usta") kesinlikle bu platformlarla eşleştirilmez; fail-closed kuralı işletilerek serbest işlem adı davranışı korunur.
+  - Ustabilir ve Bi’Usta, hizmet ve ödeme ilişkisinin kullanıcı ile bağımsız usta arasında kaldığı aracı platformlar oldukları için KnownMerchant yapılmamıştır.
+  - Mutlubiev, güncel Türkiye tüzel kişiliği, güncel payee kimliği ve Türk marka/domain yaşam döngüsü resmî kaynaklarla doğrulanamadığı için `PRODUCT_DECISION_BLOCKED` olarak bu dilimin dışında tutulmuştur.
+  - Ev sahibi kişi adları ile apartman/site özel adları global KnownMerchant değildir; UseTransactionName davranışı korunur.
+  - Normalizasyon çakışması önleme: `TurkishDescriptionNormalizer` noktayı boşluğa dönüştürdüğünden mükerrerlik oluşturabilecek alias'lar ayıklanmış (`MR USTA` normalize tekilliği), alias kalitesi korunmuştur.
+- **Atomiklik ve DAO Entegrasyon Testi:**
+  - `TransactionMerchantCreateAtomicDaoTest` içinde `knownMerchant_apsiyon_housingCategory_success_writesTwoEntitiesAndTwoOutboxesAtomically` testi pozitif başarı yolunda transaction entity, user merchant verification ve iki V2 outbox kaydının aynı DAO transaction çağrısı sonucunda birlikte oluştuğunu doğrular.
+- **Doğrulama Sonuçları:**
+  - Housing hedefli 6 test sınıfı: 238 test (%100 PASS).
+  - Full `sharedLogic`: 186 suite, 2497 test, 0 failure, 0 error, 0 skipped.
+  - Full `sharedUI`: 58 suite, 451 test, 0 failure, 0 error, 0 skipped.
+  - iOS Simulator ARM64 ortak kod derlemesi: exit 0.
+  - Android assembleDebug ve assembleDemo derlemeleri: exit 0.
+  - CI localization politikası: 2512 TR / 2512 EN katalog eşitliği, exit 0.
+- **Veri ve Mimari Bütünlüğü:** Room şema sürümü (v24), Supabase şemaları/migration'ları ve D1 hash'leri (`00c4ffbc3811960fd9a9cf897c5f58bf684c522f`, `0119fe9633ab32cd28bfa6eda3ec32a8610ee349`) korunmuştur. Form üzerinde işlem kaydedilmemiş, veritabanı/outbox mutasyonu üretilmemiştir. Ekrandaki başarılı görünüm doğrudan ağ trafiğini kanıtlamaz; sıfır kullanıcı-metni uzak istek garantisi mimariden ve testlerden gelir.
+
+#### 16. H4-G2-HLT Sağlık / Healthcare Logo Genişletmesi Kapanışı (2026-11-13)
+- **Teknik ve Canlı Cihaz Kabulü:** Sağlık kategorisi için ilk 9 ana hastane markası (`acibadem`, `memorial`, `medical_park`, `liv_hospital`, `medicana`, `florence_nightingale`, `anadolu_saglik`, `amerikan_hastanesi`, `dunyagoz`) ve kalan 10 aranabilir kayıt (`medipol`, `biruni_hastanesi`, `guven_hastanesi`, `lokman_hekim`, `baskent_hastanesi`, `synevo`, `duzen_laboratuvari`, `dentgroup`, `hospitadent`, `atasun_optik`) doğrulanmış uzak logo desteğine bağlanmış, güncel Demo APK (`com.feniqo.mobile.demo`) ile Samsung Galaxy A71 (SM-A715F) fiziksel cihazında proje sahibi tarafından görsel olarak denetlenmiş ve proje sahibinin açık beyanı (“sorunsuz çalışıyor görünüyor”) doğrultusunda `VISUAL_ACCEPTED` olarak kabul edilmiştir.
+- **Katalog Sürümü ve Metrikler:** `StarterMerchantCatalog.CATALOG_VERSION = 20` (v20) korunmuştur. Toplam merchant sayısı 210 (173 uzak logolu, 37 fallback), allowlist domain sayısı 167'dir (148 → 167; 19 yeni sağlık/optik domaini). 210 markanın tamamında uzak logo bulunduğu iddiasında bulunulmaz; uzak logo anahtarı bulunmayan 37 merchant güvenli yerel kategori ikonu fallback zincirinde kalır.
+- **Eklenen 19 Doğrulanmış Kayıt ve Kanonik Domain Yönlendirmesi:**
+  - İlk 9 Ana Hastane (Önerilenler): `acibadem`, `memorial`, `medical_park`, `liv_hospital`, `medicana`, `florence_nightingale`, `anadolu_saglik`, `amerikan_hastanesi`, `dunyagoz`.
+  - Kalan 10 Aranabilir Kayıt: `medipol`, `biruni_hastanesi`, `guven_hastanesi`, `lokman_hekim`, `baskent_hastanesi`, `synevo`, `duzen_laboratuvari`, `dentgroup`, `hospitadent`, `atasun_optik`.
+  - 19 kaydın doğrulanmış kanonik domain eşlemeleri, tema politikası, no-cache ve izin envanterinin tek ana kaynağı için bkz. `docs/MERCHANT_LOGO_KAYNAK_VE_IZIN_ENVANTERI.md` Bölüm 5.13.
+- **Önerilen ve Aranabilir Sıra Sözleşmesi (Healthcare Profili):**
+  - **Önerilen Sıra (9 Merchant):** `acibadem`, `memorial`, `medical_park`, `liv_hospital`, `medicana`, `florence_nightingale`, `anadolu_saglik`, `amerikan_hastanesi`, `dunyagoz`. Kalan 10 kayıt önerilenlere eklenmemiştir.
+  - **Aranabilir Sıra (19 Merchant):** Yukarıdaki 9 önerilen kayıt + kalan 10 kayıt (`medipol`, `biruni_hastanesi`, `guven_hastanesi`, `lokman_hekim`, `baskent_hastanesi`, `synevo`, `duzen_laboratuvari`, `dentgroup`, `hospitadent`, `atasun_optik`).
+- **Özel Çapraz Kategori ve Fail-Closed Sözleşmeleri:**
+  - `atasun_optik` kaydının ana katalog kategorisi `shopping` olarak kalır (`categoryIconKey = "shopping"`). Sağlık kategorisinde yalnızca merkezi searchable uyumluluk profili üzerinden aranabilir; sağlık önerilenler listesine girmez.
+  - Medical Park ve Liv Hospital aynı MLP Sağlık Hizmetleri A.Ş. çatısında bulunduğu için çıplak `MLP SAGLIK`, `MLP SAGLIK HIZMETLERI`, `MLP SAGLIK HIZMETLERI ANONIM SIRKETI` ifadeleri hiçbir merchant'a atanmamış; fail-closed korunmuştur. `MLP SAGLIK HIZMETLERI LIV HOSPITAL` Liv Hospital'a atanmıştır.
+  - Bayındır tesisleri Acıbadem Grubu bünyesine katıldığından ve bağımsız tüzel kişilik/marka yaşam döngüsü Acıbadem çatı markasıyla çeliştiğinden kapsam dışı tutulmuştur.
+  - Amplifon güncel resmî Türkiye tüzel kişiliği, satıcı/payee ve kanonik domain kanıtı yetersiz olduğundan kapsam dışı tutulmuştur.
+- **Doğrulama Sonuçları:**
+  - Full `sharedLogic`: 186 suite, 2513 test, 0 failure, 0 error, 0 skipped.
+  - Full `sharedUI`: 58 suite, 451 test, 0 failure, 0 error, 0 skipped.
+  - iOS Simulator ARM64 ortak kod derlemesi: exit 0.
+  - Android assembleDebug ve assembleDemo derlemeleri: exit 0.
+  - CI localization politikası: 2512 TR / 2512 EN katalog eşitliği, exit 0.
+  - Ktlint doğrulaması: Kaynak-seti ktlint görevleri repository tarihsel borcu nedeniyle exit code 1; Healthcare kapsamında değiştirilen hedef dosyalarda 0 yeni ihlal/eşleşme vardır.
+- **Veri ve Mimari Bütünlüğü:** Room şema sürümü (v24), Supabase şemaları/migration'ları ve D1 hash'leri (`00c4ffbc3811960fd9a9cf897c5f58bf684c522f`, `0119fe9633ab32cd28bfa6eda3ec32a8610ee349`) korunmuştur. Form üzerinde işlem kaydedilmemiş, veritabanı/outbox mutasyonu üretilmemiştir. Ekrandaki başarılı görünüm doğrudan ağ trafiğini kanıtlamaz; sıfır kullanıcı-metni uzak istek garantisi mimariden ve testlerden gelir.
+
+#### 17. H4-G2-J1 Eğitim / Education İlk 9 Marka Kapanışı (2026-11-14)
+- **Teknik ve Canlı Cihaz Kabulü:** Eğitim kategorisi için ilk 9 önerilen marka (`udemy`, `coursera`, `duolingo`, `cambly`, `kunduz`, `tonguc_akademi`, `okulistik`, `morpa_kampus`, `raunt`) doğrulanmış uzak logo desteğine bağlanmış, güncel Demo APK (`com.feniqo.mobile.demo`) ile Samsung Galaxy A71 (SM-A715F) fiziksel cihazında proje sahibi tarafından görsel olarak denetlenmiş ve proje sahibinin açık beyanı ("sorunsuz çalışıyor") doğrultusunda kabul edilmiştir.
+- **Katalog Sürümü ve Metrikler:** `StarterMerchantCatalog.CATALOG_VERSION = 21` (v21)'e yükseltilmiştir. Toplam merchant sayısı 219 (182 uzak logolu, 37 fallback), allowlist domain sayısı 176'dır (167 → 176; 9 yeni eğitim domaini). 219 markanın tamamında uzak logo bulunduğu iddiasında bulunulmaz; uzak logo anahtarı bulunmayan 37 merchant güvenli yerel kategori ikonu fallback zincirinde kalır.
+- **Eklenen 9 Doğrulanmış Kayıt ve Kanonik Domain Yönlendirmesi:**
+  - 9 Önerilen Marka: `udemy` (udemy.com), `coursera` (coursera.org), `duolingo` (duolingo.com), `cambly` (cambly.com), `kunduz` (kunduz.com), `tonguc_akademi` (tongucakademi.com), `okulistik` (okulistik.com), `morpa_kampus` (morpakampus.com), `raunt` (raunt.com).
+  - 9 kaydın doğrulanmış kanonik domain eşlemeleri, tema politikası, no-cache ve izin envanterinin tek ana kaynağı için bkz. `docs/MERCHANT_LOGO_KAYNAK_VE_IZIN_ENVANTERI.md` Bölüm 5.14.
+- **Önerilen ve Aranabilir Sıra Sözleşmesi (J1 Eğitim Profili):**
+  - **Önerilen Sıra (9 Merchant):** `udemy`, `coursera`, `duolingo`, `cambly`, `kunduz`, `tonguc_akademi`, `okulistik`, `morpa_kampus`, `raunt`.
+  - **Aranabilir Sıra (J1 Durumu - 9 Merchant):** J1 aşamasında önerilen ve aranabilir listeler eşit olup 9 kayıttan oluşmaktadır (`udemy`, `coursera`, `duolingo`, `cambly`, `kunduz`, `tonguc_akademi`, `okulistik`, `morpa_kampus`, `raunt`).
+  - **Sonraki Adım Notu:** Kalan 18 aranabilir Eğitim merchant'ı Faz H4-G2-J2 kapsamında tamamlanmış ve kapatılmıştır.
+- **Özel Tanıma ve Fail-Closed Sözleşmeleri:**
+  - Tonguç Akademi kanonik normalize domain alias'ı: `TONGUCAKADEMI COM` (normalizer çıktısıyla birebir uyumlu; `TONGUC AKADEMI` marka alias'ı da korunmuştur).
+  - Çıplak ve belirsiz kelimeler fail-closed kalır: `KUNDUZ`, `TONGUC`, `MORPA`, `RAUNT` ifadeleri tek başına eşleştirilmez.
+  - Statik verifiedLogoKey ve merkezi allowlist esastır; serbest kullanıcı metninden asla domain veya uzak istek üretilmez.
+  - Logo.dev Community attribution (`https://beratxkeskin.github.io/feniqo-site/`), hotlink ve no-cache (`Cache-Control: no-cache, no-store, must-revalidate`) kuralları aynen korunur.
+- **Doğrulama Sonuçları:**
+  - Full `sharedLogic`: 186 suite, 2519 test, 0 failure, 0 error, 0 skipped.
+  - Full `sharedUI`: 58 suite, 451 test, 0 failure, 0 error, 0 skipped.
+  - androidApp unit test: 110 suite, 1028 test (yalnızca daha önce proje sahibince tarihsel test borcu olarak kabul edilmiş 5 Compose UI failure'ı mevcuttur: `ProfileNavigationTest: 3`, `SyncStatusScreenComposeTest: 2`; bu 5 failure J1 kaynaklı değildir, J1 kapsamındaki tüm testler temizdir; suite tam yeşil olarak gösterilmez).
+  - Brandfetch hedefli regresyon: 11/11 PASS.
+  - iOS Simulator ARM64 ortak kod derlemesi: exit 0.
+  - Android assembleDebug ve assembleDemo derlemeleri: exit 0.
+- **Veri ve Mimari Bütünlüğü:** Room şema sürümü (v24), Supabase şemaları/migration'ları ve D1 hash'leri (`00c4ffbc3811960fd9a9cf897c5f58bf684c522f`, `0119fe9633ab32cd28bfa6eda3ec32a8610ee349`) korunmuştur. Form üzerinde işlem kaydedilmemiş, veritabanı/outbox mutasyonu üretilmemiştir. Ekrandaki başarılı görünüm doğrudan ağ trafiğini kanıtlamaz; sıfır kullanıcı-metni uzak istek garantisi mimariden ve testlerden gelir.
+
+#### 18. H4-G2-J2 Eğitim / Education Kalan 18 Arama Kaydı ve Çapraz Kitapçı/Abonelik Entegrasyonu Kapanışı (2026-11-14)
+- **Teknik ve Canlı Cihaz Kabulü:** Eğitim kategorisi için kalan 18 aranabilir aday (11 doğrudan yeni eğitim markası, 4 çapraz aranabilir kitapçı markası, 3 yeniden kullanılan eğitim aboneliği) sisteme entegre edilmiş; teknik denetim (H4-G2-J2-A/R1) tam başarıyla sonuçlanmıştır. Güncel Demo APK (`com.feniqo.mobile.demo`) ile Samsung Galaxy A71 (SM-A715F) fiziksel cihazında proje sahibi tarafından 15 yeni logo, 3 abonelik logosu, 9 önerilen sıra, 27 aranabilir aday, Alışveriş çapraz adayları, pazaryeri izolasyonu ve wordmark okunabilirliği denetlenmiş; proje sahibinin açık beyanı ("sorunsuz görünüyor") doğrultusunda `VISUAL_ACCEPTED` olarak kabul edilmiştir. Form üzerinde işlem kaydedilmemiş, veritabanı/outbox mutasyonu üretilmemiştir.
+- **Katalog Sürümü ve Metrikler:** `StarterMerchantCatalog.CATALOG_VERSION = 22` (v22)'ye yükseltilmiştir. Toplam merchant sayısı 234 (197 uzak logolu, 37 fallback), allowlist domain sayısı 191'dir (176 → 191; 15 yeni doğrulanmış domain). 234 markanın tamamında uzak logo bulunduğu iddiasında bulunulmaz; uzak logo anahtarı bulunmayan 37 merchant güvenli yerel kategori ikonu fallback zincirinde kalır.
+- **Eklenen 15 Doğrulanmış Kayıt ve Kanonik Domainler:**
+  - 11 Yeni Doğrudan Eğitim Markası: `busuu` (busuu.com), `preply` (preply.com), `italki` (italki.com), `skillshare` (skillshare.com), `derslig` (derslig.com), `benim_hocam` (benimhocam.com), `pegem_akademi` (pegem.net), `english_time` (englishtime.com), `bilge_adam` (bilgeadam.com), `wall_street_english` (wse.com.tr), `amerikankultur` (amerikankultur.org.tr).
+  - 4 Yeni Shopping Kitapçısı: `dr` (dr.com.tr), `kitapyurdu` (kitapyurdu.com), `bkm_kitap` (bkmkitap.com), `idefix` (idefix.com).
+  - 3 Yeniden Kullanılan Subscriptions Markası: `storytel` (storytel.com), `audible` (audible.com), `linkedin_premium` (linkedin.com).
+  - Kanonik domain eşlemeleri ve izin envanteri için bkz. `docs/MERCHANT_LOGO_KAYNAK_VE_IZIN_ENVANTERI.md` Bölüm 5.15.
+- **Öneri ve Arama Profilleri Sıra Sözleşmesi:**
+  - **Eğitim Önerilen Sıra (9 Merchant):** `udemy`, `coursera`, `duolingo`, `cambly`, `kunduz`, `tonguc_akademi`, `okulistik`, `morpa_kampus`, `raunt`.
+  - **Eğitim Aranabilir Sıra (27 Merchant):** 9 önerilen merchant'a ek olarak: `busuu`, `preply`, `italki`, `skillshare`, `derslig`, `benim_hocam`, `pegem_akademi`, `english_time`, `bilge_adam`, `wall_street_english`, `amerikankultur`, `dr`, `kitapyurdu`, `bkm_kitap`, `idefix`, `storytel`, `audible`, `linkedin_premium`.
+  - **Alışveriş Profili (8 Önerilen / 30 Aranabilir):** 4 yeni kitapçı (`dr`, `kitapyurdu`, `bkm_kitap`, `idefix`) Alışveriş önerilen listesine eklenmemiş, yalnız aranabilir adayı yapılmıştır (`CategoryMerchantCandidateResolver` compatible).
+- **Özel Tanıma ve Güvenlik Sözleşmeleri:**
+  - **D&R:** Ham alias listesinde `"D&R"` tanımlandı; ham `"D R"` ve çıplak `"DR"` alias yapılmadı. `USER_ENTERED_DESCRIPTION` `"D&R"` → `MATCHED` (%95, logolu); `BANK_DESCRIPTION` `"D&R"` → `LOW_CONFIDENCE` (%65, logosuz). `"DR AHMET KAYA"`, `"UZM DR"`, `"OP DR"` fail-closed kalır.
+  - **Bilge Adam:** Görünen ad `Bilge Adam` olarak korunmuştur; çıplak `"BILGE ADAM"` veya doğal dil ifadeleri fail-closed `NO_MATCH` olarak engellenmiştir.
+  - **BKM Kitap:** Çıplak `"BKM"` veya `"BKM EXPRESS"` eşleşmez.
+  - **Amerikan Kültür:** Çıplak `"AMERIKAN"` eşleşmez; `amerikan_hastanesi` negatif alias korumasıyla çakışmaz.
+  - **Wall Street English:** Çıplak `"WSE"` veya `"WALL STREET"` eşleşmez. Kanonik domain `wse.com.tr`'dir.
+  - **Pazaryeri İzolasyonu:** Amazon, Trendyol ve Hepsiburada Eğitim adayı olarak çözülmez (`CategoryMerchantCandidateResolver` fail-closed).
+  - **Gizlilik:** Serbest kullanıcı metninden asla domain veya uzak URL türetilmez; yalnızca statik verifiedLogoKey → allowlist dönüşümü yapılır.
+- **Doğrulama Sonuçları:**
+  - Full `sharedLogic`: 186 XML suite, 2526 test, 0 failure, 0 error, 0 skipped (%100 PASS).
+  - Full `sharedUI`: 58 suite, 451 test, 0 failure, 0 error, 0 skipped (%100 PASS).
+  - androidApp unit test: 1029 test; 1024 başarılı (yalnızca tarihsel 5 Compose failure: `ProfileNavigationTest: 3`, `SyncStatusScreenComposeTest: 2`). Logo testleri %100 başarılı.
+  - iOS Simulator ARM64 compile, Android assembleDebug ve assembleDemo: başarılı (exit 0).
+  - Localization politikası: 2512 TR / 2512 EN XML kaynak, 4 iOS catalog tam eşleşme (exit 0).
+  - Fresh ktlint kontrolü: J2 kapsamında değiştirilen dosya satırlarında 0 yeni ihlal.
+- **Veri ve Mimari Bütünlüğü:** Room şema sürümü (v24), Supabase sözleşmeleri ve D1 hash'leri (`00c4ffbc3811960fd9a9cf897c5f58bf684c522f`, `0119fe9633ab32cd28bfa6eda3ec32a8610ee349`) korunmuştur.
+- **Sonraki Adım:** Faz H4-G2-J2 tamamlandı; sonraki merchant kategorisi bağımsız ön araştırma ve ürün kararıyla belirlenecektir.
+
+## 19. Genel doğrulama ve teslim koşulları
 
 Her dilimde kapsamla orantılı hedefli testlere ek olarak aşağıdakiler değerlendirilir:
 

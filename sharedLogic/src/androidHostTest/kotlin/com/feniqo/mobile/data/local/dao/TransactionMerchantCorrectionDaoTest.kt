@@ -1410,7 +1410,7 @@ class TransactionMerchantCorrectionDaoTest {
         assertEquals("starbucks", updatedTrx.merchantId)
         assertEquals("USER_VERIFIED", updatedTrx.merchantMatchSourceCode)
         assertEquals(100, updatedTrx.merchantConfidence)
-        assertEquals(18, updatedTrx.merchantCatalogVersion)
+        assertEquals(22, updatedTrx.merchantCatalogVersion)
     }
 
     // 18. CancellationException yutulmaz

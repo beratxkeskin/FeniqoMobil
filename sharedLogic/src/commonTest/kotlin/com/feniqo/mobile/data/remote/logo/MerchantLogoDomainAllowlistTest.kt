@@ -207,6 +207,91 @@ class MerchantLogoDomainAllowlistTest {
     private val expectedFullOneHundredFortyOneAllowlist: Map<String, String> =
         expectedFullOneHundredTwentySixAllowlist + newFifteenEntertainmentAllowlist
 
+    private val newSevenHousingAllowlist: Map<String, String> =
+        mapOf(
+            "apsiyon" to "apsiyon.com",
+            "yonetimcell" to "yonetimcell.com",
+            "armut" to "armut.com",
+            "senyonet" to "senyonet.net",
+            "mrusta" to "mrusta.com.tr",
+            "pronet" to "pronet.com.tr",
+            "kale_alarm" to "kalealarm.com.tr",
+        )
+
+    private val expectedFullOneHundredFortyEightAllowlist: Map<String, String> =
+        expectedFullOneHundredFortyOneAllowlist + newSevenHousingAllowlist
+
+    private val newNineHealthcareAllowlist: Map<String, String> =
+        mapOf(
+            "acibadem" to "acibadem.com.tr",
+            "memorial" to "memorial.com.tr",
+            "medical_park" to "medicalpark.com.tr",
+            "liv_hospital" to "livhospital.com",
+            "medicana" to "medicana.com.tr",
+            "florence_nightingale" to "florence.com.tr",
+            "anadolu_saglik" to "anadolusaglik.org",
+            "amerikan_hastanesi" to "amerikanhastanesi.org",
+            "dunyagoz" to "dunyagoz.com",
+        )
+
+    private val expectedFullOneHundredFiftySevenAllowlist: Map<String, String> =
+        expectedFullOneHundredFortyEightAllowlist + newNineHealthcareAllowlist
+
+    private val newTenHealthcareSearchableAllowlist: Map<String, String> =
+        mapOf(
+            "medipol" to "medipol.com.tr",
+            "biruni_hastanesi" to "birunihastanesi.com.tr",
+            "guven_hastanesi" to "guven.com.tr",
+            "lokman_hekim" to "lokmanhekim.com.tr",
+            "baskent_hastanesi" to "baskenthastaneleri.com",
+            "synevo" to "synevo.com.tr",
+            "duzen_laboratuvari" to "duzen.com.tr",
+            "dentgroup" to "dentgroup.com.tr",
+            "hospitadent" to "hospitadent.com",
+            "atasun_optik" to "atasunoptik.com.tr",
+        )
+
+    private val expectedFullOneHundredSixtySevenAllowlist: Map<String, String> =
+        expectedFullOneHundredFiftySevenAllowlist + newTenHealthcareSearchableAllowlist
+
+    private val newNineEducationAllowlist: Map<String, String> =
+        mapOf(
+            "udemy" to "udemy.com",
+            "coursera" to "coursera.org",
+            "duolingo" to "duolingo.com",
+            "cambly" to "cambly.com",
+            "kunduz" to "kunduz.com",
+            "tonguc_akademi" to "tongucakademi.com",
+            "okulistik" to "okulistik.com",
+            "morpa_kampus" to "morpakampus.com",
+            "raunt" to "raunt.com",
+        )
+
+    private val expectedFullOneHundredSeventySixAllowlist: Map<String, String> =
+        expectedFullOneHundredSixtySevenAllowlist + newNineEducationAllowlist
+
+    private val newFifteenEducationAndBookstoreAllowlist: Map<String, String> =
+        mapOf(
+            "busuu" to "busuu.com",
+            "preply" to "preply.com",
+            "italki" to "italki.com",
+            "skillshare" to "skillshare.com",
+            "derslig" to "derslig.com",
+            "benim_hocam" to "benimhocam.com",
+            "pegem_akademi" to "pegem.net",
+            "english_time" to "englishtime.com",
+            "bilge_adam" to "bilgeadam.com",
+            "wall_street_english" to "wse.com.tr",
+            "amerikankultur" to "amerikankultur.org.tr",
+            "dr" to "dr.com.tr",
+            "kitapyurdu" to "kitapyurdu.com",
+            "bkm_kitap" to "bkmkitap.com",
+            "idefix" to "idefix.com",
+        )
+
+    private val expectedFullOneHundredNinetyOneAllowlist: Map<String, String> =
+        expectedFullOneHundredSeventySixAllowlist + newFifteenEducationAndBookstoreAllowlist
+
     // 1. Doğrulanıp eklenen her stable logo key doğru kanonik domaini döndürür
     @Test
     fun resolvesAllSixteenNewlyAddedFoodDiningKeysCorrectly() {
@@ -264,6 +349,46 @@ class MerchantLogoDomainAllowlistTest {
         }
     }
 
+    @Test
+    fun resolvesAllSevenNewlyAddedHousingKeysCorrectly() {
+        for ((key, expectedDomain) in newSevenHousingAllowlist) {
+            val resolved = MerchantLogoDomainAllowlist.resolveDomain(key)
+            assertEquals(expectedDomain, resolved, "Housing key '$key' beklenen domain '$expectedDomain' döndürmeli")
+        }
+    }
+
+    @Test
+    fun resolvesAllNineNewlyAddedHealthcareKeysCorrectly() {
+        for ((key, expectedDomain) in newNineHealthcareAllowlist) {
+            val resolved = MerchantLogoDomainAllowlist.resolveDomain(key)
+            assertEquals(expectedDomain, resolved, "Healthcare key '$key' beklenen domain '$expectedDomain' döndürmeli")
+        }
+    }
+
+    @Test
+    fun resolvesAllTenNewlyAddedHealthcareSearchableKeysCorrectly() {
+        for ((key, expectedDomain) in newTenHealthcareSearchableAllowlist) {
+            val resolved = MerchantLogoDomainAllowlist.resolveDomain(key)
+            assertEquals(expectedDomain, resolved, "Healthcare key '$key' beklenen domain '$expectedDomain' döndürmeli")
+        }
+    }
+
+    @Test
+    fun resolvesAllNineNewlyAddedEducationKeysCorrectly() {
+        for ((key, expectedDomain) in newNineEducationAllowlist) {
+            val resolved = MerchantLogoDomainAllowlist.resolveDomain(key)
+            assertEquals(expectedDomain, resolved, "Education key '$key' beklenen domain '$expectedDomain' döndürmeli")
+        }
+    }
+
+    @Test
+    fun resolvesAllFifteenNewlyAddedEducationAndBookstoreKeysCorrectly() {
+        for ((key, expectedDomain) in newFifteenEducationAndBookstoreAllowlist) {
+            val resolved = MerchantLogoDomainAllowlist.resolveDomain(key)
+            assertEquals(expectedDomain, resolved, "Education/Bookstore key '$key' beklenen domain '$expectedDomain' döndürmeli")
+        }
+    }
+
     // 13. Mevcut allowlist kayıtları regresyona uğramaz
     @Test
     fun historicalTwentyEightKeys_haveNoRegression() {
@@ -313,6 +438,30 @@ class MerchantLogoDomainAllowlistTest {
         }
     }
 
+    @Test
+    fun historicalOneHundredFortyOneKeys_haveNoRegression() {
+        for ((key, expectedDomain) in expectedFullOneHundredFortyOneAllowlist) {
+            val resolved = MerchantLogoDomainAllowlist.resolveDomain(key)
+            assertEquals(expectedDomain, resolved, "Tarihsel 141 anahtardan '$key' regresyona uğramamalı")
+        }
+    }
+
+    @Test
+    fun historicalOneHundredFortyEightKeys_haveNoRegression() {
+        for ((key, expectedDomain) in expectedFullOneHundredFortyEightAllowlist) {
+            val resolved = MerchantLogoDomainAllowlist.resolveDomain(key)
+            assertEquals(expectedDomain, resolved, "Tarihsel 148 anahtardan '$key' regresyona uğramamalı")
+        }
+    }
+
+    @Test
+    fun historicalOneHundredFiftySevenKeys_haveNoRegression() {
+        for ((key, expectedDomain) in expectedFullOneHundredFiftySevenAllowlist) {
+            val resolved = MerchantLogoDomainAllowlist.resolveDomain(key)
+            assertEquals(expectedDomain, resolved, "Tarihsel 157 anahtardan '$key' regresyona uğramamalı")
+        }
+    }
+
     // 2. Domainler lowercase ASCII ve yalnız host biçimindedir
     // 3. Scheme, path, query, fragment, port ve userInfo bulunmaz
     @Test
@@ -336,23 +485,23 @@ class MerchantLogoDomainAllowlistTest {
         }
     }
 
-    // 4. Allowlist size ve exact key set beklentisi günceldir (141 anahtar)
+    // 4. Allowlist size ve exact key set beklentisi günceldir (191 anahtar)
     @Test
-    fun allowlist_sizeAndExactKeys_areExactlyOneHundredFortyOne() {
-        assertEquals(141, MerchantLogoDomainAllowlist.size())
-        assertEquals(expectedFullOneHundredFortyOneAllowlist.keys, MerchantLogoDomainAllowlist.allowlistKeys())
+    fun allowlist_sizeAndExactKeys_areExactlyOneHundredNinetyOne() {
+        assertEquals(191, MerchantLogoDomainAllowlist.size())
+        assertEquals(expectedFullOneHundredNinetyOneAllowlist.keys, MerchantLogoDomainAllowlist.allowlistKeys())
     }
 
-    // 5. Katalogdaki her non-null verifiedLogoKey allowlist’te çözümlenir (147 merchant)
+    // 5. Katalogdaki her non-null verifiedLogoKey allowlist’te çözümlenir (197 merchant)
     @Test
     fun starterCatalog_everyNonNullVerifiedLogoKey_resolvesInAllowlist() {
         val nonNullMerchants = StarterMerchantCatalog.merchants.filter { it.verifiedLogoKey != null }
-        assertEquals(147, nonNullMerchants.size, "Katalogda tam 147 doğrulanmış logo anahtarı bulunmalı")
+        assertEquals(197, nonNullMerchants.size, "Katalogda tam 197 doğrulanmış logo anahtarı bulunmalı")
 
         for (m in nonNullMerchants) {
             val resolved = MerchantLogoDomainAllowlist.resolveDomain(m.verifiedLogoKey)
             assertNotNull(resolved, "Katalogdaki ${m.id} (${m.verifiedLogoKey}) allowlist'te çözülmelidir")
-            assertEquals(expectedFullOneHundredFortyOneAllowlist[m.verifiedLogoKey], resolved)
+            assertEquals(expectedFullOneHundredNinetyOneAllowlist[m.verifiedLogoKey], resolved)
         }
     }
 
@@ -365,7 +514,12 @@ class MerchantLogoDomainAllowlistTest {
                 newTwentyThreeShoppingAllowlist.keys +
                 newFifteenPersonalCareAllowlist.keys +
                 newSeventeenTransportationAndTravelAllowlist.keys +
-                newFifteenEntertainmentAllowlist.keys
+                newFifteenEntertainmentAllowlist.keys +
+                newSevenHousingAllowlist.keys +
+                newNineHealthcareAllowlist.keys +
+                newTenHealthcareSearchableAllowlist.keys +
+                newNineEducationAllowlist.keys +
+                newFifteenEducationAndBookstoreAllowlist.keys
         for (key in allDirectKeys) {
             val merchant = StarterMerchantCatalog.merchants.firstOrNull { it.id == key }
             assertNotNull(merchant, "Eklenen merchant '$key' katalogda stable ID ile bulunmalıdır")
@@ -638,24 +792,24 @@ class MerchantLogoDomainAllowlistTest {
         }
     }
 
-    // Alışveriş kategorisi toplam ve fallback metrik sözleşmesi (26/26 uzaktan logolu, 0 fallback)
+    // Alışveriş kategorisi toplam ve fallback metrik sözleşmesi (27/27 uzaktan logolu, 0 fallback)
     @Test
     fun shoppingCategoryTotalAndFallbackMetricsContract() {
         val allMerchants = StarterMerchantCatalog.merchants
-        assertEquals(184, allMerchants.size, "Toplam merchant sayısı 184 olmalıdır")
+        assertEquals(234, allMerchants.size, "Toplam merchant sayısı 234 olmalıdır")
 
         val shoppingMerchants = allMerchants.filter { it.categoryIconKey.key == "shopping" }
-        assertEquals(26, shoppingMerchants.size, "Alışveriş kategorisinde tam 26 merchant olmalıdır")
+        assertEquals(31, shoppingMerchants.size, "Alışveriş kategorisinde tam 31 merchant olmalıdır")
 
         val verifiedShopping = shoppingMerchants.filter { it.verifiedLogoKey != null }
-        assertEquals(26, verifiedShopping.size, "Alışveriş kategorisindeki 26 merchant'ın tamamı verifiedLogoKey taşımalıdır")
+        assertEquals(31, verifiedShopping.size, "Alışveriş kategorisindeki 31 merchant'ın tamamı verifiedLogoKey taşımalıdır")
 
         val fallbackShopping = shoppingMerchants.filter { it.verifiedLogoKey == null }
         assertEquals(0, fallbackShopping.size, "Alışveriş kategorisinde fallback merchant sayısı 0 olmalıdır")
 
-        assertEquals(147, allMerchants.count { it.verifiedLogoKey != null }, "Katalog genelinde 147 doğrulanmış logo olmalıdır")
+        assertEquals(197, allMerchants.count { it.verifiedLogoKey != null }, "Katalog genelinde 197 doğrulanmış logo olmalıdır")
         assertEquals(37, allMerchants.count { it.verifiedLogoKey == null }, "Katalog genelinde 37 fallback merchant olmalıdır")
-        assertEquals(141, MerchantLogoDomainAllowlist.size(), "Allowlist boyutu 141 olmalıdır")
+        assertEquals(191, MerchantLogoDomainAllowlist.size(), "Allowlist boyutu 191 olmalıdır")
     }
 
     // 23 Alışveriş merchant'ının stable ID, displayName, kategori ve alias yapılarının korunduğu snapshot
@@ -706,7 +860,7 @@ class MerchantLogoDomainAllowlistTest {
     @Test
     fun personalCareCategoryTotalAndFallbackMetricsContract() {
         val allMerchants = StarterMerchantCatalog.merchants
-        assertEquals(184, allMerchants.size, "Toplam merchant sayısı 184 olmalıdır")
+        assertEquals(234, allMerchants.size, "Toplam merchant sayısı 234 olmalıdır")
 
         val personalCareMerchants = allMerchants.filter { it.categoryIconKey.key == "personal_care" }
         assertEquals(15, personalCareMerchants.size, "Kişisel bakım kategorisinde tam 15 merchant olmalıdır")
@@ -717,9 +871,9 @@ class MerchantLogoDomainAllowlistTest {
         val fallbackPersonalCare = personalCareMerchants.filter { it.verifiedLogoKey == null }
         assertEquals(0, fallbackPersonalCare.size, "Kişisel bakım kategorisinde fallback merchant sayısı 0 olmalıdır")
 
-        assertEquals(147, allMerchants.count { it.verifiedLogoKey != null }, "Katalog genelinde 147 doğrulanmış logo olmalıdır")
+        assertEquals(197, allMerchants.count { it.verifiedLogoKey != null }, "Katalog genelinde 197 doğrulanmış logo olmalıdır")
         assertEquals(37, allMerchants.count { it.verifiedLogoKey == null }, "Katalog genelinde 37 fallback merchant olmalıdır")
-        assertEquals(141, MerchantLogoDomainAllowlist.size(), "Allowlist boyutu 141 olmalıdır")
+        assertEquals(191, MerchantLogoDomainAllowlist.size(), "Allowlist boyutu 191 olmalıdır")
     }
 
     // 15 Kişisel Bakım merchant'ının stable ID, displayName, kategori ve alias yapılarının korunduğu snapshot
@@ -762,7 +916,7 @@ class MerchantLogoDomainAllowlistTest {
     @Test
     fun transportationAndTravelCategoryTotalAndFallbackMetricsContract() {
         val allMerchants = StarterMerchantCatalog.merchants
-        assertEquals(184, allMerchants.size, "Toplam merchant sayısı 184 olmalıdır")
+        assertEquals(234, allMerchants.size, "Toplam merchant sayısı 234 olmalıdır")
 
         val transportationMerchants = allMerchants.filter { it.categoryIconKey.key == "transportation" }
         assertEquals(14, transportationMerchants.size, "Ulaşım kategorisinde tam 14 merchant olmalıdır")
@@ -786,9 +940,9 @@ class MerchantLogoDomainAllowlistTest {
             assertNull(MerchantLogoDomainAllowlist.resolveDomain(fallbackId), "'$fallbackId' allowlist'te bulunmamalıdır")
         }
 
-        assertEquals(147, allMerchants.count { it.verifiedLogoKey != null }, "Katalog genelinde 147 doğrulanmış logo olmalıdır")
+        assertEquals(197, allMerchants.count { it.verifiedLogoKey != null }, "Katalog genelinde 197 doğrulanmış logo olmalıdır")
         assertEquals(37, allMerchants.count { it.verifiedLogoKey == null }, "Katalog genelinde 37 fallback merchant olmalıdır")
-        assertEquals(141, MerchantLogoDomainAllowlist.size(), "Allowlist boyutu 141 olmalıdır")
+        assertEquals(191, MerchantLogoDomainAllowlist.size(), "Allowlist boyutu 191 olmalıdır")
     }
 
     // 17 Ulaşım ve Seyahat merchant'ının stable ID, displayName, kategori ve alias yapılarının korunduğu snapshot
@@ -843,7 +997,7 @@ class MerchantLogoDomainAllowlistTest {
     @Test
     fun entertainmentCategoryTotalAndMetricsContract() {
         val allMerchants = StarterMerchantCatalog.merchants
-        assertEquals(184, allMerchants.size, "Toplam merchant sayısı 184 olmalıdır")
+        assertEquals(234, allMerchants.size, "Toplam merchant sayısı 234 olmalıdır")
 
         val entertainmentMerchants = allMerchants.filter { it.categoryIconKey.key == "entertainment" }
         assertEquals(17, entertainmentMerchants.size, "Eğlence kategorisinde tam 17 merchant olmalıdır")
@@ -854,9 +1008,9 @@ class MerchantLogoDomainAllowlistTest {
         val fallbackEntertainment = entertainmentMerchants.filter { it.verifiedLogoKey == null }
         assertEquals(0, fallbackEntertainment.size, "Eğlence kategorisinde fallback merchant sayısı 0 olmalıdır")
 
-        assertEquals(147, allMerchants.count { it.verifiedLogoKey != null }, "Katalog genelinde 147 doğrulanmış logo olmalıdır")
+        assertEquals(197, allMerchants.count { it.verifiedLogoKey != null }, "Katalog genelinde 197 doğrulanmış logo olmalıdır")
         assertEquals(37, allMerchants.count { it.verifiedLogoKey == null }, "Katalog genelinde 37 fallback merchant olmalıdır")
-        assertEquals(141, MerchantLogoDomainAllowlist.size(), "Allowlist boyutu 141 olmalıdır")
+        assertEquals(191, MerchantLogoDomainAllowlist.size(), "Allowlist boyutu 191 olmalıdır")
     }
 
     // 17 Eğlence merchant'ının stable ID, displayName, kategori, verifiedLogoKey ve alias snapshot doğrulaması
@@ -900,5 +1054,440 @@ class MerchantLogoDomainAllowlistTest {
             val actualAliases = merchant.aliases.map { it.value }.toSet()
             assertEquals(expected.third, actualAliases, "Merchant '$id' alias seti korunmalıdır")
         }
+    }
+
+    // Housing kategorisi toplam ve metrik sözleşmesi (7/7 uzaktan logolu, 0 fallback)
+    @Test
+    fun housingCategoryTotalAndMetricsContract() {
+        val allMerchants = StarterMerchantCatalog.merchants
+        assertEquals(234, allMerchants.size, "Toplam merchant sayısı 234 olmalıdır")
+
+        val housingMerchants = allMerchants.filter { it.categoryIconKey.key == "housing" }
+        assertEquals(7, housingMerchants.size, "Konut kategorisinde tam 7 merchant olmalıdır")
+
+        val verifiedHousing = housingMerchants.filter { it.verifiedLogoKey != null }
+        assertEquals(7, verifiedHousing.size, "Konut kategorisindeki 7 merchant'ın tamamı verifiedLogoKey taşımalıdır")
+
+        val fallbackHousing = housingMerchants.filter { it.verifiedLogoKey == null }
+        assertEquals(0, fallbackHousing.size, "Konut kategorisinde fallback merchant sayısı 0 olmalıdır")
+
+        assertEquals(197, allMerchants.count { it.verifiedLogoKey != null }, "Katalog genelinde 197 doğrulanmış logo olmalıdır")
+        assertEquals(37, allMerchants.count { it.verifiedLogoKey == null }, "Katalog genelinde 37 fallback merchant olmalıdır")
+        assertEquals(191, MerchantLogoDomainAllowlist.size(), "Allowlist boyutu 191 olmalıdır")
+    }
+
+    // 7 Konut merchant'ının stable ID, displayName, kategori, verifiedLogoKey ve alias snapshot doğrulaması
+    @Test
+    fun housingMerchants_preserveIdentityAndAliasesSnapshot() {
+        val merchants = StarterMerchantCatalog.merchants
+        val snapshotExpected =
+            mapOf(
+                "apsiyon" to
+                    Triple(
+                        "Apsiyon",
+                        "apsiyon",
+                        setOf(
+                            "APSIYON",
+                            "APSIYON BILISIM",
+                            "APSIYON AIDAT",
+                            "APSIYON.COM",
+                            "APSIYON BILISIM SISTEMLERI SANAYI VE TICARET ANONIM SIRKETI",
+                        ),
+                    ),
+                "yonetimcell" to
+                    Triple(
+                        "Yönetimcell",
+                        "yonetimcell",
+                        setOf(
+                            "YONETIMCELL",
+                            "YONETIM CELL",
+                            "YONETIMCELL.COM",
+                            "YONETIMCELL YAZILIM BILISIM LIMITED SIRKETI",
+                        ),
+                    ),
+                "armut" to
+                    Triple(
+                        "Armut",
+                        "armut",
+                        setOf(
+                            "ARMUT.COM",
+                            "ARMUT TEKNOLOJI",
+                            "ARMUT HIZMET",
+                            "ARMUT TEMIZLIK",
+                            "ARMUT TADILAT",
+                            "ARMUT TEKNOLOJI ANONIM SIRKETI",
+                        ),
+                    ),
+                "senyonet" to
+                    Triple(
+                        "Senyonet",
+                        "senyonet",
+                        setOf(
+                            "SENYONET",
+                            "SEN YONET",
+                            "SENYONET.NET",
+                            "SENYONET BILISIM SISTEMLERI SANAYI VE TICARET ANONIM SIRKETI",
+                        ),
+                    ),
+                "mrusta" to
+                    Triple(
+                        "Mr Usta",
+                        "mrusta",
+                        setOf(
+                            "MR USTA",
+                            "MRUSTA",
+                            "MRUSTA.COM.TR",
+                            "MR USTA ELEKTRONIK HIZMETLER VE TICARET ANONIM SIRKETI",
+                        ),
+                    ),
+                "pronet" to
+                    Triple(
+                        "Pronet",
+                        "pronet",
+                        setOf(
+                            "PRONET",
+                            "PRONET GUVENLIK",
+                            "PRONET ALARM",
+                            "PRONET.COM.TR",
+                            "PRONET GUVENLIK HIZMETLERI ANONIM SIRKETI",
+                        ),
+                    ),
+                "kale_alarm" to
+                    Triple(
+                        "Kale Alarm",
+                        "kale_alarm",
+                        setOf(
+                            "KALE ALARM",
+                            "KALE GUVENLIK",
+                            "KALEALARM.COM.TR",
+                            "KALE GUVENLIK SISTEMLERI ANONIM SIRKETI",
+                        ),
+                    ),
+            )
+
+        for ((id, expected) in snapshotExpected) {
+            val merchant = merchants.firstOrNull { it.id == id }
+            assertNotNull(merchant, "Merchant '$id' katalogda bulunmalıdır")
+            requireNotNull(merchant)
+            assertEquals(expected.first, merchant.displayName, "Merchant '$id' displayName korunmalıdır")
+            assertEquals("housing", merchant.categoryIconKey.key, "Merchant '$id' category 'housing' olmalıdır")
+            assertEquals(expected.second, merchant.verifiedLogoKey, "Merchant '$id' verifiedLogoKey '${expected.second}' olmalıdır")
+
+            val actualAliases = merchant.aliases.map { it.value }.toSet()
+            assertEquals(expected.third, actualAliases, "Merchant '$id' alias seti korunmalıdır")
+        }
+    }
+
+    // Sağlık kategorisi toplam ve metrik sözleşmesi (18/18 uzaktan logolu, 0 fallback, Atasun shopping altında)
+    @Test
+    fun healthcareCategoryTotalAndMetricsContract() {
+        val allMerchants = StarterMerchantCatalog.merchants
+        assertEquals(234, allMerchants.size, "Toplam merchant sayısı 234 olmalıdır")
+
+        val healthcareMerchants = allMerchants.filter { it.categoryIconKey.key == "healthcare" }
+        assertEquals(18, healthcareMerchants.size, "Sağlık kategorisinde tam 18 merchant olmalıdır (Atasun shopping kategorisindedir)")
+
+        val verifiedHealthcare = healthcareMerchants.filter { it.verifiedLogoKey != null }
+        assertEquals(18, verifiedHealthcare.size, "Sağlık kategorisindeki 18 merchant'ın tamamı verifiedLogoKey taşımalıdır")
+
+        val fallbackHealthcare = healthcareMerchants.filter { it.verifiedLogoKey == null }
+        assertEquals(0, fallbackHealthcare.size, "Sağlık kategorisinde fallback merchant sayısı 0 olmalıdır")
+
+        assertEquals(197, allMerchants.count { it.verifiedLogoKey != null }, "Katalog genelinde 197 doğrulanmış logo olmalıdır")
+        assertEquals(37, allMerchants.count { it.verifiedLogoKey == null }, "Katalog genelinde 37 fallback merchant olmalıdır")
+        assertEquals(191, MerchantLogoDomainAllowlist.size(), "Allowlist boyutu 191 olmalıdır")
+    }
+
+    // 19 Sağlık-arama merchant'ının stable ID, displayName, kategori, verifiedLogoKey ve alias snapshot doğrulaması
+    @Test
+    fun healthcareMerchants_preserveIdentityAndAliasesSnapshot() {
+        val merchants = StarterMerchantCatalog.merchants
+        val snapshotExpected =
+            mapOf(
+                "acibadem" to
+                    Triple(
+                        "Acıbadem",
+                        "acibadem",
+                        setOf("ACIBADEM", "ACIBADEM HASTANESI", "ACIBADEM SAGLIK"),
+                    ),
+                "memorial" to
+                    Triple(
+                        "Memorial",
+                        "memorial",
+                        setOf("MEMORIAL", "MEMORIAL HASTANESI", "MEMORIAL SAGLIK"),
+                    ),
+                "medical_park" to
+                    Triple(
+                        "Medical Park",
+                        "medical_park",
+                        setOf("MEDICAL PARK", "MEDICALPARK", "VM MEDICAL PARK"),
+                    ),
+                "liv_hospital" to
+                    Triple(
+                        "Liv Hospital",
+                        "liv_hospital",
+                        setOf(
+                            "LIV HOSPITAL",
+                            "LIV ULUS",
+                            "LIV VADI",
+                            "LIV ANKARA",
+                            "MLP SAGLIK HIZMETLERI LIV HOSPITAL",
+                        ),
+                    ),
+                "medicana" to
+                    Triple(
+                        "Medicana",
+                        "medicana",
+                        setOf("MEDICANA", "MEDICANA HASTANESI", "MEDICANA SAGLIK"),
+                    ),
+                "florence_nightingale" to
+                    Triple(
+                        "Florence Nightingale",
+                        "florence_nightingale",
+                        setOf(
+                            "FLORENCE NIGHTINGALE",
+                            "FLORENCE HASTANESI",
+                            "ISTANBUL FLORENCE NIGHTINGALE",
+                        ),
+                    ),
+                "anadolu_saglik" to
+                    Triple(
+                        "Anadolu Sağlık Merkezi",
+                        "anadolu_saglik",
+                        setOf("ANADOLU SAGLIK MERKEZI", "ANADOLU SAGLIK"),
+                    ),
+                "amerikan_hastanesi" to
+                    Triple(
+                        "Amerikan Hastanesi",
+                        "amerikan_hastanesi",
+                        setOf(
+                            "AMERIKAN HASTANESI",
+                            "VKV AMERIKAN HASTANESI",
+                            "KOC AMERIKAN HASTANESI",
+                        ),
+                    ),
+                "dunyagoz" to
+                    Triple(
+                        "Dünyagöz",
+                        "dunyagoz",
+                        setOf("DUNYAGOZ", "DUNYA GOZ", "DUNYAGOZ HASTANESI"),
+                    ),
+                "medipol" to
+                    Triple(
+                        "Medipol",
+                        "medipol",
+                        setOf("MEDIPOL HASTANESI", "MEDIPOL SAGLIK", "MEDIPOL MEGA", "MEDIPOL UNIVERSITE HASTANESI"),
+                    ),
+                "biruni_hastanesi" to
+                    Triple(
+                        "Biruni Hastanesi",
+                        "biruni_hastanesi",
+                        setOf("BIRUNI HASTANESI", "BIRUNI UNIVERSITE HASTANESI", "BIRUNI UNIVERSITESI TIP FAKULTESI HASTANESI"),
+                    ),
+                "guven_hastanesi" to
+                    Triple(
+                        "Güven Hastanesi",
+                        "guven_hastanesi",
+                        setOf("GUVEN HASTANESI", "ANKARA GUVEN HASTANESI", "GUVEN SAGLIK"),
+                    ),
+                "lokman_hekim" to
+                    Triple(
+                        "Lokman Hekim",
+                        "lokman_hekim",
+                        setOf("LOKMAN HEKIM", "LOKMAN HEKIM HASTANESI"),
+                    ),
+                "baskent_hastanesi" to
+                    Triple(
+                        "Başkent Hastanesi",
+                        "baskent_hastanesi",
+                        setOf("BASKENT HASTANESI", "BASKENT UNIVERSITESI HASTANESI"),
+                    ),
+                "synevo" to
+                    Triple(
+                        "Synevo",
+                        "synevo",
+                        setOf("SYNEVO", "SYNEVO LABORATUVAR", "SYNEVO LAB"),
+                    ),
+                "duzen_laboratuvari" to
+                    Triple(
+                        "Düzen Laboratuvarı",
+                        "duzen_laboratuvari",
+                        setOf("DUZEN LABORATUVARI", "DUZEN LAB", "DUZEN SAGLIK"),
+                    ),
+                "dentgroup" to
+                    Triple(
+                        "DentGroup",
+                        "dentgroup",
+                        setOf("DENTGROUP", "DENT GROUP", "DENTGROUP DIS"),
+                    ),
+                "hospitadent" to
+                    Triple(
+                        "Hospitadent",
+                        "hospitadent",
+                        setOf("HOSPITADENT", "HOSPITA DENT", "HOSPITADENT DIS"),
+                    ),
+                "atasun_optik" to
+                    Triple(
+                        "Atasun Optik",
+                        "atasun_optik",
+                        setOf("ATASUN OPTIK", "ATASUN", "ATASUN GOZLUK"),
+                    ),
+            )
+
+        for ((id, expected) in snapshotExpected) {
+            val merchant = merchants.firstOrNull { it.id == id }
+            assertNotNull(merchant, "Merchant '$id' katalogda bulunmalıdır")
+            requireNotNull(merchant)
+            assertEquals(expected.first, merchant.displayName, "Merchant '$id' displayName korunmalıdır")
+            val expectedCategory = if (id == "atasun_optik") "shopping" else "healthcare"
+            assertEquals(expectedCategory, merchant.categoryIconKey.key, "Merchant '$id' category '$expectedCategory' olmalıdır")
+            assertEquals(expected.second, merchant.verifiedLogoKey, "Merchant '$id' verifiedLogoKey '${expected.second}' olmalıdır")
+
+            val actualAliases = merchant.aliases.map { it.value }.toSet()
+            assertEquals(expected.third, actualAliases, "Merchant '$id' alias seti korunmalıdır")
+        }
+    }
+
+    @Test
+    fun educationSuggestedNine_snapshotAndAllowlistContract() {
+        val allMerchants = StarterMerchantCatalog.merchants
+        assertEquals(234, allMerchants.size, "Toplam merchant sayısı 234 olmalıdır")
+
+        val educationMerchants = allMerchants.filter { it.categoryIconKey.key == "education" }
+        assertEquals(20, educationMerchants.size, "Eğitim kategorisinde tam 20 merchant olmalıdır")
+        assertEquals(20, educationMerchants.count { it.verifiedLogoKey != null }, "Eğitim kategorisinde 20 doğrulanmış logo olmalıdır")
+        assertEquals(0, educationMerchants.count { it.verifiedLogoKey == null }, "Eğitim kategorisinde 0 fallback merchant olmalıdır")
+
+        assertEquals(197, allMerchants.count { it.verifiedLogoKey != null }, "Katalog genelinde 197 doğrulanmış logo olmalıdır")
+        assertEquals(37, allMerchants.count { it.verifiedLogoKey == null }, "Katalog genelinde 37 fallback merchant olmalıdır")
+        assertEquals(191, MerchantLogoDomainAllowlist.size(), "Allowlist boyutu 191 olmalıdır")
+
+        val expectedNineEducation =
+            listOf(
+                "udemy" to ("Udemy" to "udemy.com"),
+                "coursera" to ("Coursera" to "coursera.org"),
+                "duolingo" to ("Duolingo" to "duolingo.com"),
+                "cambly" to ("Cambly" to "cambly.com"),
+                "kunduz" to ("Kunduz" to "kunduz.com"),
+                "tonguc_akademi" to ("Tonguç Akademi" to "tongucakademi.com"),
+                "okulistik" to ("Okulistik" to "okulistik.com"),
+                "morpa_kampus" to ("Morpa Kampüs" to "morpakampus.com"),
+                "raunt" to ("Raunt" to "raunt.com"),
+            )
+
+        for ((id, pair) in expectedNineEducation) {
+            val (displayName, domain) = pair
+            val merchant = educationMerchants.firstOrNull { it.id == id }
+            assertNotNull(merchant, "Eğitim merchant'ı '$id' katalogda bulunmalıdır")
+            assertEquals(displayName, merchant.displayName)
+            assertEquals("education", merchant.categoryIconKey.key)
+            assertEquals(id, merchant.verifiedLogoKey)
+
+            val resolved = MerchantLogoDomainAllowlist.resolveDomain(id)
+            assertNotNull(resolved, "Allowlist '$id' için domain döndürmelidir")
+            assertEquals(domain, resolved)
+            assertTrue(MerchantLogoDomainAllowlist.isAllowlisted(domain), "Domain '$domain' allowlist'te kayıtlı olmalıdır")
+        }
+
+        // Benzer / yanlış domainler fail-closed
+        val invalidOrUntrustedDomains =
+            listOf(
+                "udemy.net",
+                "coursera.com",
+                "duolingo.net",
+                "cambly.net",
+                "kunduz.net",
+                "tongucakademi.net",
+                "okulistik.net",
+                "morpakampus.net",
+                "raunt.net",
+            )
+        for (invalidDomain in invalidOrUntrustedDomains) {
+            assertFalse(
+                MerchantLogoDomainAllowlist.isAllowlisted(invalidDomain),
+                "Yanlış domain '$invalidDomain' allowlist'te olmamalıdır",
+            )
+        }
+
+        // Bilinmeyen anahtarlar ve serbest metinler fail-closed
+        assertNull(MerchantLogoDomainAllowlist.resolveDomain("unknown_education_key"))
+        assertNull(MerchantLogoDomainAllowlist.resolveDomain("udemy.com"))
+        assertNull(MerchantLogoDomainAllowlist.resolveDomain("https://udemy.com"))
+        assertNull(MerchantLogoDomainAllowlist.resolveDomain("udemy?size=128"))
+    }
+
+    @Test
+    fun educationAndBookstoresSearchableFifteen_snapshotAndAllowlistContract() {
+        val allMerchants = StarterMerchantCatalog.merchants
+        assertEquals(234, allMerchants.size, "Toplam merchant sayısı 234 olmalıdır")
+        assertEquals(197, allMerchants.count { it.verifiedLogoKey != null }, "Katalog genelinde 197 doğrulanmış logo olmalıdır")
+        assertEquals(37, allMerchants.count { it.verifiedLogoKey == null }, "Katalog genelinde 37 fallback merchant olmalıdır")
+        assertEquals(191, MerchantLogoDomainAllowlist.size(), "Allowlist boyutu 191 olmalıdır")
+
+        val expectedFifteen =
+            listOf(
+                "busuu" to ("Busuu" to "busuu.com"),
+                "preply" to ("Preply" to "preply.com"),
+                "italki" to ("italki" to "italki.com"),
+                "skillshare" to ("Skillshare" to "skillshare.com"),
+                "derslig" to ("Derslig" to "derslig.com"),
+                "benim_hocam" to ("Benim Hocam" to "benimhocam.com"),
+                "pegem_akademi" to ("Pegem Akademi" to "pegem.net"),
+                "english_time" to ("English Time" to "englishtime.com"),
+                "bilge_adam" to ("Bilge Adam" to "bilgeadam.com"),
+                "wall_street_english" to ("Wall Street English" to "wse.com.tr"),
+                "amerikankultur" to ("Amerikan Kültür" to "amerikankultur.org.tr"),
+                "dr" to ("D&R" to "dr.com.tr"),
+                "kitapyurdu" to ("Kitapyurdu" to "kitapyurdu.com"),
+                "bkm_kitap" to ("BKM Kitap" to "bkmkitap.com"),
+                "idefix" to ("Idefix" to "idefix.com"),
+            )
+
+        for ((id, pair) in expectedFifteen) {
+            val (displayName, domain) = pair
+            val merchant = allMerchants.firstOrNull { it.id == id }
+            assertNotNull(merchant, "Merchant '$id' katalogda bulunmalıdır")
+            assertEquals(displayName, merchant.displayName)
+            val expectedCategory = if (id in listOf("dr", "kitapyurdu", "bkm_kitap", "idefix")) "shopping" else "education"
+            assertEquals(expectedCategory, merchant.categoryIconKey.key)
+            assertEquals(id, merchant.verifiedLogoKey)
+
+            val resolved = MerchantLogoDomainAllowlist.resolveDomain(id)
+            assertNotNull(resolved, "Allowlist '$id' için domain döndürmelidir")
+            assertEquals(domain, resolved)
+            assertTrue(MerchantLogoDomainAllowlist.isAllowlisted(domain), "Domain '$domain' allowlist'te kayıtlı olmalıdır")
+        }
+
+        // Benzer / yanlış domainler fail-closed
+        val invalidOrUntrustedDomains =
+            listOf(
+                "busuu.net",
+                "preply.net",
+                "italki.net",
+                "skillshare.net",
+                "derslig.net",
+                "benimhocam.net",
+                "pegem.org",
+                "englishtime.net",
+                "bilgeadam.net",
+                "wse.net",
+                "amerikankultur.com",
+                "dr.com",
+                "kitapyurdu.net",
+                "bkmkitap.net",
+                "idefix.net",
+            )
+        for (invalidDomain in invalidOrUntrustedDomains) {
+            assertFalse(
+                MerchantLogoDomainAllowlist.isAllowlisted(invalidDomain),
+                "Yanlış domain '$invalidDomain' allowlist'te olmamalıdır",
+            )
+        }
+
+        // Bilinmeyen anahtarlar ve serbest metinler fail-closed
+        assertNull(MerchantLogoDomainAllowlist.resolveDomain("unknown_education_searchable_key"))
+        assertNull(MerchantLogoDomainAllowlist.resolveDomain("dr.com.tr"))
+        assertNull(MerchantLogoDomainAllowlist.resolveDomain("https://dr.com.tr"))
+        assertNull(MerchantLogoDomainAllowlist.resolveDomain("busuu?size=128"))
     }
 }

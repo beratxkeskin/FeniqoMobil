@@ -17,21 +17,21 @@ import kotlin.test.assertTrue
 
 class MerchantCategoryRecommendationIndexTest {
     @Test
-    fun maxEightSuggestedMerchants_enforced() {
+    fun maxNineSuggestedMerchants_enforced() {
         MerchantCategoryRecommendationIndex.profiles.values.forEach { profile ->
             assertTrue(
-                profile.suggestedMerchantIds.size <= 8,
-                "Profil en fazla 8 öneri içerebilir: ${profile.categoryIconKey.key} " +
+                profile.suggestedMerchantIds.size <= 9,
+                "Profil en fazla 9 öneri içerebilir: ${profile.categoryIconKey.key} " +
                     "(${profile.suggestedMerchantIds.size})",
             )
         }
 
-        // 9 öneri içeren profil oluşturulması fail-closed reddedilir
+        // 10 öneri içeren profil oluşturulması fail-closed reddedilir
         assertFailsWith<IllegalArgumentException> {
             MerchantCategoryRecommendationProfile(
                 categoryIconKey = CategoryIcon("groceries"),
-                suggestedMerchantIds = (1..9).map { EntityId("id_$it") },
-                searchableMerchantIds = (1..9).map { EntityId("id_$it") },
+                suggestedMerchantIds = (1..10).map { EntityId("id_$it") },
+                searchableMerchantIds = (1..10).map { EntityId("id_$it") },
             )
         }
     }
@@ -397,9 +397,6 @@ class MerchantCategoryRecommendationIndexTest {
     fun emptyCategoryProfiles_returnEmptySafely() {
         val emptyCategoryKeys =
             listOf(
-                "housing",
-                "healthcare",
-                "education",
                 "family_pets",
                 "financial_expenses",
                 "taxes_fees",
@@ -496,7 +493,7 @@ class MerchantCategoryRecommendationIndexTest {
         assertNull(MerchantCategoryRecommendationIndex.getProfile(categoryWithoutIcon))
         assertTrue(MerchantCategoryRecommendationIndex.resolveSuggestedMerchantIds(categoryWithoutIcon).isEmpty())
 
-        // 3. Kategori adı "Market" olsa bile ikonu "housing" ise housing profili (boş) uygulanır, groceries eşleşmez
+        // 3. Kategori adı "Market" olsa bile ikonu "housing" ise housing profili uygulanır, groceries eşleşmez
         val categoryWithMismatchedIcon =
             categoryWithoutIcon.copy(
                 id = EntityId("cat_housing"),
@@ -505,7 +502,10 @@ class MerchantCategoryRecommendationIndexTest {
         val housingProfile = MerchantCategoryRecommendationIndex.getProfile(categoryWithMismatchedIcon)
         assertNotNull(housingProfile)
         assertEquals(CategoryIcon("housing"), housingProfile.categoryIconKey)
-        assertTrue(housingProfile.suggestedMerchantIds.isEmpty())
+        assertEquals(
+            listOf("apsiyon", "yonetimcell", "armut", "senyonet", "mrusta", "pronet", "kale_alarm"),
+            housingProfile.suggestedMerchantIds.map { it.value },
+        )
 
         // 4. Farklı lokalize adlara ("Market", "Daily Groceries", "Manav") sahip ancak aynı iconKey'i taşıyan kategoriler
         // ada bakılmaksızın birebir aynı öneri listesini üretir
@@ -770,8 +770,8 @@ class MerchantCategoryRecommendationIndexTest {
             assertTrue(id !in suggested, "$id suggested listesinde bulunmamalı")
         }
 
-        // Starter catalog toplamı 184
-        assertEquals(184, StarterMerchantCatalog.merchants.size)
+        // Starter catalog toplamı 234
+        assertEquals(234, StarterMerchantCatalog.merchants.size)
     }
 
     @Test
@@ -843,8 +843,8 @@ class MerchantCategoryRecommendationIndexTest {
             assertTrue(id !in suggested, "$id suggested listesinde bulunmamalıdır")
         }
 
-        // Starter catalog toplamı 184
-        assertEquals(184, StarterMerchantCatalog.merchants.size)
+        // Starter catalog toplamı 234
+        assertEquals(234, StarterMerchantCatalog.merchants.size)
     }
 
     @Test
@@ -902,12 +902,16 @@ class MerchantCategoryRecommendationIndexTest {
                 "bauhaus",
                 "vatan_bilgisayar",
                 "ebebek",
+                "dr",
+                "kitapyurdu",
+                "bkm_kitap",
+                "idefix",
             )
 
         assertEquals(8, suggested.size)
         assertEquals(expectedSuggested, suggested)
 
-        assertEquals(26, searchable.size)
+        assertEquals(30, searchable.size)
         assertEquals(expectedSearchable, searchable)
 
         // suggested, searchable listesinin alt kümesidir
@@ -915,9 +919,9 @@ class MerchantCategoryRecommendationIndexTest {
             assertTrue(id in searchable, "$id searchable listesinde yer almalıdır")
         }
 
-        // Searchable-only merchant'lar suggested içinde yer almaz (18 adet)
+        // Searchable-only merchant'lar suggested içinde yer almaz (22 adet)
         val searchableOnly = expectedSearchable - expectedSuggested.toSet()
-        assertEquals(18, searchableOnly.size)
+        assertEquals(22, searchableOnly.size)
         searchableOnly.forEach { id ->
             assertTrue(id !in suggested, "$id suggested listesinde bulunmamalıdır")
         }
@@ -962,8 +966,8 @@ class MerchantCategoryRecommendationIndexTest {
             )
         }
 
-        // Starter catalog toplamı 184
-        assertEquals(184, StarterMerchantCatalog.merchants.size)
+        // Starter catalog toplamı 234
+        assertEquals(234, StarterMerchantCatalog.merchants.size)
     }
 
     @Test
@@ -1059,8 +1063,8 @@ class MerchantCategoryRecommendationIndexTest {
             )
         }
 
-        // Starter catalog toplamı 184
-        assertEquals(184, StarterMerchantCatalog.merchants.size)
+        // Starter catalog toplamı 234
+        assertEquals(234, StarterMerchantCatalog.merchants.size)
     }
 
     @Test
@@ -1141,8 +1145,8 @@ class MerchantCategoryRecommendationIndexTest {
             )
         assertTrue(incomeSearchable.isEmpty())
 
-        // Starter catalog toplamı 184
-        assertEquals(184, StarterMerchantCatalog.merchants.size)
+        // Starter catalog toplamı 234
+        assertEquals(234, StarterMerchantCatalog.merchants.size)
     }
 
     @Test
@@ -1242,8 +1246,8 @@ class MerchantCategoryRecommendationIndexTest {
             )
         assertTrue(incomeSearchable.isEmpty())
 
-        // Starter catalog toplamı 184
-        assertEquals(184, StarterMerchantCatalog.merchants.size)
+        // Starter catalog toplamı 234
+        assertEquals(234, StarterMerchantCatalog.merchants.size)
     }
 
     @Test
@@ -1335,8 +1339,8 @@ class MerchantCategoryRecommendationIndexTest {
             )
         assertTrue(incomeSearchable.isEmpty())
 
-        // Starter catalog toplamı 184
-        assertEquals(184, StarterMerchantCatalog.merchants.size)
+        // Starter catalog toplamı 234
+        assertEquals(234, StarterMerchantCatalog.merchants.size)
     }
 
     @Test
@@ -1428,6 +1432,277 @@ class MerchantCategoryRecommendationIndexTest {
             assertTrue(id !in foodDiningSearchable, "$id food_dining profiline sızmamalıdır")
         }
 
-        assertEquals(184, StarterMerchantCatalog.merchants.size)
+        assertEquals(234, StarterMerchantCatalog.merchants.size)
+    }
+
+    @Test
+    fun housingCategoryProfile_suggestedAndSearchableContract() {
+        val profile = MerchantCategoryRecommendationIndex.getProfile("housing")
+        assertNotNull(profile)
+        assertTrue(profile.hasSuggested)
+        assertTrue(profile.hasSearchable)
+
+        val expectedSuggested =
+            listOf(
+                "apsiyon",
+                "yonetimcell",
+                "armut",
+                "senyonet",
+                "mrusta",
+                "pronet",
+                "kale_alarm",
+            )
+        val expectedSearchable =
+            listOf(
+                "apsiyon",
+                "yonetimcell",
+                "armut",
+                "senyonet",
+                "mrusta",
+                "pronet",
+                "kale_alarm",
+                "koctas",
+                "bauhaus",
+            )
+
+        assertEquals(expectedSuggested, profile.suggestedMerchantIds.map { it.value })
+        assertEquals(expectedSearchable, profile.searchableMerchantIds.map { it.value })
+
+        val resolvedSuggested =
+            MerchantCategoryRecommendationIndex.resolveSuggestedMerchantIds(
+                TransactionType.EXPENSE,
+                "housing",
+            )
+        assertEquals(expectedSuggested, resolvedSuggested.map { it.value })
+
+        val resolvedSearchable =
+            MerchantCategoryRecommendationIndex.resolveSearchableMerchantIds(
+                TransactionType.EXPENSE,
+                "housing",
+            )
+        assertEquals(expectedSearchable, resolvedSearchable.map { it.value })
+
+        // Income type should return empty safely
+        val incomeSuggested =
+            MerchantCategoryRecommendationIndex.resolveSuggestedMerchantIds(
+                TransactionType.INCOME,
+                "housing",
+            )
+        assertTrue(incomeSuggested.isEmpty())
+
+        val incomeSearchable =
+            MerchantCategoryRecommendationIndex.resolveSearchableMerchantIds(
+                TransactionType.INCOME,
+                "housing",
+            )
+        assertTrue(incomeSearchable.isEmpty())
+    }
+
+    @Test
+    fun healthcareCategoryProfile_suggestedAndSearchableContract() {
+        val profile = MerchantCategoryRecommendationIndex.getProfile("healthcare")
+        assertNotNull(profile)
+        assertTrue(profile.hasSuggested)
+        assertTrue(profile.hasSearchable)
+
+        val expectedSuggested =
+            listOf(
+                "acibadem",
+                "memorial",
+                "medical_park",
+                "liv_hospital",
+                "medicana",
+                "florence_nightingale",
+                "anadolu_saglik",
+                "amerikan_hastanesi",
+                "dunyagoz",
+            )
+
+        val expectedSearchable =
+            listOf(
+                "acibadem",
+                "memorial",
+                "medical_park",
+                "liv_hospital",
+                "medicana",
+                "florence_nightingale",
+                "anadolu_saglik",
+                "amerikan_hastanesi",
+                "dunyagoz",
+                "medipol",
+                "biruni_hastanesi",
+                "guven_hastanesi",
+                "lokman_hekim",
+                "baskent_hastanesi",
+                "synevo",
+                "duzen_laboratuvari",
+                "dentgroup",
+                "hospitadent",
+                "atasun_optik",
+            )
+
+        assertEquals(expectedSuggested, profile.suggestedMerchantIds.map { it.value })
+        assertEquals(expectedSearchable, profile.searchableMerchantIds.map { it.value })
+        assertEquals(9, profile.suggestedMerchantIds.size)
+        assertEquals(19, profile.searchableMerchantIds.size)
+
+        // Atasun searchable içinde, suggested dışında
+        assertTrue(profile.searchableMerchantIds.any { it.value == "atasun_optik" })
+        assertFalse(profile.suggestedMerchantIds.any { it.value == "atasun_optik" })
+
+        // suggested searchable'ın alt kümesi
+        assertTrue(profile.searchableMerchantIds.containsAll(profile.suggestedMerchantIds))
+
+        val resolvedSuggested =
+            MerchantCategoryRecommendationIndex.resolveSuggestedMerchantIds(
+                TransactionType.EXPENSE,
+                "healthcare",
+            )
+        assertEquals(expectedSuggested, resolvedSuggested.map { it.value })
+
+        val resolvedSearchable =
+            MerchantCategoryRecommendationIndex.resolveSearchableMerchantIds(
+                TransactionType.EXPENSE,
+                "healthcare",
+            )
+        assertEquals(expectedSearchable, resolvedSearchable.map { it.value })
+
+        // Tekrarlı çağrı deterministik
+        val repeatSearchable =
+            MerchantCategoryRecommendationIndex.resolveSearchableMerchantIds(
+                TransactionType.EXPENSE,
+                "healthcare",
+            )
+        assertEquals(resolvedSearchable, repeatSearchable)
+
+        // Income type should return empty safely
+        val incomeSuggested =
+            MerchantCategoryRecommendationIndex.resolveSuggestedMerchantIds(
+                TransactionType.INCOME,
+                "healthcare",
+            )
+        assertTrue(incomeSuggested.isEmpty())
+
+        val incomeSearchable =
+            MerchantCategoryRecommendationIndex.resolveSearchableMerchantIds(
+                TransactionType.INCOME,
+                "healthcare",
+            )
+        assertTrue(incomeSearchable.isEmpty())
+    }
+
+    @Test
+    fun educationCategoryProfile_suggestedAndSearchableContract() {
+        val profile = MerchantCategoryRecommendationIndex.getProfile("education")
+        assertNotNull(profile, "Education profili bulunmalı")
+        assertEquals("education", profile.categoryIconKey.key)
+        assertTrue(profile.hasSuggested)
+        assertTrue(profile.hasSearchable)
+
+        val expectedNine =
+            listOf(
+                "udemy",
+                "coursera",
+                "duolingo",
+                "cambly",
+                "kunduz",
+                "tonguc_akademi",
+                "okulistik",
+                "morpa_kampus",
+                "raunt",
+            )
+        val expectedTwentySeven =
+            expectedNine +
+                listOf(
+                    "busuu",
+                    "preply",
+                    "italki",
+                    "skillshare",
+                    "derslig",
+                    "benim_hocam",
+                    "pegem_akademi",
+                    "english_time",
+                    "bilge_adam",
+                    "wall_street_english",
+                    "amerikankultur",
+                    "dr",
+                    "kitapyurdu",
+                    "bkm_kitap",
+                    "idefix",
+                    "storytel",
+                    "audible",
+                    "linkedin_premium",
+                )
+
+        assertEquals(expectedNine, profile.suggestedMerchantIds.map { it.value })
+        assertEquals(expectedTwentySeven, profile.searchableMerchantIds.map { it.value })
+        assertEquals(9, profile.suggestedMerchantIds.size)
+        assertEquals(27, profile.searchableMerchantIds.size)
+        assertEquals(27, profile.searchableMerchantIds.distinct().size)
+
+        // suggested searchable'ın alt kümesi
+        assertTrue(profile.searchableMerchantIds.containsAll(profile.suggestedMerchantIds))
+
+        val resolvedSuggested =
+            MerchantCategoryRecommendationIndex.resolveSuggestedMerchantIds(
+                TransactionType.EXPENSE,
+                "education",
+            )
+        assertEquals(expectedNine, resolvedSuggested.map { it.value })
+
+        val resolvedSearchable =
+            MerchantCategoryRecommendationIndex.resolveSearchableMerchantIds(
+                TransactionType.EXPENSE,
+                "education",
+            )
+        assertEquals(expectedTwentySeven, resolvedSearchable.map { it.value })
+
+        // Tekrarlı çağrı deterministik
+        val repeatSearchable =
+            MerchantCategoryRecommendationIndex.resolveSearchableMerchantIds(
+                TransactionType.EXPENSE,
+                "education",
+            )
+        assertEquals(resolvedSearchable, repeatSearchable)
+
+        // Income type should return empty safely
+        val incomeSuggested =
+            MerchantCategoryRecommendationIndex.resolveSuggestedMerchantIds(
+                TransactionType.INCOME,
+                "education",
+            )
+        assertTrue(incomeSuggested.isEmpty())
+
+        val incomeSearchable =
+            MerchantCategoryRecommendationIndex.resolveSearchableMerchantIds(
+                TransactionType.INCOME,
+                "education",
+            )
+        assertTrue(incomeSearchable.isEmpty())
+
+        // Shopping profilinde 4 kitapçı aranabilir ve suggested değil
+        val shoppingProfile =
+            MerchantCategoryRecommendationIndex.getProfile(
+                TransactionType.EXPENSE,
+                "shopping",
+            )
+        assertNotNull(shoppingProfile)
+        val bookstores = listOf("dr", "kitapyurdu", "bkm_kitap", "idefix")
+        for (b in bookstores) {
+            assertTrue(shoppingProfile.searchableMerchantIds.any { it.value == b }, "Kitapçı '$b' shopping searchable olmalıdır")
+            assertFalse(shoppingProfile.suggestedMerchantIds.any { it.value == b }, "Kitapçı '$b' shopping suggested olmamalıdır")
+            assertTrue(profile.searchableMerchantIds.any { it.value == b }, "Kitapçı '$b' education searchable olmalıdır")
+            assertFalse(profile.suggestedMerchantIds.any { it.value == b }, "Kitapçı '$b' education suggested olmamalıdır")
+        }
+
+        // Amazon, Trendyol, Hepsiburada education profilinde olmamalı
+        val forbiddenInEducation = listOf("amazon", "trendyol", "hepsiburada")
+        for (f in forbiddenInEducation) {
+            assertFalse(profile.searchableMerchantIds.any { it.value == f }, "'$f' education profilinde olmamalıdır")
+            assertFalse(profile.suggestedMerchantIds.any { it.value == f }, "'$f' education suggested olmamalıdır")
+        }
+
+        // Starter catalog toplamı 234
+        assertEquals(234, StarterMerchantCatalog.merchants.size)
     }
 }

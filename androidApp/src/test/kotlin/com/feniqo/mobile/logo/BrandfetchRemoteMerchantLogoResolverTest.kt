@@ -2,6 +2,7 @@ package com.feniqo.mobile.logo
 
 import com.feniqo.mobile.data.remote.logo.BrandfetchDomainAllowlist
 import com.feniqo.mobile.data.remote.logo.BrandfetchLogoConfig
+import com.feniqo.mobile.data.remote.logo.MerchantLogoDomainAllowlist
 import com.feniqo.mobile.presentation.component.RemoteMerchantLogoSurfacePolicy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -108,8 +109,11 @@ class BrandfetchRemoteMerchantLogoResolverTest {
     @Test
     fun allowlistKeys_matchApprovedMerchantLogoRegistry() {
         val keys = BrandfetchDomainAllowlist.allowlistKeys()
-        assertEquals(141, keys.size)
-        assertTrue(keys.containsAll(approvedLogoKeys))
+        val centralKeys = MerchantLogoDomainAllowlist.allowlistKeys()
+        assertEquals(191, keys.size)
+        assertEquals(191, centralKeys.size)
+        assertEquals(centralKeys, keys)
+        assertEquals(keys, approvedLogoKeys)
     }
 
     @Test
@@ -118,7 +122,7 @@ class BrandfetchRemoteMerchantLogoResolverTest {
 
         for (key in approvedLogoKeys) {
             val request = resolver.resolve(key)
-            assertNotNull("Pilot key '$key' için request üretilmeliydi", request)
+            assertNotNull("Allowlisted key '$key' için request üretilmeliydi", request)
             requireNotNull(request)
 
             // 1. Sabit HTTPS ve host kontrolü
@@ -138,135 +142,8 @@ class BrandfetchRemoteMerchantLogoResolverTest {
         }
     }
 
-    private val approvedLogoKeys =
-        setOf(
-            "migros",
-            "carrefoursa",
-            "a101",
-            "bim",
-            "sok",
-            "netflix",
-            "spotify",
-            "disney_plus",
-            "trendyol",
-            "hepsiburada",
-            "amazon",
-            "yemeksepeti",
-            "turkcell",
-            "vodafone",
-            "petrol_ofisi",
-            "opet",
-            "shell",
-            "thy",
-            "pegasus",
-            "uber",
-            "obilet",
-            "enuygun",
-            "macrocenter",
-            "file_market",
-            "tarim_kredi",
-            "getir",
-            "bizim_toptan",
-            "metro_turkiye",
-            "starbucks",
-            "mcdonalds",
-            "burger_king",
-            "kfc",
-            "popeyes",
-            "dominos",
-            "little_caesars",
-            "pizza_lazza",
-            "tavuk_dunyasi",
-            "baydoner",
-            "kofteci_yusuf",
-            "kahve_dunyasi",
-            "mado",
-            "espressolab",
-            "simit_sarayi",
-            "bigchefs",
-            "max",
-            "exxen",
-            "gain",
-            "mubi",
-            "tod",
-            "tabii",
-            "apple_services",
-            "adobe",
-            "canva",
-            "s_sport_plus",
-            "tv_plus",
-            "tivibu",
-            "d_smart_go",
-            "deezer",
-            "fizy",
-            "muud",
-            "storytel",
-            "audible",
-            "dropbox",
-            "youtube",
-            "google",
-            "microsoft",
-            "playstation",
-            "xbox",
-            "linkedin",
-            "nintendo",
-            "ea",
-            "n11",
-            "ciceksepeti",
-            "pazarama",
-            "boyner",
-            "lc_waikiki",
-            "defacto",
-            "teknosa",
-            "mediamarkt",
-            "flo",
-            "koton",
-            "mavi",
-            "zara",
-            "hm",
-            "pull_and_bear",
-            "bershka",
-            "stradivarius",
-            "beymen",
-            "vakko",
-            "ikea",
-            "koctas",
-            "bauhaus",
-            "vatan_bilgisayar",
-            "ebebek",
-            "gratis",
-            "watsons",
-            "rossmann",
-            "sephora",
-            "eve_shop",
-            "flormar",
-            "golden_rose",
-            "yves_rocher",
-            "the_body_shop",
-            "kiko_milano",
-            "mac_cosmetics",
-            "clinique",
-            "avon",
-            "oriflame",
-            "farmasi",
-            "istanbulkart",
-            "tcdd",
-            "bitaksi",
-            "marti",
-            "ispark",
-            "metro_turizm",
-            "pamukkale_turizm",
-            "varan_turizm",
-            "ido",
-            "ajet",
-            "sunexpress",
-            "corendon",
-            "booking",
-            "airbnb",
-            "ets_tur",
-            "jolly_tur",
-            "setur",
-        )
+    private val approvedLogoKeys: Set<String>
+        get() = MerchantLogoDomainAllowlist.allowlistKeys()
 
     @Test
     fun clientId_isNeverLeakedInConfigToString() {

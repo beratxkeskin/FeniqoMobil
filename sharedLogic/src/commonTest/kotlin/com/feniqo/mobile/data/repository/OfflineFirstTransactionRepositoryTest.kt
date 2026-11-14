@@ -1902,7 +1902,7 @@ class OfflineFirstTransactionRepositoryTest {
             assertEquals("netflix", enqueued.merchantId)
             assertEquals("EXACT_ALIAS", enqueued.merchantMatchSourceCode)
             assertEquals(95, enqueued.merchantConfidence)
-            assertEquals(18, enqueued.merchantCatalogVersion)
+            assertEquals(22, enqueued.merchantCatalogVersion)
         }
 
     @Test
@@ -1930,7 +1930,7 @@ class OfflineFirstTransactionRepositoryTest {
             assertEquals("bim", enqueued.merchantId)
             assertEquals("EXACT_ALIAS", enqueued.merchantMatchSourceCode)
             assertEquals(95, enqueued.merchantConfidence)
-            assertEquals(18, enqueued.merchantCatalogVersion)
+            assertEquals(22, enqueued.merchantCatalogVersion)
         }
 
     @Test
@@ -2114,7 +2114,7 @@ class OfflineFirstTransactionRepositoryTest {
                 assertEquals("teknosa", unit.entity.merchantId)
                 assertEquals("EXACT_ALIAS", unit.entity.merchantMatchSourceCode)
                 assertEquals(95, unit.entity.merchantConfidence)
-                assertEquals(18, unit.entity.merchantCatalogVersion)
+                assertEquals(22, unit.entity.merchantCatalogVersion)
             }
         }
 
@@ -2150,7 +2150,7 @@ class OfflineFirstTransactionRepositoryTest {
             assertNotNull(enqueued)
             assertEquals("spotify", enqueued.merchantId)
             assertEquals(95, enqueued.merchantConfidence)
-            assertEquals(18, enqueued.merchantCatalogVersion)
+            assertEquals(22, enqueued.merchantCatalogVersion)
         }
 
     @Test
@@ -2234,7 +2234,7 @@ class OfflineFirstTransactionRepositoryTest {
                 assertEquals("teknosa", unit.entity.merchantId)
                 assertEquals("EXACT_ALIAS", unit.entity.merchantMatchSourceCode)
                 assertEquals(95, unit.entity.merchantConfidence)
-                assertEquals(18, unit.entity.merchantCatalogVersion)
+                assertEquals(22, unit.entity.merchantCatalogVersion)
             }
         }
 

@@ -405,7 +405,7 @@ class OfflineFirstTransactionRepositoryDecisionTest {
             assertEquals("migros", entity.merchantId)
             assertEquals("USER_VERIFIED", entity.merchantMatchSourceCode)
             assertEquals(100, entity.merchantConfidence)
-            assertEquals(18, entity.merchantCatalogVersion)
+            assertEquals(22, entity.merchantCatalogVersion)
 
             // 2. Verification entity assertion (PERSONAL ASSIGN)
             val verification = getVerificationForAlias("MIGROS SISLI")
@@ -445,7 +445,7 @@ class OfflineFirstTransactionRepositoryDecisionTest {
             assertEquals("kofteci_yusuf", entity.merchantId)
             assertEquals("USER_VERIFIED", entity.merchantMatchSourceCode)
             assertEquals(100, entity.merchantConfidence)
-            assertEquals(18, entity.merchantCatalogVersion)
+            assertEquals(22, entity.merchantCatalogVersion)
 
             // 2. Verification entity assertion (PERSONAL ASSIGN)
             val verification = getVerificationForAlias("KOFTECI YUSUF")
@@ -486,7 +486,7 @@ class OfflineFirstTransactionRepositoryDecisionTest {
             assertEquals("yemeksepeti", entity.merchantId)
             assertEquals("USER_VERIFIED", entity.merchantMatchSourceCode)
             assertEquals(100, entity.merchantConfidence)
-            assertEquals(18, entity.merchantCatalogVersion)
+            assertEquals(22, entity.merchantCatalogVersion)
 
             // 2. Verification entity assertion: canonical alias YEMEKSEPETI, NOT generic YEMEK
             assertNull(getVerificationForAlias("YEMEK"))
@@ -553,7 +553,7 @@ class OfflineFirstTransactionRepositoryDecisionTest {
             assertEquals("vatan_bilgisayar", entity.merchantId)
             assertEquals("USER_VERIFIED", entity.merchantMatchSourceCode)
             assertEquals(100, entity.merchantConfidence)
-            assertEquals(18, entity.merchantCatalogVersion)
+            assertEquals(22, entity.merchantCatalogVersion)
 
             // 2. Verification entity assertion (PERSONAL ASSIGN)
             val verification = getVerificationForAlias("VATAN BILGISAYAR")
@@ -1150,7 +1150,7 @@ class OfflineFirstTransactionRepositoryDecisionTest {
             assertEquals("steam", created.merchantId)
             assertEquals("USER_VERIFIED", created.merchantMatchSourceCode)
             assertEquals(100, created.merchantConfidence)
-            assertEquals(18, created.merchantCatalogVersion)
+            assertEquals(22, created.merchantCatalogVersion)
 
             val verification = getVerificationForAlias("STEAM OYUN")
             assertNotNull(verification)
@@ -1162,7 +1162,7 @@ class OfflineFirstTransactionRepositoryDecisionTest {
             assertEquals("steam", domainTx.merchantId?.value)
             assertEquals(MerchantMatchSource.USER_VERIFIED, domainTx.merchantMatchSource)
             assertEquals(100, domainTx.merchantConfidence)
-            assertEquals(18, domainTx.merchantCatalogVersion)
+            assertEquals(22, domainTx.merchantCatalogVersion)
 
             // Gerçek outbox kayıtlarını doğrudan veritabanından oku (sabit test yardımcısı yerine)
             val realOps = getRealOutboxRows(syncScopeKey)
@@ -1288,7 +1288,7 @@ class OfflineFirstTransactionRepositoryDecisionTest {
             assertEquals("gratis", created.merchantId)
             assertEquals("USER_VERIFIED", created.merchantMatchSourceCode)
             assertEquals(100, created.merchantConfidence)
-            assertEquals(18, created.merchantCatalogVersion)
+            assertEquals(22, created.merchantCatalogVersion)
 
             val verification = getVerificationForAlias("GRATIS KOZMETIK")
             assertNotNull(verification)
@@ -1377,7 +1377,7 @@ class OfflineFirstTransactionRepositoryDecisionTest {
             assertEquals("turknet", created.merchantId)
             assertEquals("USER_VERIFIED", created.merchantMatchSourceCode)
             assertEquals(100, created.merchantConfidence)
-            assertEquals(18, created.merchantCatalogVersion)
+            assertEquals(22, created.merchantCatalogVersion)
 
             val verification = getVerificationForAlias("TURKNET INTERNET")
             assertNotNull(verification)
@@ -1484,7 +1484,7 @@ class OfflineFirstTransactionRepositoryDecisionTest {
             assertEquals("istanbulkart", created.merchantId)
             assertEquals("USER_VERIFIED", created.merchantMatchSourceCode)
             assertEquals(100, created.merchantConfidence)
-            assertEquals(18, created.merchantCatalogVersion)
+            assertEquals(22, created.merchantCatalogVersion)
 
             val verification = getVerificationForAlias("ISTANBULKART")
             assertNotNull(verification)
@@ -1545,7 +1545,7 @@ class OfflineFirstTransactionRepositoryDecisionTest {
             assertEquals("ajet", created.merchantId)
             assertEquals("USER_VERIFIED", created.merchantMatchSourceCode)
             assertEquals(100, created.merchantConfidence)
-            assertEquals(18, created.merchantCatalogVersion)
+            assertEquals(22, created.merchantCatalogVersion)
 
             val verification = getVerificationForAlias("AJET UCUS")
             assertNotNull(verification)
@@ -1606,7 +1606,7 @@ class OfflineFirstTransactionRepositoryDecisionTest {
             assertEquals("ajet", created.merchantId)
             assertEquals("USER_VERIFIED", created.merchantMatchSourceCode)
             assertEquals(100, created.merchantConfidence)
-            assertEquals(18, created.merchantCatalogVersion)
+            assertEquals(22, created.merchantCatalogVersion)
 
             val verification = getVerificationForAlias("AJET UCUS")
             assertNotNull(verification)
