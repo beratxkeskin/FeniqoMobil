@@ -2369,6 +2369,19 @@ class TransactionFormViewModelTest {
             createdAt = Instant.parse("2026-08-01T00:00:00Z"),
         )
 
+    private val sampleFamilyPetsCategory =
+        Category(
+            id = EntityId("cat-family-pets"),
+            ownerId = EntityId("user-1"),
+            workspaceId = null,
+            name = "Aile & Evcil Hayvan",
+            type = TransactionType.EXPENSE,
+            color = CategoryColor("#10B981"),
+            icon = CategoryIcon("family_pets"),
+            isDefault = false,
+            createdAt = Instant.parse("2026-08-01T00:00:00Z"),
+        )
+
     @Test
     fun merchantDecision_01_newFormDefaultsToAuto_andProducesNoMutation() = runTest {
         val viewModel = createViewModel(TransactionFormRoute(null))
@@ -3509,6 +3522,98 @@ class TransactionFormViewModelTest {
             assertNotNull(trxRepo.lastCreatedTransaction)
             assertEquals(
                 TransactionMerchantCreateDecision.UseTransactionName,
+                trxRepo.lastMerchantDecision,
+            )
+
+            job.cancel()
+        }
+
+    @Test
+    fun merchantDecision_34_familyPets_candidatesAndSelection_submitsSingleCall() =
+        runTest {
+            catRepo.activeCategoriesFlow.value = listOf(sampleFamilyPetsCategory)
+            val viewModel = createViewModel(TransactionFormRoute(null))
+            val job = launch(UnconfinedTestDispatcher()) { viewModel.uiState.collect { } }
+            advanceUntilIdle()
+
+            viewModel.onAmountChanged("450")
+            viewModel.onCategoryChanged(sampleFamilyPetsCategory.id)
+            viewModel.onTitleChanged("Kedi mamasi")
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertTrue(state.isMerchantSelectionEligible)
+
+            // 9 suggested candidates in deterministic order
+            val expectedCandidateIds =
+                listOf(
+                    "ebebek",
+                    "petlebi",
+                    "civil",
+                    "temizmama",
+                    "toyzz_shop",
+                    "juen_pet_market",
+                    "joker_baby",
+                    "armagan_oyuncak",
+                    "petzz_shop",
+                )
+            assertEquals(9, state.merchantSuggestedCandidates.size)
+            assertEquals(expectedCandidateIds, state.merchantSuggestedCandidates.map { it.id.value })
+
+            // 17 searchable candidates in deterministic order
+            val expectedSearchableCandidateIds =
+                expectedCandidateIds +
+                    listOf(
+                        "markamama",
+                        "petburada",
+                        "petihtiyac",
+                        "kolaymama",
+                        "panco",
+                        "bg_store",
+                        "minycenter",
+                        "vetamerikan",
+                    )
+            assertEquals(17, state.merchantSearchableCandidates.size)
+            assertEquals(expectedSearchableCandidateIds, state.merchantSearchableCandidates.map { it.id.value })
+
+            // Unknown merchant rejected fail-closed
+            viewModel.onKnownMerchantSelected(EntityId("unknown_merchant_xyz"))
+            assertEquals(TransactionMerchantCreateDecision.Auto, viewModel.uiState.value.merchantDecision)
+
+            // Cross-category candidate ebebek can be selected
+            viewModel.onKnownMerchantSelected(EntityId("ebebek"))
+            assertEquals(
+                TransactionMerchantCreateDecision.KnownMerchant(EntityId("ebebek")),
+                viewModel.uiState.value.merchantDecision,
+            )
+            assertEquals(EntityId("ebebek"), viewModel.uiState.value.selectedMerchantCandidate?.id)
+            assertEquals("ebebek", viewModel.uiState.value.selectedMerchantCandidate?.displayName)
+
+            // Direct family_pets merchant petlebi can be selected
+            viewModel.onKnownMerchantSelected(EntityId("petlebi"))
+            assertEquals(
+                TransactionMerchantCreateDecision.KnownMerchant(EntityId("petlebi")),
+                viewModel.uiState.value.merchantDecision,
+            )
+            assertEquals(EntityId("petlebi"), viewModel.uiState.value.selectedMerchantCandidate?.id)
+            assertEquals("Petlebi", viewModel.uiState.value.selectedMerchantCandidate?.displayName)
+
+            // Searchable-only family_pets merchant markamama can be selected
+            viewModel.onKnownMerchantSelected(EntityId("markamama"))
+            assertEquals(
+                TransactionMerchantCreateDecision.KnownMerchant(EntityId("markamama")),
+                viewModel.uiState.value.merchantDecision,
+            )
+            assertEquals(EntityId("markamama"), viewModel.uiState.value.selectedMerchantCandidate?.id)
+            assertEquals("Markamama", viewModel.uiState.value.selectedMerchantCandidate?.displayName)
+
+            // Single submit call sends KnownMerchant(markamama)
+            viewModel.submit()
+            advanceUntilIdle()
+
+            assertNotNull(trxRepo.lastCreatedTransaction)
+            assertEquals(
+                TransactionMerchantCreateDecision.KnownMerchant(EntityId("markamama")),
                 trxRepo.lastMerchantDecision,
             )
 

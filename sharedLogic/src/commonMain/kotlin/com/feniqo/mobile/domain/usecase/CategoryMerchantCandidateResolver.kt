@@ -19,7 +19,7 @@ import com.feniqo.mobile.domain.model.TransactionType
  */
 class CategoryMerchantCandidateResolver {
     /**
-     * Tipli transaction type ve semantik ikon anahtarına göre önerilen merchant adaylarını döner (en fazla 8).
+     * Tipli transaction type ve semantik ikon anahtarına göre önerilen merchant adaylarını döner (en fazla 9).
      */
     fun resolveSuggestedCandidates(
         transactionType: TransactionType,

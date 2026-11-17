@@ -621,7 +621,7 @@ class TransactionsDisplayModelBuilderTest {
         val istanbulkart = StarterMerchantCatalog.merchants.first { it.id == "istanbulkart" }
         assertEquals("İstanbulkart", istanbulkart.displayName)
         assertEquals("istanbulkart", istanbulkart.verifiedLogoKey)
-        assertEquals(22, istanbulkart.catalogVersion)
+        assertEquals(26, istanbulkart.catalogVersion)
 
         val info =
             TransactionMerchantInfo(
@@ -646,7 +646,7 @@ class TransactionsDisplayModelBuilderTest {
         val ajet = StarterMerchantCatalog.merchants.first { it.id == "ajet" }
         assertEquals("AJet", ajet.displayName)
         assertEquals("ajet", ajet.verifiedLogoKey)
-        assertEquals(22, ajet.catalogVersion)
+        assertEquals(26, ajet.catalogVersion)
 
         val info =
             TransactionMerchantInfo(
@@ -671,7 +671,7 @@ class TransactionsDisplayModelBuilderTest {
         val kamilKoc = StarterMerchantCatalog.merchants.first { it.id == "kamil_koc" }
         assertEquals("Kâmil Koç", kamilKoc.displayName)
         assertNull(kamilKoc.verifiedLogoKey)
-        assertEquals(22, kamilKoc.catalogVersion)
+        assertEquals(26, kamilKoc.catalogVersion)
 
         val info =
             TransactionMerchantInfo(
@@ -781,7 +781,7 @@ class TransactionsDisplayModelBuilderTest {
         val maxMerchant = StarterMerchantCatalog.merchants.first { it.id == "max" }
         assertEquals("HBO Max", maxMerchant.displayName)
         assertEquals("max", maxMerchant.verifiedLogoKey)
-        assertEquals(22, maxMerchant.catalogVersion)
+        assertEquals(26, maxMerchant.catalogVersion)
 
         val historicalInfo =
             TransactionMerchantInfo(
@@ -883,8 +883,8 @@ class TransactionsDisplayModelBuilderTest {
         assertEquals("youtube", merchantYt.verifiedLogoKey)
         assertTrue(merchantYt.canShowMerchantLogo)
 
-        // 3. v1..v20 tarihsel attribution'ın güncel v21 katalogla başarıyla çözümlendiğini doğrula
-        for (histVersion in 1..20) {
+        // 3. v1..v24 tarihsel attribution'ın güncel v25 katalogla başarıyla çözümlendiğini doğrula
+        for (histVersion in 1..24) {
             val histTrx =
                 createTrx(
                     "t-hist-$histVersion",
@@ -897,25 +897,25 @@ class TransactionsDisplayModelBuilderTest {
                         ),
                 )
             val histItem = TransactionsDisplayModelBuilder.buildItem(histTrx, subCat, catalog = StarterMerchantCatalog.merchants)
-            assertNotNull(histItem.merchant, "Tarihsel v$histVersion işlemi v21 katalogla çözümlenmelidir")
+            assertNotNull(histItem.merchant, "Tarihsel v$histVersion işlemi v25 katalogla çözümlenmelidir")
             assertEquals("Amazon Prime", histItem.merchant?.displayName)
             assertEquals("amazon", histItem.merchant?.verifiedLogoKey)
         }
 
-        // 4. Gelecekteki v23 attribution'ın fail-closed kaldığını (null döndüğünü) doğrula
+        // 4. Gelecekteki v27 attribution'ın fail-closed kaldığını (null döndüğünü) doğrula
         val futureTrx =
             createTrx(
-                "t-future-23",
+                "t-future-27",
                 merchantInfo =
                     TransactionMerchantInfo(
                         merchantId = EntityId("amazon_prime"),
                         matchSource = MerchantMatchSource.BRAND_AND_SERVICE,
                         confidence = 90,
-                        catalogVersion = 23,
+                        catalogVersion = 27,
                     ),
             )
         val futureItem = TransactionsDisplayModelBuilder.buildItem(futureTrx, subCat, catalog = StarterMerchantCatalog.merchants)
-        assertNull(futureItem.merchant, "Gelecekteki v23 attribution fail-closed kalarak null dönmelidir")
+        assertNull(futureItem.merchant, "Gelecekteki v27 attribution fail-closed kalarak null dönmelidir")
     }
 
     @Test
@@ -1156,6 +1156,132 @@ class TransactionsDisplayModelBuilderTest {
             assertEquals(id, merchant.merchantId.value)
             assertEquals(expectedLogoKey, merchant.verifiedLogoKey)
             assertTrue(merchant.canShowMerchantLogo)
+        }
+    }
+
+    @Test
+    fun buildItem_realStarterMerchant_familyPetsK1Merchants_resolveVerifiedLogoKeysAndPreserveIdentity() {
+        val familyPetsCat = cat1.copy(icon = CategoryIcon("family_pets"))
+        val k1Merchants =
+            listOf(
+                "petlebi" to "Petlebi",
+                "civil" to "Civil",
+                "temizmama" to "Temizmama",
+                "toyzz_shop" to "Toyzz Shop",
+                "juen_pet_market" to "Juen Pet Market",
+                "joker_baby" to "Joker Baby",
+                "armagan_oyuncak" to "Armağan Oyuncak",
+                "petzz_shop" to "Petzz Shop",
+            )
+
+        for ((id, expectedDisplayName) in k1Merchants) {
+            // 1. confidence >= 75 resolves model
+            val trx =
+                createTrx(
+                    "t-fp-$id",
+                    merchantInfo =
+                        TransactionMerchantInfo(
+                            merchantId = EntityId(id),
+                            matchSource = MerchantMatchSource.EXACT_ALIAS,
+                            confidence = 95,
+                            catalogVersion = 24,
+                        ),
+                )
+            val item =
+                TransactionsDisplayModelBuilder.buildItem(
+                    trx,
+                    familyPetsCat,
+                    catalog = StarterMerchantCatalog.merchants,
+                )
+            val merchant = item.merchant
+            assertNotNull(merchant, "Family & pets merchant '$id' çözümlenmelidir")
+            assertEquals(id, merchant.merchantId.value)
+            assertEquals(id, merchant.verifiedLogoKey)
+            assertEquals(expectedDisplayName, merchant.displayName)
+            assertTrue(merchant.canShowMerchantLogo)
+
+            // 2. confidence < 75 returns null (does not leak identity)
+            val lowConfidenceTrx =
+                createTrx(
+                    "t-fp-low-$id",
+                    merchantInfo =
+                        TransactionMerchantInfo(
+                            merchantId = EntityId(id),
+                            matchSource = MerchantMatchSource.EXACT_ALIAS,
+                            confidence = 70,
+                            catalogVersion = 24,
+                        ),
+                )
+            val lowItem =
+                TransactionsDisplayModelBuilder.buildItem(
+                    lowConfidenceTrx,
+                    familyPetsCat,
+                    catalog = StarterMerchantCatalog.merchants,
+                )
+            assertNull(lowItem.merchant, "Confidence < 75 durumunda merchant null dönmelidir")
+        }
+    }
+
+    @Test
+    fun buildItem_realStarterMerchant_familyPetsK2Merchants_resolveVerifiedLogoKeysAndPreserveIdentity() {
+        val familyPetsCat = cat1.copy(icon = CategoryIcon("family_pets"))
+        val k2Merchants =
+            listOf(
+                "markamama" to "Markamama",
+                "petburada" to "Petburada",
+                "petihtiyac" to "Petihtiyaç",
+                "kolaymama" to "Kolay Mama",
+                "panco" to "Panço",
+                "bg_store" to "B&G Store",
+                "minycenter" to "MinyCenter",
+                "vetamerikan" to "VetAmerikan",
+            )
+
+        for ((id, expectedDisplayName) in k2Merchants) {
+            // 1. confidence >= 75 resolves model
+            val trx =
+                createTrx(
+                    "t-fp2-$id",
+                    merchantInfo =
+                        TransactionMerchantInfo(
+                            merchantId = EntityId(id),
+                            matchSource = MerchantMatchSource.EXACT_ALIAS,
+                            confidence = 95,
+                            catalogVersion = 24,
+                        ),
+                )
+            val item =
+                TransactionsDisplayModelBuilder.buildItem(
+                    trx,
+                    familyPetsCat,
+                    catalog = StarterMerchantCatalog.merchants,
+                )
+            val merchant = item.merchant
+            assertNotNull(merchant, "Family & pets K2 merchant '$id' çözümlenmelidir")
+            assertEquals(id, merchant.merchantId.value)
+            assertEquals(id, merchant.verifiedLogoKey)
+            assertEquals(expectedDisplayName, merchant.displayName)
+            assertTrue(merchant.canShowMerchantLogo)
+
+            // 2. confidence < 75 returns null (does not leak identity)
+            val lowConfidenceTrx =
+                createTrx(
+                    "t-fp2-low-$id",
+                    merchantInfo =
+                        TransactionMerchantInfo(
+                            merchantId = EntityId(id),
+                            matchSource = MerchantMatchSource.EXACT_ALIAS,
+                            confidence = 70,
+                            catalogVersion = 24,
+                        ),
+                )
+            val lowItem =
+                TransactionsDisplayModelBuilder.buildItem(
+                    lowConfidenceTrx,
+                    familyPetsCat,
+                    catalog = StarterMerchantCatalog.merchants,
+                )
+            assertNull(lowItem.merchant, "Confidence < 75 durumunda merchant null dönmelidir")
         }
     }
 

@@ -897,6 +897,32 @@ class MerchantRecognitionEngineTest {
                 "kitapyurdu",
                 "bkm_kitap",
                 "idefix",
+                "petlebi",
+                "civil",
+                "temizmama",
+                "toyzz_shop",
+                "juen_pet_market",
+                "joker_baby",
+                "armagan_oyuncak",
+                "petzz_shop",
+                "markamama",
+                "petburada",
+                "petihtiyac",
+                "kolaymama",
+                "panco",
+                "bg_store",
+                "minycenter",
+                "vetamerikan",
+                "kizilay",
+                "losev",
+                "tema",
+                "tev",
+                "mehmetcik_vakfi",
+                "akut",
+                "acev",
+                "tog",
+                "gib",
+                "sgk",
             )
         val sharedTwelveSubscriptionKeys =
             mapOf(
@@ -940,7 +966,7 @@ class MerchantRecognitionEngineTest {
                 }
             }
         }
-        assertEquals(197, StarterMerchantCatalog.merchants.count { it.verifiedLogoKey != null })
+        assertEquals(223, StarterMerchantCatalog.merchants.count { it.verifiedLogoKey != null })
         assertEquals(37, StarterMerchantCatalog.merchants.count { it.verifiedLogoKey == null })
         assertEquals("getir", StarterMerchantCatalog.merchants.first { it.id == "getir" }.verifiedLogoKey)
         assertEquals("youtube", StarterMerchantCatalog.merchants.first { it.id == "youtube_premium" }.verifiedLogoKey)
@@ -1024,10 +1050,10 @@ class MerchantRecognitionEngineTest {
     @Test
     fun transportationAndTravel_catalogSizeAndVersionContract() {
         val merchants = StarterMerchantCatalog.merchants
-        assertEquals(234, merchants.size)
-        assertEquals(234, merchants.map { it.id }.distinct().size)
-        assertEquals(22, StarterMerchantCatalog.CATALOG_VERSION)
-        assertTrue(merchants.all { it.catalogVersion == 22 })
+        assertEquals(260, merchants.size)
+        assertEquals(260, merchants.map { it.id }.distinct().size)
+        assertEquals(26, StarterMerchantCatalog.CATALOG_VERSION)
+        assertTrue(merchants.all { it.catalogVersion == 26 })
     }
 
     @Test
@@ -2327,7 +2353,7 @@ class MerchantRecognitionEngineTest {
         assertEquals("marti", martiInfo.merchantId.value)
         assertEquals(95, martiInfo.confidence)
         assertEquals(MerchantMatchSource.EXACT_ALIAS, martiInfo.matchSource)
-        assertEquals(22, martiInfo.catalogVersion)
+        assertEquals(26, martiInfo.catalogVersion)
 
         // 2. MARTI USER_ENTERED sentence -> 65 SHORT_ALIAS / LOW_CONFIDENCE & resolver null
         val martiSentence = recognizeUser("martı gördüm")
@@ -2390,7 +2416,7 @@ class MerchantRecognitionEngineTest {
         assertEquals("tiktak", tiktakInfo.merchantId.value)
         assertEquals(95, tiktakInfo.confidence)
         assertEquals(MerchantMatchSource.EXACT_ALIAS, tiktakInfo.matchSource)
-        assertEquals(22, tiktakInfo.catalogVersion)
+        assertEquals(26, tiktakInfo.catalogVersion)
 
         // 7. TIKTAK USER_ENTERED sentence -> 65 SHORT_ALIAS / LOW_CONFIDENCE & resolver null
         val tiktakSentence = recognizeUser("tiktak sesi duydum")
@@ -2558,33 +2584,33 @@ class MerchantRecognitionEngineTest {
     }
 
     @Test
-    fun catalogV21_attributionsCarryVersionTwentyOneContract() {
+    fun catalogV26_attributionsCarryVersionTwentySixContract() {
         val merchants = StarterMerchantCatalog.merchants
-        assertEquals(22, StarterMerchantCatalog.CATALOG_VERSION)
-        assertTrue(merchants.all { it.catalogVersion == 22 }, "All 234 merchants must default to catalogVersion 22")
+        assertEquals(26, StarterMerchantCatalog.CATALOG_VERSION)
+        assertTrue(merchants.all { it.catalogVersion == 26 }, "All 260 merchants must default to catalogVersion 26")
 
         val tk = TransactionMerchantAttributionResolver.resolve("TARIM KREDI")
         assertNotNull(tk)
         assertEquals("tarim_kredi", tk.merchantId.value)
-        assertEquals(22, tk.catalogVersion)
+        assertEquals(26, tk.catalogVersion)
 
         val getir = TransactionMerchantAttributionResolver.resolve("GETIR")
         assertNotNull(getir)
         assertEquals("getir", getir.merchantId.value)
-        assertEquals(22, getir.catalogVersion)
+        assertEquals(26, getir.catalogVersion)
 
         val netflix = TransactionMerchantAttributionResolver.resolve("NETFLIX")
         assertNotNull(netflix)
         assertEquals("netflix", netflix.merchantId.value)
-        assertEquals(22, netflix.catalogVersion)
+        assertEquals(26, netflix.catalogVersion)
     }
 
     @Test
     fun subscriptionsCatalogIntegrity_currentV18Contract() {
-        assertEquals(22, StarterMerchantCatalog.CATALOG_VERSION)
+        assertEquals(26, StarterMerchantCatalog.CATALOG_VERSION)
         val merchants = StarterMerchantCatalog.merchants
-        assertEquals(234, merchants.size)
-        assertEquals(234, merchants.map { it.id }.distinct().size)
+        assertEquals(260, merchants.size)
+        assertEquals(260, merchants.map { it.id }.distinct().size)
 
         val directTenFromNewSixteen =
             listOf(
@@ -2630,17 +2656,17 @@ class MerchantRecognitionEngineTest {
             assertEquals(expectedKey, merchant.verifiedLogoKey, "$id verifiedLogoKey çatı anahtarı $expectedKey olmalıdır")
         }
 
-        // Toplam doğrulanmış logo sayısı 197, fallback sayısı 37 ve allowlist 191 oldu
-        assertEquals(197, merchants.count { it.verifiedLogoKey != null })
+        // Toplam doğrulanmış logo sayısı 223, fallback sayısı 37 ve allowlist 217 oldu
+        assertEquals(223, merchants.count { it.verifiedLogoKey != null })
         assertEquals(37, merchants.count { it.verifiedLogoKey == null })
-        assertEquals(191, MerchantLogoDomainAllowlist.size())
+        assertEquals(217, MerchantLogoDomainAllowlist.size())
     }
 
     @Test
     fun shoppingCatalogIntegrity_currentV18Contract() {
-        assertEquals(22, StarterMerchantCatalog.CATALOG_VERSION)
+        assertEquals(26, StarterMerchantCatalog.CATALOG_VERSION)
         val merchants = StarterMerchantCatalog.merchants
-        assertEquals(234, merchants.size)
+        assertEquals(260, merchants.size)
 
         val shoppingMerchants = merchants.filter { it.categoryIconKey.key == "shopping" }
         assertEquals(31, shoppingMerchants.size, "Toplam 31 alışveriş merchant'ı olmalıdır")
@@ -2692,9 +2718,9 @@ class MerchantRecognitionEngineTest {
 
     @Test
     fun personalCareCatalogIntegrity_currentV18Contract() {
-        assertEquals(22, StarterMerchantCatalog.CATALOG_VERSION)
+        assertEquals(26, StarterMerchantCatalog.CATALOG_VERSION)
         val merchants = StarterMerchantCatalog.merchants
-        assertEquals(234, merchants.size)
+        assertEquals(260, merchants.size)
 
         val personalCareMerchants = merchants.filter { it.categoryIconKey.key == "personal_care" }
         assertEquals(15, personalCareMerchants.size, "Toplam 15 kişisel bakım merchant'ı olmalıdır")
@@ -2738,9 +2764,9 @@ class MerchantRecognitionEngineTest {
 
     @Test
     fun transportationAndTravelCatalogIntegrity_v16Contract() {
-        assertEquals(22, StarterMerchantCatalog.CATALOG_VERSION)
+        assertEquals(26, StarterMerchantCatalog.CATALOG_VERSION)
         val merchants = StarterMerchantCatalog.merchants
-        assertEquals(234, merchants.size)
+        assertEquals(260, merchants.size)
 
         val transportationMerchants = merchants.filter { it.categoryIconKey.key == "transportation" }
         assertEquals(14, transportationMerchants.size, "Toplam 14 ulaşım merchant'ı olmalıdır")
@@ -2945,9 +2971,9 @@ class MerchantRecognitionEngineTest {
 
     @Test
     fun entertainmentCatalogIntegrity_v18Contract() {
-        assertEquals(22, StarterMerchantCatalog.CATALOG_VERSION)
+        assertEquals(26, StarterMerchantCatalog.CATALOG_VERSION)
         val merchants = StarterMerchantCatalog.merchants
-        assertEquals(234, merchants.size)
+        assertEquals(260, merchants.size)
 
         val entertainmentMerchants = merchants.filter { it.categoryIconKey.key == "entertainment" }
         assertEquals(17, entertainmentMerchants.size, "Toplam 17 eğlence merchant'ı olmalıdır")
@@ -3183,9 +3209,9 @@ class MerchantRecognitionEngineTest {
 
     @Test
     fun housingCatalogIntegrity_v19Contract() {
-        assertEquals(22, StarterMerchantCatalog.CATALOG_VERSION)
+        assertEquals(26, StarterMerchantCatalog.CATALOG_VERSION)
         val merchants = StarterMerchantCatalog.merchants
-        assertEquals(234, merchants.size)
+        assertEquals(260, merchants.size)
 
         val housingMerchants = merchants.filter { it.categoryIconKey.key == "housing" }
         assertEquals(7, housingMerchants.size, "Toplam 7 konut/ev merchant'ı olmalıdır")
@@ -3236,7 +3262,7 @@ class MerchantRecognitionEngineTest {
         val aps1Info = TransactionMerchantAttributionResolver.resolve("Apsiyon")
         assertNotNull(aps1Info)
         assertEquals("apsiyon", aps1Info.merchantId.value)
-        assertEquals(22, aps1Info.catalogVersion)
+        assertEquals(26, aps1Info.catalogVersion)
 
         val apsBilisim = recognizeUser("Apsiyon Bilişim")
         assertEquals("apsiyon", apsBilisim.merchant?.id)
@@ -3258,7 +3284,7 @@ class MerchantRecognitionEngineTest {
         val yon1Info = TransactionMerchantAttributionResolver.resolve("Yönetimcell")
         assertNotNull(yon1Info)
         assertEquals("yonetimcell", yon1Info.merchantId.value)
-        assertEquals(22, yon1Info.catalogVersion)
+        assertEquals(26, yon1Info.catalogVersion)
 
         val yonCell = recognizeUser("Yönetim Cell")
         assertEquals("yonetimcell", yonCell.merchant?.id)
@@ -3276,7 +3302,7 @@ class MerchantRecognitionEngineTest {
         val armDomainInfo = TransactionMerchantAttributionResolver.resolve("armut.com")
         assertNotNull(armDomainInfo)
         assertEquals("armut", armDomainInfo.merchantId.value)
-        assertEquals(22, armDomainInfo.catalogVersion)
+        assertEquals(26, armDomainInfo.catalogVersion)
 
         val armTekn = recognizeUser("Armut Teknoloji")
         assertEquals("armut", armTekn.merchant?.id)
@@ -3302,7 +3328,7 @@ class MerchantRecognitionEngineTest {
         val sen1Info = TransactionMerchantAttributionResolver.resolve("Senyonet")
         assertNotNull(sen1Info)
         assertEquals("senyonet", sen1Info.merchantId.value)
-        assertEquals(22, sen1Info.catalogVersion)
+        assertEquals(26, sen1Info.catalogVersion)
 
         val senYonet = recognizeUser("Sen Yönet")
         assertEquals("senyonet", senYonet.merchant?.id)
@@ -3320,7 +3346,7 @@ class MerchantRecognitionEngineTest {
         val mru1Info = TransactionMerchantAttributionResolver.resolve("Mr Usta")
         assertNotNull(mru1Info)
         assertEquals("mrusta", mru1Info.merchantId.value)
-        assertEquals(22, mru1Info.catalogVersion)
+        assertEquals(26, mru1Info.catalogVersion)
 
         val mruDot = recognizeUser("Mr. Usta")
         assertEquals("mrusta", mruDot.merchant?.id)
@@ -3342,7 +3368,7 @@ class MerchantRecognitionEngineTest {
         val pro1Info = TransactionMerchantAttributionResolver.resolve("Pronet")
         assertNotNull(pro1Info)
         assertEquals("pronet", pro1Info.merchantId.value)
-        assertEquals(22, pro1Info.catalogVersion)
+        assertEquals(26, pro1Info.catalogVersion)
 
         val proGuvenlik = recognizeUser("Pronet Güvenlik")
         assertEquals("pronet", proGuvenlik.merchant?.id)
@@ -3364,7 +3390,7 @@ class MerchantRecognitionEngineTest {
         val kale1Info = TransactionMerchantAttributionResolver.resolve("Kale Alarm")
         assertNotNull(kale1Info)
         assertEquals("kale_alarm", kale1Info.merchantId.value)
-        assertEquals(22, kale1Info.catalogVersion)
+        assertEquals(26, kale1Info.catalogVersion)
 
         val kaleGuvenlik = recognizeUser("Kale Güvenlik")
         assertEquals("kale_alarm", kaleGuvenlik.merchant?.id)
@@ -3409,10 +3435,10 @@ class MerchantRecognitionEngineTest {
 
     @Test
     fun healthcareCatalogIntegrity_v20Contract() {
-        assertEquals(22, StarterMerchantCatalog.CATALOG_VERSION)
+        assertEquals(26, StarterMerchantCatalog.CATALOG_VERSION)
         val merchants = StarterMerchantCatalog.merchants
-        assertEquals(234, merchants.size)
-        assertTrue(merchants.all { it.catalogVersion == 22 }, "Tüm merchant'lar v21 olmalıdır")
+        assertEquals(260, merchants.size)
+        assertTrue(merchants.all { it.catalogVersion == 26 }, "Tüm merchant'lar v26 olmalıdır")
 
         val healthcareMerchants = merchants.filter { it.categoryIconKey.key == "healthcare" }
         assertEquals(18, healthcareMerchants.size, "Toplam 18 sağlık merchant'ı olmalıdır (Atasun shopping kategorisindedir)")
@@ -3485,7 +3511,7 @@ class MerchantRecognitionEngineTest {
         val aci1Info = TransactionMerchantAttributionResolver.resolve("Acıbadem")
         assertNotNull(aci1Info)
         assertEquals("acibadem", aci1Info.merchantId.value)
-        assertEquals(22, aci1Info.catalogVersion)
+        assertEquals(26, aci1Info.catalogVersion)
 
         val aciHastane = recognizeUser("Acıbadem Hastanesi")
         assertEquals("acibadem", aciHastane.merchant?.id)
@@ -3503,7 +3529,7 @@ class MerchantRecognitionEngineTest {
         val mem1Info = TransactionMerchantAttributionResolver.resolve("Memorial")
         assertNotNull(mem1Info)
         assertEquals("memorial", mem1Info.merchantId.value)
-        assertEquals(22, mem1Info.catalogVersion)
+        assertEquals(26, mem1Info.catalogVersion)
 
         val memHastane = recognizeUser("Memorial Hastanesi")
         assertEquals("memorial", memHastane.merchant?.id)
@@ -3521,7 +3547,7 @@ class MerchantRecognitionEngineTest {
         val med1Info = TransactionMerchantAttributionResolver.resolve("Medical Park")
         assertNotNull(med1Info)
         assertEquals("medical_park", med1Info.merchantId.value)
-        assertEquals(22, med1Info.catalogVersion)
+        assertEquals(26, med1Info.catalogVersion)
 
         val medJoined = recognizeUser("MEDICALPARK")
         assertEquals("medical_park", medJoined.merchant?.id)
@@ -3539,7 +3565,7 @@ class MerchantRecognitionEngineTest {
         val liv1Info = TransactionMerchantAttributionResolver.resolve("Liv Hospital")
         assertNotNull(liv1Info)
         assertEquals("liv_hospital", liv1Info.merchantId.value)
-        assertEquals(22, liv1Info.catalogVersion)
+        assertEquals(26, liv1Info.catalogVersion)
 
         val livUlus = recognizeUser("LIV ULUS")
         assertEquals("liv_hospital", livUlus.merchant?.id)
@@ -3565,7 +3591,7 @@ class MerchantRecognitionEngineTest {
         val medc1Info = TransactionMerchantAttributionResolver.resolve("Medicana")
         assertNotNull(medc1Info)
         assertEquals("medicana", medc1Info.merchantId.value)
-        assertEquals(22, medc1Info.catalogVersion)
+        assertEquals(26, medc1Info.catalogVersion)
 
         val medcHastane = recognizeUser("Medicana Hastanesi")
         assertEquals("medicana", medcHastane.merchant?.id)
@@ -3583,7 +3609,7 @@ class MerchantRecognitionEngineTest {
         val fn1Info = TransactionMerchantAttributionResolver.resolve("Florence Nightingale")
         assertNotNull(fn1Info)
         assertEquals("florence_nightingale", fn1Info.merchantId.value)
-        assertEquals(22, fn1Info.catalogVersion)
+        assertEquals(26, fn1Info.catalogVersion)
 
         val fnHastane = recognizeUser("FLORENCE HASTANESI")
         assertEquals("florence_nightingale", fnHastane.merchant?.id)
@@ -3601,7 +3627,7 @@ class MerchantRecognitionEngineTest {
         val as1Info = TransactionMerchantAttributionResolver.resolve("Anadolu Sağlık Merkezi")
         assertNotNull(as1Info)
         assertEquals("anadolu_saglik", as1Info.merchantId.value)
-        assertEquals(22, as1Info.catalogVersion)
+        assertEquals(26, as1Info.catalogVersion)
 
         val asSaglik = recognizeUser("Anadolu Sağlık")
         assertEquals("anadolu_saglik", asSaglik.merchant?.id)
@@ -3615,7 +3641,7 @@ class MerchantRecognitionEngineTest {
         val am1Info = TransactionMerchantAttributionResolver.resolve("Amerikan Hastanesi")
         assertNotNull(am1Info)
         assertEquals("amerikan_hastanesi", am1Info.merchantId.value)
-        assertEquals(22, am1Info.catalogVersion)
+        assertEquals(26, am1Info.catalogVersion)
 
         val amVkv = recognizeUser("VKV AMERIKAN HASTANESI")
         assertEquals("amerikan_hastanesi", amVkv.merchant?.id)
@@ -3633,7 +3659,7 @@ class MerchantRecognitionEngineTest {
         val dg1Info = TransactionMerchantAttributionResolver.resolve("Dünyagöz")
         assertNotNull(dg1Info)
         assertEquals("dunyagoz", dg1Info.merchantId.value)
-        assertEquals(22, dg1Info.catalogVersion)
+        assertEquals(26, dg1Info.catalogVersion)
 
         val dgSpaced = recognizeUser("DUNYA GOZ")
         assertEquals("dunyagoz", dgSpaced.merchant?.id)
@@ -3911,10 +3937,10 @@ class MerchantRecognitionEngineTest {
 
     @Test
     fun educationCatalogIntegrity_v22Contract() {
-        assertEquals(22, StarterMerchantCatalog.CATALOG_VERSION)
+        assertEquals(26, StarterMerchantCatalog.CATALOG_VERSION)
         val merchants = StarterMerchantCatalog.merchants
-        assertEquals(234, merchants.size)
-        assertTrue(merchants.all { it.catalogVersion == 22 }, "Tüm merchant'lar v22 olmalıdır")
+        assertEquals(260, merchants.size)
+        assertTrue(merchants.all { it.catalogVersion == 26 }, "Tüm merchant'lar v26 olmalıdır")
 
         val educationMerchants = merchants.filter { it.categoryIconKey.key == "education" }
         assertEquals(20, educationMerchants.size, "Toplam 20 eğitim merchant'ı olmalıdır")
@@ -4035,7 +4061,7 @@ class MerchantRecognitionEngineTest {
             val resolved = TransactionMerchantAttributionResolver.resolve(description)
             assertNotNull(resolved, "Açıklama '$description' resolver tarafından çözülmelidir")
             assertEquals(expectedMerchantId, resolved.merchantId.value)
-            assertEquals(22, resolved.catalogVersion)
+            assertEquals(26, resolved.catalogVersion)
         }
     }
 
@@ -4094,7 +4120,7 @@ class MerchantRecognitionEngineTest {
         val resolved = TransactionMerchantAttributionResolver.resolve("TONGUCAKADEMI.COM")
         assertNotNull(resolved)
         assertEquals("tonguc_akademi", resolved.merchantId.value)
-        assertEquals(22, resolved.catalogVersion)
+        assertEquals(26, resolved.catalogVersion)
 
         // B. TONGUC
         val userTonguc = recognizeUser("TONGUC")
@@ -4112,9 +4138,9 @@ class MerchantRecognitionEngineTest {
     @Test
     fun fazH4G2J2_kalan18EgitimMerchant_tanimaVeGuvenlikSozlesmesi() {
         val merchants = StarterMerchantCatalog.merchants
-        assertEquals(234, merchants.size)
-        assertEquals(22, StarterMerchantCatalog.CATALOG_VERSION)
-        assertEquals(197, merchants.count { it.verifiedLogoKey != null })
+        assertEquals(260, merchants.size)
+        assertEquals(26, StarterMerchantCatalog.CATALOG_VERSION)
+        assertEquals(223, merchants.count { it.verifiedLogoKey != null })
         assertEquals(37, merchants.count { it.verifiedLogoKey == null })
 
         // 1. 15 Yeni Merchant ve Doğruluk Kontrolü
@@ -4140,7 +4166,7 @@ class MerchantRecognitionEngineTest {
             val m = merchants.firstOrNull { it.id == id }
             assertNotNull(m, "J2 merchant '$id' katalogda bulunmalıdır")
             assertEquals(id, m.verifiedLogoKey, "verifiedLogoKey '$id' olmalıdır")
-            assertEquals(22, m.catalogVersion)
+            assertEquals(26, m.catalogVersion)
             val normalizedAliases = m.aliases.map { TurkishDescriptionNormalizer.normalize(it.value) }
             assertEquals(
                 normalizedAliases.size,
@@ -4313,6 +4339,793 @@ class MerchantRecognitionEngineTest {
             val res = recognizeUser(desc)
             assertEquals("idefix", res.merchant?.id)
             assertEquals(MerchantMatchStatus.MATCHED, res.status)
+        }
+    }
+
+    @Test
+    fun fazH4G2K1_aileVeEvcilHayvanIlk9Merchant_tanimaVeGuvenlikSozlesmesi() {
+        val merchants = StarterMerchantCatalog.merchants
+        assertEquals(260, merchants.size)
+        assertEquals(26, StarterMerchantCatalog.CATALOG_VERSION)
+        assertEquals(223, merchants.count { it.verifiedLogoKey != null })
+        assertEquals(37, merchants.count { it.verifiedLogoKey == null })
+
+        // 1. 8 Yeni K1 Merchant ve Doğruluk Kontrolü
+        val k1Ids =
+            listOf(
+                "petlebi",
+                "civil",
+                "temizmama",
+                "toyzz_shop",
+                "juen_pet_market",
+                "joker_baby",
+                "armagan_oyuncak",
+                "petzz_shop",
+            )
+        for (id in k1Ids) {
+            val m = merchants.firstOrNull { it.id == id }
+            assertNotNull(m, "K1 merchant '$id' katalogda bulunmalıdır")
+            assertEquals(id, m.verifiedLogoKey, "verifiedLogoKey '$id' olmalıdır")
+            assertEquals(26, m.catalogVersion)
+            assertEquals("family_pets", m.categoryIconKey.key)
+            val normalizedAliases = m.aliases.map { TurkishDescriptionNormalizer.normalize(it.value) }
+            assertEquals(
+                normalizedAliases.size,
+                normalizedAliases.distinct().size,
+                "Merchant '$id' için mükerrer normalized alias bulunmamalıdır",
+            )
+        }
+
+        // 2. Exact Alias Pozitif Eşleşmeleri
+        val pozitifler =
+            listOf(
+                "PETLEBI" to "petlebi",
+                "PETLEBI COM" to "petlebi",
+                "CIVILIM" to "civil",
+                "CIVILIM COM" to "civil",
+                "CIVIL COCUK GIYIM" to "civil",
+                "CIVIL MAGAZACILIK" to "civil",
+                "TEMIZMAMA" to "temizmama",
+                "TEMIZMAMA COM" to "temizmama",
+                "CAGATAY EVCIL HAYVAN MAMALARI" to "temizmama",
+                "TOYZZ SHOP" to "toyzz_shop",
+                "TOYZZSHOP" to "toyzz_shop",
+                "TOYPA MAGAZACILIK" to "toyzz_shop",
+                "JUEN PET MARKET" to "juen_pet_market",
+                "JUEN PET" to "juen_pet_market",
+                "JUENPETMARKET" to "juen_pet_market",
+                "JOKER BABY" to "joker_baby",
+                "JOKER COM TR" to "joker_baby",
+                "ARMAGAN OYUNCAK" to "armagan_oyuncak",
+                "ARMAGANOYUNCAK" to "armagan_oyuncak",
+                "ARMAGAN OYUNCAK SANAYI" to "armagan_oyuncak",
+                "PETZZ SHOP" to "petzz_shop",
+                "PETZZSHOP" to "petzz_shop",
+                "PETZZ" to "petzz_shop",
+            )
+        for ((desc, expectedId) in pozitifler) {
+            val userRes = recognizeUser(desc)
+            assertEquals(expectedId, userRes.merchant?.id, "'$desc' user description $expectedId ile eşleşmelidir")
+            assertEquals(MerchantMatchStatus.MATCHED, userRes.status)
+
+            val bankRes = recognizeBank("POS $desc ISTANBUL")
+            assertEquals(expectedId, bankRes.merchant?.id, "'POS $desc ISTANBUL' bank description $expectedId ile eşleşmelidir")
+            assertEquals(MerchantMatchStatus.MATCHED, bankRes.status)
+        }
+
+        // 3. Generic ve Fail-Closed Negatifleri (MerchantMatchStatus.NO_MATCH)
+        val genericNegatifler =
+            listOf(
+                "CIVIL",
+                "CIVIL DEFENSE",
+                "CIVIL ENGINEERING",
+                "JOKER",
+                "JOKER BONUS",
+                "PET",
+                "PET SHOP",
+                "PET MARKET",
+                "JUEN PET URUNLERI",
+                "MAMA",
+                "CAGATAY MAMA",
+                "BEBEK MAMASI",
+                "BEBEK",
+                "COCUK",
+                "ARMAGAN",
+                "SHOP",
+                "OYUNCAK",
+            )
+        for (token in genericNegatifler) {
+            val userRes = recognizeUser(token)
+            assertNull(userRes.merchant, "Jenerik veya negatif '$token' merchant üretmemelidir")
+            assertEquals(MerchantMatchStatus.NO_MATCH, userRes.status, "Jenerik '$token' NO_MATCH olmalıdır")
+
+            val bankRes = recognizeBank("POS $token KART HARCAMASI")
+            assertNull(bankRes.merchant, "Jenerik veya negatif banka '$token' merchant üretmemelidir")
+            assertEquals(MerchantMatchStatus.NO_MATCH, bankRes.status, "Jenerik banka '$token' NO_MATCH olmalıdır")
+        }
+
+        // 4. Jolly Joker İzolasyonu (Hem joker_baby hem jolly_tur için fail-closed)
+        val jollyJokerUser = recognizeUser("JOLLY JOKER")
+        assertNull(jollyJokerUser.merchant, "JOLLY JOKER izole edilmiş negatif terimdir")
+        assertEquals(MerchantMatchStatus.NO_MATCH, jollyJokerUser.status)
+
+        val jollyJokerBank = recognizeBank("POS JOLLY JOKER VADI ISTANBUL")
+        assertNull(jollyJokerBank.merchant, "POS JOLLY JOKER izole edilmiş negatif terimdir")
+        assertEquals(MerchantMatchStatus.NO_MATCH, jollyJokerBank.status)
+    }
+
+    @Test
+    fun fazH4G2K2_kalan8AileVeEvcilHayvanSearchableMerchant_tanimaVeGuvenlikSozlesmesi() {
+        val merchants = StarterMerchantCatalog.merchants
+        assertEquals(260, merchants.size)
+        assertEquals(26, StarterMerchantCatalog.CATALOG_VERSION)
+        assertEquals(223, merchants.count { it.verifiedLogoKey != null })
+        assertEquals(37, merchants.count { it.verifiedLogoKey == null })
+
+        // 1. 8 Yeni K2 Merchant ve Doğruluk Kontrolü
+        val k2Ids =
+            listOf(
+                "markamama",
+                "petburada",
+                "petihtiyac",
+                "kolaymama",
+                "panco",
+                "bg_store",
+                "minycenter",
+                "vetamerikan",
+            )
+        for (id in k2Ids) {
+            val m = merchants.firstOrNull { it.id == id }
+            assertNotNull(m, "K2 merchant '$id' katalogda bulunmalıdır")
+            assertEquals(id, m.verifiedLogoKey, "verifiedLogoKey '$id' olmalıdır")
+            assertEquals(26, m.catalogVersion)
+            assertEquals("family_pets", m.categoryIconKey.key)
+            val normalizedAliases = m.aliases.map { TurkishDescriptionNormalizer.normalize(it.value) }
+            assertEquals(
+                normalizedAliases.size,
+                normalizedAliases.distinct().size,
+                "Merchant '$id' için mükerrer normalized alias bulunmamalıdır",
+            )
+        }
+
+        // 1a. Gerçek Üretim Alias ve Negatif Doğrulamaları
+        val markamama = merchants.first { it.id == "markamama" }
+        assertEquals(
+            listOf("MARKAMAMA", "MARKAMAMA COM TR", "MARKAMAMA PET SANAYI"),
+            markamama.aliases.map { it.value },
+        )
+        val markamamaYasaklar = listOf("MARKAMAMA COM", "MARKA MAMA", "MAMA ITRISAT")
+        for (yasak in markamamaYasaklar) {
+            assertFalse(
+                markamama.aliases.any { it.value == yasak },
+                "markamama yasak '$yasak' alias'ını içermemelidir",
+            )
+        }
+
+        val kolaymama = merchants.first { it.id == "kolaymama" }
+        assertEquals(
+            listOf("KOLAYMAMA", "KOLAY MAMA", "KOLAYMAMA COM", "DORATEK GIDA"),
+            kolaymama.aliases.map { it.value },
+        )
+        assertFalse(
+            kolaymama.aliases.any { it.value == "KOLAY MAMA PAZARLAMA" },
+            "kolaymama yasak 'KOLAY MAMA PAZARLAMA' alias'ını içermemelidir",
+        )
+
+        val bgStore = merchants.first { it.id == "bg_store" }
+        assertEquals(
+            listOf("BG STORE", "B&G STORE", "BGSTORE", "BGSTORE COM TR", "BGSTORE MAGAZACILIK"),
+            bgStore.aliases.map { it.value },
+        )
+        assertFalse(
+            bgStore.aliases.any { it.value == "BG TEKSTIL" },
+            "bg_store yasak 'BG TEKSTIL' alias'ını içermemelidir",
+        )
+
+        val petburada = merchants.first { it.id == "petburada" }
+        assertEquals(
+            listOf("PETBURADA", "PET BURADA", "PETBURADA COM", "AKVET VETERINERLIK"),
+            petburada.aliases.map { it.value },
+        )
+        assertEquals(listOf("HEPSIBURADA"), petburada.negativeAliases.map { it.value })
+
+        val petihtiyac = merchants.first { it.id == "petihtiyac" }
+        assertEquals(
+            listOf("PETIHTIYAC", "PET IHTIYAC", "PETIHTIYAC COM", "SENTURKLER VETERINERLIK"),
+            petihtiyac.aliases.map { it.value },
+        )
+
+        val panco = merchants.first { it.id == "panco" }
+        assertEquals(
+            listOf("PANCO", "PANCO COM TR", "PANCO COCUK", "PANCO GIYIM"),
+            panco.aliases.map { it.value },
+        )
+
+        val minycenter = merchants.first { it.id == "minycenter" }
+        assertEquals(
+            listOf("MINYCENTER", "MINY CENTER", "MINYCENTER COM TR", "GAMI GIYIM"),
+            minycenter.aliases.map { it.value },
+        )
+
+        val vetamerikan = merchants.first { it.id == "vetamerikan" }
+        assertEquals(
+            listOf(
+                "VETAMERIKAN",
+                "VET AMERIKAN",
+                "VETAMERIKAN ORG",
+                "VETAMERIKAN HAYVAN HASTANESI",
+                "VET AMERIKAN HAYVAN HASTANESI",
+                "VETAMERIKAN VETERINERLIK",
+            ),
+            vetamerikan.aliases.map { it.value },
+        )
+        assertTrue(vetamerikan.negativeAliases.isEmpty(), "vetamerikan için gereksiz negatif alias bulunmamalıdır")
+
+        // 2. Exact ve Hizmet Alias Pozitif Eşleşmeleri
+        val pozitifler =
+            listOf(
+                "MARKAMAMA" to "markamama",
+                "MARKAMAMA COM TR" to "markamama",
+                "MARKAMAMA PET SANAYI" to "markamama",
+                "PETBURADA" to "petburada",
+                "PET BURADA" to "petburada",
+                "PETBURADA COM" to "petburada",
+                "AKVET VETERINERLIK" to "petburada",
+                "PETIHTIYAC" to "petihtiyac",
+                "PET IHTIYAC" to "petihtiyac",
+                "PETIHTIYAC COM" to "petihtiyac",
+                "SENTURKLER VETERINERLIK" to "petihtiyac",
+                "KOLAYMAMA" to "kolaymama",
+                "KOLAY MAMA" to "kolaymama",
+                "KOLAYMAMA COM" to "kolaymama",
+                "DORATEK GIDA" to "kolaymama",
+                "PANCO" to "panco",
+                "PANCO COM TR" to "panco",
+                "PANCO COCUK" to "panco",
+                "PANCO GIYIM" to "panco",
+                "BG STORE" to "bg_store",
+                "B&G STORE" to "bg_store",
+                "BGSTORE" to "bg_store",
+                "BGSTORE COM TR" to "bg_store",
+                "BGSTORE MAGAZACILIK" to "bg_store",
+                "MINYCENTER" to "minycenter",
+                "MINY CENTER" to "minycenter",
+                "MINYCENTER COM TR" to "minycenter",
+                "GAMI GIYIM" to "minycenter",
+                "VETAMERIKAN" to "vetamerikan",
+                "VET AMERIKAN" to "vetamerikan",
+                "VETAMERIKAN ORG" to "vetamerikan",
+                "VETAMERIKAN HAYVAN HASTANESI" to "vetamerikan",
+                "VET AMERIKAN HAYVAN HASTANESI" to "vetamerikan",
+                "VETAMERIKAN VETERINERLIK" to "vetamerikan",
+            )
+        for ((desc, expectedId) in pozitifler) {
+            val userRes = recognizeUser(desc)
+            assertEquals(expectedId, userRes.merchant?.id, "'$desc' user description $expectedId ile eşleşmelidir")
+            assertEquals(MerchantMatchStatus.MATCHED, userRes.status)
+
+            val bankRes = recognizeBank("POS $desc ISTANBUL")
+            assertEquals(expectedId, bankRes.merchant?.id, "'POS $desc ISTANBUL' bank description $expectedId ile eşleşmelidir")
+            assertEquals(MerchantMatchStatus.MATCHED, bankRes.status)
+        }
+
+        // 3. Generic ve Fail-Closed Negatifleri (MerchantMatchStatus.NO_MATCH)
+        val genericNegatifler =
+            listOf(
+                "MAMA",
+                "STORE",
+                "CENTER",
+                "VETERINER",
+                "VETERINERLIK",
+                "HAYVAN",
+                "HAYVAN HASTANESI",
+                "DORATEK",
+                "GAMI",
+                "AKVET",
+            )
+        for (token in genericNegatifler) {
+            val userRes = recognizeUser(token)
+            assertNull(userRes.merchant, "Jenerik '$token' merchant üretmemelidir")
+            assertEquals(MerchantMatchStatus.NO_MATCH, userRes.status, "Jenerik '$token' NO_MATCH olmalıdır")
+
+            val bankRes = recognizeBank("POS $token KART HARCAMASI")
+            assertNull(bankRes.merchant, "Jenerik banka '$token' merchant üretmemelidir")
+            assertEquals(MerchantMatchStatus.NO_MATCH, bankRes.status, "Jenerik banka '$token' NO_MATCH olmalıdır")
+        }
+
+        // 3a. K2 Güvenlik Girdileri ve Yanlış Eşleşme İzolasyonu
+        val k2GuvenlikGirdileri =
+            listOf(
+                "MARKA",
+                "PET",
+                "IHTIYAC",
+                "IHTIYAC KREDISI",
+                "COCUK",
+                "GIYIM",
+                "BEBEK",
+                "BG",
+                "APP STORE",
+                "PLAY STORE",
+                "MINI",
+                "MINI CENTER",
+                "VET",
+            )
+        val k2IdSet = k2Ids.toSet()
+        for (girdi in k2GuvenlikGirdileri) {
+            val userRes = recognizeUser(girdi)
+            assertFalse(
+                k2IdSet.contains(userRes.merchant?.id),
+                "Girdi '$girdi' (user description) hiçbir K2 merchant'ını üretmemelidir; ancak '${userRes.merchant?.id}' üretti",
+            )
+            assertNull(userRes.merchant, "Girdi '$girdi' meşru eşleşme olmadığında null olmalıdır")
+            assertEquals(MerchantMatchStatus.NO_MATCH, userRes.status)
+
+            val bankRes = recognizeBank(girdi)
+            assertFalse(
+                k2IdSet.contains(bankRes.merchant?.id),
+                "Girdi '$girdi' (bank description) hiçbir K2 merchant'ını üretmemelidir; ancak '${bankRes.merchant?.id}' üretti",
+            )
+            assertNull(bankRes.merchant, "Girdi '$girdi' bank description için null olmalıdır")
+            assertEquals(MerchantMatchStatus.NO_MATCH, bankRes.status)
+
+            val bankPosRes = recognizeBank("POS $girdi ISTANBUL")
+            assertFalse(
+                k2IdSet.contains(bankPosRes.merchant?.id),
+                "POS '$girdi' hiçbir K2 merchant'ını üretmemelidir; ancak '${bankPosRes.merchant?.id}' üretti",
+            )
+            assertNull(bankPosRes.merchant, "POS '$girdi' için merchant null olmalıdır")
+            assertEquals(MerchantMatchStatus.NO_MATCH, bankPosRes.status)
+        }
+
+        // 4. Negatif İzolasyon ve Çapraz Çakışma Önleme
+        // 4a. HEPSIBURADA petburada'yı tetiklememeli, hepsiburada ile eşleşmelidir
+        val hbUser = recognizeUser("HEPSIBURADA")
+        assertEquals("hepsiburada", hbUser.merchant?.id)
+        assertTrue(hbUser.merchant?.id != "petburada")
+
+        val hbBank = recognizeBank("POS HEPSIBURADA ISTANBUL")
+        assertEquals("hepsiburada", hbBank.merchant?.id)
+        assertTrue(hbBank.merchant?.id != "petburada")
+
+        // 4b. AMERIKAN HASTANESI vetamerikan'ı tetiklememeli, amerikan_hastanesi ile eşleşmelidir
+        val amHastaneUser = recognizeUser("AMERIKAN HASTANESI")
+        assertEquals("amerikan_hastanesi", amHastaneUser.merchant?.id)
+        assertTrue(amHastaneUser.merchant?.id != "vetamerikan")
+
+        val amHastaneBank = recognizeBank("POS AMERIKAN HASTANESI NISANTASI")
+        assertEquals("amerikan_hastanesi", amHastaneBank.merchant?.id)
+        assertTrue(amHastaneBank.merchant?.id != "vetamerikan")
+
+        // 4c. VET AMERIKAN amerikan_hastanesi'ni tetiklememeli, vetamerikan ile eşleşmelidir
+        val vetAmUser = recognizeUser("VET AMERIKAN")
+        assertEquals("vetamerikan", vetAmUser.merchant?.id)
+        assertTrue(vetAmUser.merchant?.id != "amerikan_hastanesi")
+
+        val vetAmBank = recognizeBank("POS VET AMERIKAN HAYVAN HASTANESI")
+        assertEquals("vetamerikan", vetAmBank.merchant?.id)
+        assertTrue(vetAmBank.merchant?.id != "amerikan_hastanesi")
+
+        // 4d. VET AMERIKAN HASTANESI vetamerikan ile eşleşmeli, amerikan_hastanesi olmamalıdır
+        val vetAmHastaneUser = recognizeUser("VET AMERIKAN HASTANESI")
+        assertEquals("vetamerikan", vetAmHastaneUser.merchant?.id)
+        assertTrue(vetAmHastaneUser.merchant?.id != "amerikan_hastanesi")
+
+        val vetAmHastaneBank = recognizeBank("POS VET AMERIKAN HASTANESI")
+        assertEquals("vetamerikan", vetAmHastaneBank.merchant?.id)
+        assertTrue(vetAmHastaneBank.merchant?.id != "amerikan_hastanesi")
+
+        val vkvAmBank = recognizeBank("POS VKV AMERIKAN HASTANESI")
+        assertEquals("amerikan_hastanesi", vkvAmBank.merchant?.id)
+        assertTrue(vkvAmBank.merchant?.id != "vetamerikan")
+
+        // 4e. amerikan_hastanesi negatif listesinde VET AMERIKAN ve VETAMERIKAN bulunmalıdır
+        val amHastanesi = merchants.first { it.id == "amerikan_hastanesi" }
+        val amHastanesiNegatifler = amHastanesi.negativeAliases.map { it.value }
+        assertTrue(
+            amHastanesiNegatifler.contains("VET AMERIKAN"),
+            "amerikan_hastanesi 'VET AMERIKAN' negatif alias'ını içermelidir",
+        )
+        assertTrue(
+            amHastanesiNegatifler.contains("VETAMERIKAN"),
+            "amerikan_hastanesi 'VETAMERIKAN' negatif alias'ını içermelidir",
+        )
+    }
+
+    @Test
+    fun fazH4G2L1_bagisVeSivilToplum8Merchant_tanimaVeGuvenlikSozlesmesi() {
+        val merchants = StarterMerchantCatalog.merchants
+        assertEquals(260, merchants.size)
+        assertEquals(26, StarterMerchantCatalog.CATALOG_VERSION)
+        assertEquals(223, merchants.count { it.verifiedLogoKey != null })
+        assertEquals(37, merchants.count { it.verifiedLogoKey == null })
+
+        // 1. 8 Yeni L1 Merchant ve Doğruluk Kontrolü
+        val l1Ids =
+            listOf(
+                "kizilay",
+                "losev",
+                "tema",
+                "tev",
+                "mehmetcik_vakfi",
+                "akut",
+                "acev",
+                "tog",
+            )
+        for (id in l1Ids) {
+            val m = merchants.firstOrNull { it.id == id }
+            assertNotNull(m, "L1 merchant '$id' katalogda bulunmalıdır")
+            assertEquals(id, m.verifiedLogoKey, "verifiedLogoKey '$id' olmalıdır")
+            assertEquals(26, m.catalogVersion)
+            assertEquals("gifts_donations", m.categoryIconKey.key)
+            val normalizedAliases = m.aliases.map { TurkishDescriptionNormalizer.normalize(it.value) }
+            assertEquals(
+                normalizedAliases.size,
+                normalizedAliases.distinct().size,
+                "Merchant '$id' için mükerrer normalized alias bulunmamalıdır",
+            )
+        }
+
+        // 1a. Gerçek Üretim Alias ve Negatif Doğrulamaları
+        val kizilay = merchants.first { it.id == "kizilay" }
+        assertEquals(
+            listOf(
+                "TURK KIZILAY",
+                "TURK KIZILAYI",
+                "TURKIYE KIZILAY DERNEGI",
+                "KIZILAY BAGIS",
+            ),
+            kizilay.aliases.map { it.value },
+        )
+        assertEquals(
+            listOf("KIZILAY AVM", "KIZILAY METRO", "KIZILAY YATIRIM", "KIZILAY MAGAZA", "KIZILAY SAGLIK"),
+            kizilay.negativeAliases.map { it.value },
+        )
+
+        val losev = merchants.first { it.id == "losev" }
+        assertEquals(
+            listOf(
+                "LOSEV",
+                "LOSEMILI COCUKLAR SAGLIK VE EGITIM VAKFI",
+                "LOSEV VAKFI",
+                "LOSEV BAGIS",
+            ),
+            losev.aliases.map { it.value },
+        )
+        assertTrue(losev.negativeAliases.isEmpty())
+
+        val tema = merchants.first { it.id == "tema" }
+        assertEquals(
+            listOf(
+                "TEMA TURKIYE EROZYONLA MUCADELE AGACLANDIRMA VE DOGAL VARLIKLARI KORUMA VAKFI",
+                "TEMA VAKFI",
+                "TEMA BAGIS",
+            ),
+            tema.aliases.map { it.value },
+        )
+        assertTrue(tema.negativeAliases.isEmpty())
+
+        val tev = merchants.first { it.id == "tev" }
+        assertEquals(
+            listOf(
+                "TURK EGITIM VAKFI",
+                "TEV VAKFI",
+                "TEV BAGIS",
+            ),
+            tev.aliases.map { it.value },
+        )
+        assertTrue(tev.negativeAliases.isEmpty())
+
+        val mehmetcikVakfi = merchants.first { it.id == "mehmetcik_vakfi" }
+        assertEquals(
+            listOf(
+                "TURK SILAHLI KUVVETLERI MEHMETCIK VAKFI",
+                "TSK MEHMETCIK VAKFI",
+                "MEHMETCIK VAKFI",
+                "MEHMETCIK VAKFI BAGIS",
+            ),
+            mehmetcikVakfi.aliases.map { it.value },
+        )
+        assertEquals(listOf("TSKGV"), mehmetcikVakfi.negativeAliases.map { it.value })
+
+        val akut = merchants.first { it.id == "akut" }
+        assertEquals(
+            listOf(
+                "AKUT ARAMA KURTARMA",
+                "AKUT DERNEGI",
+                "AKUT BAGIS",
+            ),
+            akut.aliases.map { it.value },
+        )
+        assertTrue(akut.negativeAliases.isEmpty())
+
+        val acev = merchants.first { it.id == "acev" }
+        assertEquals(
+            listOf(
+                "ANNE COCUK EGITIM VAKFI",
+                "ACEV",
+                "ACEV VAKFI",
+                "ACEV BAGIS",
+            ),
+            acev.aliases.map { it.value },
+        )
+        assertTrue(acev.negativeAliases.isEmpty())
+
+        val tog = merchants.first { it.id == "tog" }
+        assertEquals(
+            listOf(
+                "TOPLUM GONULLULERI VAKFI",
+                "TOG VAKFI",
+                "TOG BAGIS",
+            ),
+            tog.aliases.map { it.value },
+        )
+        assertEquals(listOf("TOGG"), tog.negativeAliases.map { it.value })
+
+        // 2. Exact ve Hizmet Alias Pozitif Eşleşmeleri ve Skor Doğrulaması
+        val exactPozitifler =
+            listOf(
+                "TURK KIZILAY" to "kizilay",
+                "TURK KIZILAYI" to "kizilay",
+                "TURKIYE KIZILAY DERNEGI" to "kizilay",
+                "KIZILAY BAGIS" to "kizilay",
+                "LOSEV" to "losev",
+                "LOSEV VAKFI" to "losev",
+                "LOSEMILI COCUKLAR SAGLIK VE EGITIM VAKFI" to "losev",
+                "LOSEV BAGIS" to "losev",
+                "TEMA VAKFI" to "tema",
+                "TEMA BAGIS" to "tema",
+                "TURK EGITIM VAKFI" to "tev",
+                "TEV VAKFI" to "tev",
+                "TEV BAGIS" to "tev",
+                "MEHMETCIK VAKFI" to "mehmetcik_vakfi",
+                "TSK MEHMETCIK VAKFI" to "mehmetcik_vakfi",
+                "TURK SILAHLI KUVVETLERI MEHMETCIK VAKFI" to "mehmetcik_vakfi",
+                "MEHMETCIK VAKFI BAGIS" to "mehmetcik_vakfi",
+                "AKUT ARAMA KURTARMA" to "akut",
+                "AKUT DERNEGI" to "akut",
+                "AKUT BAGIS" to "akut",
+                "TOPLUM GONULLULERI VAKFI" to "tog",
+                "TOG VAKFI" to "tog",
+                "TOG BAGIS" to "tog",
+            )
+        for ((desc, expectedId) in exactPozitifler) {
+            val userRes = recognizeUser(desc)
+            assertEquals(expectedId, userRes.merchant?.id, "'$desc' user description $expectedId ile eşleşmelidir")
+            assertEquals(MerchantMatchStatus.MATCHED, userRes.status)
+            assertEquals(MerchantMatchSource.EXACT_ALIAS, userRes.source)
+            assertEquals(95, userRes.confidence)
+            assertTrue(userRes.canShowMerchantLogo)
+
+            val bankRes = recognizeBank(desc)
+            assertEquals(expectedId, bankRes.merchant?.id, "'$desc' bank description $expectedId ile eşleşmelidir")
+            assertEquals(MerchantMatchStatus.MATCHED, bankRes.status)
+            assertEquals(MerchantMatchSource.EXACT_ALIAS, bankRes.source)
+            assertEquals(95, bankRes.confidence)
+            assertTrue(bankRes.canShowMerchantLogo)
+
+            val resolved = TransactionMerchantAttributionResolver.resolve(desc)
+            assertNotNull(resolved, "'$desc' resolver tarafından çözümlenmelidir")
+            assertEquals(expectedId, resolved.merchantId.value)
+            assertEquals(95, resolved.confidence)
+        }
+
+        // 2a. Kısa Alias Kontrolü (ACEV: 4 karakter)
+        val userAcev = recognizeUser("ACEV")
+        assertEquals("acev", userAcev.merchant?.id)
+        assertEquals(MerchantMatchStatus.MATCHED, userAcev.status)
+        assertEquals(MerchantMatchSource.EXACT_ALIAS, userAcev.source)
+        assertEquals(95, userAcev.confidence)
+        assertTrue(userAcev.canShowMerchantLogo)
+        val resolvedAcev = TransactionMerchantAttributionResolver.resolve("ACEV")
+        assertNotNull(resolvedAcev)
+        assertEquals("acev", resolvedAcev.merchantId.value)
+        assertEquals(95, resolvedAcev.confidence)
+
+        val bankAcev = recognizeBank("ACEV")
+        assertEquals("acev", bankAcev.merchant?.id)
+        assertEquals(MerchantMatchStatus.LOW_CONFIDENCE, bankAcev.status)
+        assertEquals(MerchantMatchSource.SHORT_ALIAS, bankAcev.source)
+        assertEquals(65, bankAcev.confidence)
+        assertFalse(bankAcev.canShowMerchantLogo)
+
+        // 2b. Embedded Eşleşme (POS TSK MEHMETCIK VAKFI ISTANBUL -> STRONG_BRAND / 80)
+        val bankMehmetcik = recognizeBank("POS TSK MEHMETCIK VAKFI ISTANBUL")
+        assertEquals("mehmetcik_vakfi", bankMehmetcik.merchant?.id)
+        assertEquals(MerchantMatchStatus.MATCHED, bankMehmetcik.status)
+        assertEquals(MerchantMatchSource.STRONG_BRAND, bankMehmetcik.source)
+        assertEquals(80, bankMehmetcik.confidence)
+        assertTrue(bankMehmetcik.canShowMerchantLogo)
+        val resolvedMehmetcik = TransactionMerchantAttributionResolver.resolve("POS TSK MEHMETCIK VAKFI ISTANBUL")
+        assertNotNull(resolvedMehmetcik)
+        assertEquals("mehmetcik_vakfi", resolvedMehmetcik.merchantId.value)
+        assertEquals(80, resolvedMehmetcik.confidence)
+
+        // 3. 20 Negatif Örnek (Hepsi NO_MATCH)
+        val twentyNegatives =
+            listOf(
+                "KIZILAY",
+                "KIZILAY AVM",
+                "KIZILAY ANKARA",
+                "KIZILAY METRO",
+                "KIZILAY YATIRIM",
+                "TEV",
+                "TEMA",
+                "TEMA TASARIM",
+                "AKUT",
+                "AKUT APANDISIT",
+                "TOG",
+                "TOGG",
+                "TSKGV",
+                "FONZIP",
+                "VAKIF",
+                "DERNEK",
+                "BAGIS",
+                "YARDIM",
+                "DARUSSAFAKA DOGUS",
+                "AHBAP",
+            )
+        for (neg in twentyNegatives) {
+            val userRes = recognizeUser(neg)
+            assertNull(userRes.merchant, "Negatif '$neg' user description merchant üretmemelidir")
+            assertEquals(MerchantMatchStatus.NO_MATCH, userRes.status, "Negatif '$neg' NO_MATCH olmalıdır")
+
+            val bankRes = recognizeBank(neg)
+            assertNull(bankRes.merchant, "Negatif '$neg' bank description merchant üretmemelidir")
+            assertEquals(MerchantMatchStatus.NO_MATCH, bankRes.status, "Negatif '$neg' bank NO_MATCH olmalıdır")
+
+            val bankPosRes = recognizeBank("POS $neg ISTANBUL")
+            assertNull(bankPosRes.merchant, "POS '$neg' merchant üretmemelidir")
+            assertEquals(MerchantMatchStatus.NO_MATCH, bankPosRes.status, "POS '$neg' NO_MATCH olmalıdır")
+
+            assertNull(TransactionMerchantAttributionResolver.resolve(neg), "Negatif '$neg' resolver null dönmelidir")
+            assertNull(TransactionMerchantAttributionResolver.resolve("POS $neg ISTANBUL"))
+        }
+
+        // 4. 3 Transfer Exclusion (EFT, FAST, HAVALE)
+        val threeTransfers =
+            listOf(
+                "EFT TURKIYE KIZILAY DERNEGI",
+                "FAST LOSEV BAGIS",
+                "HAVALE TOPLUM GONULLULERI VAKFI",
+            )
+        for (desc in threeTransfers) {
+            val userRes = recognizeUser(desc)
+            assertNull(userRes.merchant, "Transfer '$desc' merchant null olmalıdır")
+            assertEquals(0, userRes.confidence)
+            assertEquals(MerchantMatchStatus.EXCLUDED_TRANSACTION, userRes.status)
+            assertEquals(TransactionClassification.PERSONAL_TRANSFER, userRes.transactionClassification)
+            assertNull(userRes.source)
+            assertFalse(userRes.canShowMerchantLogo)
+
+            val bankRes = recognizeBank(desc)
+            assertNull(bankRes.merchant, "Transfer '$desc' bank merchant null olmalıdır")
+            assertEquals(0, bankRes.confidence)
+            assertEquals(MerchantMatchStatus.EXCLUDED_TRANSACTION, bankRes.status)
+            assertEquals(TransactionClassification.PERSONAL_TRANSFER, bankRes.transactionClassification)
+            assertNull(bankRes.source)
+            assertFalse(bankRes.canShowMerchantLogo)
+
+            assertNull(TransactionMerchantAttributionResolver.resolve(desc), "Transfer '$desc' resolver null dönmelidir")
+        }
+    }
+
+    @Test
+    fun starterCatalog_m1aTaxesFees_gibAndSgkContract() {
+        val merchants = StarterMerchantCatalog.merchants
+        assertEquals(260, merchants.size)
+        assertEquals(26, StarterMerchantCatalog.CATALOG_VERSION)
+        assertEquals(223, merchants.count { it.verifiedLogoKey != null })
+
+        // 1. GİB ve SGK varlık ve alan kontrolleri
+        val gib = merchants.firstOrNull { it.id == "gib" }
+        assertNotNull(gib, "gib katalogda bulunmalıdır")
+        assertEquals("Gelir İdaresi Başkanlığı", gib.displayName)
+        assertEquals("taxes_fees", gib.categoryIconKey.key)
+        assertEquals("gib", gib.verifiedLogoKey)
+        assertEquals(26, gib.catalogVersion)
+        assertEquals(
+            listOf(
+                "GELIR IDARESI BASKANLIGI",
+                "DIJITAL VERGI DAIRESI",
+                "INTERNET VERGI DAIRESI",
+            ),
+            gib.aliases.map { it.value },
+        )
+        assertEquals(listOf("IBAN", "TRANSFER"), gib.negativeAliases.map { it.value })
+
+        val sgk = merchants.firstOrNull { it.id == "sgk" }
+        assertNotNull(sgk, "sgk katalogda bulunmalıdır")
+        assertEquals("Sosyal Güvenlik Kurumu", sgk.displayName)
+        assertEquals("taxes_fees", sgk.categoryIconKey.key)
+        assertEquals("sgk", sgk.verifiedLogoKey)
+        assertEquals(26, sgk.catalogVersion)
+        assertEquals(
+            listOf(
+                "SOSYAL GUVENLIK KURUMU",
+            ),
+            sgk.aliases.map { it.value },
+        )
+        assertEquals(listOf("IBAN", "TRANSFER", "MOSIP"), sgk.negativeAliases.map { it.value })
+
+        // 2. Pozitif eşleşmeler
+        val positiveCases =
+            listOf(
+                "GELIR IDARESI BASKANLIGI" to "gib",
+                "DIJITAL VERGI DAIRESI" to "gib",
+                "INTERNET VERGI DAIRESI" to "gib",
+                "SOSYAL GUVENLIK KURUMU" to "sgk",
+            )
+        for ((desc, expectedId) in positiveCases) {
+            val userRes = recognizeUser(desc)
+            assertNotNull(userRes.merchant, "'$desc' merchant üretmelidir")
+            assertEquals(expectedId, userRes.merchant?.id, "'$desc' $expectedId ile eşleşmelidir")
+            assertEquals(MerchantMatchStatus.MATCHED, userRes.status)
+            assertTrue(userRes.canShowMerchantLogo)
+
+            val bankRes = recognizeBank(desc)
+            assertNotNull(bankRes.merchant, "Bank '$desc' merchant üretmelidir")
+            assertEquals(expectedId, bankRes.merchant?.id)
+            assertEquals(MerchantMatchStatus.MATCHED, bankRes.status)
+            assertTrue(bankRes.canShowMerchantLogo)
+
+            val attrib = TransactionMerchantAttributionResolver.resolve(desc)
+            assertNotNull(attrib, "'$desc' resolver ile çözümlenmelidir")
+            assertEquals(expectedId, attrib.merchantId.value)
+        }
+
+        // 3. Negatif / Fail-Closed senaryolar
+        val negativeCases =
+            listOf(
+                "GIB",
+                "SGK",
+                "GIB SANAL POS",
+                "GIB VERGI ODEMESI",
+                "SGK PRIM ODEMESI",
+                "SGK MOSIP",
+                "KART ILE PRIM ODEME",
+                "IBAN TRANSFER GELIR IDARESI BASKANLIGI",
+                "IBAN TRANSFER SOSYAL GUVENLIK KURUMU",
+                "SOSYAL GUVENLIK KURUMU MOSIP",
+                "BELEDIYE VERGI",
+                "E DEVLET",
+                "BANKA KOMISYONU",
+                "KART AIDATI",
+            )
+        for (neg in negativeCases) {
+            val userRes = recognizeUser(neg)
+            assertNull(userRes.merchant, "Negatif '$neg' merchant üretmemelidir (fail-closed)")
+            assertEquals(MerchantMatchStatus.NO_MATCH, userRes.status, "Negatif '$neg' NO_MATCH olmalıdır")
+
+            val bankRes = recognizeBank(neg)
+            assertNull(bankRes.merchant, "Negatif '$neg' bank merchant üretmemelidir (fail-closed)")
+            assertEquals(MerchantMatchStatus.NO_MATCH, bankRes.status, "Negatif '$neg' bank NO_MATCH olmalıdır")
+
+            assertNull(TransactionMerchantAttributionResolver.resolve(neg), "Negatif '$neg' resolver null dönmelidir")
+        }
+
+        // 4. Transfer exclusion (EFT / FAST / HAVALE) regresyonları
+        val transfers =
+            listOf(
+                "EFT GELIR IDARESI BASKANLIGI",
+                "FAST SOSYAL GUVENLIK KURUMU",
+                "HAVALE DIJITAL VERGI DAIRESI",
+            )
+        for (desc in transfers) {
+            val userRes = recognizeUser(desc)
+            assertNull(userRes.merchant, "Transfer '$desc' merchant null olmalıdır")
+            assertEquals(0, userRes.confidence)
+            assertEquals(MerchantMatchStatus.EXCLUDED_TRANSACTION, userRes.status)
+            assertEquals(TransactionClassification.PERSONAL_TRANSFER, userRes.transactionClassification)
+            assertFalse(userRes.canShowMerchantLogo)
+
+            val bankRes = recognizeBank(desc)
+            assertNull(bankRes.merchant, "Transfer '$desc' bank merchant null olmalıdır")
+            assertEquals(0, bankRes.confidence)
+            assertEquals(MerchantMatchStatus.EXCLUDED_TRANSACTION, bankRes.status)
+            assertEquals(TransactionClassification.PERSONAL_TRANSFER, bankRes.transactionClassification)
+            assertFalse(bankRes.canShowMerchantLogo)
+
+            assertNull(TransactionMerchantAttributionResolver.resolve(desc), "Transfer '$desc' resolver null dönmelidir")
         }
     }
 }

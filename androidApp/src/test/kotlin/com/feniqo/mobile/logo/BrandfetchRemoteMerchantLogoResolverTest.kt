@@ -110,8 +110,8 @@ class BrandfetchRemoteMerchantLogoResolverTest {
     fun allowlistKeys_matchApprovedMerchantLogoRegistry() {
         val keys = BrandfetchDomainAllowlist.allowlistKeys()
         val centralKeys = MerchantLogoDomainAllowlist.allowlistKeys()
-        assertEquals(191, keys.size)
-        assertEquals(191, centralKeys.size)
+        assertEquals(217, keys.size)
+        assertEquals(217, centralKeys.size)
         assertEquals(centralKeys, keys)
         assertEquals(keys, approvedLogoKeys)
     }

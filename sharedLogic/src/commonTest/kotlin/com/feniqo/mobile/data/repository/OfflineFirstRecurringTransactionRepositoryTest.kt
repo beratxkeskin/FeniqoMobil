@@ -956,7 +956,7 @@ class OfflineFirstRecurringTransactionRepositoryTest {
             assertEquals("netflix", generatedTx.merchantId)
             assertEquals("EXACT_ALIAS", generatedTx.merchantMatchSourceCode)
             assertEquals(95, generatedTx.merchantConfidence)
-            assertEquals(22, generatedTx.merchantCatalogVersion)
+            assertEquals(26, generatedTx.merchantCatalogVersion)
         }
 
     @Test

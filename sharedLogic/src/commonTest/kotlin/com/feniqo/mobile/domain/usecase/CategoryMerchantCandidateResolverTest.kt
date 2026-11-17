@@ -344,7 +344,7 @@ class CategoryMerchantCandidateResolverTest {
 
     @Test
     fun emptyProfileCategories_returnEmpty() {
-        val emptyCategories = listOf("family_pets", "other_expense")
+        val emptyCategories = listOf("financial_expenses", "other_expense")
         val thy = StarterMerchantCatalog.merchants.first { it.id == "thy" }
 
         emptyCategories.forEach { catKey ->
@@ -1663,5 +1663,181 @@ class CategoryMerchantCandidateResolverTest {
         // Uyumsuz merchant fail-closed
         val bim = StarterMerchantCatalog.merchants.first { it.id == "bim" }
         assertFalse(CategoryMerchantCandidateResolver.isCompatible("education", bim))
+    }
+
+    @Test
+    fun familyPets_suggestedAndSearchableOrder_exactMatchWithIndex() {
+        val expectedNine =
+            listOf(
+                "ebebek",
+                "petlebi",
+                "civil",
+                "temizmama",
+                "toyzz_shop",
+                "juen_pet_market",
+                "joker_baby",
+                "armagan_oyuncak",
+                "petzz_shop",
+            )
+
+        val expectedSearchable =
+            expectedNine +
+                listOf(
+                    "markamama",
+                    "petburada",
+                    "petihtiyac",
+                    "kolaymama",
+                    "panco",
+                    "bg_store",
+                    "minycenter",
+                    "vetamerikan",
+                )
+
+        val suggested =
+            resolver.resolveSuggestedCandidates(
+                transactionType = TransactionType.EXPENSE,
+                categoryIconKey = "family_pets",
+            )
+        assertEquals(expectedNine, suggested.map { it.id })
+        assertEquals(9, suggested.size)
+        assertEquals(9, suggested.distinctBy { it.id }.size)
+
+        val searchable =
+            resolver.resolveSearchableCandidates(
+                transactionType = TransactionType.EXPENSE,
+                categoryIconKey = "family_pets",
+            )
+        assertEquals(expectedSearchable, searchable.map { it.id })
+        assertEquals(17, searchable.size)
+        assertEquals(17, searchable.distinctBy { it.id }.size)
+
+        // Index ile birebir uyum
+        val indexSuggested =
+            MerchantCategoryRecommendationIndex
+                .resolveSuggestedMerchantIds(TransactionType.EXPENSE, "family_pets")
+                .map { it.value }
+        assertEquals(indexSuggested, suggested.map { it.id })
+
+        val indexSearchable =
+            MerchantCategoryRecommendationIndex
+                .resolveSearchableMerchantIds(TransactionType.EXPENSE, "family_pets")
+                .map { it.value }
+        assertEquals(indexSearchable, searchable.map { it.id })
+
+        // ebebek cross-category kontrolü: ana kategorisi shopping kalmalı, ancak family_pets ile uyumlu olmalı
+        val ebebek = StarterMerchantCatalog.merchants.first { it.id == "ebebek" }
+        assertEquals("shopping", ebebek.categoryIconKey.key, "ebebek ana kategorisi shopping kalmalıdır")
+        assertTrue(CategoryMerchantCandidateResolver.isCompatible("family_pets", ebebek))
+        assertTrue(CategoryMerchantCandidateResolver.isCompatible("shopping", ebebek))
+
+        // Doğrudan family_pets merchant'ı uyumlu olmalıdır
+        val markamama = StarterMerchantCatalog.merchants.first { it.id == "markamama" }
+        assertTrue(CategoryMerchantCandidateResolver.isCompatible("family_pets", markamama))
+
+        // Uyumsuz merchant fail-closed
+        val bim = StarterMerchantCatalog.merchants.first { it.id == "bim" }
+        assertFalse(CategoryMerchantCandidateResolver.isCompatible("family_pets", bim))
+    }
+
+    @Test
+    fun giftsDonations_resolvesExactEightSuggestedAndSearchableCandidates() {
+        val expectedEight =
+            listOf(
+                "kizilay",
+                "losev",
+                "tema",
+                "tev",
+                "mehmetcik_vakfi",
+                "akut",
+                "acev",
+                "tog",
+            )
+
+        val suggested =
+            resolver.resolveSuggestedCandidates(
+                transactionType = TransactionType.EXPENSE,
+                categoryIconKey = "gifts_donations",
+            )
+        assertEquals(expectedEight, suggested.map { it.id })
+        assertEquals(8, suggested.size)
+        assertEquals(8, suggested.distinctBy { it.id }.size)
+
+        val searchable =
+            resolver.resolveSearchableCandidates(
+                transactionType = TransactionType.EXPENSE,
+                categoryIconKey = "gifts_donations",
+            )
+        assertEquals(expectedEight, searchable.map { it.id })
+        assertEquals(8, searchable.size)
+        assertEquals(8, searchable.distinctBy { it.id }.size)
+
+        // Index ile birebir uyum
+        val indexSuggested =
+            MerchantCategoryRecommendationIndex
+                .resolveSuggestedMerchantIds(TransactionType.EXPENSE, "gifts_donations")
+                .map { it.value }
+        assertEquals(indexSuggested, suggested.map { it.id })
+
+        val indexSearchable =
+            MerchantCategoryRecommendationIndex
+                .resolveSearchableMerchantIds(TransactionType.EXPENSE, "gifts_donations")
+                .map { it.value }
+        assertEquals(indexSearchable, searchable.map { it.id })
+
+        // gifts_donations merchant uyumluluğu
+        val kizilay = StarterMerchantCatalog.merchants.first { it.id == "kizilay" }
+        assertEquals("gifts_donations", kizilay.categoryIconKey.key)
+        assertTrue(CategoryMerchantCandidateResolver.isCompatible("gifts_donations", kizilay))
+
+        // Uyumsuz merchant fail-closed
+        val bim = StarterMerchantCatalog.merchants.first { it.id == "bim" }
+        assertFalse(CategoryMerchantCandidateResolver.isCompatible("gifts_donations", bim))
+    }
+
+    @Test
+    fun taxesFees_resolvesExactTwoSuggestedAndSearchableCandidates() {
+        val expectedTwo = listOf("gib", "sgk")
+
+        val suggested =
+            resolver.resolveSuggestedCandidates(
+                transactionType = TransactionType.EXPENSE,
+                categoryIconKey = "taxes_fees",
+            )
+        assertEquals(expectedTwo, suggested.map { it.id })
+        assertEquals(2, suggested.size)
+
+        val searchable =
+            resolver.resolveSearchableCandidates(
+                transactionType = TransactionType.EXPENSE,
+                categoryIconKey = "taxes_fees",
+            )
+        assertEquals(expectedTwo, searchable.map { it.id })
+        assertEquals(2, searchable.size)
+
+        // Index ile birebir uyum
+        val indexSuggested =
+            MerchantCategoryRecommendationIndex
+                .resolveSuggestedMerchantIds(TransactionType.EXPENSE, "taxes_fees")
+                .map { it.value }
+        assertEquals(indexSuggested, suggested.map { it.id })
+
+        val indexSearchable =
+            MerchantCategoryRecommendationIndex
+                .resolveSearchableMerchantIds(TransactionType.EXPENSE, "taxes_fees")
+                .map { it.value }
+        assertEquals(indexSearchable, searchable.map { it.id })
+
+        // taxes_fees merchant uyumluluğu
+        val gib = StarterMerchantCatalog.merchants.first { it.id == "gib" }
+        assertEquals("taxes_fees", gib.categoryIconKey.key)
+        assertTrue(CategoryMerchantCandidateResolver.isCompatible("taxes_fees", gib))
+
+        val sgk = StarterMerchantCatalog.merchants.first { it.id == "sgk" }
+        assertEquals("taxes_fees", sgk.categoryIconKey.key)
+        assertTrue(CategoryMerchantCandidateResolver.isCompatible("taxes_fees", sgk))
+
+        // Uyumsuz merchant fail-closed
+        val bim = StarterMerchantCatalog.merchants.first { it.id == "bim" }
+        assertFalse(CategoryMerchantCandidateResolver.isCompatible("taxes_fees", bim))
     }
 }

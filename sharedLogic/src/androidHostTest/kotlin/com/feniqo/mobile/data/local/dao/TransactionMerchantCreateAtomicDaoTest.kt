@@ -399,7 +399,7 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertEquals("migros", savedTx.merchantId)
             assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
             assertEquals(100, savedTx.merchantConfidence)
-            assertEquals(22, savedTx.merchantCatalogVersion)
+            assertEquals(26, savedTx.merchantCatalogVersion)
 
             val verifications = getAllVerificationsSnapshot()
             assertEquals(1, verifications.size)
@@ -448,7 +448,7 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertEquals("kofteci_yusuf", savedTx.merchantId)
             assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
             assertEquals(100, savedTx.merchantConfidence)
-            assertEquals(22, savedTx.merchantCatalogVersion)
+            assertEquals(26, savedTx.merchantCatalogVersion)
 
             // 2. Verification entity snapshot verification
             val verifications = getAllVerificationsSnapshot()
@@ -540,7 +540,7 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertEquals("vatan_bilgisayar", savedTx.merchantId)
             assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
             assertEquals(100, savedTx.merchantConfidence)
-            assertEquals(22, savedTx.merchantCatalogVersion)
+            assertEquals(26, savedTx.merchantCatalogVersion)
 
             // 2. Verification entity snapshot verification
             val verifications = getAllVerificationsSnapshot()
@@ -632,7 +632,7 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertEquals("gratis", savedTx.merchantId)
             assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
             assertEquals(100, savedTx.merchantConfidence)
-            assertEquals(22, savedTx.merchantCatalogVersion)
+            assertEquals(26, savedTx.merchantCatalogVersion)
 
             // 2. Verification entity snapshot verification
             val verifications = getAllVerificationsSnapshot()
@@ -757,7 +757,7 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertEquals("turknet", savedTx.merchantId)
             assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
             assertEquals(100, savedTx.merchantConfidence)
-            assertEquals(22, savedTx.merchantCatalogVersion)
+            assertEquals(26, savedTx.merchantCatalogVersion)
 
             // 2. Verification entity snapshot verification
             val verifications = getAllVerificationsSnapshot()
@@ -910,7 +910,7 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertEquals("istanbulkart", savedTx.merchantId)
             assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
             assertEquals(100, savedTx.merchantConfidence)
-            assertEquals(22, savedTx.merchantCatalogVersion)
+            assertEquals(26, savedTx.merchantCatalogVersion)
 
             // 2. Verification entity snapshot verification
             val verifications = getAllVerificationsSnapshot()
@@ -1020,7 +1020,7 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertEquals("ajet", savedTx.merchantId)
             assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
             assertEquals(100, savedTx.merchantConfidence)
-            assertEquals(22, savedTx.merchantCatalogVersion)
+            assertEquals(26, savedTx.merchantCatalogVersion)
 
             val verifications = getAllVerificationsSnapshot()
             assertEquals(1, verifications.size)
@@ -2160,7 +2160,7 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertEquals("yemeksepeti", savedTx.merchantId)
             assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
             assertEquals(100, savedTx.merchantConfidence)
-            assertEquals(22, savedTx.merchantCatalogVersion)
+            assertEquals(26, savedTx.merchantCatalogVersion)
 
             // 2. Verification entity snapshot verification: canonical YEMEKSEPETI, NOT generic YEMEK
             val verifications = getAllVerificationsSnapshot()
@@ -2293,7 +2293,7 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertEquals("steam", createdTx.merchantId)
             assertEquals("USER_VERIFIED", createdTx.merchantMatchSourceCode)
             assertEquals(100, createdTx.merchantConfidence)
-            assertEquals(22, createdTx.merchantCatalogVersion)
+            assertEquals(26, createdTx.merchantCatalogVersion)
 
             val verSnapshot = getAllVerificationsSnapshot()
             assertEquals(1, verSnapshot.size)
@@ -2516,7 +2516,7 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertEquals("apsiyon", savedTx.merchantId)
             assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
             assertEquals(100, savedTx.merchantConfidence)
-            assertEquals(22, savedTx.merchantCatalogVersion)
+            assertEquals(26, savedTx.merchantCatalogVersion)
 
             // 2. Verification entity snapshot verification
             val verifications = getAllVerificationsSnapshot()
@@ -2628,7 +2628,7 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertEquals("busuu", savedTx.merchantId)
             assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
             assertEquals(100, savedTx.merchantConfidence)
-            assertEquals(22, savedTx.merchantCatalogVersion)
+            assertEquals(26, savedTx.merchantCatalogVersion)
 
             // 2. Verification entity snapshot verification
             val verifications = getAllVerificationsSnapshot()
@@ -2720,7 +2720,7 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertEquals("dr", savedTx.merchantId)
             assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
             assertEquals(100, savedTx.merchantConfidence)
-            assertEquals(22, savedTx.merchantCatalogVersion)
+            assertEquals(26, savedTx.merchantCatalogVersion)
 
             // 2. Verification entity snapshot verification
             val verifications = getAllVerificationsSnapshot()
@@ -2748,6 +2748,247 @@ class TransactionMerchantCreateAtomicDaoTest {
             assertEquals(2, verifOp.protocolVersion, "Verification outbox must use protocol_version = 2")
             assertEquals(savedV.id, verifOp.entityId)
             assertEquals(result.verificationOperationId, verifOp.operationId)
+        }
+
+    @Test
+    fun familyPetsCategory_withFamilyPetsMerchantPetlebi_atomicallySucceeds() =
+        runTest {
+            val familyPetsCatId = "cat-family-pets-atom-1"
+            db.categoryDao().upsert(
+                CategoryEntity(
+                    id = familyPetsCatId,
+                    ownerId = userId,
+                    workspaceId = null,
+                    scopeKey = "user:$userId",
+                    name = "Aile & Evcil Hayvan",
+                    normalizedName = "AILE EVCIL HAYVAN",
+                    slug = "family-pets-atom-1",
+                    typeCode = "EXPENSE",
+                    colorHex = "#FF9800",
+                    iconKey = "family_pets",
+                    isDefault = false,
+                    createdAtEpochMillis = 1000L,
+                    sync =
+                        SyncMetadata(
+                            syncStatus = SyncStatus.SYNCED.name,
+                            updatedAtEpochMillis = 1000L,
+                            localUpdatedAtEpochMillis = 1000L,
+                            deletedAtEpochMillis = null,
+                            version = 1L,
+                            baseVersion = 1L,
+                            lastSyncError = null,
+                        ),
+                ),
+            )
+
+            val tx =
+                buildTransactionEntity(
+                    id = "tx-atom-petlebi-1",
+                    description = "PETLEBI MAMA SIPARISI",
+                    categoryId = familyPetsCatId,
+                )
+            val expectedTxPayload = """{"transaction_id":"tx-atom-petlebi-1","amount":45000,"currency":"TRY"}"""
+
+            val result =
+                mutationDao.createTransactionWithMerchantDecisionV2(
+                    syncScopeKey = syncScopeKey,
+                    actorUserId = userId,
+                    transactionEntity = tx,
+                    transactionPayloadJson = expectedTxPayload,
+                    decision = TransactionMerchantCreateDecision.KnownMerchant("petlebi"),
+                    operationIdFactory = { (++opIndex).toString(16).padStart(32, '0') },
+                    nowEpochMillis = 1000L,
+                )
+
+            assertNotNull(result.transactionOperationId)
+            assertNotNull(result.verificationOperationId)
+            assertTrue(result.transactionOperationId != result.verificationOperationId)
+
+            // 1. Transaction snapshot verification
+            val txs = getAllTransactionsSnapshot()
+            assertEquals(1, txs.size)
+            val savedTx = txs[0]
+            assertEquals("tx-atom-petlebi-1", savedTx.id)
+            assertEquals("petlebi", savedTx.merchantId)
+            assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
+            assertEquals(100, savedTx.merchantConfidence)
+            assertEquals(26, savedTx.merchantCatalogVersion)
+
+            // 2. Verification entity snapshot verification
+            val verifications = getAllVerificationsSnapshot()
+            assertEquals(1, verifications.size)
+            val savedV = verifications[0]
+            assertEquals("PETLEBI MAMA SIPARISI", savedV.normalizedAlias)
+            assertEquals("ASSIGN", savedV.decisionCode)
+            assertEquals("petlebi", savedV.merchantId)
+            assertEquals("PERSONAL", savedV.scopeCode)
+
+            // 3. Outbox operations snapshot verification
+            val ops = getAllOperationsSnapshot()
+            assertEquals(2, ops.size)
+
+            val txOp = ops.firstOrNull { it.entityTypeCode == "TRANSACTION" }
+            assertNotNull(txOp, "Transaction outbox operation must exist")
+            assertEquals("CREATE", txOp.operationTypeCode)
+            assertEquals(2, txOp.protocolVersion)
+            assertEquals(savedTx.id, txOp.entityId)
+            assertEquals(result.transactionOperationId, txOp.operationId)
+
+            val verifOp = ops.firstOrNull { it.entityTypeCode == "USER_MERCHANT_VERIFICATION" }
+            assertNotNull(verifOp, "Verification outbox operation must exist")
+            assertEquals("CREATE", verifOp.operationTypeCode)
+            assertEquals(2, verifOp.protocolVersion)
+            assertEquals(savedV.id, verifOp.entityId)
+            assertEquals(result.verificationOperationId, verifOp.operationId)
+        }
+
+    @Test
+    fun familyPetsCategory_withCrossMerchantEbebek_atomicallySucceeds() =
+        runTest {
+            val familyPetsCatId = "cat-family-pets-atom-2"
+            db.categoryDao().upsert(
+                CategoryEntity(
+                    id = familyPetsCatId,
+                    ownerId = userId,
+                    workspaceId = null,
+                    scopeKey = "user:$userId",
+                    name = "Aile & Evcil Hayvan",
+                    normalizedName = "AILE EVCIL HAYVAN",
+                    slug = "family-pets-atom-2",
+                    typeCode = "EXPENSE",
+                    colorHex = "#FF9800",
+                    iconKey = "family_pets",
+                    isDefault = false,
+                    createdAtEpochMillis = 1000L,
+                    sync =
+                        SyncMetadata(
+                            syncStatus = SyncStatus.SYNCED.name,
+                            updatedAtEpochMillis = 1000L,
+                            localUpdatedAtEpochMillis = 1000L,
+                            deletedAtEpochMillis = null,
+                            version = 1L,
+                            baseVersion = 1L,
+                            lastSyncError = null,
+                        ),
+                ),
+            )
+
+            val tx =
+                buildTransactionEntity(
+                    id = "tx-atom-ebebek-1",
+                    description = "EBEBEK MAGAZACILIK",
+                    categoryId = familyPetsCatId,
+                )
+            val expectedTxPayload = """{"transaction_id":"tx-atom-ebebek-1","amount":75000,"currency":"TRY"}"""
+
+            val result =
+                mutationDao.createTransactionWithMerchantDecisionV2(
+                    syncScopeKey = syncScopeKey,
+                    actorUserId = userId,
+                    transactionEntity = tx,
+                    transactionPayloadJson = expectedTxPayload,
+                    decision = TransactionMerchantCreateDecision.KnownMerchant("ebebek"),
+                    operationIdFactory = { (++opIndex).toString(16).padStart(32, '0') },
+                    nowEpochMillis = 1000L,
+                )
+
+            assertNotNull(result.transactionOperationId)
+            assertNotNull(result.verificationOperationId)
+            assertTrue(result.transactionOperationId != result.verificationOperationId)
+
+            val txs = getAllTransactionsSnapshot()
+            assertEquals(1, txs.size)
+            val savedTx = txs[0]
+            assertEquals("tx-atom-ebebek-1", savedTx.id)
+            assertEquals("ebebek", savedTx.merchantId)
+            assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
+            assertEquals(100, savedTx.merchantConfidence)
+            assertEquals(26, savedTx.merchantCatalogVersion)
+
+            val verifications = getAllVerificationsSnapshot()
+            assertEquals(1, verifications.size)
+            val savedV = verifications[0]
+            assertEquals("EBEBEK MAGAZACILIK", savedV.normalizedAlias)
+            assertEquals("ASSIGN", savedV.decisionCode)
+            assertEquals("ebebek", savedV.merchantId)
+
+            val ops = getAllOperationsSnapshot()
+            assertEquals(2, ops.size)
+        }
+
+    @Test
+    fun createTransactionAtomic_withKnownMerchantGib_taxesFees_writesTransactionAndVerificationAndOutboxInSingleTransaction() =
+        runTest {
+            val taxesFeesCatId = "c-taxes-fees-1"
+            db.categoryDao().upsert(
+                CategoryEntity(
+                    id = taxesFeesCatId,
+                    ownerId = userId,
+                    workspaceId = null,
+                    scopeKey = "user:$userId",
+                    name = "Vergi & Ücretler",
+                    normalizedName = "VERGI & UCRETLER",
+                    slug = "taxes-fees-$userId",
+                    typeCode = "EXPENSE",
+                    colorHex = "#64748B",
+                    iconKey = "taxes_fees",
+                    isDefault = false,
+                    createdAtEpochMillis = 1000L,
+                    sync =
+                        SyncMetadata(
+                            syncStatus = SyncStatus.SYNCED.name,
+                            updatedAtEpochMillis = 1000L,
+                            localUpdatedAtEpochMillis = 1000L,
+                            deletedAtEpochMillis = null,
+                            version = 1L,
+                            baseVersion = 1L,
+                            lastSyncError = null,
+                        ),
+                ),
+            )
+
+            val tx =
+                buildTransactionEntity(
+                    id = "tx-atom-gib-1",
+                    description = "GELIR IDARESI BASKANLIGI",
+                    categoryId = taxesFeesCatId,
+                )
+            val expectedTxPayload = """{"transaction_id":"tx-atom-gib-1","amount":25000,"currency":"TRY"}"""
+
+            val result =
+                mutationDao.createTransactionWithMerchantDecisionV2(
+                    syncScopeKey = syncScopeKey,
+                    actorUserId = userId,
+                    transactionEntity = tx,
+                    transactionPayloadJson = expectedTxPayload,
+                    decision = TransactionMerchantCreateDecision.KnownMerchant("gib"),
+                    operationIdFactory = { (++opIndex).toString(16).padStart(32, '0') },
+                    nowEpochMillis = 1000L,
+                )
+
+            assertNotNull(result.transactionOperationId)
+            assertNotNull(result.verificationOperationId)
+            assertTrue(result.transactionOperationId != result.verificationOperationId)
+
+            val txs = getAllTransactionsSnapshot()
+            assertEquals(1, txs.size)
+            val savedTx = txs[0]
+            assertEquals("tx-atom-gib-1", savedTx.id)
+            assertEquals("gib", savedTx.merchantId)
+            assertEquals("USER_VERIFIED", savedTx.merchantMatchSourceCode)
+            assertEquals(100, savedTx.merchantConfidence)
+            assertEquals(26, savedTx.merchantCatalogVersion)
+
+            val verifications = getAllVerificationsSnapshot()
+            assertEquals(1, verifications.size)
+            val savedV = verifications[0]
+            assertEquals("GELIR IDARESI BASKANLIGI", savedV.normalizedAlias)
+            assertEquals("ASSIGN", savedV.decisionCode)
+            assertEquals("gib", savedV.merchantId)
+            assertEquals("PERSONAL", savedV.scopeCode)
+
+            val ops = getAllOperationsSnapshot()
+            assertEquals(2, ops.size)
         }
 
     private class SpyBackgroundSyncScheduler : BackgroundSyncScheduler {

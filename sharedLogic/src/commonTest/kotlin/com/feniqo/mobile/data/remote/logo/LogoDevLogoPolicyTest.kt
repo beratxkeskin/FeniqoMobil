@@ -87,7 +87,7 @@ class LogoDevLogoPolicyTest {
     @Test
     fun starterCatalog_everyNonNullVerifiedLogoKey_resolvesInAllowlist() {
         val nonNullMerchants = StarterMerchantCatalog.merchants.filter { it.verifiedLogoKey != null }
-        assertEquals(197, nonNullMerchants.size, "Yalnızca doğrulanmış 197 merchant logo anahtarı taşımalı")
+        assertEquals(223, nonNullMerchants.size, "Yalnızca doğrulanmış 223 merchant logo anahtarı taşımalı")
 
         for (merchant in nonNullMerchants) {
             val resolvedDomain = MerchantLogoDomainAllowlist.resolveDomain(merchant.verifiedLogoKey)

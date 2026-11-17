@@ -502,7 +502,7 @@ FeniqoMobil uygulamasÄ±nda aktif uzak logo saÄŸlayÄ±cÄ±sÄ± olarak **Lo
    - Önerilen 7'li sıra (`apsiyon`, `yonetimcell`, `armut`, `senyonet`, `mrusta`, `pronet`, `kale_alarm`) ve aranabilir 9'lu sıra (7 housing + `koctas`, `bauhaus`) uygulanmıştır.
    - Statik `verifiedLogoKey` ve merkezi allowlist sınırı esastır; kullanıcı girdisinden domain veya URL üretilmez (sıfır kullanıcı-metni uzak istek garantisi).
    - Logo.dev tema politikası: Housing markaları için PNG/WebP formatında `theme=light`, `LIGHT_NEUTRAL` (beyaz dairesel yüzey) ve `DEFAULT` (1.0f ölçek); JPG formatı için themesiz URL sözleşmesi işletilir; `fallback=404` korunur.
-   - Marka Hakları ve Lisans Beyanı: Gösterilen logolar ve ticari markalar münhasıran ilgili marka sahiplerine aittir. Logoların uygulamada yer alması, ticari marka sahipleri ile Feniqo arasında herhangi bir sponsorluk, ortaklık, onay veya ticari bağ bulunduğu anlamına gelmez; yalnızca bilgilendirme ve işlem tanıma amacıyla kanonik kamuya açık web kaynakları üzerinden çözümlenir.
+   - **Hak ve ilişki sınırı:** Bu envanter logo veya marka haklarının hukuki sahipliği hakkında bir tespit yapmaz. Logo gösterimi yalnızca kullanıcının tanınan markayı veya kurumu ayırt etmesini destekler; Feniqo ile listelenen marka ve kurumlar arasında sponsorluk, ortaklık, resmî onay veya ticari bağ bulunduğu anlamına gelmez.
    - Logo.dev Community attribution (`https://beratxkeskin.github.io/feniqo-site/`), hotlink ve katı no-cache (`Cache-Control: no-cache, no-store, must-revalidate`) sözleşmeleri değişmemiştir.
 
 5. **Veri Modeli ve Altyapı:**
@@ -559,7 +559,7 @@ FeniqoMobil uygulamasÄ±nda aktif uzak logo saÄŸlayÄ±cÄ±sÄ± olarak **Lo
    - Amplifon güncel resmî Türkiye tüzel kişiliği, satıcı/payee ve kanonik domain kanıtı yetersiz olduğundan kapsam dışı tutulmuştur.
    - Statik `verifiedLogoKey` ve merkezi allowlist sınırı esastır; kullanıcı girdisinden domain veya URL üretilmez (sıfır kullanıcı-metni uzak istek garantisi).
    - Logo.dev tema politikası: Sağlık markaları için PNG/WebP formatında `theme=light`, `LIGHT_NEUTRAL` (beyaz dairesel yüzey) ve `DEFAULT` (1.0f ölçek); JPG formatı için themesiz URL sözleşmesi işletilir; `fallback=404` korunur.
-   - Marka Hakları ve Lisans Beyanı: Gösterilen logolar ve ticari markalar münhasıran ilgili marka sahiplerine aittir. Logoların uygulamada yer alması, ticari marka sahipleri ile Feniqo arasında herhangi bir sponsorluk, ortaklık, onay veya ticari bağ bulunduğu anlamına gelmez; yalnızca bilgilendirme ve işlem tanıma amacıyla kanonik kamuya açık web kaynakları üzerinden çözümlenir.
+   - **Hak ve ilişki sınırı:** Bu envanter logo veya marka haklarının hukuki sahipliği hakkında bir tespit yapmaz. Logo gösterimi yalnızca kullanıcının tanınan markayı veya kurumu ayırt etmesini destekler; Feniqo ile listelenen marka ve kurumlar arasında sponsorluk, ortaklık, resmî onay veya ticari bağ bulunduğu anlamına gelmez.
    - Logo.dev Community attribution (`https://beratxkeskin.github.io/feniqo-site/`), hotlink ve katı no-cache (`Cache-Control: no-cache, no-store, must-revalidate`) sözleşmeleri değişmemiştir.
 
 4. **Veri Modeli ve Altyapı:**
@@ -602,7 +602,7 @@ FeniqoMobil uygulamasÄ±nda aktif uzak logo saÄŸlayÄ±cÄ±sÄ± olarak **Lo
    - Statik `verifiedLogoKey` ve merkezi allowlist sınırı esastır; kullanıcı girdisinden domain veya URL üretilmez (sıfır kullanıcı-metni uzak istek garantisi).
    - Kullanıcı girdisi kesinlikle Logo.dev CDN'ine gönderilmez.
    - Logo.dev Community attribution (`https://beratxkeskin.github.io/feniqo-site/`), hotlink ve katı no-cache (`Cache-Control: no-cache, no-store, must-revalidate`) sözleşmeleri değişmemiştir.
-   - Marka Hakları ve Lisans Beyanı: Gösterilen logolar ve ticari markalar münhasıran ilgili marka sahiplerine aittir. Logoların uygulamada yer alması, ticari marka sahipleri ile Feniqo arasında herhangi bir sponsorluk, ortaklık, onay veya ticari bağ bulunduğu anlamına gelmez; yalnızca bilgilendirme ve işlem tanıma amacıyla kanonik kamuya açık web kaynakları üzerinden çözümlenir.
+   - **Hak ve ilişki sınırı:** Bu envanter logo veya marka haklarının hukuki sahipliği hakkında bir tespit yapmaz. Logo gösterimi yalnızca kullanıcının tanınan markayı veya kurumu ayırt etmesini destekler; Feniqo ile listelenen marka ve kurumlar arasında sponsorluk, ortaklık, resmî onay veya ticari bağ bulunduğu anlamına gelmez.
 
 4. **Veri Modeli ve Altyapı:**
    - Room şema sürümü 24'tür (değişmemiştir).
@@ -662,7 +662,7 @@ FeniqoMobil uygulamasÄ±nda aktif uzak logo saÄŸlayÄ±cÄ±sÄ± olarak **Lo
    - Pazaryeri İzolasyonu: Amazon, Trendyol ve Hepsiburada Eğitim adayı olamaz (`CategoryMerchantCandidateResolver` fail-closed).
    - Statik `verifiedLogoKey` ve merkezi allowlist sınırı esastır; kullanıcı girdisinden domain veya URL üretilmez (sıfır kullanıcı-metni uzak istek garantisi).
    - Logo.dev Community attribution (`https://beratxkeskin.github.io/feniqo-site/`), hotlink ve katı no-cache (`Cache-Control: no-cache, no-store, must-revalidate`) sözleşmeleri değişmemiştir.
-   - Marka Hakları ve Lisans Beyanı: Gösterilen logolar ve ticari markalar münhasıran ilgili marka sahiplerine aittir. Logoların uygulamada yer alması, ticari marka sahipleri ile Feniqo arasında herhangi bir sponsorluk, ortaklık, onay veya ticari bağ bulunduğu anlamına gelmez; yalnızca bilgilendirme ve işlem tanıma amacıyla kanonik kamuya açık web kaynakları üzerinden çözümlenir.
+   - **Hak ve ilişki sınırı:** Bu envanter logo veya marka haklarının hukuki sahipliği hakkında bir tespit yapmaz. Logo gösterimi yalnızca kullanıcının tanınan markayı veya kurumu ayırt etmesini destekler; Feniqo ile listelenen marka ve kurumlar arasında sponsorluk, ortaklık, resmî onay veya ticari bağ bulunduğu anlamına gelmez.
 
 4. **Veri Modeli ve Altyapı:**
    - Room şema sürümü 24'tür (değişmemiştir).
@@ -680,4 +680,210 @@ FeniqoMobil uygulamasÄ±nda aktif uzak logo saÄŸlayÄ±cÄ±sÄ± olarak **Lo
    - Proje sahibi 2026-11-14 tarihinde Samsung Galaxy A71 (SM-A715F) fiziksel cihazında güncel Demo APK ile yaptığı incelemede 15 yeni Eğitim/kitapçı logosunu, 3 çapraz abonelik logosunu, 9 önerilen sırasını, 27 aranabilir adayını, Shopping çapraz adaylarını ve wordmark kalitesini kontrol etmiş ve "sorunsuz görünüyor" açık beyanı ile kabul etmiştir (`VISUAL_ACCEPTED`).
    - Kaydet düğmesine basılmamış, işlem/Room/outbox mutasyonu üretilmemiştir.
    - Bu görsel kabul doğrudan ağ trafiğini kanıtlamaz; gizlilik garantisi statik `verifiedLogoKey` + merkezi allowlist/request-factory mimarisi ve testlerden gelir.
-   - **Sonraki Adım:** Faz H4-G2-J2 tamamlandı; sonraki merchant kategorisi bağımsız ön araştırma ve ürün kararıyla belirlenecektir.
+   - **Sonraki Adım:** Faz H4-G2-J2 tamamlanmış; sonraki kategori Faz H4-G2-K1 ile Aile & Evcil Hayvan olarak uygulanmıştır.
+
+### 5.16 Faz H4-G2-K1 — Aile & Evcil Hayvan İlk 9 Marka Kapanışı (2026-11-15)
+
+1. **Kapsam ve Katalog Gerçeği:**
+   - `StarterMerchantCatalog.CATALOG_VERSION` v23 (23)'e yükseltilmiş ve `family_pets` kategorisi ilk 9 önerilen merchant profili ile aktive edilmiştir.
+   - Toplam merchant sayısı 242'dir (205 uzaktan logolu, 37 güvenli yerel fallback).
+   - `MerchantLogoDomainAllowlist` boyutu 199 doğrulanmış anahtara genişletilmiştir (191 → 199; 8 yeni kanonik domain eklendi).
+   - 242 markanın tamamında uzak logo bulunduğu iddiasında bulunulmaz; uzak logo anahtarı bulunmayan 37 merchant güvenli yerel kategori ikonu fallback zincirinde kalır.
+
+2. **Eklenen 8 Doğrulanmış Kayıt, Çapraz Kullanım ve Kanonik Domainler:**
+   - `petlebi` → `petlebi.com` (Petlebi / Petlebi Evcil Hayvan Ürünleri Paz. San. Tic. Ltd. Şti. [Kaynak: https://www.petlebi.com/iletisim])
+   - `civil` → `civilim.com` (Civil / Civil Mağazacılık A.Ş.)
+   - `temizmama` → `temizmama.com` (Temizmama / Çağatay Evcil Hayvan Mamaları ve Yem Ürünleri San. ve Tic. A.Ş. [Kaynak: https://www.temizmama.com/bize-ulasin])
+   - `toyzz_shop` → `toyzzshop.com` (Toyzz Shop / Toypa Mağazacılık Tic. A.Ş.)
+   - `juen_pet_market` → `juenpetmarket.com` (Juen Pet Market / JUEN PET ÜRÜNLERİ PAZARLAMA VE TİCARET LİMİTED ŞİRKETİ [Kaynak: https://etbis.ticaret.gov.tr/tr/SiteSorgulamaSonuc?siteId=73683e7d-2293-4a96-8dca-4a9a0e2ea31a])
+   - `joker_baby` → `joker.com.tr` (Joker Baby / İmir Global Dış Ticaret Yönetim A.Ş.)
+   - `armagan_oyuncak` → `armaganoyuncak.com.tr` (Armağan Oyuncak / Armağan Oyuncak San. ve Tic. A.Ş.)
+   - `petzz_shop` → `petzzshop.com` (Petzz Shop / ITC DANIŞMANLIK SANAYİ VE TİCARET LİMİTED ŞİRKETİ [Kaynak: https://www.petzzshop.com/pages/gizlilik-politikasi-ve-kvkk])
+   - `ebebek` → `e-bebek.com` (Ebebek Mağazacılık A.Ş. — Mevcut kayıt; ana kategorisi `shopping` olarak korunur, `family_pets` önerilerine çapraz bağlanmıştır).
+
+3. **Kimlik, Tanıma Sözleşmeleri, Tema ve Gizlilik Bütünlüğü:**
+   - 8 yeni kaydın tamamında stable merchant ID, varsayılan kategori (`family_pets`) ve alias yapıları doğrulanmıştır.
+   - `ebebek` duplicate edilmemiş; ana kategorisi `shopping` olarak korunup `family_pets` önerilerine çapraz dahil edilmiştir.
+   - Juen Pet Market: Yalnız doğrulanmış marka alias'larıyla tanınır; doğrulanmamış `JUEN PET URUNLERI` payee alias'ı negatif izole edilmiştir.
+   - Temizmama: Doğrulanmış marka alias'ları kullanılır; `CAGATAY MAMA` negatif izole edilmiştir.
+   - Çıplak/generic kelimeler fail-closed kalır: `CIVIL`, `JOKER`, `PET`, `MAMA`, `BEBEK`, `COCUK`, `ARMAGAN`, `SHOP` ve `OYUNCAK` tek başına eşleştirilmez (`NO_MATCH`).
+   - `JOLLY JOKER`, Joker Baby'den izole edilir (hem `joker_baby` hem `jolly_tur` için fail-closed `NO_MATCH` kalır).
+   - Statik `verifiedLogoKey` ve merkezi allowlist esastır; serbest kullanıcı metninden asla domain veya uzak istek üretilmez (sıfır kullanıcı-metni uzak istek garantisi).
+   - Logo.dev Community attribution (`https://beratxkeskin.github.io/feniqo-site/`), hotlink ve no-local-storage/no-cache sözleşmeleri korunur.
+   - **Hak ve ilişki sınırı:** Bu envanter logo veya marka haklarının hukuki sahipliği hakkında bir tespit yapmaz. Logo gösterimi yalnızca kullanıcının tanınan markayı veya kurumu ayırt etmesini destekler; Feniqo ile listelenen marka ve kurumlar arasında sponsorluk, ortaklık, resmî onay veya ticari bağ bulunduğu anlamına gelmez.
+
+4. **Veri Modeli, Atomiklik ve Altyapı:**
+   - Room şema sürümü 24'tür (değişmemiştir).
+   - Supabase/migration değişikliği yoktur; D1 dosyaları (`00c4ffbc3811960fd9a9cf897c5f58bf684c522f`, `0119fe9633ab32cd28bfa6eda3ec32a8610ee349`) birebir korunmuştur.
+   - Petlebi KnownMerchant create testi: `transaction entity`, `USER_MERCHANT_VERIFICATION ASSIGN`, `transaction V2 outbox`, `verification V2 outbox` aynı Room transaction sınırında doğrulanmıştır. `USER_VERIFIED`, `confidence 100`, unknown merchant ID fail-closed, workspace/personal ayrımı korunmuştur.
+
+5. **Doğrulama ve Fiziksel Cihaz Canlı Kabulü:**
+   - Full `sharedLogic` test sonucu: 2533 test / 0 failure / 0 error / 0 skipped (%100 PASS).
+   - Full `sharedUI` test sonucu: 452 test / 0 failure / 0 error / 0 skipped (%100 PASS).
+   - androidApp unit test: 1031 test / 1026 başarılı (yalnızca daha önce proje sahibince tarihsel test borcu olarak kabul edilmiş 5 Compose UI failure'ı mevcuttur: `ProfileNavigationTest: 3`, `SyncStatusScreenComposeTest: 2`). Logo testleri %100 başarılıdır.
+   - iOS Simulator ARM64 compile, assembleDebug ve assembleDemo: başarılı (exit 0).
+   - Localization politikası: 2512 TR / 2512 EN XML kaynak, 4 iOS catalog tam eşleşme (exit 0).
+   - Fresh ktlint kontrolü: K1 hedef dosyalarında 0 yeni ihlal.
+   - K1-R1 hedefli `MerchantRecognitionEngineTest`: 86 test, 0 failure, 0 error, 0 skipped (%100 PASS).
+   - Demo paket: `com.feniqo.mobile.demo`
+   - Fiziksel cihaz: Samsung Galaxy A71 / SM-A715F
+   - Kurulum: `adb install -r`; veri silinmedi.
+   - Samsung Galaxy A71 (SM-A715F) fiziksel cihazında güncel Demo APK ile dokuz markanın logo görünümü 15 Kasım 2026 tarihinde proje sahibi tarafından sorunsuz bulunmuş ("markalar sorunsuz gözüküyor") ve görsel kabul verilmiştir (`VISUAL_ACCEPTED`). Dokuzlu deterministik öneri sırası ve 9/9 searchable sözleşmesi otomatik testlerle doğrulanmıştır.
+   - Kaydet düğmesine basılmamış, işlem/Room/outbox mutasyonu üretilmemiştir.
+   - Bu görsel kabul doğrudan ağ trafiğini kanıtlamaz; gizlilik garantisi statik `verifiedLogoKey` + merkezi allowlist/request-factory mimarisi ve testlerden gelir.
+   - **Sonraki Adım:** Faz H4-G2-K1 tamamlanmış; sonraki dilim Faz H4-G2-K2 kapsamında kalan sekiz searchable-only kayıt tamamlanmış ve kapatılmıştır.
+
+### 5.17 Faz H4-G2-K2 — Aile & Evcil Hayvan Kalan 8 Searchable-Only Merchant Kapanışı (2026-11-15)
+
+1. **Kapsam ve Katalog Gerçeği:**
+   - `StarterMerchantCatalog.CATALOG_VERSION` v24 (24)'e yükseltilmiş ve `family_pets` kategorisi kalan 8 searchable-only merchant kaydı ile genişletilmiştir.
+   - Toplam merchant sayısı 250'dir (213 uzaktan logolu, 37 güvenli yerel fallback).
+   - `MerchantLogoDomainAllowlist` boyutu 207 doğrulanmış anahtara genişletilmiştir (199 → 207; 8 yeni kanonik domain eklendi).
+   - 250 markanın tamamında uzak logo bulunduğu iddiasında bulunulmaz; uzak logo anahtarı bulunmayan 37 merchant güvenli yerel kategori ikonu fallback zincirinde kalır.
+   - `family_pets` öneri profili 9 suggested (K1 ile aynı sıra ve içerik) ve 17 searchable (deterministik tam sıralı) olarak kapatılmıştır.
+
+2. **Eklenen 8 Doğrulanmış Kayıt, Tüzel Kişiler ve Kanonik Domainler:**
+   - `markamama` → `markamama.com.tr` (Markamama Pet Sanayi Anonim Şirketi [Kaynak: https://www.markamama.com.tr/iletisim])
+   - `petburada` → `petburada.com` (AKVET VETERİNERLİK HAYVANCILIK VE HAYVAN ÜRÜNLERİ PAZARLAMA SANAYİ TİCARET LİMİTED ŞİRKETİ [ETBİS Kaynağı: https://etbis.ticaret.gov.tr/tr/SiteSorgulamaSonuc?siteId=0cb0afc9-94a6-4997-b5c5-a7ac684d0c3f])
+   - `petihtiyac` → `petihtiyac.com` (Şentürkler Veterinerlik Hizmetleri San. Tic. Ltd. Şti. [Birincil Kaynak: https://www.petihtiyac.com/iletisim.shtm ; Güncel Hukuki Metin Kaynakları: https://www.petihtiyac.com/kisisel-veri-aydinlatma-metni.shtm , https://www.petihtiyac.com/satis-sozlesmesi.shtm])
+   - `kolaymama` → `kolaymama.com` (DORATEK GIDA HAY. TUR. TEKS. BİL. ELEK. KIR. REK. SAN. VE TİC. LTD. ŞTİ. [Kaynak: https://www.kolaymama.com/satis-sozlesmesi.shtm])
+   - `panco` → `panco.com.tr` (Panço Giyim Sanayi ve Ticaret Anonim Şirketi [Kaynak: https://www.panco.com.tr/iletisim])
+   - `bg_store` → `bgstore.com.tr` (BGSTORE Mağazacılık Anonim Şirketi [Kaynak: https://www.bgstore.com.tr/hakkimizda/])
+   - `minycenter` → `minycenter.com.tr` (Gami Giyim Ticaret Anonim Şirketi [Kaynak: https://www.minycenter.com.tr/hakkimizda])
+   - `vetamerikan` → `vetamerikan.org` (VetAmerikan Veterinerlik Hizmetleri Ticaret Anonim Şirketi [Kaynak: https://www.vetamerikan.org/hakkimizda/])
+
+3. **Kimlik, Tanıma Sözleşmeleri, Negatif İzolasyon, Tema ve Gizlilik Bütünlüğü:**
+   - 8 yeni kaydın tamamında stable merchant ID, varsayılan kategori (`family_pets`), `isSuggested = false` (searchable-only) sözleşmesi ve alias yapıları doğrulanmıştır.
+   - Doğrulanmış tam üretim alias'ları:
+     - `markamama`: `MARKAMAMA`, `MARKAMAMA COM TR`, `MARKAMAMA PET SANAYI`. Yasaklı alias'lar: `MARKAMAMA COM` bulunmamalı; `MARKA MAMA` ve `MAMA ITRISAT` bulunmamalı.
+     - `petburada`: `PETBURADA`, `PET BURADA`, `PETBURADA COM`, `AKVET VETERINERLIK`.
+     - `petihtiyac`: `PETIHTIYAC`, `PET IHTIYAC`, `PETIHTIYAC COM`, `SENTURKLER VETERINERLIK`.
+     - `kolaymama`: `KOLAYMAMA`, `KOLAY MAMA`, `KOLAYMAMA COM`, `DORATEK GIDA`. Yasaklı alias: `KOLAY MAMA PAZARLAMA` bulunmamalı.
+     - `panco`: `PANCO`, `PANCO COM TR`, `PANCO COCUK`, `PANCO GIYIM`.
+     - `bg_store`: `BG STORE`, `B&G STORE`, `BGSTORE`, `BGSTORE COM TR`, `BGSTORE MAGAZACILIK`. Yasaklı alias: `BG TEKSTIL` bulunmamalı.
+     - `minycenter`: `MINYCENTER`, `MINY CENTER`, `MINYCENTER COM TR`, `GAMI GIYIM`.
+     - `vetamerikan`: `VETAMERIKAN`, `VET AMERIKAN`, `VETAMERIKAN ORG`, `VETAMERIKAN HAYVAN HASTANESI`, `VET AMERIKAN HAYVAN HASTANESI`, `VETAMERIKAN VETERINERLIK`.
+   - Negatif İzolasyonlar:
+     - `petburada` production `negativeAliases`: yalnız `"HEPSIBURADA"` (Hepsiburada ile karışması engellenmiştir; `"HEPSI BURADA"` negatif listede yer almaz).
+     - `amerikan_hastanesi` production `negativeAliases` içinde: `"VET AMERIKAN"` ve `"VETAMERIKAN"` yer alır; Amerikan Hastanesi ile karışması engellenmiştir.
+     - `vetamerikan` `negativeAliases`: boş (`emptyList()`).
+     - Tanıma Davranışı:
+       - `HEPSIBURADA` → `hepsiburada`
+       - `AMERIKAN HASTANESI` → `amerikan_hastanesi`
+       - `VET AMERIKAN` → `vetamerikan`
+       - `VET AMERIKAN HASTANESI` → `vetamerikan`
+   - Test Kümeleri ve Güvenlik İzolasyonu:
+     - 13 K2 Güvenlik Girdisi: `MARKA`, `PET`, `IHTIYAC`, `IHTIYAC KREDISI`, `COCUK`, `GIYIM`, `BEBEK`, `BG`, `APP STORE`, `PLAY STORE`, `MINI`, `MINI CENTER`, `VET`. Bu girdiler hiçbir K2 merchant ID üretmez ve mevcut testlerde deterministik olarak `NO_MATCH` döner.
+     - Ayrı Jenerik Test Kümesi: `MAMA`, `STORE`, `CENTER`, `VETERINER`, `VETERINERLIK`, `HAYVAN`, `HAYVAN HASTANESI`, `DORATEK`, `GAMI`, `AKVET`. Bu girdiler de hem kullanıcı açıklamasında hem banka payee girdisinde deterministik olarak `NO_MATCH` döner.
+   - Statik `verifiedLogoKey` ve merkezi allowlist esastır; serbest kullanıcı metninden asla domain veya uzak istek üretilmez (sıfır kullanıcı-metni uzak istek garantisi).
+   - Logo.dev Community attribution (`https://beratxkeskin.github.io/feniqo-site/`), hotlink ve no-local-storage/no-cache sözleşmeleri korunur.
+   - **Hak ve ilişki sınırı:** Bu envanter logo veya marka haklarının hukuki sahipliği hakkında bir tespit yapmaz. Logo gösterimi yalnızca kullanıcının tanınan markayı veya kurumu ayırt etmesini destekler; Feniqo ile listelenen marka ve kurumlar arasında sponsorluk, ortaklık, resmî onay veya ticari bağ bulunduğu anlamına gelmez.
+
+4. **Veri Modeli ve Altyapı:**
+   - Room şema sürümü 24'tür (değişmemiştir, migration yoktur).
+   - Supabase/migration değişikliği yoktur; D1 dosyaları (`00c4ffbc3811960fd9a9cf897c5f58bf684c522f`, `0119fe9633ab32cd28bfa6eda3ec32a8610ee349`) birebir korunmuştur.
+
+5. **Doğrulama ve Fiziksel Cihaz Canlı Kabulü:**
+   - Full `sharedLogic`: 186 XML/suite, 2535 test, 0 failure, 0 error, 0 skipped (%100 PASS).
+   - Full `sharedUI`: 58 suite, 453 test, 0 failure, 0 error, 0 skipped (%100 PASS).
+   - androidApp unit test: 110 suite, 1032 test / 1027 başarılı (yalnızca daha önce proje sahibince tarihsel test borcu olarak kabul edilmiş 5 Compose UI failure'ı mevcuttur: `ProfileNavigationTest: 3`, `SyncStatusScreenComposeTest: 2`). Logo ve merchant testleri %100 başarılıdır.
+   - iOS Simulator ARM64 compile, assembleDebug ve assembleDemo: başarılı (exit 0).
+   - Localization politikası: 2512 TR / 2512 EN XML kaynak, 4 iOS catalog tam eşleşme (exit 0).
+   - Fresh ktlint kontrolü: Hedef dosyalarda 0 yeni ihlal.
+   - Demo paket: `com.feniqo.mobile.demo`
+   - Fiziksel cihaz: Samsung Galaxy A71 / SM-A715F (Android 13)
+   - Kurulum: `adb install -r`; veri silinmedi.
+   - Samsung Galaxy A71 (SM-A715F) fiziksel cihazında güncel Demo APK ile sekiz yeni searchable-only logonun görünümü, önerilen 9 sırası ve sekiz yeni kaydın yalnızca "Tümünü ara" içinde listelenmesi 15 Kasım 2026 tarihinde proje sahibi tarafından sorunsuz bulunmuş ("hepsi sorunsuz çalışıyor") ve görsel kabul verilmiştir (`VISUAL_ACCEPTED`).
+   - Kaydet düğmesine basılmamış, işlem/Room/outbox mutasyonu üretilmemiştir.
+   - Bu görsel kabul doğrudan ağ trafiğini kanıtlamaz; gizlilik garantisi statik `verifiedLogoKey` + merkezi allowlist/request-factory mimarisi ve testlerden gelir.
+   - **Sonraki Adım:** Faz H4-G2-K2 tamamlandı; Aile & Evcil Hayvan kategorisi 9 suggested / 17 searchable sözleşmesiyle kapatılmıştır. Sıradaki kategori proje sahibinin bağımsız araştırma ve ürün kararı sonrasında belirlenecektir (Tarihsel kayıt: K2 sonrasında sıradaki kategori Faz H4-G2-L1 ile Hediye & Bağış olarak belirlenmiş ve tamamlanmıştır; güncel sıradaki adım L1 sonrasıdır).
+
+### 5.18 Faz H4-G2-L1 — Hediye & Bağış 8 Merchant Logo Kapanışı (2026-11-16)
+
+1. **Kapsam ve Katalog Gerçeği:**
+   - `StarterMerchantCatalog.CATALOG_VERSION` v25 (25)'e yükseltilmiş ve `gifts_donations` kategorisi 8 doğrulanmış kurum kaydı ile genişletilmiştir.
+   - Toplam merchant sayısı 258'dir (221 uzaktan logolu, 37 güvenli yerel fallback).
+   - `MerchantLogoDomainAllowlist` boyutu 215 doğrulanmış anahtara genişletilmiştir (207 → 215; 8 yeni kanonik domain eklendi).
+   - 258 markanın tamamında uzak logo bulunduğu iddiasında bulunulmaz; uzak logo anahtarı bulunmayan 37 merchant güvenli yerel kategori ikonu fallback zincirinde kalır.
+   - `gifts_donations` öneri profili 8 suggested ve 8 searchable (deterministik aynı sıra) olarak kapatılmıştır.
+
+2. **Eklenen 8 Doğrulanmış Kayıt, Görünen Ad, Logo Anahtarı ve Kanonik Domainler:**
+
+   | Stable ID | Görünen Marka Adı | verifiedLogoKey | Kanonik Domain |
+   |---|---|---|---|
+   | `kizilay` | Türk Kızılay | `kizilay` | `kizilay.org.tr` |
+   | `losev` | LÖSEV | `losev` | `losev.org.tr` |
+   | `tema` | TEMA Vakfı | `tema` | `tema.org.tr` |
+   | `tev` | TEV | `tev` | `tev.org.tr` |
+   | `mehmetcik_vakfi` | Mehmetçik Vakfı | `mehmetcik_vakfi` | `mehmetcik.org.tr` |
+   | `akut` | AKUT | `akut` | `akut.org.tr` |
+   | `acev` | AÇEV | `acev` | `acev.org` |
+   | `tog` | Toplum Gönüllüleri Vakfı | `tog` | `tog.org.tr` |
+
+3. **Kimlik, İzin, Güvenlik ve Gizlilik Bütünlüğü:**
+   - Logolar uygulamanın APK veya IPA paketleri içerisine paketlenmemiştir (`VERIFIED_FOR_BUNDLING = 0`, `MerchantLogoRegistry` boş kalmaya devam eder).
+   - Logolar istemci tarafında Logo.dev CDN servisi üzerinden statik ve merkezi allowlist (`MerchantLogoDomainAllowlist`) / request-factory mekanizmasıyla hotlink olarak çözümlenir.
+   - Kullanıcı tarafından girilen serbest metinlerden, banka açıklamalarından veya finansal verilerden asla harici domain ya da uzak URL türetilmez (sıfır kullanıcı-metni uzak istek garantisi).
+   - Logo.dev Community attribution sitesi (`https://beratxkeskin.github.io/feniqo-site/`), hotlink ve no-local-storage / no-cache sözleşmeleri eksiksiz korunmaktadır.
+   - Bu envanter logo veya marka haklarının hukuki sahipliği hakkında bir tespit yapmaz. Logo gösterimi yalnızca kullanıcının tanınan kurumu ayırt etmesini destekler; Feniqo ile listelenen kurumlar arasında sponsorluk, ortaklık, resmî onay veya ticari bağ bulunduğu anlamına gelmez.
+   - Kurum kapsam ve isimlendirme kararları:
+     - `ahbap`: Proje sahibinin açık ürün kararıyla kapsam dışı bırakılmıştır. Kataloğa, allowlist'e, önerilere veya testlere dahil edilmemiştir; hakkında doğrulanmamış olumsuz iddia veya hüküm üretilmemiştir.
+     - `darussafaka`: `EVIDENCE_PENDING_MANUAL_VERIFICATION`; bu teknik dilime dahil edilmemiştir.
+     - Resmî marka adı “Türk Kızılay” olarak kullanılmıştır; “Türk Kızılayı” ifadesi resmî unvan olarak değil, yalnızca arama/tanıma alias'ı olarak tanımlanmıştır.
+
+4. **Veri Modeli ve Altyapı:**
+   - Room şema sürümü 24'tür (değişmemiştir, migration yoktur).
+   - Supabase/migration değişikliği yoktur; D1 dosyaları (`00c4ffbc3811960fd9a9cf897c5f58bf684c522f`, `0119fe9633ab32cd28bfa6eda3ec32a8610ee349`) birebir korunmuştur.
+
+5. **Doğrulama ve Fiziksel Cihaz Canlı Kabulü:**
+   - Demo paket: `com.feniqo.mobile.demo`
+   - Fiziksel cihaz: Samsung Galaxy A71 / SM-A715F (Android 13)
+   - Kurulum: `adb install -r`; veri silinmedi (`uninstall` veya `pm clear` yapılmadı).
+   - Samsung Galaxy A71 (SM-A715F) fiziksel cihazında güncel Demo APK ile sekiz kurumun logosu, önerilen 8 sırası ve genel görünüm 16 Kasım 2026 tarihinde proje sahibi tarafından kontrol edilmiş ve "sorunsuz gözüküyor kontrol ettim" açık beyanı ile görsel kabul verilmiştir (`VISUAL_ACCEPTED`).
+   - Kaydet düğmesine basılmamış, işlem/Room/outbox mutasyonu üretilmemiştir.
+   - Bu görsel kabul doğrudan ağ trafiğini kanıtlamaz; gizlilik garantisi statik `verifiedLogoKey` + merkezi allowlist/request-factory mimarisi ve testlerden gelir.
+   - **Sonraki Adım:** Faz H4-G2-L1 tamamlandı; Hediye & Bağış kategorisi 8 suggested / 8 searchable sözleşmesiyle kapatılmıştır. (Tarihsel kayıt: L1 sonrasında sıradaki kategori Faz H4-G2-M1 ile Vergi & Ücretler ilk dar dilimi olarak belirlenmiş ve tamamlanmıştır; güncel sıradaki adım M1 sonrasıdır).
+
+### 5.19 Faz H4-G2-M1 — Vergi & Ücretler İlk Dar Dilim: GİB + SGK Logo Kapanışı (2026-11-17)
+
+1. **Kapsam ve Katalog Gerçeği:**
+   - `StarterMerchantCatalog.CATALOG_VERSION` v26 (26)'ya yükseltilmiş ve `taxes_fees` kategorisi 2 doğrulanmış kamu kurumu kaydı (`gib`, `sgk`) ile genişletilmiştir.
+   - Toplam merchant sayısı 260'tır (223 uzaktan logolu, 37 güvenli yerel fallback).
+   - `MerchantLogoDomainAllowlist` boyutu 217 doğrulanmış anahtara genişletilmiştir (215 → 217; `gib.gov.tr`, `sgk.gov.tr` eklendi).
+   - 260 markanın tamamında uzak logo bulunduğu iddiasında bulunulmaz; uzak logo anahtarı bulunmayan 37 merchant güvenli yerel kategori ikonu fallback zincirinde kalır.
+   - `taxes_fees` öneri profili 2 suggested ve 2 searchable (`gib`, `sgk` deterministik sırasıyla) olarak yapılandırılmıştır.
+
+2. **Eklenen 2 Doğrulanmış Kayıt, Görünen Ad, Logo Anahtarı ve Kanonik Domainler:**
+
+   | Stable ID | Görünen Marka Adı | verifiedLogoKey | Kanonik Domain |
+   |---|---|---|---|
+   | `gib` | Gelir İdaresi Başkanlığı | `gib` | `gib.gov.tr` |
+   | `sgk` | Sosyal Güvenlik Kurumu | `sgk` | `sgk.gov.tr` |
+
+3. **Kimlik, İzin, Güvenlik ve Gizlilik Bütünlüğü:**
+   - Logolar uygulamanın APK veya IPA paketleri içerisine paketlenmemiştir (`VERIFIED_FOR_BUNDLING = 0`, `MerchantLogoRegistry` boş kalmaya devam eder).
+   - Logolar istemci tarafında Logo.dev CDN servisi üzerinden statik ve merkezi allowlist (`MerchantLogoDomainAllowlist`) / request-factory mekanizmasıyla hotlink olarak çözümlenir.
+   - Kullanıcı tarafından girilen serbest metinlerden, banka açıklamalarından veya finansal verilerden asla harici domain ya da uzak URL türetilmez (sıfır kullanıcı-metni uzak istek garantisi).
+   - Logo.dev Community attribution sitesi (`https://beratxkeskin.github.io/feniqo-site/`), hotlink ve no-local-storage / no-cache sözleşmeleri eksiksiz korunmaktadır.
+   - **Hak ve ilişki sınırı:** Bu envanter logo veya marka haklarının hukuki sahipliği hakkında bir tespit yapmaz. Logo gösterimi yalnızca kullanıcının tanınan kurumu ayırt etmesini destekler; Feniqo ile listelenen kurumlar arasında sponsorluk, ortaklık, resmî onay veya ticari bağ bulunduğu anlamına gelmez.
+   - Pozitif ve Negatif Alias Politikası:
+     - GİB: Pozitif: `GELIR IDARESI BASKANLIGI` (LEGAL_NAME, priority 24), `DIJITAL VERGI DAIRESI` (BRAND_AND_SERVICE, priority 24), `INTERNET VERGI DAIRESI` (BRAND_AND_SERVICE, priority 20). Negatif: `IBAN`, `TRANSFER`.
+     - SGK: Pozitif: `SOSYAL GUVENLIK KURUMU` (LEGAL_NAME, priority 24). Negatif: `IBAN`, `TRANSFER`, `MOSIP`.
+     - `GIB`, `SGK`, `MOSIP`, `GIB SANAL POS`, `GIB VERGI ODEMESI`, `SGK PRIM ODEMESI`, `KART ILE PRIM ODEME` gibi doğrulanmamış/kısa descriptor'lar pozitif alias yapılmamış, fail-closed korunmuştur.
+     - Transfer dışlama: `EFT`, `FAST`, `HAVALE` işlemleri `PERSONAL_TRANSFER` olarak dışlanır (`EXCLUDED_TRANSACTION`, confidence 0).
+     - `financial_expenses` kategorisi, transfer sınıflandırması sertleştirilmeden boş kalır (`TRANSFER_CLASSIFICATION_HARDENING_REQUIRED`).
+     - `other_expense` kategorisi, ürün kararı gereği boş kalır (`emptyProfile`).
+     - HGS/PTT, Türkiye Noterler Birliği, e-Devlet, belediyeler, bankalar ve finansman şirketleri bu dar dilime dahil edilmemiştir.
+
+4. **Veri Modeli ve Altyapı:**
+   - Room şema sürümü 24'tür (değişmemiştir, migration yoktur).
+   - Supabase/migration değişikliği yoktur; D1 dosyaları (`00c4ffbc3811960fd9a9cf897c5f58bf684c522f`, `0119fe9633ab32cd28bfa6eda3ec32a8610ee349`) birebir korunmuştur.
+
+5. **Doğrulama ve Fiziksel Cihaz Canlı Kabulü:**
+   - Demo paket: `com.feniqo.mobile.demo`
+   - Fiziksel cihaz: Samsung Galaxy A71 / SM-A715F (Android 13)
+   - Kurulum: `adb install -r`; veri silinmedi (`uninstall` veya `pm clear` yapılmadı).
+   - Samsung Galaxy A71 (SM-A715F) fiziksel cihazında güncel Demo APK ile GİB ve SGK logolarının görünümü, `GİB → SGK` önerilen sırası ve genel görünüm 17 Kasım 2026 tarihinde proje sahibi tarafından kontrol edilmiş ve "herhangi bir sorun yok" açık beyanı ile görsel kabul verilmiştir (`VISUAL_ACCEPTED`).
+   - Kaydet düğmesine basılmamış, işlem/Room/outbox mutasyonu üretilmemiştir.
+   - Bu görsel kabul doğrudan ağ trafiğini kanıtlamaz; gizlilik garantisi statik `verifiedLogoKey` + merkezi allowlist/request-factory mimarisi ve testlerden gelir.
+   - **Sonraki Adım:** Faz H4-G2-M1 tamamlandı; Vergi & Ücretler kategorisinin ilk dar dilimi 2 suggested / 2 searchable (`gib`, `sgk`) sözleşmesiyle kapatılmıştır. Sıradaki adım proje sahibinin açık talimatı ve kararıyla belirlenecektir.

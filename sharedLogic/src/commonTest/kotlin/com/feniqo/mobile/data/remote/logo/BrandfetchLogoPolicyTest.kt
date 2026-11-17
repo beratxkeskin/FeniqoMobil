@@ -75,14 +75,14 @@ class BrandfetchLogoPolicyTest {
 
     @Test
     fun allowlist_sizeAndKeysMatchVerifiedCatalog() {
-        assertEquals(191, BrandfetchDomainAllowlist.size())
+        assertEquals(217, BrandfetchDomainAllowlist.size())
         assertEquals(expectedAllowlist.keys, BrandfetchDomainAllowlist.allowlistKeys())
     }
 
     @Test
     fun starterCatalog_everyNonNullVerifiedLogoKey_resolvesInAllowlist() {
         val nonNullMerchants = StarterMerchantCatalog.merchants.filter { it.verifiedLogoKey != null }
-        assertEquals(197, nonNullMerchants.size, "Yalnızca doğrulanmış 197 merchant logo anahtarı taşımalı")
+        assertEquals(223, nonNullMerchants.size, "Yalnızca doğrulanmış 223 merchant logo anahtarı taşımalı")
 
         for (merchant in nonNullMerchants) {
             val resolvedDomain = BrandfetchDomainAllowlist.resolveDomain(merchant.verifiedLogoKey)
@@ -287,6 +287,32 @@ class BrandfetchLogoPolicyTest {
             "kitapyurdu" to "kitapyurdu.com",
             "bkm_kitap" to "bkmkitap.com",
             "idefix" to "idefix.com",
+            "petlebi" to "petlebi.com",
+            "civil" to "civilim.com",
+            "temizmama" to "temizmama.com",
+            "toyzz_shop" to "toyzzshop.com",
+            "juen_pet_market" to "juenpetmarket.com",
+            "joker_baby" to "joker.com.tr",
+            "armagan_oyuncak" to "armaganoyuncak.com.tr",
+            "petzz_shop" to "petzzshop.com",
+            "markamama" to "markamama.com.tr",
+            "petburada" to "petburada.com",
+            "petihtiyac" to "petihtiyac.com",
+            "kolaymama" to "kolaymama.com",
+            "panco" to "panco.com.tr",
+            "bg_store" to "bgstore.com.tr",
+            "minycenter" to "minycenter.com.tr",
+            "vetamerikan" to "vetamerikan.org",
+            "kizilay" to "kizilay.org.tr",
+            "losev" to "losev.org.tr",
+            "tema" to "tema.org.tr",
+            "tev" to "tev.org.tr",
+            "mehmetcik_vakfi" to "mehmetcik.org.tr",
+            "akut" to "akut.org.tr",
+            "acev" to "acev.org",
+            "tog" to "tog.org.tr",
+            "gib" to "gib.gov.tr",
+            "sgk" to "sgk.gov.tr",
         )
 
     // -------------------------------------------------------------

@@ -662,4 +662,118 @@ class LogoDevRemoteMerchantLogoResolverTest {
             )
         }
     }
+
+    @Test
+    fun familyPetsEightMerchants_resolveToExpectedCanonicalDomainsAndLogoDevUrls() {
+        val resolver = LogoDevRemoteMerchantLogoResolver(config = validSyntheticConfig)
+
+        val approvedFamilyPets =
+            mapOf(
+                "petlebi" to "petlebi.com",
+                "civil" to "civilim.com",
+                "temizmama" to "temizmama.com",
+                "toyzz_shop" to "toyzzshop.com",
+                "juen_pet_market" to "juenpetmarket.com",
+                "joker_baby" to "joker.com.tr",
+                "armagan_oyuncak" to "armaganoyuncak.com.tr",
+                "petzz_shop" to "petzzshop.com",
+            )
+
+        for ((key, expectedDomain) in approvedFamilyPets) {
+            val request = resolver.resolve(key)
+            assertNotNull("Approved family & pets key '$key' için request null olamaz", request)
+            requireNotNull(request)
+
+            val expectedUrl =
+                "https://img.logo.dev/$expectedDomain" +
+                    "?token=pk_test_sample_valid_key_12345&size=128&format=png&theme=light&fallback=404"
+            assertEquals(expectedUrl, request.url)
+            assertTrue("HTTPS protokolü kullanılmalıdır", request.url.startsWith("https://img.logo.dev/"))
+            assertTrue("theme=light taşımalıdır", request.url.contains("theme=light"))
+            assertTrue("fallback=404 taşımalıdır", request.url.contains("fallback=404"))
+            assertEquals(RemoteMerchantLogoCachePolicy.PROVIDER_HEADERS_NO_LOCAL_STORAGE, request.cachePolicy)
+            assertEquals(RemoteMerchantLogoSurfacePolicy.LIGHT_NEUTRAL, request.surfacePolicy)
+            assertEquals(RemoteMerchantLogoContentScalePolicy.DEFAULT, request.contentScalePolicy)
+            assertTrue("Header sahte bilgi içermez", request.headers.isEmpty())
+        }
+
+        // Benzer / yanlış domainler fail-closed
+        val unselectedDomains =
+            listOf(
+                "petlebi.net",
+                "civil.com",
+                "temizmama.net",
+                "toyzzshop.net",
+                "juenpetmarket.net",
+                "joker.com",
+                "armaganoyuncak.net",
+                "petzzshop.net",
+                "https://petlebi.com",
+                "petlebi_magaza",
+                "civilim_giyim",
+            )
+        for (unselected in unselectedDomains) {
+            assertNull(
+                "Seçilmemiş domain veya raw string fail-closed null dönmelidir: $unselected",
+                resolver.resolve(unselected),
+            )
+        }
+    }
+
+    @Test
+    fun familyPetsEightSearchableMerchants_resolveToExpectedCanonicalDomainsAndLogoDevUrls() {
+        val resolver = LogoDevRemoteMerchantLogoResolver(config = validSyntheticConfig)
+
+        val approvedFamilyPets =
+            mapOf(
+                "markamama" to "markamama.com.tr",
+                "petburada" to "petburada.com",
+                "petihtiyac" to "petihtiyac.com",
+                "kolaymama" to "kolaymama.com",
+                "panco" to "panco.com.tr",
+                "bg_store" to "bgstore.com.tr",
+                "minycenter" to "minycenter.com.tr",
+                "vetamerikan" to "vetamerikan.org",
+            )
+
+        for ((key, expectedDomain) in approvedFamilyPets) {
+            val request = resolver.resolve(key)
+            assertNotNull("Approved family & pets searchable key '$key' için request null olamaz", request)
+            requireNotNull(request)
+
+            val expectedUrl =
+                "https://img.logo.dev/$expectedDomain" +
+                    "?token=pk_test_sample_valid_key_12345&size=128&format=png&theme=light&fallback=404"
+            assertEquals(expectedUrl, request.url)
+            assertTrue("HTTPS protokolü kullanılmalıdır", request.url.startsWith("https://img.logo.dev/"))
+            assertTrue("theme=light taşımalıdır", request.url.contains("theme=light"))
+            assertTrue("fallback=404 taşımalıdır", request.url.contains("fallback=404"))
+            assertEquals(RemoteMerchantLogoCachePolicy.PROVIDER_HEADERS_NO_LOCAL_STORAGE, request.cachePolicy)
+            assertEquals(RemoteMerchantLogoSurfacePolicy.LIGHT_NEUTRAL, request.surfacePolicy)
+            assertEquals(RemoteMerchantLogoContentScalePolicy.DEFAULT, request.contentScalePolicy)
+            assertTrue("Header sahte bilgi içermez", request.headers.isEmpty())
+        }
+
+        // Benzer / yanlış domainler fail-closed
+        val unselectedDomains =
+            listOf(
+                "markamama.com",
+                "petburada.net",
+                "petihtiyac.net",
+                "kolaymama.net",
+                "panco.com",
+                "bgstore.com",
+                "minycenter.com",
+                "vetamerikan.com",
+                "https://markamama.com.tr",
+                "markamama_pet",
+                "vetamerikan_hastane",
+            )
+        for (unselected in unselectedDomains) {
+            assertNull(
+                "Seçilmemiş domain veya raw string fail-closed null dönmelidir: $unselected",
+                resolver.resolve(unselected),
+            )
+        }
+    }
 }
